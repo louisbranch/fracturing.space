@@ -286,7 +286,7 @@ func TestUsersPageRoute(t *testing.T) {
 		if recorder.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", recorder.Code)
 		}
-		assertNotContains(t, recorder.Body.String(), "<!doctype html>")
+		assertHTMXFragmentInvariant(t, recorder.Body.String())
 	})
 }
 
@@ -359,7 +359,7 @@ func TestSystemDetailRoute(t *testing.T) {
 		if recorder.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", recorder.Code)
 		}
-		assertNotContains(t, recorder.Body.String(), "<!doctype html>")
+		assertHTMXFragmentInvariant(t, recorder.Body.String())
 	})
 }
 

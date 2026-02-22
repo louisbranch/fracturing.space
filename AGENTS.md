@@ -42,6 +42,12 @@ Single source of agent directives and project context.
 - **Exception path (rare)**: If a test is truly impossible, stop and ask for guidance. Include: (1) why it is impossible, (2) attempted testability approaches (fakes, DI, seams), (3) a proposal to add a testability seam first.
 - **Testability-first expectation**: Use existing fakes (for example `fakeStorage`) to simulate error paths; do not claim errors are hard to reproduce without checking available fakes.
 
+### UI Negative Assertion Policy
+
+- UI changes should prefer positive behavior assertions over incidental "not contains" checks.
+- `assertNotContains`/`assertHTMLNotContains` are allowed only for explicit invariants and must include a nearby `// Invariant: ...` rationale.
+- Keep detailed UI negative-assertion guidance and examples in `.agents/skills/testing/SKILL.md`.
+
 ### TDD Example (Required Response Shape)
 
 Example response for a behavior change:

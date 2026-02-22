@@ -231,6 +231,7 @@ func TestWebPageRendering(t *testing.T) {
 			for _, expected := range tc.contains {
 				assertContains(t, body, expected)
 			}
+			// Invariant: route-specific exclusions in this table must stay absent.
 			for _, unexpected := range tc.notContains {
 				assertNotContains(t, body, unexpected)
 			}
@@ -427,7 +428,7 @@ func TestScenarioPostEmptyScript(t *testing.T) {
 	}
 	assertContains(t, rec.Body.String(), "Scenario script is required")
 	assertContains(t, rec.Body.String(), "scenario-results-tabs")
-	assertNotContains(t, rec.Body.String(), "<!doctype html>")
+	assertHTMXFragmentInvariant(t, rec.Body.String())
 }
 
 // TestScenarioPostRejectsCrossOrigin verifies POST /scenarios enforces CSRF checks.
@@ -463,7 +464,7 @@ func TestScenarioPostScriptTooLarge(t *testing.T) {
 		t.Fatalf("expected 200, got %d", rec.Code)
 	}
 	assertContains(t, rec.Body.String(), "Scenario script exceeds the 100KB limit")
-	assertNotContains(t, rec.Body.String(), "<!doctype html>")
+	assertHTMXFragmentInvariant(t, rec.Body.String())
 }
 
 func TestScenarioTimelineTable(t *testing.T) {
@@ -577,7 +578,7 @@ func TestCampaignSessionsRoute(t *testing.T) {
 
 		body := recorder.Body.String()
 		assertContains(t, body, "Sessions</h1>")
-		assertNotContains(t, body, "<!doctype html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("sessions full page", func(t *testing.T) {
@@ -1459,6 +1460,7 @@ func TestAdminPageTitleUsesPipeSuffixConvention(t *testing.T) {
 	}
 	body := recorder.Body.String()
 	assertContains(t, body, "<title>Campaigns - Admin | "+branding.AppName+"</title>")
+	// Invariant: page title should use a single pipe-separated suffix convention.
 	assertNotContains(t, body, "Campaigns | Admin "+branding.AppName+" | "+branding.AppName)
 }
 
@@ -1524,6 +1526,7 @@ func TestUsersPage(t *testing.T) {
 		}
 		assertContains(t, rec.Body.String(), "<!doctype html>")
 		assertContains(t, rec.Body.String(), "Users</h1>")
+		// Invariant: user creation controls are not rendered on the users page.
 		assertNotContains(t, rec.Body.String(), "action=\"/users/create\"")
 		assertNotContains(t, rec.Body.String(), "Create User")
 	})
@@ -1538,7 +1541,7 @@ func TestUsersPage(t *testing.T) {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
 		assertContains(t, rec.Body.String(), "Users</h1>")
-		assertNotContains(t, rec.Body.String(), "<!doctype html>")
+		assertHTMXFragmentInvariant(t, rec.Body.String())
 	})
 
 	t.Run("with message", func(t *testing.T) {
@@ -1770,7 +1773,7 @@ func TestCharactersPage(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
-		assertNotContains(t, rec.Body.String(), "<!doctype html>")
+		assertHTMXFragmentInvariant(t, rec.Body.String())
 	})
 }
 
@@ -1938,7 +1941,7 @@ func TestSystemDetail(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
-		assertNotContains(t, rec.Body.String(), "<!doctype html>")
+		assertHTMXFragmentInvariant(t, rec.Body.String())
 	})
 }
 
@@ -2029,6 +2032,14 @@ func assertNotContains(t *testing.T, body string, unexpected string) {
 	if strings.Contains(body, unexpected) {
 		t.Fatalf("expected response to not contain %q", unexpected)
 	}
+}
+
+// assertHTMXFragmentInvariant verifies HTMX responses stay fragment-only.
+func assertHTMXFragmentInvariant(t *testing.T, body string) {
+	t.Helper()
+
+	// Invariant: HTMX responses must not include a full HTML document wrapper.
+	assertNotContains(t, body, "<!doctype html>")
 }
 
 // TestEscapeAIP160StringLiteral verifies special character escaping.
@@ -3232,7 +3243,7 @@ func TestRenderCharacterSheet(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
-		assertNotContains(t, rec.Body.String(), "<!doctype html>")
+		assertHTMXFragmentInvariant(t, rec.Body.String())
 		assertContains(t, rec.Body.String(), "Rogue")
 	})
 
@@ -3274,7 +3285,7 @@ func TestRenderUserDetail(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
-		assertNotContains(t, rec.Body.String(), "<!doctype html>")
+		assertHTMXFragmentInvariant(t, rec.Body.String())
 	})
 
 	t.Run("full page", func(t *testing.T) {
@@ -3735,7 +3746,7 @@ func TestSessionDetail(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
-		assertNotContains(t, rec.Body.String(), "<!doctype html>")
+		assertHTMXFragmentInvariant(t, rec.Body.String())
 	})
 }
 
@@ -4206,7 +4217,7 @@ func TestInvitesListRendering(t *testing.T) {
 		if rec.Code != http.StatusOK {
 			t.Fatalf("expected 200, got %d", rec.Code)
 		}
-		assertNotContains(t, rec.Body.String(), "<!doctype html>")
+		assertHTMXFragmentInvariant(t, rec.Body.String())
 	})
 
 	t.Run("full page", func(t *testing.T) {

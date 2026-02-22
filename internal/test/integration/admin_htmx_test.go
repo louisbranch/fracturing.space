@@ -58,7 +58,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 
 		assertHTMLContains(t, body, "No campaigns yet.")
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("campaigns table with data", func(t *testing.T) {
@@ -84,7 +84,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"/campaigns/"+campaignID,
 			"Human",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("campaign detail full page", func(t *testing.T) {
@@ -148,7 +148,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"Fragment Test Campaign",
 			"Hybrid",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("campaign sessions htmx fragment", func(t *testing.T) {
@@ -173,7 +173,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"<title>Sessions - Admin | "+branding.AppName+"</title>",
 			"/sessions/table",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("campaign not found", func(t *testing.T) {
@@ -224,7 +224,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 
 		assertHTMLContains(t, body, "<title>Dashboard - Admin | "+branding.AppName+"</title>")
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("dashboard content with data", func(t *testing.T) {
@@ -257,7 +257,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"Sessions",
 			"Users",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	// Sessions tests
@@ -318,7 +318,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 
 		assertHTMLContains(t, body, "No sessions yet.")
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("sessions table with data", func(t *testing.T) {
@@ -349,7 +349,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"Test Session Alpha",
 			"Active",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("session detail full page", func(t *testing.T) {
@@ -431,7 +431,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"<h2>Session Info</h2>",
 			"<h2>Event Timeline</h2>",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("session events", func(t *testing.T) {
@@ -461,7 +461,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 
 		// Session events should contain the event table (may be empty or have session.started event)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	// Characters tests
@@ -525,7 +525,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"<title>Characters - Admin | "+branding.AppName+"</title>",
 			"/characters/table",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("characters table empty", func(t *testing.T) {
@@ -546,7 +546,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 
 		assertHTMLContains(t, body, "No characters yet.")
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("characters table with data", func(t *testing.T) {
@@ -578,7 +578,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"Test Hero Alpha",
 			"PC",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("character sheet full page", func(t *testing.T) {
@@ -660,7 +660,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"HTMX Sheet Character",
 			"<h2>Character Info</h2>",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	// Participants tests
@@ -724,7 +724,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"<title>Participants - Admin | "+branding.AppName+"</title>",
 			"/participants/table",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("participants table empty", func(t *testing.T) {
@@ -748,7 +748,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"Owner",
 			"GM",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("participants table with data", func(t *testing.T) {
@@ -791,7 +791,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"Test Player One",
 			"Player",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	// Event Log tests
@@ -855,7 +855,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			"<h2>Event Log</h2>",
 			"Event Type",
 		)
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("event log table with data", func(t *testing.T) {
@@ -884,7 +884,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 
 		// Should have campaign.created and session.started events
-		assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
+		assertHTMXFragmentInvariant(t, body)
 	})
 }
 
@@ -993,6 +993,14 @@ func assertHTMLContains(t *testing.T, body string, fragments ...string) {
 			t.Errorf("expected HTML to contain %q\nbody:\n%s", fragment, body)
 		}
 	}
+}
+
+// assertHTMXFragmentInvariant enforces the HTMX fragment transport contract.
+func assertHTMXFragmentInvariant(t *testing.T, body string) {
+	t.Helper()
+
+	// Invariant: HTMX responses must not include a full HTML document wrapper.
+	assertHTMLNotContains(t, body, "<!doctype html>", "<!DOCTYPE html>")
 }
 
 // assertHTMLNotContains checks that the HTML body does NOT contain any of the fragments.
