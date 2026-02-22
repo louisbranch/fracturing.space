@@ -150,6 +150,7 @@ func init() {
 	message.SetString(lang, "error.http.pending_id_is_required", "pending_id is required")
 	message.SetString(lang, "error.http.auth_client_not_configured", "auth client not configured")
 	message.SetString(lang, "error.http.invalid_json_body", "invalid json body")
+	message.SetString(lang, "error.http.invalid_locale", "invalid locale")
 	message.SetString(lang, "error.http.failed_to_start_passkey_login", "failed to start passkey login")
 	message.SetString(lang, "error.http.failed_to_finish_passkey_login", "failed to finish passkey login")
 	message.SetString(lang, "error.http.session_id_is_required", "session_id is required")

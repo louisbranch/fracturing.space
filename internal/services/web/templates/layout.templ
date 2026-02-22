@@ -2,9 +2,33 @@ package templates
 
 import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 
+templ ShellLanguageMenu(page PageContext) {
+	<div class="dropdown dropdown-end">
+		<div tabindex="0" role="button" class="btn btn-sm btn-ghost bg-base-200/80 backdrop-blur">
+			{ ActiveLanguageLabel(page) }
+		</div>
+		<ul tabindex="0" class="dropdown-content menu menu-sm bg-base-200 rounded-box z-10 mt-2 w-24 p-2 shadow">
+			for _, option := range LanguageOptions(page) {
+				<li>
+					<a
+						href={ LanguageURL(page, option.Tag) }
+						data-lang={ option.Tag }
+						if option.Active {
+							class="font-bold"
+						}
+					>{ option.Label }</a>
+				</li>
+			}
+		</ul>
+	</div>
+}
+
 // ShellLayout wraps auth/public pages in the shared HTML shell.
-templ ShellLayout(title string, lang string, loc Localizer) {
-	@sharedtemplates.ShellLayout(title, lang, loc) {
+templ ShellLayout(title string, page PageContext) {
+	@sharedtemplates.ShellLayout(title, page.Lang, page.Loc) {
+		<div class="fixed right-4 top-4 z-50">
+			@ShellLanguageMenu(page)
+		</div>
 		{ children... }
 	}
 }

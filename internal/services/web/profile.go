@@ -104,6 +104,7 @@ func (h *handler) handleAppProfilePost(w http.ResponseWriter, r *http.Request, s
 		h.renderErrorPage(w, r, http.StatusBadGateway, "Profile update failed", "failed to update profile")
 		return
 	}
+	sess.setCachedUserLocale(platformi18n.LocaleString(parsedLocale))
 	http.Redirect(w, r, "/profile", http.StatusFound)
 }
 
@@ -174,7 +175,7 @@ func (h *handler) fetchAccountProfile(ctx context.Context, userID string) (*acco
 	profile := &accountProfileView{}
 	if resp != nil && resp.GetProfile() != nil {
 		profile.Name = resp.GetProfile().GetName()
-		profile.Locale = platformi18n.NormalizeLocale(resp.GetProfile().GetLocale())
+		profile.Locale = resp.GetProfile().GetLocale()
 	}
 	return profile, nil
 }
