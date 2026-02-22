@@ -92,11 +92,11 @@ func (f fakeGameSystem) OutcomeApplier() systems.OutcomeApplier {
 }
 
 type fakeSystemAdapter struct {
-	id      commonv1.GameSystem
+	id      string
 	version string
 }
 
-func (f fakeSystemAdapter) ID() commonv1.GameSystem {
+func (f fakeSystemAdapter) ID() string {
 	return f.id
 }
 
@@ -1217,7 +1217,7 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 		}
 		adapters := systems.NewAdapterRegistry()
 		if err := adapters.Register(fakeSystemAdapter{
-			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			id:      "DAGGERHEART",
 			version: "v1",
 		}); err != nil {
 			t.Fatalf("register adapter: %v", err)
@@ -1259,7 +1259,7 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 		}
 		adapters := systems.NewAdapterRegistry()
 		if err := adapters.Register(fakeSystemAdapter{
-			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			id:      "DAGGERHEART",
 			version: "v1",
 		}); err != nil {
 			t.Fatalf("register adapter: %v", err)

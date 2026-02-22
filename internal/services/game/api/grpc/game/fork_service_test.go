@@ -124,7 +124,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		Type:          event.Type("sys.daggerheart.character_state_patched"),
 		EntityType:    "character",
 		EntityID:      "char-1",
-		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
@@ -566,7 +566,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		Type:          event.Type("sys.daggerheart.character_state_patched"),
 		EntityType:    "character",
 		EntityID:      "char-1",
-		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
@@ -581,7 +581,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		Type:          event.Type("sys.daggerheart.gm_fear_changed"),
 		EntityType:    "campaign",
 		EntityID:      "source",
-		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.GMFearChangedPayload{
 			Before: 2,
@@ -859,7 +859,7 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 		EntityType:    "campaign",
 		EntityID:      "source",
 		SessionID:     "sess-1",
-		SystemID:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.GMFearChangedPayload{
 			Before: 1,

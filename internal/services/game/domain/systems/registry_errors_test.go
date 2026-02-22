@@ -10,11 +10,11 @@ import (
 )
 
 type testAdapter struct {
-	id      commonv1.GameSystem
+	id      string
 	version string
 }
 
-func (t *testAdapter) ID() commonv1.GameSystem {
+func (t *testAdapter) ID() string {
 	return t.id
 }
 
@@ -66,7 +66,7 @@ func (t *testGameSystem) OutcomeApplier() OutcomeApplier {
 func TestAdapterRegistryRegister_RequiresVersion(t *testing.T) {
 	registry := NewAdapterRegistry()
 	err := registry.Register(&testAdapter{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      "daggerheart",
 		version: "   ",
 	})
 	if !errors.Is(err, ErrAdapterVersionRequired) {
@@ -77,7 +77,7 @@ func TestAdapterRegistryRegister_RequiresVersion(t *testing.T) {
 func TestAdapterRegistryRegister_Duplicate(t *testing.T) {
 	registry := NewAdapterRegistry()
 	adapter := &testAdapter{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      "daggerheart",
 		version: "1.0.0",
 	}
 	if err := registry.Register(adapter); err != nil {
@@ -92,7 +92,7 @@ func TestAdapterRegistryRegister_Duplicate(t *testing.T) {
 func TestAdapterRegistryRegister_NilRegistry(t *testing.T) {
 	var registry *AdapterRegistry
 	err := registry.Register(&testAdapter{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      "daggerheart",
 		version: "1.0.0",
 	})
 	if !errors.Is(err, ErrAdapterRegistryNil) {
@@ -110,7 +110,7 @@ func TestAdapterRegistryRegister_NilAdapter(t *testing.T) {
 
 func TestAdapterRegistryGetRequired_ReturnsErrorForUnknownSystem(t *testing.T) {
 	registry := NewAdapterRegistry()
-	_, err := registry.GetRequired(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, "1.0.0")
+	_, err := registry.GetRequired("daggerheart", "1.0.0")
 	if err == nil {
 		t.Fatal("expected error for unknown system")
 	}
@@ -122,13 +122,13 @@ func TestAdapterRegistryGetRequired_ReturnsErrorForUnknownSystem(t *testing.T) {
 func TestAdapterRegistryGetRequired_ReturnsAdapterWhenRegistered(t *testing.T) {
 	registry := NewAdapterRegistry()
 	adapter := &testAdapter{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      "daggerheart",
 		version: "1.0.0",
 	}
 	if err := registry.Register(adapter); err != nil {
 		t.Fatalf("register: %v", err)
 	}
-	got, err := registry.GetRequired(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, "1.0.0")
+	got, err := registry.GetRequired("daggerheart", "1.0.0")
 	if err != nil {
 		t.Fatalf("GetRequired: %v", err)
 	}
@@ -139,7 +139,7 @@ func TestAdapterRegistryGetRequired_ReturnsAdapterWhenRegistered(t *testing.T) {
 
 func TestAdapterRegistryGetRequired_NilRegistryReturnsError(t *testing.T) {
 	var registry *AdapterRegistry
-	_, err := registry.GetRequired(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, "1.0.0")
+	_, err := registry.GetRequired("daggerheart", "1.0.0")
 	if err == nil {
 		t.Fatal("expected error for nil registry")
 	}

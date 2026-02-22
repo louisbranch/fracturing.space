@@ -19,7 +19,7 @@ func TestTypedFolder_SatisfiesFolderInterface(t *testing.T) {
 	var _ Folder = TypedFolder[testState]{}
 }
 
-func TestTypedFolder_Apply_DelegatesToFold(t *testing.T) {
+func TestTypedFolder_Fold_DelegatesToFoldFunc(t *testing.T) {
 	p := TypedFolder[testState]{
 		Assert: func(state any) (testState, error) {
 			if state == nil {
@@ -31,7 +31,7 @@ func TestTypedFolder_Apply_DelegatesToFold(t *testing.T) {
 			}
 			return s, nil
 		},
-		Fold: func(s testState, evt event.Event) (testState, error) {
+		FoldFn: func(s testState, evt event.Event) (testState, error) {
 			s.Count++
 			return s, nil
 		},
@@ -40,7 +40,7 @@ func TestTypedFolder_Apply_DelegatesToFold(t *testing.T) {
 		},
 	}
 
-	result, err := p.Apply(nil, event.Event{Type: "test.event"})
+	result, err := p.Fold(nil, event.Event{Type: "test.event"})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -53,36 +53,36 @@ func TestTypedFolder_Apply_DelegatesToFold(t *testing.T) {
 	}
 }
 
-func TestTypedFolder_Apply_PropagatesAssertError(t *testing.T) {
+func TestTypedFolder_Fold_PropagatesAssertError(t *testing.T) {
 	p := TypedFolder[testState]{
 		Assert: func(state any) (testState, error) {
 			return testState{}, errors.New("bad state")
 		},
-		Fold: func(s testState, evt event.Event) (testState, error) {
+		FoldFn: func(s testState, evt event.Event) (testState, error) {
 			t.Fatal("fold should not be called on assert error")
 			return s, nil
 		},
 		Types: func() []event.Type { return nil },
 	}
 
-	_, err := p.Apply("wrong type", event.Event{})
+	_, err := p.Fold("wrong type", event.Event{})
 	if err == nil {
 		t.Fatal("expected error from assert")
 	}
 }
 
-func TestTypedFolder_Apply_PropagatesFoldError(t *testing.T) {
+func TestTypedFolder_Fold_PropagatesFoldError(t *testing.T) {
 	p := TypedFolder[testState]{
 		Assert: func(state any) (testState, error) {
 			return testState{}, nil
 		},
-		Fold: func(s testState, evt event.Event) (testState, error) {
+		FoldFn: func(s testState, evt event.Event) (testState, error) {
 			return s, errors.New("fold failed")
 		},
 		Types: func() []event.Type { return nil },
 	}
 
-	_, err := p.Apply(nil, event.Event{})
+	_, err := p.Fold(nil, event.Event{})
 	if err == nil {
 		t.Fatal("expected error from fold")
 	}
@@ -104,25 +104,25 @@ func TestTypedFolder_FoldHandledTypes(t *testing.T) {
 	}
 }
 
-func TestTypedFolder_Apply_NilAssertReturnsError(t *testing.T) {
+func TestTypedFolder_Fold_NilAssertReturnsError(t *testing.T) {
 	p := TypedFolder[testState]{
-		Fold:  func(s testState, _ event.Event) (testState, error) { return s, nil },
-		Types: func() []event.Type { return nil },
+		FoldFn: func(s testState, _ event.Event) (testState, error) { return s, nil },
+		Types:  func() []event.Type { return nil },
 	}
-	_, err := p.Apply(nil, event.Event{})
+	_, err := p.Fold(nil, event.Event{})
 	if err == nil {
 		t.Fatal("expected error for nil Assert")
 	}
 }
 
-func TestTypedFolder_Apply_NilFoldReturnsError(t *testing.T) {
+func TestTypedFolder_Fold_NilFoldFnReturnsError(t *testing.T) {
 	p := TypedFolder[testState]{
 		Assert: func(any) (testState, error) { return testState{}, nil },
 		Types:  func() []event.Type { return nil },
 	}
-	_, err := p.Apply(nil, event.Event{})
+	_, err := p.Fold(nil, event.Event{})
 	if err == nil {
-		t.Fatal("expected error for nil Fold")
+		t.Fatal("expected error for nil FoldFn")
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -457,12 +456,12 @@ func TestValidateAdapterEventCoverage_FailsOnMissingHandler(t *testing.T) {
 }
 
 type fakeAdapterForCoverage struct {
-	id           commonv1.GameSystem
+	id           string
 	version      string
 	handledTypes []event.Type
 }
 
-func (a fakeAdapterForCoverage) ID() commonv1.GameSystem                           { return a.id }
+func (a fakeAdapterForCoverage) ID() string                                        { return a.id }
 func (a fakeAdapterForCoverage) Version() string                                   { return a.version }
 func (a fakeAdapterForCoverage) Apply(_ context.Context, _ event.Event) error      { return nil }
 func (a fakeAdapterForCoverage) Snapshot(_ context.Context, _ string) (any, error) { return nil, nil }
@@ -472,7 +471,7 @@ func buildFakeAdapterRegistry(t *testing.T, handledTypes []event.Type) *systems.
 	t.Helper()
 	registry := systems.NewAdapterRegistry()
 	if err := registry.Register(fakeAdapterForCoverage{
-		id:           commonv1.GameSystem(999),
+		id:           "system-1",
 		version:      "v1",
 		handledTypes: handledTypes,
 	}); err != nil {
@@ -613,7 +612,7 @@ type fakeFolderWithFoldTypes struct {
 	handled []event.Type
 }
 
-func (p *fakeFolderWithFoldTypes) Apply(state any, _ event.Event) (any, error) {
+func (p *fakeFolderWithFoldTypes) Fold(state any, _ event.Event) (any, error) {
 	return state, nil
 }
 
@@ -797,5 +796,101 @@ func TestBuildRegistries_SyntheticModuleRejectsLegacyActionPrefix(t *testing.T) 
 	}
 	if !strings.Contains(err.Error(), "sys.alpha.") {
 		t.Fatalf("expected sys.alpha prefix guidance, got %v", err)
+	}
+}
+
+// --- Intent-guard validator tests ---
+
+func TestValidateNoFoldHandlersForAuditOnlyEvents_PassesWhenClean(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.projected"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	// The fold handler covers a projection-and-replay event — no conflict.
+	foldHandled := []event.Type{event.Type("test.projected")}
+	if err := ValidateNoFoldHandlersForAuditOnlyEvents(eventRegistry, foldHandled); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateNoFoldHandlersForAuditOnlyEvents_RejectsDeadHandler(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.audit_event"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentAuditOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	// A fold handler exists for an audit-only event — dead code.
+	foldHandled := []event.Type{event.Type("test.audit_event")}
+	err := ValidateNoFoldHandlersForAuditOnlyEvents(eventRegistry, foldHandled)
+	if err == nil {
+		t.Fatal("expected error for fold handler on audit-only event")
+	}
+	if !strings.Contains(err.Error(), "test.audit_event") {
+		t.Fatalf("expected error to mention type, got: %v", err)
+	}
+}
+
+func TestValidateNoProjectionHandlersForNonProjectionEvents_PassesWhenClean(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.projected"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	projectionHandled := []event.Type{event.Type("test.projected")}
+	if err := ValidateNoProjectionHandlersForNonProjectionEvents(eventRegistry, projectionHandled); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateNoProjectionHandlersForNonProjectionEvents_RejectsAuditOnlyHandler(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.audit_event"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentAuditOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	projectionHandled := []event.Type{event.Type("test.audit_event")}
+	err := ValidateNoProjectionHandlersForNonProjectionEvents(eventRegistry, projectionHandled)
+	if err == nil {
+		t.Fatal("expected error for projection handler on audit-only event")
+	}
+	if !strings.Contains(err.Error(), "test.audit_event") {
+		t.Fatalf("expected error to mention type, got: %v", err)
+	}
+}
+
+func TestValidateNoProjectionHandlersForNonProjectionEvents_RejectsReplayOnlyHandler(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.replay_event"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentReplayOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	projectionHandled := []event.Type{event.Type("test.replay_event")}
+	err := ValidateNoProjectionHandlersForNonProjectionEvents(eventRegistry, projectionHandled)
+	if err == nil {
+		t.Fatal("expected error for projection handler on replay-only event")
+	}
+	if !strings.Contains(err.Error(), "test.replay_event") {
+		t.Fatalf("expected error to mention type, got: %v", err)
 	}
 }

@@ -49,7 +49,7 @@ func TestFolderApply_UpdatesSessionGateState(t *testing.T) {
 
 type fakeSystemFolder struct{}
 
-func (fakeSystemFolder) Apply(state any, _ event.Event) (any, error) {
+func (fakeSystemFolder) Fold(state any, _ event.Event) (any, error) {
 	count := 0
 	if existing, ok := state.(int); ok {
 		count = existing
@@ -170,6 +170,48 @@ func TestFolderFoldDispatchedTypes_ReturnsNonEmpty(t *testing.T) {
 			t.Fatalf("duplicate dispatched type: %s", et)
 		}
 		seen[et] = true
+	}
+}
+
+func TestFolderFold_ReturnsErrorForEmptyEntityID_Participant(t *testing.T) {
+	applier := Folder{}
+	state := State{}
+
+	_, err := applier.Fold(state, event.Event{
+		Type:        event.Type("participant.joined"),
+		EntityID:    "", // empty — should error
+		PayloadJSON: []byte(`{"participant_id":"p-1","display_name":"Test","role":"PLAYER","controller":"HUMAN","campaign_access":"EDIT"}`),
+	})
+	if err == nil {
+		t.Fatal("expected error for empty EntityID on entity-keyed fold")
+	}
+}
+
+func TestFolderFold_ReturnsErrorForEmptyEntityID_Character(t *testing.T) {
+	applier := Folder{}
+	state := State{}
+
+	_, err := applier.Fold(state, event.Event{
+		Type:        event.Type("character.created"),
+		EntityID:    "",
+		PayloadJSON: []byte(`{"character_id":"c-1","display_name":"Hero","system_id":"daggerheart","system_version":"v1"}`),
+	})
+	if err == nil {
+		t.Fatal("expected error for empty EntityID on entity-keyed fold")
+	}
+}
+
+func TestFolderFold_ReturnsErrorForEmptyEntityID_Invite(t *testing.T) {
+	applier := Folder{}
+	state := State{}
+
+	_, err := applier.Fold(state, event.Event{
+		Type:        event.Type("invite.created"),
+		EntityID:    "",
+		PayloadJSON: []byte(`{"invite_id":"inv-1","participant_id":"p-1","status":"pending"}`),
+	})
+	if err == nil {
+		t.Fatal("expected error for empty EntityID on entity-keyed fold")
 	}
 }
 

@@ -8,13 +8,12 @@ import (
 	"strings"
 	"sync"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
 // Adapter applies system events to system-specific projections.
 type Adapter interface {
-	ID() commonv1.GameSystem
+	ID() string
 	Version() string
 	Apply(context.Context, event.Event) error
 	Snapshot(context.Context, string) (any, error)
@@ -35,13 +34,13 @@ type ProfileAdapter interface {
 // AdapterRegistry routes system adapters by system ID + version.
 type AdapterRegistry struct {
 	adapters map[systemKey]Adapter
-	defaults map[commonv1.GameSystem]string
+	defaults map[string]string
 	mu       sync.RWMutex
 }
 
 // systemKey identifies a specific system version.
 type systemKey struct {
-	ID      commonv1.GameSystem
+	ID      string
 	Version string
 }
 
@@ -62,7 +61,7 @@ var (
 func NewAdapterRegistry() *AdapterRegistry {
 	return &AdapterRegistry{
 		adapters: make(map[systemKey]Adapter),
-		defaults: make(map[commonv1.GameSystem]string),
+		defaults: make(map[string]string),
 	}
 }
 
@@ -107,7 +106,7 @@ func (r *AdapterRegistry) Adapters() []Adapter {
 
 // Get returns the adapter for the system + version, or nil when not found.
 // Use GetRequired when the caller cannot proceed without an adapter.
-func (r *AdapterRegistry) Get(id commonv1.GameSystem, version string) Adapter {
+func (r *AdapterRegistry) Get(id string, version string) Adapter {
 	if r == nil {
 		return nil
 	}
@@ -126,7 +125,7 @@ func (r *AdapterRegistry) Get(id commonv1.GameSystem, version string) Adapter {
 // GetRequired returns the adapter for the system + version, or a typed error
 // when no adapter is registered. Use this on paths where a missing adapter
 // indicates a configuration bug (e.g., system event projection routing).
-func (r *AdapterRegistry) GetRequired(id commonv1.GameSystem, version string) (Adapter, error) {
+func (r *AdapterRegistry) GetRequired(id string, version string) (Adapter, error) {
 	if r == nil {
 		return nil, ErrAdapterRegistryNil
 	}

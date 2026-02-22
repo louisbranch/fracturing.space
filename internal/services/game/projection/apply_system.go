@@ -12,14 +12,11 @@ func (a Applier) applySystemEvent(ctx context.Context, evt event.Event) error {
 	if a.Adapters == nil {
 		return fmt.Errorf("system adapters are not configured")
 	}
-	if strings.TrimSpace(evt.SystemID) == "" {
+	systemID := strings.TrimSpace(evt.SystemID)
+	if systemID == "" {
 		return fmt.Errorf("system_id is required for system events")
 	}
-	gameSystem, err := parseGameSystem(evt.SystemID)
-	if err != nil {
-		return err
-	}
-	adapter, err := a.Adapters.GetRequired(gameSystem, evt.SystemVersion)
+	adapter, err := a.Adapters.GetRequired(systemID, evt.SystemVersion)
 	if err != nil {
 		return err
 	}

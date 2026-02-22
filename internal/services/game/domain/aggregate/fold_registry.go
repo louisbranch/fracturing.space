@@ -1,6 +1,8 @@
 package aggregate
 
 import (
+	"fmt"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -63,7 +65,7 @@ func coreFoldEntries() []foldEntry {
 			types: participant.FoldHandledTypes,
 			fold: func(state *State, evt event.Event) error {
 				if evt.EntityID == "" {
-					return nil
+					return fmt.Errorf("participant fold requires EntityID but got empty for %s", evt.Type)
 				}
 				if state.Participants == nil {
 					state.Participants = make(map[string]participant.State)
@@ -81,7 +83,7 @@ func coreFoldEntries() []foldEntry {
 			types: character.FoldHandledTypes,
 			fold: func(state *State, evt event.Event) error {
 				if evt.EntityID == "" {
-					return nil
+					return fmt.Errorf("character fold requires EntityID but got empty for %s", evt.Type)
 				}
 				if state.Characters == nil {
 					state.Characters = make(map[string]character.State)
@@ -99,7 +101,7 @@ func coreFoldEntries() []foldEntry {
 			types: invite.FoldHandledTypes,
 			fold: func(state *State, evt event.Event) error {
 				if evt.EntityID == "" {
-					return nil
+					return fmt.Errorf("invite fold requires EntityID but got empty for %s", evt.Type)
 				}
 				if state.Invites == nil {
 					state.Invites = make(map[string]invite.State)

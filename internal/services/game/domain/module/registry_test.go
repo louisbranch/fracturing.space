@@ -71,7 +71,7 @@ type stubFolder struct {
 	err    error
 }
 
-func (p *stubFolder) Apply(state any, evt event.Event) (any, error) {
+func (p *stubFolder) Fold(state any, evt event.Event) (any, error) {
 	p.called = true
 	p.state = state
 	p.evt = evt

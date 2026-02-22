@@ -48,6 +48,10 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 	}
 
 	moduleKeys := make(map[string]struct{}, len(modules))
+	// enumToModuleID maps protobuf enum IDs to string module IDs so the
+	// metadata loop (which iterates enum-keyed GameSystem values) can look
+	// up string-keyed adapters.
+	enumToModuleID := make(map[commonv1.GameSystem]string, len(modules))
 	for _, module := range modules {
 		if module == nil {
 			return fmt.Errorf("%w: module is nil", errSystemModuleRegistryMismatch)
@@ -61,11 +65,12 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 		if err != nil {
 			return fmt.Errorf("%w: %v", errSystemModuleRegistryMismatch, err)
 		}
-		moduleKeys[systemParityKey(gameSystem, moduleVersion)] = struct{}{}
+		moduleKeys[systemParityKey(moduleID, moduleVersion)] = struct{}{}
+		enumToModuleID[gameSystem] = moduleID
 		if metadata.GetVersion(gameSystem, moduleVersion) == nil {
 			return fmt.Errorf("%w: metadata missing for module %s@%s", errSystemModuleRegistryMismatch, moduleID, moduleVersion)
 		}
-		if adapters.Get(gameSystem, moduleVersion) == nil {
+		if adapters.Get(moduleID, moduleVersion) == nil {
 			return fmt.Errorf("%w: adapter missing for module %s@%s", errSystemModuleRegistryMismatch, moduleID, moduleVersion)
 		}
 	}
@@ -75,11 +80,15 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 			continue
 		}
 		version := strings.TrimSpace(gameSystem.Version())
-		key := systemParityKey(gameSystem.ID(), version)
+		moduleID, ok := enumToModuleID[gameSystem.ID()]
+		if !ok {
+			return fmt.Errorf("%w: metadata registered without module %s@%s", errSystemModuleRegistryMismatch, gameSystem.ID(), version)
+		}
+		key := systemParityKey(moduleID, version)
 		if _, ok := moduleKeys[key]; !ok {
 			return fmt.Errorf("%w: metadata registered without module %s@%s", errSystemModuleRegistryMismatch, gameSystem.ID(), version)
 		}
-		if adapters.Get(gameSystem.ID(), version) == nil {
+		if adapters.Get(moduleID, version) == nil {
 			return fmt.Errorf("%w: adapter missing for metadata %s@%s", errSystemModuleRegistryMismatch, gameSystem.ID(), version)
 		}
 	}
@@ -103,6 +112,6 @@ func parseGameSystemID(raw string) (commonv1.GameSystem, error) {
 }
 
 // systemParityKey normalizes system+version into a single key for cross-registry comparison.
-func systemParityKey(id commonv1.GameSystem, version string) string {
-	return fmt.Sprintf("%d@%s", id, strings.TrimSpace(version))
+func systemParityKey(id string, version string) string {
+	return id + "@" + strings.TrimSpace(version)
 }

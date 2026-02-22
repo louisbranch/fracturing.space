@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -23,8 +22,8 @@ func NewAdapter(store storage.DaggerheartStore) *Adapter {
 }
 
 // ID returns the Daggerheart system identifier.
-func (a *Adapter) ID() commonv1.GameSystem {
-	return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
+func (a *Adapter) ID() string {
+	return SystemID
 }
 
 // Version returns the Daggerheart system version.
