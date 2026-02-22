@@ -17,14 +17,22 @@ import (
 )
 
 type fakeUserStore struct {
-	users   map[string]user.User
-	putErr  error
-	getErr  error
-	listErr error
+	users    map[string]user.User
+	contacts map[string]map[string]storage.Contact
+	putErr   error
+	getErr   error
+	listErr  error
+}
+
+type userOnlyStore struct {
+	users map[string]user.User
 }
 
 func newFakeUserStore() *fakeUserStore {
-	return &fakeUserStore{users: make(map[string]user.User)}
+	return &fakeUserStore{
+		users:    make(map[string]user.User),
+		contacts: make(map[string]map[string]storage.Contact),
+	}
 }
 
 func (s *fakeUserStore) PutUser(_ context.Context, u user.User) error {
@@ -55,6 +63,67 @@ func (s *fakeUserStore) ListUsers(_ context.Context, pageSize int, pageToken str
 		users = append(users, u)
 	}
 	return storage.UserPage{Users: users, NextPageToken: ""}, nil
+}
+
+func (s *userOnlyStore) PutUser(_ context.Context, u user.User) error {
+	s.users[u.ID] = u
+	return nil
+}
+
+func (s *userOnlyStore) GetUser(_ context.Context, userID string) (user.User, error) {
+	u, ok := s.users[userID]
+	if !ok {
+		return user.User{}, storage.ErrNotFound
+	}
+	return u, nil
+}
+
+func (s *userOnlyStore) ListUsers(_ context.Context, pageSize int, pageToken string) (storage.UserPage, error) {
+	users := make([]user.User, 0, len(s.users))
+	for _, u := range s.users {
+		users = append(users, u)
+	}
+	return storage.UserPage{Users: users}, nil
+}
+
+func (s *fakeUserStore) PutContact(_ context.Context, contact storage.Contact) error {
+	if _, ok := s.contacts[contact.OwnerUserID]; !ok {
+		s.contacts[contact.OwnerUserID] = make(map[string]storage.Contact)
+	}
+	s.contacts[contact.OwnerUserID][contact.ContactUserID] = contact
+	return nil
+}
+
+func (s *fakeUserStore) GetContact(_ context.Context, ownerUserID string, contactUserID string) (storage.Contact, error) {
+	byOwner, ok := s.contacts[ownerUserID]
+	if !ok {
+		return storage.Contact{}, storage.ErrNotFound
+	}
+	contact, ok := byOwner[contactUserID]
+	if !ok {
+		return storage.Contact{}, storage.ErrNotFound
+	}
+	return contact, nil
+}
+
+func (s *fakeUserStore) DeleteContact(_ context.Context, ownerUserID string, contactUserID string) error {
+	if byOwner, ok := s.contacts[ownerUserID]; ok {
+		delete(byOwner, contactUserID)
+	}
+	return nil
+}
+
+func (s *fakeUserStore) ListContacts(_ context.Context, ownerUserID string, pageSize int, pageToken string) (storage.ContactPage, error) {
+	all := make([]storage.Contact, 0)
+	if byOwner, ok := s.contacts[ownerUserID]; ok {
+		for _, contact := range byOwner {
+			all = append(all, contact)
+		}
+	}
+	return storage.ContactPage{
+		Contacts:      all,
+		NextPageToken: "",
+	}, nil
 }
 
 func TestCreateUser_NilRequest(t *testing.T) {
@@ -238,6 +307,148 @@ func TestIssueJoinGrant_Success(t *testing.T) {
 	}
 	if claims.JWTID != resp.GetJti() {
 		t.Fatalf("jti = %s, want %s", claims.JWTID, resp.GetJti())
+	}
+}
+
+func TestAddContact_NilRequest(t *testing.T) {
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	_, err := svc.AddContact(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestAddContact_RequiresContactStore(t *testing.T) {
+	store := &userOnlyStore{users: make(map[string]user.User)}
+	svc := NewAuthService(store, nil, nil)
+	_, err := svc.AddContact(context.Background(), &authv1.AddContactRequest{
+		OwnerUserId:   "user-1",
+		ContactUserId: "user-2",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestAddContact_SelfContactRejected(t *testing.T) {
+	store := newFakeUserStore()
+	store.users["user-1"] = user.User{ID: "user-1", Email: "alpha@example.com", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	svc := NewAuthService(store, nil, nil)
+
+	_, err := svc.AddContact(context.Background(), &authv1.AddContactRequest{
+		OwnerUserId:   "user-1",
+		ContactUserId: "user-1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestAddContact_SuccessAndIdempotent(t *testing.T) {
+	store := newFakeUserStore()
+	now := time.Date(2026, 2, 21, 20, 30, 0, 0, time.UTC)
+	store.users["user-1"] = user.User{ID: "user-1", Email: "alpha@example.com", CreatedAt: now, UpdatedAt: now}
+	store.users["user-2"] = user.User{ID: "user-2", Email: "beta@example.com", CreatedAt: now, UpdatedAt: now}
+	svc := NewAuthService(store, nil, nil)
+	svc.clock = func() time.Time { return now }
+
+	for range 2 {
+		resp, err := svc.AddContact(context.Background(), &authv1.AddContactRequest{
+			OwnerUserId:   "user-1",
+			ContactUserId: "user-2",
+		})
+		if err != nil {
+			t.Fatalf("add contact: %v", err)
+		}
+		if resp.GetContact() == nil {
+			t.Fatal("expected contact in response")
+		}
+	}
+
+	listResp, err := svc.ListContacts(context.Background(), &authv1.ListContactsRequest{
+		OwnerUserId: "user-1",
+		PageSize:    10,
+	})
+	if err != nil {
+		t.Fatalf("list contacts: %v", err)
+	}
+	if len(listResp.GetContacts()) != 1 {
+		t.Fatalf("contacts len = %d, want 1", len(listResp.GetContacts()))
+	}
+}
+
+func TestAddContact_IdempotentResponsePreservesOriginalCreatedAt(t *testing.T) {
+	store := openTempAuthStore(t)
+	now := time.Date(2026, 2, 21, 20, 32, 0, 0, time.UTC)
+	later := now.Add(5 * time.Minute)
+
+	for _, u := range []user.User{
+		{ID: "user-1", Email: "user1@example.com", CreatedAt: now, UpdatedAt: now},
+		{ID: "user-2", Email: "user2@example.com", CreatedAt: now, UpdatedAt: now},
+	} {
+		if err := store.PutUser(context.Background(), u); err != nil {
+			t.Fatalf("put user %s: %v", u.ID, err)
+		}
+	}
+
+	svc := NewAuthService(store, store, nil)
+	svc.clock = func() time.Time { return now }
+
+	firstResp, err := svc.AddContact(context.Background(), &authv1.AddContactRequest{
+		OwnerUserId:   "user-1",
+		ContactUserId: "user-2",
+	})
+	if err != nil {
+		t.Fatalf("first add contact: %v", err)
+	}
+
+	svc.clock = func() time.Time { return later }
+	secondResp, err := svc.AddContact(context.Background(), &authv1.AddContactRequest{
+		OwnerUserId:   "user-1",
+		ContactUserId: "user-2",
+	})
+	if err != nil {
+		t.Fatalf("second add contact: %v", err)
+	}
+
+	firstCreated := firstResp.GetContact().GetCreatedAt().AsTime()
+	secondCreated := secondResp.GetContact().GetCreatedAt().AsTime()
+	if !secondCreated.Equal(firstCreated) {
+		t.Fatalf("created_at = %v, want %v", secondCreated, firstCreated)
+	}
+	if gotUpdated := secondResp.GetContact().GetUpdatedAt().AsTime(); !gotUpdated.Equal(later) {
+		t.Fatalf("updated_at = %v, want %v", gotUpdated, later)
+	}
+}
+
+func TestRemoveContact_Idempotent(t *testing.T) {
+	store := newFakeUserStore()
+	now := time.Date(2026, 2, 21, 20, 31, 0, 0, time.UTC)
+	store.users["user-1"] = user.User{ID: "user-1", Email: "alpha@example.com", CreatedAt: now, UpdatedAt: now}
+	store.users["user-2"] = user.User{ID: "user-2", Email: "beta@example.com", CreatedAt: now, UpdatedAt: now}
+	svc := NewAuthService(store, nil, nil)
+	svc.clock = func() time.Time { return now }
+
+	_, err := svc.AddContact(context.Background(), &authv1.AddContactRequest{
+		OwnerUserId:   "user-1",
+		ContactUserId: "user-2",
+	})
+	if err != nil {
+		t.Fatalf("seed contact: %v", err)
+	}
+
+	for range 2 {
+		if _, err := svc.RemoveContact(context.Background(), &authv1.RemoveContactRequest{
+			OwnerUserId:   "user-1",
+			ContactUserId: "user-2",
+		}); err != nil {
+			t.Fatalf("remove contact: %v", err)
+		}
+	}
+
+	listResp, err := svc.ListContacts(context.Background(), &authv1.ListContactsRequest{
+		OwnerUserId: "user-1",
+		PageSize:    10,
+	})
+	if err != nil {
+		t.Fatalf("list contacts: %v", err)
+	}
+	if len(listResp.GetContacts()) != 0 {
+		t.Fatalf("contacts len = %d, want 0", len(listResp.GetContacts()))
 	}
 }
 

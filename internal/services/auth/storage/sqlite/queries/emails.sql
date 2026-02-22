@@ -6,8 +6,9 @@ ON CONFLICT(email) DO UPDATE SET
     user_id = excluded.user_id,
     is_primary = user_emails.is_primary,
     verified_at = excluded.verified_at,
-    updated_at = excluded.updated_at
+    updated_at = excluded.updated_at;
 
+-- name: PutUserPrimaryEmail :exec
 INSERT INTO user_emails (
     id, user_id, email, is_primary, verified_at, created_at, updated_at
 ) VALUES (?, ?, ?, 1, ?, ?, ?)

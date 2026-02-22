@@ -29,6 +29,9 @@ type fakeWebParticipantClient struct {
 }
 
 func (f *fakeWebParticipantClient) ListParticipants(ctx context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	if f.err != nil {
 		return nil, f.err
 	}
