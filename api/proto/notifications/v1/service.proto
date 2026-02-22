@@ -6,6 +6,13 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1;notificationsv1";
 
+// NotificationSource identifies the producer class for one notification.
+enum NotificationSource {
+  NOTIFICATION_SOURCE_UNSPECIFIED = 0;
+  // SYSTEM is the internal catch-all source (e.g. onboarding welcome).
+  NOTIFICATION_SOURCE_SYSTEM = 1;
+}
+
 // NotificationService manages user notification inbox lifecycle.
 service NotificationService {
   // CreateNotificationIntent appends one user-targeted notification intent.
@@ -25,7 +32,7 @@ message Notification {
   string topic = 3;
   string payload_json = 4;
   string dedupe_key = 5;
-  string source = 6;
+  NotificationSource source = 6;
   google.protobuf.Timestamp created_at = 7;
   google.protobuf.Timestamp updated_at = 8;
   google.protobuf.Timestamp read_at = 9;
@@ -36,7 +43,7 @@ message CreateNotificationIntentRequest {
   string topic = 2;
   string payload_json = 3;
   string dedupe_key = 4;
-  string source = 5;
+  NotificationSource source = 5;
 }
 
 message CreateNotificationIntentResponse {

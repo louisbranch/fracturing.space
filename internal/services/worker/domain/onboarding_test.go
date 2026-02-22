@@ -36,8 +36,8 @@ func TestOnboardingWelcomeHandler_HandleSuccess(t *testing.T) {
 	if notif.lastCreateReq.GetTopic() != "auth.onboarding.welcome" {
 		t.Fatalf("topic = %q, want %q", notif.lastCreateReq.GetTopic(), "auth.onboarding.welcome")
 	}
-	if notif.lastCreateReq.GetSource() != "auth" {
-		t.Fatalf("source = %q, want %q", notif.lastCreateReq.GetSource(), "auth")
+	if got := notif.lastCreateReq.GetSource(); got != notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM {
+		t.Fatalf("source = %v, want %v", got, notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM)
 	}
 	if notif.lastCreateReq.GetDedupeKey() != "welcome:user:user-1:v1" {
 		t.Fatalf("dedupe key = %q, want %q", notif.lastCreateReq.GetDedupeKey(), "welcome:user:user-1:v1")

@@ -17,8 +17,8 @@ import (
 const (
 	// OnboardingWelcomeTopic is the canonical topic for signup welcome notifications.
 	OnboardingWelcomeTopic = "auth.onboarding.welcome"
-	// OnboardingWelcomeSource identifies auth as the producer.
-	OnboardingWelcomeSource = "auth"
+	// OnboardingWelcomeSource is the internal catch-all notification source.
+	OnboardingWelcomeSource = notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM
 )
 
 type notificationIntentClient interface {

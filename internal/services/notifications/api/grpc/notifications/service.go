@@ -20,6 +20,8 @@ type domainService interface {
 	MarkRead(ctx context.Context, input domain.MarkReadInput) (domain.Notification, error)
 }
 
+const sourceSystem = "system"
+
 // Service exposes notifications.v1 gRPC operations.
 type Service struct {
 	notificationsv1.UnimplementedNotificationServiceServer
@@ -45,7 +47,7 @@ func (s *Service) CreateNotificationIntent(ctx context.Context, in *notification
 		Topic:           in.GetTopic(),
 		PayloadJSON:     in.GetPayloadJson(),
 		DedupeKey:       in.GetDedupeKey(),
-		Source:          in.GetSource(),
+		Source:          sourceFromProto(in.GetSource()),
 	})
 	if err != nil {
 		return nil, mapDomainError(err)
@@ -147,7 +149,7 @@ func notificationToProto(notification domain.Notification) *notificationsv1.Noti
 		Topic:           notification.Topic,
 		PayloadJson:     notification.PayloadJSON,
 		DedupeKey:       notification.DedupeKey,
-		Source:          notification.Source,
+		Source:          sourceToProto(notification.Source),
 		CreatedAt:       timestamppb.New(notification.CreatedAt),
 		UpdatedAt:       timestamppb.New(notification.UpdatedAt),
 	}
@@ -155,6 +157,24 @@ func notificationToProto(notification domain.Notification) *notificationsv1.Noti
 		result.ReadAt = timestamppb.New(*notification.ReadAt)
 	}
 	return result
+}
+
+func sourceFromProto(source notificationsv1.NotificationSource) string {
+	switch source {
+	case notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM:
+		return sourceSystem
+	default:
+		return sourceSystem
+	}
+}
+
+func sourceToProto(source string) notificationsv1.NotificationSource {
+	switch strings.ToLower(strings.TrimSpace(source)) {
+	case "", sourceSystem:
+		return notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM
+	default:
+		return notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM
+	}
 }
 
 func mapDomainError(err error) error {
