@@ -520,7 +520,7 @@ func TestCampaignCoverImageURL_UsesExternalAssetBaseURLWhenConfigured(t *testing
 	}
 }
 
-func TestCampaignCoverImageURL_UsesCloudinaryTransformForCardSize(t *testing.T) {
+func TestCampaignCoverImageURL_UsesCloudinaryBasePathWithoutResize(t *testing.T) {
 	got := campaignCoverImageURL(
 		Config{
 			AssetBaseURL: "https://res.cloudinary.com/fracturing-space/image/upload",
@@ -529,7 +529,7 @@ func TestCampaignCoverImageURL_UsesCloudinaryTransformForCardSize(t *testing.T) 
 		catalog.CampaignCoverSetV1,
 		"abandoned_castle_courtyard",
 	)
-	want := "https://res.cloudinary.com/fracturing-space/image/upload/f_auto,q_auto,dpr_auto,c_limit,w_768/abandoned_castle_courtyard.png"
+	want := "https://res.cloudinary.com/fracturing-space/image/upload/abandoned_castle_courtyard.png"
 	if got != want {
 		t.Fatalf("campaignCoverImageURL(...) = %q, want %q", got, want)
 	}

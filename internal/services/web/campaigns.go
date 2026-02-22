@@ -266,7 +266,6 @@ func renderAppCampaignsListPageWithConfig(w http.ResponseWriter, r *http.Request
 
 const (
 	campaignThemePromptLimit = 80
-	campaignCoverCardWidthPX = 768
 )
 
 var webCampaignCoverManifest = catalog.CampaignCoverManifest()
@@ -287,9 +286,6 @@ func campaignCoverImageURL(config Config, campaignID, coverSetID, coverAssetID s
 	resolvedAssetURL, err := imagecdn.New(config.AssetBaseURL).URL(imagecdn.Request{
 		AssetID:   resolvedCoverAssetID,
 		Extension: ".png",
-		Delivery: &imagecdn.Delivery{
-			WidthPX: campaignCoverCardWidthPX,
-		},
 	})
 	if err == nil {
 		return resolvedAssetURL

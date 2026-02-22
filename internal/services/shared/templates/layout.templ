@@ -3,6 +3,7 @@ package templates
 import (
 	"strings"
 
+	"github.com/a-h/templ"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"golang.org/x/text/message"
 
@@ -13,13 +14,19 @@ type Localizer interface {
 	Sprintf(key message.Reference, args ...any) string
 }
 
+const defaultTheme = "abyss"
+const defaultThemeStylesheet = "https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/" + defaultTheme + ".css"
+
 type ChromeLayoutOptions struct {
 	Theme         string
 	DataLayout    string
 	MainAria      string
+	MainStyle     string
+	MainClass     string
 	Nav           templ.Component
 	HeadExtras    templ.Component
 	BodyScripts   templ.Component
+	SideMenu      templ.Component
 	UserName      string
 	UserAvatarURL string
 }
@@ -70,19 +77,33 @@ func pageHeadingFromTitle(title string, appName string) string {
 	return heading
 }
 
+func chromeMainClassFromStyle(mainStyle, mainClass string) string {
+	mainStyle = strings.TrimSpace(mainStyle)
+	mainClass = strings.TrimSpace(mainClass)
+
+	baseClasses := "max-w-screen-xl mx-auto px-4 pt-20 flex-1"
+	if mainStyle != "" {
+		baseClasses = "w-full max-w-none px-0 pt-20 flex-1"
+	}
+	if mainClass != "" {
+		baseClasses = baseClasses + " " + mainClass
+	}
+	return baseClasses
+}
+
 templ pageHead(title string, loc Localizer) {
 	<meta charset="utf-8"/>
 	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<title>{ ComposePageTitle(title) }</title>
 	<meta name="description" content={ T(loc, "layout.meta_description") }/>
 	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18" rel="stylesheet" type="text/css" integrity="sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq" crossorigin="anonymous"/>
-	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/retro.css" rel="stylesheet" type="text/css" crossorigin="anonymous"/>
+	<link href={ defaultThemeStylesheet } rel="stylesheet" type="text/css" crossorigin="anonymous"/>
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18" integrity="sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij" crossorigin="anonymous"></script>
 }
 
 templ ShellLayout(title string, lang string, loc Localizer) {
 	<!DOCTYPE html>
-	<html lang={ lang } data-theme="retro">
+	<html lang={ lang } data-theme={ defaultTheme }>
 		<head>
 			@pageHead(title, loc)
 			<link rel="stylesheet" href="/static/shell.css"/>
@@ -107,7 +128,7 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 				@options.ChromeOptions.HeadExtras
 			}
 		</head>
-		<body data-layout={ chromeDataLayout(options.ChromeOptions) }>
+		<body class="min-h-[100dvh] flex flex-col" data-layout={ chromeDataLayout(options.ChromeOptions) }>
 			@LucideSprite()
 			if options.ChromeOptions.Nav != nil {
 				@options.ChromeOptions.Nav
@@ -190,16 +211,55 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 					</div>
 				</nav>
 			}
-			<main class="max-w-screen-xl mx-auto px-4 pt-20" id="main" aria-label={ chromeMainAria(options.Loc, options.ChromeOptions) }>
+			<main
+				class={ chromeMainClassFromStyle(options.ChromeOptions.MainStyle, options.ChromeOptions.MainClass) }
+				style={ options.ChromeOptions.MainStyle }
+				data-default-style={ options.ChromeOptions.MainStyle }
+				id="main"
+				data-default-class={ chromeMainClassFromStyle(options.ChromeOptions.MainStyle, options.ChromeOptions.MainClass) }
+				aria-label={ chromeMainAria(options.Loc, options.ChromeOptions) }
+			>
 				if len(options.Breadcrumbs) > 0 {
 					@Breadcrumbs(options.Breadcrumbs, false)
 				}
-				<h1 class="mb-5">{ pageHeadingFromTitle(options.Title, options.AppName) }</h1>
+			<h1 class="mb-5">{ pageHeadingFromTitle(options.Title, options.AppName) }</h1>
+			if options.ChromeOptions.SideMenu != nil {
+				<div class="grid gap-6 lg:grid-cols-[16rem_1fr]">
+					<aside class="h-fit">
+						@options.ChromeOptions.SideMenu
+					</aside>
+					{ children... }
+				</div>
+			} else {
 				{ children... }
-			</main>
+			}
+		</main>
 			<script>
-			function syncChromeNavActiveLinks() {
-				var currentPath = window.location.pathname;
+			function chromeCurrentPath(pathname) {
+				if (!pathname) {
+					return window.location.pathname || "/";
+				}
+				if (typeof pathname === "object") {
+					if (pathname instanceof URL && pathname.pathname) {
+						return pathname.pathname;
+					}
+					if (typeof pathname.pathname === "string") {
+						return pathname.pathname;
+					}
+					pathname = String(pathname);
+				}
+				if (typeof pathname !== "string" || pathname.charAt(0) !== "/") {
+					try {
+						return new URL(pathname, window.location.origin).pathname;
+					} catch (err) {
+						return window.location.pathname || "/";
+					}
+				}
+				return pathname;
+			}
+
+			function syncChromeNavActiveLinks(currentPath) {
+				currentPath = chromeCurrentPath(currentPath);
 				var links = document.querySelectorAll("a[data-nav-item]");
 				if (!links.length) {
 					return;
@@ -230,11 +290,139 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 					}
 				});
 			}
-			syncChromeNavActiveLinks();
-			document.addEventListener("DOMContentLoaded", syncChromeNavActiveLinks);
-			window.addEventListener("popstate", syncChromeNavActiveLinks);
-			document.addEventListener("htmx:afterSwap", syncChromeNavActiveLinks);
-			document.addEventListener("htmx:afterSettle", syncChromeNavActiveLinks);
+
+			var campaignWorkspaceRoutePattern = /^\/campaigns\/(?!create(?:\/|$))[^/]+(?:\/|$)/;
+			var fallbackMainClass = "max-w-screen-xl mx-auto px-4 pt-20 flex-1";
+			var campaignMainCoverClass = "w-full max-w-none px-0 pt-20 flex-1";
+
+			function isCampaignWorkspaceRoute(pathname) {
+				return campaignWorkspaceRoutePattern.test(chromeCurrentPath(pathname));
+			}
+
+			function campaignMainContainerClass(mainStyle, extraClass) {
+				var baseClass = fallbackMainClass;
+				if (mainStyle) {
+					baseClass = campaignMainCoverClass;
+				}
+				if (extraClass) {
+					baseClass = baseClass + " " + extraClass;
+				}
+				return baseClass;
+			}
+
+			function campaignMainMetadata(main) {
+				var metadata = main.querySelector("[data-campaign-main-style]");
+				if (!metadata) {
+					return null;
+				}
+
+				return {
+					style: metadata.getAttribute("data-campaign-main-style") || "",
+					extraClass: metadata.getAttribute("data-campaign-main-extra-class") || "",
+				};
+			}
+
+			function isCampaignMainStyle(style) {
+				return (
+					typeof style === "string" &&
+					style.indexOf("background-image: linear-gradient(to bottom") === 0
+				);
+			}
+
+			function syncCampaignMainState(main) {
+				var metadata = campaignMainMetadata(main);
+				var style = "";
+				var extraClass = "";
+
+				if (metadata) {
+					style = metadata.style;
+					extraClass = metadata.extraClass;
+				}
+				if (!style) {
+					style = main.getAttribute("data-default-style") || "";
+				}
+
+				main.setAttribute("style", style);
+				main.className = campaignMainContainerClass(style, extraClass);
+			}
+
+			function syncChromeMainStateForRoute(currentPath) {
+				var main = document.getElementById("main");
+				if (!main) {
+					return;
+				}
+
+				if (isCampaignWorkspaceRoute(currentPath)) {
+					syncCampaignMainState(main);
+					return;
+				}
+
+				var defaultStyle = main.getAttribute("data-default-style") || "";
+				var defaultClass = main.getAttribute("data-default-class") || fallbackMainClass;
+
+				if (isCampaignMainStyle(defaultStyle)) {
+					main.removeAttribute("style");
+					defaultClass = fallbackMainClass;
+				} else {
+					if (defaultStyle) {
+						main.setAttribute("style", defaultStyle);
+					} else {
+						main.removeAttribute("style");
+					}
+				}
+
+				if (main.className !== defaultClass) {
+					main.className = defaultClass;
+				}
+			}
+
+			function syncChromePathFromHtmxDetail(detail) {
+				if (!detail) {
+					return null;
+				}
+				if (detail.pathInfo && detail.pathInfo.requestPath) {
+					return detail.pathInfo.requestPath;
+				}
+				if (detail.requestConfig && detail.requestConfig.path) {
+					return detail.requestConfig.path;
+				}
+				if (detail.elt && typeof detail.elt.getAttribute === "function") {
+					var href = detail.elt.getAttribute("href") || detail.elt.getAttribute("hx-get");
+					if (href) {
+						return href;
+					}
+				}
+				if (detail.xhr && detail.xhr.responseURL) {
+					return detail.xhr.responseURL;
+				}
+				return null;
+			}
+
+			function syncChromeState(currentPath) {
+				syncChromeNavActiveLinks(currentPath);
+				syncChromeMainStateForRoute(currentPath);
+			}
+
+			syncChromeState();
+			document.addEventListener("DOMContentLoaded", function() {
+				syncChromeState();
+			});
+			window.addEventListener("popstate", function() {
+				syncChromeState();
+			});
+			document.addEventListener("htmx:beforeSwap", function(event) {
+				var nextPath = syncChromePathFromHtmxDetail(event && event.detail);
+				if (isCampaignWorkspaceRoute(nextPath)) {
+					return;
+				}
+				syncChromeState(nextPath);
+			});
+			document.addEventListener("htmx:afterSwap", function(event) {
+				syncChromeState(syncChromePathFromHtmxDetail(event && event.detail));
+			});
+			document.addEventListener("htmx:afterSettle", function(event) {
+				syncChromeState(syncChromePathFromHtmxDetail(event && event.detail));
+			});
 		</script>
 			if options.ChromeOptions.BodyScripts != nil {
 				@options.ChromeOptions.BodyScripts
@@ -246,7 +434,7 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 func chromeTheme(options ChromeLayoutOptions) string {
 	theme := strings.TrimSpace(options.Theme)
 	if theme == "" {
-		return "retro"
+		return defaultTheme
 	}
 	return theme
 }
