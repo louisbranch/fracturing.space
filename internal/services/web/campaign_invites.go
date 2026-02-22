@@ -20,6 +20,7 @@ import (
 var (
 	errRecipientUsernameRequired = errors.New("recipient username is required")
 	errConnectionsUnavailable    = errors.New("connections service is not configured")
+	errRecipientUsernameFormat   = errors.New("recipient username must start with @")
 )
 
 func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -99,20 +100,18 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 		return
 	}
 	lookupCtx := grpcauthctx.WithUserID(r.Context(), strings.TrimSpace(actor.GetUserId()))
+	if strings.EqualFold(strings.TrimSpace(r.FormValue("action")), "verify") {
+		verification, err := h.lookupInviteRecipientVerification(lookupCtx, strings.TrimSpace(r.FormValue("recipient_user_id")))
+		if err != nil {
+			h.renderInviteRecipientLookupError(w, r, err)
+			return
+		}
+		h.renderCampaignInvitesVerificationPage(w, r, campaignID, strings.TrimSpace(actor.GetUserId()), inviteActor.canManageInvites, verification)
+		return
+	}
 	recipientUserID, err := h.resolveInviteRecipientUserID(lookupCtx, strings.TrimSpace(r.FormValue("recipient_user_id")))
 	if err != nil {
-		switch {
-		case errors.Is(err, errRecipientUsernameRequired):
-			h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username is required")
-		case errors.Is(err, errConnectionsUnavailable):
-			h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Invite action unavailable", "connections service is not configured")
-		case status.Code(err) == codes.InvalidArgument:
-			h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username is invalid")
-		case status.Code(err) == codes.NotFound:
-			h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username was not found")
-		default:
-			h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Invite action unavailable", "failed to resolve invite recipient")
-		}
+		h.renderInviteRecipientLookupError(w, r, err)
 		return
 	}
 
@@ -128,6 +127,68 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 	}
 
 	http.Redirect(w, r, "/campaigns/"+campaignID+"/invites", http.StatusFound)
+}
+
+func (h *handler) renderInviteRecipientLookupError(w http.ResponseWriter, r *http.Request, err error) {
+	switch {
+	case errors.Is(err, errRecipientUsernameRequired):
+		h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username is required")
+	case errors.Is(err, errRecipientUsernameFormat):
+		h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username must start with @")
+	case errors.Is(err, errConnectionsUnavailable):
+		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Invite action unavailable", "connections service is not configured")
+	case status.Code(err) == codes.InvalidArgument:
+		h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username is invalid")
+	case status.Code(err) == codes.NotFound:
+		h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username was not found")
+	default:
+		h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Invite action unavailable", "failed to resolve invite recipient")
+	}
+}
+
+func (h *handler) lookupInviteRecipientVerification(ctx context.Context, recipientUserID string) (webtemplates.CampaignInviteVerification, error) {
+	recipientUserID = strings.TrimSpace(recipientUserID)
+	if recipientUserID == "" {
+		return webtemplates.CampaignInviteVerification{}, errRecipientUsernameRequired
+	}
+	if !strings.HasPrefix(recipientUserID, "@") {
+		return webtemplates.CampaignInviteVerification{}, errRecipientUsernameFormat
+	}
+	username := strings.TrimSpace(strings.TrimPrefix(recipientUserID, "@"))
+	if username == "" {
+		return webtemplates.CampaignInviteVerification{}, errRecipientUsernameRequired
+	}
+	if h == nil || h.connectionsClient == nil {
+		return webtemplates.CampaignInviteVerification{}, errConnectionsUnavailable
+	}
+	resp, err := h.connectionsClient.LookupPublicProfile(ctx, &connectionsv1.LookupPublicProfileRequest{
+		Username: username,
+	})
+	if err != nil {
+		return webtemplates.CampaignInviteVerification{}, err
+	}
+	usernameRecord := resp.GetUsernameRecord()
+	if usernameRecord == nil {
+		return webtemplates.CampaignInviteVerification{}, status.Error(codes.NotFound, "username not found")
+	}
+	resolvedUserID := strings.TrimSpace(usernameRecord.GetUserId())
+	if resolvedUserID == "" {
+		return webtemplates.CampaignInviteVerification{}, status.Error(codes.NotFound, "username not found")
+	}
+	verification := webtemplates.CampaignInviteVerification{
+		HasResult: true,
+		Username:  strings.TrimSpace(usernameRecord.GetUsername()),
+		UserID:    resolvedUserID,
+	}
+	if verification.Username == "" {
+		verification.Username = username
+	}
+	if profile := resp.GetPublicProfileRecord(); profile != nil {
+		verification.DisplayName = strings.TrimSpace(profile.GetDisplayName())
+		verification.AvatarURL = strings.TrimSpace(profile.GetAvatarUrl())
+		verification.Bio = strings.TrimSpace(profile.GetBio())
+	}
+	return verification, nil
 }
 
 func (h *handler) resolveInviteRecipientUserID(ctx context.Context, recipientUserID string) (string, error) {
@@ -291,6 +352,19 @@ func renderAppCampaignInvitesPageWithContext(w http.ResponseWriter, r *http.Requ
 }
 
 func renderAppCampaignInvitesPageWithContextAndContacts(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, invites []*statev1.Invite, contacts []webtemplates.CampaignInviteContactOption, canManageInvites bool) {
+	renderAppCampaignInvitesPageWithContextAndContactsAndVerification(
+		w,
+		r,
+		page,
+		campaignID,
+		invites,
+		contacts,
+		canManageInvites,
+		webtemplates.CampaignInviteVerification{},
+	)
+}
+
+func renderAppCampaignInvitesPageWithContextAndContactsAndVerification(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, invites []*statev1.Invite, contacts []webtemplates.CampaignInviteContactOption, canManageInvites bool, verification webtemplates.CampaignInviteVerification) {
 	// renderAppCampaignInvitesPage exposes write controls only to managed roles.
 	campaignID = strings.TrimSpace(campaignID)
 	inviteItems := make([]webtemplates.CampaignInviteItem, 0, len(invites))
@@ -318,9 +392,44 @@ func renderAppCampaignInvitesPageWithContextAndContacts(w http.ResponseWriter, r
 			Label: displayInviteID + " - " + recipient,
 		})
 	}
-	if err := writePage(w, r, webtemplates.CampaignInvitesPage(page, campaignID, canManageInvites, inviteItems, contacts), composeHTMXTitleForPage(page, "game.campaign_invites.title")); err != nil {
+	if err := writePage(w, r, webtemplates.CampaignInvitesPage(page, campaignID, canManageInvites, inviteItems, contacts, verification), composeHTMXTitleForPage(page, "game.campaign_invites.title")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaign_invites_page")
 	}
+}
+
+func (h *handler) renderCampaignInvitesVerificationPage(w http.ResponseWriter, r *http.Request, campaignID string, userID string, canManageInvites bool, verification webtemplates.CampaignInviteVerification) {
+	if h == nil || h.inviteClient == nil {
+		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Invites unavailable", "campaign invite service is not configured")
+		return
+	}
+	ctx := grpcauthctx.WithUserID(r.Context(), userID)
+	var invites []*statev1.Invite
+	if cachedInvites, ok := h.cachedCampaignInvites(ctx, campaignID, userID); ok {
+		invites = cachedInvites
+	} else {
+		resp, err := h.inviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
+			CampaignId: campaignID,
+			PageSize:   10,
+		})
+		if err != nil {
+			h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Invites unavailable", "failed to list campaign invites")
+			return
+		}
+		invites = resp.GetInvites()
+		h.setCampaignInvitesCache(ctx, campaignID, userID, invites)
+	}
+	contactOptions := h.listInviteContactOptions(ctx, campaignID, userID, invites)
+	renderReq := r.WithContext(ctx)
+	renderAppCampaignInvitesPageWithContextAndContactsAndVerification(
+		w,
+		renderReq,
+		h.pageContextForCampaign(w, renderReq, campaignID),
+		campaignID,
+		invites,
+		contactOptions,
+		canManageInvites,
+		verification,
+	)
 }
 
 func (h *handler) listInviteContactOptions(ctx context.Context, campaignID string, ownerUserID string, invites []*statev1.Invite) []webtemplates.CampaignInviteContactOption {

@@ -8,6 +8,7 @@ import (
 
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	profileutil "github.com/louisbranch/fracturing.space/internal/services/connections/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/connections/storage"
 	usernameutil "github.com/louisbranch/fracturing.space/internal/services/connections/username"
 	"google.golang.org/grpc/codes"
@@ -23,6 +24,7 @@ const (
 type contactAndUsernameStore interface {
 	storage.ContactStore
 	storage.UsernameStore
+	storage.ProfileStore
 }
 
 // Service exposes connections.v1 gRPC operations.
@@ -233,6 +235,106 @@ func (s *Service) LookupUsername(ctx context.Context, in *connectionsv1.LookupUs
 	}, nil
 }
 
+// SetPublicProfile creates or updates one public profile owned by user ID.
+func (s *Service) SetPublicProfile(ctx context.Context, in *connectionsv1.SetPublicProfileRequest) (*connectionsv1.SetPublicProfileResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "set public profile request is required")
+	}
+	if s == nil || s.store == nil {
+		return nil, status.Error(codes.Internal, "contact store is not configured")
+	}
+	userID := strings.TrimSpace(in.GetUserId())
+	if userID == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+	normalized, err := profileutil.Normalize(in.GetDisplayName(), in.GetAvatarUrl(), in.GetBio())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "public profile is invalid: %v", err)
+	}
+
+	now := time.Now()
+	if s.clock != nil {
+		now = s.clock()
+	}
+	if err := s.store.PutPublicProfile(ctx, storage.PublicProfileRecord{
+		UserID:      userID,
+		DisplayName: normalized.DisplayName,
+		AvatarURL:   normalized.AvatarURL,
+		Bio:         normalized.Bio,
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "set public profile: %v", err)
+	}
+	record, err := s.store.GetPublicProfileByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "public profile not found")
+		}
+		return nil, status.Errorf(codes.Internal, "set public profile: %v", err)
+	}
+	return &connectionsv1.SetPublicProfileResponse{
+		PublicProfileRecord: publicProfileToProto(record),
+	}, nil
+}
+
+// GetPublicProfile fetches one public profile by owner user ID.
+func (s *Service) GetPublicProfile(ctx context.Context, in *connectionsv1.GetPublicProfileRequest) (*connectionsv1.GetPublicProfileResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "get public profile request is required")
+	}
+	if s == nil || s.store == nil {
+		return nil, status.Error(codes.Internal, "contact store is not configured")
+	}
+	userID := strings.TrimSpace(in.GetUserId())
+	if userID == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+	record, err := s.store.GetPublicProfileByUserID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "public profile not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get public profile: %v", err)
+	}
+	return &connectionsv1.GetPublicProfileResponse{
+		PublicProfileRecord: publicProfileToProto(record),
+	}, nil
+}
+
+// LookupPublicProfile resolves username and returns optional public profile.
+func (s *Service) LookupPublicProfile(ctx context.Context, in *connectionsv1.LookupPublicProfileRequest) (*connectionsv1.LookupPublicProfileResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "lookup public profile request is required")
+	}
+	if s == nil || s.store == nil {
+		return nil, status.Error(codes.Internal, "contact store is not configured")
+	}
+	canonicalUsername, err := usernameutil.Canonicalize(in.GetUsername())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "username is invalid: %v", err)
+	}
+	usernameRecord, err := s.store.GetUsernameByUsername(ctx, canonicalUsername)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "username not found")
+		}
+		return nil, status.Errorf(codes.Internal, "lookup public profile: %v", err)
+	}
+	resp := &connectionsv1.LookupPublicProfileResponse{
+		UsernameRecord: usernameToProto(usernameRecord),
+	}
+	profileRecord, err := s.store.GetPublicProfileByUserID(ctx, usernameRecord.UserID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return resp, nil
+		}
+		return nil, status.Errorf(codes.Internal, "lookup public profile: %v", err)
+	}
+	resp.PublicProfileRecord = publicProfileToProto(profileRecord)
+	return resp, nil
+}
+
 func contactToProto(contact storage.Contact) *connectionsv1.Contact {
 	return &connectionsv1.Contact{
 		OwnerUserId:   contact.OwnerUserID,
@@ -248,5 +350,16 @@ func usernameToProto(username storage.UsernameRecord) *connectionsv1.UsernameRec
 		Username:  username.Username,
 		CreatedAt: timestamppb.New(username.CreatedAt),
 		UpdatedAt: timestamppb.New(username.UpdatedAt),
+	}
+}
+
+func publicProfileToProto(profile storage.PublicProfileRecord) *connectionsv1.PublicProfileRecord {
+	return &connectionsv1.PublicProfileRecord{
+		UserId:      profile.UserID,
+		DisplayName: profile.DisplayName,
+		AvatarUrl:   profile.AvatarURL,
+		Bio:         profile.Bio,
+		CreatedAt:   timestamppb.New(profile.CreatedAt),
+		UpdatedAt:   timestamppb.New(profile.UpdatedAt),
 	}
 }

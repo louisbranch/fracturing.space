@@ -321,6 +321,366 @@ func TestAppCampaignInviteCreateParticipantResolvesRecipientUsername(t *testing.
 	}
 }
 
+func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersVerificationContext(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		listInvitesResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{}},
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-456",
+				Username: "alice",
+			},
+		},
+		lookupPublicProfileResp: &connectionsv1.LookupPublicProfileResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-456",
+				Username: "alice",
+			},
+			PublicProfileRecord: &connectionsv1.PublicProfileRecord{
+				UserId:      "user-456",
+				DisplayName: "Alice Verified",
+				AvatarUrl:   "https://cdn.example.com/avatar/alice.png",
+				Bio:         "GM",
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"@alice"},
+		"action":            {"verify"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if inviteClient.createReq != nil {
+		t.Fatal("expected CreateInvite to be skipped during verification")
+	}
+	if connectionsClient.lookupPublicProfileReq == nil {
+		t.Fatal("expected LookupPublicProfile request")
+	}
+	if got := connectionsClient.lookupPublicProfileReq.GetUsername(); got != "alice" {
+		t.Fatalf("lookup public profile username = %q, want alice", got)
+	}
+	lookupUserIDs := connectionsClient.lookupPublicProfileMD.Get(grpcmeta.UserIDHeader)
+	if len(lookupUserIDs) != 1 || lookupUserIDs[0] != "user-123" {
+		t.Fatalf("lookup public profile metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, lookupUserIDs)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Alice Verified") {
+		t.Fatalf("response body missing verification display name: %q", body)
+	}
+	if !strings.Contains(body, "user-456") {
+		t.Fatalf("response body missing verification user id: %q", body)
+	}
+}
+
+func TestAppCampaignInviteCreateParticipantVerifyUsernameRequiresAtPrefix(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		listInvitesResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{}},
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupPublicProfileResp: &connectionsv1.LookupPublicProfileResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-456",
+				Username: "alice",
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"alice"},
+		"action":            {"verify"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if inviteClient.createReq != nil {
+		t.Fatal("expected CreateInvite to be skipped during verification failure")
+	}
+	if connectionsClient.lookupPublicProfileReq != nil {
+		t.Fatal("expected LookupPublicProfile to be skipped when @ prefix is missing")
+	}
+	if !strings.Contains(w.Body.String(), "recipient username must start with @") {
+		t.Fatalf("response body missing @ prefix message: %q", w.Body.String())
+	}
+}
+
+func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersWhenProfileMissing(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		listInvitesResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{}},
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupPublicProfileResp: &connectionsv1.LookupPublicProfileResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-456",
+				Username: "alice",
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"@alice"},
+		"action":            {"verify"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Username: @alice") {
+		t.Fatalf("response body missing verification username: %q", body)
+	}
+	if !strings.Contains(body, "User ID: user-456") {
+		t.Fatalf("response body missing verification user id: %q", body)
+	}
+}
+
+func TestAppCampaignInviteCreateParticipantVerifyUsernameLocalizesVerificationCopy(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		listInvitesResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{}},
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupPublicProfileResp: &connectionsv1.LookupPublicProfileResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-456",
+				Username: "alice",
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"@alice"},
+		"action":            {"verify"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create?lang=pt-BR", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Destinatário verificado") {
+		t.Fatalf("expected localized verification heading in response, got %q", body)
+	}
+}
+
 func TestAppCampaignInviteCreateParticipantRecipientUsernameLookupNotFound(t *testing.T) {
 	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/introspect" {

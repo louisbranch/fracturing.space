@@ -6,6 +6,18 @@ nav_order: 18
 
 # Connections Phase 2: Username Claim and Lookup
 
+## Implementation Status
+
+As of 2026-02-22, Phase 2 behavior is implemented:
+
+- `connections.v1.ConnectionsService` exposes `SetUsername`, `GetUsername`,
+  and `LookupUsername`.
+- Username canonicalization and uniqueness are enforced in `connections`
+  storage.
+- Web invite flow resolves `@username` to `recipient_user_id` before invoking
+  `game` invite APIs.
+- Web settings includes username claim/update UI that calls `SetUsername`.
+
 ## Purpose
 
 Define an implementation-ready specification for the next `connections` phase:

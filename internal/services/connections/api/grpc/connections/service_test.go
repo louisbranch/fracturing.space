@@ -184,10 +184,130 @@ func TestLookupUsername_NotFoundReturnsNotFound(t *testing.T) {
 	}
 }
 
+func TestSetPublicProfile_SuccessAndLookupByUsername(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+	now := time.Date(2026, time.February, 22, 14, 0, 0, 0, time.UTC)
+	svc.clock = func() time.Time { return now }
+
+	_, err := svc.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
+		UserId:   "user-1",
+		Username: "alice_one",
+	})
+	if err != nil {
+		t.Fatalf("set username: %v", err)
+	}
+
+	setResp, err := svc.SetPublicProfile(context.Background(), &connectionsv1.SetPublicProfileRequest{
+		UserId:      "user-1",
+		DisplayName: "Alice",
+		AvatarUrl:   "https://cdn.example.com/avatar/alice.png",
+		Bio:         "Campaign manager",
+	})
+	if err != nil {
+		t.Fatalf("set public profile: %v", err)
+	}
+	if setResp.GetPublicProfileRecord() == nil {
+		t.Fatal("expected public profile record response")
+	}
+
+	getResp, err := svc.GetPublicProfile(context.Background(), &connectionsv1.GetPublicProfileRequest{
+		UserId: "user-1",
+	})
+	if err != nil {
+		t.Fatalf("get public profile: %v", err)
+	}
+	if got := getResp.GetPublicProfileRecord().GetDisplayName(); got != "Alice" {
+		t.Fatalf("display_name = %q, want Alice", got)
+	}
+
+	lookupResp, err := svc.LookupPublicProfile(context.Background(), &connectionsv1.LookupPublicProfileRequest{
+		Username: "ALICE_ONE",
+	})
+	if err != nil {
+		t.Fatalf("lookup public profile: %v", err)
+	}
+	if got := lookupResp.GetUsernameRecord().GetUserId(); got != "user-1" {
+		t.Fatalf("lookup user_id = %q, want user-1", got)
+	}
+	if got := lookupResp.GetPublicProfileRecord().GetBio(); got != "Campaign manager" {
+		t.Fatalf("lookup bio = %q, want Campaign manager", got)
+	}
+}
+
+func TestSetPublicProfile_InvalidAvatarReturnsInvalidArgument(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+
+	_, err := svc.SetPublicProfile(context.Background(), &connectionsv1.SetPublicProfileRequest{
+		UserId:      "user-1",
+		DisplayName: "Alice",
+		AvatarUrl:   "not-a-url",
+		Bio:         "Campaign manager",
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("code = %v, want %v", status.Code(err), codes.InvalidArgument)
+	}
+}
+
+func TestGetPublicProfile_NotFoundReturnsNotFound(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+
+	_, err := svc.GetPublicProfile(context.Background(), &connectionsv1.GetPublicProfileRequest{
+		UserId: "missing-user",
+	})
+	if status.Code(err) != codes.NotFound {
+		t.Fatalf("code = %v, want %v", status.Code(err), codes.NotFound)
+	}
+}
+
+func TestLookupPublicProfile_UsernameFoundWithoutProfileReturnsUsernameOnly(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+
+	_, err := svc.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
+		UserId:   "user-1",
+		Username: "alice_one",
+	})
+	if err != nil {
+		t.Fatalf("set username: %v", err)
+	}
+
+	resp, err := svc.LookupPublicProfile(context.Background(), &connectionsv1.LookupPublicProfileRequest{
+		Username: "ALICE_ONE",
+	})
+	if err != nil {
+		t.Fatalf("lookup public profile: %v", err)
+	}
+	if resp.GetUsernameRecord() == nil {
+		t.Fatal("expected username record")
+	}
+	if got := resp.GetUsernameRecord().GetUserId(); got != "user-1" {
+		t.Fatalf("lookup user_id = %q, want user-1", got)
+	}
+	if resp.GetPublicProfileRecord() != nil {
+		t.Fatalf("public profile = %+v, want nil when no profile exists", resp.GetPublicProfileRecord())
+	}
+}
+
+func TestLookupPublicProfile_InvalidUsernameReturnsInvalidArgument(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+
+	_, err := svc.LookupPublicProfile(context.Background(), &connectionsv1.LookupPublicProfileRequest{
+		Username: "bad username",
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("code = %v, want %v", status.Code(err), codes.InvalidArgument)
+	}
+}
+
 type fakeContactStore struct {
 	contacts         map[string]map[string]storage.Contact
 	usernamesByUser  map[string]storage.UsernameRecord
 	usernamesByValue map[string]string
+	publicProfiles   map[string]storage.PublicProfileRecord
 }
 
 func newFakeContactStore() *fakeContactStore {
@@ -195,6 +315,7 @@ func newFakeContactStore() *fakeContactStore {
 		contacts:         make(map[string]map[string]storage.Contact),
 		usernamesByUser:  make(map[string]storage.UsernameRecord),
 		usernamesByValue: make(map[string]string),
+		publicProfiles:   make(map[string]storage.PublicProfileRecord),
 	}
 }
 
@@ -305,6 +426,43 @@ func (s *fakeContactStore) GetUsernameByUsername(_ context.Context, username str
 	record, ok := s.usernamesByUser[userID]
 	if !ok {
 		return storage.UsernameRecord{}, storage.ErrNotFound
+	}
+	return record, nil
+}
+
+func (s *fakeContactStore) PutPublicProfile(_ context.Context, profile storage.PublicProfileRecord) error {
+	userID := strings.TrimSpace(profile.UserID)
+	if userID == "" {
+		return errors.New("user id is required")
+	}
+	displayName := strings.TrimSpace(profile.DisplayName)
+	if displayName == "" {
+		return errors.New("display name is required")
+	}
+	if existing, ok := s.publicProfiles[userID]; ok {
+		profile.CreatedAt = existing.CreatedAt
+	}
+	if profile.CreatedAt.IsZero() && !profile.UpdatedAt.IsZero() {
+		profile.CreatedAt = profile.UpdatedAt
+	}
+	if profile.UpdatedAt.IsZero() {
+		profile.UpdatedAt = profile.CreatedAt
+	}
+	s.publicProfiles[userID] = storage.PublicProfileRecord{
+		UserID:      userID,
+		DisplayName: displayName,
+		AvatarURL:   strings.TrimSpace(profile.AvatarURL),
+		Bio:         strings.TrimSpace(profile.Bio),
+		CreatedAt:   profile.CreatedAt,
+		UpdatedAt:   profile.UpdatedAt,
+	}
+	return nil
+}
+
+func (s *fakeContactStore) GetPublicProfileByUserID(_ context.Context, userID string) (storage.PublicProfileRecord, error) {
+	record, ok := s.publicProfiles[strings.TrimSpace(userID)]
+	if !ok {
+		return storage.PublicProfileRecord{}, storage.ErrNotFound
 	}
 	return record, nil
 }

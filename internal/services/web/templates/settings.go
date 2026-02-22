@@ -21,6 +21,12 @@ type AIKeysPageState struct {
 	Keys         []AIKeyRow
 }
 
+// UsernameSettingsPageState captures form state for username settings.
+type UsernameSettingsPageState struct {
+	Username     string
+	ErrorMessage string
+}
+
 // SettingsLayoutOptions returns layout options for the root settings page.
 func SettingsLayoutOptions(page PageContext) LayoutOptions {
 	options := LayoutOptionsForPage(page, "layout.settings", true)
@@ -35,6 +41,17 @@ func SettingsAIKeysLayoutOptions(page PageContext) LayoutOptions {
 	options.CustomBreadcrumbs = []sharedtemplates.BreadcrumbItem{
 		{Label: T(page.Loc, "layout.settings"), URL: "/settings"},
 		{Label: T(page.Loc, "layout.settings_ai_keys"), URL: ""},
+	}
+	options.ChromeMenu = SettingsMenu(page)
+	return options
+}
+
+// SettingsUsernameLayoutOptions returns layout options for the username settings page.
+func SettingsUsernameLayoutOptions(page PageContext) LayoutOptions {
+	options := LayoutOptionsForPage(page, "layout.settings_username", true)
+	options.CustomBreadcrumbs = []sharedtemplates.BreadcrumbItem{
+		{Label: T(page.Loc, "layout.settings"), URL: "/settings"},
+		{Label: T(page.Loc, "layout.settings_username"), URL: ""},
 	}
 	options.ChromeMenu = SettingsMenu(page)
 	return options
