@@ -51,7 +51,7 @@ if ! grep -Fq 'bash .devcontainer/scripts/stop-devcontainer.sh' <<<"$down_plan";
   exit 1
 fi
 
-if ! grep -Fq 'docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml up -d devcontainer' .devcontainer/scripts/start-devcontainer.sh; then
+if ! grep -Fq 'docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml up -d devcontainer' .devcontainer/scripts/start-devcontainer.sh; then
   echo "expected start-devcontainer.sh to bring up the devcontainer service with devcontainer compose file first" >&2
   exit 1
 fi
@@ -116,8 +116,13 @@ if ! grep -Fq '/workspace/${repo_name}' .devcontainer/scripts/stop-devcontainer.
   exit 1
 fi
 
-if ! grep -Fq 'docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml down' .devcontainer/scripts/stop-devcontainer.sh; then
-  echo "expected stop-devcontainer.sh to bring down devcontainer compose services with devcontainer compose file first" >&2
+if ! grep -Fq 'docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml "$@"' .devcontainer/scripts/stop-devcontainer.sh; then
+  echo "expected stop-devcontainer.sh compose helper to use --env-file .env and the devcontainer compose files" >&2
+  exit 1
+fi
+
+if ! grep -Fq 'compose_devcontainer down' .devcontainer/scripts/stop-devcontainer.sh; then
+  echo "expected stop-devcontainer.sh to invoke compose helper for down" >&2
   exit 1
 fi
 
