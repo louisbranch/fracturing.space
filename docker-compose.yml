@@ -94,6 +94,26 @@ services:
       - internal
     restart: unless-stopped
 
+  listing:
+    build:
+      context: .
+      target: listing
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.0}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/listing:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_LISTING_PORT: 8091
+      FRACTURING_SPACE_LISTING_DB_PATH: /data/listing.db
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
   ai:
     build:
       context: .

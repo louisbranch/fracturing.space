@@ -1,0 +1,88 @@
+syntax = "proto3";
+
+package listing.v1;
+
+import "common/v1/game_system.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1;listingv1";
+
+enum CampaignDifficultyTier {
+  CAMPAIGN_DIFFICULTY_TIER_UNSPECIFIED = 0;
+  CAMPAIGN_DIFFICULTY_TIER_BEGINNER = 1;
+  CAMPAIGN_DIFFICULTY_TIER_INTERMEDIATE = 2;
+  CAMPAIGN_DIFFICULTY_TIER_ADVANCED = 3;
+}
+
+// CampaignListing stores one public listing record for a starter campaign.
+message CampaignListing {
+  // The source campaign identifier in game service.
+  string campaign_id = 1;
+
+  // Public card title.
+  string title = 2;
+
+  // Public description shown in listing/detail views.
+  string description = 3;
+
+  // Suggested minimum table size.
+  int32 recommended_participants_min = 4;
+
+  // Suggested maximum table size.
+  int32 recommended_participants_max = 5;
+
+  // Coarse complexity tier for first-pass discovery filters.
+  CampaignDifficultyTier difficulty_tier = 6;
+
+  // Human-readable expected duration (for example "2-3 sessions").
+  string expected_duration_label = 7;
+
+  // Source game system for quick filtering.
+  common.v1.GameSystem system = 8;
+
+  google.protobuf.Timestamp created_at = 9;
+  google.protobuf.Timestamp updated_at = 10;
+}
+
+message CreateCampaignListingRequest {
+  string campaign_id = 1;
+  string title = 2;
+  string description = 3;
+  int32 recommended_participants_min = 4;
+  int32 recommended_participants_max = 5;
+  CampaignDifficultyTier difficulty_tier = 6;
+  string expected_duration_label = 7;
+  common.v1.GameSystem system = 8;
+}
+
+message CreateCampaignListingResponse {
+  CampaignListing listing = 1;
+}
+
+message GetCampaignListingRequest {
+  string campaign_id = 1;
+}
+
+message GetCampaignListingResponse {
+  CampaignListing listing = 1;
+}
+
+message ListCampaignListingsRequest {
+  // The maximum number of listings to return.
+  // If zero, the server defaults to 10. The server clamps values above 50 to 50.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListCampaignListingsResponse.
+  string page_token = 2;
+}
+
+message ListCampaignListingsResponse {
+  repeated CampaignListing listings = 1;
+  string next_page_token = 2;
+}
+
+service CampaignListingService {
+  rpc CreateCampaignListing(CreateCampaignListingRequest) returns (CreateCampaignListingResponse);
+  rpc GetCampaignListing(GetCampaignListingRequest) returns (GetCampaignListingResponse);
+  rpc ListCampaignListings(ListCampaignListingsRequest) returns (ListCampaignListingsResponse);
+}

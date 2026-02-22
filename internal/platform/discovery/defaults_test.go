@@ -14,6 +14,7 @@ func TestDefaultGRPCAddr(t *testing.T) {
 		ServiceGame:          "game:8082",
 		ServiceAuth:          "auth:8083",
 		ServiceConnections:   "connections:8090",
+		ServiceListing:       "listing:8091",
 		ServiceAI:            "ai:8087",
 		ServiceNotifications: "notifications:8088",
 	}
