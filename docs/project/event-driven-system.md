@@ -392,6 +392,27 @@ For system implementation workflow and checklist details, use
 For Daggerheart mechanic-level mappings, use
 [Daggerheart event timeline contract](daggerheart-event-timeline-contract.md).
 
+## Startup validator troubleshooting
+
+The server runs a validation suite at startup (`BuildRegistries`) that rejects
+configurations with missing handlers. This table maps each error pattern to the
+fix.
+
+| Error pattern | Cause | Fix |
+|---|---|---|
+| `core emittable event types not in registry: <type>` | A core domain declares an event type in `EmittableEventTypes()` but never registers it via `RegisterEvents`. | Add the missing `event.Definition` in the core domain's `RegisterEvents` function. |
+| `system module <id> declares emittable event types not in registry: <type>` | A system module's `EmittableEventTypes()` includes a type not registered in `RegisterEvents`. | Add the missing `event.Definition` in the module's `RegisterEvents` method. |
+| `core replay events missing fold handlers: <type>` | A core event with `IntentProjectionAndReplay` or `IntentReplayOnly` has no entry in any core domain's `FoldHandledTypes()`. | Add the event type to the appropriate domain's `FoldHandledTypes()` and add a case in its `Fold` function. |
+| `core projection-and-replay events missing projection handlers: <type>` | A core event with `IntentProjectionAndReplay` has no entry in the projection applier's handled types. | Add the event type to `ProjectionHandledTypes()` in `projection/applier_domain.go` and add a case in `Apply`. |
+| `system emittable events missing projector fold handlers: <type>` | A system module emits an event with replay intent but its projector's `FoldHandledTypes()` does not include it. | Add the event type to the projector's `FoldHandledTypes()` and add a case in its `Apply` method. |
+| `system emittable events missing adapter handlers: <type>` | A system module emits an `IntentProjectionAndReplay` event but no system adapter handles it. | Add the event type to the adapter's `HandledTypes()` and add a case in its `Apply` method. |
+| `system commands missing decider handlers: <type>` | A system module registers a command type but the module's decider does not list it in `DeciderHandledCommands()`. | Add the command type to the decider's `DeciderHandledCommands()` and add a case in its `Decide` method. |
+| `system module <id> command <type> must use sys.<id>.* prefix` | A system-owned command type does not follow the `sys.<system_id>.*` naming convention. | Rename the command type constant to use the required prefix. |
+| `system module <id> event <type> must use sys.<id>.* prefix` | A system-owned event type does not follow the `sys.<system_id>.*` naming convention. | Rename the event type constant to use the required prefix. |
+
+All validators run before the server accepts traffic. Fix the reported type,
+then restart. Run `make integration` to verify all validators pass.
+
 ## Known gaps and improvement backlog
 
 These are current documentation or architecture pain points worth improving.
@@ -407,7 +428,17 @@ These are current documentation or architecture pain points worth improving.
      cannot occur.
    - Improvement: document an explicit projection-repair runbook and consider a
      durable projection work queue/outbox.
-3. Two similarly named system registries:
+3. Two "Apply" methods with different semantics:
+   - `projection.Applier.Apply`: writes to denormalized read-model stores
+     (projection tables). Errors here are recoverable via replay.
+   - `aggregate.Applier.Apply` / system `Projector.Apply`: folds events into
+     in-memory aggregate state. Errors here are domain-level (unmarshal, etc).
+   - `engine.Applier.Apply`: the write-handler interface; during live execution
+     it folds state, while the projection applier runs in the application layer.
+   - `ErrPostPersistApplyFailed` refers to the *aggregate fold* step in
+     `Handler.prepareExecution`, not the projection apply.
+   - Improvement: rename aggregate fold interface to `Folder` to remove ambiguity.
+4. Two similarly named system registries:
    - `domain/system.Registry` (module command/event routing) and
      `domain/systems.Registry` (API/system metadata bridge) can be confused.
    - Improvement: clarify names or collapse responsibilities.

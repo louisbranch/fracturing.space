@@ -77,6 +77,45 @@ var daggerheartEventDefinitions = []event.Definition{
 	{Type: EventTypeAdversaryDeleted, Owner: event.OwnerSystem, ValidatePayload: validateAdversaryDeletedPayload, Intent: event.IntentProjectionAndReplay},
 }
 
+// eventTypesWithReplayIntent returns event types from daggerheartEventDefinitions
+// that require fold handling (IntentProjectionAndReplay or IntentReplayOnly).
+// Projector.FoldHandledTypes delegates to this so the list stays in sync with
+// the authoritative definitions slice.
+func eventTypesWithReplayIntent() []event.Type {
+	var types []event.Type
+	for _, def := range daggerheartEventDefinitions {
+		if def.Intent == event.IntentProjectionAndReplay || def.Intent == event.IntentReplayOnly {
+			types = append(types, def.Type)
+		}
+	}
+	return types
+}
+
+// eventTypesWithProjectionIntent returns event types from
+// daggerheartEventDefinitions that require projection adapter handling
+// (IntentProjectionAndReplay only). Adapter.HandledTypes delegates to this
+// so the list stays in sync with the authoritative definitions slice.
+func eventTypesWithProjectionIntent() []event.Type {
+	var types []event.Type
+	for _, def := range daggerheartEventDefinitions {
+		if def.Intent == event.IntentProjectionAndReplay {
+			types = append(types, def.Type)
+		}
+	}
+	return types
+}
+
+// commandTypesFromDefinitions returns all command types from
+// daggerheartCommandDefinitions. Used by Decider.DeciderHandledCommands so the
+// list stays in sync with the authoritative registration slice.
+func commandTypesFromDefinitions() []command.Type {
+	types := make([]command.Type, len(daggerheartCommandDefinitions))
+	for i, def := range daggerheartCommandDefinitions {
+		types[i] = def.Type
+	}
+	return types
+}
+
 // RegisterCommands registers Daggerheart system commands.
 func (m *Module) RegisterCommands(registry *command.Registry) error {
 	if registry == nil {

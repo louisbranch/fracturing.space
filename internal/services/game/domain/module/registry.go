@@ -34,16 +34,21 @@ type Decider interface {
 }
 
 // Projector applies system-owned events to system state.
+//
+// FoldHandledTypes declares which event types the Apply method handles, enabling
+// ValidateSystemFoldCoverage to verify at startup that every emittable event
+// type with replay intent has a corresponding fold handler.
 type Projector interface {
 	Apply(state any, evt event.Event) (any, error)
+	FoldHandledTypes() []event.Type
 }
 
-// FoldTyper is an optional interface for projectors that declare which event
-// types their Apply method handles. When a projector implements FoldTyper,
-// ValidateSystemFoldCoverage can verify that every emittable event type with
-// replay intent has a corresponding fold handler.
-type FoldTyper interface {
-	FoldHandledTypes() []event.Type
+// CommandTyper is an optional interface for deciders that declare which command
+// types their Decide method handles. When a decider implements CommandTyper,
+// ValidateDeciderCommandCoverage can verify that every registered system command
+// has a corresponding decider case at startup.
+type CommandTyper interface {
+	DeciderHandledCommands() []command.Type
 }
 
 // StateFactory creates initial system-specific state instances.

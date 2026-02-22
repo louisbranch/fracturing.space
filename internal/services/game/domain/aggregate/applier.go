@@ -56,6 +56,28 @@ func (a *Applier) initFoldSets() {
 	})
 }
 
+// FoldDispatchedTypes returns the union of all event types wired into the
+// applier's fold dispatch sets. ValidateAggregateFoldDispatch uses this to
+// verify that every type declared in CoreDomains().FoldHandledTypes actually
+// reaches a fold function at runtime.
+func (a *Applier) FoldDispatchedTypes() []event.Type {
+	a.initFoldSets()
+	var types []event.Type
+	for _, s := range []map[event.Type]struct{}{
+		a.campaignTypes,
+		a.sessionTypes,
+		a.actionTypes,
+		a.participantTypes,
+		a.characterTypes,
+		a.inviteTypes,
+	} {
+		for t := range s {
+			types = append(types, t)
+		}
+	}
+	return types
+}
+
 // Apply applies a single event to aggregate state.
 //
 // The function only mutates aggregate state through fold functions so state

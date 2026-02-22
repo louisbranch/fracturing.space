@@ -95,6 +95,39 @@ type Adapter interface {
 }
 ```
 
+## Registry map
+
+Three registries serve different purposes. All are populated from a single
+`SystemDescriptor` entry in `manifest/manifest.go`.
+
+```
+SystemDescriptor (manifest/manifest.go)
+├── BuildModule()         → module.Registry      (write-path routing)
+│   ├── RegisterCommands  → command.Registry      (shared with core)
+│   ├── RegisterEvents    → event.Registry        (shared with core)
+│   ├── Decider()         → command decisions
+│   └── Projector()       → aggregate fold / replay
+│
+├── BuildMetadataSystem() → systems.Registry      (API metadata bridge)
+│   └── Maps system_id + version to protobuf enum for transport layers
+│
+└── BuildAdapter()        → systems.AdapterRegistry (read-path projections)
+    └── Applies system events to denormalized projection tables
+```
+
+- **`module.Registry`** (`domain/module/registry.go`): Routes system commands to
+  deciders and system events to projectors. Used by the domain engine write-path
+  and the replay pipeline.
+- **`systems.Registry`** (`domain/systems/registry_bridge.go`): Maps
+  `system_id` + `system_version` to protobuf `GameSystem` enums. Used by gRPC
+  and MCP transport layers to expose system metadata.
+- **`systems.AdapterRegistry`** (`domain/systems/adapter_registry.go`): Routes
+  system-owned events to projection adapters that write to system-specific read
+  tables. Used by `projection.Applier.applySystemEvent`.
+
+When adding a new system, register all three surfaces from one
+`SystemDescriptor` so they stay aligned.
+
 ## Where systems plug in
 
 Core registration entrypoint:

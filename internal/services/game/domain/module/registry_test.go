@@ -78,6 +78,8 @@ func (p *stubProjector) Apply(state any, evt event.Event) (any, error) {
 	return p.result, p.err
 }
 
+func (p *stubProjector) FoldHandledTypes() []event.Type { return nil }
+
 func TestRegistryRegister_RequiresSystemID(t *testing.T) {
 	registry := NewRegistry()
 	err := registry.Register(stubModule{id: "", version: "v1"})

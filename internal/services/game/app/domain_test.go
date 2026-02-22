@@ -97,32 +97,44 @@ func TestBuildCoreRouteTable_RejectsMissingCoreRoute(t *testing.T) {
 }
 
 func TestBuildCoreRouteTable_IncludesRegisteredCoreRoutes(t *testing.T) {
-	definitions := []command.Definition{
-		{Type: command.Type("campaign.create"), Owner: command.OwnerCore},
-		{Type: command.Type("action.roll.resolve"), Owner: command.OwnerCore},
-		{Type: command.Type("participant.seat.reassign"), Owner: command.OwnerCore},
-		{Type: command.Type("seat.reassign"), Owner: command.OwnerCore},
-		{Type: command.Type("sys.alpha.action.attack.resolve"), Owner: command.OwnerSystem},
+	// Build definitions from all static routes plus one system command.
+	static := staticCoreCommandRoutes()
+	definitions := make([]command.Definition, 0, len(static)+1)
+	for cmdType := range static {
+		definitions = append(definitions, command.Definition{Type: cmdType, Owner: command.OwnerCore})
 	}
+	definitions = append(definitions, command.Definition{
+		Type: command.Type("sys.alpha.action.attack.resolve"), Owner: command.OwnerSystem,
+	})
 
 	routes, err := buildCoreRouteTable(definitions)
 	if err != nil {
 		t.Fatalf("build core route table: %v", err)
 	}
-	if _, ok := routes[command.Type("campaign.create")]; !ok {
-		t.Fatal("expected campaign.create route")
+	// All static core routes should be present.
+	for cmdType := range static {
+		if _, ok := routes[cmdType]; !ok {
+			t.Fatalf("expected route for %s", cmdType)
+		}
 	}
-	if _, ok := routes[command.Type("action.roll.resolve")]; !ok {
-		t.Fatal("expected action.roll.resolve route")
-	}
-	if _, ok := routes[command.Type("participant.seat.reassign")]; !ok {
-		t.Fatal("expected participant.seat.reassign route")
-	}
-	if _, ok := routes[command.Type("seat.reassign")]; !ok {
-		t.Fatal("expected seat.reassign route")
-	}
+	// System command should not be in core table.
 	if _, ok := routes[command.Type("sys.alpha.action.attack.resolve")]; ok {
 		t.Fatal("did not expect system command route in core table")
+	}
+}
+
+func TestBuildCoreRouteTable_RejectsStaleStaticRoute(t *testing.T) {
+	// Pass only a subset of static routes — the missing ones should be detected.
+	definitions := []command.Definition{
+		{Type: command.Type("campaign.create"), Owner: command.OwnerCore},
+	}
+
+	_, err := buildCoreRouteTable(definitions)
+	if err == nil {
+		t.Fatal("expected error for stale static route")
+	}
+	if !strings.Contains(err.Error(), "stale") {
+		t.Fatalf("expected 'stale' in error message, got: %v", err)
 	}
 }
 

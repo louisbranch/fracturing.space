@@ -1227,9 +1227,10 @@ func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map
 				}
 				return true
 			}
-			// Match command.NewEvent(cmd, <eventType>, ...) calls.
+			// Match command.NewEvent(cmd, <eventType>, ...) and
+			// module.DecideFunc(cmd, <eventType>, ...) calls.
 			if call, ok := node.(*ast.CallExpr); ok {
-				if isCommandNewEventCall(call) && len(call.Args) >= 2 {
+				if (isCommandNewEventCall(call) || isModuleDecideFuncCall(call)) && len(call.Args) >= 2 {
 					value := resolveEventValue(call.Args[1], fileLookup, importAliases, root)
 					if value != "" {
 						pos := fset.Position(call.Args[1].Pos())
@@ -1329,6 +1330,31 @@ func isCommandNewEventCall(call *ast.CallExpr) bool {
 		return false
 	}
 	return ident.Name == "command" && sel.Sel.Name == "NewEvent"
+}
+
+// isModuleDecideFuncCall returns true when the call expression is module.DecideFunc(...).
+func isModuleDecideFuncCall(call *ast.CallExpr) bool {
+	// DecideFunc is generic: the AST represents module.DecideFunc[T](...) as an
+	// IndexExpr wrapping the selector.
+	switch fun := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		ident, ok := fun.X.(*ast.Ident)
+		if !ok {
+			return false
+		}
+		return ident.Name == "module" && fun.Sel.Name == "DecideFunc"
+	case *ast.IndexExpr:
+		sel, ok := fun.X.(*ast.SelectorExpr)
+		if !ok {
+			return false
+		}
+		ident, ok := sel.X.(*ast.Ident)
+		if !ok {
+			return false
+		}
+		return ident.Name == "module" && sel.Sel.Name == "DecideFunc"
+	}
+	return false
 }
 
 // resolveEventValue resolves an event value expression, preferring precise

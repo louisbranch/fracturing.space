@@ -58,6 +58,8 @@ func (fakeSystemProjector) Apply(state any, _ event.Event) (any, error) {
 	return count, nil
 }
 
+func (fakeSystemProjector) FoldHandledTypes() []event.Type { return nil }
+
 type fakeSystemModule struct{}
 
 func (fakeSystemModule) ID() string                                 { return "system-1" }
@@ -152,6 +154,22 @@ func TestApplierApply_SkipsAuditOnlyEvents(t *testing.T) {
 	// Audit-only event should not modify state.
 	if updated.Campaign.Name != "unchanged" {
 		t.Fatalf("campaign name = %s, want unchanged", updated.Campaign.Name)
+	}
+}
+
+func TestApplierFoldDispatchedTypes_ReturnsNonEmpty(t *testing.T) {
+	applier := &Applier{}
+	types := applier.FoldDispatchedTypes()
+	if len(types) == 0 {
+		t.Fatal("expected FoldDispatchedTypes to return non-empty slice")
+	}
+	// Verify no duplicate types in the dispatched set.
+	seen := make(map[event.Type]bool)
+	for _, et := range types {
+		if seen[et] {
+			t.Fatalf("duplicate dispatched type: %s", et)
+		}
+		seen[et] = true
 	}
 }
 

@@ -69,6 +69,90 @@ func eventValidationCases() []eventValidationCase {
 	}
 }
 
+func TestFoldHandledTypes_DerivedFromEventDefinitions(t *testing.T) {
+	projector := Projector{}
+	foldTypes := projector.FoldHandledTypes()
+
+	// Build expected set from daggerheartEventDefinitions with replay intent.
+	expected := make(map[event.Type]struct{})
+	for _, def := range daggerheartEventDefinitions {
+		if def.Intent == event.IntentProjectionAndReplay || def.Intent == event.IntentReplayOnly {
+			expected[def.Type] = struct{}{}
+		}
+	}
+
+	seen := make(map[event.Type]struct{})
+	for _, ft := range foldTypes {
+		if _, dup := seen[ft]; dup {
+			t.Fatalf("FoldHandledTypes() contains duplicate type %s", ft)
+		}
+		seen[ft] = struct{}{}
+		if _, ok := expected[ft]; !ok {
+			t.Errorf("FoldHandledTypes() contains %s which is not in daggerheartEventDefinitions with replay intent", ft)
+		}
+	}
+	for typ := range expected {
+		if _, ok := seen[typ]; !ok {
+			t.Errorf("FoldHandledTypes() is missing type %s from daggerheartEventDefinitions", typ)
+		}
+	}
+}
+
+func TestAdapterHandledTypes_DerivedFromEventDefinitions(t *testing.T) {
+	adapter := &Adapter{}
+	handledTypes := adapter.HandledTypes()
+
+	// Build expected set from daggerheartEventDefinitions with projection intent.
+	expected := make(map[event.Type]struct{})
+	for _, def := range daggerheartEventDefinitions {
+		if def.Intent == event.IntentProjectionAndReplay {
+			expected[def.Type] = struct{}{}
+		}
+	}
+
+	seen := make(map[event.Type]struct{})
+	for _, ht := range handledTypes {
+		if _, dup := seen[ht]; dup {
+			t.Fatalf("HandledTypes() contains duplicate type %s", ht)
+		}
+		seen[ht] = struct{}{}
+		if _, ok := expected[ht]; !ok {
+			t.Errorf("HandledTypes() contains %s which is not in daggerheartEventDefinitions with projection intent", ht)
+		}
+	}
+	for typ := range expected {
+		if _, ok := seen[typ]; !ok {
+			t.Errorf("HandledTypes() is missing type %s from daggerheartEventDefinitions", typ)
+		}
+	}
+}
+
+func TestDeciderHandledCommands_DerivedFromCommandDefinitions(t *testing.T) {
+	decider := Decider{}
+	handled := decider.DeciderHandledCommands()
+
+	expected := make(map[command.Type]struct{})
+	for _, def := range daggerheartCommandDefinitions {
+		expected[def.Type] = struct{}{}
+	}
+
+	seen := make(map[command.Type]struct{})
+	for _, ct := range handled {
+		if _, dup := seen[ct]; dup {
+			t.Fatalf("DeciderHandledCommands() contains duplicate command type %s", ct)
+		}
+		seen[ct] = struct{}{}
+		if _, ok := expected[ct]; !ok {
+			t.Errorf("DeciderHandledCommands() contains %s which is not in daggerheartCommandDefinitions", ct)
+		}
+	}
+	for typ := range expected {
+		if _, ok := seen[typ]; !ok {
+			t.Errorf("DeciderHandledCommands() is missing command type %s from daggerheartCommandDefinitions", typ)
+		}
+	}
+}
+
 func TestModuleMetadata(t *testing.T) {
 	module := NewModule()
 

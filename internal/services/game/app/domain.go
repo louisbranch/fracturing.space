@@ -197,21 +197,36 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 	}
 }
 
-// buildCoreRouteTable makes sure every registered core command type has a routing target.
+// buildCoreRouteTable makes sure every registered core command type has a routing
+// target and every static route has a matching registration.
 //
-// The resulting map is the source-of-truth permission model for non-system commands.
+// The forward check catches new command types without a route. The reverse check
+// catches stale routes left behind after a command type is removed.
 func buildCoreRouteTable(definitions []command.Definition) (map[command.Type]coreCommandRoute, error) {
 	available := staticCoreCommandRoutes()
 	routes := make(map[command.Type]coreCommandRoute)
+	registered := make(map[command.Type]struct{})
 	for _, definition := range definitions {
 		if definition.Owner != command.OwnerCore {
 			continue
 		}
+		registered[definition.Type] = struct{}{}
 		route, ok := available[definition.Type]
 		if !ok {
 			return nil, fmt.Errorf("core command route missing for registered type %s", definition.Type)
 		}
 		routes[definition.Type] = route
+	}
+	// Reverse check: detect stale static routes not backed by a registration.
+	var stale []string
+	for cmdType := range available {
+		if _, ok := registered[cmdType]; !ok {
+			stale = append(stale, string(cmdType))
+		}
+	}
+	if len(stale) > 0 {
+		return nil, fmt.Errorf("stale static core command routes without registration: %s",
+			strings.Join(stale, ", "))
 	}
 	return routes, nil
 }
