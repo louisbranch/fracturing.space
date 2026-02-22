@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -77,6 +78,77 @@ func TestParseConfigListFlag(t *testing.T) {
 	}
 	if !cfg.List {
 		t.Fatal("expected list flag to be true")
+	}
+}
+
+func TestParseConfigManifestModeDefaultsStatePath(t *testing.T) {
+	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, []string{"-manifest", "internal/tools/seed/manifests/local-dev.json"})
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if cfg.ManifestPath != "internal/tools/seed/manifests/local-dev.json" {
+		t.Fatalf("manifest path = %q", cfg.ManifestPath)
+	}
+	if cfg.SeedStatePath == "" {
+		t.Fatal("expected non-empty state path in manifest mode")
+	}
+	wantSuffix := filepath.Join(".tmp", "seed-state", "local-dev.state.json")
+	if !strings.HasSuffix(cfg.SeedStatePath, wantSuffix) {
+		t.Fatalf("state path = %q, want suffix %q", cfg.SeedStatePath, wantSuffix)
+	}
+}
+
+func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
+	original := runDeclarativeManifestFn
+	t.Cleanup(func() { runDeclarativeManifestFn = original })
+
+	called := false
+	runDeclarativeManifestFn = func(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
+		called = true
+		if cfg.ManifestPath != "internal/tools/seed/manifests/local-dev.json" {
+			t.Fatalf("manifest path = %q", cfg.ManifestPath)
+		}
+		if cfg.ConnectionsAddr == "" {
+			t.Fatal("connections addr should be set")
+		}
+		return nil
+	}
+
+	cfg := Config{
+		Timeout:         10,
+		ManifestPath:    "internal/tools/seed/manifests/local-dev.json",
+		SeedStatePath:   filepath.Join(".tmp", "seed-state", "local-dev.state.json"),
+		ConnectionsAddr: "connections:8090",
+	}
+
+	if err := Run(context.Background(), cfg, io.Discard, io.Discard); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if !called {
+		t.Fatal("expected manifest runner to be called")
+	}
+}
+
+func TestParseConfigManifestModeRejectsGenerate(t *testing.T) {
+	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
+	_, err := ParseConfig(fs, []string{
+		"-manifest", "internal/tools/seed/manifests/local-dev.json",
+		"-generate",
+	})
+	if err == nil {
+		t.Fatal("expected parse error when -manifest and -generate are combined")
+	}
+}
+
+func TestParseConfigDefaultConnectionsAddr(t *testing.T) {
+	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, nil)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if cfg.ConnectionsAddr != "connections:8090" {
+		t.Fatalf("connections addr = %q, want %q", cfg.ConnectionsAddr, "connections:8090")
 	}
 }
 

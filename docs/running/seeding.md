@@ -161,6 +161,60 @@ Using seed: 1707234567890123456
 
 Emails are uniquified within a run to satisfy auth email uniqueness constraints. When duplicates occur, the generator appends a numeric suffix (for example, `alex@example.com` -> `alex-2@example.com`).
 
+## Declarative Local Seeding (Idempotent)
+
+Use declarative manifests to seed stable local datasets that can be re-applied safely.
+
+```bash
+make seed-local
+```
+
+The default local manifest is:
+
+- `internal/tools/seed/manifests/local-dev.json`
+
+The idempotent state map is stored at:
+
+- `.tmp/seed-state/local-dev.state.json`
+
+To reset from scratch:
+
+```bash
+make seed-local-fresh
+```
+
+### Manifest Entity Coverage
+
+The declarative seeder supports:
+
+| Entity | Service |
+|--------|---------|
+| User identities | `auth.v1.AuthService` |
+| Public profiles | `connections.v1.ConnectionsService` |
+| Contacts | `connections.v1.ConnectionsService` |
+| Campaigns | `game.v1.CampaignService` |
+| Participants | `game.v1.ParticipantService` |
+| Characters + controls | `game.v1.CharacterService` |
+| Sessions | `game.v1.SessionService` |
+| Forks | `game.v1.ForkService` |
+| Listings | `listing.v1.CampaignListingService` |
+
+Account profiles are intentionally excluded from seed manifests and are not written during declarative seeding.
+
+### CLI Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `-manifest` | Path to declarative manifest JSON | empty |
+| `-seed-state` | Path to idempotent state file | derived from manifest path |
+| `-grpc-addr` | game server address | `game:8082` |
+| `-auth-addr` | auth server address | `auth:8083` |
+| `-connections-addr` | connections server address | `connections:8090` |
+| `-listing-addr` | listing server address | `listing:8091` |
+| `-v` | Verbose output | false |
+
+`-manifest` cannot be combined with `-generate`, `-scenario`, or `-seed-campaign-listings`.
+
 ### Entity Variations
 
 The dynamic generator creates diverse test data:

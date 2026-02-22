@@ -23,6 +23,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed"
+	"github.com/louisbranch/fracturing.space/internal/tools/seed/declarative"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/generator"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -39,6 +40,9 @@ type Config struct {
 	Generate             bool
 	SeedCampaignListings bool
 	ListingAddr          string
+	ConnectionsAddr      string
+	ManifestPath         string
+	SeedStatePath        string
 	Preset               generator.Preset
 	Seed                 int64
 	Campaigns            int
@@ -46,10 +50,11 @@ type Config struct {
 
 // seedEnv holds env-tagged fields for the seed command.
 type seedEnv struct {
-	GameAddr    string        `env:"FRACTURING_SPACE_GAME_ADDR"`
-	AuthAddr    string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
-	ListingAddr string        `env:"FRACTURING_SPACE_LISTING_ADDR"`
-	Timeout     time.Duration `env:"FRACTURING_SPACE_SEED_TIMEOUT" envDefault:"10m"`
+	GameAddr        string        `env:"FRACTURING_SPACE_GAME_ADDR"`
+	AuthAddr        string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
+	ListingAddr     string        `env:"FRACTURING_SPACE_LISTING_ADDR"`
+	ConnectionsAddr string        `env:"FRACTURING_SPACE_CONNECTIONS_ADDR"`
+	Timeout         time.Duration `env:"FRACTURING_SPACE_SEED_TIMEOUT" envDefault:"10m"`
 }
 
 // ParseConfig parses environment and flags into a Config.
@@ -63,6 +68,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	seedCfg.GRPCAddr = discovery.OrDefaultGRPCAddr(se.GameAddr, discovery.ServiceGame)
 	seedCfg.AuthAddr = discovery.OrDefaultGRPCAddr(se.AuthAddr, discovery.ServiceAuth)
 	listingAddr := discovery.OrDefaultGRPCAddr(se.ListingAddr, discovery.ServiceListing)
+	connectionsAddr := discovery.OrDefaultGRPCAddr(se.ConnectionsAddr, discovery.ServiceConnections)
 	timeout := se.Timeout
 	var list bool
 	var generate bool
@@ -70,10 +76,13 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var preset string
 	var seedVal int64
 	var campaigns int
+	var manifestPath string
+	var seedStatePath string
 
 	fs.StringVar(&seedCfg.GRPCAddr, "grpc-addr", seedCfg.GRPCAddr, "game server address")
 	fs.StringVar(&seedCfg.AuthAddr, "auth-addr", seedCfg.AuthAddr, "auth server address")
 	fs.StringVar(&listingAddr, "listing-addr", listingAddr, "listing server address")
+	fs.StringVar(&connectionsAddr, "connections-addr", connectionsAddr, "connections server address")
 	fs.DurationVar(&timeout, "timeout", timeout, "overall timeout")
 	fs.StringVar(&seedCfg.Scenario, "scenario", "", "run specific scenario (default: all)")
 	fs.BoolVar(&seedCfg.Verbose, "v", false, "verbose output")
@@ -83,6 +92,8 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&preset, "preset", string(generator.PresetDemo), "generation preset (demo, variety, session-heavy, stress-test)")
 	fs.Int64Var(&seedVal, "seed", 0, "random seed for reproducibility (0 = random)")
 	fs.IntVar(&campaigns, "campaigns", 0, "number of campaigns to generate (0 = use preset default)")
+	fs.StringVar(&manifestPath, "manifest", "", "run declarative seed manifest from JSON file")
+	fs.StringVar(&seedStatePath, "seed-state", "", "path to declarative seed state file")
 	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
@@ -92,6 +103,20 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 		return Config{}, err
 	}
 	seedCfg.RepoRoot = root
+	manifestPath = strings.TrimSpace(manifestPath)
+	seedStatePath = strings.TrimSpace(seedStatePath)
+	if manifestPath != "" && seedStatePath == "" {
+		seedStatePath = defaultSeedStatePathForManifest(manifestPath)
+	}
+	if manifestPath != "" && generate {
+		return Config{}, fmt.Errorf("cannot use -manifest with -generate")
+	}
+	if manifestPath != "" && seedCfg.Scenario != "" {
+		return Config{}, fmt.Errorf("cannot use -manifest with -scenario")
+	}
+	if manifestPath != "" && seedCampaignListings {
+		return Config{}, fmt.Errorf("cannot use -manifest with -seed-campaign-listings")
+	}
 
 	return Config{
 		SeedConfig:           seedCfg,
@@ -100,6 +125,9 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 		Generate:             generate,
 		SeedCampaignListings: seedCampaignListings,
 		ListingAddr:          listingAddr,
+		ConnectionsAddr:      connectionsAddr,
+		ManifestPath:         manifestPath,
+		SeedStatePath:        seedStatePath,
 		Preset:               generator.Preset(preset),
 		Seed:                 seedVal,
 		Campaigns:            campaigns,
@@ -130,7 +158,13 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 			fmt.Fprintln(out, "  variety      - 8 campaigns across all statuses/modes")
 			fmt.Fprintln(out, "  session-heavy - Few campaigns with many sessions")
 			fmt.Fprintln(out, "  stress-test  - 50 minimal campaigns")
+			fmt.Fprintln(out, "\nDeclarative manifest mode:")
+			fmt.Fprintln(out, "  -manifest=internal/tools/seed/manifests/local-dev.json")
+			fmt.Fprintln(out, "  -seed-state=.tmp/seed-state/local-dev.state.json")
 			return nil
+		}
+		if strings.TrimSpace(cfg.ManifestPath) != "" {
+			return runDeclarativeManifestFn(runCtx, cfg, out, errOut)
 		}
 
 		beforeCampaignIDs := []string{}
@@ -184,6 +218,52 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 		}
 		return nil
 	})
+}
+
+var runDeclarativeManifestFn = runDeclarativeManifest
+
+func runDeclarativeManifest(ctx context.Context, cfg Config, out io.Writer, _ io.Writer) error {
+	if strings.TrimSpace(cfg.ManifestPath) == "" {
+		return fmt.Errorf("manifest path is required")
+	}
+	runner, err := declarative.NewGRPCRunner(
+		declarative.Config{
+			ManifestPath: cfg.ManifestPath,
+			StatePath:    cfg.SeedStatePath,
+			Verbose:      cfg.SeedConfig.Verbose,
+		},
+		declarative.DialConfig{
+			GameAddr:        cfg.SeedConfig.GRPCAddr,
+			AuthAddr:        cfg.SeedConfig.AuthAddr,
+			ConnectionsAddr: cfg.ConnectionsAddr,
+			ListingAddr:     cfg.ListingAddr,
+		},
+	)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = runner.Close() }()
+
+	if err := runner.Run(ctx); err != nil {
+		return err
+	}
+	if out != nil {
+		fmt.Fprintf(out, "Applied declarative seed manifest: %s (state: %s)\n", cfg.ManifestPath, cfg.SeedStatePath)
+	}
+	return nil
+}
+
+func defaultSeedStatePathForManifest(manifestPath string) string {
+	base := strings.TrimSpace(filepath.Base(manifestPath))
+	if base == "" {
+		return filepath.Join(".tmp", "seed-state", "manifest.state.json")
+	}
+	ext := filepath.Ext(base)
+	name := strings.TrimSpace(strings.TrimSuffix(base, ext))
+	if name == "" {
+		name = "manifest"
+	}
+	return filepath.Join(".tmp", "seed-state", name+".state.json")
 }
 
 type campaignListingCreator interface {
