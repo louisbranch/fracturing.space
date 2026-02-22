@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"sync"
 )
 
 //go:embed data/campaign_covers.v1.json
@@ -14,9 +15,11 @@ var campaignCoverManifestJSON []byte
 var avatarCatalogJSON []byte
 
 var (
-	campaignCoverManifestData = mustDecodeManifestJSON(campaignCoverManifestJSON, "campaign cover manifest")
-	avatarManifestData        = mustDecodeManifestJSON(avatarManifestJSONFromCatalog(avatarCatalogJSON), "avatar manifest")
-	avatarSheetsDataBySetID   = mustDecodeAvatarSheetsJSON(avatarCatalogJSON)
+	loadCatalogManifestsOnce      sync.Once
+	embeddedCampaignCoverManifest Manifest
+	embeddedAvatarManifest        Manifest
+	embeddedAvatarSheetsBySetID   map[string]AvatarSheet
+	catalogLoadError              error
 )
 
 type manifestJSON struct {
@@ -52,15 +55,60 @@ type avatarPortraitJSON struct {
 	HeightPX int `json:"height_px"`
 }
 
-func mustDecodeManifestJSON(raw []byte, source string) Manifest {
-	manifest, err := decodeManifestJSON(raw)
-	if err != nil {
-		panic(fmt.Sprintf("decode %s: %v", source, err))
+// ValidateEmbeddedCatalogManifests returns any manifest parsing error from the embedded bundle.
+func ValidateEmbeddedCatalogManifests() error {
+	_, _, _, err := EmbeddedCatalogManifests()
+	return err
+}
+
+func loadCampaignAssetsManifests() (Manifest, Manifest, map[string]AvatarSheet, error) {
+	loadCatalogManifestsOnce.Do(func() {
+		embeddedCampaignCoverManifest, embeddedAvatarManifest, embeddedAvatarSheetsBySetID, catalogLoadError = loadEmbeddedCatalogManifests()
+	})
+	if catalogLoadError != nil {
+		return Manifest{}, Manifest{}, map[string]AvatarSheet{}, catalogLoadError
 	}
-	return manifest
+	return copyManifest(embeddedCampaignCoverManifest),
+		copyManifest(embeddedAvatarManifest),
+		copyAvatarSheetMap(embeddedAvatarSheetsBySetID),
+		nil
+}
+
+// EmbeddedCatalogManifests returns decoded, immutable embedded catalog data.
+//
+// It validates embedded JSON once and returns fresh copies so callers cannot
+// mutate cached package state.
+func EmbeddedCatalogManifests() (Manifest, Manifest, map[string]AvatarSheet, error) {
+	return loadCampaignAssetsManifests()
+}
+
+func loadEmbeddedCatalogManifests() (Manifest, Manifest, map[string]AvatarSheet, error) {
+	campaignManifest, err := decodeManifestJSON(campaignCoverManifestJSON)
+	if err != nil {
+		return Manifest{}, Manifest{}, nil, fmt.Errorf("decode campaign cover manifest: %w", err)
+	}
+
+	avatarManifest, err := decodeManifestJSONFromCatalog(avatarCatalogJSON)
+	if err != nil {
+		return Manifest{}, Manifest{}, nil, fmt.Errorf("decode avatar manifest: %w", err)
+	}
+
+	avatarSheets, err := decodeAvatarSheetsJSON(avatarCatalogJSON)
+	if err != nil {
+		return Manifest{}, Manifest{}, nil, fmt.Errorf("decode avatar sheets: %w", err)
+	}
+	return campaignManifest, avatarManifest, avatarSheets, nil
 }
 
 func decodeManifestJSON(raw []byte) (Manifest, error) {
+	manifest, err := decodeManifest(raw)
+	if err != nil {
+		return Manifest{}, err
+	}
+	return manifest, nil
+}
+
+func decodeManifest(raw []byte) (Manifest, error) {
 	var payload manifestJSON
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return Manifest{}, err
@@ -98,12 +146,12 @@ func decodeManifestJSON(raw []byte) (Manifest, error) {
 	}, nil
 }
 
-func mustDecodeAvatarSheetsJSON(raw []byte) map[string]AvatarSheet {
-	sheets, err := decodeAvatarSheetsJSON(raw)
+func decodeManifestJSONFromCatalog(raw []byte) (Manifest, error) {
+	manifestPayload, err := avatarManifestJSONFromCatalog(raw)
 	if err != nil {
-		panic(fmt.Sprintf("decode avatar sheets: %v", err))
+		return Manifest{}, err
 	}
-	return sheets
+	return decodeManifest(manifestPayload)
 }
 
 func decodeAvatarSheetsJSON(raw []byte) (map[string]AvatarSheet, error) {
@@ -139,16 +187,27 @@ func decodeAvatarSheetsJSON(raw []byte) (map[string]AvatarSheet, error) {
 	return sheetsBySetID, nil
 }
 
-func avatarManifestJSONFromCatalog(raw []byte) []byte {
+func copyAvatarSheetMap(source map[string]AvatarSheet) map[string]AvatarSheet {
+	if len(source) == 0 {
+		return map[string]AvatarSheet{}
+	}
+	out := make(map[string]AvatarSheet, len(source))
+	for setID, sheet := range source {
+		out[strings.TrimSpace(setID)] = copyAvatarSheet(sheet)
+	}
+	return out
+}
+
+func avatarManifestJSONFromCatalog(raw []byte) ([]byte, error) {
 	var payload avatarCatalogJSONDocument
 	if err := json.Unmarshal(raw, &payload); err != nil {
-		panic(fmt.Sprintf("decode avatar catalog manifest: %v", err))
+		return nil, fmt.Errorf("decode avatar catalog: %w", err)
 	}
 	manifestJSONPayload, err := json.Marshal(payload.Manifest)
 	if err != nil {
-		panic(fmt.Sprintf("marshal avatar manifest payload: %v", err))
+		return nil, fmt.Errorf("marshal avatar manifest payload: %w", err)
 	}
-	return manifestJSONPayload
+	return manifestJSONPayload, nil
 }
 
 func normalizeStringList(values []string) []string {

@@ -13,10 +13,12 @@ import (
 )
 
 var (
-	inlineApplyIntentIndexMu   sync.Mutex
-	inlineApplyIntentIndexOnce sync.Once
-	inlineApplyIntentIndex     map[event.Type]event.Intent
+	defaultInlineApplyIntentIndexOnce sync.Once
+	defaultInlineApplyIntentIndex     map[event.Type]event.Intent
 )
+
+// EventIntentResolver resolves metadata intent for a specific event type.
+type EventIntentResolver func(event.Type) (event.Intent, bool)
 
 // Executor executes a domain command and returns the domain result.
 type Executor interface {
@@ -30,13 +32,14 @@ type EventApplier interface {
 
 // Options controls command execution and emitted-event application behavior.
 type Options struct {
-	RequireEvents      bool
-	MissingEventMsg    string
-	InlineApplyEnabled bool
-	ShouldApply        func(event.Event) bool
-	ExecuteErr         func(error) error
-	ApplyErr           func(error) error
-	RejectErr          func(string) error
+	RequireEvents        bool
+	MissingEventMsg      string
+	InlineApplyEnabled   bool
+	ShouldApply          func(event.Event) bool
+	ExecuteErr           func(error) error
+	ApplyErr             func(error) error
+	RejectErr            func(string) error
+	DefaultEventResolver EventIntentResolver
 }
 
 // ExecuteAndApply executes the command, handles rejections, and applies events.
@@ -80,29 +83,22 @@ func ExecuteAndApply(
 // ShouldApplyProjectionInline enforces request-path inline-apply policy using
 // event registry intent metadata.
 func ShouldApplyProjectionInline(evt event.Event) bool {
-	if intent, ok := inlineApplyEventIntent(evt.Type); ok {
-		return intent != event.IntentAuditOnly
-	}
-	// Fail closed when intent cannot be resolved; this avoids mutating
-	// projections inline under degraded registry bootstrap conditions.
-	return false
+	return ShouldApplyProjectionInlineWithResolver(NewDefaultEventIntentResolver(), evt)
 }
 
-func inlineApplyEventIntent(eventType event.Type) (event.Intent, bool) {
-	inlineApplyIntentIndexMu.Lock()
-	defer inlineApplyIntentIndexMu.Unlock()
-	if inlineApplyIntentIndex == nil {
-		inlineApplyIntentIndexOnce.Do(func() {
-			inlineApplyIntentIndex = buildInlineApplyIntentIndex()
-		})
-		if inlineApplyIntentIndex == nil {
-			// Retry bootstrap on subsequent calls if registry build failed.
-			inlineApplyIntentIndexOnce = sync.Once{}
-			return "", false
-		}
+// ShouldApplyProjectionInlineWithResolver enforces inline-apply policy using the
+// provided event intent resolver.
+func ShouldApplyProjectionInlineWithResolver(resolve EventIntentResolver, evt event.Event) bool {
+	if resolve == nil {
+		resolve = NewDefaultEventIntentResolver()
 	}
-	intent, ok := inlineApplyIntentIndex[eventType]
-	return intent, ok
+	intent, ok := resolve(evt.Type)
+	if !ok {
+		// Fail closed when intent cannot be resolved; this avoids mutating
+		// projections inline under degraded registry bootstrap conditions.
+		return false
+	}
+	return intent != event.IntentAuditOnly
 }
 
 func buildInlineApplyIntentIndex() map[event.Type]event.Intent {
@@ -116,6 +112,19 @@ func buildInlineApplyIntentIndex() map[event.Type]event.Intent {
 		index[definition.Type] = definition.Intent
 	}
 	return index
+}
+
+// NewDefaultEventIntentResolver creates a process-wide cached resolver backed by
+// registry intent metadata.
+func NewDefaultEventIntentResolver() EventIntentResolver {
+	defaultInlineApplyIntentIndexOnce.Do(func() {
+		defaultInlineApplyIntentIndex = buildInlineApplyIntentIndex()
+	})
+	intentIndex := defaultInlineApplyIntentIndex
+	return func(eventType event.Type) (event.Intent, bool) {
+		intent, ok := intentIndex[eventType]
+		return intent, ok
+	}
 }
 
 func normalizeOptions(options Options) Options {
@@ -132,6 +141,14 @@ func normalizeOptions(options Options) Options {
 	if options.RejectErr == nil {
 		options.RejectErr = func(message string) error {
 			return status.Error(codes.FailedPrecondition, message)
+		}
+	}
+	if options.DefaultEventResolver == nil {
+		options.DefaultEventResolver = NewDefaultEventIntentResolver()
+	}
+	if options.ShouldApply == nil {
+		options.ShouldApply = func(evt event.Event) bool {
+			return ShouldApplyProjectionInlineWithResolver(options.DefaultEventResolver, evt)
 		}
 	}
 	return options

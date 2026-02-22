@@ -235,6 +235,8 @@ func (r *Registry) DefaultVersion(id commonv1.GameSystem) string {
 }
 
 // MustGet returns the game system for the given ID, or panics if not registered.
+// For newcomer-safe call paths, prefer GetOrError so startup can surface
+// registry problems without panics.
 func (r *Registry) MustGet(id commonv1.GameSystem) GameSystem {
 	system, err := r.GetOrError(id)
 	if err != nil {

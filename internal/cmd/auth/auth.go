@@ -4,11 +4,8 @@ package auth
 import (
 	"context"
 	"flag"
-	"log"
-	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/config"
-	"github.com/louisbranch/fracturing.space/internal/platform/otel"
+	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	server "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 )
 
@@ -21,13 +18,13 @@ type Config struct {
 // ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
-	if err := config.ParseEnv(&cfg); err != nil {
+	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
 
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The auth gRPC server port")
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "The auth HTTP server address")
-	if err := fs.Parse(args); err != nil {
+	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
@@ -35,17 +32,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run starts the auth process by delegating to the auth app server.
 func Run(ctx context.Context, cfg Config) error {
-	shutdown, err := otel.Setup(ctx, "auth")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := shutdown(shutdownCtx); err != nil {
-			log.Printf("otel shutdown: %v", err)
-		}
-	}()
-
-	return server.Run(ctx, cfg.Port, cfg.HTTPAddr)
+	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceAuth, func(context.Context) error {
+		return server.Run(ctx, cfg.Port, cfg.HTTPAddr)
+	})
 }

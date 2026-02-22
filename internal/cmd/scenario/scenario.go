@@ -9,7 +9,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/config"
+	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 )
 
@@ -26,7 +26,7 @@ type Config struct {
 // ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
-	if err := config.ParseEnv(&cfg); err != nil {
+	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
 
@@ -36,7 +36,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.BoolVar(&cfg.ValidateComments, "validate-comments", cfg.ValidateComments, "require each scene block to start with a comment")
 	fs.BoolVar(&cfg.Verbose, "verbose", cfg.Verbose, "enable verbose logging")
 	fs.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "timeout per step")
-	if err := fs.Parse(args); err != nil {
+	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil

@@ -49,9 +49,12 @@ func TestModulesAndMetadataShareSystemVersionKeys(t *testing.T) {
 }
 
 func TestAdapterRegistryRegistersDaggerheart(t *testing.T) {
-	registry := AdapterRegistry(ProjectionStores{
+	registry, err := AdapterRegistry(ProjectionStores{
 		Daggerheart: fakeDaggerheartStore{},
 	})
+	if err != nil {
+		t.Fatalf("build adapter registry: %v", err)
+	}
 
 	adapter := registry.Get(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, daggerheart.SystemVersion)
 	if adapter == nil {
@@ -66,9 +69,12 @@ func TestModulesHaveCorrespondingAdapters(t *testing.T) {
 	}
 
 	// Build adapter registry with all stores populated so adapters register.
-	registry := AdapterRegistry(ProjectionStores{
+	registry, err := AdapterRegistry(ProjectionStores{
 		Daggerheart: fakeDaggerheartStore{},
 	})
+	if err != nil {
+		t.Fatalf("build adapter registry: %v", err)
+	}
 
 	for _, module := range modules {
 		systemID, ok := parseGameSystemID(module.ID())

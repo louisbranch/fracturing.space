@@ -5,6 +5,12 @@ import (
 	"testing"
 )
 
+func TestValidateEmbeddedCatalogManifests(t *testing.T) {
+	if err := ValidateEmbeddedCatalogManifests(); err != nil {
+		t.Fatalf("embedded catalog manifests invalid: %v", err)
+	}
+}
+
 func TestResolveSelection_DefaultsAssetDeterministically(t *testing.T) {
 	manifest := AvatarManifest()
 	setA, assetA, err := manifest.ResolveSelection(SelectionInput{

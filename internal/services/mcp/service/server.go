@@ -31,6 +31,225 @@ const (
 	mcpAuthzOverrideReason = "mcp_service"
 )
 
+type mcpRegistrationKind int
+
+const (
+	mcpRegistrationKindTools mcpRegistrationKind = iota
+	mcpRegistrationKindResources
+)
+
+type mcpRegistrationModule struct {
+	name     string
+	kind     mcpRegistrationKind
+	register func(mcpRegistrationTarget) error
+}
+
+const (
+	mcpDaggerheartToolsModuleName = "daggerheart-tools"
+	mcpCampaignToolsModuleName    = "campaign-tools"
+	mcpSessionToolsModuleName     = "session-tools"
+	mcpForkToolsModuleName        = "fork-tools"
+	mcpEventToolsModuleName       = "event-tools"
+	mcpContextToolsModuleName     = "context-tools"
+	mcpCampaignResourceModuleName = "campaign-resources"
+	mcpSessionResourceModuleName  = "session-resources"
+	mcpEventResourceModuleName    = "event-resources"
+	mcpContextResourceModuleName  = "context-resources"
+)
+
+type mcpRegistrationClients struct {
+	daggerheartClient daggerheartv1.DaggerheartServiceClient
+	campaignClient    statev1.CampaignServiceClient
+	participantClient statev1.ParticipantServiceClient
+	characterClient   statev1.CharacterServiceClient
+	snapshotClient    statev1.SnapshotServiceClient
+	sessionClient     statev1.SessionServiceClient
+	forkClient        statev1.ForkServiceClient
+	eventClient       statev1.EventServiceClient
+}
+
+type mcpServerRegistrationAdapter struct {
+	server *mcp.Server
+}
+
+func (r mcpServerRegistrationAdapter) AddTool(tool *mcp.Tool, handler any) error {
+	return addMCPTool(r.server, tool, handler)
+}
+
+func (r mcpServerRegistrationAdapter) AddResourceTemplate(resourceTemplate *mcp.ResourceTemplate, handler mcp.ResourceHandler) {
+	r.server.AddResourceTemplate(resourceTemplate, handler)
+}
+
+func (r mcpServerRegistrationAdapter) AddResource(resource *mcp.Resource, handler mcp.ResourceHandler) {
+	r.server.AddResource(resource, handler)
+}
+
+func addMCPTool(server *mcp.Server, tool *mcp.Tool, handler any) error {
+	switch h := handler.(type) {
+	case mcp.ToolHandlerFor[domain.ActionRollInput, domain.ActionRollResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.DualityExplainInput, domain.DualityExplainResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.DualityOutcomeInput, domain.DualityOutcomeResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.DualityProbabilityInput, domain.DualityProbabilityResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.RulesVersionInput, domain.RulesVersionResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.RollDiceInput, domain.RollDiceResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CampaignCreateInput, domain.CampaignCreateResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CampaignStatusChangeInput, domain.CampaignStatusResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.ParticipantCreateInput, domain.ParticipantCreateResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.ParticipantUpdateInput, domain.ParticipantUpdateResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.ParticipantDeleteInput, domain.ParticipantDeleteResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CharacterCreateInput, domain.CharacterCreateResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CharacterUpdateInput, domain.CharacterUpdateResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CharacterDeleteInput, domain.CharacterDeleteResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CharacterControlSetInput, domain.CharacterControlSetResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CharacterSheetGetInput, domain.CharacterSheetGetResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CharacterProfilePatchInput, domain.CharacterProfilePatchResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CharacterStatePatchInput, domain.CharacterStatePatchResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.SessionStartInput, domain.SessionStartResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.SessionEndInput, domain.SessionEndResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.EventListInput, domain.EventListResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CampaignForkInput, domain.CampaignForkResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.CampaignLineageInput, domain.CampaignLineageResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	case mcp.ToolHandlerFor[domain.SetContextInput, domain.SetContextResult]:
+		mcp.AddTool(server, tool, h)
+		return nil
+	default:
+		toolName := "<nil>"
+		if tool != nil {
+			toolName = tool.Name
+		}
+		return fmt.Errorf("mcp registration adapter does not support handler type %T for tool %q", handler, toolName)
+	}
+}
+
+func newMCPRegistrationModules(
+	server *Server,
+	clients mcpRegistrationClients,
+	notify domain.ResourceUpdateNotifier,
+) []mcpRegistrationModule {
+	return []mcpRegistrationModule{
+		{
+			name: mcpDaggerheartToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerDaggerheartTools(registrar, clients.daggerheartClient)
+			},
+		},
+		{
+			name: mcpCampaignToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerCampaignTools(registrar, clients.campaignClient, clients.participantClient, clients.characterClient, clients.snapshotClient, server.getContext, notify)
+			},
+		},
+		{
+			name: mcpSessionToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerSessionTools(registrar, clients.sessionClient, server.getContext, notify)
+			},
+		},
+		{
+			name: mcpForkToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerForkTools(registrar, clients.forkClient, notify)
+			},
+		},
+		{
+			name: mcpEventToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerEventTools(registrar, clients.eventClient, server.getContext)
+			},
+		},
+		{
+			name: mcpContextToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerContextTools(registrar, clients.campaignClient, clients.sessionClient, clients.participantClient, server, notify)
+			},
+		},
+		{
+			name: mcpCampaignResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerCampaignResources(registrar, clients.campaignClient, clients.participantClient, clients.characterClient)
+				return nil
+			},
+		},
+		{
+			name: mcpSessionResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerSessionResources(registrar, clients.sessionClient)
+				return nil
+			},
+		},
+		{
+			name: mcpEventResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerEventResources(registrar, clients.eventClient)
+				return nil
+			},
+		},
+		{
+			name: mcpContextResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerContextResources(registrar, server)
+				return nil
+			},
+		},
+	}
+}
+
 // serverName identifies this MCP server to clients.
 var serverName = branding.AppName + " MCP"
 
@@ -75,12 +294,12 @@ func New(grpcAddr string) (*Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("connect to game server at %s: %w", addr, err)
 	}
-	return newServer(conn), nil
+	return newServer(conn)
 }
 
 // newServer creates MCP tool/resource handler bindings once and keeps shared
 // context for protocol state updates.
-func newServer(conn *grpc.ClientConn) *Server {
+func newServer(conn *grpc.ClientConn) (*Server, error) {
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, &mcp.ServerOptions{
 		CompletionHandler:  completionHandler,
 		SubscribeHandler:   resourceSubscribeHandler,
@@ -109,19 +328,28 @@ func newServer(conn *grpc.ClientConn) *Server {
 		}
 	}
 
-	registerDaggerheartTools(mcpServer, daggerheartClient)
-	registerCampaignTools(mcpServer, campaignClient, participantClient, characterClient, snapshotClient, server.getContext, resourceNotifier)
-	registerSessionTools(mcpServer, sessionClient, server.getContext, resourceNotifier)
-	registerForkTools(mcpServer, forkClient, resourceNotifier)
-	registerEventTools(mcpServer, eventClient, server.getContext)
-	registerContextTools(mcpServer, campaignClient, sessionClient, participantClient, server, resourceNotifier)
-	registerCampaignResources(mcpServer, campaignClient, participantClient, characterClient)
-	registerSessionResources(mcpServer, sessionClient)
-	registerEventResources(mcpServer, eventClient)
-	registerContextResources(mcpServer, server)
+	for _, module := range newMCPRegistrationModules(
+		server,
+		mcpRegistrationClients{
+			daggerheartClient: daggerheartClient,
+			campaignClient:    campaignClient,
+			participantClient: participantClient,
+			characterClient:   characterClient,
+			snapshotClient:    snapshotClient,
+			sessionClient:     sessionClient,
+			forkClient:        forkClient,
+			eventClient:       eventClient,
+		},
+		resourceNotifier,
+	) {
+		if err := module.register(mcpServerRegistrationAdapter{server: mcpServer}); err != nil {
+			return nil, fmt.Errorf("register MCP module %q: %w", module.name, err)
+		}
+	}
+
 	conformance.Register(mcpServer)
 
-	return server
+	return server, nil
 }
 
 // completionHandler handles completion/complete requests with empty results.
@@ -192,7 +420,10 @@ func runWithHTTPTransport(ctx context.Context, cfg Config) error {
 	if err != nil {
 		return err
 	}
-	mcpServer := newServer(conn)
+	mcpServer, err := newServer(conn)
+	if err != nil {
+		return err
+	}
 	defer mcpServer.Close()
 
 	// Start gRPC connection health monitoring in background
@@ -313,7 +544,10 @@ func runWithTransport(ctx context.Context, grpcAddr string, transport mcp.Transp
 	if err != nil {
 		return err
 	}
-	mcpServer := newServer(conn)
+	mcpServer, err := newServer(conn)
+	if err != nil {
+		return err
+	}
 	return mcpServer.serveWithTransport(ctx, transport)
 }
 

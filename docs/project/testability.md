@@ -59,6 +59,19 @@ func newRunner(env scenarioEnv, auth *MockAuth, cfg Config) *Runner {
 
 Tests call the internal constructor directly with fakes. The production constructor is thin wiring that calls the internal one.
 
+## Injecting policy decisions (example: domain-write inline apply)
+
+When behavior depends on policy, inject a resolver instead of reading globals.
+
+`internal/services/game/api/grpc/internal/domainwrite/helper.go` demonstrates this pattern:
+
+- `ExecuteAndApply` evaluates `Options.ShouldApply` before applying events inline.
+- `Options.DefaultEventResolver` defaults to a resolver built from system metadata.
+- `ShouldApplyProjectionInlineWithResolver` accepts any `EventIntentResolver`, so tests can provide a deterministic fake and avoid global bootstrap coupling.
+
+This keeps command-write behavior deterministic for tests while preserving the
+same production behavior through `normalizeOptions`.
+
 ## Interface boundaries
 
 Accept interfaces at dependency boundaries. Concrete types stay behind them.

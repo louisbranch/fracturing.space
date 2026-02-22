@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -741,43 +742,191 @@ func TestRegisterToolsNoPanic(t *testing.T) {
 	server := &Server{}
 
 	t.Run("registerDaggerheartTools", func(t *testing.T) {
-		registerDaggerheartTools(mcpServer, nil)
+		err := registerDaggerheartTools(mcpServerRegistrationAdapter{server: mcpServer}, nil)
+		if err != nil {
+			t.Fatalf("registerDaggerheartTools: %v", err)
+		}
 	})
 
 	t.Run("registerCampaignTools", func(t *testing.T) {
-		registerCampaignTools(mcpServer, nil, nil, nil, nil, server.getContext, nil)
+		err := registerCampaignTools(mcpServerRegistrationAdapter{server: mcpServer}, nil, nil, nil, nil, server.getContext, nil)
+		if err != nil {
+			t.Fatalf("registerCampaignTools: %v", err)
+		}
 	})
 
 	t.Run("registerSessionTools", func(t *testing.T) {
-		registerSessionTools(mcpServer, nil, server.getContext, nil)
+		err := registerSessionTools(mcpServerRegistrationAdapter{server: mcpServer}, nil, server.getContext, nil)
+		if err != nil {
+			t.Fatalf("registerSessionTools: %v", err)
+		}
 	})
 
 	t.Run("registerEventTools", func(t *testing.T) {
-		registerEventTools(mcpServer, nil, server.getContext)
+		err := registerEventTools(mcpServerRegistrationAdapter{server: mcpServer}, nil, server.getContext)
+		if err != nil {
+			t.Fatalf("registerEventTools: %v", err)
+		}
 	})
 
 	t.Run("registerForkTools", func(t *testing.T) {
-		registerForkTools(mcpServer, nil, nil)
+		err := registerForkTools(mcpServerRegistrationAdapter{server: mcpServer}, nil, nil)
+		if err != nil {
+			t.Fatalf("registerForkTools: %v", err)
+		}
 	})
 
 	t.Run("registerContextTools", func(t *testing.T) {
-		registerContextTools(mcpServer, nil, nil, nil, server, nil)
+		err := registerContextTools(mcpServerRegistrationAdapter{server: mcpServer}, nil, nil, nil, server, nil)
+		if err != nil {
+			t.Fatalf("registerContextTools: %v", err)
+		}
 	})
 
 	t.Run("registerCampaignResources", func(t *testing.T) {
-		registerCampaignResources(mcpServer, nil, nil, nil)
+		registerCampaignResources(mcpServerRegistrationAdapter{server: mcpServer}, nil, nil, nil)
 	})
 
 	t.Run("registerSessionResources", func(t *testing.T) {
-		registerSessionResources(mcpServer, nil)
+		registerSessionResources(mcpServerRegistrationAdapter{server: mcpServer}, nil)
 	})
 
 	t.Run("registerEventResources", func(t *testing.T) {
-		registerEventResources(mcpServer, nil)
+		registerEventResources(mcpServerRegistrationAdapter{server: mcpServer}, nil)
 	})
 
 	t.Run("registerContextResources", func(t *testing.T) {
-		registerContextResources(mcpServer, server)
+		registerContextResources(mcpServerRegistrationAdapter{server: mcpServer}, server)
+	})
+}
+
+type fakeMCPRegistrationTarget struct {
+	tools             []string
+	resourceTemplates []string
+	resources         []string
+}
+
+func (f *fakeMCPRegistrationTarget) AddTool(tool *mcp.Tool, _ any) error {
+	if tool != nil {
+		f.tools = append(f.tools, tool.Name)
+	}
+	return nil
+}
+
+func (f *fakeMCPRegistrationTarget) AddResourceTemplate(resourceTemplate *mcp.ResourceTemplate, _ mcp.ResourceHandler) {
+	if resourceTemplate != nil {
+		f.resourceTemplates = append(f.resourceTemplates, resourceTemplate.URITemplate)
+	}
+}
+
+func (f *fakeMCPRegistrationTarget) AddResource(resource *mcp.Resource, _ mcp.ResourceHandler) {
+	if resource != nil {
+		f.resources = append(f.resources, resource.URI)
+	}
+}
+
+func TestMCPRegistrationModules(t *testing.T) {
+	server := &Server{}
+	modules := newMCPRegistrationModules(
+		server,
+		mcpRegistrationClients{},
+		nil,
+	)
+
+	expectNames := []string{
+		mcpDaggerheartToolsModuleName,
+		mcpCampaignToolsModuleName,
+		mcpSessionToolsModuleName,
+		mcpForkToolsModuleName,
+		mcpEventToolsModuleName,
+		mcpContextToolsModuleName,
+		mcpCampaignResourceModuleName,
+		mcpSessionResourceModuleName,
+		mcpEventResourceModuleName,
+		mcpContextResourceModuleName,
+	}
+	gotNames := make([]string, 0, len(modules))
+	for _, module := range modules {
+		gotNames = append(gotNames, module.name)
+	}
+	if !reflect.DeepEqual(gotNames, expectNames) {
+		t.Fatalf("expected registration modules %v, got %v", expectNames, gotNames)
+	}
+}
+
+func TestMCPRegistrationModulesAreIsolated(t *testing.T) {
+	server := &Server{}
+	modules := newMCPRegistrationModules(
+		server,
+		mcpRegistrationClients{},
+		nil,
+	)
+
+	expectedCounts := map[string]int{
+		mcpDaggerheartToolsModuleName: 6,
+		mcpCampaignToolsModuleName:    14,
+		mcpSessionToolsModuleName:     2,
+		mcpForkToolsModuleName:        2,
+		mcpEventToolsModuleName:       1,
+		mcpContextToolsModuleName:     1,
+		mcpCampaignResourceModuleName: 4,
+		mcpSessionResourceModuleName:  1,
+		mcpEventResourceModuleName:    1,
+		mcpContextResourceModuleName:  1,
+	}
+
+	for _, module := range modules {
+		module := module
+		t.Run(module.name, func(t *testing.T) {
+			fake := &fakeMCPRegistrationTarget{}
+			if err := module.register(fake); err != nil {
+				t.Fatalf("module registration failed for %q: %v", module.name, err)
+			}
+
+			if len(fake.tools)+len(fake.resourceTemplates)+len(fake.resources) == 0 {
+				t.Fatalf("module %q did not register anything", module.name)
+			}
+
+			switch module.kind {
+			case mcpRegistrationKindTools:
+				if len(fake.tools) == 0 {
+					t.Fatalf("tool module %q has no tools", module.name)
+				}
+				if len(fake.resourceTemplates) != 0 || len(fake.resources) != 0 {
+					t.Fatalf("tool module %q also registered resources", module.name)
+				}
+			case mcpRegistrationKindResources:
+				if len(fake.resourceTemplates) == 0 && len(fake.resources) == 0 {
+					t.Fatalf("resource module %q has no resources", module.name)
+				}
+				if len(fake.tools) != 0 {
+					t.Fatalf("resource module %q also registered tools", module.name)
+				}
+			default:
+				t.Fatalf("unexpected module kind %v for %q", module.kind, module.name)
+			}
+
+			want := expectedCounts[module.name]
+			if want == 0 {
+				t.Fatalf("module %q missing from expectedCounts", module.name)
+			}
+			if got := len(fake.tools) + len(fake.resourceTemplates) + len(fake.resources); got != want {
+				t.Fatalf("module %q registered %d items, expected %d", module.name, got, want)
+			}
+		})
+	}
+}
+
+func TestAddMCPToolErrorsOnUnsupportedHandler(t *testing.T) {
+	t.Run("unsupported handler type returns an error", func(t *testing.T) {
+		srv := mcp.NewServer(&mcp.Implementation{Name: "test", Version: "1.0"}, nil)
+		err := addMCPTool(srv, domain.CampaignCreateTool(), func() {})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+		if !strings.Contains(err.Error(), "mcp registration adapter does not support handler type") {
+			t.Fatalf("unexpected error message: %q", err.Error())
+		}
 	})
 }
 
