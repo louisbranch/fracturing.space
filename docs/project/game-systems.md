@@ -66,6 +66,7 @@ type Module interface {
     Version() string
     RegisterCommands(registry *command.Registry) error
     RegisterEvents(registry *event.Registry) error
+    EmittableEventTypes() []event.Type
     Decider() Decider
     Folder() Folder
     StateFactory() StateFactory
@@ -88,10 +89,11 @@ Projection adapter interface:
 
 ```go
 type Adapter interface {
-    ID() commonv1.GameSystem
+    ID() string
     Version() string
     Apply(context.Context, event.Event) error
     Snapshot(context.Context, string) (any, error)
+    HandledTypes() []event.Type
 }
 ```
 

@@ -125,7 +125,7 @@ func RouteCommand(registry *Registry, state any, cmd command.Command, now func()
 	}
 	module := registry.Get(systemID, systemVersion)
 	if module == nil {
-		return command.Decision{}, ErrModuleNotFound
+		return command.Decision{}, fmt.Errorf("%w: %s@%s", ErrModuleNotFound, systemID, systemVersion)
 	}
 	decider := module.Decider()
 	if decider == nil {
@@ -152,7 +152,7 @@ func RouteEvent(registry *Registry, state any, evt event.Event) (any, error) {
 	}
 	module := registry.Get(systemID, systemVersion)
 	if module == nil {
-		return nil, ErrModuleNotFound
+		return nil, fmt.Errorf("%w: %s@%s", ErrModuleNotFound, systemID, systemVersion)
 	}
 	folder := module.Folder()
 	if folder == nil {

@@ -2,6 +2,7 @@ package module
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -178,6 +179,43 @@ func TestRouteEvent_UsesModuleFolder(t *testing.T) {
 	}
 	if state != "next" {
 		t.Fatalf("state = %v, want %v", state, "next")
+	}
+}
+
+func TestRouteCommand_ModuleNotFoundIncludesSystemContext(t *testing.T) {
+	registry := NewRegistry()
+	// Register a different module so the registry is non-empty.
+	if err := registry.Register(stubModule{id: "other", version: "v1"}); err != nil {
+		t.Fatalf("register module: %v", err)
+	}
+	cmd := command.Command{SystemID: "missing-system", SystemVersion: "v2"}
+	_, err := RouteCommand(registry, nil, cmd, nil)
+	if !errors.Is(err, ErrModuleNotFound) {
+		t.Fatalf("expected ErrModuleNotFound, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "missing-system") {
+		t.Fatalf("expected error to contain system ID, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "v2") {
+		t.Fatalf("expected error to contain system version, got %v", err)
+	}
+}
+
+func TestRouteEvent_ModuleNotFoundIncludesSystemContext(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(stubModule{id: "other", version: "v1"}); err != nil {
+		t.Fatalf("register module: %v", err)
+	}
+	evt := event.Event{SystemID: "missing-system", SystemVersion: "v3"}
+	_, err := RouteEvent(registry, nil, evt)
+	if !errors.Is(err, ErrModuleNotFound) {
+		t.Fatalf("expected ErrModuleNotFound, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "missing-system") {
+		t.Fatalf("expected error to contain system ID, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "v3") {
+		t.Fatalf("expected error to contain system version, got %v", err)
 	}
 }
 
