@@ -31,6 +31,32 @@ func TestNormalizeSystemNamespace(t *testing.T) {
 	}
 }
 
+func TestValidateSystemNamespace(t *testing.T) {
+	tests := []struct {
+		name     string
+		typeName string
+		systemID string
+		wantErr  bool
+	}{
+		{name: "match", typeName: "sys.alpha.action.tested", systemID: "GAME_SYSTEM_ALPHA", wantErr: false},
+		{name: "mismatch", typeName: "sys.alpha.action.tested", systemID: "GAME_SYSTEM_BETA", wantErr: true},
+		{name: "non-system type", typeName: "campaign.created", systemID: "GAME_SYSTEM_ALPHA", wantErr: false},
+		{name: "empty systemID", typeName: "sys.alpha.action.tested", systemID: "", wantErr: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateSystemNamespace(tt.typeName, tt.systemID)
+			if tt.wantErr && err == nil {
+				t.Error("expected error, got nil")
+			}
+			if !tt.wantErr && err != nil {
+				t.Errorf("expected no error, got: %v", err)
+			}
+		})
+	}
+}
+
 func TestNamespaceFromType(t *testing.T) {
 	tests := []struct {
 		name   string

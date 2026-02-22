@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 )
+
+// noopValidator is a payload validator that always succeeds. Used by test
+// fixtures to satisfy the mandatory payload-validator requirement.
+func noopValidator(_ json.RawMessage) error { return nil }
 
 type fakeModule struct{}
 
@@ -24,8 +29,9 @@ func (fakeModule) RegisterCommands(registry *command.Registry) error {
 }
 func (fakeModule) RegisterEvents(registry *event.Registry) error {
 	return registry.Register(event.Definition{
-		Type:  event.Type("sys.system_1.action.tested"),
-		Owner: event.OwnerSystem,
+		Type:            event.Type("sys.system_1.action.tested"),
+		Owner:           event.OwnerSystem,
+		ValidatePayload: noopValidator,
 	})
 }
 func (fakeModule) EmittableEventTypes() []event.Type {
@@ -52,8 +58,9 @@ func (m syntheticModule) RegisterCommands(registry *command.Registry) error {
 }
 func (m syntheticModule) RegisterEvents(registry *event.Registry) error {
 	return registry.Register(event.Definition{
-		Type:  m.eventType,
-		Owner: event.OwnerSystem,
+		Type:            m.eventType,
+		Owner:           event.OwnerSystem,
+		ValidatePayload: noopValidator,
 	})
 }
 func (m syntheticModule) EmittableEventTypes() []event.Type {
@@ -1113,3 +1120,151 @@ func TestValidateNoProjectionHandlersForNonProjectionEvents_RejectsReplayOnlyHan
 		t.Fatalf("expected error to mention type, got: %v", err)
 	}
 }
+
+// --- Stale projection handler tests ---
+
+func TestValidateNoStaleProjectionHandlers_RejectsUnregisteredType(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	// Register only one type — the handler list includes an unregistered one.
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.registered"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	projectionHandled := []event.Type{
+		event.Type("test.registered"),
+		event.Type("test.stale_handler"), // not in event registry
+	}
+	err := ValidateNoStaleProjectionHandlers(eventRegistry, projectionHandled)
+	if err == nil {
+		t.Fatal("expected error for unregistered projection handler type")
+	}
+	if !strings.Contains(err.Error(), "test.stale_handler") {
+		t.Fatalf("expected error to mention stale type, got: %v", err)
+	}
+}
+
+func TestValidateNoStaleProjectionHandlers_PassesWhenAllRegistered(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	if err := eventRegistry.Register(event.Definition{
+		Type:   event.Type("test.registered"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	projectionHandled := []event.Type{event.Type("test.registered")}
+	if err := ValidateNoStaleProjectionHandlers(eventRegistry, projectionHandled); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+// --- CommandTyper enforcement tests ---
+
+func TestValidateDeciderCommandCoverage_ErrorsWhenDeciderLacksCommandTyper(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &fakeModuleWithDeciderNoCommandTyper{
+		id:      "system-1",
+		version: "v1",
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("sys.system_1.cmd1"),
+		Owner: command.OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+
+	err := ValidateDeciderCommandCoverage(registry, cmdRegistry)
+	if err == nil {
+		t.Fatal("expected error when decider lacks CommandTyper but system commands exist")
+	}
+	if !strings.Contains(err.Error(), "CommandTyper") {
+		t.Fatalf("expected error to mention CommandTyper, got: %v", err)
+	}
+}
+
+// fakeModuleWithDeciderNoCommandTyper has a non-nil decider that does NOT
+// implement module.CommandTyper.
+type fakeModuleWithDeciderNoCommandTyper struct {
+	id      string
+	version string
+}
+
+func (m *fakeModuleWithDeciderNoCommandTyper) ID() string      { return m.id }
+func (m *fakeModuleWithDeciderNoCommandTyper) Version() string { return m.version }
+func (m *fakeModuleWithDeciderNoCommandTyper) RegisterCommands(_ *command.Registry) error {
+	return nil
+}
+func (m *fakeModuleWithDeciderNoCommandTyper) RegisterEvents(_ *event.Registry) error { return nil }
+func (m *fakeModuleWithDeciderNoCommandTyper) EmittableEventTypes() []event.Type      { return nil }
+func (m *fakeModuleWithDeciderNoCommandTyper) Decider() module.Decider {
+	return &plainDecider{}
+}
+func (m *fakeModuleWithDeciderNoCommandTyper) Folder() module.Folder             { return nil }
+func (m *fakeModuleWithDeciderNoCommandTyper) StateFactory() module.StateFactory { return nil }
+
+// plainDecider is a decider that does NOT implement CommandTyper.
+type plainDecider struct{}
+
+func (d *plainDecider) Decide(_ any, _ command.Command, _ func() time.Time) command.Decision {
+	return command.Decision{}
+}
+
+// --- Payload validator enforcement tests ---
+
+func TestBuildRegistries_RejectsMissingPayloadValidator(t *testing.T) {
+	mod := &noValidatorModule{
+		id:          "GAME_SYSTEM_ALPHA",
+		version:     "v1",
+		commandType: command.Type("sys.alpha.cmd1"),
+		eventType:   event.Type("sys.alpha.ev1"),
+	}
+
+	_, err := BuildRegistries(mod)
+	if err == nil {
+		t.Fatal("expected error for non-audit event without payload validator")
+	}
+	if !strings.Contains(err.Error(), "payload validator") {
+		t.Fatalf("expected error to mention payload validators, got: %v", err)
+	}
+}
+
+// noValidatorModule is a synthetic module that registers an event without a
+// payload validator, used to test the hard-error enforcement.
+type noValidatorModule struct {
+	id          string
+	version     string
+	commandType command.Type
+	eventType   event.Type
+}
+
+func (m *noValidatorModule) ID() string      { return m.id }
+func (m *noValidatorModule) Version() string { return m.version }
+func (m *noValidatorModule) RegisterCommands(registry *command.Registry) error {
+	return registry.Register(command.Definition{
+		Type:  m.commandType,
+		Owner: command.OwnerSystem,
+	})
+}
+func (m *noValidatorModule) RegisterEvents(registry *event.Registry) error {
+	return registry.Register(event.Definition{
+		Type:  m.eventType,
+		Owner: event.OwnerSystem,
+		// Intentionally no ValidatePayload — tests the hard-error path.
+	})
+}
+func (m *noValidatorModule) EmittableEventTypes() []event.Type {
+	return []event.Type{m.eventType}
+}
+func (m *noValidatorModule) Decider() module.Decider           { return nil }
+func (m *noValidatorModule) Folder() module.Folder             { return nil }
+func (m *noValidatorModule) StateFactory() module.StateFactory { return nil }

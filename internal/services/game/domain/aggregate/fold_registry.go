@@ -24,6 +24,30 @@ type foldEntry struct {
 	fold func(state *State, evt event.Event) error
 }
 
+// foldEntityKeyed is a generic helper for entity-keyed fold entries. It
+// validates the EntityID, lazily initializes the map, looks up the sub-state,
+// calls the domain fold, and writes back the result.
+func foldEntityKeyed[S any](
+	m *map[string]S,
+	evt event.Event,
+	domainName string,
+	fold func(S, event.Event) (S, error),
+) error {
+	if evt.EntityID == "" {
+		return fmt.Errorf("%s fold requires EntityID but got empty for %s", domainName, evt.Type)
+	}
+	if *m == nil {
+		*m = make(map[string]S)
+	}
+	sub := (*m)[evt.EntityID]
+	updated, err := fold(sub, evt)
+	if err != nil {
+		return err
+	}
+	(*m)[evt.EntityID] = updated
+	return nil
+}
+
 // coreFoldEntries returns the declarative fold dispatch table for all core
 // domains. Adding a new core domain requires only adding an entry here.
 //
@@ -71,55 +95,19 @@ func coreFoldEntries() []foldEntry {
 		{
 			types: participant.FoldHandledTypes,
 			fold: func(state *State, evt event.Event) error {
-				if evt.EntityID == "" {
-					return fmt.Errorf("participant fold requires EntityID but got empty for %s", evt.Type)
-				}
-				if state.Participants == nil {
-					state.Participants = make(map[string]participant.State)
-				}
-				pState := state.Participants[evt.EntityID]
-				updated, err := participant.Fold(pState, evt)
-				if err != nil {
-					return err
-				}
-				state.Participants[evt.EntityID] = updated
-				return nil
+				return foldEntityKeyed(&state.Participants, evt, "participant", participant.Fold)
 			},
 		},
 		{
 			types: character.FoldHandledTypes,
 			fold: func(state *State, evt event.Event) error {
-				if evt.EntityID == "" {
-					return fmt.Errorf("character fold requires EntityID but got empty for %s", evt.Type)
-				}
-				if state.Characters == nil {
-					state.Characters = make(map[string]character.State)
-				}
-				cState := state.Characters[evt.EntityID]
-				updated, err := character.Fold(cState, evt)
-				if err != nil {
-					return err
-				}
-				state.Characters[evt.EntityID] = updated
-				return nil
+				return foldEntityKeyed(&state.Characters, evt, "character", character.Fold)
 			},
 		},
 		{
 			types: invite.FoldHandledTypes,
 			fold: func(state *State, evt event.Event) error {
-				if evt.EntityID == "" {
-					return fmt.Errorf("invite fold requires EntityID but got empty for %s", evt.Type)
-				}
-				if state.Invites == nil {
-					state.Invites = make(map[string]invite.State)
-				}
-				iState := state.Invites[evt.EntityID]
-				updated, err := invite.Fold(iState, evt)
-				if err != nil {
-					return err
-				}
-				state.Invites[evt.EntityID] = updated
-				return nil
+				return foldEntityKeyed(&state.Invites, evt, "invite", invite.Fold)
 			},
 		},
 	}

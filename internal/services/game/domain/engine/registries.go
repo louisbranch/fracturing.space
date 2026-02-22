@@ -2,7 +2,6 @@ package engine
 
 import (
 	"fmt"
-	"log"
 	"reflect"
 	"strings"
 
@@ -111,7 +110,7 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 		for i, t := range missing {
 			names[i] = string(t)
 		}
-		log.Printf("WARNING: non-audit events without payload validators: %s", strings.Join(names, ", "))
+		return Registries{}, fmt.Errorf("non-audit events without payload validators: %s", strings.Join(names, ", "))
 	}
 
 	return Registries{
@@ -275,8 +274,34 @@ func ValidateProjectionRegistries(
 	if err := ValidateNoProjectionHandlersForNonProjectionEvents(events, projectionHandledTypes); err != nil {
 		return fmt.Errorf("validate projection intent guard: %w", err)
 	}
+	if err := ValidateNoStaleProjectionHandlers(events, projectionHandledTypes); err != nil {
+		return fmt.Errorf("validate stale projection handlers: %w", err)
+	}
 	if err := ValidateAdapterEventCoverage(modules, adapters, events); err != nil {
 		return fmt.Errorf("validate adapter event coverage: %w", err)
+	}
+	return nil
+}
+
+// ValidateNoStaleProjectionHandlers verifies that every event type in the
+// projection handler list is actually registered in the event registry (after
+// alias resolution). A stale handler — one left behind after an event type is
+// removed or renamed — would be dead code that silently misleads developers.
+func ValidateNoStaleProjectionHandlers(events *event.Registry, projectionHandled []event.Type) error {
+	if events == nil {
+		return fmt.Errorf("event registry is required for stale projection handler check")
+	}
+
+	var stale []string
+	for _, t := range projectionHandled {
+		resolved := events.Resolve(t)
+		if _, ok := events.Definition(resolved); !ok {
+			stale = append(stale, string(t))
+		}
+	}
+	if len(stale) > 0 {
+		return fmt.Errorf("projection handlers for unregistered event types (stale): %s",
+			strings.Join(stale, ", "))
 	}
 	return nil
 }
@@ -398,15 +423,23 @@ func ValidateDeciderCommandCoverage(modules *module.Registry, commands *command.
 		if decider == nil {
 			continue
 		}
+		key := mod.ID() + "@" + mod.Version()
 		typer, ok := decider.(module.CommandTyper)
 		if !ok {
+			// If the module has registered system commands but its decider
+			// does not implement CommandTyper, the coverage check cannot
+			// verify handler completeness — fail loudly instead of silently
+			// skipping.
+			if len(systemCommands[key]) > 0 {
+				return fmt.Errorf("module %s has %d registered system commands but its decider does not implement CommandTyper",
+					key, len(systemCommands[key]))
+			}
 			continue
 		}
 		handled := make(map[command.Type]struct{})
 		for _, t := range typer.DeciderHandledCommands() {
 			handled[t] = struct{}{}
 		}
-		key := mod.ID() + "@" + mod.Version()
 		for ct := range systemCommands[key] {
 			if _, ok := handled[ct]; !ok {
 				missing = append(missing, string(ct))

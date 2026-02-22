@@ -101,6 +101,40 @@ func registeredHandlerTypes() []event.Type {
 	return types
 }
 
+// storeCheck maps a store requirement bit to the Applier field that satisfies
+// it and a human-readable label for error messages.
+type storeCheck struct {
+	bit   storeRequirement
+	label string
+	isNil func(Applier) bool
+}
+
+// storeChecks is the single table that drives both ValidateStorePreconditions
+// and validatePreconditions, eliminating duplicated nil-check logic.
+var storeChecks = []storeCheck{
+	{needCampaign, "campaign", func(a Applier) bool { return a.Campaign == nil }},
+	{needCharacter, "character", func(a Applier) bool { return a.Character == nil }},
+	{needCampaignFork, "campaign fork", func(a Applier) bool { return a.CampaignFork == nil }},
+	{needInvite, "invite", func(a Applier) bool { return a.Invite == nil }},
+	{needParticipant, "participant", func(a Applier) bool { return a.Participant == nil }},
+	{needSession, "session", func(a Applier) bool { return a.Session == nil }},
+	{needSessionGate, "session gate", func(a Applier) bool { return a.SessionGate == nil }},
+	{needSessionSpotlight, "session spotlight", func(a Applier) bool { return a.SessionSpotlight == nil }},
+	{needAdapters, "system adapters", func(a Applier) bool { return a.Adapters == nil }},
+}
+
+// checkMissingStores returns the labels of stores that are required by the
+// given requirement bitmask but nil in the Applier.
+func checkMissingStores(required storeRequirement, a Applier) []string {
+	var missing []string
+	for _, sc := range storeChecks {
+		if required&sc.bit != 0 && sc.isNil(a) {
+			missing = append(missing, sc.label)
+		}
+	}
+	return missing
+}
+
 // ValidateStorePreconditions verifies that every store dependency declared in
 // the handler registry is satisfied by this Applier. Call at startup to fail
 // fast on misconfiguration instead of discovering nil stores at runtime when the
@@ -112,35 +146,7 @@ func (a Applier) ValidateStorePreconditions() error {
 		required |= h.stores
 	}
 
-	var missing []string
-	if required&needCampaign != 0 && a.Campaign == nil {
-		missing = append(missing, "campaign")
-	}
-	if required&needCharacter != 0 && a.Character == nil {
-		missing = append(missing, "character")
-	}
-	if required&needCampaignFork != 0 && a.CampaignFork == nil {
-		missing = append(missing, "campaign fork")
-	}
-	if required&needInvite != 0 && a.Invite == nil {
-		missing = append(missing, "invite")
-	}
-	if required&needParticipant != 0 && a.Participant == nil {
-		missing = append(missing, "participant")
-	}
-	if required&needSession != 0 && a.Session == nil {
-		missing = append(missing, "session")
-	}
-	if required&needSessionGate != 0 && a.SessionGate == nil {
-		missing = append(missing, "session gate")
-	}
-	if required&needSessionSpotlight != 0 && a.SessionSpotlight == nil {
-		missing = append(missing, "session spotlight")
-	}
-	if required&needAdapters != 0 && a.Adapters == nil {
-		missing = append(missing, "system adapters")
-	}
-	if len(missing) > 0 {
+	if missing := checkMissingStores(required, a); len(missing) > 0 {
 		return fmt.Errorf("projection stores not configured: %s", strings.Join(missing, ", "))
 	}
 	return nil
@@ -149,32 +155,8 @@ func (a Applier) ValidateStorePreconditions() error {
 // validatePreconditions checks that the applier's stores and event envelope
 // fields satisfy the handler's declared requirements.
 func (a Applier) validatePreconditions(h handlerEntry, evt event.Event) error {
-	if h.stores&needCampaign != 0 && a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if h.stores&needCharacter != 0 && a.Character == nil {
-		return fmt.Errorf("character store is not configured")
-	}
-	if h.stores&needCampaignFork != 0 && a.CampaignFork == nil {
-		return fmt.Errorf("campaign fork store is not configured")
-	}
-	if h.stores&needInvite != 0 && a.Invite == nil {
-		return fmt.Errorf("invite store is not configured")
-	}
-	if h.stores&needParticipant != 0 && a.Participant == nil {
-		return fmt.Errorf("participant store is not configured")
-	}
-	if h.stores&needSession != 0 && a.Session == nil {
-		return fmt.Errorf("session store is not configured")
-	}
-	if h.stores&needSessionGate != 0 && a.SessionGate == nil {
-		return fmt.Errorf("session gate store is not configured")
-	}
-	if h.stores&needSessionSpotlight != 0 && a.SessionSpotlight == nil {
-		return fmt.Errorf("session spotlight store is not configured")
-	}
-	if h.stores&needAdapters != 0 && a.Adapters == nil {
-		return fmt.Errorf("system adapters are not configured")
+	if missing := checkMissingStores(h.stores, a); len(missing) > 0 {
+		return fmt.Errorf("%s store is not configured", missing[0])
 	}
 
 	if h.ids&requireCampaignID != 0 && strings.TrimSpace(evt.CampaignID) == "" {

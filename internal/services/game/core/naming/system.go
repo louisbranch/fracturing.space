@@ -3,7 +3,10 @@
 // pluggable game-system modules.
 package naming
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 // NormalizeSystemNamespace converts a raw system identifier (e.g.
 // "GAME_SYSTEM_ALPHA", "my-system") into the canonical lowercase
@@ -34,6 +37,24 @@ func NormalizeSystemNamespace(systemID string) string {
 		}
 	}
 	return strings.Trim(b.String(), "_")
+}
+
+// ValidateSystemNamespace checks that a system-prefixed type name's namespace
+// matches the normalized systemID. Non-system types and empty systemIDs are
+// silently accepted so callers only need one call site for both ownership cases.
+func ValidateSystemNamespace(typeName, systemID string) error {
+	if systemID == "" {
+		return nil
+	}
+	expectedNS, ok := NamespaceFromType(typeName)
+	if !ok {
+		return nil
+	}
+	if NormalizeSystemNamespace(systemID) != expectedNS {
+		return fmt.Errorf("system id %s does not match type namespace %s in %s",
+			systemID, expectedNS, typeName)
+	}
+	return nil
 }
 
 // NamespaceFromType extracts the system namespace from a "sys.{namespace}.…"

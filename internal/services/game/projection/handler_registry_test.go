@@ -58,6 +58,33 @@ func TestHandlerRegistry_AllEntriesHaveApply(t *testing.T) {
 	}
 }
 
+func TestCheckMissingStores_AllPresent(t *testing.T) {
+	applier := Applier{
+		Campaign:         newProjectionCampaignStore(),
+		Character:        newFakeCharacterStore(),
+		CampaignFork:     newFakeCampaignForkStore(),
+		Invite:           newFakeInviteStore(),
+		Participant:      newProjectionParticipantStore(),
+		Session:          &fakeSessionStore{},
+		SessionGate:      newFakeSessionGateStore(),
+		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Adapters:         systems.NewAdapterRegistry(),
+	}
+	missing := checkMissingStores(needCampaign|needCharacter|needParticipant, applier)
+	if len(missing) > 0 {
+		t.Fatalf("expected no missing stores, got: %v", missing)
+	}
+}
+
+func TestCheckMissingStores_SomeMissing(t *testing.T) {
+	// Zero-value Applier has all stores nil.
+	applier := Applier{}
+	missing := checkMissingStores(needCampaign|needCharacter, applier)
+	if len(missing) != 2 {
+		t.Fatalf("expected 2 missing stores, got %d: %v", len(missing), missing)
+	}
+}
+
 func TestValidateStorePreconditions_ReportsNilStores(t *testing.T) {
 	// Zero-value Applier has all stores nil.
 	applier := Applier{}
