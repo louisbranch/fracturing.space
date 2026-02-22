@@ -28,7 +28,7 @@ It defines `auth` ownership, not social/discovery ownership.
 - **Auth service**: Source of truth for authN/authZ primitives: users, emails,
   passkeys, magic links, sessions, and OAuth issuance/verification.
 - **Connections service**: Source of truth for social/discovery identity
-  metadata and relationships (usernames, public profile, contacts).
+  metadata and relationships (unified user profiles and contacts).
 - **Web service**: Hosts login and recovery UX, calls auth gRPC for verification and storage.
 - **Admin service**: Generates magic links for operators (display-only, not emailed).
 
@@ -42,9 +42,11 @@ Boundary rule:
 Applied examples:
 
 - `locale` -> `auth` user record
+- `username` -> `connections`
 - `name` -> `connections`
 - `avatar_set_id` -> `connections`
 - `avatar_asset_id` -> `connections`
+- `bio` -> `connections`
 
 ## UX Flow (Web)
 

@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
@@ -14,6 +15,11 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
+)
+
+const (
+	// Keep these aligned with internal/services/connections/profile/user_profile.go.
+	userProfileNameMaxLength = 64
 )
 
 func (h *handler) handleAppSettings(w http.ResponseWriter, r *http.Request) {
@@ -45,8 +51,8 @@ func (h *handler) handleAppSettingsRoutes(w http.ResponseWriter, r *http.Request
 
 	path := strings.TrimPrefix(r.URL.Path, routepath.AppSettingsPrefix)
 	parts := splitSettingsPathParts(path)
-	if len(parts) == 1 && parts[0] == "username" {
-		h.handleAppUsernameSettings(w, r)
+	if len(parts) == 1 && parts[0] == "user-profile" {
+		h.handleAppUserProfileSettings(w, r)
 		return
 	}
 	if len(parts) == 1 && parts[0] == "ai-keys" {
@@ -73,19 +79,19 @@ func splitSettingsPathParts(path string) []string {
 	return parts
 }
 
-func (h *handler) handleAppUsernameSettings(w http.ResponseWriter, r *http.Request) {
+func (h *handler) handleAppUserProfileSettings(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		h.handleAppUsernameSettingsGet(w, r)
+		h.handleAppUserProfileSettingsGet(w, r)
 	case http.MethodPost:
-		h.handleAppUsernameSettingsPost(w, r)
+		h.handleAppUserProfileSettingsPost(w, r)
 	default:
 		w.Header().Set("Allow", http.MethodGet+", "+http.MethodPost)
 		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 	}
 }
 
-func (h *handler) handleAppUsernameSettingsGet(w http.ResponseWriter, r *http.Request) {
+func (h *handler) handleAppUserProfileSettingsGet(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
 		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
@@ -93,74 +99,94 @@ func (h *handler) handleAppUsernameSettingsGet(w http.ResponseWriter, r *http.Re
 	}
 	page := h.pageContext(w, r)
 	if h.connectionsClient == nil {
-		writeUsernameSettingsPage(w, r, page, webtemplates.UsernameSettingsPageState{
-			ErrorMessage: webtemplates.T(page.Loc, "web.settings.username.error_connections_unavailable"),
+		writeUserProfileSettingsPage(w, r, page, webtemplates.UserProfileSettingsPageState{
+			ErrorMessage: webtemplates.T(page.Loc, "web.settings.user_profile.error_connections_unavailable"),
 		}, http.StatusOK)
 		return
 	}
-	userID, ok := h.resolveSettingsUserID(w, r, sess, "Username settings unavailable")
+	userID, ok := h.resolveSettingsUserID(w, r, sess, "User profile settings unavailable")
 	if !ok {
 		return
 	}
 
 	ctx := grpcauthctx.WithUserID(r.Context(), userID)
-	resp, err := h.connectionsClient.GetUsername(ctx, &connectionsv1.GetUsernameRequest{UserId: userID})
+	resp, err := h.connectionsClient.GetUserProfile(ctx, &connectionsv1.GetUserProfileRequest{UserId: userID})
 	if err != nil {
 		if status.Code(err) != codes.NotFound {
-			h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Username settings unavailable", "failed to load username")
+			h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "User profile settings unavailable", "failed to load user profile")
 			return
 		}
 	}
-	state := webtemplates.UsernameSettingsPageState{}
-	if resp != nil && resp.GetUsernameRecord() != nil {
-		state.Username = strings.TrimSpace(resp.GetUsernameRecord().GetUsername())
+	state := webtemplates.UserProfileSettingsPageState{}
+	if resp != nil && resp.GetUserProfileRecord() != nil {
+		record := resp.GetUserProfileRecord()
+		state.Username = strings.TrimSpace(record.GetUsername())
+		state.Name = strings.TrimSpace(record.GetName())
+		state.AvatarSetID = strings.TrimSpace(record.GetAvatarSetId())
+		state.AvatarAssetID = strings.TrimSpace(record.GetAvatarAssetId())
+		state.Bio = strings.TrimSpace(record.GetBio())
 	}
-	writeUsernameSettingsPage(w, r, page, state, http.StatusOK)
+	writeUserProfileSettingsPage(w, r, page, state, http.StatusOK)
 }
 
-func (h *handler) handleAppUsernameSettingsPost(w http.ResponseWriter, r *http.Request) {
+func (h *handler) handleAppUserProfileSettingsPost(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
 		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		h.renderErrorPage(w, r, http.StatusBadRequest, "Username settings unavailable", "failed to parse username form")
+		h.renderErrorPage(w, r, http.StatusBadRequest, "User profile settings unavailable", "failed to parse user profile form")
 		return
 	}
 	page := h.pageContext(w, r)
-	username := strings.TrimSpace(r.FormValue("username"))
+	state := webtemplates.UserProfileSettingsPageState{
+		Username:      strings.TrimSpace(r.FormValue("username")),
+		Name:          strings.TrimSpace(r.FormValue("name")),
+		AvatarSetID:   strings.TrimSpace(r.FormValue("avatar_set_id")),
+		AvatarAssetID: strings.TrimSpace(r.FormValue("avatar_asset_id")),
+		Bio:           strings.TrimSpace(r.FormValue("bio")),
+	}
 	if h.connectionsClient == nil {
-		writeUsernameSettingsPage(w, r, page, webtemplates.UsernameSettingsPageState{
-			Username:     username,
-			ErrorMessage: webtemplates.T(page.Loc, "web.settings.username.error_connections_unavailable"),
-		}, http.StatusOK)
+		state.ErrorMessage = webtemplates.T(page.Loc, "web.settings.user_profile.error_connections_unavailable")
+		writeUserProfileSettingsPage(w, r, page, state, http.StatusOK)
 		return
 	}
-	if username == "" {
-		writeUsernameSettingsPage(w, r, page, webtemplates.UsernameSettingsPageState{
-			ErrorMessage: webtemplates.T(page.Loc, "web.settings.username.error_required"),
-		}, http.StatusBadRequest)
+	if state.Username == "" {
+		state.ErrorMessage = webtemplates.T(page.Loc, "web.settings.user_profile.error_username_required")
+		writeUserProfileSettingsPage(w, r, page, state, http.StatusBadRequest)
 		return
 	}
-	userID, ok := h.resolveSettingsUserID(w, r, sess, "Username settings unavailable")
+	if state.Name == "" {
+		state.ErrorMessage = webtemplates.T(page.Loc, "web.settings.user_profile.error_name_required")
+		writeUserProfileSettingsPage(w, r, page, state, http.StatusBadRequest)
+		return
+	}
+	if utf8.RuneCountInString(state.Name) > userProfileNameMaxLength {
+		state.ErrorMessage = webtemplates.T(page.Loc, "web.settings.user_profile.error_name_too_long")
+		writeUserProfileSettingsPage(w, r, page, state, http.StatusBadRequest)
+		return
+	}
+	userID, ok := h.resolveSettingsUserID(w, r, sess, "User profile settings unavailable")
 	if !ok {
 		return
 	}
 	ctx := grpcauthctx.WithUserID(r.Context(), userID)
-	_, err := h.connectionsClient.SetUsername(ctx, &connectionsv1.SetUsernameRequest{
-		UserId:   userID,
-		Username: username,
+	_, err := h.connectionsClient.SetUserProfile(ctx, &connectionsv1.SetUserProfileRequest{
+		UserId:        userID,
+		Username:      state.Username,
+		Name:          state.Name,
+		AvatarSetId:   state.AvatarSetID,
+		AvatarAssetId: state.AvatarAssetID,
+		Bio:           state.Bio,
 	})
 	if err != nil {
 		statusCode := grpcErrorHTTPStatus(err, http.StatusBadGateway)
-		writeUsernameSettingsPage(w, r, page, webtemplates.UsernameSettingsPageState{
-			Username:     username,
-			ErrorMessage: grpcErrorMessage(err, webtemplates.T(page.Loc, "web.settings.username.error_save_failed")),
-		}, statusCode)
+		state.ErrorMessage = grpcErrorMessage(err, webtemplates.T(page.Loc, "web.settings.user_profile.error_save_failed"))
+		writeUserProfileSettingsPage(w, r, page, state, statusCode)
 		return
 	}
-	http.Redirect(w, r, routepath.AppSettingsPrefix+"username", http.StatusFound)
+	http.Redirect(w, r, routepath.AppSettingsPrefix+"user-profile", http.StatusFound)
 }
 
 func (h *handler) handleAppAIKeys(w http.ResponseWriter, r *http.Request) {
@@ -321,10 +347,10 @@ func renderAIKeysPage(w http.ResponseWriter, r *http.Request, page webtemplates.
 	}
 }
 
-func writeUsernameSettingsPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, state webtemplates.UsernameSettingsPageState, statusCode int) {
+func writeUserProfileSettingsPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, state webtemplates.UserProfileSettingsPageState, statusCode int) {
 	writeGameContentType(w)
 	w.WriteHeader(statusCode)
-	if err := writePage(w, r, webtemplates.UsernameSettingsPage(page, state), composeHTMXTitleForPage(page, "layout.settings_username")); err != nil {
+	if err := writePage(w, r, webtemplates.UserProfileSettingsPage(page, state), composeHTMXTitleForPage(page, "layout.settings_user_profile")); err != nil {
 		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
 	}
 }

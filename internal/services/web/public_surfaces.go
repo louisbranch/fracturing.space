@@ -47,7 +47,7 @@ func (h *handler) handlePublicProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := h.connectionsClient.LookupPublicProfile(r.Context(), &connectionsv1.LookupPublicProfileRequest{
+	resp, err := h.connectionsClient.LookupUserProfile(r.Context(), &connectionsv1.LookupUserProfileRequest{
 		Username: username,
 	})
 	if err != nil {
@@ -59,14 +59,13 @@ func (h *handler) handlePublicProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	usernameRecord := resp.GetUsernameRecord()
-	profileRecord := resp.GetPublicProfileRecord()
-	if usernameRecord == nil || profileRecord == nil {
+	profileRecord := resp.GetUserProfileRecord()
+	if profileRecord == nil {
 		http.NotFound(w, r)
 		return
 	}
 
-	resolvedUsername := strings.TrimSpace(usernameRecord.GetUsername())
+	resolvedUsername := strings.TrimSpace(profileRecord.GetUsername())
 	if resolvedUsername == "" {
 		resolvedUsername = username
 	}

@@ -92,6 +92,8 @@ CREATE TABLE account_profiles (
     user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
     name TEXT NOT NULL,
     locale TEXT NOT NULL,
+    avatar_set_id TEXT NOT NULL DEFAULT '',
+    avatar_asset_id TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -120,10 +122,51 @@ CREATE TABLE magic_links (
     used_at INTEGER
 );
 
+CREATE TABLE user_contacts (
+    owner_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    contact_user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (owner_user_id, contact_user_id),
+    CHECK (owner_user_id <> contact_user_id)
+);
+
+CREATE INDEX IF NOT EXISTS user_contacts_contact_user_idx
+ON user_contacts(contact_user_id);
+
+CREATE TABLE auth_integration_outbox (
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    payload_json TEXT NOT NULL DEFAULT '{}',
+    dedupe_key TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL,
+    attempt_count INTEGER NOT NULL DEFAULT 0,
+    next_attempt_at INTEGER NOT NULL,
+    lease_owner TEXT NOT NULL DEFAULT '',
+    lease_expires_at INTEGER,
+    last_error TEXT NOT NULL DEFAULT '',
+    processed_at INTEGER,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+);
+
+CREATE UNIQUE INDEX auth_integration_outbox_dedupe_unique_idx
+ON auth_integration_outbox(dedupe_key)
+WHERE dedupe_key <> '';
+
+CREATE INDEX auth_integration_outbox_lease_idx
+ON auth_integration_outbox(status, next_attempt_at, lease_expires_at, id);
+
 -- +migrate Down
+DROP INDEX IF EXISTS auth_integration_outbox_lease_idx;
+DROP INDEX IF EXISTS auth_integration_outbox_dedupe_unique_idx;
+DROP TABLE IF EXISTS auth_integration_outbox;
+DROP INDEX IF EXISTS user_contacts_contact_user_idx;
+DROP TABLE IF EXISTS user_contacts;
 DROP TABLE IF EXISTS magic_links;
-DROP TABLE IF EXISTS user_emails;
 DROP INDEX IF EXISTS user_emails_primary_idx;
+DROP TABLE IF EXISTS user_emails;
+DROP TABLE IF EXISTS account_profiles;
 DROP TABLE IF EXISTS passkey_sessions;
 DROP TABLE IF EXISTS passkeys;
 DROP TABLE IF EXISTS oauth_external_identities;

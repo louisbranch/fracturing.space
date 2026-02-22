@@ -27,17 +27,10 @@ type ContactPage struct {
 	NextPageToken string
 }
 
-// UsernameRecord stores one canonical username claim for a user.
-type UsernameRecord struct {
-	UserID    string
-	Username  string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-}
-
-// PublicProfileRecord stores one public profile for user identity verification.
-type PublicProfileRecord struct {
+// UserProfileRecord stores one social/discovery profile for a user.
+type UserProfileRecord struct {
 	UserID        string
+	Username      string
 	Name          string
 	AvatarSetID   string
 	AvatarAssetID string
@@ -54,15 +47,9 @@ type ContactStore interface {
 	ListContacts(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (ContactPage, error)
 }
 
-// UsernameStore persists canonical username claims.
-type UsernameStore interface {
-	PutUsername(ctx context.Context, username UsernameRecord) error
-	GetUsernameByUserID(ctx context.Context, userID string) (UsernameRecord, error)
-	GetUsernameByUsername(ctx context.Context, username string) (UsernameRecord, error)
-}
-
-// ProfileStore persists public profile records.
-type ProfileStore interface {
-	PutPublicProfile(ctx context.Context, profile PublicProfileRecord) error
-	GetPublicProfileByUserID(ctx context.Context, userID string) (PublicProfileRecord, error)
+// UserProfileStore persists social/discovery user profile records.
+type UserProfileStore interface {
+	PutUserProfile(ctx context.Context, profile UserProfileRecord) error
+	GetUserProfileByUserID(ctx context.Context, userID string) (UserProfileRecord, error)
+	GetUserProfileByUsername(ctx context.Context, username string) (UserProfileRecord, error)
 }

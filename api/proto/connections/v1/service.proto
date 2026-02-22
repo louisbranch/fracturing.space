@@ -14,23 +14,16 @@ message Contact {
   google.protobuf.Timestamp updated_at = 4;
 }
 
-// UsernameRecord stores one canonical username claim for a user.
-message UsernameRecord {
+// UserProfileRecord stores one social/discovery profile for a user.
+message UserProfileRecord {
   string user_id = 1;
   string username = 2;
-  google.protobuf.Timestamp created_at = 3;
-  google.protobuf.Timestamp updated_at = 4;
-}
-
-// PublicProfileRecord stores one user-managed profile for username verification.
-message PublicProfileRecord {
-  string user_id = 1;
-  string name = 2;
-  string avatar_set_id = 3;
-  string avatar_asset_id = 4;
-  string bio = 5;
-  google.protobuf.Timestamp created_at = 6;
-  google.protobuf.Timestamp updated_at = 7;
+  string name = 3;
+  string avatar_set_id = 4;
+  string avatar_asset_id = 5;
+  string bio = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
 }
 
 message AddContactRequest {
@@ -65,58 +58,33 @@ message ListContactsResponse {
   string next_page_token = 2;
 }
 
-message SetUsernameRequest {
+message SetUserProfileRequest {
   string user_id = 1;
   string username = 2;
+  string name = 3;
+  string avatar_set_id = 4;
+  string avatar_asset_id = 5;
+  string bio = 6;
 }
 
-message SetUsernameResponse {
-  UsernameRecord username_record = 1;
+message SetUserProfileResponse {
+  UserProfileRecord user_profile_record = 1;
 }
 
-message GetUsernameRequest {
+message GetUserProfileRequest {
   string user_id = 1;
 }
 
-message GetUsernameResponse {
-  UsernameRecord username_record = 1;
+message GetUserProfileResponse {
+  UserProfileRecord user_profile_record = 1;
 }
 
-message LookupUsernameRequest {
+message LookupUserProfileRequest {
   string username = 1;
 }
 
-message LookupUsernameResponse {
-  UsernameRecord username_record = 1;
-}
-
-message SetPublicProfileRequest {
-  string user_id = 1;
-  string name = 2;
-  string avatar_set_id = 3;
-  string avatar_asset_id = 4;
-  string bio = 5;
-}
-
-message SetPublicProfileResponse {
-  PublicProfileRecord public_profile_record = 1;
-}
-
-message GetPublicProfileRequest {
-  string user_id = 1;
-}
-
-message GetPublicProfileResponse {
-  PublicProfileRecord public_profile_record = 1;
-}
-
-message LookupPublicProfileRequest {
-  string username = 1;
-}
-
-message LookupPublicProfileResponse {
-  UsernameRecord username_record = 1;
-  PublicProfileRecord public_profile_record = 2;
+message LookupUserProfileResponse {
+  UserProfileRecord user_profile_record = 1;
 }
 
 // ConnectionsService manages directed contact relationships between users.
@@ -124,10 +92,7 @@ service ConnectionsService {
   rpc AddContact(AddContactRequest) returns (AddContactResponse);
   rpc RemoveContact(RemoveContactRequest) returns (RemoveContactResponse);
   rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
-  rpc SetUsername(SetUsernameRequest) returns (SetUsernameResponse);
-  rpc GetUsername(GetUsernameRequest) returns (GetUsernameResponse);
-  rpc LookupUsername(LookupUsernameRequest) returns (LookupUsernameResponse);
-  rpc SetPublicProfile(SetPublicProfileRequest) returns (SetPublicProfileResponse);
-  rpc GetPublicProfile(GetPublicProfileRequest) returns (GetPublicProfileResponse);
-  rpc LookupPublicProfile(LookupPublicProfileRequest) returns (LookupPublicProfileResponse);
+  rpc SetUserProfile(SetUserProfileRequest) returns (SetUserProfileResponse);
+  rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
+  rpc LookupUserProfile(LookupUserProfileRequest) returns (LookupUserProfileResponse);
 }

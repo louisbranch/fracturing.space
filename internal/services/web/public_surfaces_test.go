@@ -18,11 +18,11 @@ func TestPublicProfileRouteUsesConnectionsLookup(t *testing.T) {
 	t.Parallel()
 
 	connectionsClient := &fakeConnectionsClient{
-		lookupPublicProfileResp: &connectionsv1.LookupPublicProfileResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{Username: "alice"},
-			PublicProfileRecord: &connectionsv1.PublicProfileRecord{
-				Name: "Alice Adventurer",
-				Bio:  "GM and worldbuilder.",
+		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
+				Username: "alice",
+				Name:     "Alice Adventurer",
+				Bio:      "GM and worldbuilder.",
 			},
 		},
 	}
@@ -49,10 +49,10 @@ func TestPublicProfileRouteUsesConnectionsLookup(t *testing.T) {
 	if !strings.Contains(body, "GM and worldbuilder.") {
 		t.Fatalf("expected bio in response, got %q", body)
 	}
-	if connectionsClient.lookupPublicProfileReq == nil {
-		t.Fatal("expected LookupPublicProfile request")
+	if connectionsClient.lookupUserProfileReq == nil {
+		t.Fatal("expected LookupUserProfile request")
 	}
-	if got := connectionsClient.lookupPublicProfileReq.GetUsername(); got != "alice" {
+	if got := connectionsClient.lookupUserProfileReq.GetUsername(); got != "alice" {
 		t.Fatalf("username = %q, want %q", got, "alice")
 	}
 }

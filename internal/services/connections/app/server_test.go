@@ -52,124 +52,87 @@ func TestServer_AddListRemoveContactRoundTrip(t *testing.T) {
 	}
 }
 
-func TestServer_UsernameRoundTrip(t *testing.T) {
+func TestServer_UserProfileRoundTrip(t *testing.T) {
 	client := newConnectionsClientForTest(t)
 
-	setResp, err := client.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
-		UserId:   "user-1",
-		Username: "Alice_One",
-	})
-	if err != nil {
-		t.Fatalf("set username: %v", err)
-	}
-	if setResp.GetUsernameRecord() == nil {
-		t.Fatal("expected username record from set username")
-	}
-	if got := setResp.GetUsernameRecord().GetUsername(); got != "alice_one" {
-		t.Fatalf("set username = %q, want alice_one", got)
-	}
-
-	getResp, err := client.GetUsername(context.Background(), &connectionsv1.GetUsernameRequest{
-		UserId: "user-1",
-	})
-	if err != nil {
-		t.Fatalf("get username: %v", err)
-	}
-	if got := getResp.GetUsernameRecord().GetUsername(); got != "alice_one" {
-		t.Fatalf("get username = %q, want alice_one", got)
-	}
-
-	lookupResp, err := client.LookupUsername(context.Background(), &connectionsv1.LookupUsernameRequest{
-		Username: "ALICE_ONE",
-	})
-	if err != nil {
-		t.Fatalf("lookup username: %v", err)
-	}
-	if got := lookupResp.GetUsernameRecord().GetUserId(); got != "user-1" {
-		t.Fatalf("lookup user_id = %q, want user-1", got)
-	}
-}
-
-func TestServer_UsernameConflictReturnsAlreadyExists(t *testing.T) {
-	client := newConnectionsClientForTest(t)
-
-	if _, err := client.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
-		UserId:   "user-1",
-		Username: "taken",
-	}); err != nil {
-		t.Fatalf("set username user-1: %v", err)
-	}
-
-	_, err := client.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
-		UserId:   "user-2",
-		Username: "Taken",
-	})
-	if status.Code(err) != codes.AlreadyExists {
-		t.Fatalf("code = %v, want %v", status.Code(err), codes.AlreadyExists)
-	}
-}
-
-func TestServer_UsernameNotFoundReturnsNotFound(t *testing.T) {
-	client := newConnectionsClientForTest(t)
-
-	_, err := client.GetUsername(context.Background(), &connectionsv1.GetUsernameRequest{
-		UserId: "missing-user",
-	})
-	if status.Code(err) != codes.NotFound {
-		t.Fatalf("get username code = %v, want %v", status.Code(err), codes.NotFound)
-	}
-
-	_, err = client.LookupUsername(context.Background(), &connectionsv1.LookupUsernameRequest{
-		Username: "missing-user",
-	})
-	if status.Code(err) != codes.NotFound {
-		t.Fatalf("lookup username code = %v, want %v", status.Code(err), codes.NotFound)
-	}
-}
-
-func TestServer_SetAndLookupPublicProfileRoundTrip(t *testing.T) {
-	client := newConnectionsClientForTest(t)
-
-	_, err := client.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
-		UserId:   "user-1",
-		Username: "alice_one",
-	})
-	if err != nil {
-		t.Fatalf("set username: %v", err)
-	}
-
-	_, err = client.SetPublicProfile(context.Background(), &connectionsv1.SetPublicProfileRequest{
+	setResp, err := client.SetUserProfile(context.Background(), &connectionsv1.SetUserProfileRequest{
 		UserId:        "user-1",
+		Username:      "Alice_One",
 		Name:          "Alice",
 		AvatarSetId:   "avatar_set_v1",
 		AvatarAssetId: "001",
 		Bio:           "Campaign manager",
 	})
 	if err != nil {
-		t.Fatalf("set public profile: %v", err)
+		t.Fatalf("set user profile: %v", err)
+	}
+	if setResp.GetUserProfileRecord() == nil {
+		t.Fatal("expected user profile record from set user profile")
+	}
+	if got := setResp.GetUserProfileRecord().GetUsername(); got != "alice_one" {
+		t.Fatalf("set username = %q, want alice_one", got)
 	}
 
-	getResp, err := client.GetPublicProfile(context.Background(), &connectionsv1.GetPublicProfileRequest{
+	getResp, err := client.GetUserProfile(context.Background(), &connectionsv1.GetUserProfileRequest{
 		UserId: "user-1",
 	})
 	if err != nil {
-		t.Fatalf("get public profile: %v", err)
+		t.Fatalf("get user profile: %v", err)
 	}
-	if got := getResp.GetPublicProfileRecord().GetName(); got != "Alice" {
+	if got := getResp.GetUserProfileRecord().GetName(); got != "Alice" {
 		t.Fatalf("name = %q, want Alice", got)
 	}
 
-	lookupResp, err := client.LookupPublicProfile(context.Background(), &connectionsv1.LookupPublicProfileRequest{
+	lookupResp, err := client.LookupUserProfile(context.Background(), &connectionsv1.LookupUserProfileRequest{
 		Username: "ALICE_ONE",
 	})
 	if err != nil {
-		t.Fatalf("lookup public profile: %v", err)
+		t.Fatalf("lookup user profile: %v", err)
 	}
-	if got := lookupResp.GetUsernameRecord().GetUserId(); got != "user-1" {
+	if got := lookupResp.GetUserProfileRecord().GetUserId(); got != "user-1" {
 		t.Fatalf("lookup user_id = %q, want user-1", got)
 	}
-	if got := lookupResp.GetPublicProfileRecord().GetBio(); got != "Campaign manager" {
+	if got := lookupResp.GetUserProfileRecord().GetBio(); got != "Campaign manager" {
 		t.Fatalf("lookup bio = %q, want Campaign manager", got)
+	}
+}
+
+func TestServer_UserProfileConflictReturnsAlreadyExists(t *testing.T) {
+	client := newConnectionsClientForTest(t)
+
+	if _, err := client.SetUserProfile(context.Background(), &connectionsv1.SetUserProfileRequest{
+		UserId:   "user-1",
+		Username: "taken",
+		Name:     "Alice",
+	}); err != nil {
+		t.Fatalf("set user profile user-1: %v", err)
+	}
+
+	_, err := client.SetUserProfile(context.Background(), &connectionsv1.SetUserProfileRequest{
+		UserId:   "user-2",
+		Username: "Taken",
+		Name:     "Bob",
+	})
+	if status.Code(err) != codes.AlreadyExists {
+		t.Fatalf("code = %v, want %v", status.Code(err), codes.AlreadyExists)
+	}
+}
+
+func TestServer_UserProfileNotFoundReturnsNotFound(t *testing.T) {
+	client := newConnectionsClientForTest(t)
+
+	_, err := client.GetUserProfile(context.Background(), &connectionsv1.GetUserProfileRequest{
+		UserId: "missing-user",
+	})
+	if status.Code(err) != codes.NotFound {
+		t.Fatalf("get user profile code = %v, want %v", status.Code(err), codes.NotFound)
+	}
+
+	_, err = client.LookupUserProfile(context.Background(), &connectionsv1.LookupUserProfileRequest{
+		Username: "missing-user",
+	})
+	if status.Code(err) != codes.NotFound {
+		t.Fatalf("lookup user profile code = %v, want %v", status.Code(err), codes.NotFound)
 	}
 }
 

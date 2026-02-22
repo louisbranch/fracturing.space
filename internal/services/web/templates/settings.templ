@@ -7,15 +7,15 @@ templ SettingsMenu(page PageContext) {
 	<ul class="menu bg-base-200 rounded-box w-full">
 		<li>
 			<a
-				class={ settingsMenuLinkClass(page.CurrentPath, "/app/settings/username") }
-				href="/app/settings/username"
-				hx-get="/app/settings/username"
+				class={ settingsMenuLinkClass(page.CurrentPath, "/app/settings/user-profile") }
+				href="/app/settings/user-profile"
+				hx-get="/app/settings/user-profile"
 				hx-target="#main"
 				hx-swap="innerHTML"
 				hx-push-url="true"
 				>
 				@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_PROFILE, "size-4 me-2")
-				{ T(page.Loc, "web.settings.username.link") }
+				{ T(page.Loc, "web.settings.user_profile.link") }
 			</a>
 		</li>
 		<li>
@@ -45,24 +45,48 @@ templ SettingsPage(page PageContext) {
 	}
 }
 
-templ UsernameSettingsPage(page PageContext, state UsernameSettingsPageState) {
-	@Layout(SettingsUsernameLayoutOptions(page)) {
+templ UserProfileSettingsPage(page PageContext, state UserProfileSettingsPageState) {
+	@Layout(SettingsUserProfileLayoutOptions(page)) {
 		<section class="space-y-4">
 			<div class="card bg-base-200">
 				<div class="card-body">
-					<h2 class="card-title">{ T(page.Loc, "web.settings.username.title") }</h2>
+					<h2 class="card-title">{ T(page.Loc, "web.settings.user_profile.title") }</h2>
 					if state.ErrorMessage != "" {
 						<div class="alert alert-error">{ state.ErrorMessage }</div>
 					}
-					<form method="post" action="/app/settings/username" class="space-y-4">
+					<form method="post" action="/app/settings/user-profile" class="space-y-4">
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">{ T(page.Loc, "web.settings.username.field_username") }</span>
+								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_username") }</span>
 							</label>
-							<input class="input input-bordered w-full" type="text" name="username" value={ state.Username } placeholder={ T(page.Loc, "web.settings.username.placeholder_username") }>
+							<input class="input input-bordered w-full" type="text" name="username" value={ state.Username } placeholder={ T(page.Loc, "web.settings.user_profile.placeholder_username") }>
+						</div>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_name") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="name" value={ state.Name } placeholder={ T(page.Loc, "web.settings.user_profile.placeholder_name") }>
+						</div>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_avatar_set_id") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="avatar_set_id" value={ state.AvatarSetID }>
+						</div>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_avatar_asset_id") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="avatar_asset_id" value={ state.AvatarAssetID }>
+						</div>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_bio") }</span>
+							</label>
+							<textarea class="textarea textarea-bordered w-full" name="bio">{ state.Bio }</textarea>
 						</div>
 						<div class="card-actions justify-end">
-							<button class="btn btn-primary" type="submit">{ T(page.Loc, "web.settings.username.submit_save") }</button>
+							<button class="btn btn-primary" type="submit">{ T(page.Loc, "web.settings.user_profile.submit_save") }</button>
 						</div>
 					</form>
 				</div>
