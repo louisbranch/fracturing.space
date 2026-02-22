@@ -211,41 +211,34 @@ func buildUserRows(users []*authv1.User) []templates.UserRow {
 }
 
 // catalogSectionColumns defines which columns to show per catalog section.
+var catalogSectionColumnKeys = map[string][]string{
+	templates.CatalogSectionClasses:              {"catalog.table.starting_hp", "catalog.table.starting_evasion"},
+	templates.CatalogSectionSubclasses:           {"catalog.table.spellcast_trait", "catalog.table.feature_count"},
+	templates.CatalogSectionHeritages:            {"catalog.table.kind", "catalog.table.feature_count"},
+	templates.CatalogSectionExperiences:          {"catalog.table.description"},
+	templates.CatalogSectionDomains:              {"catalog.table.description"},
+	templates.CatalogSectionDomainCards:          {"catalog.table.domain", "catalog.table.level", "catalog.table.type"},
+	templates.CatalogSectionItems:                {"catalog.table.rarity", "catalog.table.kind", "catalog.table.stack_max"},
+	templates.CatalogSectionWeapons:              {"catalog.table.category", "catalog.table.tier", "catalog.table.damage_type"},
+	templates.CatalogSectionArmor:                {"catalog.table.tier", "catalog.table.armor_score"},
+	templates.CatalogSectionLoot:                 {"catalog.table.roll", "catalog.table.description"},
+	templates.CatalogSectionDamageTypes:          {"catalog.table.description"},
+	templates.CatalogSectionAdversaries:          {"catalog.table.tier", "catalog.table.role"},
+	templates.CatalogSectionBeastforms:           {"catalog.table.tier", "catalog.table.trait"},
+	templates.CatalogSectionCompanionExperiences: {"catalog.table.description"},
+	templates.CatalogSectionEnvironments:         {"catalog.table.type", "catalog.table.difficulty"},
+}
+
 func catalogSectionColumns(sectionID string, loc *message.Printer) []string {
-	switch sectionID {
-	case templates.CatalogSectionClasses:
-		return []string{loc.Sprintf("catalog.table.starting_hp"), loc.Sprintf("catalog.table.starting_evasion")}
-	case templates.CatalogSectionSubclasses:
-		return []string{loc.Sprintf("catalog.table.spellcast_trait"), loc.Sprintf("catalog.table.feature_count")}
-	case templates.CatalogSectionHeritages:
-		return []string{loc.Sprintf("catalog.table.kind"), loc.Sprintf("catalog.table.feature_count")}
-	case templates.CatalogSectionExperiences:
-		return []string{loc.Sprintf("catalog.table.description")}
-	case templates.CatalogSectionDomains:
-		return []string{loc.Sprintf("catalog.table.description")}
-	case templates.CatalogSectionDomainCards:
-		return []string{loc.Sprintf("catalog.table.domain"), loc.Sprintf("catalog.table.level"), loc.Sprintf("catalog.table.type")}
-	case templates.CatalogSectionItems:
-		return []string{loc.Sprintf("catalog.table.rarity"), loc.Sprintf("catalog.table.kind"), loc.Sprintf("catalog.table.stack_max")}
-	case templates.CatalogSectionWeapons:
-		return []string{loc.Sprintf("catalog.table.category"), loc.Sprintf("catalog.table.tier"), loc.Sprintf("catalog.table.damage_type")}
-	case templates.CatalogSectionArmor:
-		return []string{loc.Sprintf("catalog.table.tier"), loc.Sprintf("catalog.table.armor_score")}
-	case templates.CatalogSectionLoot:
-		return []string{loc.Sprintf("catalog.table.roll"), loc.Sprintf("catalog.table.description")}
-	case templates.CatalogSectionDamageTypes:
-		return []string{loc.Sprintf("catalog.table.description")}
-	case templates.CatalogSectionAdversaries:
-		return []string{loc.Sprintf("catalog.table.tier"), loc.Sprintf("catalog.table.role")}
-	case templates.CatalogSectionBeastforms:
-		return []string{loc.Sprintf("catalog.table.tier"), loc.Sprintf("catalog.table.trait")}
-	case templates.CatalogSectionCompanionExperiences:
-		return []string{loc.Sprintf("catalog.table.description")}
-	case templates.CatalogSectionEnvironments:
-		return []string{loc.Sprintf("catalog.table.type"), loc.Sprintf("catalog.table.difficulty")}
-	default:
+	keys, ok := catalogSectionColumnKeys[sectionID]
+	if !ok {
 		return nil
 	}
+	columns := make([]string, 0, len(keys))
+	for _, key := range keys {
+		columns = append(columns, loc.Sprintf(key))
+	}
+	return columns
 }
 
 // buildCatalogClassRows formats class entries for tables.

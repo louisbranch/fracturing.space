@@ -8,6 +8,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 const (
@@ -117,41 +118,48 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		if state.Status == statusClaimed || state.Status == statusRevoked {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
 		}
-		var payload RevokePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		inviteID := strings.TrimSpace(payload.InviteID)
-		if inviteID == "" {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payloadJSON, _ := json.Marshal(RevokePayload{InviteID: inviteID})
-		return command.Accept(command.NewEvent(cmd, EventTypeRevoked, "invite", inviteID, payloadJSON, now().UTC()))
+		return module.DecideFunc(
+			cmd,
+			EventTypeRevoked,
+			"invite",
+			func(payload *RevokePayload) string {
+				return payload.InviteID
+			},
+			func(payload *RevokePayload, _ func() time.Time) *command.Rejection {
+				payload.InviteID = strings.TrimSpace(payload.InviteID)
+				if payload.InviteID == "" {
+					return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
+				}
+				return nil
+			},
+			now,
+		)
 
 	case commandTypeUpdate:
 		if !state.Created {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
 		}
-		var payload UpdatePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		inviteID := strings.TrimSpace(payload.InviteID)
-		if inviteID == "" {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"})
-		}
-		status, ok := normalizeStatusLabel(payload.Status)
-		if !ok {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payloadJSON, _ := json.Marshal(UpdatePayload{InviteID: inviteID, Status: status})
-		return command.Accept(command.NewEvent(cmd, EventTypeUpdated, "invite", inviteID, payloadJSON, now().UTC()))
+		return module.DecideFunc(
+			cmd,
+			EventTypeUpdated,
+			"invite",
+			func(payload *UpdatePayload) string {
+				return payload.InviteID
+			},
+			func(payload *UpdatePayload, _ func() time.Time) *command.Rejection {
+				payload.InviteID = strings.TrimSpace(payload.InviteID)
+				if payload.InviteID == "" {
+					return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
+				}
+				status, ok := normalizeStatusLabel(payload.Status)
+				if !ok {
+					return &command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"}
+				}
+				payload.Status = status
+				return nil
+			},
+			now,
+		)
 
 	default:
 		return command.Reject(command.Rejection{Code: "COMMAND_TYPE_UNSUPPORTED", Message: fmt.Sprintf("command type %s is not supported by invite decider", cmd.Type)})

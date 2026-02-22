@@ -17,6 +17,7 @@ import (
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcdial"
 	websqlite "github.com/louisbranch/fracturing.space/internal/services/web/storage/sqlite"
 )
 
@@ -65,23 +66,16 @@ func dialAuthGRPC(ctx context.Context, config Config) (authGRPCClients, error) {
 	logf := func(format string, args ...any) {
 		log.Printf("auth %s", fmt.Sprintf(format, args...))
 	}
-	conn, err := platformgrpc.DialWithHealth(
+	conn, err := grpcdial.DialWithHealth(
 		ctx,
-		nil,
 		authAddr,
 		config.GRPCDialTimeout,
+		"auth",
 		logf,
 		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return authGRPCClients{}, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
-			}
-			return authGRPCClients{}, fmt.Errorf("dial auth gRPC %s: %w", authAddr, dialErr.Err)
-		}
-		return authGRPCClients{}, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
+		return authGRPCClients{}, err
 	}
 	return authGRPCClients{
 		conn:          conn,
@@ -105,23 +99,16 @@ func dialConnectionsGRPC(ctx context.Context, config Config) (connectionsGRPCCli
 	logf := func(format string, args ...any) {
 		log.Printf("connections %s", fmt.Sprintf(format, args...))
 	}
-	conn, err := platformgrpc.DialWithHealth(
+	conn, err := grpcdial.DialWithHealth(
 		ctx,
-		nil,
 		connectionsAddr,
 		config.GRPCDialTimeout,
+		"connections",
 		logf,
 		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return connectionsGRPCClients{}, fmt.Errorf("connections gRPC health check failed for %s: %w", connectionsAddr, dialErr.Err)
-			}
-			return connectionsGRPCClients{}, fmt.Errorf("dial connections gRPC %s: %w", connectionsAddr, dialErr.Err)
-		}
-		return connectionsGRPCClients{}, fmt.Errorf("dial connections gRPC %s: %w", connectionsAddr, err)
+		return connectionsGRPCClients{}, err
 	}
 	return connectionsGRPCClients{
 		conn:              conn,
@@ -146,23 +133,16 @@ func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 	logf := func(format string, args ...any) {
 		log.Printf("game %s", fmt.Sprintf(format, args...))
 	}
-	conn, err := platformgrpc.DialWithHealth(
+	conn, err := grpcdial.DialWithHealth(
 		ctx,
-		nil,
 		gameAddr,
 		config.GRPCDialTimeout,
+		"game",
 		logf,
 		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return gameGRPCClients{}, fmt.Errorf("game gRPC health check failed for %s: %w", gameAddr, dialErr.Err)
-			}
-			return gameGRPCClients{}, fmt.Errorf("dial game gRPC %s: %w", gameAddr, dialErr.Err)
-		}
-		return gameGRPCClients{}, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
+		return gameGRPCClients{}, err
 	}
 	return gameGRPCClients{
 		conn:              conn,
@@ -190,23 +170,16 @@ func dialAIGRPC(ctx context.Context, config Config) (aiGRPCClients, error) {
 	logf := func(format string, args ...any) {
 		log.Printf("ai %s", fmt.Sprintf(format, args...))
 	}
-	conn, err := platformgrpc.DialWithHealth(
+	conn, err := grpcdial.DialWithHealth(
 		ctx,
-		nil,
 		aiAddr,
 		config.GRPCDialTimeout,
+		"ai",
 		logf,
 		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return aiGRPCClients{}, fmt.Errorf("ai gRPC health check failed for %s: %w", aiAddr, dialErr.Err)
-			}
-			return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, dialErr.Err)
-		}
-		return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, err)
+		return aiGRPCClients{}, err
 	}
 	return aiGRPCClients{
 		conn:             conn,
@@ -229,23 +202,16 @@ func dialNotificationsGRPC(ctx context.Context, config Config) (notificationsGRP
 	logf := func(format string, args ...any) {
 		log.Printf("notifications %s", fmt.Sprintf(format, args...))
 	}
-	conn, err := platformgrpc.DialWithHealth(
+	conn, err := grpcdial.DialWithHealth(
 		ctx,
-		nil,
 		notificationsAddr,
 		config.GRPCDialTimeout,
+		"notifications",
 		logf,
 		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return notificationsGRPCClients{}, fmt.Errorf("notifications gRPC health check failed for %s: %w", notificationsAddr, dialErr.Err)
-			}
-			return notificationsGRPCClients{}, fmt.Errorf("dial notifications gRPC %s: %w", notificationsAddr, dialErr.Err)
-		}
-		return notificationsGRPCClients{}, fmt.Errorf("dial notifications gRPC %s: %w", notificationsAddr, err)
+		return notificationsGRPCClients{}, err
 	}
 	return notificationsGRPCClients{
 		conn:               conn,

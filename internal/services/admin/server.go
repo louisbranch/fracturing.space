@@ -20,6 +20,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	adminsqlite "github.com/louisbranch/fracturing.space/internal/services/admin/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcdial"
 	"google.golang.org/grpc"
 )
 
@@ -447,22 +448,15 @@ func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 		grpc.WithChainUnaryInterceptor(grpcauthctx.AdminOverrideUnaryClientInterceptor(adminAuthzOverrideReason)),
 		grpc.WithChainStreamInterceptor(grpcauthctx.AdminOverrideStreamClientInterceptor(adminAuthzOverrideReason)),
 	)
-	conn, err := platformgrpc.DialWithHealth(
+	conn, err := grpcdial.DialWithHealth(
 		ctx,
-		nil,
 		grpcAddr,
 		config.GRPCDialTimeout,
+		"admin game",
 		logf,
 		dialOpts...,
 	)
 	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return gameGRPCClients{}, fmt.Errorf("admin game gRPC health check failed for %s: %w", grpcAddr, dialErr.Err)
-			}
-			return gameGRPCClients{}, dialErr.Err
-		}
 		return gameGRPCClients{}, err
 	}
 
@@ -495,22 +489,15 @@ func dialAuthGRPC(ctx context.Context, config Config) (authGRPCClients, error) {
 	logf := func(format string, args ...any) {
 		log.Printf("admin auth %s", fmt.Sprintf(format, args...))
 	}
-	conn, err := platformgrpc.DialWithHealth(
+	conn, err := grpcdial.DialWithHealth(
 		ctx,
-		nil,
 		authAddr,
 		config.GRPCDialTimeout,
+		"admin auth",
 		logf,
 		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return authGRPCClients{}, fmt.Errorf("admin auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
-			}
-			return authGRPCClients{}, dialErr.Err
-		}
 		return authGRPCClients{}, err
 	}
 
@@ -529,38 +516,21 @@ func connectGameGRPCWithRetry(ctx context.Context, config Config, clients *grpcC
 	if strings.TrimSpace(config.GRPCAddr) == "" {
 		return
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	retryDelay := defaultGRPCRetryDelay
-	for {
-		if ctx.Err() != nil {
-			return
-		}
-		if clients.HasGameConnection() {
-			return
-		}
-		clientsResult, err := dialGameGRPC(ctx, config)
-		if err == nil {
-			clients.SetGameClients(clientsResult)
-			log.Printf("admin gRPC connected to %s", config.GRPCAddr)
-			return
-		}
-		log.Printf("admin game gRPC dial failed: %v", err)
-		timer := time.NewTimer(retryDelay)
-		select {
-		case <-timer.C:
-		case <-ctx.Done():
-			timer.Stop()
-			return
-		}
-		if retryDelay < maxGRPCRetryDelay {
-			retryDelay *= 2
-			if retryDelay > maxGRPCRetryDelay {
-				retryDelay = maxGRPCRetryDelay
+	connectGRPCWithRetry(
+		ctx,
+		config.GRPCAddr,
+		clients.HasGameConnection,
+		func(connectCtx context.Context) error {
+			clientsResult, err := dialGameGRPC(connectCtx, config)
+			if err != nil {
+				return err
 			}
-		}
-	}
+			clients.SetGameClients(clientsResult)
+			return nil
+		},
+		"admin gRPC connected to %s",
+		"admin game gRPC dial failed: %v",
+	)
 }
 
 // connectAuthGRPCWithRetry keeps dialing until a connection is established or context ends.
@@ -571,6 +541,31 @@ func connectAuthGRPCWithRetry(ctx context.Context, config Config, clients *grpcC
 	if strings.TrimSpace(config.AuthAddr) == "" {
 		return
 	}
+	connectGRPCWithRetry(
+		ctx,
+		config.AuthAddr,
+		clients.HasAuthConnection,
+		func(connectCtx context.Context) error {
+			authClients, err := dialAuthGRPC(connectCtx, config)
+			if err != nil {
+				return err
+			}
+			clients.SetAuthClients(authClients)
+			return nil
+		},
+		"admin auth gRPC connected to %s",
+		"admin auth gRPC dial failed: %v",
+	)
+}
+
+func connectGRPCWithRetry(
+	ctx context.Context,
+	address string,
+	hasConnection func() bool,
+	connect func(context.Context) error,
+	successLogFormat string,
+	failureLogFormat string,
+) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -579,16 +574,15 @@ func connectAuthGRPCWithRetry(ctx context.Context, config Config, clients *grpcC
 		if ctx.Err() != nil {
 			return
 		}
-		if clients.HasAuthConnection() {
+		if hasConnection() {
 			return
 		}
-		authClients, err := dialAuthGRPC(ctx, config)
+		err := connect(ctx)
 		if err == nil {
-			clients.SetAuthClients(authClients)
-			log.Printf("admin auth gRPC connected to %s", config.AuthAddr)
+			log.Printf(successLogFormat, address)
 			return
 		}
-		log.Printf("admin auth gRPC dial failed: %v", err)
+		log.Printf(failureLogFormat, err)
 		timer := time.NewTimer(retryDelay)
 		select {
 		case <-timer.C:

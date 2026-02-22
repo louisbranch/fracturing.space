@@ -15,16 +15,30 @@ import (
 
 // Daggerheart content catalog methods
 
-// PutDaggerheartClass persists a Daggerheart class catalog entry.
-func (s *Store) PutDaggerheartClass(ctx context.Context, class storage.DaggerheartClass) error {
+func (s *Store) validateContentStore(ctx context.Context) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	if strings.TrimSpace(class.ID) == "" {
-		return fmt.Errorf("class id is required")
+	return nil
+}
+
+func requireCatalogEntryID(id string, label string) error {
+	if strings.TrimSpace(id) == "" {
+		return fmt.Errorf("%s id is required", label)
+	}
+	return nil
+}
+
+// PutDaggerheartClass persists a Daggerheart class catalog entry.
+func (s *Store) PutDaggerheartClass(ctx context.Context, class storage.DaggerheartClass) error {
+	if err := s.validateContentStore(ctx); err != nil {
+		return err
+	}
+	if err := requireCatalogEntryID(class.ID, "class"); err != nil {
+		return err
 	}
 
 	startingItemsJSON, err := json.Marshal(class.StartingItems)
@@ -60,14 +74,11 @@ func (s *Store) PutDaggerheartClass(ctx context.Context, class storage.Daggerhea
 
 // GetDaggerheartClass retrieves a Daggerheart class catalog entry.
 func (s *Store) GetDaggerheartClass(ctx context.Context, id string) (storage.DaggerheartClass, error) {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return storage.DaggerheartClass{}, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return storage.DaggerheartClass{}, fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(id) == "" {
-		return storage.DaggerheartClass{}, fmt.Errorf("class id is required")
+	if err := requireCatalogEntryID(id, "class"); err != nil {
+		return storage.DaggerheartClass{}, err
 	}
 
 	row, err := s.q.GetDaggerheartClass(ctx, id)
@@ -87,11 +98,8 @@ func (s *Store) GetDaggerheartClass(ctx context.Context, id string) (storage.Dag
 
 // ListDaggerheartClasses lists all Daggerheart class catalog entries.
 func (s *Store) ListDaggerheartClasses(ctx context.Context) ([]storage.DaggerheartClass, error) {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return nil, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return nil, fmt.Errorf("storage is not configured")
 	}
 
 	rows, err := s.q.ListDaggerheartClasses(ctx)
@@ -112,14 +120,11 @@ func (s *Store) ListDaggerheartClasses(ctx context.Context) ([]storage.Daggerhea
 
 // DeleteDaggerheartClass removes a Daggerheart class catalog entry.
 func (s *Store) DeleteDaggerheartClass(ctx context.Context, id string) error {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return err
 	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(id) == "" {
-		return fmt.Errorf("class id is required")
+	if err := requireCatalogEntryID(id, "class"); err != nil {
+		return err
 	}
 
 	return s.q.DeleteDaggerheartClass(ctx, id)
@@ -127,14 +132,11 @@ func (s *Store) DeleteDaggerheartClass(ctx context.Context, id string) error {
 
 // PutDaggerheartSubclass persists a Daggerheart subclass catalog entry.
 func (s *Store) PutDaggerheartSubclass(ctx context.Context, subclass storage.DaggerheartSubclass) error {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return err
 	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(subclass.ID) == "" {
-		return fmt.Errorf("subclass id is required")
+	if err := requireCatalogEntryID(subclass.ID, "subclass"); err != nil {
+		return err
 	}
 
 	foundationJSON, err := json.Marshal(subclass.FoundationFeatures)
@@ -164,14 +166,11 @@ func (s *Store) PutDaggerheartSubclass(ctx context.Context, subclass storage.Dag
 
 // GetDaggerheartSubclass retrieves a Daggerheart subclass catalog entry.
 func (s *Store) GetDaggerheartSubclass(ctx context.Context, id string) (storage.DaggerheartSubclass, error) {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return storage.DaggerheartSubclass{}, err
 	}
-	if s == nil || s.sqlDB == nil {
-		return storage.DaggerheartSubclass{}, fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(id) == "" {
-		return storage.DaggerheartSubclass{}, fmt.Errorf("subclass id is required")
+	if err := requireCatalogEntryID(id, "subclass"); err != nil {
+		return storage.DaggerheartSubclass{}, err
 	}
 
 	row, err := s.q.GetDaggerheartSubclass(ctx, id)
@@ -191,11 +190,8 @@ func (s *Store) GetDaggerheartSubclass(ctx context.Context, id string) (storage.
 
 // ListDaggerheartSubclasses lists all Daggerheart subclass catalog entries.
 func (s *Store) ListDaggerheartSubclasses(ctx context.Context) ([]storage.DaggerheartSubclass, error) {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return nil, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return nil, fmt.Errorf("storage is not configured")
 	}
 
 	rows, err := s.q.ListDaggerheartSubclasses(ctx)
@@ -216,14 +212,11 @@ func (s *Store) ListDaggerheartSubclasses(ctx context.Context) ([]storage.Dagger
 
 // DeleteDaggerheartSubclass removes a Daggerheart subclass catalog entry.
 func (s *Store) DeleteDaggerheartSubclass(ctx context.Context, id string) error {
-	if err := ctx.Err(); err != nil {
+	if err := s.validateContentStore(ctx); err != nil {
 		return err
 	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(id) == "" {
-		return fmt.Errorf("subclass id is required")
+	if err := requireCatalogEntryID(id, "subclass"); err != nil {
+		return err
 	}
 
 	return s.q.DeleteDaggerheartSubclass(ctx, id)
