@@ -82,6 +82,10 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 		return Registries{}, err
 	}
 
+	if err := ValidateEntityKeyedAddressing(eventRegistry); err != nil {
+		return Registries{}, err
+	}
+
 	return Registries{
 		Commands: commandRegistry,
 		Events:   eventRegistry,
@@ -272,7 +276,7 @@ func ValidateProjectionCoverage(events *event.Registry, handledTypes []event.Typ
 
 // ValidateSystemFoldCoverage verifies that every system module's emittable
 // event types with IntentProjectionAndReplay or IntentReplayOnly are handled
-// by the module's projector. This is the system-event counterpart of
+// by the module's folder. This is the system-event counterpart of
 // ValidateFoldCoverage, which covers core domains.
 func ValidateSystemFoldCoverage(modules *module.Registry, events *event.Registry) error {
 	if modules == nil || events == nil {
@@ -281,12 +285,12 @@ func ValidateSystemFoldCoverage(modules *module.Registry, events *event.Registry
 
 	var missing []string
 	for _, mod := range modules.List() {
-		projector := mod.Projector()
-		if projector == nil {
+		folder := mod.Folder()
+		if folder == nil {
 			continue
 		}
 		handled := make(map[event.Type]struct{})
-		for _, t := range projector.FoldHandledTypes() {
+		for _, t := range folder.FoldHandledTypes() {
 			handled[t] = struct{}{}
 		}
 		for _, t := range mod.EmittableEventTypes() {
@@ -303,7 +307,7 @@ func ValidateSystemFoldCoverage(modules *module.Registry, events *event.Registry
 		}
 	}
 	if len(missing) > 0 {
-		return fmt.Errorf("system emittable events missing projector fold handlers: %s", strings.Join(missing, ", "))
+		return fmt.Errorf("system emittable events missing folder fold handlers: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }
@@ -404,6 +408,50 @@ func ValidateAdapterEventCoverage(modules *module.Registry, adapters *systems.Ad
 	return nil
 }
 
+// entityKeyedDomains returns the core domains whose fold types require entity
+// addressing (EntityID != "" guard in the aggregate folder). Adding a new
+// entity-keyed domain here ensures ValidateEntityKeyedAddressing catches
+// missing AddressingPolicyEntityTarget at startup.
+func entityKeyedDomains() []CoreDomain {
+	var keyed []CoreDomain
+	for _, d := range CoreDomains() {
+		switch d.Name() {
+		case "participant", "character", "invite":
+			keyed = append(keyed, d)
+		}
+	}
+	return keyed
+}
+
+// ValidateEntityKeyedAddressing verifies that every entity-keyed fold type
+// (participant, character, invite) has AddressingPolicyEntityTarget in its
+// event definition. This catches the case where a developer registers an
+// entity-keyed event but forgets to set addressing policy, causing the
+// aggregate folder to silently skip the fold when EntityID is empty.
+func ValidateEntityKeyedAddressing(events *event.Registry) error {
+	if events == nil {
+		return fmt.Errorf("event registry is required for entity-keyed addressing validation")
+	}
+
+	var missing []string
+	for _, domain := range entityKeyedDomains() {
+		for _, t := range domain.FoldHandledTypes() {
+			def, ok := events.Definition(t)
+			if !ok {
+				continue
+			}
+			if def.Addressing != event.AddressingPolicyEntityTarget {
+				missing = append(missing, string(t))
+			}
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("entity-keyed fold types missing AddressingPolicyEntityTarget: %s",
+			strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 // ValidateAggregateFoldDispatch verifies that every core event type declared
 // in CoreDomains().FoldHandledTypes is actually wired into the aggregate
 // applier's fold dispatch sets. This catches the case where a developer adds
@@ -414,7 +462,7 @@ func ValidateAggregateFoldDispatch(events *event.Registry) error {
 		return fmt.Errorf("event registry is required for aggregate fold dispatch validation")
 	}
 
-	applier := &aggregate.Applier{}
+	applier := &aggregate.Folder{}
 	dispatched := make(map[event.Type]struct{})
 	for _, t := range applier.FoldDispatchedTypes() {
 		dispatched[t] = struct{}{}

@@ -22,7 +22,8 @@ func FoldHandledTypes() []event.Type {
 // Fold applies an event to campaign state. It returns an error if a recognized
 // event carries a payload that cannot be unmarshalled.
 func Fold(state State, evt event.Event) (State, error) {
-	if evt.Type == EventTypeCreated {
+	switch evt.Type {
+	case EventTypeCreated:
 		state.Created = true
 		var payload CreatePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
@@ -34,8 +35,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		state.Status = StatusDraft
 		state.CoverAssetID = strings.TrimSpace(payload.CoverAssetID)
 		state.CoverSetID = strings.TrimSpace(payload.CoverSetID)
-	}
-	if evt.Type == EventTypeUpdated {
+	case EventTypeUpdated:
 		var payload UpdatePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("campaign fold %s: %w", evt.Type, err)
@@ -54,9 +54,10 @@ func Fold(state State, evt event.Event) (State, error) {
 				state.CoverSetID = strings.TrimSpace(value)
 			}
 		}
+	case EventTypeForked:
+		// Projection-only: fork lineage metadata does not affect campaign
+		// aggregate state but is acknowledged here so fold coverage
+		// validation knows the event was deliberately considered.
 	}
-	// EventTypeForked is projection-only: fork lineage metadata does not affect
-	// campaign aggregate state but is acknowledged here so fold coverage
-	// validation knows the event was deliberately considered.
 	return state, nil
 }

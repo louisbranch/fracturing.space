@@ -38,7 +38,7 @@ func TestReplayStateLoader_LoadsAggregateState(t *testing.T) {
 	loader := ReplayStateLoader{
 		Events:      store,
 		Checkpoints: checkpoint.NewMemory(),
-		Applier:     &aggregate.Applier{},
+		Applier:     &aggregate.Folder{},
 		StateFactory: func() any {
 			return aggregate.State{}
 		},
@@ -79,7 +79,7 @@ func TestReplayGateStateLoader_LoadsSessionState(t *testing.T) {
 	stateLoader := ReplayStateLoader{
 		Events:      store,
 		Checkpoints: checkpoint.NewMemory(),
-		Applier:     &aggregate.Applier{},
+		Applier:     &aggregate.Folder{},
 		StateFactory: func() any {
 			return aggregate.State{}
 		},
@@ -145,7 +145,7 @@ func TestReplayStateLoader_SeedsReplayFromSnapshot(t *testing.T) {
 		Events:      events,
 		Checkpoints: checkpoint.NewMemory(),
 		Snapshots:   snapshots,
-		Applier:     &aggregate.Applier{},
+		Applier:     &aggregate.Folder{},
 		StateFactory: func() any {
 			return aggregate.State{}
 		},
@@ -177,7 +177,7 @@ func TestReplayStateLoader_ReturnsSnapshotLoadError(t *testing.T) {
 		Snapshots: &fakeSnapshotStore{
 			getErr: errors.New("snapshot boom"),
 		},
-		Applier: &aggregate.Applier{},
+		Applier: &aggregate.Folder{},
 		StateFactory: func() any {
 			return aggregate.State{}
 		},

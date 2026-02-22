@@ -54,7 +54,7 @@ func (f fakeSystemModule) Decider() module.Decider {
 	return nil
 }
 
-func (f fakeSystemModule) Projector() module.Projector {
+func (f fakeSystemModule) Folder() module.Folder {
 	return nil
 }
 

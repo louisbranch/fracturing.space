@@ -26,7 +26,8 @@ func FoldHandledTypes() []event.Type {
 // The fold is intentionally declarative: every session transition is represented as
 // an event so tests and replay both observe the same gate and spotlight behavior.
 func Fold(state State, evt event.Event) (State, error) {
-	if evt.Type == EventTypeStarted {
+	switch evt.Type {
+	case EventTypeStarted:
 		state.Started = true
 		state.Ended = false
 		var payload StartPayload
@@ -35,8 +36,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		}
 		state.SessionID = payload.SessionID
 		state.Name = payload.SessionName
-	}
-	if evt.Type == EventTypeEnded {
+	case EventTypeEnded:
 		state.Ended = true
 		state.Started = false
 		var payload EndPayload
@@ -46,28 +46,24 @@ func Fold(state State, evt event.Event) (State, error) {
 		if payload.SessionID != "" {
 			state.SessionID = payload.SessionID
 		}
-	}
-	if evt.Type == EventTypeGateOpened {
+	case EventTypeGateOpened:
 		state.GateOpen = true
 		var payload GateOpenedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 		}
 		state.GateID = payload.GateID
-	}
-	if evt.Type == EventTypeGateResolved || evt.Type == EventTypeGateAbandoned {
+	case EventTypeGateResolved, EventTypeGateAbandoned:
 		state.GateOpen = false
 		state.GateID = ""
-	}
-	if evt.Type == EventTypeSpotlightSet {
+	case EventTypeSpotlightSet:
 		var payload SpotlightSetPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 		}
 		state.SpotlightType = payload.SpotlightType
 		state.SpotlightCharacterID = payload.CharacterID
-	}
-	if evt.Type == EventTypeSpotlightCleared {
+	case EventTypeSpotlightCleared:
 		state.SpotlightType = ""
 		state.SpotlightCharacterID = ""
 	}

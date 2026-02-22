@@ -33,7 +33,7 @@ func (fakeModule) EmittableEventTypes() []event.Type {
 	return []event.Type{event.Type("sys.system_1.action.tested")}
 }
 func (fakeModule) Decider() module.Decider           { return nil }
-func (fakeModule) Projector() module.Projector       { return nil }
+func (fakeModule) Folder() module.Folder             { return nil }
 func (fakeModule) StateFactory() module.StateFactory { return nil }
 
 type syntheticModule struct {
@@ -61,7 +61,7 @@ func (m syntheticModule) EmittableEventTypes() []event.Type {
 	return []event.Type{m.eventType}
 }
 func (m syntheticModule) Decider() module.Decider           { return nil }
-func (m syntheticModule) Projector() module.Projector       { return nil }
+func (m syntheticModule) Folder() module.Folder             { return nil }
 func (m syntheticModule) StateFactory() module.StateFactory { return nil }
 
 func TestCoreDomains_AllSixRegistered(t *testing.T) {
@@ -309,7 +309,7 @@ func TestValidateFoldCoverage_IgnoresAuditOnlyEvents(t *testing.T) {
 func TestValidateFoldCoverage_IgnoresSystemEvents(t *testing.T) {
 	eventRegistry := event.NewRegistry()
 	// Register a system event — fold coverage for system events is the
-	// responsibility of the module projector, not core fold functions.
+	// responsibility of the module folder, not core fold functions.
 	if err := eventRegistry.Register(event.Definition{
 		Type:   event.Type("sys.test.some_event"),
 		Owner:  event.OwnerSystem,
@@ -515,7 +515,7 @@ func TestValidateSystemFoldCoverage_FailsOnMissingHandler(t *testing.T) {
 		id:        "system-1",
 		version:   "v1",
 		emittable: []event.Type{"sys.system_1.ev1", "sys.system_1.ev2"},
-		// projector only handles ev1, not ev2
+		// folder only handles ev1, not ev2
 		foldHandled: []event.Type{"sys.system_1.ev1"},
 	}
 	if err := registry.Register(mod); err != nil {
@@ -559,7 +559,38 @@ func TestValidateAggregateFoldDispatch_RejectsNilRegistry(t *testing.T) {
 	}
 }
 
-// fakeModuleWithFoldTypes is a test module whose projector implements FoldTyper.
+func TestValidateEntityKeyedAddressing_PassesWithCurrentDomains(t *testing.T) {
+	registries, err := BuildRegistries()
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	if err := ValidateEntityKeyedAddressing(registries.Events); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateEntityKeyedAddressing_RejectsMissingPolicy(t *testing.T) {
+	eventRegistry := event.NewRegistry()
+	// Register a participant event without AddressingPolicyEntityTarget.
+	if err := eventRegistry.Register(event.Definition{
+		Type:       event.Type("participant.joined"),
+		Owner:      event.OwnerCore,
+		Intent:     event.IntentProjectionAndReplay,
+		Addressing: event.AddressingPolicyNone,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	err := ValidateEntityKeyedAddressing(eventRegistry)
+	if err == nil {
+		t.Fatal("expected error for entity-keyed type without entity addressing")
+	}
+	if !strings.Contains(err.Error(), "participant.joined") {
+		t.Fatalf("expected error to mention participant.joined, got: %v", err)
+	}
+}
+
+// fakeModuleWithFoldTypes is a test module whose folder implements FoldTyper.
 type fakeModuleWithFoldTypes struct {
 	id          string
 	version     string
@@ -573,20 +604,20 @@ func (m *fakeModuleWithFoldTypes) RegisterCommands(_ *command.Registry) error { 
 func (m *fakeModuleWithFoldTypes) RegisterEvents(_ *event.Registry) error     { return nil }
 func (m *fakeModuleWithFoldTypes) EmittableEventTypes() []event.Type          { return m.emittable }
 func (m *fakeModuleWithFoldTypes) Decider() module.Decider                    { return nil }
-func (m *fakeModuleWithFoldTypes) Projector() module.Projector {
-	return &fakeProjectorWithFoldTypes{handled: m.foldHandled}
+func (m *fakeModuleWithFoldTypes) Folder() module.Folder {
+	return &fakeFolderWithFoldTypes{handled: m.foldHandled}
 }
 func (m *fakeModuleWithFoldTypes) StateFactory() module.StateFactory { return nil }
 
-type fakeProjectorWithFoldTypes struct {
+type fakeFolderWithFoldTypes struct {
 	handled []event.Type
 }
 
-func (p *fakeProjectorWithFoldTypes) Apply(state any, _ event.Event) (any, error) {
+func (p *fakeFolderWithFoldTypes) Apply(state any, _ event.Event) (any, error) {
 	return state, nil
 }
 
-func (p *fakeProjectorWithFoldTypes) FoldHandledTypes() []event.Type {
+func (p *fakeFolderWithFoldTypes) FoldHandledTypes() []event.Type {
 	return p.handled
 }
 
@@ -694,7 +725,7 @@ func (m *fakeModuleWithCommandTypes) EmittableEventTypes() []event.Type      { r
 func (m *fakeModuleWithCommandTypes) Decider() module.Decider {
 	return &fakeDeciderWithCommandTypes{handled: m.commandHandled}
 }
-func (m *fakeModuleWithCommandTypes) Projector() module.Projector       { return nil }
+func (m *fakeModuleWithCommandTypes) Folder() module.Folder             { return nil }
 func (m *fakeModuleWithCommandTypes) StateFactory() module.StateFactory { return nil }
 
 type fakeDeciderWithCommandTypes struct {

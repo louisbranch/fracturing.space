@@ -24,8 +24,8 @@ var (
 	ErrModuleNotFound = errors.New("system module is not registered")
 	// ErrDeciderRequired indicates a missing system decider.
 	ErrDeciderRequired = errors.New("system decider is required")
-	// ErrProjectorRequired indicates a missing system projector.
-	ErrProjectorRequired = errors.New("system projector is required")
+	// ErrFolderRequired indicates a missing system folder.
+	ErrFolderRequired = errors.New("system folder is required")
 )
 
 // Decider handles system-owned commands.
@@ -33,12 +33,14 @@ type Decider interface {
 	Decide(state any, cmd command.Command, now func() time.Time) command.Decision
 }
 
-// Projector applies system-owned events to system state.
+// Folder folds system-owned events into system state.
 //
 // FoldHandledTypes declares which event types the Apply method handles, enabling
 // ValidateSystemFoldCoverage to verify at startup that every emittable event
 // type with replay intent has a corresponding fold handler.
-type Projector interface {
+// Named "Folder" (not "Projector") because it performs a pure state fold,
+// not a side-effecting projection write.
+type Folder interface {
 	Apply(state any, evt event.Event) (any, error)
 	FoldHandledTypes() []event.Type
 }
@@ -68,7 +70,7 @@ type Module interface {
 	// event registry, catching missing registrations at startup.
 	EmittableEventTypes() []event.Type
 	Decider() Decider
-	Projector() Projector
+	Folder() Folder
 	StateFactory() StateFactory
 }
 
@@ -120,10 +122,10 @@ func RouteCommand(registry *Registry, state any, cmd command.Command, now func()
 	return decider.Decide(state, cmd, now), nil
 }
 
-// RouteEvent routes a system event to the registered module projector.
+// RouteEvent routes a system event to the registered module folder.
 //
-// Projectors keep system-owned read models or aggregate state slices aligned with
-// event semantics defined by the same module that emitted them.
+// Folders keep system-owned aggregate state slices aligned with event semantics
+// defined by the same module that emitted them.
 func RouteEvent(registry *Registry, state any, evt event.Event) (any, error) {
 	if registry == nil {
 		return nil, ErrRegistryRequired
@@ -140,11 +142,11 @@ func RouteEvent(registry *Registry, state any, evt event.Event) (any, error) {
 	if module == nil {
 		return nil, ErrModuleNotFound
 	}
-	projector := module.Projector()
-	if projector == nil {
-		return nil, ErrProjectorRequired
+	folder := module.Folder()
+	if folder == nil {
+		return nil, ErrFolderRequired
 	}
-	return projector.Apply(state, evt)
+	return folder.Apply(state, evt)
 }
 
 // Register adds a system module to the registry.

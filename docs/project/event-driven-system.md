@@ -58,9 +58,14 @@ assigns sequencing and integrity fields.
 
 Event definitions now include intent to make projection behavior explicit:
 
-- `IntentProjectionAndReplay`: event must be handled in replay/projection paths.
-- `IntentAuditOnly`: event is not projected and is treated as audit/observability
-  only.
+- `IntentProjectionAndReplay`: event must be handled in both replay (aggregate
+  fold) and projection paths. Most domain events use this intent.
+- `IntentReplayOnly`: event affects aggregate state during replay but does NOT
+  write to projection stores. Use this for events that update fold state (e.g.
+  internal counters or derived aggregate fields) without needing a corresponding
+  projection record.
+- `IntentAuditOnly`: event is not projected and is not folded into aggregate
+  state. Treated as audit/observability only.
 
 The intent is configured on `event.Definition` as `Intent`, defaults to
 `IntentProjectionAndReplay` when omitted.
@@ -404,11 +409,13 @@ fix.
 | `system module <id> declares emittable event types not in registry: <type>` | A system module's `EmittableEventTypes()` includes a type not registered in `RegisterEvents`. | Add the missing `event.Definition` in the module's `RegisterEvents` method. |
 | `core replay events missing fold handlers: <type>` | A core event with `IntentProjectionAndReplay` or `IntentReplayOnly` has no entry in any core domain's `FoldHandledTypes()`. | Add the event type to the appropriate domain's `FoldHandledTypes()` and add a case in its `Fold` function. |
 | `core projection-and-replay events missing projection handlers: <type>` | A core event with `IntentProjectionAndReplay` has no entry in the projection applier's handled types. | Add the event type to `ProjectionHandledTypes()` in `projection/applier_domain.go` and add a case in `Apply`. |
-| `system emittable events missing projector fold handlers: <type>` | A system module emits an event with replay intent but its projector's `FoldHandledTypes()` does not include it. | Add the event type to the projector's `FoldHandledTypes()` and add a case in its `Apply` method. |
+| `system emittable events missing folder fold handlers: <type>` | A system module emits an event with replay intent but its folder's `FoldHandledTypes()` does not include it. | Add the event type to the folder's `FoldHandledTypes()` and add a case in its `Apply` method. |
 | `system emittable events missing adapter handlers: <type>` | A system module emits an `IntentProjectionAndReplay` event but no system adapter handles it. | Add the event type to the adapter's `HandledTypes()` and add a case in its `Apply` method. |
 | `system commands missing decider handlers: <type>` | A system module registers a command type but the module's decider does not list it in `DeciderHandledCommands()`. | Add the command type to the decider's `DeciderHandledCommands()` and add a case in its `Decide` method. |
 | `system module <id> command <type> must use sys.<id>.* prefix` | A system-owned command type does not follow the `sys.<system_id>.*` naming convention. | Rename the command type constant to use the required prefix. |
 | `system module <id> event <type> must use sys.<id>.* prefix` | A system-owned event type does not follow the `sys.<system_id>.*` naming convention. | Rename the event type constant to use the required prefix. |
+| `entity-keyed fold types missing AddressingPolicyEntityTarget: <type>` | An entity-keyed domain (participant, character, invite) has a fold type without `AddressingPolicyEntityTarget` addressing. | Set `Addressing: event.AddressingPolicyEntityTarget` in the event definition. |
+| `projection stores not configured: <store>` | The projection applier is missing a required store dependency. | Ensure all stores are wired in the `projection.Applier` constructor. |
 
 All validators run before the server accepts traffic. Fix the reported type,
 then restart. Run `make integration` to verify all validators pass.
@@ -428,16 +435,17 @@ These are current documentation or architecture pain points worth improving.
      cannot occur.
    - Improvement: document an explicit projection-repair runbook and consider a
      durable projection work queue/outbox.
-3. Two "Apply" methods with different semantics:
+3. "Apply" vs "Fold" naming (resolved):
    - `projection.Applier.Apply`: writes to denormalized read-model stores
      (projection tables). Errors here are recoverable via replay.
-   - `aggregate.Applier.Apply` / system `Projector.Apply`: folds events into
+   - `aggregate.Folder.Apply` / system `module.Folder.Apply`: folds events into
      in-memory aggregate state. Errors here are domain-level (unmarshal, etc).
-   - `engine.Applier.Apply`: the write-handler interface; during live execution
+   - `engine.Folder.Apply`: the write-handler interface; during live execution
      it folds state, while the projection applier runs in the application layer.
    - `ErrPostPersistApplyFailed` refers to the *aggregate fold* step in
      `Handler.prepareExecution`, not the projection apply.
-   - Improvement: rename aggregate fold interface to `Folder` to remove ambiguity.
+   - The fold-semantic types now use `Folder` naming to distinguish from the
+     side-effecting `projection.Applier`.
 4. Two similarly named system registries:
    - `domain/system.Registry` (module command/event routing) and
      `domain/systems.Registry` (API/system metadata bridge) can be confused.

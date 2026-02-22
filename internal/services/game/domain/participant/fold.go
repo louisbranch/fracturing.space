@@ -23,7 +23,8 @@ func FoldHandledTypes() []event.Type {
 // Fold applies an event to participant state. It returns an error if a
 // recognized event carries a payload that cannot be unmarshalled.
 func Fold(state State, evt event.Event) (State, error) {
-	if evt.Type == EventTypeJoined {
+	switch evt.Type {
+	case EventTypeJoined:
 		state.Joined = true
 		state.Left = false
 		var payload JoinPayload
@@ -38,8 +39,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		state.CampaignAccess = payload.CampaignAccess
 		state.AvatarSetID = payload.AvatarSetID
 		state.AvatarAssetID = payload.AvatarAssetID
-	}
-	if evt.Type == EventTypeUpdated {
+	case EventTypeUpdated:
 		var payload UpdatePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
@@ -65,8 +65,7 @@ func Fold(state State, evt event.Event) (State, error) {
 				state.AvatarAssetID = value
 			}
 		}
-	}
-	if evt.Type == EventTypeLeft {
+	case EventTypeLeft:
 		state.Left = true
 		state.Joined = false
 		var payload LeavePayload
@@ -76,8 +75,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		if payload.ParticipantID != "" {
 			state.ParticipantID = payload.ParticipantID
 		}
-	}
-	if evt.Type == EventTypeBound {
+	case EventTypeBound:
 		var payload BindPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
@@ -86,8 +84,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			state.ParticipantID = payload.ParticipantID
 		}
 		state.UserID = payload.UserID
-	}
-	if evt.Type == EventTypeUnbound {
+	case EventTypeUnbound:
 		var payload UnbindPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
@@ -96,8 +93,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			state.ParticipantID = payload.ParticipantID
 		}
 		state.UserID = ""
-	}
-	if evt.Type == EventTypeSeatReassigned || evt.Type == EventTypeSeatReassignedLegacy {
+	case EventTypeSeatReassigned, EventTypeSeatReassignedLegacy:
 		var payload SeatReassignPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)

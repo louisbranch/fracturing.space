@@ -146,5 +146,13 @@ func (s *Stores) Validate() error {
 		return fmt.Errorf("build adapter registry: %w", err)
 	}
 	s.adapters = adapters
+
+	applier, err := s.TryApplier()
+	if err != nil {
+		return fmt.Errorf("build projection applier: %w", err)
+	}
+	if err := applier.ValidateStorePreconditions(); err != nil {
+		return err
+	}
 	return nil
 }

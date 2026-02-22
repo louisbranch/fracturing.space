@@ -14,16 +14,18 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
-// Applier folds events into aggregate state.
+// Folder folds events into aggregate state.
 //
-// The applier is where the domain boundary stays deterministic:
+// The folder is where the domain boundary stays deterministic:
 // each event type updates exactly one aggregate slice and is replayed
 // identically whether during request execution or historical reconstruction.
-type Applier struct {
-	// Events provides event definitions so the applier can skip audit-only
+// Named "Folder" (not "Applier") to distinguish pure state folds from
+// projection.Applier, which performs side-effecting I/O writes to stores.
+type Folder struct {
+	// Events provides event definitions so the folder can skip audit-only
 	// events that do not affect aggregate state.
 	Events *event.Registry
-	// SystemRegistry routes system events to their module-specific projector.
+	// SystemRegistry routes system events to their module-specific folder.
 	SystemRegistry *module.Registry
 
 	// foldSets are lazily built on first Apply to avoid dispatch into fold
@@ -38,7 +40,7 @@ type Applier struct {
 }
 
 // initFoldSets builds per-fold type lookup sets from FoldHandledTypes.
-func (a *Applier) initFoldSets() {
+func (a *Folder) initFoldSets() {
 	a.foldOnce.Do(func() {
 		toSet := func(types []event.Type) map[event.Type]struct{} {
 			s := make(map[event.Type]struct{}, len(types))
@@ -60,7 +62,7 @@ func (a *Applier) initFoldSets() {
 // applier's fold dispatch sets. ValidateAggregateFoldDispatch uses this to
 // verify that every type declared in CoreDomains().FoldHandledTypes actually
 // reaches a fold function at runtime.
-func (a *Applier) FoldDispatchedTypes() []event.Type {
+func (a *Folder) FoldDispatchedTypes() []event.Type {
 	a.initFoldSets()
 	var types []event.Type
 	for _, s := range []map[event.Type]struct{}{
@@ -83,7 +85,7 @@ func (a *Applier) FoldDispatchedTypes() []event.Type {
 // The function only mutates aggregate state through fold functions so state
 // transitions remain visible in one place per subdomain and replay behavior matches
 // request-time behavior.
-func (a *Applier) Apply(state any, evt event.Event) (any, error) {
+func (a *Folder) Apply(state any, evt event.Event) (any, error) {
 	// Skip audit-only events: they do not affect aggregate state and should
 	// not be passed to fold functions.
 	if a.Events != nil {

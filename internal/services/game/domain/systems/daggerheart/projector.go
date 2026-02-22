@@ -8,19 +8,19 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// Projector applies Daggerheart system events to state.
-type Projector struct{}
+// Folder folds Daggerheart system events into snapshot state.
+type Folder struct{}
 
-// FoldHandledTypes returns the event types this projector's Apply handles.
+// FoldHandledTypes returns the event types this folder's Apply handles.
 // Derived from daggerheartEventDefinitions so the list stays in sync with the
 // authoritative registration slice. Used by ValidateSystemFoldCoverage to
 // verify every emittable event type has a fold handler.
-func (Projector) FoldHandledTypes() []event.Type {
+func (Folder) FoldHandledTypes() []event.Type {
 	return eventTypesWithReplayIntent()
 }
 
-// Apply applies a Daggerheart event to state.
-func (Projector) Apply(state any, evt event.Event) (any, error) {
+// Apply folds a Daggerheart event into state.
+func (Folder) Apply(state any, evt event.Event) (any, error) {
 	var fearPayload GMFearChangedPayload
 	current, ok := snapshotFromState(state)
 	if !ok && state != nil {
@@ -150,7 +150,7 @@ func (Projector) Apply(state any, evt event.Event) (any, error) {
 		}
 		delete(current.AdversaryStates, strings.TrimSpace(payload.AdversaryID))
 	default:
-		return nil, fmt.Errorf("unhandled daggerheart projector event type: %s", evt.Type)
+		return nil, fmt.Errorf("unhandled daggerheart folder event type: %s", evt.Type)
 	}
 	return current, nil
 }

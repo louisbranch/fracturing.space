@@ -20,7 +20,8 @@ func FoldHandledTypes() []event.Type {
 // Fold applies an event to character state. It returns an error if a recognized
 // event carries a payload that cannot be unmarshalled.
 func Fold(state State, evt event.Event) (State, error) {
-	if evt.Type == EventTypeCreated {
+	switch evt.Type {
+	case EventTypeCreated:
 		state.Created = true
 		state.Deleted = false
 		var payload CreatePayload
@@ -34,8 +35,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		state.Notes = payload.Notes
 		state.AvatarSetID = payload.AvatarSetID
 		state.AvatarAssetID = payload.AvatarAssetID
-	}
-	if evt.Type == EventTypeUpdated {
+	case EventTypeUpdated:
 		var payload UpdatePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
@@ -61,8 +61,7 @@ func Fold(state State, evt event.Event) (State, error) {
 				state.AvatarAssetID = value
 			}
 		}
-	}
-	if evt.Type == EventTypeDeleted {
+	case EventTypeDeleted:
 		state.Deleted = true
 		var payload DeletePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
@@ -71,8 +70,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		if payload.CharacterID != "" {
 			state.CharacterID = payload.CharacterID
 		}
-	}
-	if evt.Type == EventTypeProfileUpdated {
+	case EventTypeProfileUpdated:
 		var payload ProfileUpdatePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("character fold %s: %w", evt.Type, err)

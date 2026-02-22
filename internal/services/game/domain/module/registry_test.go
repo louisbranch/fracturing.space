@@ -10,11 +10,11 @@ import (
 )
 
 type stubModule struct {
-	id        string
-	version   string
-	decider   Decider
-	projector Projector
-	factory   StateFactory
+	id      string
+	version string
+	decider Decider
+	folder  Folder
+	factory StateFactory
 }
 
 func (m stubModule) ID() string {
@@ -41,8 +41,8 @@ func (m stubModule) Decider() Decider {
 	return m.decider
 }
 
-func (m stubModule) Projector() Projector {
-	return m.projector
+func (m stubModule) Folder() Folder {
+	return m.folder
 }
 
 func (m stubModule) StateFactory() StateFactory {
@@ -63,7 +63,7 @@ func (d *stubDecider) Decide(state any, cmd command.Command, now func() time.Tim
 	return d.decision
 }
 
-type stubProjector struct {
+type stubFolder struct {
 	called bool
 	state  any
 	evt    event.Event
@@ -71,14 +71,14 @@ type stubProjector struct {
 	err    error
 }
 
-func (p *stubProjector) Apply(state any, evt event.Event) (any, error) {
+func (p *stubFolder) Apply(state any, evt event.Event) (any, error) {
 	p.called = true
 	p.state = state
 	p.evt = evt
 	return p.result, p.err
 }
 
-func (p *stubProjector) FoldHandledTypes() []event.Type { return nil }
+func (p *stubFolder) FoldHandledTypes() []event.Type { return nil }
 
 func TestRegistryRegister_RequiresSystemID(t *testing.T) {
 	registry := NewRegistry()
@@ -153,10 +153,10 @@ func TestRouteCommand_MissingDeciderRejected(t *testing.T) {
 	}
 }
 
-func TestRouteEvent_UsesModuleProjector(t *testing.T) {
+func TestRouteEvent_UsesModuleFolder(t *testing.T) {
 	registry := NewRegistry()
-	projector := &stubProjector{result: "next"}
-	if err := registry.Register(stubModule{id: "daggerheart", version: "v1", projector: projector}); err != nil {
+	folder := &stubFolder{result: "next"}
+	if err := registry.Register(stubModule{id: "daggerheart", version: "v1", folder: folder}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
 
@@ -170,24 +170,24 @@ func TestRouteEvent_UsesModuleProjector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("route event: %v", err)
 	}
-	if !projector.called {
-		t.Fatal("expected projector to be called")
+	if !folder.called {
+		t.Fatal("expected folder to be called")
 	}
-	if projector.state != "state" {
-		t.Fatalf("state = %v, want %v", projector.state, "state")
+	if folder.state != "state" {
+		t.Fatalf("state = %v, want %v", folder.state, "state")
 	}
 	if state != "next" {
 		t.Fatalf("state = %v, want %v", state, "next")
 	}
 }
 
-func TestRouteEvent_MissingProjectorRejected(t *testing.T) {
+func TestRouteEvent_MissingFolderRejected(t *testing.T) {
 	registry := NewRegistry()
 	if err := registry.Register(stubModule{id: "daggerheart", version: "v1"}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
 	_, err := RouteEvent(registry, nil, event.Event{SystemID: "daggerheart", SystemVersion: "v1"})
-	if !errors.Is(err, ErrProjectorRequired) {
-		t.Fatalf("expected ErrProjectorRequired, got %v", err)
+	if !errors.Is(err, ErrFolderRequired) {
+		t.Fatalf("expected ErrFolderRequired, got %v", err)
 	}
 }

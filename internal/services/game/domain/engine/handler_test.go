@@ -308,7 +308,7 @@ func TestExecute_AppliesEventsToState(t *testing.T) {
 	handler := Handler{
 		Commands: cmdRegistry,
 		Decider:  decider,
-		Applier:  &aggregate.Applier{},
+		Folder:   &aggregate.Folder{},
 	}
 	cmd := command.Command{
 		CampaignID: "camp-1",
@@ -467,7 +467,7 @@ func TestExecute_AllowsSystemEventWithNoMutation(t *testing.T) {
 			ActorType:     event.ActorTypeSystem,
 			PayloadJSON:   []byte(`{}`),
 		})},
-		Applier: &systemMutationApplier{},
+		Folder: &systemMutationApplier{},
 	}
 
 	_, err := handler.Execute(context.Background(), command.Command{
@@ -512,7 +512,7 @@ func TestExecute_AllowsMutatingSystemEvent(t *testing.T) {
 			ActorType:     event.ActorTypeSystem,
 			PayloadJSON:   []byte(`{}`),
 		})},
-		Applier: &systemMutationApplier{Mutate: true},
+		Folder: &systemMutationApplier{Mutate: true},
 	}
 
 	result, err := handler.Execute(context.Background(), command.Command{
@@ -570,7 +570,7 @@ func TestExecute_WrapsPostPersistApplyFailure(t *testing.T) {
 			ActorType:   event.ActorTypeSystem,
 			PayloadJSON: []byte(`{"ok":true}`),
 		})},
-		Applier: failingApplier{err: errors.New("apply boom")},
+		Folder: failingApplier{err: errors.New("apply boom")},
 	}
 
 	_, err := handler.Execute(context.Background(), command.Command{
@@ -664,7 +664,7 @@ func TestExecute_DoesNotApplyWhenJournalFails(t *testing.T) {
 			PayloadJSON: []byte(`{"ok":true}`),
 		})},
 		Journal: failingJournal{},
-		Applier: applier,
+		Folder:  applier,
 	}
 
 	_, err := handler.Execute(context.Background(), command.Command{
@@ -676,7 +676,7 @@ func TestExecute_DoesNotApplyWhenJournalFails(t *testing.T) {
 		t.Fatal("expected error from failing journal")
 	}
 	if applier.called {
-		t.Fatal("expected applier not to be called when journal fails")
+		t.Fatal("expected folder not to be called when journal fails")
 	}
 }
 
