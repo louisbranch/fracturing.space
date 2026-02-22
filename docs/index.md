@@ -29,6 +29,8 @@ Not sure where to start? Use the [audience guides](audience/index.md).
 - [Project overview](project/overview.md)
 - [Architecture](project/architecture.md)
 - [Domain language](project/domain-language.md)
+- [User connections roadmap](project/connections-roadmap.md)
+- [Connections phase 2 username](project/connections-phase2-username.md)
 - [AI provider access](project/ai-provider-access.md)
 - [AI campaign assignment (phase 4)](project/ai-campaign-assignment-phase4.md)
 - [Event replay and snapshots](project/event-replay.md)

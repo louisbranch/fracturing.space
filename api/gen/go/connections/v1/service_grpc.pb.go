@@ -20,9 +20,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ConnectionsService_AddContact_FullMethodName    = "/connections.v1.ConnectionsService/AddContact"
-	ConnectionsService_RemoveContact_FullMethodName = "/connections.v1.ConnectionsService/RemoveContact"
-	ConnectionsService_ListContacts_FullMethodName  = "/connections.v1.ConnectionsService/ListContacts"
+	ConnectionsService_AddContact_FullMethodName     = "/connections.v1.ConnectionsService/AddContact"
+	ConnectionsService_RemoveContact_FullMethodName  = "/connections.v1.ConnectionsService/RemoveContact"
+	ConnectionsService_ListContacts_FullMethodName   = "/connections.v1.ConnectionsService/ListContacts"
+	ConnectionsService_SetUsername_FullMethodName    = "/connections.v1.ConnectionsService/SetUsername"
+	ConnectionsService_GetUsername_FullMethodName    = "/connections.v1.ConnectionsService/GetUsername"
+	ConnectionsService_LookupUsername_FullMethodName = "/connections.v1.ConnectionsService/LookupUsername"
 )
 
 // ConnectionsServiceClient is the client API for ConnectionsService service.
@@ -34,6 +37,9 @@ type ConnectionsServiceClient interface {
 	AddContact(ctx context.Context, in *AddContactRequest, opts ...grpc.CallOption) (*AddContactResponse, error)
 	RemoveContact(ctx context.Context, in *RemoveContactRequest, opts ...grpc.CallOption) (*RemoveContactResponse, error)
 	ListContacts(ctx context.Context, in *ListContactsRequest, opts ...grpc.CallOption) (*ListContactsResponse, error)
+	SetUsername(ctx context.Context, in *SetUsernameRequest, opts ...grpc.CallOption) (*SetUsernameResponse, error)
+	GetUsername(ctx context.Context, in *GetUsernameRequest, opts ...grpc.CallOption) (*GetUsernameResponse, error)
+	LookupUsername(ctx context.Context, in *LookupUsernameRequest, opts ...grpc.CallOption) (*LookupUsernameResponse, error)
 }
 
 type connectionsServiceClient struct {
@@ -74,6 +80,36 @@ func (c *connectionsServiceClient) ListContacts(ctx context.Context, in *ListCon
 	return out, nil
 }
 
+func (c *connectionsServiceClient) SetUsername(ctx context.Context, in *SetUsernameRequest, opts ...grpc.CallOption) (*SetUsernameResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetUsernameResponse)
+	err := c.cc.Invoke(ctx, ConnectionsService_SetUsername_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectionsServiceClient) GetUsername(ctx context.Context, in *GetUsernameRequest, opts ...grpc.CallOption) (*GetUsernameResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetUsernameResponse)
+	err := c.cc.Invoke(ctx, ConnectionsService_GetUsername_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *connectionsServiceClient) LookupUsername(ctx context.Context, in *LookupUsernameRequest, opts ...grpc.CallOption) (*LookupUsernameResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LookupUsernameResponse)
+	err := c.cc.Invoke(ctx, ConnectionsService_LookupUsername_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ConnectionsServiceServer is the server API for ConnectionsService service.
 // All implementations must embed UnimplementedConnectionsServiceServer
 // for forward compatibility.
@@ -83,6 +119,9 @@ type ConnectionsServiceServer interface {
 	AddContact(context.Context, *AddContactRequest) (*AddContactResponse, error)
 	RemoveContact(context.Context, *RemoveContactRequest) (*RemoveContactResponse, error)
 	ListContacts(context.Context, *ListContactsRequest) (*ListContactsResponse, error)
+	SetUsername(context.Context, *SetUsernameRequest) (*SetUsernameResponse, error)
+	GetUsername(context.Context, *GetUsernameRequest) (*GetUsernameResponse, error)
+	LookupUsername(context.Context, *LookupUsernameRequest) (*LookupUsernameResponse, error)
 	mustEmbedUnimplementedConnectionsServiceServer()
 }
 
@@ -101,6 +140,15 @@ func (UnimplementedConnectionsServiceServer) RemoveContact(context.Context, *Rem
 }
 func (UnimplementedConnectionsServiceServer) ListContacts(context.Context, *ListContactsRequest) (*ListContactsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListContacts not implemented")
+}
+func (UnimplementedConnectionsServiceServer) SetUsername(context.Context, *SetUsernameRequest) (*SetUsernameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetUsername not implemented")
+}
+func (UnimplementedConnectionsServiceServer) GetUsername(context.Context, *GetUsernameRequest) (*GetUsernameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetUsername not implemented")
+}
+func (UnimplementedConnectionsServiceServer) LookupUsername(context.Context, *LookupUsernameRequest) (*LookupUsernameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupUsername not implemented")
 }
 func (UnimplementedConnectionsServiceServer) mustEmbedUnimplementedConnectionsServiceServer() {}
 func (UnimplementedConnectionsServiceServer) testEmbeddedByValue()                            {}
@@ -177,6 +225,60 @@ func _ConnectionsService_ListContacts_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ConnectionsService_SetUsername_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetUsernameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionsServiceServer).SetUsername(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectionsService_SetUsername_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionsServiceServer).SetUsername(ctx, req.(*SetUsernameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConnectionsService_GetUsername_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetUsernameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionsServiceServer).GetUsername(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectionsService_GetUsername_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionsServiceServer).GetUsername(ctx, req.(*GetUsernameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ConnectionsService_LookupUsername_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupUsernameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ConnectionsServiceServer).LookupUsername(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ConnectionsService_LookupUsername_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ConnectionsServiceServer).LookupUsername(ctx, req.(*LookupUsernameRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ConnectionsService_ServiceDesc is the grpc.ServiceDesc for ConnectionsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -195,6 +297,18 @@ var ConnectionsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListContacts",
 			Handler:    _ConnectionsService_ListContacts_Handler,
+		},
+		{
+			MethodName: "SetUsername",
+			Handler:    _ConnectionsService_SetUsername_Handler,
+		},
+		{
+			MethodName: "GetUsername",
+			Handler:    _ConnectionsService_GetUsername_Handler,
+		},
+		{
+			MethodName: "LookupUsername",
+			Handler:    _ConnectionsService_LookupUsername_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

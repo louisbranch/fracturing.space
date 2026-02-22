@@ -230,6 +230,553 @@ func TestAppCampaignInviteCreateParticipantCallsCreateInvite(t *testing.T) {
 	}
 }
 
+func TestAppCampaignInviteCreateParticipantResolvesRecipientUsername(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-456",
+				Username: "alice",
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"@alice"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	if inviteClient.createReq == nil {
+		t.Fatalf("expected CreateInvite request to be captured")
+	}
+	if got := inviteClient.createReq.GetRecipientUserId(); got != "user-456" {
+		t.Fatalf("recipient_user_id = %q, want user-456", got)
+	}
+	if connectionsClient.lookupUsernameReq == nil {
+		t.Fatal("expected LookupUsername request")
+	}
+	if got := connectionsClient.lookupUsernameReq.GetUsername(); got != "alice" {
+		t.Fatalf("lookup username = %q, want alice", got)
+	}
+	lookupUserIDs := connectionsClient.lookupUsernameMD.Get(grpcmeta.UserIDHeader)
+	if len(lookupUserIDs) != 1 || lookupUserIDs[0] != "user-123" {
+		t.Fatalf("lookup metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, lookupUserIDs)
+	}
+}
+
+func TestAppCampaignInviteCreateParticipantRecipientUsernameLookupNotFound(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupUsernameErr: status.Error(codes.NotFound, "username not found"),
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"@missing"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if inviteClient.createReq != nil {
+		t.Fatal("expected CreateInvite to be skipped")
+	}
+}
+
+func TestAppCampaignInviteCreateParticipantRecipientUsernameInvalid(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupUsernameErr: status.Error(codes.InvalidArgument, "invalid username"),
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"@bad username"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if inviteClient.createReq != nil {
+		t.Fatal("expected CreateInvite to be skipped")
+	}
+	if !strings.Contains(w.Body.String(), "recipient username is invalid") {
+		t.Fatalf("response body missing invalid username message: %q", w.Body.String())
+	}
+}
+
+func TestAppCampaignInviteCreateParticipantRecipientUsernameRequired(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-456",
+				Username: "alice",
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"@"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if inviteClient.createReq != nil {
+		t.Fatal("expected CreateInvite to be skipped")
+	}
+	if connectionsClient.lookupUsernameReq != nil {
+		t.Fatal("expected LookupUsername to be skipped for empty username")
+	}
+}
+
+func TestAppCampaignInviteCreateParticipantRecipientUsernameRequiresConnectionsClient(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"@alice"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusServiceUnavailable)
+	}
+	if inviteClient.createReq != nil {
+		t.Fatal("expected CreateInvite to be skipped")
+	}
+}
+
+func TestAppCampaignInviteCreateParticipantRecipientUsernameLookupEmptyRecord(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"@alice"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if inviteClient.createReq != nil {
+		t.Fatal("expected CreateInvite to be skipped")
+	}
+}
+
+func TestAppCampaignInviteCreateParticipantUsesRecipientUserIDFallback(t *testing.T) {
+	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/introspect" {
+			t.Fatalf("path = %q, want %q", r.URL.Path, "/introspect")
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(introspectResponse{
+			Active: true,
+			UserID: "user-123",
+		})
+	}))
+	t.Cleanup(authServer.Close)
+
+	participantClient := &fakeWebParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{
+					{
+						Id:             "part-owner",
+						CampaignId:     "camp-123",
+						UserId:         "user-123",
+						Name:           "Alice",
+						CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+					},
+				},
+			},
+		},
+	}
+	inviteClient := &fakeWebInviteClient{
+		createResp: &statev1.CreateInviteResponse{
+			Invite: &statev1.Invite{Id: "inv-new", CampaignId: "camp-123", ParticipantId: "seat-1"},
+		},
+	}
+	connectionsClient := &fakeConnectionsClient{
+		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{
+			UsernameRecord: &connectionsv1.UsernameRecord{
+				UserId:   "user-lookup",
+				Username: "user-456",
+			},
+		},
+	}
+	h := &handler{
+		config: Config{
+			AuthBaseURL:         authServer.URL,
+			OAuthResourceSecret: "secret-1",
+		},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		participantClient: participantClient,
+		inviteClient:      inviteClient,
+		connectionsClient: connectionsClient,
+		campaignAccess: &campaignAccessService{
+			authBaseURL:         authServer.URL,
+			oauthResourceSecret: "secret-1",
+			httpClient:          authServer.Client(),
+			participantClient:   participantClient,
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	form := url.Values{
+		"participant_id":    {"seat-1"},
+		"recipient_user_id": {"user-456"},
+	}
+	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppCampaignDetail(w, req)
+
+	if w.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
+	}
+	if inviteClient.createReq == nil {
+		t.Fatal("expected CreateInvite request")
+	}
+	if got := inviteClient.createReq.GetRecipientUserId(); got != "user-456" {
+		t.Fatalf("recipient_user_id = %q, want user-456", got)
+	}
+	if connectionsClient.lookupUsernameReq != nil {
+		t.Fatal("expected LookupUsername to be skipped for explicit user id")
+	}
+}
+
 func TestAppCampaignInviteRevokeParticipantCallsRevokeInvite(t *testing.T) {
 	authServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/introspect" {

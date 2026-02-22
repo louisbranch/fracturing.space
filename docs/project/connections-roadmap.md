@@ -96,6 +96,9 @@ Clean-slate move with no compatibility bridge:
 
 A user can find another user by username without needing internal user IDs.
 
+Detailed phase spec:
+[Connections Phase 2: Username Claim and Lookup](connections-phase2-username.md)
+
 ## Phase 3: Public Profile (Deferred)
 
 ### Scope
@@ -127,5 +130,4 @@ A user can share one link that lets another user add them as a contact with mini
 
 ## Open Questions
 
-- Should campaign invite UX support `invite by username` in phase 2 or phase 3?
 - Should contact requests (pending/accepted/declined) be introduced before permalinks?
