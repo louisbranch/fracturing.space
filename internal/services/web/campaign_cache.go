@@ -48,109 +48,127 @@ func campaignInvitesCacheKey(campaignID, userID string) string {
 	return "campaign_invites:id:" + strings.TrimSpace(campaignID) + ":user:" + strings.TrimSpace(userID)
 }
 
-func (h *handler) cachedUserCampaigns(ctx context.Context, userID string) ([]*statev1.Campaign, bool) {
+type cacheWriteRequest struct {
+	CacheKey   string
+	Scope      string
+	CampaignID string
+	UserID     string
+	TTL        time.Duration
+	Payload    []byte
+}
+
+func normalizeCacheContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
+}
+
+func (h *handler) cachedPayload(ctx context.Context, cacheKey string) ([]byte, bool) {
 	if h == nil || h.cacheStore == nil {
 		return nil, false
 	}
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return nil, false
-	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
+	ctx = normalizeCacheContext(ctx)
 
-	entry, ok, err := h.cacheStore.GetCacheEntry(ctx, campaignListCacheKey(userID))
+	entry, ok, err := h.cacheStore.GetCacheEntry(ctx, cacheKey)
 	if err != nil || !ok {
 		return nil, false
 	}
 	if entry.Stale || (!entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt)) {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, campaignListCacheKey(userID))
+		_ = h.cacheStore.DeleteCacheEntry(ctx, cacheKey)
 		return nil, false
 	}
 	if len(entry.PayloadBytes) == 0 {
 		return nil, false
 	}
+	return entry.PayloadBytes, true
+}
+
+func (h *handler) deleteCacheKey(ctx context.Context, cacheKey string) {
+	if h == nil || h.cacheStore == nil {
+		return
+	}
+	_ = h.cacheStore.DeleteCacheEntry(normalizeCacheContext(ctx), cacheKey)
+}
+
+func (h *handler) putCachePayload(ctx context.Context, request cacheWriteRequest) {
+	if h == nil || h.cacheStore == nil || len(request.Payload) == 0 {
+		return
+	}
+	now := time.Now().UTC()
+	_ = h.cacheStore.PutCacheEntry(normalizeCacheContext(ctx), webstorage.CacheEntry{
+		CacheKey:     request.CacheKey,
+		Scope:        request.Scope,
+		CampaignID:   request.CampaignID,
+		UserID:       request.UserID,
+		PayloadBytes: request.Payload,
+		Stale:        false,
+		CheckedAt:    now,
+		RefreshedAt:  now,
+		ExpiresAt:    now.Add(request.TTL),
+	})
+}
+
+func (h *handler) cachedUserCampaigns(ctx context.Context, userID string) ([]*statev1.Campaign, bool) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return nil, false
+	}
+	key := campaignListCacheKey(userID)
+	payload, ok := h.cachedPayload(ctx, key)
+	if !ok {
+		return nil, false
+	}
 
 	var resp statev1.ListCampaignsResponse
-	if err := proto.Unmarshal(entry.PayloadBytes, &resp); err != nil {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, campaignListCacheKey(userID))
+	if err := proto.Unmarshal(payload, &resp); err != nil {
+		h.deleteCacheKey(ctx, key)
 		return nil, false
 	}
 	return resp.GetCampaigns(), true
 }
 
 func (h *handler) setUserCampaignsCache(ctx context.Context, userID string, campaigns []*statev1.Campaign) {
-	if h == nil || h.cacheStore == nil {
-		return
-	}
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
 		return
-	}
-	if ctx == nil {
-		ctx = context.Background()
 	}
 
 	payload, err := proto.Marshal(&statev1.ListCampaignsResponse{Campaigns: campaigns})
 	if err != nil {
 		return
 	}
-	now := time.Now().UTC()
-	_ = h.cacheStore.PutCacheEntry(ctx, webstorage.CacheEntry{
-		CacheKey:     campaignListCacheKey(userID),
-		Scope:        cacheScopeCampaignSummary,
-		UserID:       userID,
-		PayloadBytes: payload,
-		Stale:        false,
-		CheckedAt:    now,
-		RefreshedAt:  now,
-		ExpiresAt:    now.Add(campaignListCacheTTL),
+	h.putCachePayload(ctx, cacheWriteRequest{
+		CacheKey: campaignListCacheKey(userID),
+		Scope:    cacheScopeCampaignSummary,
+		UserID:   userID,
+		TTL:      campaignListCacheTTL,
+		Payload:  payload,
 	})
 }
 
 func (h *handler) expireUserCampaignsCache(ctx context.Context, userID string) {
-	if h == nil || h.cacheStore == nil {
-		return
-	}
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
 		return
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	_ = h.cacheStore.DeleteCacheEntry(ctx, campaignListCacheKey(userID))
+	h.deleteCacheKey(ctx, campaignListCacheKey(userID))
 }
 
 func (h *handler) cachedCampaign(ctx context.Context, campaignID string) (*statev1.Campaign, bool) {
-	if h == nil || h.cacheStore == nil {
-		return nil, false
-	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return nil, false
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	key := campaignDetailCacheKey(campaignID)
-	entry, ok, err := h.cacheStore.GetCacheEntry(ctx, key)
-	if err != nil || !ok {
-		return nil, false
-	}
-	if entry.Stale || (!entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt)) {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
-		return nil, false
-	}
-	if len(entry.PayloadBytes) == 0 {
+	payload, ok := h.cachedPayload(ctx, key)
+	if !ok {
 		return nil, false
 	}
 
 	var resp statev1.GetCampaignResponse
-	if err := proto.Unmarshal(entry.PayloadBytes, &resp); err != nil {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
+	if err := proto.Unmarshal(payload, &resp); err != nil {
+		h.deleteCacheKey(ctx, key)
 		return nil, false
 	}
 	if resp.GetCampaign() == nil {
@@ -160,281 +178,178 @@ func (h *handler) cachedCampaign(ctx context.Context, campaignID string) (*state
 }
 
 func (h *handler) setCampaignCache(ctx context.Context, campaign *statev1.Campaign) {
-	if h == nil || h.cacheStore == nil || campaign == nil {
+	if campaign == nil {
 		return
 	}
 	campaignID := strings.TrimSpace(campaign.GetId())
 	if campaignID == "" {
 		return
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
 
 	payload, err := proto.Marshal(&statev1.GetCampaignResponse{Campaign: campaign})
 	if err != nil {
 		return
 	}
-	now := time.Now().UTC()
-	_ = h.cacheStore.PutCacheEntry(ctx, webstorage.CacheEntry{
-		CacheKey:     campaignDetailCacheKey(campaignID),
-		Scope:        cacheScopeCampaignSummary,
-		CampaignID:   campaignID,
-		PayloadBytes: payload,
-		Stale:        false,
-		CheckedAt:    now,
-		RefreshedAt:  now,
-		ExpiresAt:    now.Add(campaignDetailCacheTTL),
+	h.putCachePayload(ctx, cacheWriteRequest{
+		CacheKey:   campaignDetailCacheKey(campaignID),
+		Scope:      cacheScopeCampaignSummary,
+		CampaignID: campaignID,
+		TTL:        campaignDetailCacheTTL,
+		Payload:    payload,
 	})
 }
 
 func (h *handler) cachedCampaignParticipants(ctx context.Context, campaignID string) ([]*statev1.Participant, bool) {
-	if h == nil || h.cacheStore == nil {
-		return nil, false
-	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return nil, false
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	key := campaignParticipantsCacheKey(campaignID)
-	entry, ok, err := h.cacheStore.GetCacheEntry(ctx, key)
-	if err != nil || !ok {
-		return nil, false
-	}
-	if entry.Stale || (!entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt)) {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
-		return nil, false
-	}
-	if len(entry.PayloadBytes) == 0 {
+	payload, ok := h.cachedPayload(ctx, key)
+	if !ok {
 		return nil, false
 	}
 
 	var resp statev1.ListParticipantsResponse
-	if err := proto.Unmarshal(entry.PayloadBytes, &resp); err != nil {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
+	if err := proto.Unmarshal(payload, &resp); err != nil {
+		h.deleteCacheKey(ctx, key)
 		return nil, false
 	}
 	return resp.GetParticipants(), true
 }
 
 func (h *handler) setCampaignParticipantsCache(ctx context.Context, campaignID string, participants []*statev1.Participant) {
-	if h == nil || h.cacheStore == nil {
-		return
-	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return
-	}
-	if ctx == nil {
-		ctx = context.Background()
 	}
 
 	payload, err := proto.Marshal(&statev1.ListParticipantsResponse{Participants: participants})
 	if err != nil {
 		return
 	}
-	now := time.Now().UTC()
-	_ = h.cacheStore.PutCacheEntry(ctx, webstorage.CacheEntry{
-		CacheKey:     campaignParticipantsCacheKey(campaignID),
-		Scope:        cacheScopeCampaignParticipants,
-		CampaignID:   campaignID,
-		PayloadBytes: payload,
-		Stale:        false,
-		CheckedAt:    now,
-		RefreshedAt:  now,
-		ExpiresAt:    now.Add(campaignParticipantsCacheTTL),
+	h.putCachePayload(ctx, cacheWriteRequest{
+		CacheKey:   campaignParticipantsCacheKey(campaignID),
+		Scope:      cacheScopeCampaignParticipants,
+		CampaignID: campaignID,
+		TTL:        campaignParticipantsCacheTTL,
+		Payload:    payload,
 	})
 }
 
 func (h *handler) cachedCampaignSessions(ctx context.Context, campaignID string) ([]*statev1.Session, bool) {
-	if h == nil || h.cacheStore == nil {
-		return nil, false
-	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return nil, false
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	key := campaignSessionsCacheKey(campaignID)
-	entry, ok, err := h.cacheStore.GetCacheEntry(ctx, key)
-	if err != nil || !ok {
-		return nil, false
-	}
-	if entry.Stale || (!entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt)) {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
-		return nil, false
-	}
-	if len(entry.PayloadBytes) == 0 {
+	payload, ok := h.cachedPayload(ctx, key)
+	if !ok {
 		return nil, false
 	}
 
 	var resp statev1.ListSessionsResponse
-	if err := proto.Unmarshal(entry.PayloadBytes, &resp); err != nil {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
+	if err := proto.Unmarshal(payload, &resp); err != nil {
+		h.deleteCacheKey(ctx, key)
 		return nil, false
 	}
 	return resp.GetSessions(), true
 }
 
 func (h *handler) setCampaignSessionsCache(ctx context.Context, campaignID string, sessions []*statev1.Session) {
-	if h == nil || h.cacheStore == nil {
-		return
-	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return
-	}
-	if ctx == nil {
-		ctx = context.Background()
 	}
 
 	payload, err := proto.Marshal(&statev1.ListSessionsResponse{Sessions: sessions})
 	if err != nil {
 		return
 	}
-	now := time.Now().UTC()
-	_ = h.cacheStore.PutCacheEntry(ctx, webstorage.CacheEntry{
-		CacheKey:     campaignSessionsCacheKey(campaignID),
-		Scope:        cacheScopeCampaignSessions,
-		CampaignID:   campaignID,
-		PayloadBytes: payload,
-		Stale:        false,
-		CheckedAt:    now,
-		RefreshedAt:  now,
-		ExpiresAt:    now.Add(campaignSessionsCacheTTL),
+	h.putCachePayload(ctx, cacheWriteRequest{
+		CacheKey:   campaignSessionsCacheKey(campaignID),
+		Scope:      cacheScopeCampaignSessions,
+		CampaignID: campaignID,
+		TTL:        campaignSessionsCacheTTL,
+		Payload:    payload,
 	})
 }
 
 func (h *handler) cachedCampaignCharacters(ctx context.Context, campaignID string) ([]*statev1.Character, bool) {
-	if h == nil || h.cacheStore == nil {
-		return nil, false
-	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return nil, false
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	key := campaignCharactersCacheKey(campaignID)
-	entry, ok, err := h.cacheStore.GetCacheEntry(ctx, key)
-	if err != nil || !ok {
-		return nil, false
-	}
-	if entry.Stale || (!entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt)) {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
-		return nil, false
-	}
-	if len(entry.PayloadBytes) == 0 {
+	payload, ok := h.cachedPayload(ctx, key)
+	if !ok {
 		return nil, false
 	}
 
 	var resp statev1.ListCharactersResponse
-	if err := proto.Unmarshal(entry.PayloadBytes, &resp); err != nil {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
+	if err := proto.Unmarshal(payload, &resp); err != nil {
+		h.deleteCacheKey(ctx, key)
 		return nil, false
 	}
 	return resp.GetCharacters(), true
 }
 
 func (h *handler) setCampaignCharactersCache(ctx context.Context, campaignID string, characters []*statev1.Character) {
-	if h == nil || h.cacheStore == nil {
-		return
-	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return
-	}
-	if ctx == nil {
-		ctx = context.Background()
 	}
 
 	payload, err := proto.Marshal(&statev1.ListCharactersResponse{Characters: characters})
 	if err != nil {
 		return
 	}
-	now := time.Now().UTC()
-	_ = h.cacheStore.PutCacheEntry(ctx, webstorage.CacheEntry{
-		CacheKey:     campaignCharactersCacheKey(campaignID),
-		Scope:        cacheScopeCampaignCharacters,
-		CampaignID:   campaignID,
-		PayloadBytes: payload,
-		Stale:        false,
-		CheckedAt:    now,
-		RefreshedAt:  now,
-		ExpiresAt:    now.Add(campaignCharactersCacheTTL),
+	h.putCachePayload(ctx, cacheWriteRequest{
+		CacheKey:   campaignCharactersCacheKey(campaignID),
+		Scope:      cacheScopeCampaignCharacters,
+		CampaignID: campaignID,
+		TTL:        campaignCharactersCacheTTL,
+		Payload:    payload,
 	})
 }
 
 func (h *handler) cachedCampaignInvites(ctx context.Context, campaignID, userID string) ([]*statev1.Invite, bool) {
-	if h == nil || h.cacheStore == nil {
-		return nil, false
-	}
 	campaignID = strings.TrimSpace(campaignID)
 	userID = strings.TrimSpace(userID)
 	if campaignID == "" || userID == "" {
 		return nil, false
 	}
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
 	key := campaignInvitesCacheKey(campaignID, userID)
-	entry, ok, err := h.cacheStore.GetCacheEntry(ctx, key)
-	if err != nil || !ok {
-		return nil, false
-	}
-	if entry.Stale || (!entry.ExpiresAt.IsZero() && time.Now().After(entry.ExpiresAt)) {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
-		return nil, false
-	}
-	if len(entry.PayloadBytes) == 0 {
+	payload, ok := h.cachedPayload(ctx, key)
+	if !ok {
 		return nil, false
 	}
 
 	var resp statev1.ListInvitesResponse
-	if err := proto.Unmarshal(entry.PayloadBytes, &resp); err != nil {
-		_ = h.cacheStore.DeleteCacheEntry(ctx, key)
+	if err := proto.Unmarshal(payload, &resp); err != nil {
+		h.deleteCacheKey(ctx, key)
 		return nil, false
 	}
 	return resp.GetInvites(), true
 }
 
 func (h *handler) setCampaignInvitesCache(ctx context.Context, campaignID, userID string, invites []*statev1.Invite) {
-	if h == nil || h.cacheStore == nil {
-		return
-	}
 	campaignID = strings.TrimSpace(campaignID)
 	userID = strings.TrimSpace(userID)
 	if campaignID == "" || userID == "" {
 		return
-	}
-	if ctx == nil {
-		ctx = context.Background()
 	}
 
 	payload, err := proto.Marshal(&statev1.ListInvitesResponse{Invites: invites})
 	if err != nil {
 		return
 	}
-	now := time.Now().UTC()
-	_ = h.cacheStore.PutCacheEntry(ctx, webstorage.CacheEntry{
-		CacheKey:     campaignInvitesCacheKey(campaignID, userID),
-		Scope:        cacheScopeCampaignInvites,
-		CampaignID:   campaignID,
-		UserID:       userID,
-		PayloadBytes: payload,
-		Stale:        false,
-		CheckedAt:    now,
-		RefreshedAt:  now,
-		ExpiresAt:    now.Add(campaignInvitesCacheTTL),
+	h.putCachePayload(ctx, cacheWriteRequest{
+		CacheKey:   campaignInvitesCacheKey(campaignID, userID),
+		Scope:      cacheScopeCampaignInvites,
+		CampaignID: campaignID,
+		UserID:     userID,
+		TTL:        campaignInvitesCacheTTL,
+		Payload:    payload,
 	})
 }

@@ -871,7 +871,7 @@ func (s *DaggerheartContentService) ListEnvironments(ctx context.Context, in *pb
 	}, nil
 }
 
-func (s *DaggerheartContentService) contentStore() (storage.DaggerheartContentStore, error) {
+func (s *DaggerheartContentService) contentStore() (storage.DaggerheartContentReadStore, error) {
 	if s == nil || s.stores.DaggerheartContent == nil {
 		return nil, status.Error(codes.Internal, "content store is not configured")
 	}

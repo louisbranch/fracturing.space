@@ -9,6 +9,161 @@ import (
 	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
 )
 
+type campaignRouteDescriptor struct {
+	length   int
+	literals map[int]string
+	handle   func(Service, http.ResponseWriter, *http.Request, []string)
+}
+
+func (d campaignRouteDescriptor) matches(parts []string) bool {
+	if len(parts) != d.length {
+		return false
+	}
+	for index, value := range d.literals {
+		if parts[index] != value {
+			return false
+		}
+	}
+	return true
+}
+
+var campaignRouteDescriptors = []campaignRouteDescriptor{
+	{
+		length:   2,
+		literals: map[int]string{1: "characters"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCharactersList(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "characters", 2: "table"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCharactersTable(w, r, parts[0])
+		},
+	},
+	{
+		length:   4,
+		literals: map[int]string{1: "characters", 3: "activity"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCharacterActivity(w, r, parts[0], parts[2])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "characters"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCharacterSheet(w, r, parts[0], parts[2])
+		},
+	},
+	{
+		length:   2,
+		literals: map[int]string{1: "participants"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleParticipantsList(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "participants", 2: "table"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleParticipantsTable(w, r, parts[0])
+		},
+	},
+	{
+		length:   2,
+		literals: map[int]string{1: "invites"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleInvitesList(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "invites", 2: "table"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleInvitesTable(w, r, parts[0])
+		},
+	},
+	{
+		length:   2,
+		literals: map[int]string{1: "sessions"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleSessionsList(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "sessions", 2: "table"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleSessionsTable(w, r, parts[0])
+		},
+	},
+	{
+		length:   4,
+		literals: map[int]string{1: "sessions", 3: "events"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleSessionEvents(w, r, parts[0], parts[2])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "sessions"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleSessionDetail(w, r, parts[0], parts[2])
+		},
+	},
+	{
+		length:   2,
+		literals: map[int]string{1: "events"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleEventLog(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "events", 2: "table"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleEventLogTable(w, r, parts[0])
+		},
+	},
+	{
+		length: 1,
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignDetail(w, r, parts[0])
+		},
+	},
+}
+
+func dispatchCampaignPath(service Service, w http.ResponseWriter, r *http.Request, parts []string) bool {
+	return dispatchMostSpecificCampaignPath(campaignRouteDescriptors, service, w, r, parts)
+}
+
+func dispatchMostSpecificCampaignPath(
+	descriptors []campaignRouteDescriptor,
+	service Service,
+	w http.ResponseWriter,
+	r *http.Request,
+	parts []string,
+) bool {
+	bestIndex := -1
+	bestSpecificity := -1
+	for index, descriptor := range descriptors {
+		if !descriptor.matches(parts) {
+			continue
+		}
+		specificity := len(descriptor.literals)
+		if specificity > bestSpecificity {
+			bestSpecificity = specificity
+			bestIndex = index
+		}
+	}
+	if bestIndex < 0 {
+		return false
+	}
+	descriptors[bestIndex].handle(service, w, r, parts)
+	return true
+}
+
 // Service defines campaign route handlers consumed by this route module.
 type Service interface {
 	HandleCampaignsPage(w http.ResponseWriter, r *http.Request)
@@ -58,81 +213,7 @@ func HandleCampaignPath(w http.ResponseWriter, r *http.Request, service Service)
 		http.NotFound(w, r)
 		return
 	}
-
-	// /campaigns/{id}/characters
-	if len(parts) == 2 && parts[1] == "characters" {
-		service.HandleCharactersList(w, r, parts[0])
-		return
+	if !dispatchCampaignPath(service, w, r, parts) {
+		http.NotFound(w, r)
 	}
-	// /campaigns/{id}/characters/table
-	if len(parts) == 3 && parts[1] == "characters" && parts[2] == "table" {
-		service.HandleCharactersTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/characters/{characterId}
-	if len(parts) == 3 && parts[1] == "characters" {
-		service.HandleCharacterSheet(w, r, parts[0], parts[2])
-		return
-	}
-	// /campaigns/{id}/characters/{characterId}/activity
-	if len(parts) == 4 && parts[1] == "characters" && parts[3] == "activity" {
-		service.HandleCharacterActivity(w, r, parts[0], parts[2])
-		return
-	}
-	// /campaigns/{id}/participants
-	if len(parts) == 2 && parts[1] == "participants" {
-		service.HandleParticipantsList(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/participants/table
-	if len(parts) == 3 && parts[1] == "participants" && parts[2] == "table" {
-		service.HandleParticipantsTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/invites
-	if len(parts) == 2 && parts[1] == "invites" {
-		service.HandleInvitesList(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/invites/table
-	if len(parts) == 3 && parts[1] == "invites" && parts[2] == "table" {
-		service.HandleInvitesTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/sessions
-	if len(parts) == 2 && parts[1] == "sessions" {
-		service.HandleSessionsList(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/sessions/table
-	if len(parts) == 3 && parts[1] == "sessions" && parts[2] == "table" {
-		service.HandleSessionsTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/sessions/{sessionId}
-	if len(parts) == 3 && parts[1] == "sessions" {
-		service.HandleSessionDetail(w, r, parts[0], parts[2])
-		return
-	}
-	// /campaigns/{id}/sessions/{sessionId}/events
-	if len(parts) == 4 && parts[1] == "sessions" && parts[3] == "events" {
-		service.HandleSessionEvents(w, r, parts[0], parts[2])
-		return
-	}
-	// /campaigns/{id}/events
-	if len(parts) == 2 && parts[1] == "events" {
-		service.HandleEventLog(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}/events/table
-	if len(parts) == 3 && parts[1] == "events" && parts[2] == "table" {
-		service.HandleEventLogTable(w, r, parts[0])
-		return
-	}
-	// /campaigns/{id}
-	if len(parts) == 1 && strings.TrimSpace(parts[0]) != "" {
-		service.HandleCampaignDetail(w, r, parts[0])
-		return
-	}
-	http.NotFound(w, r)
 }

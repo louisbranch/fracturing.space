@@ -295,7 +295,7 @@ func (h *handler) registerGameRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(routepath.AppRootPrefix, h.handleAppHome)
 	profilemodule.RegisterRoutes(mux, newProfileModuleService(h))
 	settingsmodule.RegisterRoutes(mux, newSettingsModuleService(h))
-	campaignsmodule.RegisterRoutes(mux, newCampaignModuleService(h))
+	campaignsmodule.RegisterRoutes(mux, h)
 	invitesmodule.RegisterRoutes(mux, newInvitesModuleService(h))
 	notificationsmodule.RegisterRoutes(mux, newNotificationsModuleService(h))
 }

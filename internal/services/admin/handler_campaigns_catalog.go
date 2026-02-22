@@ -8,7 +8,6 @@ import (
 	"github.com/a-h/templ"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformicons "github.com/louisbranch/fracturing.space/internal/platform/icons"
 	catalogmodule "github.com/louisbranch/fracturing.space/internal/services/admin/module/catalog"
 	routepath "github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
@@ -147,234 +146,19 @@ func (h *Handler) handleCatalogSectionTable(w http.ResponseWriter, r *http.Reque
 	var nextToken, prevToken string
 	var rows []templates.CatalogTableRow
 
-	switch sectionID {
-	case templates.CatalogSectionClasses:
-		resp, err := contentClient.ListClasses(ctx, &daggerheartv1.ListDaggerheartClassesRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list classes: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogClassRows(resp.GetClasses())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionSubclasses:
-		resp, err := contentClient.ListSubclasses(ctx, &daggerheartv1.ListDaggerheartSubclassesRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list subclasses: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogSubclassRows(resp.GetSubclasses())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionHeritages:
-		resp, err := contentClient.ListHeritages(ctx, &daggerheartv1.ListDaggerheartHeritagesRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list heritages: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogHeritageRows(resp.GetHeritages())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionExperiences:
-		resp, err := contentClient.ListExperiences(ctx, &daggerheartv1.ListDaggerheartExperiencesRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list experiences: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogExperienceRows(resp.GetExperiences())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionDomains:
-		resp, err := contentClient.ListDomains(ctx, &daggerheartv1.ListDaggerheartDomainsRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list domains: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogDomainRows(resp.GetDomains())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionDomainCards:
-		resp, err := contentClient.ListDomainCards(ctx, &daggerheartv1.ListDaggerheartDomainCardsRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "level",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list domain cards: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogDomainCardRows(resp.GetDomainCards())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionItems:
-		resp, err := contentClient.ListItems(ctx, &daggerheartv1.ListDaggerheartItemsRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list items: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogItemRows(resp.GetItems())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionWeapons:
-		resp, err := contentClient.ListWeapons(ctx, &daggerheartv1.ListDaggerheartWeaponsRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list weapons: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogWeaponRows(resp.GetWeapons())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionArmor:
-		resp, err := contentClient.ListArmor(ctx, &daggerheartv1.ListDaggerheartArmorRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list armor: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogArmorRows(resp.GetArmor())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionLoot:
-		resp, err := contentClient.ListLootEntries(ctx, &daggerheartv1.ListDaggerheartLootEntriesRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "roll",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list loot: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogLootRows(resp.GetEntries())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionDamageTypes:
-		resp, err := contentClient.ListDamageTypes(ctx, &daggerheartv1.ListDaggerheartDamageTypesRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list damage types: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogDamageTypeRows(resp.GetDamageTypes())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionAdversaries:
-		resp, err := contentClient.ListAdversaries(ctx, &daggerheartv1.ListDaggerheartAdversariesRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list adversaries: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogAdversaryRows(resp.GetAdversaries())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionBeastforms:
-		resp, err := contentClient.ListBeastforms(ctx, &daggerheartv1.ListDaggerheartBeastformsRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list beastforms: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogBeastformRows(resp.GetBeastforms())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionCompanionExperiences:
-		resp, err := contentClient.ListCompanionExperiences(ctx, &daggerheartv1.ListDaggerheartCompanionExperiencesRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list companion experiences: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogCompanionExperienceRows(resp.GetExperiences())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	case templates.CatalogSectionEnvironments:
-		resp, err := contentClient.ListEnvironments(ctx, &daggerheartv1.ListDaggerheartEnvironmentsRequest{
-			PageSize:  catalogListPageSize,
-			PageToken: pageToken,
-			OrderBy:   "name",
-			Locale:    locale,
-		})
-		if err != nil {
-			log.Printf("list environments: %v", err)
-			message = loc.Sprintf("catalog.error.entries_unavailable")
-		} else if resp != nil {
-			rows = buildCatalogEnvironmentRows(resp.GetEnvironments())
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	default:
+	loader, ok := catalogSectionTableLoaders[sectionID]
+	if !ok {
 		message = loc.Sprintf("catalog.error.entries_unavailable")
+	} else {
+		loadedRows, loadedNextToken, loadedPrevToken, err := loader(ctx, contentClient, pageToken, locale)
+		if err != nil {
+			log.Printf("list catalog section %s: %v", sectionID, err)
+			message = loc.Sprintf("catalog.error.entries_unavailable")
+		} else {
+			rows = loadedRows
+			nextToken = loadedNextToken
+			prevToken = loadedPrevToken
+		}
 	}
 
 	if len(rows) == 0 && message == "" {
@@ -423,56 +207,13 @@ func (h *Handler) handleCatalogSectionDetail(w http.ResponseWriter, r *http.Requ
 		BackURL:   routepath.CatalogSection(catalogmodule.DaggerheartSystemID, sectionID),
 	}
 
-	switch sectionID {
-	case templates.CatalogSectionClasses:
-		resp, err := contentClient.GetClass(ctx, &daggerheartv1.GetDaggerheartClassRequest{Id: entryID, Locale: locale})
-		view = buildCatalogClassDetail(sectionID, entryID, resp.GetClass(), err, loc)
-	case templates.CatalogSectionSubclasses:
-		resp, err := contentClient.GetSubclass(ctx, &daggerheartv1.GetDaggerheartSubclassRequest{Id: entryID, Locale: locale})
-		view = buildCatalogSubclassDetail(sectionID, entryID, resp.GetSubclass(), err, loc)
-	case templates.CatalogSectionHeritages:
-		resp, err := contentClient.GetHeritage(ctx, &daggerheartv1.GetDaggerheartHeritageRequest{Id: entryID, Locale: locale})
-		view = buildCatalogHeritageDetail(sectionID, entryID, resp.GetHeritage(), err, loc)
-	case templates.CatalogSectionExperiences:
-		resp, err := contentClient.GetExperience(ctx, &daggerheartv1.GetDaggerheartExperienceRequest{Id: entryID, Locale: locale})
-		view = buildCatalogExperienceDetail(sectionID, entryID, resp.GetExperience(), err, loc)
-	case templates.CatalogSectionDomains:
-		resp, err := contentClient.GetDomain(ctx, &daggerheartv1.GetDaggerheartDomainRequest{Id: entryID, Locale: locale})
-		view = buildCatalogDomainDetail(sectionID, entryID, resp.GetDomain(), err, loc)
-	case templates.CatalogSectionDomainCards:
-		resp, err := contentClient.GetDomainCard(ctx, &daggerheartv1.GetDaggerheartDomainCardRequest{Id: entryID, Locale: locale})
-		view = buildCatalogDomainCardDetail(sectionID, entryID, resp.GetDomainCard(), err, loc)
-	case templates.CatalogSectionItems:
-		resp, err := contentClient.GetItem(ctx, &daggerheartv1.GetDaggerheartItemRequest{Id: entryID, Locale: locale})
-		view = buildCatalogItemDetail(sectionID, entryID, resp.GetItem(), err, loc)
-	case templates.CatalogSectionWeapons:
-		resp, err := contentClient.GetWeapon(ctx, &daggerheartv1.GetDaggerheartWeaponRequest{Id: entryID, Locale: locale})
-		view = buildCatalogWeaponDetail(sectionID, entryID, resp.GetWeapon(), err, loc)
-	case templates.CatalogSectionArmor:
-		resp, err := contentClient.GetArmor(ctx, &daggerheartv1.GetDaggerheartArmorRequest{Id: entryID, Locale: locale})
-		view = buildCatalogArmorDetail(sectionID, entryID, resp.GetArmor(), err, loc)
-	case templates.CatalogSectionLoot:
-		resp, err := contentClient.GetLootEntry(ctx, &daggerheartv1.GetDaggerheartLootEntryRequest{Id: entryID, Locale: locale})
-		view = buildCatalogLootDetail(sectionID, entryID, resp.GetEntry(), err, loc)
-	case templates.CatalogSectionDamageTypes:
-		resp, err := contentClient.GetDamageType(ctx, &daggerheartv1.GetDaggerheartDamageTypeRequest{Id: entryID, Locale: locale})
-		view = buildCatalogDamageTypeDetail(sectionID, entryID, resp.GetDamageType(), err, loc)
-	case templates.CatalogSectionAdversaries:
-		resp, err := contentClient.GetAdversary(ctx, &daggerheartv1.GetDaggerheartAdversaryRequest{Id: entryID, Locale: locale})
-		view = buildCatalogAdversaryDetail(sectionID, entryID, resp.GetAdversary(), err, loc)
-	case templates.CatalogSectionBeastforms:
-		resp, err := contentClient.GetBeastform(ctx, &daggerheartv1.GetDaggerheartBeastformRequest{Id: entryID, Locale: locale})
-		view = buildCatalogBeastformDetail(sectionID, entryID, resp.GetBeastform(), err, loc)
-	case templates.CatalogSectionCompanionExperiences:
-		resp, err := contentClient.GetCompanionExperience(ctx, &daggerheartv1.GetDaggerheartCompanionExperienceRequest{Id: entryID, Locale: locale})
-		view = buildCatalogCompanionExperienceDetail(sectionID, entryID, resp.GetExperience(), err, loc)
-	case templates.CatalogSectionEnvironments:
-		resp, err := contentClient.GetEnvironment(ctx, &daggerheartv1.GetDaggerheartEnvironmentRequest{Id: entryID, Locale: locale})
-		view = buildCatalogEnvironmentDetail(sectionID, entryID, resp.GetEnvironment(), err, loc)
-	default:
+	detailLoader, ok := catalogSectionDetailLoaders[sectionID]
+	if !ok {
 		view.Title = templates.DaggerheartCatalogSectionLabel(loc, sectionID)
 		view.Message = loc.Sprintf("catalog.error.not_found")
 		view.BackURL = routepath.CatalogSection(catalogmodule.DaggerheartSystemID, sectionID)
+	} else {
+		view = detailLoader(ctx, contentClient, sectionID, entryID, locale, loc)
 	}
 
 	var full templ.Component

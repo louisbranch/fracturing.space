@@ -191,6 +191,9 @@ func (a forkApplication) copyForkEvents(ctx context.Context, sourceCampaignID, f
 		return time.Time{}, nil
 	}
 
+	inlineApplyEnabled := writeRuntime.InlineApplyEnabled()
+	shouldApply := writeRuntime.ShouldApply()
+
 	afterSeq := uint64(0)
 	var lastEventAt time.Time
 	for {
@@ -221,7 +224,7 @@ func (a forkApplication) copyForkEvents(ctx context.Context, sourceCampaignID, f
 			if err != nil {
 				return lastEventAt, fmt.Errorf("append forked event: %w", err)
 			}
-			if inlineProjectionApplyEnabled.Load() && intentFilter(stored) {
+			if inlineApplyEnabled && shouldApply(stored) {
 				if err := applier.Apply(ctx, stored); err != nil {
 					return lastEventAt, fmt.Errorf("apply forked event: %w", err)
 				}

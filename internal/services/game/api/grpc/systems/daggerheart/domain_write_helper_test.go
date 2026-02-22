@@ -50,8 +50,8 @@ func (f fakeDomainExecutor) Execute(context.Context, command.Command) (engine.Re
 // filter on cleanup.
 func setTestIntentFilter(t *testing.T) {
 	t.Helper()
-	prev := intentFilter
-	t.Cleanup(func() { intentFilter = prev })
+	prev := writeRuntime.ShouldApply()
+	t.Cleanup(func() { writeRuntime.SetShouldApply(prev) })
 
 	registry := event.NewRegistry()
 	for _, def := range []event.Definition{

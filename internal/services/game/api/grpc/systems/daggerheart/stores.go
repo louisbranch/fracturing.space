@@ -26,7 +26,7 @@ type Stores struct {
 	SessionGate        storage.SessionGateStore
 	SessionSpotlight   storage.SessionSpotlightStore
 	Daggerheart        storage.DaggerheartStore
-	DaggerheartContent storage.DaggerheartContentStore
+	DaggerheartContent storage.DaggerheartContentReadStore
 	Event              storage.EventStore
 	Domain             Domain
 

@@ -169,13 +169,13 @@ func (h *Handler) routes() http.Handler {
 	} else {
 		log.Printf("admin: failed to initialize static assets: %v", err)
 	}
-	dashboardmodule.RegisterRoutes(adminMux, newDashboardModuleService(h))
-	campaignsmodule.RegisterRoutes(adminMux, newCampaignsModuleService(h))
-	systemsmodule.RegisterRoutes(adminMux, newSystemsModuleService(h))
-	catalogmodule.RegisterRoutes(adminMux, newCatalogModuleService(h))
-	iconsmodule.RegisterRoutes(adminMux, newIconsModuleService(h))
-	usersmodule.RegisterRoutes(adminMux, newUsersModuleService(h))
-	scenariosmodule.RegisterRoutes(adminMux, newScenariosModuleService(h))
+	dashboardmodule.RegisterRoutes(adminMux, h)
+	campaignsmodule.RegisterRoutes(adminMux, h)
+	systemsmodule.RegisterRoutes(adminMux, h)
+	catalogmodule.RegisterRoutes(adminMux, h)
+	iconsmodule.RegisterRoutes(adminMux, h)
+	usersmodule.RegisterRoutes(adminMux, h)
+	scenariosmodule.RegisterRoutes(adminMux, h)
 
 	httpmux.MountAdminRoutes(rootMux, adminMux)
 	return rootMux
