@@ -19,7 +19,7 @@ type ReplayStateLoader struct {
 	Events       replay.EventStore
 	Checkpoints  replay.CheckpointStore
 	Snapshots    StateSnapshotStore
-	Applier      replay.Applier
+	Folder       replay.Folder
 	StateFactory func() any
 	Options      replay.Options
 }
@@ -46,8 +46,8 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 	if l.Checkpoints == nil {
 		return nil, replay.ErrCheckpointStoreRequired
 	}
-	if l.Applier == nil {
-		return nil, replay.ErrApplierRequired
+	if l.Folder == nil {
+		return nil, replay.ErrFolderRequired
 	}
 	var state any
 	options := l.Options
@@ -69,7 +69,7 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 			state = l.StateFactory()
 		}
 	}
-	result, err := replay.Replay(ctx, l.Events, l.Checkpoints, l.Applier, cmd.CampaignID, state, options)
+	result, err := replay.Replay(ctx, l.Events, l.Checkpoints, l.Folder, cmd.CampaignID, state, options)
 	if err != nil {
 		return nil, err
 	}

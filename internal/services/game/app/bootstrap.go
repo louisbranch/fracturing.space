@@ -38,6 +38,7 @@ type serverBootstrapConfig struct {
 	configureDomain                 func(serverEnv, *gamegrpc.Stores, engine.Registries) error
 	buildSystemRegistry             func() (*systems.Registry, error)
 	validateSystemRegistration      func([]module.Module, *systems.Registry, *systems.AdapterRegistry) error
+	validateAdapterEventCoverage    func(*module.Registry, *systems.AdapterRegistry, *event.Registry) error
 	dialAuthGRPC                    func(context.Context, string) (authGRPCClients, error)
 	newGRPCServer                   func(*storageBundle) *grpc.Server
 	newHealthServer                 func() *health.Server
@@ -90,6 +91,9 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	}
 	if cfg.validateSystemRegistration == nil {
 		cfg.validateSystemRegistration = validateSystemRegistrationParity
+	}
+	if cfg.validateAdapterEventCoverage == nil {
+		cfg.validateAdapterEventCoverage = engine.ValidateAdapterEventCoverage
 	}
 	if cfg.dialAuthGRPC == nil {
 		cfg.dialAuthGRPC = dialAuthGRPC
@@ -190,6 +194,9 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	repairProjectionGaps(bundle, applier)
 	if err := b.config.validateSystemRegistration(registeredSystemModules(), systemRegistry, applier.Adapters); err != nil {
 		return nil, fmt.Errorf("validate system parity: %w", err)
+	}
+	if err := b.config.validateAdapterEventCoverage(registries.Systems, applier.Adapters, registries.Events); err != nil {
+		return nil, fmt.Errorf("validate adapter event coverage: %w", err)
 	}
 
 	authClients, err := b.config.dialAuthGRPC(context.Background(), srvEnv.AuthAddr)

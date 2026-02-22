@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -94,7 +95,7 @@ type systemMutationApplier struct {
 	Mutate bool
 }
 
-func (a *systemMutationApplier) Apply(_ any, _ event.Event) (any, error) {
+func (a *systemMutationApplier) Fold(_ any, _ event.Event) (any, error) {
 	if a.Mutate {
 		return map[string]int{"mutated": 1}, nil
 	}
@@ -538,7 +539,7 @@ type failingApplier struct {
 	err error
 }
 
-func (f failingApplier) Apply(_ any, _ event.Event) (any, error) {
+func (f failingApplier) Fold(_ any, _ event.Event) (any, error) {
 	return nil, f.err
 }
 
@@ -583,6 +584,9 @@ func TestExecute_WrapsPostPersistApplyFailure(t *testing.T) {
 	}
 	if !errors.Is(err, ErrPostPersistApplyFailed) {
 		t.Fatalf("expected ErrPostPersistApplyFailed, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "post-persist fold failed") {
+		t.Fatalf("expected fold wording in error, got %v", err)
 	}
 	// The journal should have persisted the event despite the apply failure.
 	if journal.last.Seq != 1 {
@@ -631,7 +635,7 @@ type spyApplier struct {
 	called bool
 }
 
-func (s *spyApplier) Apply(state any, _ event.Event) (any, error) {
+func (s *spyApplier) Fold(state any, _ event.Event) (any, error) {
 	s.called = true
 	return state, nil
 }

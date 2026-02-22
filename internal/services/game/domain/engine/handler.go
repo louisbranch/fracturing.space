@@ -26,10 +26,10 @@ var (
 	// ErrGateStateLoaderRequired indicates a missing gate state loader.
 	ErrGateStateLoaderRequired = errors.New("gate state loader is required")
 	// ErrPostPersistApplyFailed indicates that events were persisted to the
-	// journal but the in-memory apply step failed. Callers should use
+	// journal but the in-memory fold step failed. Callers should use
 	// errors.Is to detect this condition and recover via replay rather than
 	// retrying the command, which would create duplicates.
-	ErrPostPersistApplyFailed = errors.New("post-persist apply failed")
+	ErrPostPersistApplyFailed = errors.New("post-persist fold failed")
 )
 
 // GateStateLoader loads session state for gate checks.
@@ -65,7 +65,7 @@ type EventJournal interface {
 // Named "Folder" (not "Applier") to distinguish pure state folds from
 // projection.Applier, which performs side-effecting I/O writes to stores.
 type Folder interface {
-	Apply(state any, evt event.Event) (any, error)
+	Fold(state any, evt event.Event) (any, error)
 }
 
 // Decider returns a decision for a command.
@@ -267,7 +267,7 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 	if h.Folder != nil && len(decision.Events) > 0 {
 		journalPersisted := h.Journal != nil
 		for _, evt := range decision.Events {
-			stateAfter, err := h.Folder.Apply(state, evt)
+			stateAfter, err := h.Folder.Fold(state, evt)
 			if err != nil {
 				if journalPersisted {
 					return command.Command{}, nil, command.Decision{}, fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err)

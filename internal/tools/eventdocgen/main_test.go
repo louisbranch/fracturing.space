@@ -290,6 +290,44 @@ func TestScanEmitters(t *testing.T) {
 	}
 }
 
+func TestScanEmitterValues_DetectsDecideFuncWithState(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "emitters")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir emitters: %v", err)
+	}
+	src := strings.Join([]string{
+		"package sample",
+		"",
+		"import \"example.com/module\"",
+		"",
+		"const EventTypeFromState = \"sys.sample.from_state\"",
+		"",
+		"type snapshot struct{}",
+		"type payload struct{}",
+		"",
+		"func emit(cmd any, s snapshot, hasState bool) any {",
+		"\treturn module.DecideFuncWithState(cmd, s, hasState, EventTypeFromState, \"character\", nil, nil, nil)",
+		"}",
+	}, "\n")
+	path := filepath.Join(dir, "emit.go")
+	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+		t.Fatalf("write emit.go: %v", err)
+	}
+
+	emitters, err := scanEmitterValues(root, root, map[string]string{})
+	if err != nil {
+		t.Fatalf("scanEmitterValues returned error: %v", err)
+	}
+	got := emitters["sys.sample.from_state"]
+	if len(got) != 1 {
+		t.Fatalf("expected one emitter for sys.sample.from_state, got %d (%v)", len(got), got)
+	}
+	if !strings.HasPrefix(got[0], "emitters/emit.go:") {
+		t.Fatalf("unexpected emitter path: %s", got[0])
+	}
+}
+
 func TestFormatPosition(t *testing.T) {
 	pos := formatPosition(tokenPosition("/root/pkg/file.go", 12), "/root")
 	if pos != "pkg/file.go:12" {

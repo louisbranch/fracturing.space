@@ -13,7 +13,7 @@ func TestFolderApply_UpdatesSessionGateState(t *testing.T) {
 	applier := Folder{}
 	state := State{}
 
-	opened, err := applier.Apply(state, event.Event{
+	opened, err := applier.Fold(state, event.Event{
 		Type:        event.Type("session.gate_opened"),
 		PayloadJSON: []byte(`{"gate_id":"gate-1","gate_type":"gm_consequence"}`),
 	})
@@ -31,7 +31,7 @@ func TestFolderApply_UpdatesSessionGateState(t *testing.T) {
 		t.Fatalf("gate id = %s, want %s", updated.Session.GateID, "gate-1")
 	}
 
-	closed, err := applier.Apply(updated, event.Event{
+	closed, err := applier.Fold(updated, event.Event{
 		Type:        event.Type("session.gate_resolved"),
 		PayloadJSON: []byte(`{"gate_id":"gate-1","decision":"approve"}`),
 	})
@@ -80,7 +80,7 @@ func TestFolderApply_RoutesSystemEvents(t *testing.T) {
 	state := State{}
 	key := module.Key{ID: "system-1", Version: "v1"}
 
-	updated, err := applier.Apply(state, event.Event{
+	updated, err := applier.Fold(state, event.Event{
 		Type:          event.Type("action.tested"),
 		SystemID:      "system-1",
 		SystemVersion: "v1",
@@ -105,7 +105,7 @@ func TestFolderApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
 	applier := Folder{SystemRegistry: module.NewRegistry()}
 	state := State{}
 
-	_, err := applier.Apply(state, event.Event{
+	_, err := applier.Fold(state, event.Event{
 		Type:          event.Type("action.unregistered_system"),
 		SystemID:      "unregistered-system",
 		SystemVersion: "v1",
@@ -119,7 +119,7 @@ func TestFolderApply_PropagatesFoldError(t *testing.T) {
 	applier := Folder{}
 	state := State{}
 
-	_, err := applier.Apply(state, event.Event{
+	_, err := applier.Fold(state, event.Event{
 		Type:        event.Type("campaign.created"),
 		PayloadJSON: []byte(`{corrupt`),
 	})
@@ -140,7 +140,7 @@ func TestFolderApply_SkipsAuditOnlyEvents(t *testing.T) {
 	applier := Folder{Events: registry}
 	state := State{Campaign: campaign.State{Name: "unchanged"}}
 
-	result, err := applier.Apply(state, event.Event{
+	result, err := applier.Fold(state, event.Event{
 		Type:        event.Type("test.audit_event"),
 		PayloadJSON: []byte(`{}`),
 	})
@@ -177,7 +177,7 @@ func TestFolderApply_UpdatesInviteState(t *testing.T) {
 	applier := Folder{}
 	state := State{}
 
-	updated, err := applier.Apply(state, event.Event{
+	updated, err := applier.Fold(state, event.Event{
 		Type:        event.Type("invite.created"),
 		EntityType:  "invite",
 		EntityID:    "inv-1",

@@ -1228,12 +1228,18 @@ func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map
 				return true
 			}
 			// Match command.NewEvent(cmd, <eventType>, ...) and
-			// module.DecideFunc(cmd, <eventType>, ...) calls.
+			// module.Decide* helper calls.
 			if call, ok := node.(*ast.CallExpr); ok {
-				if (isCommandNewEventCall(call) || isModuleDecideFuncCall(call)) && len(call.Args) >= 2 {
-					value := resolveEventValue(call.Args[1], fileLookup, importAliases, root)
+				eventTypeArg := -1
+				if isCommandNewEventCall(call) {
+					eventTypeArg = 1
+				} else if idx, ok := moduleDecideEventTypeArgIndex(call); ok {
+					eventTypeArg = idx
+				}
+				if eventTypeArg >= 0 && len(call.Args) > eventTypeArg {
+					value := resolveEventValue(call.Args[eventTypeArg], fileLookup, importAliases, root)
 					if value != "" {
-						pos := fset.Position(call.Args[1].Pos())
+						pos := fset.Position(call.Args[eventTypeArg].Pos())
 						location := fmt.Sprintf("%s:%d", relPath, pos.Line)
 						emitters[value] = append(emitters[value], location)
 					}
@@ -1332,29 +1338,64 @@ func isCommandNewEventCall(call *ast.CallExpr) bool {
 	return ident.Name == "command" && sel.Sel.Name == "NewEvent"
 }
 
-// isModuleDecideFuncCall returns true when the call expression is module.DecideFunc(...).
-func isModuleDecideFuncCall(call *ast.CallExpr) bool {
-	// DecideFunc is generic: the AST represents module.DecideFunc[T](...) as an
-	// IndexExpr wrapping the selector.
+// moduleDecideEventTypeArgIndex returns the argument index that carries the
+// event type for supported module decide helpers.
+func moduleDecideEventTypeArgIndex(call *ast.CallExpr) (int, bool) {
+	name, ok := moduleCallName(call)
+	if !ok {
+		return 0, false
+	}
+	switch name {
+	case "DecideFunc":
+		return 1, true
+	case "DecideFuncWithState":
+		return 3, true
+	default:
+		return 0, false
+	}
+}
+
+// moduleCallName returns the helper function name for module.<fn>(...) calls,
+// including generic forms such as module.DecideFunc[T](...).
+func moduleCallName(call *ast.CallExpr) (string, bool) {
 	switch fun := call.Fun.(type) {
 	case *ast.SelectorExpr:
 		ident, ok := fun.X.(*ast.Ident)
 		if !ok {
-			return false
+			return "", false
 		}
-		return ident.Name == "module" && fun.Sel.Name == "DecideFunc"
+		if ident.Name != "module" {
+			return "", false
+		}
+		return fun.Sel.Name, true
 	case *ast.IndexExpr:
 		sel, ok := fun.X.(*ast.SelectorExpr)
 		if !ok {
-			return false
+			return "", false
 		}
 		ident, ok := sel.X.(*ast.Ident)
 		if !ok {
-			return false
+			return "", false
 		}
-		return ident.Name == "module" && sel.Sel.Name == "DecideFunc"
+		if ident.Name != "module" {
+			return "", false
+		}
+		return sel.Sel.Name, true
+	case *ast.IndexListExpr:
+		sel, ok := fun.X.(*ast.SelectorExpr)
+		if !ok {
+			return "", false
+		}
+		ident, ok := sel.X.(*ast.Ident)
+		if !ok {
+			return "", false
+		}
+		if ident.Name != "module" {
+			return "", false
+		}
+		return sel.Sel.Name, true
 	}
-	return false
+	return "", false
 }
 
 // resolveEventValue resolves an event value expression, preferring precise

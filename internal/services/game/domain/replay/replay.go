@@ -21,8 +21,8 @@ var (
 	ErrEventStoreRequired = errors.New("event store is required")
 	// ErrCheckpointStoreRequired indicates a missing checkpoint store.
 	ErrCheckpointStoreRequired = errors.New("checkpoint store is required")
-	// ErrApplierRequired indicates a missing applier.
-	ErrApplierRequired = errors.New("applier is required")
+	// ErrFolderRequired indicates a missing folder.
+	ErrFolderRequired = errors.New("folder is required")
 	// ErrCampaignIDRequired indicates a missing campaign id.
 	ErrCampaignIDRequired = errors.New("campaign id is required")
 	// ErrCheckpointNotFound indicates no checkpoint exists yet.
@@ -40,9 +40,9 @@ type CheckpointStore interface {
 	Save(ctx context.Context, checkpoint Checkpoint) error
 }
 
-// Applier applies a domain event into the in-memory replay target.
-type Applier interface {
-	Apply(state any, evt event.Event) (any, error)
+// Folder folds a domain event into aggregate state during replay.
+type Folder interface {
+	Fold(state any, evt event.Event) (any, error)
 }
 
 // Checkpoint captures the last applied sequence for a campaign.
@@ -74,15 +74,15 @@ type Result struct {
 //
 // It is the shared safety net used by both startup recovery and projection rebuilds:
 // sequence gaps fail fast, and each checkpoint represents the last known-correct seq.
-func Replay(ctx context.Context, store EventStore, checkpoints CheckpointStore, applier Applier, campaignID string, state any, options Options) (Result, error) {
+func Replay(ctx context.Context, store EventStore, checkpoints CheckpointStore, folder Folder, campaignID string, state any, options Options) (Result, error) {
 	if store == nil {
 		return Result{}, ErrEventStoreRequired
 	}
 	if checkpoints == nil {
 		return Result{}, ErrCheckpointStoreRequired
 	}
-	if applier == nil {
-		return Result{}, ErrApplierRequired
+	if folder == nil {
+		return Result{}, ErrFolderRequired
 	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
@@ -142,7 +142,7 @@ func Replay(ctx context.Context, store EventStore, checkpoints CheckpointStore, 
 			if evt.Seq != expectedSeq {
 				return result, fmt.Errorf("event sequence gap: expected %d got %d", expectedSeq, evt.Seq)
 			}
-			nextState, err := applier.Apply(result.State, evt)
+			nextState, err := folder.Fold(result.State, evt)
 			if err != nil {
 				return result, err
 			}

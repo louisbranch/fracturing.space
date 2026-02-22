@@ -62,3 +62,55 @@ func DecideFunc[P any](
 	evt := command.NewEvent(cmd, eventType, etype, eid, payloadJSON, now().UTC())
 	return command.Accept(evt)
 }
+
+// DecideFuncWithState extends DecideFunc with typed snapshot state for
+// pre-validation. The caller provides the already-extracted state and whether
+// the extraction succeeded (hasState). The validate callback can use the state
+// to enforce before-value checks, idempotency guards, or snapshot-based
+// invariants before the payload is marshaled into the emitted event.
+//
+// Use this when a decider case needs snapshot access but otherwise follows the
+// standard unmarshal → validate → marshal → emit flow.
+func DecideFuncWithState[S, P any](
+	cmd command.Command,
+	state S,
+	hasState bool,
+	eventType event.Type,
+	entityType string,
+	entityID func(*P) string,
+	validate func(S, bool, *P, func() time.Time) *command.Rejection,
+	now func() time.Time,
+) command.Decision {
+	var payload P
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	if now == nil {
+		now = time.Now
+	}
+	if validate != nil {
+		if rejection := validate(state, hasState, &payload, now); rejection != nil {
+			return command.Reject(*rejection)
+		}
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_ENCODE_FAILED",
+			Message: fmt.Sprintf("encode %s payload: %v", cmd.Type, err),
+		})
+	}
+	eid := strings.TrimSpace(cmd.EntityID)
+	if eid == "" && entityID != nil {
+		eid = entityID(&payload)
+	}
+	etype := strings.TrimSpace(cmd.EntityType)
+	if etype == "" {
+		etype = entityType
+	}
+	evt := command.NewEvent(cmd, eventType, etype, eid, payloadJSON, now().UTC())
+	return command.Accept(evt)
+}
