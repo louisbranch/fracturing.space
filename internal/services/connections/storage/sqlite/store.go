@@ -13,7 +13,9 @@ import (
 	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	"github.com/louisbranch/fracturing.space/internal/services/connections/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/connections/storage/sqlite/migrations"
-	_ "modernc.org/sqlite"
+	usernameutil "github.com/louisbranch/fracturing.space/internal/services/connections/username"
+	msqlite "modernc.org/sqlite"
+	sqlite3lib "modernc.org/sqlite/lib"
 )
 
 // Store persists connections state in SQLite.
@@ -254,4 +256,144 @@ func (s *Store) ListContacts(ctx context.Context, ownerUserID string, pageSize i
 	return page, nil
 }
 
+// PutUsername upserts one canonical username claim for a user.
+func (s *Store) PutUsername(ctx context.Context, username storage.UsernameRecord) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	userID := strings.TrimSpace(username.UserID)
+	if userID == "" {
+		return fmt.Errorf("user id is required")
+	}
+	canonicalUsername, err := usernameutil.Canonicalize(username.Username)
+	if err != nil {
+		return fmt.Errorf("normalize username: %w", err)
+	}
+	createdAt := username.CreatedAt.UTC()
+	updatedAt := username.UpdatedAt.UTC()
+	if createdAt.IsZero() && updatedAt.IsZero() {
+		createdAt = time.Now().UTC()
+		updatedAt = createdAt
+	} else {
+		if createdAt.IsZero() {
+			createdAt = updatedAt
+		}
+		if updatedAt.IsZero() {
+			updatedAt = createdAt
+		}
+	}
+
+	_, err = s.sqlDB.ExecContext(
+		ctx,
+		`INSERT INTO usernames (user_id, username, created_at, updated_at)
+		 VALUES (?, ?, ?, ?)
+		 ON CONFLICT(user_id) DO UPDATE SET
+		   username = excluded.username,
+		   updated_at = excluded.updated_at
+		 WHERE usernames.username <> excluded.username`,
+		userID,
+		canonicalUsername,
+		toMillis(createdAt),
+		toMillis(updatedAt),
+	)
+	if err != nil {
+		if isUsernameUniqueViolation(err) {
+			return storage.ErrAlreadyExists
+		}
+		return fmt.Errorf("put username: %w", err)
+	}
+	return nil
+}
+
+// GetUsernameByUserID returns one username claim for a user.
+func (s *Store) GetUsernameByUserID(ctx context.Context, userID string) (storage.UsernameRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.UsernameRecord{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.UsernameRecord{}, fmt.Errorf("storage is not configured")
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return storage.UsernameRecord{}, fmt.Errorf("user id is required")
+	}
+
+	row := s.sqlDB.QueryRowContext(
+		ctx,
+		`SELECT user_id, username, created_at, updated_at
+		 FROM usernames
+		 WHERE user_id = ?`,
+		userID,
+	)
+	var record storage.UsernameRecord
+	var createdAt int64
+	var updatedAt int64
+	err := row.Scan(&record.UserID, &record.Username, &createdAt, &updatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.UsernameRecord{}, storage.ErrNotFound
+		}
+		return storage.UsernameRecord{}, fmt.Errorf("get username by user id: %w", err)
+	}
+	record.CreatedAt = fromMillis(createdAt)
+	record.UpdatedAt = fromMillis(updatedAt)
+	return record, nil
+}
+
+// GetUsernameByUsername returns one username claim by canonical username.
+func (s *Store) GetUsernameByUsername(ctx context.Context, username string) (storage.UsernameRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.UsernameRecord{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.UsernameRecord{}, fmt.Errorf("storage is not configured")
+	}
+	canonicalUsername, err := usernameutil.Canonicalize(username)
+	if err != nil {
+		return storage.UsernameRecord{}, fmt.Errorf("normalize username: %w", err)
+	}
+
+	row := s.sqlDB.QueryRowContext(
+		ctx,
+		`SELECT user_id, username, created_at, updated_at
+		 FROM usernames
+		 WHERE username = ?`,
+		canonicalUsername,
+	)
+	var record storage.UsernameRecord
+	var createdAt int64
+	var updatedAt int64
+	err = row.Scan(&record.UserID, &record.Username, &createdAt, &updatedAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.UsernameRecord{}, storage.ErrNotFound
+		}
+		return storage.UsernameRecord{}, fmt.Errorf("get username by username: %w", err)
+	}
+	record.CreatedAt = fromMillis(createdAt)
+	record.UpdatedAt = fromMillis(updatedAt)
+	return record, nil
+}
+
+// isUsernameUniqueViolation reports whether a username uniqueness constraint failed.
+func isUsernameUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	var sqliteErr *msqlite.Error
+	if errors.As(err, &sqliteErr) {
+		switch sqliteErr.Code() {
+		case sqlite3lib.SQLITE_CONSTRAINT_UNIQUE, sqlite3lib.SQLITE_CONSTRAINT:
+			return true
+		}
+	}
+	message := strings.ToLower(err.Error())
+	return strings.Contains(message, "unique constraint failed") &&
+		strings.Contains(message, "usernames.username")
+}
+
 var _ storage.ContactStore = (*Store)(nil)
+var _ storage.UsernameStore = (*Store)(nil)

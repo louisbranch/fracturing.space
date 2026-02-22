@@ -4,11 +4,14 @@ import (
 	"context"
 	"errors"
 	"sort"
+	"strings"
 	"testing"
 	"time"
 
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/connections/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestAddContact_SuccessAndIdempotent(t *testing.T) {
@@ -49,12 +52,150 @@ func TestAddContact_SuccessAndIdempotent(t *testing.T) {
 	}
 }
 
+func TestSetUsername_SuccessAndIdempotent(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+	now := time.Date(2026, time.February, 22, 13, 0, 0, 0, time.UTC)
+	svc.clock = func() time.Time { return now }
+
+	for i := 0; i < 2; i++ {
+		resp, err := svc.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
+			UserId:   "user-1",
+			Username: "Alice_One",
+		})
+		if err != nil {
+			t.Fatalf("set username attempt %d: %v", i+1, err)
+		}
+		if resp.GetUsernameRecord() == nil {
+			t.Fatal("expected username record response")
+		}
+		if got := resp.GetUsernameRecord().GetUsername(); got != "alice_one" {
+			t.Fatalf("username = %q, want alice_one", got)
+		}
+	}
+
+	getResp, err := svc.GetUsername(context.Background(), &connectionsv1.GetUsernameRequest{UserId: "user-1"})
+	if err != nil {
+		t.Fatalf("get username: %v", err)
+	}
+	if got := getResp.GetUsernameRecord().GetUsername(); got != "alice_one" {
+		t.Fatalf("get username = %q, want alice_one", got)
+	}
+
+	lookupResp, err := svc.LookupUsername(context.Background(), &connectionsv1.LookupUsernameRequest{
+		Username: "ALICE_ONE",
+	})
+	if err != nil {
+		t.Fatalf("lookup username: %v", err)
+	}
+	if got := lookupResp.GetUsernameRecord().GetUserId(); got != "user-1" {
+		t.Fatalf("lookup user_id = %q, want user-1", got)
+	}
+}
+
+func TestSetUsername_SameCanonicalValueDoesNotChangeTimestamps(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+	initial := time.Date(2026, time.February, 22, 13, 0, 0, 0, time.UTC)
+	retryAt := initial.Add(2 * time.Hour)
+
+	svc.clock = func() time.Time { return initial }
+	first, err := svc.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
+		UserId:   "user-1",
+		Username: "Alice_One",
+	})
+	if err != nil {
+		t.Fatalf("set initial username: %v", err)
+	}
+
+	svc.clock = func() time.Time { return retryAt }
+	second, err := svc.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
+		UserId:   "user-1",
+		Username: "ALICE_ONE",
+	})
+	if err != nil {
+		t.Fatalf("set repeated username: %v", err)
+	}
+
+	firstRecord := first.GetUsernameRecord()
+	secondRecord := second.GetUsernameRecord()
+	if firstRecord == nil || secondRecord == nil {
+		t.Fatal("expected username record in both responses")
+	}
+	if !secondRecord.GetCreatedAt().AsTime().Equal(firstRecord.GetCreatedAt().AsTime()) {
+		t.Fatalf("created_at changed: got %v want %v", secondRecord.GetCreatedAt().AsTime(), firstRecord.GetCreatedAt().AsTime())
+	}
+	if !secondRecord.GetUpdatedAt().AsTime().Equal(firstRecord.GetUpdatedAt().AsTime()) {
+		t.Fatalf("updated_at changed: got %v want %v", secondRecord.GetUpdatedAt().AsTime(), firstRecord.GetUpdatedAt().AsTime())
+	}
+}
+
+func TestSetUsername_InvalidUsernameReturnsInvalidArgument(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+
+	_, err := svc.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
+		UserId:   "user-1",
+		Username: "__",
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("code = %v, want %v", status.Code(err), codes.InvalidArgument)
+	}
+}
+
+func TestSetUsername_ConflictReturnsAlreadyExists(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+
+	_, err := svc.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
+		UserId:   "user-1",
+		Username: "conflict",
+	})
+	if err != nil {
+		t.Fatalf("set username user-1: %v", err)
+	}
+
+	_, err = svc.SetUsername(context.Background(), &connectionsv1.SetUsernameRequest{
+		UserId:   "user-2",
+		Username: "Conflict",
+	})
+	if status.Code(err) != codes.AlreadyExists {
+		t.Fatalf("code = %v, want %v", status.Code(err), codes.AlreadyExists)
+	}
+}
+
+func TestGetUsername_NotFoundReturnsNotFound(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+
+	_, err := svc.GetUsername(context.Background(), &connectionsv1.GetUsernameRequest{UserId: "missing-user"})
+	if status.Code(err) != codes.NotFound {
+		t.Fatalf("code = %v, want %v", status.Code(err), codes.NotFound)
+	}
+}
+
+func TestLookupUsername_NotFoundReturnsNotFound(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+
+	_, err := svc.LookupUsername(context.Background(), &connectionsv1.LookupUsernameRequest{Username: "missing-user"})
+	if status.Code(err) != codes.NotFound {
+		t.Fatalf("code = %v, want %v", status.Code(err), codes.NotFound)
+	}
+}
+
 type fakeContactStore struct {
-	contacts map[string]map[string]storage.Contact
+	contacts         map[string]map[string]storage.Contact
+	usernamesByUser  map[string]storage.UsernameRecord
+	usernamesByValue map[string]string
 }
 
 func newFakeContactStore() *fakeContactStore {
-	return &fakeContactStore{contacts: make(map[string]map[string]storage.Contact)}
+	return &fakeContactStore{
+		contacts:         make(map[string]map[string]storage.Contact),
+		usernamesByUser:  make(map[string]storage.UsernameRecord),
+		usernamesByValue: make(map[string]string),
+	}
 }
 
 func (s *fakeContactStore) PutContact(_ context.Context, contact storage.Contact) error {
@@ -122,4 +263,48 @@ func (s *fakeContactStore) ListContacts(_ context.Context, ownerUserID string, p
 		page.Contacts = append(page.Contacts, byOwner[ids[i]])
 	}
 	return page, nil
+}
+
+func (s *fakeContactStore) PutUsername(_ context.Context, username storage.UsernameRecord) error {
+	canonical := strings.TrimSpace(strings.ToLower(username.Username))
+	if canonical == "" {
+		return errors.New("username is required")
+	}
+	if owner, ok := s.usernamesByValue[canonical]; ok && owner != username.UserID {
+		return storage.ErrAlreadyExists
+	}
+	if existing, ok := s.usernamesByUser[username.UserID]; ok {
+		if existing.Username == canonical {
+			username.CreatedAt = existing.CreatedAt
+			username.UpdatedAt = existing.UpdatedAt
+		} else {
+			delete(s.usernamesByValue, existing.Username)
+			username.CreatedAt = existing.CreatedAt
+		}
+	}
+	username.Username = canonical
+	s.usernamesByUser[username.UserID] = username
+	s.usernamesByValue[canonical] = username.UserID
+	return nil
+}
+
+func (s *fakeContactStore) GetUsernameByUserID(_ context.Context, userID string) (storage.UsernameRecord, error) {
+	record, ok := s.usernamesByUser[userID]
+	if !ok {
+		return storage.UsernameRecord{}, storage.ErrNotFound
+	}
+	return record, nil
+}
+
+func (s *fakeContactStore) GetUsernameByUsername(_ context.Context, username string) (storage.UsernameRecord, error) {
+	canonical := strings.TrimSpace(strings.ToLower(username))
+	userID, ok := s.usernamesByValue[canonical]
+	if !ok {
+		return storage.UsernameRecord{}, storage.ErrNotFound
+	}
+	record, ok := s.usernamesByUser[userID]
+	if !ok {
+		return storage.UsernameRecord{}, storage.ErrNotFound
+	}
+	return record, nil
 }

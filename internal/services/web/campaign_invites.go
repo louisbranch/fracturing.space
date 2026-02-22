@@ -13,6 +13,13 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+var (
+	errRecipientUsernameRequired = errors.New("recipient username is required")
+	errConnectionsUnavailable    = errors.New("connections service is not configured")
 )
 
 func (h *handler) handleAppCampaignInvites(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -91,10 +98,26 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 		h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "participant id is required")
 		return
 	}
-	recipientUserID := strings.TrimSpace(r.FormValue("recipient_user_id"))
+	lookupCtx := grpcauthctx.WithUserID(r.Context(), strings.TrimSpace(actor.GetUserId()))
+	recipientUserID, err := h.resolveInviteRecipientUserID(lookupCtx, strings.TrimSpace(r.FormValue("recipient_user_id")))
+	if err != nil {
+		switch {
+		case errors.Is(err, errRecipientUsernameRequired):
+			h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username is required")
+		case errors.Is(err, errConnectionsUnavailable):
+			h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Invite action unavailable", "connections service is not configured")
+		case status.Code(err) == codes.InvalidArgument:
+			h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username is invalid")
+		case status.Code(err) == codes.NotFound:
+			h.renderErrorPage(w, r, http.StatusBadRequest, "Invite action unavailable", "recipient username was not found")
+		default:
+			h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "Invite action unavailable", "failed to resolve invite recipient")
+		}
+		return
+	}
 
 	ctx := grpcauthctx.WithParticipantID(r.Context(), inviteActor.participantID)
-	_, err := h.inviteClient.CreateInvite(ctx, &statev1.CreateInviteRequest{
+	_, err = h.inviteClient.CreateInvite(ctx, &statev1.CreateInviteRequest{
 		CampaignId:      campaignID,
 		ParticipantId:   targetParticipantID,
 		RecipientUserId: recipientUserID,
@@ -105,6 +128,38 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 	}
 
 	http.Redirect(w, r, "/campaigns/"+campaignID+"/invites", http.StatusFound)
+}
+
+func (h *handler) resolveInviteRecipientUserID(ctx context.Context, recipientUserID string) (string, error) {
+	recipientUserID = strings.TrimSpace(recipientUserID)
+	if recipientUserID == "" {
+		return "", nil
+	}
+	if !strings.HasPrefix(recipientUserID, "@") {
+		return recipientUserID, nil
+	}
+	username := strings.TrimSpace(strings.TrimPrefix(recipientUserID, "@"))
+	if username == "" {
+		return "", errRecipientUsernameRequired
+	}
+	if h == nil || h.connectionsClient == nil {
+		return "", errConnectionsUnavailable
+	}
+	resp, err := h.connectionsClient.LookupUsername(ctx, &connectionsv1.LookupUsernameRequest{
+		Username: username,
+	})
+	if err != nil {
+		return "", err
+	}
+	record := resp.GetUsernameRecord()
+	if record == nil {
+		return "", status.Error(codes.NotFound, "username not found")
+	}
+	resolvedUserID := strings.TrimSpace(record.GetUserId())
+	if resolvedUserID == "" {
+		return "", status.Error(codes.NotFound, "username not found")
+	}
+	return resolvedUserID, nil
 }
 
 func (h *handler) handleAppCampaignInviteRevoke(w http.ResponseWriter, r *http.Request, campaignID string) {

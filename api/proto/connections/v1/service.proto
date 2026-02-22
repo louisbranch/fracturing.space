@@ -14,6 +14,14 @@ message Contact {
   google.protobuf.Timestamp updated_at = 4;
 }
 
+// UsernameRecord stores one canonical username claim for a user.
+message UsernameRecord {
+  string user_id = 1;
+  string username = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp updated_at = 4;
+}
+
 message AddContactRequest {
   string owner_user_id = 1;
   string contact_user_id = 2;
@@ -46,9 +54,37 @@ message ListContactsResponse {
   string next_page_token = 2;
 }
 
+message SetUsernameRequest {
+  string user_id = 1;
+  string username = 2;
+}
+
+message SetUsernameResponse {
+  UsernameRecord username_record = 1;
+}
+
+message GetUsernameRequest {
+  string user_id = 1;
+}
+
+message GetUsernameResponse {
+  UsernameRecord username_record = 1;
+}
+
+message LookupUsernameRequest {
+  string username = 1;
+}
+
+message LookupUsernameResponse {
+  UsernameRecord username_record = 1;
+}
+
 // ConnectionsService manages directed contact relationships between users.
 service ConnectionsService {
   rpc AddContact(AddContactRequest) returns (AddContactResponse);
   rpc RemoveContact(RemoveContactRequest) returns (RemoveContactResponse);
   rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
+  rpc SetUsername(SetUsernameRequest) returns (SetUsernameResponse);
+  rpc GetUsername(GetUsernameRequest) returns (GetUsernameResponse);
+  rpc LookupUsername(LookupUsernameRequest) returns (LookupUsernameResponse);
 }
