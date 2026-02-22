@@ -31,6 +31,16 @@ type Options struct {
 	RejectErr          func(string) error
 }
 
+// ErrorHandlerOptions controls how ExecuteAndApply error callbacks are
+// normalized when callers want shared default behavior with optional overrides.
+type ErrorHandlerOptions struct {
+	ExecuteErr        func(error) error
+	ApplyErr          func(error) error
+	RejectErr         func(string) error
+	ExecuteErrMessage string
+	ApplyErrMessage   string
+}
+
 // ExecuteAndApply executes the command, handles rejections, and applies events.
 func ExecuteAndApply(
 	ctx context.Context,
@@ -93,20 +103,51 @@ func NewIntentFilter(registry *event.Registry) func(event.Event) bool {
 }
 
 func normalizeOptions(options Options) Options {
-	if options.ExecuteErr == nil {
-		options.ExecuteErr = func(err error) error {
-			return status.Errorf(codes.Internal, "execute domain command: %v", err)
+	executeErr, applyErr, rejectErr := NormalizeErrorHandlers(ErrorHandlerOptions{
+		ExecuteErr: options.ExecuteErr,
+		ApplyErr:   options.ApplyErr,
+		RejectErr:  options.RejectErr,
+	})
+	options.ExecuteErr = executeErr
+	options.ApplyErr = applyErr
+	options.RejectErr = rejectErr
+	return options
+}
+
+// NormalizeErrorHandlers returns execute/apply/reject handlers with shared
+// status defaults while allowing callers to override any callback.
+func NormalizeErrorHandlers(options ErrorHandlerOptions) (
+	executeErr func(error) error,
+	applyErr func(error) error,
+	rejectErr func(string) error,
+) {
+	executeErr = options.ExecuteErr
+	applyErr = options.ApplyErr
+	rejectErr = options.RejectErr
+
+	if executeErr == nil {
+		message := options.ExecuteErrMessage
+		if message == "" {
+			message = "execute domain command"
+		}
+		executeErr = func(err error) error {
+			return status.Errorf(codes.Internal, "%s: %v", message, err)
 		}
 	}
-	if options.ApplyErr == nil {
-		options.ApplyErr = func(err error) error {
-			return status.Errorf(codes.Internal, "apply event: %v", err)
+	if applyErr == nil {
+		message := options.ApplyErrMessage
+		if message == "" {
+			message = "apply event"
+		}
+		applyErr = func(err error) error {
+			return status.Errorf(codes.Internal, "%s: %v", message, err)
 		}
 	}
-	if options.RejectErr == nil {
-		options.RejectErr = func(message string) error {
+	if rejectErr == nil {
+		rejectErr = func(message string) error {
 			return status.Error(codes.FailedPrecondition, message)
 		}
 	}
-	return options
+
+	return executeErr, applyErr, rejectErr
 }

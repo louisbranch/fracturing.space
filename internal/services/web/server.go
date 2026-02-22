@@ -400,90 +400,59 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		return nil, err
 	}
 
-	var authConn *grpc.ClientConn
-	var authClient authv1.AuthServiceClient
-	var accountClient authv1.AccountServiceClient
+	var authClients authGRPCClients
 	if strings.TrimSpace(config.AuthAddr) != "" {
-		clients, err := dialAuthGRPC(ctx, config)
+		authClients, err = dialAuthGRPC(ctx, config)
 		if err != nil {
 			if cacheStore != nil {
 				_ = cacheStore.Close()
 			}
 			return nil, fmt.Errorf("dial auth grpc: %w", err)
 		}
-		authConn = clients.conn
-		authClient = clients.authClient
-		accountClient = clients.accountClient
 	}
-	var connectionsConn *grpc.ClientConn
-	var connectionsClient connectionsv1.ConnectionsServiceClient
+	var connectionsClients connectionsGRPCClients
 	if strings.TrimSpace(config.ConnectionsAddr) != "" {
-		clients, err := dialConnectionsGRPC(ctx, config)
+		connectionsClients, err = dialConnectionsGRPC(ctx, config)
 		if err != nil {
 			log.Printf("connections gRPC dial failed, invite contact options disabled: %v", err)
-		} else {
-			connectionsConn = clients.conn
-			connectionsClient = clients.connectionsClient
 		}
 	}
 
-	var gameConn *grpc.ClientConn
-	var participantClient statev1.ParticipantServiceClient
-	var campaignClient statev1.CampaignServiceClient
-	var eventClient statev1.EventServiceClient
-	var sessionClient statev1.SessionServiceClient
-	var characterClient statev1.CharacterServiceClient
-	var inviteClient statev1.InviteServiceClient
+	var gameClients gameGRPCClients
 	if strings.TrimSpace(config.GameAddr) != "" {
-		clients, err := dialGameGRPC(ctx, config)
+		gameClients, err = dialGameGRPC(ctx, config)
 		if err != nil {
 			log.Printf("game gRPC dial failed, campaign access checks disabled: %v", err)
-		} else {
-			gameConn = clients.conn
-			participantClient = clients.participantClient
-			campaignClient = clients.campaignClient
-			eventClient = clients.eventClient
-			sessionClient = clients.sessionClient
-			characterClient = clients.characterClient
-			inviteClient = clients.inviteClient
 		}
 	}
-	var notificationsConn *grpc.ClientConn
-	var notificationClient notificationsv1.NotificationServiceClient
+	var notificationsClients notificationsGRPCClients
 	if strings.TrimSpace(config.NotificationsAddr) != "" {
-		clients, err := dialNotificationsGRPC(ctx, config)
+		notificationsClients, err = dialNotificationsGRPC(ctx, config)
 		if err != nil {
 			log.Printf("notifications gRPC dial failed, notifications routes disabled: %v", err)
-		} else {
-			notificationsConn = clients.conn
-			notificationClient = clients.notificationClient
 		}
 	}
-	var aiConn *grpc.ClientConn
-	var credentialClient aiv1.CredentialServiceClient
+	var aiClients aiGRPCClients
 	if strings.TrimSpace(config.AIAddr) != "" {
-		clients, err := dialAIGRPC(ctx, config)
+		aiClients, err = dialAIGRPC(ctx, config)
 		if err != nil {
 			log.Printf("ai gRPC dial failed, settings ai keys disabled: %v", err)
-		} else {
-			aiConn = clients.conn
-			credentialClient = clients.credentialClient
 		}
 	}
-	campaignAccess := newCampaignAccessChecker(config, participantClient)
-	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{
+	campaignAccess := newCampaignAccessChecker(config, gameClients.participantClient)
+	handler, err := NewHandlerWithCampaignAccess(config, authClients.authClient, handlerDependencies{
 		campaignAccess:     campaignAccess,
 		cacheStore:         cacheStore,
-		accountClient:      accountClient,
-		connectionsClient:  connectionsClient,
-		credentialClient:   credentialClient,
-		campaignClient:     campaignClient,
-		eventClient:        eventClient,
-		sessionClient:      sessionClient,
-		participantClient:  participantClient,
-		characterClient:    characterClient,
-		inviteClient:       inviteClient,
-		notificationClient: notificationClient,
+		accountClient:      authClients.accountClient,
+		connectionsClient:  connectionsClients.connectionsClient,
+		credentialClient:   aiClients.credentialClient,
+		campaignClient:     gameClients.campaignClient,
+		eventClient:        gameClients.eventClient,
+		sessionClient:      gameClients.sessionClient,
+		participantClient:  gameClients.participantClient,
+		characterClient:    gameClients.characterClient,
+		inviteClient:       gameClients.inviteClient,
+		notificationClient: notificationsClients.notificationClient,
 	})
 	if err != nil {
 		if cacheStore != nil {
@@ -497,17 +466,17 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		ReadHeaderTimeout: timeouts.ReadHeader,
 	}
 
-	invalidationStop, invalidationDone := startCacheInvalidationWorker(cacheStore, eventClient)
-	campaignUpdateStop, campaignUpdateDone := startCampaignProjectionSubscriptionWorker(cacheStore, eventClient)
+	invalidationStop, invalidationDone := startCacheInvalidationWorker(cacheStore, gameClients.eventClient)
+	campaignUpdateStop, campaignUpdateDone := startCampaignProjectionSubscriptionWorker(cacheStore, gameClients.eventClient)
 
 	return &Server{
 		httpAddr:                       httpAddr,
 		httpServer:                     httpServer,
-		authConn:                       authConn,
-		connectionsConn:                connectionsConn,
-		gameConn:                       gameConn,
-		notificationsConn:              notificationsConn,
-		aiConn:                         aiConn,
+		authConn:                       authClients.conn,
+		connectionsConn:                connectionsClients.conn,
+		gameConn:                       gameClients.conn,
+		notificationsConn:              notificationsClients.conn,
+		aiConn:                         aiClients.conn,
 		cacheStore:                     cacheStore,
 		cacheInvalidationDone:          invalidationDone,
 		cacheInvalidationStop:          invalidationStop,

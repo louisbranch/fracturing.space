@@ -8,6 +8,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 const (
@@ -131,50 +132,48 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		return command.Accept(evt)
 
 	case commandTypeGateResolve:
-		var payload GateResolvedPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		gateID := strings.TrimSpace(payload.GateID)
-		decision := strings.TrimSpace(payload.Decision)
-		if gateID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionGateIDRequired,
-				Message: "gate id is required",
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := GateResolvedPayload{GateID: gateID, Decision: decision, Resolution: payload.Resolution}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeGateResolved, "session_gate", gateID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(
+			cmd,
+			EventTypeGateResolved,
+			"session_gate",
+			func(payload *GateResolvedPayload) string {
+				return payload.GateID
+			},
+			func(payload *GateResolvedPayload, _ func() time.Time) *command.Rejection {
+				payload.GateID = strings.TrimSpace(payload.GateID)
+				payload.Decision = strings.TrimSpace(payload.Decision)
+				if payload.GateID == "" {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateIDRequired,
+						Message: "gate id is required",
+					}
+				}
+				return nil
+			},
+			now,
+		)
 
 	case commandTypeGateAbandon:
-		var payload GateAbandonedPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		gateID := strings.TrimSpace(payload.GateID)
-		reason := strings.TrimSpace(payload.Reason)
-		if gateID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionGateIDRequired,
-				Message: "gate id is required",
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := GateAbandonedPayload{GateID: gateID, Reason: reason}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeGateAbandoned, "session_gate", gateID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(
+			cmd,
+			EventTypeGateAbandoned,
+			"session_gate",
+			func(payload *GateAbandonedPayload) string {
+				return payload.GateID
+			},
+			func(payload *GateAbandonedPayload, _ func() time.Time) *command.Rejection {
+				payload.GateID = strings.TrimSpace(payload.GateID)
+				payload.Reason = strings.TrimSpace(payload.Reason)
+				if payload.GateID == "" {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateIDRequired,
+						Message: "gate id is required",
+					}
+				}
+				return nil
+			},
+			now,
+		)
 
 	case commandTypeSpotlightSet:
 		var payload SpotlightSetPayload
@@ -200,20 +199,19 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		return command.Accept(evt)
 
 	case commandTypeSpotlightClear:
-		var payload SpotlightClearedPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		reason := strings.TrimSpace(payload.Reason)
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := SpotlightClearedPayload{Reason: reason}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeSpotlightCleared, "session", cmd.SessionID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(
+			cmd,
+			EventTypeSpotlightCleared,
+			"session",
+			func(_ *SpotlightClearedPayload) string {
+				return cmd.SessionID
+			},
+			func(payload *SpotlightClearedPayload, _ func() time.Time) *command.Rejection {
+				payload.Reason = strings.TrimSpace(payload.Reason)
+				return nil
+			},
+			now,
+		)
 
 	default:
 		return command.Reject(command.Rejection{Code: "COMMAND_TYPE_UNSUPPORTED", Message: fmt.Sprintf("command type %s is not supported by session decider", cmd.Type)})

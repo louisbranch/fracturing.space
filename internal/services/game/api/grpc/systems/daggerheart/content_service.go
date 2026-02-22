@@ -168,17 +168,11 @@ func (s *DaggerheartContentService) GetClass(ctx context.Context, in *pb.GetDagg
 		return nil, status.Error(codes.InvalidArgument, "class id is required")
 	}
 
-	class, err := store.GetDaggerheartClass(ctx, in.GetId())
+	class, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), classDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get class", err)
+		return nil, err
 	}
-	classes := []storage.DaggerheartClass{class}
-	if err := localizeClasses(ctx, store, in.GetLocale(), classes); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize classes: %v", err)
-	}
-	class = classes[0]
-
-	return &pb.GetDaggerheartClassResponse{Class: toProtoDaggerheartClass(class)}, nil
+	return &pb.GetDaggerheartClassResponse{Class: class}, nil
 }
 
 // ListClasses returns Daggerheart classes.
@@ -190,60 +184,18 @@ func (s *DaggerheartContentService) ListClasses(ctx context.Context, in *pb.List
 	if err != nil {
 		return nil, err
 	}
-
-	classes, err := store.ListDaggerheartClasses(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list classes: %v", err)
-	}
-
-	page, err := listContentPage(classes, contentListRequest{
+	classes, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartClass]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":   contentfilter.FieldString,
-			"name": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartClass) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartClass, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), classDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list classes: %v", err)
-	}
-	if err := localizeClasses(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize classes: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartClassesResponse{
-		Classes:           toProtoDaggerheartClasses(page.Items),
+		Classes:           classes,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -263,17 +215,11 @@ func (s *DaggerheartContentService) GetSubclass(ctx context.Context, in *pb.GetD
 		return nil, status.Error(codes.InvalidArgument, "subclass id is required")
 	}
 
-	subclass, err := store.GetDaggerheartSubclass(ctx, in.GetId())
+	subclass, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), subclassDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get subclass", err)
+		return nil, err
 	}
-	subclasses := []storage.DaggerheartSubclass{subclass}
-	if err := localizeSubclasses(ctx, store, in.GetLocale(), subclasses); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize subclasses: %v", err)
-	}
-	subclass = subclasses[0]
-
-	return &pb.GetDaggerheartSubclassResponse{Subclass: toProtoDaggerheartSubclass(subclass)}, nil
+	return &pb.GetDaggerheartSubclassResponse{Subclass: subclass}, nil
 }
 
 // ListSubclasses returns Daggerheart subclasses.
@@ -285,63 +231,18 @@ func (s *DaggerheartContentService) ListSubclasses(ctx context.Context, in *pb.L
 	if err != nil {
 		return nil, err
 	}
-
-	subclasses, err := store.ListDaggerheartSubclasses(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list subclasses: %v", err)
-	}
-
-	page, err := listContentPage(subclasses, contentListRequest{
+	subclasses, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartSubclass]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":              contentfilter.FieldString,
-			"name":            contentfilter.FieldString,
-			"spellcast_trait": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartSubclass) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartSubclass, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "spellcast_trait":
-				return item.SpellcastTrait, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), subclassDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list subclasses: %v", err)
-	}
-	if err := localizeSubclasses(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize subclasses: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartSubclassesResponse{
-		Subclasses:        toProtoDaggerheartSubclasses(page.Items),
+		Subclasses:        subclasses,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -361,17 +262,11 @@ func (s *DaggerheartContentService) GetHeritage(ctx context.Context, in *pb.GetD
 		return nil, status.Error(codes.InvalidArgument, "heritage id is required")
 	}
 
-	heritage, err := store.GetDaggerheartHeritage(ctx, in.GetId())
+	heritage, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), heritageDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get heritage", err)
+		return nil, err
 	}
-	heritages := []storage.DaggerheartHeritage{heritage}
-	if err := localizeHeritages(ctx, store, in.GetLocale(), heritages); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize heritages: %v", err)
-	}
-	heritage = heritages[0]
-
-	return &pb.GetDaggerheartHeritageResponse{Heritage: toProtoDaggerheartHeritage(heritage)}, nil
+	return &pb.GetDaggerheartHeritageResponse{Heritage: heritage}, nil
 }
 
 // ListHeritages returns Daggerheart heritages.
@@ -383,63 +278,18 @@ func (s *DaggerheartContentService) ListHeritages(ctx context.Context, in *pb.Li
 	if err != nil {
 		return nil, err
 	}
-
-	heritages, err := store.ListDaggerheartHeritages(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list heritages: %v", err)
-	}
-
-	page, err := listContentPage(heritages, contentListRequest{
+	heritages, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartHeritage]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":   contentfilter.FieldString,
-			"name": contentfilter.FieldString,
-			"kind": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartHeritage) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartHeritage, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "kind":
-				return item.Kind, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), heritageDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list heritages: %v", err)
-	}
-	if err := localizeHeritages(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize heritages: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartHeritagesResponse{
-		Heritages:         toProtoDaggerheartHeritages(page.Items),
+		Heritages:         heritages,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -459,17 +309,11 @@ func (s *DaggerheartContentService) GetExperience(ctx context.Context, in *pb.Ge
 		return nil, status.Error(codes.InvalidArgument, "experience id is required")
 	}
 
-	experience, err := store.GetDaggerheartExperience(ctx, in.GetId())
+	experience, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), experienceDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get experience", err)
+		return nil, err
 	}
-	experiences := []storage.DaggerheartExperienceEntry{experience}
-	if err := localizeExperiences(ctx, store, in.GetLocale(), experiences); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize experiences: %v", err)
-	}
-	experience = experiences[0]
-
-	return &pb.GetDaggerheartExperienceResponse{Experience: toProtoDaggerheartExperience(experience)}, nil
+	return &pb.GetDaggerheartExperienceResponse{Experience: experience}, nil
 }
 
 // ListExperiences returns Daggerheart experiences.
@@ -481,60 +325,18 @@ func (s *DaggerheartContentService) ListExperiences(ctx context.Context, in *pb.
 	if err != nil {
 		return nil, err
 	}
-
-	experiences, err := store.ListDaggerheartExperiences(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list experiences: %v", err)
-	}
-
-	page, err := listContentPage(experiences, contentListRequest{
+	experiences, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartExperienceEntry]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":   contentfilter.FieldString,
-			"name": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartExperienceEntry) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartExperienceEntry, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), experienceDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list experiences: %v", err)
-	}
-	if err := localizeExperiences(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize experiences: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartExperiencesResponse{
-		Experiences:       toProtoDaggerheartExperiences(page.Items),
+		Experiences:       experiences,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),

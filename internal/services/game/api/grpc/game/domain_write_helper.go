@@ -88,29 +88,16 @@ func executeDomainCommandWithoutInlineApply(
 }
 
 func normalizeDomainCommandOptions(options domainCommandApplyOptions) domainCommandApplyOptions {
-	if options.executeErr == nil {
-		message := options.executeErrMessage
-		if message == "" {
-			message = "execute domain command"
-		}
-		options.executeErr = func(err error) error {
-			return status.Errorf(codes.Internal, "%s: %v", message, err)
-		}
-	}
-	if options.applyErr == nil {
-		message := options.applyErrMessage
-		if message == "" {
-			message = "apply event"
-		}
-		options.applyErr = func(err error) error {
-			return status.Errorf(codes.Internal, "%s: %v", message, err)
-		}
-	}
-	if options.rejectErr == nil {
-		options.rejectErr = func(message string) error {
-			return status.Error(codes.FailedPrecondition, message)
-		}
-	}
+	executeErr, applyErr, rejectErr := domainwrite.NormalizeErrorHandlers(domainwrite.ErrorHandlerOptions{
+		ExecuteErr:        options.executeErr,
+		ApplyErr:          options.applyErr,
+		RejectErr:         options.rejectErr,
+		ExecuteErrMessage: options.executeErrMessage,
+		ApplyErrMessage:   options.applyErrMessage,
+	})
+	options.executeErr = executeErr
+	options.applyErr = applyErr
+	options.rejectErr = rejectErr
 	return options
 }
 

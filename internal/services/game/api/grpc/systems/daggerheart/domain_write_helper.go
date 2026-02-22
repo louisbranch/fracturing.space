@@ -8,8 +8,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var (
@@ -34,6 +32,8 @@ type domainCommandApplyOptions struct {
 	missingEventMsg string
 	applyErrMessage string
 	executeErrMsg   string
+	applyErr        func(error) error
+	executeErr      func(error) error
 	rejectErr       func(string) error
 }
 
@@ -62,27 +62,22 @@ func (s *DaggerheartService) executeAndApplyDomainCommand(
 		MissingEventMsg:    options.missingEventMsg,
 		InlineApplyEnabled: inlineProjectionApplyEnabled.Load(),
 		ShouldApply:        intentFilter,
-		ExecuteErr: func(err error) error {
-			return status.Errorf(codes.Internal, "%s: %v", options.executeErrMsg, err)
-		},
-		ApplyErr: func(err error) error {
-			return status.Errorf(codes.Internal, "%s: %v", options.applyErrMessage, err)
-		},
-		RejectErr: options.rejectErr,
+		ExecuteErr:         options.executeErr,
+		ApplyErr:           options.applyErr,
+		RejectErr:          options.rejectErr,
 	})
 }
 
 func normalizeDomainCommandOptions(options domainCommandApplyOptions) domainCommandApplyOptions {
-	if options.executeErrMsg == "" {
-		options.executeErrMsg = "execute domain command"
-	}
-	if options.applyErrMessage == "" {
-		options.applyErrMessage = "apply event"
-	}
-	if options.rejectErr == nil {
-		options.rejectErr = func(message string) error {
-			return status.Error(codes.FailedPrecondition, message)
-		}
-	}
+	executeErr, applyErr, rejectErr := domainwrite.NormalizeErrorHandlers(domainwrite.ErrorHandlerOptions{
+		ExecuteErr:        options.executeErr,
+		ApplyErr:          options.applyErr,
+		RejectErr:         options.rejectErr,
+		ExecuteErrMessage: options.executeErrMsg,
+		ApplyErrMessage:   options.applyErrMessage,
+	})
+	options.executeErr = executeErr
+	options.applyErr = applyErr
+	options.rejectErr = rejectErr
 	return options
 }
