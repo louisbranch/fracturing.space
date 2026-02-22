@@ -8,6 +8,7 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -57,7 +58,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 	}
 	if a.stores.Domain != nil {
 		if cmdType, ok := domainCommandTypeForEvent(input.Type); ok {
-			result, err := a.stores.Domain.Execute(ctx, command.Command{
+			cmd := commandbuild.Core(commandbuild.CoreInput{
 				CampaignID:   input.CampaignID,
 				Type:         cmdType,
 				ActorType:    commandActorTypeForEventActor(input.ActorType),
@@ -69,14 +70,15 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 				EntityID:     input.EntityID,
 				PayloadJSON:  input.PayloadJSON,
 			})
+			result, err := executeDomainCommandWithoutInlineApply(ctx, a.stores.Domain, cmd, domainCommandApplyOptions{
+				requireEvents:   true,
+				missingEventMsg: "append event did not emit an event",
+				executeErr: func(err error) error {
+					return status.Errorf(codes.Internal, "execute domain command: %v", err)
+				},
+			})
 			if err != nil {
-				return event.Event{}, status.Errorf(codes.Internal, "execute domain command: %v", err)
-			}
-			if len(result.Decision.Rejections) > 0 {
-				return event.Event{}, status.Error(codes.FailedPrecondition, result.Decision.Rejections[0].Message)
-			}
-			if len(result.Decision.Events) == 0 {
-				return event.Event{}, status.Error(codes.Internal, "append event did not emit an event")
+				return event.Event{}, err
 			}
 			for _, emitted := range result.Decision.Events {
 				if emitted.Type == input.Type {

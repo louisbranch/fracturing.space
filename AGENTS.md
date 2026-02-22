@@ -9,7 +9,7 @@ Single source of agent directives and project context.
 ## ExecPlans
 
 - For complex features or significant refactors, write an ExecPlan and follow `PLANS.md`.
-- ExecPlans live in `plans/` and must be kept up to date as work progresses.
+- ExecPlans live in `.agents/plans/` and must be kept up to date as work progresses.
 
 ## Safety
 

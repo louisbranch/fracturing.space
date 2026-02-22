@@ -69,6 +69,24 @@ func executeAndApplyDomainCommand(
 	})
 }
 
+func executeDomainCommandWithoutInlineApply(
+	ctx context.Context,
+	domain Domain,
+	cmd command.Command,
+	options domainCommandApplyOptions,
+) (engine.Result, error) {
+	options = normalizeDomainCommandOptions(options)
+	return domainwrite.ExecuteAndApply(ctx, domain, projection.Applier{}, cmd, domainwrite.Options{
+		RequireEvents:      options.requireEvents,
+		MissingEventMsg:    options.missingEventMsg,
+		InlineApplyEnabled: false,
+		ShouldApply:        nil,
+		ExecuteErr:         options.executeErr,
+		ApplyErr:           options.applyErr,
+		RejectErr:          options.rejectErr,
+	})
+}
+
 func normalizeDomainCommandOptions(options domainCommandApplyOptions) domainCommandApplyOptions {
 	if options.executeErr == nil {
 		message := options.executeErrMessage
