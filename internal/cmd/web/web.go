@@ -15,10 +15,11 @@ import (
 
 // Config holds the web command configuration.
 type Config struct {
-	HTTPAddr            string        `env:"FRACTURING_SPACE_WEB_HTTP_ADDR"           envDefault:"localhost:8086"`
+	HTTPAddr            string        `env:"FRACTURING_SPACE_WEB_HTTP_ADDR"           envDefault:"localhost:8080"`
+	ChatHTTPAddr        string        `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR"         envDefault:"localhost:8086"`
 	AuthBaseURL         string        `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"       envDefault:"http://localhost:8084"`
 	AuthAddr            string        `env:"FRACTURING_SPACE_WEB_AUTH_ADDR"           envDefault:"localhost:8083"`
-	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"              envDefault:"localhost:8080"`
+	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"              envDefault:"localhost:8082"`
 	AIAddr              string        `env:"FRACTURING_SPACE_AI_ADDR"`
 	CacheDBPath         string        `env:"FRACTURING_SPACE_WEB_CACHE_DB_PATH"      envDefault:"data/web-cache.db"`
 	AssetBaseURL        string        `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
@@ -42,6 +43,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	}
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
+	fs.StringVar(&cfg.ChatHTTPAddr, "chat-http-addr", cfg.ChatHTTPAddr, "Chat HTTP listen address")
 	fs.StringVar(&cfg.AuthBaseURL, "auth-base-url", cfg.AuthBaseURL, "Auth service HTTP base URL")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "Auth service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
@@ -64,6 +66,7 @@ func Run(ctx context.Context, cfg Config) error {
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceWeb, func(context.Context) error {
 		server, err := web.NewServer(web.Config{
 			HTTPAddr:             cfg.HTTPAddr,
+			ChatHTTPAddr:         cfg.ChatHTTPAddr,
 			AuthBaseURL:          cfg.AuthBaseURL,
 			AuthAddr:             cfg.AuthAddr,
 			GameAddr:             cfg.GameAddr,

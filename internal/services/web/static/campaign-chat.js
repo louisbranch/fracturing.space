@@ -12,6 +12,8 @@
   var sendBtn = document.getElementById("chat-send");
   var socket = null;
   var lastSequenceID = 0;
+  var wsHostCandidates = [];
+  var wsHostIndex = 0;
   var chatText = {
     invalidId: root.dataset.chatInvalidId || "",
     connecting: root.dataset.chatConnecting || "",
@@ -26,6 +28,73 @@
     unableToSend: root.dataset.chatUnableToSend || "",
     disconnectedRetrying: root.dataset.chatDisconnectedRetrying || ""
   };
+  var fallbackPort = String(root.dataset.chatFallbackPort || "").trim();
+
+  function isLocalHost(hostname) {
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+  }
+
+  function addWSHostCandidate(host) {
+    if (!host) {
+      return;
+    }
+    var normalized = String(host).trim();
+    if (!normalized) {
+      return;
+    }
+    for (var i = 0; i < wsHostCandidates.length; i += 1) {
+      if (wsHostCandidates[i] === normalized) {
+        return;
+      }
+    }
+    wsHostCandidates.push(normalized);
+  }
+
+  function stripChatHostPrefix(hostname) {
+    if (String(hostname).indexOf("chat.") === 0) {
+      return String(hostname).slice(5);
+    }
+    return hostname;
+  }
+
+  function buildWSHostCandidates() {
+    var host = window.location.host;
+    var hostname = window.location.hostname;
+    var chatBaseHostname = stripChatHostPrefix(hostname);
+    var pagePort = String(window.location.port || "").trim();
+    var canUseLocalFallback = isLocalHost(hostname) || isLocalHost(chatBaseHostname);
+    var chatProxyHost = chatBaseHostname;
+
+    if (canUseLocalFallback) {
+      if (chatProxyHost === "127.0.0.1" || chatProxyHost === "::1" || chatProxyHost === "[::1]") {
+        chatProxyHost = "localhost";
+      }
+      if (pagePort) {
+        addWSHostCandidate("chat." + chatProxyHost + ":" + pagePort);
+      } else {
+        addWSHostCandidate("chat." + chatProxyHost);
+      }
+    }
+
+    if (canUseLocalFallback && fallbackPort) {
+      addWSHostCandidate(hostname + ":" + fallbackPort);
+      if (hostname === "localhost") {
+        addWSHostCandidate("127.0.0.1:" + fallbackPort);
+        addWSHostCandidate("[::1]:" + fallbackPort);
+      } else if (hostname === "127.0.0.1") {
+        addWSHostCandidate("localhost:" + fallbackPort);
+      } else if (hostname === "::1" || hostname === "[::1]") {
+        addWSHostCandidate("localhost:" + fallbackPort);
+      }
+      if (chatBaseHostname !== hostname) {
+        addWSHostCandidate(chatBaseHostname + ":" + fallbackPort);
+      }
+    }
+
+    if (!canUseLocalFallback) {
+      addWSHostCandidate(host.indexOf("chat.") === 0 ? host : "chat." + host);
+    }
+  }
 
   function randomID(prefix) {
     if (window.crypto && typeof window.crypto.randomUUID === "function") {
@@ -36,9 +105,20 @@
 
   function wsURL() {
     var scheme = window.location.protocol === "https:" ? "wss" : "ws";
-    var host = window.location.host;
-    var wsHost = host.indexOf("chat.") === 0 ? host : "chat." + host;
-    return scheme + "://" + wsHost + "/ws";
+    var host = wsHostCandidates[wsHostIndex] || "";
+    if (!host) {
+      return "";
+    }
+    return scheme + "://" + host + "/ws";
+  }
+
+  function maybeUseNextHost() {
+    if (wsHostIndex + 1 >= wsHostCandidates.length) {
+      return false;
+    }
+    wsHostIndex += 1;
+    socket = null;
+    return true;
   }
 
   function setStatus(text, isError) {
@@ -92,6 +172,12 @@
     if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) {
       return;
     }
+    var wsUrl = wsURL();
+    if (!wsUrl) {
+      setStatus(chatText.unavailable, true);
+      appendLine("", chatText.wsSetupFailed, true);
+      return;
+    }
 
     setStatus(chatText.connecting, false);
     if (sendBtn) {
@@ -99,14 +185,21 @@
     }
 
     try {
-      socket = new WebSocket(wsURL());
+      socket = new WebSocket(wsUrl);
     } catch (err) {
+      if (maybeUseNextHost()) {
+        setStatus(chatText.connecting, false);
+        window.setTimeout(connect, 300);
+        return;
+      }
       setStatus(chatText.unavailable, true);
       appendLine("", chatText.wsSetupFailed, true);
       return;
     }
+    var hasConnected = false;
 
     socket.addEventListener("open", function () {
+      hasConnected = true;
       setStatus(chatText.connected, false);
       if (sendBtn) {
         sendBtn.disabled = false;
@@ -156,10 +249,17 @@
     });
 
     socket.addEventListener("error", function () {
-      setStatus(chatText.unavailable, true);
+      if (hasConnected) {
+        setStatus(chatText.unavailable, true);
+      }
     });
 
     socket.addEventListener("close", function () {
+      if (!hasConnected && maybeUseNextHost()) {
+        setStatus(chatText.connecting, false);
+        window.setTimeout(connect, 300);
+        return;
+      }
       setStatus(chatText.disconnectedRetrying, true);
       if (sendBtn) {
         sendBtn.disabled = true;
@@ -191,5 +291,6 @@
     });
   }
 
+  buildWSHostCandidates();
   connect();
 })();

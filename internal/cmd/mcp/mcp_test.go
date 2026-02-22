@@ -11,10 +11,10 @@ func TestParseConfigDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
-	if cfg.Addr != "localhost:8080" {
+	if cfg.Addr != "localhost:8082" {
 		t.Fatalf("expected default addr, got %q", cfg.Addr)
 	}
-	if cfg.HTTPAddr != "localhost:8081" {
+	if cfg.HTTPAddr != "localhost:8085" {
 		t.Fatalf("expected default http addr, got %q", cfg.HTTPAddr)
 	}
 	if cfg.Transport != "stdio" {

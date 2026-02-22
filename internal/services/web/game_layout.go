@@ -3,7 +3,9 @@ package web
 import (
 	"context"
 	"errors"
+	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -32,13 +34,14 @@ func (h *handler) resolvedAppName() string {
 func (h *handler) pageContext(w http.ResponseWriter, r *http.Request) webtemplates.PageContext {
 	printer, lang := localizer(w, r)
 	page := webtemplates.PageContext{
-		Lang:          lang,
-		Loc:           printer,
-		CurrentPath:   r.URL.Path,
-		CurrentQuery:  r.URL.RawQuery,
-		UserName:      "",
-		UserAvatarURL: "",
-		AppName:       h.resolvedAppName(),
+		Lang:             lang,
+		Loc:              printer,
+		CurrentPath:      r.URL.Path,
+		CurrentQuery:     r.URL.RawQuery,
+		ChatFallbackPort: chatFallbackPort(h.config.ChatHTTPAddr),
+		UserName:         "",
+		UserAvatarURL:    "",
+		AppName:          h.resolvedAppName(),
 	}
 
 	sess := sessionFromRequest(r, h.sessions)
@@ -51,6 +54,40 @@ func (h *handler) pageContext(w http.ResponseWriter, r *http.Request) webtemplat
 	}
 
 	return page
+}
+
+func chatFallbackPort(rawAddr string) string {
+	trimmed := strings.TrimSpace(rawAddr)
+	if trimmed == "" {
+		return ""
+	}
+	_, port, err := net.SplitHostPort(trimmed)
+	if err == nil {
+		return sanitizePort(port)
+	}
+
+	if strings.Count(trimmed, ":") <= 1 {
+		if idx := strings.LastIndex(trimmed, ":"); idx >= 0 {
+			return sanitizePort(trimmed[idx+1:])
+		}
+	}
+
+	return sanitizePort(trimmed)
+}
+
+func sanitizePort(raw string) string {
+	port := strings.TrimSpace(raw)
+	if port == "" {
+		return ""
+	}
+	n, err := strconv.Atoi(port)
+	if err != nil {
+		return ""
+	}
+	if n < 1 || n > 65535 {
+		return ""
+	}
+	return port
 }
 
 func (h *handler) pageContextUserAvatar(ctx context.Context, sess *session) string {

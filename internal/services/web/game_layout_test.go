@@ -265,6 +265,65 @@ func TestComposeHTMXTitleForPageUsesLocalizedTitle(t *testing.T) {
 	}
 }
 
+func TestChatFallbackPort(t *testing.T) {
+	tests := []struct {
+		name string
+		addr string
+		want string
+	}{
+		{name: "empty", addr: "", want: ""},
+		{name: "raw port", addr: "8086", want: "8086"},
+		{name: "localhost", addr: "localhost:8086", want: "8086"},
+		{name: "loopback ipv4", addr: "127.0.0.1:8086", want: "8086"},
+		{name: "loopback ipv6", addr: "[::1]:8086", want: "8086"},
+		{name: "ipv6 host", addr: "[2001:db8::1]:8086", want: "8086"},
+		{name: "hostless", addr: ":8086", want: "8086"},
+		{name: "whitespace", addr: "  localhost:8086  ", want: "8086"},
+		{name: "no port", addr: "localhost", want: ""},
+		{name: "invalid port", addr: "localhost:not-a-port", want: ""},
+		{name: "out of range high", addr: "localhost:65536", want: ""},
+		{name: "out of range low", addr: "localhost:0", want: ""},
+		{name: "multiple colons non ipv6", addr: "foo:bar:baz", want: ""},
+		{name: "bare ipv6 no brackets", addr: "2001:db8::1", want: ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := chatFallbackPort(tc.addr)
+			if got != tc.want {
+				t.Fatalf("chatFallbackPort(%q) = %q, want %q", tc.addr, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSanitizePort(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "empty", raw: "", want: ""},
+		{name: "space", raw: " ", want: ""},
+		{name: "minimum", raw: "1", want: "1"},
+		{name: "maximum", raw: "65535", want: "65535"},
+		{name: "trimmed", raw: " 8086 ", want: "8086"},
+		{name: "zero", raw: "0", want: ""},
+		{name: "negative", raw: "-1", want: ""},
+		{name: "too large", raw: "65536", want: ""},
+		{name: "alpha", raw: "abc", want: ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := sanitizePort(tc.raw)
+			if got != tc.want {
+				t.Fatalf("sanitizePort(%q) = %q, want %q", tc.raw, got, tc.want)
+			}
+		})
+	}
+}
+
 type stubComponent struct {
 	content string
 }

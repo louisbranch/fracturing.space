@@ -12,7 +12,7 @@ import (
 
 // Config holds game command configuration.
 type Config struct {
-	Port int    `env:"FRACTURING_SPACE_GAME_PORT" envDefault:"8080"`
+	Port int    `env:"FRACTURING_SPACE_GAME_PORT" envDefault:"8082"`
 	Addr string `env:"FRACTURING_SPACE_GAME_ADDR"`
 }
 

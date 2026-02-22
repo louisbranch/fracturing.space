@@ -12,10 +12,10 @@ func TestParseConfigDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
-	if cfg.HTTPAddr != ":8082" {
+	if cfg.HTTPAddr != ":8081" {
 		t.Fatalf("expected default http addr, got %q", cfg.HTTPAddr)
 	}
-	if cfg.GRPCAddr != "localhost:8080" {
+	if cfg.GRPCAddr != "localhost:8082" {
 		t.Fatalf("expected default grpc addr, got %q", cfg.GRPCAddr)
 	}
 	if cfg.AuthAddr != "localhost:8083" {

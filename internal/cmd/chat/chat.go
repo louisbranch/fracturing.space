@@ -12,9 +12,9 @@ import (
 
 // Config holds chat command configuration.
 type Config struct {
-	HTTPAddr            string `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR"       envDefault:":8087"`
-	GameAddr            string `env:"FRACTURING_SPACE_GAME_ADDR"            envDefault:"localhost:8080"`
-	AuthBaseURL         string `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"    envDefault:"http://localhost:8081"`
+	HTTPAddr            string `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR"       envDefault:":8086"`
+	GameAddr            string `env:"FRACTURING_SPACE_GAME_ADDR"            envDefault:"localhost:8082"`
+	AuthBaseURL         string `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"    envDefault:"http://localhost:8084"`
 	OAuthResourceSecret string `env:"FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET"`
 }
 

@@ -40,7 +40,7 @@ This is the full environment variable reference. For setup steps, see
 
 ### AI
 
-- `FRACTURING_SPACE_AI_PORT`: gRPC port for AI service. Default: `8088`.
+- `FRACTURING_SPACE_AI_PORT`: gRPC port for AI service. Default: `8087`.
 - `FRACTURING_SPACE_AI_DB_PATH`: AI SQLite path. Default: `data/ai.db`.
 - `FRACTURING_SPACE_AI_ENCRYPTION_KEY`: base64-encoded AES key used to encrypt provider secrets at rest (must decode to 16/24/32 bytes).
 
@@ -48,7 +48,7 @@ This is the full environment variable reference. For setup steps, see
 
 - `FRACTURING_SPACE_WEBAUTHN_RP_ID`: WebAuthn relying party ID (the domain the user sees). Default: `localhost`.
 - `FRACTURING_SPACE_WEBAUTHN_RP_DISPLAY_NAME`: display name shown during passkey prompts. Defaults to the app name.
-- `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS`: comma-separated list of allowed WebAuthn origins. Default: `http://localhost:8086`.
+- `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS`: comma-separated list of allowed WebAuthn origins. Default: `http://localhost:8080`.
 - `FRACTURING_SPACE_WEBAUTHN_SESSION_TTL`: passkey session TTL. Default: `5m`.
 
 ### Join grants
@@ -61,8 +61,8 @@ This is the full environment variable reference. For setup steps, see
 
 ### MCP
 
-- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, and web. Default: `localhost:8080`.
-- `FRACTURING_SPACE_MCP_HTTP_ADDR`: HTTP bind address for MCP when using HTTP transport. Default: `localhost:8081`.
+- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, and web. Default: `localhost:8082`.
+- `FRACTURING_SPACE_MCP_HTTP_ADDR`: HTTP bind address for MCP when using HTTP transport. Default: `localhost:8085`.
 - `FRACTURING_SPACE_MCP_TRANSPORT`: transport type (`stdio` or `http`). Default: `stdio`.
 - `FRACTURING_SPACE_MCP_ALLOWED_HOSTS`: comma-separated allowed Host/Origin values for MCP HTTP. Defaults to loopback-only when unset.
 - `FRACTURING_SPACE_MCP_OAUTH_ISSUER`: OAuth issuer URL for MCP token validation.
@@ -70,13 +70,14 @@ This is the full environment variable reference. For setup steps, see
 
 ### Admin
 
-- `FRACTURING_SPACE_ADMIN_ADDR`: HTTP bind address for the admin dashboard. Default: `:8082`.
+- `FRACTURING_SPACE_ADMIN_ADDR`: HTTP bind address for the admin dashboard. Default: `:8081`.
 - `FRACTURING_SPACE_ADMIN_DB_PATH`: admin SQLite path. Default: `data/admin.db`.
 - `FRACTURING_SPACE_AUTH_ADDR`: auth gRPC address used by the game, admin dashboard, and web login server.
 
 ### Web
 
-- `FRACTURING_SPACE_WEB_HTTP_ADDR`: HTTP bind address for the web login server. Default: `localhost:8086`.
+- `FRACTURING_SPACE_WEB_HTTP_ADDR`: HTTP bind address for the web login server. Default: `localhost:8080`.
+- `FRACTURING_SPACE_CHAT_HTTP_ADDR`: chat HTTP bind address used for campaign chat fallback host candidates. Default: `localhost:8086`.
 - `FRACTURING_SPACE_WEB_AUTH_BASE_URL`: external auth base URL for login redirects.
 - `FRACTURING_SPACE_WEB_AUTH_ADDR`: auth gRPC address used by the web login server.
 - `FRACTURING_SPACE_WEB_DIAL_TIMEOUT`: gRPC dial timeout for the web login server. Default: `2s`.
@@ -110,10 +111,10 @@ This is the full environment variable reference. For setup steps, see
 
 The MCP server (`cmd/mcp`) accepts the following flags:
 
-- `-addr`: game server address. Default: `localhost:8080`
-- `-http-addr`: HTTP server address (for HTTP transport). Default: `localhost:8081`
+- `-addr`: game server address. Default: `localhost:8082`
+- `-http-addr`: HTTP server address (for HTTP transport). Default: `localhost:8085`
   
-  When running the `cmd/mcp` binary, this value is provided by the flag definition. When constructing the MCP server programmatically and leaving the HTTP address empty in the `Config` struct, the server also falls back to `localhost:8081` internally.
+  When running the `cmd/mcp` binary, this value is provided by the flag definition. When constructing the MCP server programmatically and leaving the HTTP address empty in the `Config` struct, the server also falls back to `localhost:8085` internally.
 - `-transport`: Transport type (`stdio` or `http`). Default: `stdio`
 
 ### Address Overrides
@@ -134,8 +135,8 @@ The MCP server supports `stdio` (default) and `http` transports. See
 
 The admin dashboard (`cmd/admin`) accepts the following flags:
 
-- `-http-addr`: HTTP server address. Default: `:8082`
-- `-grpc-addr`: game server address. Default: `localhost:8080`
+- `-http-addr`: HTTP server address. Default: `:8081`
+- `-grpc-addr`: game server address. Default: `localhost:8082`
 - `-auth-addr`: auth server address. Default: `localhost:8083`
 
 ### Address Overrides
@@ -150,7 +151,8 @@ omitted. Command-line flags take precedence over env values.
 
 The web login server (`cmd/web`) accepts the following flags:
 
-- `-http-addr`: HTTP server address. Default: `localhost:8086`
+- `-http-addr`: HTTP server address. Default: `localhost:8080`
+- `-chat-http-addr`: Chat HTTP server address. Default: `localhost:8086`
 - `-auth-base-url`: external auth base URL used in login redirects.
 - `-auth-addr`: auth server address. Default: `localhost:8083`
 - `-asset-base-url`: external base URL used for image asset delivery.
@@ -158,8 +160,8 @@ The web login server (`cmd/web`) accepts the following flags:
 
 ### Address Overrides
 
-The web login server accepts flags for HTTP address and auth endpoints. If
-`FRACTURING_SPACE_WEB_HTTP_ADDR`, `FRACTURING_SPACE_WEB_AUTH_BASE_URL`, or
+The web login server accepts flags for HTTP and chat endpoints. If
+`FRACTURING_SPACE_WEB_HTTP_ADDR`, `FRACTURING_SPACE_CHAT_HTTP_ADDR`, `FRACTURING_SPACE_WEB_AUTH_BASE_URL`, or
 `FRACTURING_SPACE_WEB_AUTH_ADDR` are set, they provide defaults when the matching flag
 is omitted. Asset URL defaults come from `FRACTURING_SPACE_ASSET_BASE_URL` and
 `FRACTURING_SPACE_ASSET_VERSION`. Command-line flags take precedence over env values.
@@ -170,7 +172,7 @@ is omitted. Asset URL defaults come from `FRACTURING_SPACE_ASSET_BASE_URL` and
 
 The AI service (`cmd/ai`) accepts the following flags:
 
-- `-port`: gRPC server port. Default: `8088`
+- `-port`: gRPC server port. Default: `8087`
 
 ### Address Overrides
 

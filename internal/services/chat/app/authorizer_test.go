@@ -6,12 +6,15 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
@@ -19,15 +22,18 @@ type fakeParticipantClient struct {
 	pages map[string]*statev1.ListParticipantsResponse
 	err   error
 	calls []*statev1.ListParticipantsRequest
+	users []string
 }
 
 type fakeSessionClient struct {
 	pages map[string]*statev1.ListSessionsResponse
 	err   error
 	calls []*statev1.ListSessionsRequest
+	users []string
 }
 
-func (f *fakeSessionClient) ListSessions(_ context.Context, req *statev1.ListSessionsRequest, _ ...grpc.CallOption) (*statev1.ListSessionsResponse, error) {
+func (f *fakeSessionClient) ListSessions(ctx context.Context, req *statev1.ListSessionsRequest, _ ...grpc.CallOption) (*statev1.ListSessionsResponse, error) {
+	f.users = append(f.users, userIDFromOutgoingContext(ctx))
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -117,7 +123,8 @@ func (*fakeCampaignClient) SetCampaignCover(context.Context, *statev1.SetCampaig
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (f *fakeParticipantClient) ListParticipants(_ context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
+func (f *fakeParticipantClient) ListParticipants(ctx context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
+	f.users = append(f.users, userIDFromOutgoingContext(ctx))
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -143,6 +150,21 @@ func (*fakeParticipantClient) DeleteParticipant(context.Context, *statev1.Delete
 
 func (*fakeParticipantClient) GetParticipant(context.Context, *statev1.GetParticipantRequest, ...grpc.CallOption) (*statev1.GetParticipantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func userIDFromOutgoingContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return ""
+	}
+	userIDs := md.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) == 0 {
+		return ""
+	}
+	return strings.TrimSpace(userIDs[0])
 }
 
 func TestCampaignAuthorizerAuthenticateSuccess(t *testing.T) {
@@ -358,5 +380,48 @@ func TestCampaignAuthorizerResolveJoinWelcomeUsesCampaignLocale(t *testing.T) {
 	}
 	if welcome.SessionName != "Sessao Um" {
 		t.Fatalf("session name = %q, want %q", welcome.SessionName, "Sessao Um")
+	}
+}
+
+func TestCampaignAuthorizerResolveJoinWelcomePropagatesUserIdentityToGameRPC(t *testing.T) {
+	sessionClient := &fakeSessionClient{
+		pages: map[string]*statev1.ListSessionsResponse{
+			"": {
+				Sessions: []*statev1.Session{{Id: "sess-1", Name: "Sessao Um", CampaignId: "camp-1", Status: statev1.SessionStatus_SESSION_ACTIVE}},
+			},
+		},
+	}
+	participantClient := &fakeParticipantClient{
+		pages: map[string]*statev1.ListParticipantsResponse{
+			"": {
+				Participants: []*statev1.Participant{{Id: "p-1", UserId: "user-a", Name: "Ari"}},
+			},
+		},
+	}
+	a := &campaignAuthorizer{
+		sessionClient:     sessionClient,
+		participantClient: participantClient,
+		campaignClient: &fakeCampaignClient{
+			response: &statev1.GetCampaignResponse{
+				Campaign: &statev1.Campaign{Id: "camp-1", Name: "Campanha Um", Locale: commonv1.Locale_LOCALE_PT_BR},
+			},
+		},
+	}
+
+	_, err := a.ResolveJoinWelcome(context.Background(), "camp-1", "user-a")
+	if err != nil {
+		t.Fatalf("resolve join welcome: %v", err)
+	}
+	if len(sessionClient.users) != 1 {
+		t.Fatalf("session calls = %d, want 1", len(sessionClient.users))
+	}
+	if got := sessionClient.users[0]; got != "user-a" {
+		t.Fatalf("session call user = %q, want %q", got, "user-a")
+	}
+	if len(participantClient.users) != 1 {
+		t.Fatalf("participant calls = %d, want 1", len(participantClient.users))
+	}
+	if got := participantClient.users[0]; got != "user-a" {
+		t.Fatalf("participant call user = %q, want %q", got, "user-a")
 	}
 }
