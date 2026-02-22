@@ -29,6 +29,8 @@ jobs:
         run: make event-catalog-check
       - name: Verify topology-generated outputs are up to date
         run: make topology-check
+      - name: Guard low-value negative test assertions
+        run: make negative-test-assertion-check
       - name: Run tests and generate coverage report
         run: make cover
       - name: Check coverage regression against baseline

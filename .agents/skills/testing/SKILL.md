@@ -22,6 +22,18 @@ Test-driven development and coverage guardrails for this project.
 - If a test is truly impossible, stop and ask for guidance with: why it is impossible, attempted testability approaches, and a proposal for a testability seam.
 - Use existing fakes (for example `fakeStorage`) for error paths; do not claim errors are hard to reproduce without checking available fakes.
 
+## UI Red Test Heuristics
+
+- Start with a user-visible contract: what should render, enable, redirect, or block.
+- Prefer positive assertions (`contains`, state transitions, status, links) over absence assertions.
+- Use negative assertions only for explicit invariants (security/privacy, protocol transport, mutually exclusive state).
+- Every allowed negative assertion needs an adjacent `// Invariant: ...` rationale.
+
+Example:
+
+- Weak Red: "response does not contain class `foo`."
+- Strong Red: "HTMX response returns fragment content and does not include a full HTML document wrapper (`Invariant:` protocol contract)."
+
 ## Coverage Guardrails
 
 - Treat coverage as a regression signal, not a goal.
