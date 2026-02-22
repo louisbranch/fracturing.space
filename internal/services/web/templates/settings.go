@@ -24,10 +24,14 @@ type AIKeysPageState struct {
 	Keys         []AIKeyRow
 }
 
-// UsernameSettingsPageState captures form state for username settings.
-type UsernameSettingsPageState struct {
-	Username     string
-	ErrorMessage string
+// UserProfileSettingsPageState captures form state for user profile settings.
+type UserProfileSettingsPageState struct {
+	Username      string
+	Name          string
+	AvatarSetID   string
+	AvatarAssetID string
+	Bio           string
+	ErrorMessage  string
 }
 
 // SettingsLayoutOptions returns layout options for the root settings page.
@@ -49,12 +53,12 @@ func SettingsAIKeysLayoutOptions(page PageContext) LayoutOptions {
 	return options
 }
 
-// SettingsUsernameLayoutOptions returns layout options for the username settings page.
-func SettingsUsernameLayoutOptions(page PageContext) LayoutOptions {
-	options := LayoutOptionsForPage(page, "layout.settings_username", true)
+// SettingsUserProfileLayoutOptions returns layout options for the user profile settings page.
+func SettingsUserProfileLayoutOptions(page PageContext) LayoutOptions {
+	options := LayoutOptionsForPage(page, "layout.settings_user_profile", true)
 	options.CustomBreadcrumbs = []sharedtemplates.BreadcrumbItem{
 		{Label: T(page.Loc, "layout.settings"), URL: routepath.AppSettings},
-		{Label: T(page.Loc, "layout.settings_username"), URL: ""},
+		{Label: T(page.Loc, "layout.settings_user_profile"), URL: ""},
 	}
 	options.ChromeMenu = SettingsMenu(page)
 	return options

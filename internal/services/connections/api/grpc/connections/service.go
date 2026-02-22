@@ -21,21 +21,20 @@ const (
 	maxListContactsPageSize     = 50
 )
 
-type contactAndUsernameStore interface {
+type contactAndUserProfileStore interface {
 	storage.ContactStore
-	storage.UsernameStore
-	storage.ProfileStore
+	storage.UserProfileStore
 }
 
 // Service exposes connections.v1 gRPC operations.
 type Service struct {
 	connectionsv1.UnimplementedConnectionsServiceServer
-	store contactAndUsernameStore
+	store contactAndUserProfileStore
 	clock func() time.Time
 }
 
 // NewService creates a connections service backed by contact storage.
-func NewService(store contactAndUsernameStore) *Service {
+func NewService(store contactAndUserProfileStore) *Service {
 	return &Service{
 		store: store,
 		clock: time.Now,
@@ -143,10 +142,10 @@ func (s *Service) ListContacts(ctx context.Context, in *connectionsv1.ListContac
 	return resp, nil
 }
 
-// SetUsername claims or updates one canonical username for a user.
-func (s *Service) SetUsername(ctx context.Context, in *connectionsv1.SetUsernameRequest) (*connectionsv1.SetUsernameResponse, error) {
+// SetUserProfile claims or updates one social/discovery profile for a user.
+func (s *Service) SetUserProfile(ctx context.Context, in *connectionsv1.SetUserProfileRequest) (*connectionsv1.SetUserProfileResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "set username request is required")
+		return nil, status.Error(codes.InvalidArgument, "set user profile request is required")
 	}
 	if s == nil || s.store == nil {
 		return nil, status.Error(codes.Internal, "contact store is not configured")
@@ -158,106 +157,19 @@ func (s *Service) SetUsername(ctx context.Context, in *connectionsv1.SetUsername
 	canonicalUsername, err := usernameutil.Canonicalize(in.GetUsername())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "username is invalid: %v", err)
-	}
-
-	now := time.Now()
-	if s.clock != nil {
-		now = s.clock()
-	}
-	if err := s.store.PutUsername(ctx, storage.UsernameRecord{
-		UserID:    userID,
-		Username:  canonicalUsername,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		if errors.Is(err, storage.ErrAlreadyExists) {
-			return nil, status.Error(codes.AlreadyExists, "username is already claimed")
-		}
-		return nil, status.Errorf(codes.Internal, "set username: %v", err)
-	}
-	record, err := s.store.GetUsernameByUserID(ctx, userID)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "username not found")
-		}
-		return nil, status.Errorf(codes.Internal, "set username: %v", err)
-	}
-	return &connectionsv1.SetUsernameResponse{
-		UsernameRecord: usernameToProto(record),
-	}, nil
-}
-
-// GetUsername fetches one canonical username by user ID.
-func (s *Service) GetUsername(ctx context.Context, in *connectionsv1.GetUsernameRequest) (*connectionsv1.GetUsernameResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "get username request is required")
-	}
-	if s == nil || s.store == nil {
-		return nil, status.Error(codes.Internal, "contact store is not configured")
-	}
-	userID := strings.TrimSpace(in.GetUserId())
-	if userID == "" {
-		return nil, status.Error(codes.InvalidArgument, "user id is required")
-	}
-	record, err := s.store.GetUsernameByUserID(ctx, userID)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "username not found")
-		}
-		return nil, status.Errorf(codes.Internal, "get username: %v", err)
-	}
-	return &connectionsv1.GetUsernameResponse{
-		UsernameRecord: usernameToProto(record),
-	}, nil
-}
-
-// LookupUsername resolves one canonical username to its owner user.
-func (s *Service) LookupUsername(ctx context.Context, in *connectionsv1.LookupUsernameRequest) (*connectionsv1.LookupUsernameResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "lookup username request is required")
-	}
-	if s == nil || s.store == nil {
-		return nil, status.Error(codes.Internal, "contact store is not configured")
-	}
-	canonicalUsername, err := usernameutil.Canonicalize(in.GetUsername())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "username is invalid: %v", err)
-	}
-	record, err := s.store.GetUsernameByUsername(ctx, canonicalUsername)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "username not found")
-		}
-		return nil, status.Errorf(codes.Internal, "lookup username: %v", err)
-	}
-	return &connectionsv1.LookupUsernameResponse{
-		UsernameRecord: usernameToProto(record),
-	}, nil
-}
-
-// SetPublicProfile creates or updates one public profile owned by user ID.
-func (s *Service) SetPublicProfile(ctx context.Context, in *connectionsv1.SetPublicProfileRequest) (*connectionsv1.SetPublicProfileResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "set public profile request is required")
-	}
-	if s == nil || s.store == nil {
-		return nil, status.Error(codes.Internal, "contact store is not configured")
-	}
-	userID := strings.TrimSpace(in.GetUserId())
-	if userID == "" {
-		return nil, status.Error(codes.InvalidArgument, "user id is required")
 	}
 	normalized, err := profileutil.Normalize(userID, in.GetName(), in.GetAvatarSetId(), in.GetAvatarAssetId(), in.GetBio())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "public profile is invalid: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "user profile is invalid: %v", err)
 	}
 
 	now := time.Now()
 	if s.clock != nil {
 		now = s.clock()
 	}
-	if err := s.store.PutPublicProfile(ctx, storage.PublicProfileRecord{
+	if err := s.store.PutUserProfile(ctx, storage.UserProfileRecord{
 		UserID:        userID,
+		Username:      canonicalUsername,
 		Name:          normalized.Name,
 		AvatarSetID:   normalized.AvatarSetID,
 		AvatarAssetID: normalized.AvatarAssetID,
@@ -265,24 +177,27 @@ func (s *Service) SetPublicProfile(ctx context.Context, in *connectionsv1.SetPub
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}); err != nil {
-		return nil, status.Errorf(codes.Internal, "set public profile: %v", err)
+		if errors.Is(err, storage.ErrAlreadyExists) {
+			return nil, status.Error(codes.AlreadyExists, "username is already claimed")
+		}
+		return nil, status.Errorf(codes.Internal, "set user profile: %v", err)
 	}
-	record, err := s.store.GetPublicProfileByUserID(ctx, userID)
+	record, err := s.store.GetUserProfileByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "public profile not found")
+			return nil, status.Error(codes.NotFound, "user profile not found")
 		}
-		return nil, status.Errorf(codes.Internal, "set public profile: %v", err)
+		return nil, status.Errorf(codes.Internal, "set user profile: %v", err)
 	}
-	return &connectionsv1.SetPublicProfileResponse{
-		PublicProfileRecord: publicProfileToProto(record),
+	return &connectionsv1.SetUserProfileResponse{
+		UserProfileRecord: userProfileToProto(record),
 	}, nil
 }
 
-// GetPublicProfile fetches one public profile by owner user ID.
-func (s *Service) GetPublicProfile(ctx context.Context, in *connectionsv1.GetPublicProfileRequest) (*connectionsv1.GetPublicProfileResponse, error) {
+// GetUserProfile fetches one social/discovery profile by owner user ID.
+func (s *Service) GetUserProfile(ctx context.Context, in *connectionsv1.GetUserProfileRequest) (*connectionsv1.GetUserProfileResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "get public profile request is required")
+		return nil, status.Error(codes.InvalidArgument, "get user profile request is required")
 	}
 	if s == nil || s.store == nil {
 		return nil, status.Error(codes.Internal, "contact store is not configured")
@@ -291,22 +206,22 @@ func (s *Service) GetPublicProfile(ctx context.Context, in *connectionsv1.GetPub
 	if userID == "" {
 		return nil, status.Error(codes.InvalidArgument, "user id is required")
 	}
-	record, err := s.store.GetPublicProfileByUserID(ctx, userID)
+	record, err := s.store.GetUserProfileByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "public profile not found")
+			return nil, status.Error(codes.NotFound, "user profile not found")
 		}
-		return nil, status.Errorf(codes.Internal, "get public profile: %v", err)
+		return nil, status.Errorf(codes.Internal, "get user profile: %v", err)
 	}
-	return &connectionsv1.GetPublicProfileResponse{
-		PublicProfileRecord: publicProfileToProto(record),
+	return &connectionsv1.GetUserProfileResponse{
+		UserProfileRecord: userProfileToProto(record),
 	}, nil
 }
 
-// LookupPublicProfile resolves username and returns optional public profile.
-func (s *Service) LookupPublicProfile(ctx context.Context, in *connectionsv1.LookupPublicProfileRequest) (*connectionsv1.LookupPublicProfileResponse, error) {
+// LookupUserProfile resolves one canonical username to its profile record.
+func (s *Service) LookupUserProfile(ctx context.Context, in *connectionsv1.LookupUserProfileRequest) (*connectionsv1.LookupUserProfileResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "lookup public profile request is required")
+		return nil, status.Error(codes.InvalidArgument, "lookup user profile request is required")
 	}
 	if s == nil || s.store == nil {
 		return nil, status.Error(codes.Internal, "contact store is not configured")
@@ -315,25 +230,16 @@ func (s *Service) LookupPublicProfile(ctx context.Context, in *connectionsv1.Loo
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "username is invalid: %v", err)
 	}
-	usernameRecord, err := s.store.GetUsernameByUsername(ctx, canonicalUsername)
+	record, err := s.store.GetUserProfileByUsername(ctx, canonicalUsername)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "username not found")
 		}
-		return nil, status.Errorf(codes.Internal, "lookup public profile: %v", err)
+		return nil, status.Errorf(codes.Internal, "lookup user profile: %v", err)
 	}
-	resp := &connectionsv1.LookupPublicProfileResponse{
-		UsernameRecord: usernameToProto(usernameRecord),
-	}
-	profileRecord, err := s.store.GetPublicProfileByUserID(ctx, usernameRecord.UserID)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return resp, nil
-		}
-		return nil, status.Errorf(codes.Internal, "lookup public profile: %v", err)
-	}
-	resp.PublicProfileRecord = publicProfileToProto(profileRecord)
-	return resp, nil
+	return &connectionsv1.LookupUserProfileResponse{
+		UserProfileRecord: userProfileToProto(record),
+	}, nil
 }
 
 func contactToProto(contact storage.Contact) *connectionsv1.Contact {
@@ -345,18 +251,10 @@ func contactToProto(contact storage.Contact) *connectionsv1.Contact {
 	}
 }
 
-func usernameToProto(username storage.UsernameRecord) *connectionsv1.UsernameRecord {
-	return &connectionsv1.UsernameRecord{
-		UserId:    username.UserID,
-		Username:  username.Username,
-		CreatedAt: timestamppb.New(username.CreatedAt),
-		UpdatedAt: timestamppb.New(username.UpdatedAt),
-	}
-}
-
-func publicProfileToProto(profile storage.PublicProfileRecord) *connectionsv1.PublicProfileRecord {
-	return &connectionsv1.PublicProfileRecord{
+func userProfileToProto(profile storage.UserProfileRecord) *connectionsv1.UserProfileRecord {
+	return &connectionsv1.UserProfileRecord{
 		UserId:        profile.UserID,
+		Username:      profile.Username,
 		Name:          profile.Name,
 		AvatarSetId:   profile.AvatarSetID,
 		AvatarAssetId: profile.AvatarAssetID,

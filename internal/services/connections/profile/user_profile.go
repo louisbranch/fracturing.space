@@ -1,4 +1,4 @@
-// Package profile validates and normalizes public profile inputs.
+// Package profile validates and normalizes user profile inputs.
 package profile
 
 import (
@@ -23,9 +23,9 @@ type Normalized struct {
 	Bio           string
 }
 
-var publicProfileAvatarManifest = assetcatalog.AvatarManifest()
+var userProfileAvatarManifest = assetcatalog.AvatarManifest()
 
-// Normalize validates and trims user-supplied public profile values.
+// Normalize validates and trims user-supplied user profile values.
 func Normalize(userID string, name string, avatarSetID string, avatarAssetID string, bio string) (Normalized, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
@@ -41,7 +41,7 @@ func Normalize(userID string, name string, avatarSetID string, avatarAssetID str
 		return Normalized{}, fmt.Errorf("avatar set and avatar asset must be provided together")
 	}
 	if avatarSetID != "" {
-		resolvedSetID, resolvedAssetID, err := publicProfileAvatarManifest.ResolveSelection(assetcatalog.SelectionInput{
+		resolvedSetID, resolvedAssetID, err := userProfileAvatarManifest.ResolveSelection(assetcatalog.SelectionInput{
 			EntityType: "user",
 			EntityID:   strings.TrimSpace(userID),
 			SetID:      avatarSetID,

@@ -123,7 +123,7 @@ Entry point: `cmd/ai`
 
 ### Connections server
 
-The connections server hosts social/discovery APIs (contacts, usernames, public
+The connections server hosts social/discovery APIs (contacts and unified user
 profile metadata) used for discovery and invite targeting workflows.
 
 Entry point: `cmd/connections`
@@ -187,8 +187,8 @@ The primary service boundaries are:
   - Public/auth/discovery surface: `/`, `/login`, `/auth/*`, `/magic`, `/passkeys/*`, `/u/{username}`, `/discover`, `/discover/campaigns/{campaignID}`.
   - Authenticated surface: canonical `/app/*` routes (`/app/campaigns`, `/app/campaigns/{id}/*`, `/app/invites`, `/app/notifications`, `/app/profile`, `/app/settings/*`) with OAuth-required startup contract.
   - Internal boundaries: route modules under `internal/services/web/module/*` and composition seams under `internal/services/web/integration/*` and `internal/services/web/transport/httpmux`.
-- **Auth service** (`internal/services/auth/`): Authentication domain logic and gRPC API surface; owns the auth database.
-- **Connections service** (`internal/services/connections/`): Directed user contact APIs and connection metadata; owns the connections database.
+- **Auth service** (`internal/services/auth/`): AuthN/authZ domain logic and gRPC API surface (identity proof and access artifacts); owns the auth database.
+- **Connections service** (`internal/services/connections/`): Social/discovery domain logic and gRPC API surface (contacts and unified user profile metadata); owns the connections database.
 - **Listing service** (`internal/services/listing/`): Public campaign listing metadata APIs; owns the listing database.
 - **AI service** (`internal/services/ai/`): AI credential and agent domain logic + gRPC API surface; owns the AI database.
 

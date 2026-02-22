@@ -162,34 +162,32 @@ func (h *handler) lookupInviteRecipientVerification(ctx context.Context, recipie
 	if h == nil || h.connectionsClient == nil {
 		return webtemplates.CampaignInviteVerification{}, errConnectionsUnavailable
 	}
-	resp, err := h.connectionsClient.LookupPublicProfile(ctx, &connectionsv1.LookupPublicProfileRequest{
+	resp, err := h.connectionsClient.LookupUserProfile(ctx, &connectionsv1.LookupUserProfileRequest{
 		Username: username,
 	})
 	if err != nil {
 		return webtemplates.CampaignInviteVerification{}, err
 	}
-	usernameRecord := resp.GetUsernameRecord()
-	if usernameRecord == nil {
+	profileRecord := resp.GetUserProfileRecord()
+	if profileRecord == nil {
 		return webtemplates.CampaignInviteVerification{}, status.Error(codes.NotFound, "username not found")
 	}
-	resolvedUserID := strings.TrimSpace(usernameRecord.GetUserId())
+	resolvedUserID := strings.TrimSpace(profileRecord.GetUserId())
 	if resolvedUserID == "" {
 		return webtemplates.CampaignInviteVerification{}, status.Error(codes.NotFound, "username not found")
 	}
 	verification := webtemplates.CampaignInviteVerification{
 		HasResult: true,
-		Username:  strings.TrimSpace(usernameRecord.GetUsername()),
+		Username:  strings.TrimSpace(profileRecord.GetUsername()),
 		UserID:    resolvedUserID,
 	}
 	if verification.Username == "" {
 		verification.Username = username
 	}
-	if profile := resp.GetPublicProfileRecord(); profile != nil {
-		verification.Name = strings.TrimSpace(profile.GetName())
-		verification.AvatarSetID = strings.TrimSpace(profile.GetAvatarSetId())
-		verification.AvatarAssetID = strings.TrimSpace(profile.GetAvatarAssetId())
-		verification.Bio = strings.TrimSpace(profile.GetBio())
-	}
+	verification.Name = strings.TrimSpace(profileRecord.GetName())
+	verification.AvatarSetID = strings.TrimSpace(profileRecord.GetAvatarSetId())
+	verification.AvatarAssetID = strings.TrimSpace(profileRecord.GetAvatarAssetId())
+	verification.Bio = strings.TrimSpace(profileRecord.GetBio())
 	return verification, nil
 }
 
@@ -208,13 +206,13 @@ func (h *handler) resolveInviteRecipientUserID(ctx context.Context, recipientUse
 	if h == nil || h.connectionsClient == nil {
 		return "", errConnectionsUnavailable
 	}
-	resp, err := h.connectionsClient.LookupUsername(ctx, &connectionsv1.LookupUsernameRequest{
+	resp, err := h.connectionsClient.LookupUserProfile(ctx, &connectionsv1.LookupUserProfileRequest{
 		Username: username,
 	})
 	if err != nil {
 		return "", err
 	}
-	record := resp.GetUsernameRecord()
+	record := resp.GetUserProfileRecord()
 	if record == nil {
 		return "", status.Error(codes.NotFound, "username not found")
 	}

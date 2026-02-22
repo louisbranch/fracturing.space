@@ -266,8 +266,8 @@ func TestAppCampaignInviteCreateParticipantResolvesRecipientUsername(t *testing.
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
+		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -311,13 +311,13 @@ func TestAppCampaignInviteCreateParticipantResolvesRecipientUsername(t *testing.
 	if got := inviteClient.createReq.GetRecipientUserId(); got != "user-456" {
 		t.Fatalf("recipient_user_id = %q, want user-456", got)
 	}
-	if connectionsClient.lookupUsernameReq == nil {
-		t.Fatal("expected LookupUsername request")
+	if connectionsClient.lookupUserProfileReq == nil {
+		t.Fatal("expected LookupUserProfile request")
 	}
-	if got := connectionsClient.lookupUsernameReq.GetUsername(); got != "alice" {
+	if got := connectionsClient.lookupUserProfileReq.GetUsername(); got != "alice" {
 		t.Fatalf("lookup username = %q, want alice", got)
 	}
-	lookupUserIDs := connectionsClient.lookupUsernameMD.Get(grpcmeta.UserIDHeader)
+	lookupUserIDs := connectionsClient.lookupUserProfileMD.Get(grpcmeta.UserIDHeader)
 	if len(lookupUserIDs) != 1 || lookupUserIDs[0] != "user-123" {
 		t.Fatalf("lookup metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, lookupUserIDs)
 	}
@@ -358,19 +358,10 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersVerificationCont
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
-				UserId:   "user-456",
-				Username: "alice",
-			},
-		},
-		lookupPublicProfileResp: &connectionsv1.LookupPublicProfileResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
-				UserId:   "user-456",
-				Username: "alice",
-			},
-			PublicProfileRecord: &connectionsv1.PublicProfileRecord{
+		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
 				UserId:        "user-456",
+				Username:      "alice",
 				Name:          "Alice Verified",
 				AvatarSetId:   "avatar_set_v1",
 				AvatarAssetId: "001",
@@ -414,13 +405,13 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersVerificationCont
 	if inviteClient.createReq != nil {
 		t.Fatal("expected CreateInvite to be skipped during verification")
 	}
-	if connectionsClient.lookupPublicProfileReq == nil {
-		t.Fatal("expected LookupPublicProfile request")
+	if connectionsClient.lookupUserProfileReq == nil {
+		t.Fatal("expected LookupUserProfile request")
 	}
-	if got := connectionsClient.lookupPublicProfileReq.GetUsername(); got != "alice" {
+	if got := connectionsClient.lookupUserProfileReq.GetUsername(); got != "alice" {
 		t.Fatalf("lookup public profile username = %q, want alice", got)
 	}
-	lookupUserIDs := connectionsClient.lookupPublicProfileMD.Get(grpcmeta.UserIDHeader)
+	lookupUserIDs := connectionsClient.lookupUserProfileMD.Get(grpcmeta.UserIDHeader)
 	if len(lookupUserIDs) != 1 || lookupUserIDs[0] != "user-123" {
 		t.Fatalf("lookup public profile metadata %s = %v, want [user-123]", grpcmeta.UserIDHeader, lookupUserIDs)
 	}
@@ -468,8 +459,8 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRequiresAtPrefix(t *tes
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupPublicProfileResp: &connectionsv1.LookupPublicProfileResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
+		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -511,8 +502,8 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRequiresAtPrefix(t *tes
 	if inviteClient.createReq != nil {
 		t.Fatal("expected CreateInvite to be skipped during verification failure")
 	}
-	if connectionsClient.lookupPublicProfileReq != nil {
-		t.Fatal("expected LookupPublicProfile to be skipped when @ prefix is missing")
+	if connectionsClient.lookupUserProfileReq != nil {
+		t.Fatal("expected LookupUserProfile to be skipped when @ prefix is missing")
 	}
 	if !strings.Contains(w.Body.String(), "recipient username must start with @") {
 		t.Fatalf("response body missing @ prefix message: %q", w.Body.String())
@@ -554,8 +545,8 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersWhenProfileMissi
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupPublicProfileResp: &connectionsv1.LookupPublicProfileResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
+		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -638,8 +629,8 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameLocalizesVerificationCo
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupPublicProfileResp: &connectionsv1.LookupPublicProfileResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
+		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -718,7 +709,7 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameLookupNotFound(t *te
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupUsernameErr: status.Error(codes.NotFound, "username not found"),
+		lookupUserProfileErr: status.Error(codes.NotFound, "username not found"),
 	}
 	h := &handler{
 		config: Config{
@@ -791,7 +782,7 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameInvalid(t *testing.T
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupUsernameErr: status.Error(codes.InvalidArgument, "invalid username"),
+		lookupUserProfileErr: status.Error(codes.InvalidArgument, "invalid username"),
 	}
 	h := &handler{
 		config: Config{
@@ -867,8 +858,8 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameRequired(t *testing.
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
+		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -909,8 +900,8 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameRequired(t *testing.
 	if inviteClient.createReq != nil {
 		t.Fatal("expected CreateInvite to be skipped")
 	}
-	if connectionsClient.lookupUsernameReq != nil {
-		t.Fatal("expected LookupUsername to be skipped for empty username")
+	if connectionsClient.lookupUserProfileReq != nil {
+		t.Fatal("expected LookupUserProfile to be skipped for empty username")
 	}
 }
 
@@ -1017,7 +1008,7 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameLookupEmptyRecord(t 
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{},
+		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{},
 	}
 	h := &handler{
 		config: Config{
@@ -1090,8 +1081,8 @@ func TestAppCampaignInviteCreateParticipantUsesRecipientUserIDFallback(t *testin
 		},
 	}
 	connectionsClient := &fakeConnectionsClient{
-		lookupUsernameResp: &connectionsv1.LookupUsernameResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
+		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
 				UserId:   "user-lookup",
 				Username: "user-456",
 			},
@@ -1135,8 +1126,8 @@ func TestAppCampaignInviteCreateParticipantUsesRecipientUserIDFallback(t *testin
 	if got := inviteClient.createReq.GetRecipientUserId(); got != "user-456" {
 		t.Fatalf("recipient_user_id = %q, want user-456", got)
 	}
-	if connectionsClient.lookupUsernameReq != nil {
-		t.Fatal("expected LookupUsername to be skipped for explicit user id")
+	if connectionsClient.lookupUserProfileReq != nil {
+		t.Fatal("expected LookupUserProfile to be skipped for explicit user id")
 	}
 }
 

@@ -64,10 +64,11 @@ func TestAppSettingsPageRendersForAuthenticatedUser(t *testing.T) {
 
 func TestAppSettingsUsernamePageLoadsCurrentUsername(t *testing.T) {
 	connectionsClient := &fakeConnectionsClient{
-		getUsernameResp: &connectionsv1.GetUsernameResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
+		getUserProfileResp: &connectionsv1.GetUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
 				UserId:   "user-1",
 				Username: "alice_one",
+				Name:     "Alice",
 			},
 		},
 	}
@@ -83,7 +84,7 @@ func TestAppSettingsUsernamePageLoadsCurrentUsername(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/app/settings/username", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/user-profile", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -92,10 +93,10 @@ func TestAppSettingsUsernamePageLoadsCurrentUsername(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
-	if connectionsClient.getUsernameReq == nil {
-		t.Fatal("expected GetUsername request")
+	if connectionsClient.getUserProfileReq == nil {
+		t.Fatal("expected GetUserProfile request")
 	}
-	if got := connectionsClient.getUsernameReq.GetUserId(); got != "user-1" {
+	if got := connectionsClient.getUserProfileReq.GetUserId(); got != "user-1" {
 		t.Fatalf("get username user_id = %q, want user-1", got)
 	}
 	body := w.Body.String()
@@ -106,7 +107,7 @@ func TestAppSettingsUsernamePageLoadsCurrentUsername(t *testing.T) {
 
 func TestAppSettingsUsernamePageLocalizesCopy(t *testing.T) {
 	connectionsClient := &fakeConnectionsClient{
-		getUsernameErr: status.Error(codes.NotFound, "username not found"),
+		getUserProfileErr: status.Error(codes.NotFound, "username not found"),
 	}
 	h := &handler{
 		config:            Config{AuthBaseURL: "http://auth.local"},
@@ -120,7 +121,7 @@ func TestAppSettingsUsernamePageLocalizesCopy(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/app/settings/username?lang=pt-BR", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/user-profile?lang=pt-BR", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -137,10 +138,11 @@ func TestAppSettingsUsernamePageLocalizesCopy(t *testing.T) {
 
 func TestAppSettingsUsernameUpdateSavesUsernameAndRedirects(t *testing.T) {
 	connectionsClient := &fakeConnectionsClient{
-		setUsernameResp: &connectionsv1.SetUsernameResponse{
-			UsernameRecord: &connectionsv1.UsernameRecord{
+		setUserProfileResp: &connectionsv1.SetUserProfileResponse{
+			UserProfileRecord: &connectionsv1.UserProfileRecord{
 				UserId:   "user-1",
 				Username: "alice_two",
+				Name:     "Alice Two",
 			},
 		},
 	}
@@ -158,7 +160,8 @@ func TestAppSettingsUsernameUpdateSavesUsernameAndRedirects(t *testing.T) {
 
 	form := url.Values{}
 	form.Set("username", "Alice_Two")
-	req := httptest.NewRequest(http.MethodPost, "/app/settings/username", strings.NewReader(form.Encode()))
+	form.Set("name", "Alice Two")
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/user-profile", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -168,23 +171,26 @@ func TestAppSettingsUsernameUpdateSavesUsernameAndRedirects(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/app/settings/username" {
-		t.Fatalf("location = %q, want %q", location, "/app/settings/username")
+	if location := w.Header().Get("Location"); location != "/app/settings/user-profile" {
+		t.Fatalf("location = %q, want %q", location, "/app/settings/user-profile")
 	}
-	if connectionsClient.setUsernameReq == nil {
-		t.Fatal("expected SetUsername request")
+	if connectionsClient.setUserProfileReq == nil {
+		t.Fatal("expected SetUserProfile request")
 	}
-	if got := connectionsClient.setUsernameReq.GetUserId(); got != "user-1" {
+	if got := connectionsClient.setUserProfileReq.GetUserId(); got != "user-1" {
 		t.Fatalf("set username user_id = %q, want user-1", got)
 	}
-	if got := connectionsClient.setUsernameReq.GetUsername(); got != "Alice_Two" {
+	if got := connectionsClient.setUserProfileReq.GetUsername(); got != "Alice_Two" {
 		t.Fatalf("set username value = %q, want Alice_Two", got)
+	}
+	if got := connectionsClient.setUserProfileReq.GetName(); got != "Alice Two" {
+		t.Fatalf("set name value = %q, want Alice Two", got)
 	}
 }
 
 func TestAppSettingsUsernameUpdateInvalidUsernameRendersValidationError(t *testing.T) {
 	connectionsClient := &fakeConnectionsClient{
-		setUsernameErr: status.Error(codes.InvalidArgument, "username is invalid"),
+		setUserProfileErr: status.Error(codes.InvalidArgument, "username is invalid"),
 	}
 	h := &handler{
 		config:            Config{AuthBaseURL: "http://auth.local"},
@@ -200,7 +206,8 @@ func TestAppSettingsUsernameUpdateInvalidUsernameRendersValidationError(t *testi
 
 	form := url.Values{}
 	form.Set("username", "bad username")
-	req := httptest.NewRequest(http.MethodPost, "/app/settings/username", strings.NewReader(form.Encode()))
+	form.Set("name", "Alice")
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/user-profile", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -210,12 +217,83 @@ func TestAppSettingsUsernameUpdateInvalidUsernameRendersValidationError(t *testi
 	if w.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
-	if connectionsClient.setUsernameReq == nil {
-		t.Fatal("expected SetUsername request")
+	if connectionsClient.setUserProfileReq == nil {
+		t.Fatal("expected SetUserProfile request")
 	}
 	body := w.Body.String()
 	if !strings.Contains(body, "username is invalid") {
 		t.Fatalf("response body missing validation message: %q", body)
+	}
+}
+
+func TestAppSettingsUsernameUpdateMissingNameRendersValidationError(t *testing.T) {
+	connectionsClient := &fakeConnectionsClient{}
+	h := &handler{
+		config:            Config{AuthBaseURL: "http://auth.local"},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		connectionsClient: connectionsClient,
+		campaignNameCache: map[string]campaignNameCache{},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	form := url.Values{}
+	form.Set("username", "alice_one")
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/user-profile", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppSettingsRoutes(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if connectionsClient.setUserProfileReq != nil {
+		t.Fatalf("expected SetUserProfile not to be called when name is missing")
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Name is required.") {
+		t.Fatalf("response body missing missing-name validation message: %q", body)
+	}
+}
+
+func TestAppSettingsUsernameUpdateNameTooLongRendersValidationError(t *testing.T) {
+	connectionsClient := &fakeConnectionsClient{}
+	h := &handler{
+		config:            Config{AuthBaseURL: "http://auth.local"},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		connectionsClient: connectionsClient,
+		campaignNameCache: map[string]campaignNameCache{},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	form := url.Values{}
+	form.Set("username", "alice_one")
+	form.Set("name", strings.Repeat("a", 65))
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/user-profile", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppSettingsRoutes(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if connectionsClient.setUserProfileReq != nil {
+		t.Fatalf("expected SetUserProfile not to be called when name is too long")
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Name must be at most 64 characters.") {
+		t.Fatalf("response body missing max-length validation message: %q", body)
 	}
 }
 
@@ -233,7 +311,7 @@ func TestAppSettingsUsernameUpdateRendersUnavailableStateWhenConnectionsMissing(
 
 	form := url.Values{}
 	form.Set("username", "Alice_One")
-	req := httptest.NewRequest(http.MethodPost, "/app/settings/username", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/user-profile", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()

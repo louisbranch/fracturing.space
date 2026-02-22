@@ -37,35 +37,23 @@ func TestListAllContactsUsesConnectionsClient(t *testing.T) {
 }
 
 type fakeConnectionsClient struct {
-	listContactsResp        *connectionsv1.ListContactsResponse
-	listContactsPages       map[string]*connectionsv1.ListContactsResponse
-	listContactsCalls       int
-	listContactsReq         *connectionsv1.ListContactsRequest
-	setUsernameResp         *connectionsv1.SetUsernameResponse
-	setUsernameErr          error
-	setUsernameReq          *connectionsv1.SetUsernameRequest
-	setUsernameMD           metadata.MD
-	getUsernameResp         *connectionsv1.GetUsernameResponse
-	getUsernameErr          error
-	getUsernameReq          *connectionsv1.GetUsernameRequest
-	getUsernameMD           metadata.MD
-	setPublicProfileResp    *connectionsv1.SetPublicProfileResponse
-	setPublicProfileErr     error
-	setPublicProfileReq     *connectionsv1.SetPublicProfileRequest
-	setPublicProfileMD      metadata.MD
-	getPublicProfileResp    *connectionsv1.GetPublicProfileResponse
-	getPublicProfileErr     error
-	getPublicProfileReq     *connectionsv1.GetPublicProfileRequest
-	getPublicProfileMD      metadata.MD
-	lookupPublicProfileResp *connectionsv1.LookupPublicProfileResponse
-	lookupPublicProfileErr  error
-	lookupPublicProfileReq  *connectionsv1.LookupPublicProfileRequest
-	lookupPublicProfileMD   metadata.MD
-	lookupUsernameResp      *connectionsv1.LookupUsernameResponse
-	lookupUsernameErr       error
-	lookupUsernameReq       *connectionsv1.LookupUsernameRequest
-	lookupUsernameMD        metadata.MD
-	lookupUsernameCalls     int
+	listContactsResp       *connectionsv1.ListContactsResponse
+	listContactsPages      map[string]*connectionsv1.ListContactsResponse
+	listContactsCalls      int
+	listContactsReq        *connectionsv1.ListContactsRequest
+	setUserProfileResp     *connectionsv1.SetUserProfileResponse
+	setUserProfileErr      error
+	setUserProfileReq      *connectionsv1.SetUserProfileRequest
+	setUserProfileMD       metadata.MD
+	getUserProfileResp     *connectionsv1.GetUserProfileResponse
+	getUserProfileErr      error
+	getUserProfileReq      *connectionsv1.GetUserProfileRequest
+	getUserProfileMD       metadata.MD
+	lookupUserProfileResp  *connectionsv1.LookupUserProfileResponse
+	lookupUserProfileErr   error
+	lookupUserProfileReq   *connectionsv1.LookupUserProfileRequest
+	lookupUserProfileMD    metadata.MD
+	lookupUserProfileCalls int
 }
 
 func (f *fakeConnectionsClient) AddContact(context.Context, *connectionsv1.AddContactRequest, ...grpc.CallOption) (*connectionsv1.AddContactResponse, error) {
@@ -76,84 +64,36 @@ func (f *fakeConnectionsClient) RemoveContact(context.Context, *connectionsv1.Re
 	return nil, status.Error(codes.Unimplemented, "fakeConnectionsClient.RemoveContact not implemented")
 }
 
-func (f *fakeConnectionsClient) SetUsername(ctx context.Context, req *connectionsv1.SetUsernameRequest, _ ...grpc.CallOption) (*connectionsv1.SetUsernameResponse, error) {
+func (f *fakeConnectionsClient) SetUserProfile(ctx context.Context, req *connectionsv1.SetUserProfileRequest, _ ...grpc.CallOption) (*connectionsv1.SetUserProfileResponse, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	f.setUsernameReq = req
+	f.setUserProfileReq = req
 	md, _ := metadata.FromOutgoingContext(ctx)
-	f.setUsernameMD = md
-	if f.setUsernameErr != nil {
-		return nil, f.setUsernameErr
+	f.setUserProfileMD = md
+	if f.setUserProfileErr != nil {
+		return nil, f.setUserProfileErr
 	}
-	if f.setUsernameResp != nil {
-		return f.setUsernameResp, nil
+	if f.setUserProfileResp != nil {
+		return f.setUserProfileResp, nil
 	}
-	return nil, status.Error(codes.NotFound, "set username not configured")
+	return nil, status.Error(codes.NotFound, "set user profile not configured")
 }
 
-func (f *fakeConnectionsClient) GetUsername(ctx context.Context, req *connectionsv1.GetUsernameRequest, _ ...grpc.CallOption) (*connectionsv1.GetUsernameResponse, error) {
+func (f *fakeConnectionsClient) GetUserProfile(ctx context.Context, req *connectionsv1.GetUserProfileRequest, _ ...grpc.CallOption) (*connectionsv1.GetUserProfileResponse, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	f.getUsernameReq = req
+	f.getUserProfileReq = req
 	md, _ := metadata.FromOutgoingContext(ctx)
-	f.getUsernameMD = md
-	if f.getUsernameErr != nil {
-		return nil, f.getUsernameErr
+	f.getUserProfileMD = md
+	if f.getUserProfileErr != nil {
+		return nil, f.getUserProfileErr
 	}
-	if f.getUsernameResp != nil {
-		return f.getUsernameResp, nil
+	if f.getUserProfileResp != nil {
+		return f.getUserProfileResp, nil
 	}
-	return nil, status.Error(codes.NotFound, "get username not configured")
-}
-
-func (f *fakeConnectionsClient) SetPublicProfile(ctx context.Context, req *connectionsv1.SetPublicProfileRequest, _ ...grpc.CallOption) (*connectionsv1.SetPublicProfileResponse, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	f.setPublicProfileReq = req
-	md, _ := metadata.FromOutgoingContext(ctx)
-	f.setPublicProfileMD = md
-	if f.setPublicProfileErr != nil {
-		return nil, f.setPublicProfileErr
-	}
-	if f.setPublicProfileResp != nil {
-		return f.setPublicProfileResp, nil
-	}
-	return nil, status.Error(codes.NotFound, "set public profile not configured")
-}
-
-func (f *fakeConnectionsClient) GetPublicProfile(ctx context.Context, req *connectionsv1.GetPublicProfileRequest, _ ...grpc.CallOption) (*connectionsv1.GetPublicProfileResponse, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	f.getPublicProfileReq = req
-	md, _ := metadata.FromOutgoingContext(ctx)
-	f.getPublicProfileMD = md
-	if f.getPublicProfileErr != nil {
-		return nil, f.getPublicProfileErr
-	}
-	if f.getPublicProfileResp != nil {
-		return f.getPublicProfileResp, nil
-	}
-	return nil, status.Error(codes.NotFound, "get public profile not configured")
-}
-
-func (f *fakeConnectionsClient) LookupPublicProfile(ctx context.Context, req *connectionsv1.LookupPublicProfileRequest, _ ...grpc.CallOption) (*connectionsv1.LookupPublicProfileResponse, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	f.lookupPublicProfileReq = req
-	md, _ := metadata.FromOutgoingContext(ctx)
-	f.lookupPublicProfileMD = md
-	if f.lookupPublicProfileErr != nil {
-		return nil, f.lookupPublicProfileErr
-	}
-	if f.lookupPublicProfileResp != nil {
-		return f.lookupPublicProfileResp, nil
-	}
-	return nil, status.Error(codes.NotFound, "lookup public profile not configured")
+	return nil, status.Error(codes.NotFound, "get user profile not configured")
 }
 
 func (f *fakeConnectionsClient) ListContacts(ctx context.Context, req *connectionsv1.ListContactsRequest, _ ...grpc.CallOption) (*connectionsv1.ListContactsResponse, error) {
@@ -170,19 +110,19 @@ func (f *fakeConnectionsClient) ListContacts(ctx context.Context, req *connectio
 	return f.listContactsResp, nil
 }
 
-func (f *fakeConnectionsClient) LookupUsername(ctx context.Context, req *connectionsv1.LookupUsernameRequest, _ ...grpc.CallOption) (*connectionsv1.LookupUsernameResponse, error) {
+func (f *fakeConnectionsClient) LookupUserProfile(ctx context.Context, req *connectionsv1.LookupUserProfileRequest, _ ...grpc.CallOption) (*connectionsv1.LookupUserProfileResponse, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
-	f.lookupUsernameCalls++
-	f.lookupUsernameReq = req
+	f.lookupUserProfileCalls++
+	f.lookupUserProfileReq = req
 	md, _ := metadata.FromOutgoingContext(ctx)
-	f.lookupUsernameMD = md
-	if f.lookupUsernameErr != nil {
-		return nil, f.lookupUsernameErr
+	f.lookupUserProfileMD = md
+	if f.lookupUserProfileErr != nil {
+		return nil, f.lookupUserProfileErr
 	}
-	if f.lookupUsernameResp == nil {
-		return nil, status.Error(codes.NotFound, "lookup username not configured")
+	if f.lookupUserProfileResp == nil {
+		return nil, status.Error(codes.NotFound, "lookup user profile not configured")
 	}
-	return f.lookupUsernameResp, nil
+	return f.lookupUserProfileResp, nil
 }

@@ -256,130 +256,8 @@ func (s *Store) ListContacts(ctx context.Context, ownerUserID string, pageSize i
 	return page, nil
 }
 
-// PutUsername upserts one canonical username claim for a user.
-func (s *Store) PutUsername(ctx context.Context, username storage.UsernameRecord) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	userID := strings.TrimSpace(username.UserID)
-	if userID == "" {
-		return fmt.Errorf("user id is required")
-	}
-	canonicalUsername, err := usernameutil.Canonicalize(username.Username)
-	if err != nil {
-		return fmt.Errorf("normalize username: %w", err)
-	}
-	createdAt := username.CreatedAt.UTC()
-	updatedAt := username.UpdatedAt.UTC()
-	if createdAt.IsZero() && updatedAt.IsZero() {
-		createdAt = time.Now().UTC()
-		updatedAt = createdAt
-	} else {
-		if createdAt.IsZero() {
-			createdAt = updatedAt
-		}
-		if updatedAt.IsZero() {
-			updatedAt = createdAt
-		}
-	}
-
-	_, err = s.sqlDB.ExecContext(
-		ctx,
-		`INSERT INTO usernames (user_id, username, created_at, updated_at)
-		 VALUES (?, ?, ?, ?)
-		 ON CONFLICT(user_id) DO UPDATE SET
-		   username = excluded.username,
-		   updated_at = excluded.updated_at
-		 WHERE usernames.username <> excluded.username`,
-		userID,
-		canonicalUsername,
-		toMillis(createdAt),
-		toMillis(updatedAt),
-	)
-	if err != nil {
-		if isUsernameUniqueViolation(err) {
-			return storage.ErrAlreadyExists
-		}
-		return fmt.Errorf("put username: %w", err)
-	}
-	return nil
-}
-
-// GetUsernameByUserID returns one username claim for a user.
-func (s *Store) GetUsernameByUserID(ctx context.Context, userID string) (storage.UsernameRecord, error) {
-	if err := ctx.Err(); err != nil {
-		return storage.UsernameRecord{}, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return storage.UsernameRecord{}, fmt.Errorf("storage is not configured")
-	}
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return storage.UsernameRecord{}, fmt.Errorf("user id is required")
-	}
-
-	row := s.sqlDB.QueryRowContext(
-		ctx,
-		`SELECT user_id, username, created_at, updated_at
-		 FROM usernames
-		 WHERE user_id = ?`,
-		userID,
-	)
-	var record storage.UsernameRecord
-	var createdAt int64
-	var updatedAt int64
-	err := row.Scan(&record.UserID, &record.Username, &createdAt, &updatedAt)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return storage.UsernameRecord{}, storage.ErrNotFound
-		}
-		return storage.UsernameRecord{}, fmt.Errorf("get username by user id: %w", err)
-	}
-	record.CreatedAt = fromMillis(createdAt)
-	record.UpdatedAt = fromMillis(updatedAt)
-	return record, nil
-}
-
-// GetUsernameByUsername returns one username claim by canonical username.
-func (s *Store) GetUsernameByUsername(ctx context.Context, username string) (storage.UsernameRecord, error) {
-	if err := ctx.Err(); err != nil {
-		return storage.UsernameRecord{}, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return storage.UsernameRecord{}, fmt.Errorf("storage is not configured")
-	}
-	canonicalUsername, err := usernameutil.Canonicalize(username)
-	if err != nil {
-		return storage.UsernameRecord{}, fmt.Errorf("normalize username: %w", err)
-	}
-
-	row := s.sqlDB.QueryRowContext(
-		ctx,
-		`SELECT user_id, username, created_at, updated_at
-		 FROM usernames
-		 WHERE username = ?`,
-		canonicalUsername,
-	)
-	var record storage.UsernameRecord
-	var createdAt int64
-	var updatedAt int64
-	err = row.Scan(&record.UserID, &record.Username, &createdAt, &updatedAt)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return storage.UsernameRecord{}, storage.ErrNotFound
-		}
-		return storage.UsernameRecord{}, fmt.Errorf("get username by username: %w", err)
-	}
-	record.CreatedAt = fromMillis(createdAt)
-	record.UpdatedAt = fromMillis(updatedAt)
-	return record, nil
-}
-
-// PutPublicProfile upserts one public profile record for a user.
-func (s *Store) PutPublicProfile(ctx context.Context, profile storage.PublicProfileRecord) error {
+// PutUserProfile upserts one social/discovery user profile record.
+func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfileRecord) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -389,6 +267,10 @@ func (s *Store) PutPublicProfile(ctx context.Context, profile storage.PublicProf
 	userID := strings.TrimSpace(profile.UserID)
 	if userID == "" {
 		return fmt.Errorf("user id is required")
+	}
+	canonicalUsername, err := usernameutil.Canonicalize(profile.Username)
+	if err != nil {
+		return fmt.Errorf("normalize username: %w", err)
 	}
 	name := strings.TrimSpace(profile.Name)
 	if name == "" {
@@ -411,17 +293,24 @@ func (s *Store) PutPublicProfile(ctx context.Context, profile storage.PublicProf
 		}
 	}
 
-	_, err := s.sqlDB.ExecContext(
+	_, err = s.sqlDB.ExecContext(
 		ctx,
-		`INSERT INTO public_profiles (user_id, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO user_profiles (user_id, username, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id) DO UPDATE SET
+		   username = excluded.username,
 		   name = excluded.name,
 		   avatar_set_id = excluded.avatar_set_id,
 		   avatar_asset_id = excluded.avatar_asset_id,
 		   bio = excluded.bio,
-		   updated_at = excluded.updated_at`,
+		   updated_at = excluded.updated_at
+		 WHERE user_profiles.username <> excluded.username
+		    OR user_profiles.name <> excluded.name
+		    OR user_profiles.avatar_set_id <> excluded.avatar_set_id
+		    OR user_profiles.avatar_asset_id <> excluded.avatar_asset_id
+		    OR user_profiles.bio <> excluded.bio`,
 		userID,
+		canonicalUsername,
 		name,
 		avatarSetID,
 		avatarAssetID,
@@ -430,48 +319,104 @@ func (s *Store) PutPublicProfile(ctx context.Context, profile storage.PublicProf
 		toMillis(updatedAt),
 	)
 	if err != nil {
-		return fmt.Errorf("put public profile: %w", err)
+		if isUserProfileUsernameUniqueViolation(err) {
+			return storage.ErrAlreadyExists
+		}
+		return fmt.Errorf("put user profile: %w", err)
 	}
 	return nil
 }
 
-// GetPublicProfileByUserID returns one public profile by owner user ID.
-func (s *Store) GetPublicProfileByUserID(ctx context.Context, userID string) (storage.PublicProfileRecord, error) {
+// GetUserProfileByUserID returns one social/discovery profile by owner user ID.
+func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (storage.UserProfileRecord, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.PublicProfileRecord{}, err
+		return storage.UserProfileRecord{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.PublicProfileRecord{}, fmt.Errorf("storage is not configured")
+		return storage.UserProfileRecord{}, fmt.Errorf("storage is not configured")
 	}
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
-		return storage.PublicProfileRecord{}, fmt.Errorf("user id is required")
+		return storage.UserProfileRecord{}, fmt.Errorf("user id is required")
 	}
 
 	row := s.sqlDB.QueryRowContext(
 		ctx,
-		`SELECT user_id, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at
-		 FROM public_profiles
+		`SELECT user_id, username, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at
+		 FROM user_profiles
 		 WHERE user_id = ?`,
 		userID,
 	)
-	var record storage.PublicProfileRecord
+	var record storage.UserProfileRecord
 	var createdAt int64
 	var updatedAt int64
-	err := row.Scan(&record.UserID, &record.Name, &record.AvatarSetID, &record.AvatarAssetID, &record.Bio, &createdAt, &updatedAt)
+	err := row.Scan(
+		&record.UserID,
+		&record.Username,
+		&record.Name,
+		&record.AvatarSetID,
+		&record.AvatarAssetID,
+		&record.Bio,
+		&createdAt,
+		&updatedAt,
+	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.PublicProfileRecord{}, storage.ErrNotFound
+			return storage.UserProfileRecord{}, storage.ErrNotFound
 		}
-		return storage.PublicProfileRecord{}, fmt.Errorf("get public profile by user id: %w", err)
+		return storage.UserProfileRecord{}, fmt.Errorf("get user profile by user id: %w", err)
 	}
 	record.CreatedAt = fromMillis(createdAt)
 	record.UpdatedAt = fromMillis(updatedAt)
 	return record, nil
 }
 
-// isUsernameUniqueViolation reports whether a username uniqueness constraint failed.
-func isUsernameUniqueViolation(err error) bool {
+// GetUserProfileByUsername returns one social/discovery profile by canonical username.
+func (s *Store) GetUserProfileByUsername(ctx context.Context, username string) (storage.UserProfileRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.UserProfileRecord{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.UserProfileRecord{}, fmt.Errorf("storage is not configured")
+	}
+	canonicalUsername, err := usernameutil.Canonicalize(username)
+	if err != nil {
+		return storage.UserProfileRecord{}, fmt.Errorf("normalize username: %w", err)
+	}
+
+	row := s.sqlDB.QueryRowContext(
+		ctx,
+		`SELECT user_id, username, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at
+		 FROM user_profiles
+		 WHERE username = ?`,
+		canonicalUsername,
+	)
+	var record storage.UserProfileRecord
+	var createdAt int64
+	var updatedAt int64
+	err = row.Scan(
+		&record.UserID,
+		&record.Username,
+		&record.Name,
+		&record.AvatarSetID,
+		&record.AvatarAssetID,
+		&record.Bio,
+		&createdAt,
+		&updatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.UserProfileRecord{}, storage.ErrNotFound
+		}
+		return storage.UserProfileRecord{}, fmt.Errorf("get user profile by username: %w", err)
+	}
+	record.CreatedAt = fromMillis(createdAt)
+	record.UpdatedAt = fromMillis(updatedAt)
+	return record, nil
+}
+
+// isUserProfileUsernameUniqueViolation reports whether a username uniqueness constraint failed.
+func isUserProfileUsernameUniqueViolation(err error) bool {
 	if err == nil {
 		return false
 	}
@@ -484,9 +429,8 @@ func isUsernameUniqueViolation(err error) bool {
 	}
 	message := strings.ToLower(err.Error())
 	return strings.Contains(message, "unique constraint failed") &&
-		strings.Contains(message, "usernames.username")
+		strings.Contains(message, "user_profiles.username")
 }
 
 var _ storage.ContactStore = (*Store)(nil)
-var _ storage.UsernameStore = (*Store)(nil)
-var _ storage.ProfileStore = (*Store)(nil)
+var _ storage.UserProfileStore = (*Store)(nil)
