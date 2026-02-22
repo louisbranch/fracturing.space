@@ -12,6 +12,7 @@ templ ErrorPage(page PageContext, title string, message string) {
 			CampaignName:     page.CampaignName,
 			UserName:         page.UserName,
 			UserAvatarURL:    page.UserAvatarURL,
+			HasUnreadNotifications: page.HasUnreadNotifications,
 			UseCustomBreadcrumbs: false,
 		}) {
 			@errorPageContent(page, title, message)

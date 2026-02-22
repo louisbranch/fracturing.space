@@ -6,6 +6,7 @@ type DashboardPageParams struct {
 	Lang         string
 	UserName     string
 	UserAvatarURL string
+	HasUnreadNotifications bool
 	CurrentPath string
 	CampaignName string
 	Loc          Localizer
@@ -22,6 +23,7 @@ templ DashboardPage(params DashboardPageParams) {
 		CampaignName:     params.CampaignName,
 		UserName:         params.UserName,
 		UserAvatarURL:    params.UserAvatarURL,
+		HasUnreadNotifications: params.HasUnreadNotifications,
 		UseCustomBreadcrumbs: false,
 	}) {
 		<div class="max-w-screen-xl mx-auto px-4 pt-20" id="main">

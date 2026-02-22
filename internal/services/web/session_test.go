@@ -264,6 +264,24 @@ func TestSessionStoreConcurrentRestoreLoadsOnlyOnce(t *testing.T) {
 	}
 }
 
+func TestSessionClearCachedUnreadNotificationsPreservesStaleFallback(t *testing.T) {
+	sess := &session{}
+	sess.setCachedUnreadNotifications(true)
+
+	sess.clearCachedUnreadNotifications()
+
+	if _, ok := sess.cachedUnreadNotifications(unreadNotificationProbeTTL); ok {
+		t.Fatal("expected fresh unread cache lookup to miss after clear")
+	}
+	hasUnread, ok := sess.cachedUnreadNotifications(0)
+	if !ok {
+		t.Fatal("expected stale unread cache value to remain available")
+	}
+	if !hasUnread {
+		t.Fatal("expected stale unread cache value to preserve last known true state")
+	}
+}
+
 func TestPendingFlowStoreCreateAndConsume(t *testing.T) {
 	store := newPendingFlowStore()
 	state := store.create("verifier-1")

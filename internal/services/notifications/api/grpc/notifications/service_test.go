@@ -109,6 +109,43 @@ func TestMarkNotificationRead_NotFound(t *testing.T) {
 	}
 }
 
+func TestGetUnreadNotificationStatus_RequiresUserIdentity(t *testing.T) {
+	t.Parallel()
+
+	svc := NewService(&fakeDomainService{})
+	_, err := svc.GetUnreadNotificationStatus(context.Background(), &notificationsv1.GetUnreadNotificationStatusRequest{})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("status code = %v, want %v", status.Code(err), codes.PermissionDenied)
+	}
+}
+
+func TestGetUnreadNotificationStatus_UsesCallerIdentity(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakeDomainService{
+		unreadStatusResult: domain.UnreadStatus{
+			HasUnread:   true,
+			UnreadCount: 2,
+		},
+	}
+	svc := NewService(fake)
+
+	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(metadata.UserIDHeader, "user-1"))
+	resp, err := svc.GetUnreadNotificationStatus(ctx, &notificationsv1.GetUnreadNotificationStatusRequest{})
+	if err != nil {
+		t.Fatalf("get unread notification status: %v", err)
+	}
+	if fake.lastUnreadStatusInput.RecipientUserID != "user-1" {
+		t.Fatalf("recipient_user_id = %q, want %q", fake.lastUnreadStatusInput.RecipientUserID, "user-1")
+	}
+	if !resp.GetHasUnread() {
+		t.Fatalf("has_unread = false, want true")
+	}
+	if resp.GetUnreadCount() != 2 {
+		t.Fatalf("unread_count = %d, want 2", resp.GetUnreadCount())
+	}
+}
+
 type fakeDomainService struct {
 	createResult domain.Notification
 	createErr    error
@@ -121,6 +158,10 @@ type fakeDomainService struct {
 	markReadResult domain.Notification
 	markReadErr    error
 	lastMarkRead   domain.MarkReadInput
+
+	unreadStatusResult    domain.UnreadStatus
+	unreadStatusErr       error
+	lastUnreadStatusInput domain.GetUnreadStatusInput
 }
 
 func (f *fakeDomainService) CreateIntent(_ context.Context, input domain.CreateIntentInput) (domain.Notification, error) {
@@ -145,6 +186,14 @@ func (f *fakeDomainService) MarkRead(_ context.Context, input domain.MarkReadInp
 		return domain.Notification{}, f.markReadErr
 	}
 	return f.markReadResult, nil
+}
+
+func (f *fakeDomainService) GetUnreadStatus(_ context.Context, input domain.GetUnreadStatusInput) (domain.UnreadStatus, error) {
+	f.lastUnreadStatusInput = input
+	if f.unreadStatusErr != nil {
+		return domain.UnreadStatus{}, f.unreadStatusErr
+	}
+	return f.unreadStatusResult, nil
 }
 
 var _ domainService = (*fakeDomainService)(nil)

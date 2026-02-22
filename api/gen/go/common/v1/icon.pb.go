@@ -26,45 +26,47 @@ const (
 type IconId int32
 
 const (
-	IconId_ICON_ID_UNSPECIFIED IconId = 0
-	IconId_ICON_ID_GENERIC     IconId = 1
-	IconId_ICON_ID_CAMPAIGN    IconId = 2
-	IconId_ICON_ID_SESSION     IconId = 3
-	IconId_ICON_ID_PARTICIPANT IconId = 4
-	IconId_ICON_ID_CHARACTER   IconId = 5
-	IconId_ICON_ID_GM          IconId = 6
-	IconId_ICON_ID_CHAT        IconId = 7
-	IconId_ICON_ID_DECISION    IconId = 8
-	IconId_ICON_ID_NOTE        IconId = 9
-	IconId_ICON_ID_ROLL        IconId = 10
-	IconId_ICON_ID_COMBAT      IconId = 11
-	IconId_ICON_ID_DAMAGE      IconId = 12
-	IconId_ICON_ID_ARMOR       IconId = 13
-	IconId_ICON_ID_CONDITION   IconId = 14
-	IconId_ICON_ID_DEATH       IconId = 15
-	IconId_ICON_ID_REST        IconId = 16
-	IconId_ICON_ID_COUNTDOWN   IconId = 17
-	IconId_ICON_ID_HOPE        IconId = 18
-	IconId_ICON_ID_STRESS      IconId = 19
-	IconId_ICON_ID_GM_FEAR     IconId = 20
-	IconId_ICON_ID_DOMAIN      IconId = 21
-	IconId_ICON_ID_DOMAIN_CARD IconId = 22
-	IconId_ICON_ID_CLASS       IconId = 23
-	IconId_ICON_ID_SUBCLASS    IconId = 24
-	IconId_ICON_ID_HERITAGE    IconId = 25
-	IconId_ICON_ID_EXPERIENCE  IconId = 26
-	IconId_ICON_ID_WEAPON      IconId = 27
-	IconId_ICON_ID_ITEM        IconId = 28
-	IconId_ICON_ID_LOOT        IconId = 29
-	IconId_ICON_ID_ADVERSARY   IconId = 30
-	IconId_ICON_ID_ENVIRONMENT IconId = 31
-	IconId_ICON_ID_ANIMAL      IconId = 32
-	IconId_ICON_ID_KEY         IconId = 33
-	IconId_ICON_ID_LOG_OUT     IconId = 34
-	IconId_ICON_ID_SETTINGS    IconId = 35
-	IconId_ICON_ID_PROFILE     IconId = 36
-	IconId_ICON_ID_INVITES     IconId = 37
-	IconId_ICON_ID_AI          IconId = 38
+	IconId_ICON_ID_UNSPECIFIED         IconId = 0
+	IconId_ICON_ID_GENERIC             IconId = 1
+	IconId_ICON_ID_CAMPAIGN            IconId = 2
+	IconId_ICON_ID_SESSION             IconId = 3
+	IconId_ICON_ID_PARTICIPANT         IconId = 4
+	IconId_ICON_ID_CHARACTER           IconId = 5
+	IconId_ICON_ID_GM                  IconId = 6
+	IconId_ICON_ID_CHAT                IconId = 7
+	IconId_ICON_ID_DECISION            IconId = 8
+	IconId_ICON_ID_NOTE                IconId = 9
+	IconId_ICON_ID_ROLL                IconId = 10
+	IconId_ICON_ID_COMBAT              IconId = 11
+	IconId_ICON_ID_DAMAGE              IconId = 12
+	IconId_ICON_ID_ARMOR               IconId = 13
+	IconId_ICON_ID_CONDITION           IconId = 14
+	IconId_ICON_ID_DEATH               IconId = 15
+	IconId_ICON_ID_REST                IconId = 16
+	IconId_ICON_ID_COUNTDOWN           IconId = 17
+	IconId_ICON_ID_HOPE                IconId = 18
+	IconId_ICON_ID_STRESS              IconId = 19
+	IconId_ICON_ID_GM_FEAR             IconId = 20
+	IconId_ICON_ID_DOMAIN              IconId = 21
+	IconId_ICON_ID_DOMAIN_CARD         IconId = 22
+	IconId_ICON_ID_CLASS               IconId = 23
+	IconId_ICON_ID_SUBCLASS            IconId = 24
+	IconId_ICON_ID_HERITAGE            IconId = 25
+	IconId_ICON_ID_EXPERIENCE          IconId = 26
+	IconId_ICON_ID_WEAPON              IconId = 27
+	IconId_ICON_ID_ITEM                IconId = 28
+	IconId_ICON_ID_LOOT                IconId = 29
+	IconId_ICON_ID_ADVERSARY           IconId = 30
+	IconId_ICON_ID_ENVIRONMENT         IconId = 31
+	IconId_ICON_ID_ANIMAL              IconId = 32
+	IconId_ICON_ID_KEY                 IconId = 33
+	IconId_ICON_ID_LOG_OUT             IconId = 34
+	IconId_ICON_ID_SETTINGS            IconId = 35
+	IconId_ICON_ID_PROFILE             IconId = 36
+	IconId_ICON_ID_INVITES             IconId = 37
+	IconId_ICON_ID_AI                  IconId = 38
+	IconId_ICON_ID_NOTIFICATION        IconId = 39
+	IconId_ICON_ID_NOTIFICATION_UNREAD IconId = 40
 )
 
 // Enum value maps for IconId.
@@ -109,47 +111,51 @@ var (
 		36: "ICON_ID_PROFILE",
 		37: "ICON_ID_INVITES",
 		38: "ICON_ID_AI",
+		39: "ICON_ID_NOTIFICATION",
+		40: "ICON_ID_NOTIFICATION_UNREAD",
 	}
 	IconId_value = map[string]int32{
-		"ICON_ID_UNSPECIFIED": 0,
-		"ICON_ID_GENERIC":     1,
-		"ICON_ID_CAMPAIGN":    2,
-		"ICON_ID_SESSION":     3,
-		"ICON_ID_PARTICIPANT": 4,
-		"ICON_ID_CHARACTER":   5,
-		"ICON_ID_GM":          6,
-		"ICON_ID_CHAT":        7,
-		"ICON_ID_DECISION":    8,
-		"ICON_ID_NOTE":        9,
-		"ICON_ID_ROLL":        10,
-		"ICON_ID_COMBAT":      11,
-		"ICON_ID_DAMAGE":      12,
-		"ICON_ID_ARMOR":       13,
-		"ICON_ID_CONDITION":   14,
-		"ICON_ID_DEATH":       15,
-		"ICON_ID_REST":        16,
-		"ICON_ID_COUNTDOWN":   17,
-		"ICON_ID_HOPE":        18,
-		"ICON_ID_STRESS":      19,
-		"ICON_ID_GM_FEAR":     20,
-		"ICON_ID_DOMAIN":      21,
-		"ICON_ID_DOMAIN_CARD": 22,
-		"ICON_ID_CLASS":       23,
-		"ICON_ID_SUBCLASS":    24,
-		"ICON_ID_HERITAGE":    25,
-		"ICON_ID_EXPERIENCE":  26,
-		"ICON_ID_WEAPON":      27,
-		"ICON_ID_ITEM":        28,
-		"ICON_ID_LOOT":        29,
-		"ICON_ID_ADVERSARY":   30,
-		"ICON_ID_ENVIRONMENT": 31,
-		"ICON_ID_ANIMAL":      32,
-		"ICON_ID_KEY":         33,
-		"ICON_ID_LOG_OUT":     34,
-		"ICON_ID_SETTINGS":    35,
-		"ICON_ID_PROFILE":     36,
-		"ICON_ID_INVITES":     37,
-		"ICON_ID_AI":          38,
+		"ICON_ID_UNSPECIFIED":         0,
+		"ICON_ID_GENERIC":             1,
+		"ICON_ID_CAMPAIGN":            2,
+		"ICON_ID_SESSION":             3,
+		"ICON_ID_PARTICIPANT":         4,
+		"ICON_ID_CHARACTER":           5,
+		"ICON_ID_GM":                  6,
+		"ICON_ID_CHAT":                7,
+		"ICON_ID_DECISION":            8,
+		"ICON_ID_NOTE":                9,
+		"ICON_ID_ROLL":                10,
+		"ICON_ID_COMBAT":              11,
+		"ICON_ID_DAMAGE":              12,
+		"ICON_ID_ARMOR":               13,
+		"ICON_ID_CONDITION":           14,
+		"ICON_ID_DEATH":               15,
+		"ICON_ID_REST":                16,
+		"ICON_ID_COUNTDOWN":           17,
+		"ICON_ID_HOPE":                18,
+		"ICON_ID_STRESS":              19,
+		"ICON_ID_GM_FEAR":             20,
+		"ICON_ID_DOMAIN":              21,
+		"ICON_ID_DOMAIN_CARD":         22,
+		"ICON_ID_CLASS":               23,
+		"ICON_ID_SUBCLASS":            24,
+		"ICON_ID_HERITAGE":            25,
+		"ICON_ID_EXPERIENCE":          26,
+		"ICON_ID_WEAPON":              27,
+		"ICON_ID_ITEM":                28,
+		"ICON_ID_LOOT":                29,
+		"ICON_ID_ADVERSARY":           30,
+		"ICON_ID_ENVIRONMENT":         31,
+		"ICON_ID_ANIMAL":              32,
+		"ICON_ID_KEY":                 33,
+		"ICON_ID_LOG_OUT":             34,
+		"ICON_ID_SETTINGS":            35,
+		"ICON_ID_PROFILE":             36,
+		"ICON_ID_INVITES":             37,
+		"ICON_ID_AI":                  38,
+		"ICON_ID_NOTIFICATION":        39,
+		"ICON_ID_NOTIFICATION_UNREAD": 40,
 	}
 )
 
@@ -185,7 +191,7 @@ var File_common_v1_icon_proto protoreflect.FileDescriptor
 var file_common_v1_icon_proto_rawDesc = string([]byte{
 	0x0a, 0x14, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2f, 0x76, 0x31, 0x2f, 0x69, 0x63, 0x6f, 0x6e,
 	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x09, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2e, 0x76,
-	0x31, 0x2a, 0xac, 0x06, 0x0a, 0x06, 0x49, 0x63, 0x6f, 0x6e, 0x49, 0x64, 0x12, 0x17, 0x0a, 0x13,
+	0x31, 0x2a, 0xe7, 0x06, 0x0a, 0x06, 0x49, 0x63, 0x6f, 0x6e, 0x49, 0x64, 0x12, 0x17, 0x0a, 0x13,
 	0x49, 0x43, 0x4f, 0x4e, 0x5f, 0x49, 0x44, 0x5f, 0x55, 0x4e, 0x53, 0x50, 0x45, 0x43, 0x49, 0x46,
 	0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x13, 0x0a, 0x0f, 0x49, 0x43, 0x4f, 0x4e, 0x5f, 0x49, 0x44,
 	0x5f, 0x47, 0x45, 0x4e, 0x45, 0x52, 0x49, 0x43, 0x10, 0x01, 0x12, 0x14, 0x0a, 0x10, 0x49, 0x43,
@@ -236,12 +242,15 @@ var file_common_v1_icon_proto_rawDesc = string([]byte{
 	0x44, 0x5f, 0x50, 0x52, 0x4f, 0x46, 0x49, 0x4c, 0x45, 0x10, 0x24, 0x12, 0x13, 0x0a, 0x0f, 0x49,
 	0x43, 0x4f, 0x4e, 0x5f, 0x49, 0x44, 0x5f, 0x49, 0x4e, 0x56, 0x49, 0x54, 0x45, 0x53, 0x10, 0x25,
 	0x12, 0x0e, 0x0a, 0x0a, 0x49, 0x43, 0x4f, 0x4e, 0x5f, 0x49, 0x44, 0x5f, 0x41, 0x49, 0x10, 0x26,
-	0x42, 0x47, 0x5a, 0x45, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6c,
-	0x6f, 0x75, 0x69, 0x73, 0x62, 0x72, 0x61, 0x6e, 0x63, 0x68, 0x2f, 0x66, 0x72, 0x61, 0x63, 0x74,
-	0x75, 0x72, 0x69, 0x6e, 0x67, 0x2e, 0x73, 0x70, 0x61, 0x63, 0x65, 0x2f, 0x61, 0x70, 0x69, 0x2f,
-	0x67, 0x65, 0x6e, 0x2f, 0x67, 0x6f, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2f, 0x76, 0x31,
-	0x3b, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x12, 0x18, 0x0a, 0x14, 0x49, 0x43, 0x4f, 0x4e, 0x5f, 0x49, 0x44, 0x5f, 0x4e, 0x4f, 0x54, 0x49,
+	0x46, 0x49, 0x43, 0x41, 0x54, 0x49, 0x4f, 0x4e, 0x10, 0x27, 0x12, 0x1f, 0x0a, 0x1b, 0x49, 0x43,
+	0x4f, 0x4e, 0x5f, 0x49, 0x44, 0x5f, 0x4e, 0x4f, 0x54, 0x49, 0x46, 0x49, 0x43, 0x41, 0x54, 0x49,
+	0x4f, 0x4e, 0x5f, 0x55, 0x4e, 0x52, 0x45, 0x41, 0x44, 0x10, 0x28, 0x42, 0x47, 0x5a, 0x45, 0x67,
+	0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x6c, 0x6f, 0x75, 0x69, 0x73, 0x62,
+	0x72, 0x61, 0x6e, 0x63, 0x68, 0x2f, 0x66, 0x72, 0x61, 0x63, 0x74, 0x75, 0x72, 0x69, 0x6e, 0x67,
+	0x2e, 0x73, 0x70, 0x61, 0x63, 0x65, 0x2f, 0x61, 0x70, 0x69, 0x2f, 0x67, 0x65, 0x6e, 0x2f, 0x67,
+	0x6f, 0x2f, 0x63, 0x6f, 0x6d, 0x6d, 0x6f, 0x6e, 0x2f, 0x76, 0x31, 0x3b, 0x63, 0x6f, 0x6d, 0x6d,
+	0x6f, 0x6e, 0x76, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 })
 
 var (

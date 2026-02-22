@@ -141,6 +141,49 @@ func TestMarkRead_PersistsReadTimestamp(t *testing.T) {
 	}
 }
 
+func TestGetUnreadStatus_ReportsUnreadCount(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 2, 21, 20, 47, 0, 0, time.UTC)
+	store := newFakeStore()
+	svc := NewService(store, fixedClock(now), sequentialIDGenerator("notif-1", "notif-2"))
+
+	first, err := svc.CreateIntent(context.Background(), CreateIntentInput{
+		RecipientUserID: "user-1",
+		Topic:           "campaign.invite",
+		DedupeKey:       "invite:1",
+	})
+	if err != nil {
+		t.Fatalf("create first intent: %v", err)
+	}
+	if _, err := svc.CreateIntent(context.Background(), CreateIntentInput{
+		RecipientUserID: "user-1",
+		Topic:           "session.update",
+		DedupeKey:       "session:1",
+	}); err != nil {
+		t.Fatalf("create second intent: %v", err)
+	}
+	if _, err := svc.MarkRead(context.Background(), MarkReadInput{
+		RecipientUserID: "user-1",
+		NotificationID:  first.ID,
+	}); err != nil {
+		t.Fatalf("mark first read: %v", err)
+	}
+
+	status, err := svc.GetUnreadStatus(context.Background(), GetUnreadStatusInput{
+		RecipientUserID: "user-1",
+	})
+	if err != nil {
+		t.Fatalf("get unread status: %v", err)
+	}
+	if !status.HasUnread {
+		t.Fatalf("HasUnread = false, want true")
+	}
+	if status.UnreadCount != 1 {
+		t.Fatalf("UnreadCount = %d, want 1", status.UnreadCount)
+	}
+}
+
 func TestCreateIntent_ConcurrentDedupeReturnsSingleNotification(t *testing.T) {
 	t.Parallel()
 
@@ -309,6 +352,21 @@ func (s *concurrentConflictStore) ListNotificationsByRecipient(_ context.Context
 	return base.ListNotificationsByRecipient(context.Background(), recipientUserID, pageSize, pageToken)
 }
 
+func (s *concurrentConflictStore) CountUnreadNotificationsByRecipient(_ context.Context, recipientUserID string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	unreadCount := 0
+	for _, notification := range s.notifications {
+		if notification.RecipientUserID != recipientUserID {
+			continue
+		}
+		if notification.ReadAt == nil {
+			unreadCount++
+		}
+	}
+	return unreadCount, nil
+}
+
 func (s *concurrentConflictStore) MarkNotificationRead(_ context.Context, recipientUserID string, notificationID string, readAt time.Time) (Notification, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -397,6 +455,19 @@ func (s *fakeStore) ListNotificationsByRecipient(_ context.Context, recipientUse
 		page.NextPageToken = filtered[end-1].ID
 	}
 	return page, nil
+}
+
+func (s *fakeStore) CountUnreadNotificationsByRecipient(_ context.Context, recipientUserID string) (int, error) {
+	unreadCount := 0
+	for _, notification := range s.notifications {
+		if notification.RecipientUserID != recipientUserID {
+			continue
+		}
+		if notification.ReadAt == nil {
+			unreadCount++
+		}
+	}
+	return unreadCount, nil
 }
 
 func (s *fakeStore) MarkNotificationRead(_ context.Context, recipientUserID string, notificationID string, readAt time.Time) (Notification, error) {

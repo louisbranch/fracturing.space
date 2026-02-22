@@ -21,7 +21,9 @@
     8084,
     8085,
     8086,
-    8087
+    8087,
+    8088,
+    8089
   ],
   "remoteEnv": {
     "TMPDIR": "/workspace/.tmp/go-build"

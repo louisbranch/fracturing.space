@@ -89,6 +89,16 @@ func TestServer_CreateListAndMarkReadRoundTrip(t *testing.T) {
 	if len(listResp.GetNotifications()) != 1 {
 		t.Fatalf("notifications len = %d, want 1", len(listResp.GetNotifications()))
 	}
+	unreadResp, err := client.GetUnreadNotificationStatus(userCtx, &notificationsv1.GetUnreadNotificationStatusRequest{})
+	if err != nil {
+		t.Fatalf("get unread status: %v", err)
+	}
+	if !unreadResp.GetHasUnread() {
+		t.Fatal("expected has_unread true before mark read")
+	}
+	if unreadResp.GetUnreadCount() != 1 {
+		t.Fatalf("unread_count = %d, want 1", unreadResp.GetUnreadCount())
+	}
 
 	markResp, err := client.MarkNotificationRead(userCtx, &notificationsv1.MarkNotificationReadRequest{
 		NotificationId: createResp.GetNotification().GetId(),
@@ -98,5 +108,15 @@ func TestServer_CreateListAndMarkReadRoundTrip(t *testing.T) {
 	}
 	if markResp.GetNotification().GetReadAt() == nil {
 		t.Fatal("expected read_at timestamp")
+	}
+	unreadAfterResp, err := client.GetUnreadNotificationStatus(userCtx, &notificationsv1.GetUnreadNotificationStatusRequest{})
+	if err != nil {
+		t.Fatalf("get unread status after mark read: %v", err)
+	}
+	if unreadAfterResp.GetHasUnread() {
+		t.Fatal("expected has_unread false after mark read")
+	}
+	if unreadAfterResp.GetUnreadCount() != 0 {
+		t.Fatalf("unread_count after mark read = %d, want 0", unreadAfterResp.GetUnreadCount())
 	}
 }

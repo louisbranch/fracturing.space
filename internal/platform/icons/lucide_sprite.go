@@ -234,6 +234,15 @@ const lucideSprite = `<svg xmlns="http://www.w3.org/2000/svg" style="display:non
     <circle cx="12" cy="10" r="3" />
     <path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662" />
   </symbol>
+  <symbol id="lucide-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+    <path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />
+  </symbol>
+  <symbol id="lucide-bell-dot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10.268 21a2 2 0 0 0 3.464 0" />
+    <path d="M13.916 3.736A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.59 14.157 18.352 12.92 18 10.472" />
+    <circle cx="18" cy="8" r="3" />
+  </symbol>
   <symbol id="lucide-mail" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
     <rect x="2" y="4" width="20" height="16" rx="2" />

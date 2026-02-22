@@ -17,13 +17,14 @@ func (localizedTitle) Sprintf(key message.Reference, _ ...any) string {
 
 func TestLayoutOptionsForPageBuildsCommonValues(t *testing.T) {
 	page := PageContext{
-		Lang:          "en-US",
-		AppName:       "app-name",
-		Loc:           localizedTitle{},
-		CurrentPath:   "/profile",
-		CampaignName:  "Campaign",
-		UserName:      "Alice",
-		UserAvatarURL: "https://example.com/avatar.png",
+		Lang:                   "en-US",
+		AppName:                "app-name",
+		Loc:                    localizedTitle{},
+		CurrentPath:            "/profile",
+		CampaignName:           "Campaign",
+		UserName:               "Alice",
+		UserAvatarURL:          "https://example.com/avatar.png",
+		HasUnreadNotifications: true,
 	}
 	got := LayoutOptionsForPage(page, "layout.profile", true)
 
@@ -44,6 +45,9 @@ func TestLayoutOptionsForPageBuildsCommonValues(t *testing.T) {
 	}
 	if got.UserAvatarURL != page.UserAvatarURL {
 		t.Fatalf("UserAvatarURL = %q, want %q", got.UserAvatarURL, page.UserAvatarURL)
+	}
+	if got.HasUnreadNotifications != page.HasUnreadNotifications {
+		t.Fatalf("HasUnreadNotifications = %t, want %t", got.HasUnreadNotifications, page.HasUnreadNotifications)
 	}
 	if got.AppName != page.AppName {
 		t.Fatalf("AppName = %q, want %q", got.AppName, page.AppName)

@@ -29,6 +29,7 @@ type ChromeLayoutOptions struct {
 	SideMenu      templ.Component
 	UserName      string
 	UserAvatarURL string
+	HasUnreadNotifications bool
 }
 
 type AppChromeLayoutOptions struct {
@@ -161,6 +162,23 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 							data-nav-item="true"
 							class="btn btn-ghost btn-sm"
 						>{ T(options.Loc, "game.campaigns.title") }</a>
+						<a
+							href="/notifications"
+							hx-get="/notifications"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							data-nav-item="true"
+							class="btn btn-ghost btn-circle"
+							aria-label={ T(options.Loc, "game.notifications.title") }
+							title={ T(options.Loc, "game.notifications.title") }
+						>
+							if options.ChromeOptions.HasUnreadNotifications {
+								@LucideIconID(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD, "size-5")
+							} else {
+								@LucideIconID(commonv1.IconId_ICON_ID_NOTIFICATION, "size-5")
+							}
+						</a>
 						if strings.TrimSpace(options.ChromeOptions.UserAvatarURL) != "" {
 							<div class="dropdown dropdown-end">
 								<button type="button" class="btn btn-ghost btn-circle avatar">

@@ -61,6 +61,8 @@ var errorPageTitleTextKeys = map[string]string{
 	"Sessions unavailable":           "error.web.title.sessions_unavailable",
 	"AI keys unavailable":            "error.web.title.ai_keys_unavailable",
 	"AI key action unavailable":      "error.web.title.ai_key_action_unavailable",
+	"Notification unavailable":       "error.web.title.notification_unavailable",
+	"Notifications unavailable":      "error.web.title.notifications_unavailable",
 }
 
 var errorPageMessageTextKeys = map[string]string{
@@ -140,4 +142,7 @@ var errorPageMessageTextKeys = map[string]string{
 	"failed to parse ai key form":                             "error.web.message.failed_to_parse_ai_key_form",
 	"failed to revoke ai key":                                 "error.web.message.failed_to_revoke_ai_key",
 	"ai key id is required":                                   "error.web.message.ai_key_id_is_required",
+	"notification service client is not configured":           "error.web.message.notification_service_client_is_not_configured",
+	"failed to list notifications":                            "error.web.message.failed_to_list_notifications",
+	"failed to mark notification read":                        "error.web.message.failed_to_mark_notification_read",
 }

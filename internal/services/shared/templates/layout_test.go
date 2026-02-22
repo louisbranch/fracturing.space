@@ -141,3 +141,70 @@ func TestAppChromeLayoutFallsBackToSignOutButtonWithoutAvatar(t *testing.T) {
 		t.Fatalf("expected sign out fallback form when avatar is missing, got %q", got)
 	}
 }
+
+func TestAppChromeLayoutRendersNotificationButtonLeftOfAvatar(t *testing.T) {
+	var b strings.Builder
+	err := AppChromeLayout(AppChromeLayoutOptions{
+		Title:   "Campaigns",
+		Lang:    "en-US",
+		AppName: branding.AppName,
+		Loc:     breadcrumbLocalizer{},
+		ChromeOptions: ChromeLayoutOptions{
+			UserName:               "Alice",
+			UserAvatarURL:          "https://example.com/avatar.png",
+			HasUnreadNotifications: false,
+		},
+	}).Render(context.Background(), &b)
+	if err != nil {
+		t.Fatalf("AppChromeLayout() = %v", err)
+	}
+	got := b.String()
+	if !strings.Contains(got, `href="/notifications"`) {
+		t.Fatalf("expected notifications button link, got %q", got)
+	}
+	if !strings.Contains(got, `href="#lucide-bell"`) {
+		t.Fatalf("expected bell icon for read notification state, got %q", got)
+	}
+	if strings.Contains(got, `href="#lucide-bell-dot"`) {
+		t.Fatalf("expected read notification state to avoid bell-dot icon, got %q", got)
+	}
+	notificationIndex := strings.Index(got, `href="/notifications"`)
+	avatarIndex := strings.Index(got, `class="btn btn-ghost btn-circle avatar"`)
+	if notificationIndex < 0 || avatarIndex < 0 {
+		t.Fatalf("missing notification or avatar controls in output")
+	}
+	if notificationIndex > avatarIndex {
+		t.Fatalf("expected notifications control before avatar control")
+	}
+
+	snippetEnd := notificationIndex + 180
+	if snippetEnd > len(got) {
+		snippetEnd = len(got)
+	}
+	snippet := got[notificationIndex:snippetEnd]
+	if !strings.Contains(snippet, `data-nav-item="true"`) {
+		t.Fatalf("expected notifications control to participate in nav active state, got %q", snippet)
+	}
+}
+
+func TestAppChromeLayoutRendersUnreadNotificationBellDot(t *testing.T) {
+	var b strings.Builder
+	err := AppChromeLayout(AppChromeLayoutOptions{
+		Title:   "Campaigns",
+		Lang:    "en-US",
+		AppName: branding.AppName,
+		Loc:     breadcrumbLocalizer{},
+		ChromeOptions: ChromeLayoutOptions{
+			UserName:               "Alice",
+			UserAvatarURL:          "https://example.com/avatar.png",
+			HasUnreadNotifications: true,
+		},
+	}).Render(context.Background(), &b)
+	if err != nil {
+		t.Fatalf("AppChromeLayout() = %v", err)
+	}
+	got := b.String()
+	if !strings.Contains(got, `href="#lucide-bell-dot"`) {
+		t.Fatalf("expected bell-dot icon when unread notifications exist, got %q", got)
+	}
+}

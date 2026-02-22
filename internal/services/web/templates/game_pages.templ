@@ -172,6 +172,7 @@ templ GamePageShell(page PageContext, title string) {
 			MainClass:            campaignMainClass(page.CampaignCoverImageURL),
 			UserName:             page.UserName,
 			UserAvatarURL:        page.UserAvatarURL,
+			HasUnreadNotifications: page.HasUnreadNotifications,
 			ChromeMenu:           CampaignWorkspaceMenu(page, campaignID, activeSection),
 			UseCustomBreadcrumbs:  false,
 	}) {
@@ -199,6 +200,7 @@ templ GamePageShell(page PageContext, title string) {
 			CampaignName:         page.CampaignName,
 			UserName:             page.UserName,
 			UserAvatarURL:        page.UserAvatarURL,
+			HasUnreadNotifications: page.HasUnreadNotifications,
 			UseCustomBreadcrumbs:  false,
 		}) {
 		{ children... }
@@ -233,6 +235,7 @@ templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
 		CampaignName:        page.CampaignName,
 		UserName:            page.UserName,
 		UserAvatarURL:       page.UserAvatarURL,
+		HasUnreadNotifications: page.HasUnreadNotifications,
 		CustomBreadcrumbs:    []sharedtemplates.BreadcrumbItem{},
 		UseCustomBreadcrumbs: true,
 	}) {

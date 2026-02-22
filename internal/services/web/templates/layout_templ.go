@@ -221,12 +221,13 @@ func Layout(options LayoutOptions) templ.Component {
 				Loc:         options.Loc,
 				Breadcrumbs: options.CustomBreadcrumbs,
 				ChromeOptions: sharedtemplates.ChromeLayoutOptions{
-					MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
-					UserName:      options.UserName,
-					UserAvatarURL: options.UserAvatarURL,
-					SideMenu:      options.ChromeMenu,
-					MainStyle:     options.MainStyle,
-					MainClass:     options.MainClass,
+					MainAria:               sharedtemplates.T(options.Loc, "game.aria_label"),
+					UserName:               options.UserName,
+					UserAvatarURL:          options.UserAvatarURL,
+					HasUnreadNotifications: options.HasUnreadNotifications,
+					SideMenu:               options.ChromeMenu,
+					MainStyle:              options.MainStyle,
+					MainClass:              options.MainClass,
 				},
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var9), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
@@ -258,12 +259,13 @@ func Layout(options LayoutOptions) templ.Component {
 				Loc:         options.Loc,
 				Breadcrumbs: sharedtemplates.BuildPathBreadcrumbsForWeb(options.CurrentPath, options.Loc, campaignNamesForPath(options.CurrentPath, options.CampaignName)),
 				ChromeOptions: sharedtemplates.ChromeLayoutOptions{
-					MainAria:      sharedtemplates.T(options.Loc, "game.aria_label"),
-					UserName:      options.UserName,
-					UserAvatarURL: options.UserAvatarURL,
-					SideMenu:      options.ChromeMenu,
-					MainStyle:     options.MainStyle,
-					MainClass:     options.MainClass,
+					MainAria:               sharedtemplates.T(options.Loc, "game.aria_label"),
+					UserName:               options.UserName,
+					UserAvatarURL:          options.UserAvatarURL,
+					HasUnreadNotifications: options.HasUnreadNotifications,
+					SideMenu:               options.ChromeMenu,
+					MainStyle:              options.MainStyle,
+					MainClass:              options.MainClass,
 				},
 			}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var10), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {

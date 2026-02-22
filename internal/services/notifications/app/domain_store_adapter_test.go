@@ -77,6 +77,19 @@ func (s *atomicCapableStore) ListNotificationsByRecipient(_ context.Context, _ s
 	return storage.NotificationPage{}, nil
 }
 
+func (s *atomicCapableStore) CountUnreadNotificationsByRecipient(_ context.Context, recipientUserID string) (int, error) {
+	unreadCount := 0
+	for _, notification := range s.notifications {
+		if notification.RecipientUserID != recipientUserID {
+			continue
+		}
+		if notification.ReadAt == nil {
+			unreadCount++
+		}
+	}
+	return unreadCount, nil
+}
+
 func (s *atomicCapableStore) MarkNotificationRead(_ context.Context, _, _ string, _ time.Time) (storage.NotificationRecord, error) {
 	return storage.NotificationRecord{}, storage.ErrNotFound
 }
