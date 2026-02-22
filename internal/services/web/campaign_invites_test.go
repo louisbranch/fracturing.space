@@ -13,7 +13,9 @@ import (
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	"golang.org/x/text/language"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -1395,6 +1397,25 @@ func TestRenderAppCampaignInvitesPageSkipsRevokeForMissingInviteID(t *testing.T)
 	}
 	if strings.Contains(body, "/campaigns/camp-123/invites/revoke") {
 		t.Fatalf("expected revoke invite form to be hidden for missing invite id")
+	}
+}
+
+func TestRenderAppCampaignInvitesPageUsesRecipientUsernameCopy(t *testing.T) {
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	page := webtemplates.PageContext{
+		Lang: "en",
+		Loc:  webi18n.Printer(language.English),
+	}
+
+	renderAppCampaignInvitesPage(w, req, page, "camp-123", []*statev1.Invite{}, true)
+
+	body := w.Body.String()
+	if !strings.Contains(body, "Recipient Username or User ID") {
+		t.Fatalf("expected recipient label to mention username and user id, got %q", body)
+	}
+	if !strings.Contains(body, "@username or user id") {
+		t.Fatalf("expected placeholder to mention @username fallback, got %q", body)
 	}
 }
 

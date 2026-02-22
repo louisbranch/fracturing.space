@@ -219,6 +219,39 @@ func TestAppSettingsUsernameUpdateInvalidUsernameRendersValidationError(t *testi
 	}
 }
 
+func TestAppSettingsUsernameUpdateRendersUnavailableStateWhenConnectionsMissing(t *testing.T) {
+	h := &handler{
+		config:            Config{AuthBaseURL: "http://auth.local"},
+		sessions:          newSessionStore(),
+		pendingFlows:      newPendingFlowStore(),
+		campaignNameCache: map[string]campaignNameCache{},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	form := url.Values{}
+	form.Set("username", "Alice_One")
+	req := httptest.NewRequest(http.MethodPost, "/settings/username", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppSettingsRoutes(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "Connections service is unavailable.") {
+		t.Fatalf("expected unavailable message, got %q", body)
+	}
+	if !strings.Contains(body, `value="Alice_One"`) {
+		t.Fatalf("expected submitted username to be preserved, got %q", body)
+	}
+}
+
 func TestAppAIKeysPageRendersUnavailableStateWhenCredentialServiceMissing(t *testing.T) {
 	h := &handler{
 		config:       Config{AuthBaseURL: "http://auth.local"},
