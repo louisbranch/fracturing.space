@@ -59,53 +59,51 @@ func (Decider) DeciderHandledCommands() []command.Type {
 
 // Decide returns the decision for a system command against current state.
 func (Decider) Decide(state any, cmd command.Command, now func() time.Time) command.Decision {
-	snapshotState, hasSnapshot := snapshotFromState(state)
+	snapshotState, hasSnapshot := snapshotOrDefault(state)
 	switch cmd.Type {
 	case commandTypeGMFearSet:
-		var payload GMFearSetPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if payload.After == nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeGMFearAfterRequired,
-				Message: "gm fear after is required",
-			})
-		}
-		after := *payload.After
-		if after < GMFearMin || after > GMFearMax {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeGMFearOutOfRange,
-				Message: "gm fear after is out of range",
-			})
-		}
-		before := GMFearDefault
-		if hasSnapshot {
-			before = snapshotState.GMFear
-		}
-		if after == before {
-			// FIXME(telemetry): metric for idempotent gm fear set commands (no-op reject).
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeGMFearUnchanged,
-				Message: "gm fear after is unchanged",
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		changed := GMFearChangedPayload{
-			Before: before,
-			After:  after,
-			Reason: strings.TrimSpace(payload.Reason),
-		}
-		payloadJSON, _ := json.Marshal(changed)
-		evt := command.NewEvent(cmd, EventTypeGMFearChanged, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+			EventTypeGMFearChanged, "campaign",
+			func(_ *GMFearSetPayload) string { return cmd.CampaignID },
+			func(s SnapshotState, hasState bool, p *GMFearSetPayload, _ func() time.Time) *command.Rejection {
+				if p.After == nil {
+					return &command.Rejection{
+						Code:    rejectionCodeGMFearAfterRequired,
+						Message: "gm fear after is required",
+					}
+				}
+				after := *p.After
+				if after < GMFearMin || after > GMFearMax {
+					return &command.Rejection{
+						Code:    rejectionCodeGMFearOutOfRange,
+						Message: "gm fear after is out of range",
+					}
+				}
+				before := GMFearDefault
+				if hasState {
+					before = s.GMFear
+				}
+				if after == before {
+					// FIXME(telemetry): metric for idempotent gm fear set commands (no-op reject).
+					return &command.Rejection{
+						Code:    rejectionCodeGMFearUnchanged,
+						Message: "gm fear after is unchanged",
+					}
+				}
+				return nil
+			},
+			func(s SnapshotState, hasState bool, p GMFearSetPayload) GMFearChangedPayload {
+				before := GMFearDefault
+				if hasState {
+					before = s.GMFear
+				}
+				return GMFearChangedPayload{
+					Before: before,
+					After:  *p.After,
+					Reason: strings.TrimSpace(p.Reason),
+				}
+			},
+			now)
 	case commandTypeCharacterStatePatch:
 		return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeCharacterStatePatched, "character",
 			func(p *CharacterStatePatchPayload) string { return strings.TrimSpace(p.CharacterID) },
@@ -144,53 +142,37 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 				return nil
 			}, now)
 	case commandTypeHopeSpend:
-		var payload HopeSpendPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payloadJSON, _ := json.Marshal(CharacterStatePatchedPayload{
-			CharacterID: payload.CharacterID,
-			HopeBefore:  &payload.Before,
-			HopeAfter:   &payload.After,
-		})
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CharacterID
-		}
-		evt := command.NewEvent(cmd, EventTypeCharacterStatePatched, "character", entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+			EventTypeCharacterStatePatched, "character",
+			func(p *HopeSpendPayload) string { return strings.TrimSpace(p.CharacterID) },
+			func(_ SnapshotState, _ bool, p *HopeSpendPayload, _ func() time.Time) *command.Rejection {
+				p.CharacterID = strings.TrimSpace(p.CharacterID)
+				return nil
+			},
+			func(_ SnapshotState, _ bool, p HopeSpendPayload) CharacterStatePatchedPayload {
+				return CharacterStatePatchedPayload{
+					CharacterID: p.CharacterID,
+					HopeBefore:  &p.Before,
+					HopeAfter:   &p.After,
+				}
+			},
+			now)
 	case commandTypeStressSpend:
-		var payload StressSpendPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payloadJSON, _ := json.Marshal(CharacterStatePatchedPayload{
-			CharacterID:  payload.CharacterID,
-			StressBefore: &payload.Before,
-			StressAfter:  &payload.After,
-		})
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CharacterID
-		}
-		evt := command.NewEvent(cmd, EventTypeCharacterStatePatched, "character", entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+			EventTypeCharacterStatePatched, "character",
+			func(p *StressSpendPayload) string { return strings.TrimSpace(p.CharacterID) },
+			func(_ SnapshotState, _ bool, p *StressSpendPayload, _ func() time.Time) *command.Rejection {
+				p.CharacterID = strings.TrimSpace(p.CharacterID)
+				return nil
+			},
+			func(_ SnapshotState, _ bool, p StressSpendPayload) CharacterStatePatchedPayload {
+				return CharacterStatePatchedPayload{
+					CharacterID:  p.CharacterID,
+					StressBefore: &p.Before,
+					StressAfter:  &p.After,
+				}
+			},
+			now)
 	case commandTypeLoadoutSwap:
 		return module.DecideFunc(cmd, EventTypeLoadoutSwapped, "character",
 			func(p *LoadoutSwapPayload) string { return strings.TrimSpace(p.CharacterID) },
@@ -267,87 +249,61 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 				return nil
 			}, now)
 	case commandTypeDamageApply:
-		var payload DamageApplyPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if payload.ArmorSpent > 1 {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeDamageArmorSpendLimit,
-				Message: "damage apply can spend at most one armor slot",
-			})
-		}
-		if hasSnapshot {
-			if character, ok := snapshotCharacterState(snapshotState, payload.CharacterID); ok {
-				if payload.HpBefore != nil && character.HP != *payload.HpBefore {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeDamageBeforeMismatch,
-						Message: "damage before does not match current state",
-					})
+		return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeDamageApplied, "character",
+			func(p *DamageApplyPayload) string { return strings.TrimSpace(p.CharacterID) },
+			func(s SnapshotState, hasState bool, p *DamageApplyPayload, _ func() time.Time) *command.Rejection {
+				if p.ArmorSpent > 1 {
+					return &command.Rejection{
+						Code:    rejectionCodeDamageArmorSpendLimit,
+						Message: "damage apply can spend at most one armor slot",
+					}
 				}
-				if payload.ArmorBefore != nil && character.Armor != *payload.ArmorBefore {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeDamageBeforeMismatch,
-						Message: "damage before does not match current state",
-					})
+				if hasState {
+					if character, ok := snapshotCharacterState(s, p.CharacterID); ok {
+						if p.HpBefore != nil && character.HP != *p.HpBefore {
+							return &command.Rejection{
+								Code:    rejectionCodeDamageBeforeMismatch,
+								Message: "damage before does not match current state",
+							}
+						}
+						if p.ArmorBefore != nil && character.Armor != *p.ArmorBefore {
+							return &command.Rejection{
+								Code:    rejectionCodeDamageBeforeMismatch,
+								Message: "damage before does not match current state",
+							}
+						}
+					}
 				}
-			}
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.DamageType = strings.TrimSpace(payload.DamageType)
-		payload.Source = strings.TrimSpace(payload.Source)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CharacterID
-		}
-		evt := command.NewEvent(cmd, EventTypeDamageApplied, "character", entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+				p.CharacterID = strings.TrimSpace(p.CharacterID)
+				p.DamageType = strings.TrimSpace(p.DamageType)
+				p.Source = strings.TrimSpace(p.Source)
+				return nil
+			}, now)
 	case commandTypeAdversaryDamageApply:
-		var payload AdversaryDamageApplyPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if hasSnapshot {
-			if adversary, ok := snapshotAdversaryState(snapshotState, payload.AdversaryID); ok {
-				if payload.HpBefore != nil && adversary.HP != *payload.HpBefore {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeAdversaryDamageBeforeMismatch,
-						Message: "adversary damage before does not match current state",
-					})
+		return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeAdversaryDamageApplied, "adversary",
+			func(p *AdversaryDamageApplyPayload) string { return strings.TrimSpace(p.AdversaryID) },
+			func(s SnapshotState, hasState bool, p *AdversaryDamageApplyPayload, _ func() time.Time) *command.Rejection {
+				if hasState {
+					if adversary, ok := snapshotAdversaryState(s, p.AdversaryID); ok {
+						if p.HpBefore != nil && adversary.HP != *p.HpBefore {
+							return &command.Rejection{
+								Code:    rejectionCodeAdversaryDamageBeforeMismatch,
+								Message: "adversary damage before does not match current state",
+							}
+						}
+						if p.ArmorBefore != nil && adversary.Armor != *p.ArmorBefore {
+							return &command.Rejection{
+								Code:    rejectionCodeAdversaryDamageBeforeMismatch,
+								Message: "adversary damage before does not match current state",
+							}
+						}
+					}
 				}
-				if payload.ArmorBefore != nil && adversary.Armor != *payload.ArmorBefore {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeAdversaryDamageBeforeMismatch,
-						Message: "adversary damage before does not match current state",
-					})
-				}
-			}
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.AdversaryID = strings.TrimSpace(payload.AdversaryID)
-		payload.DamageType = strings.TrimSpace(payload.DamageType)
-		payload.Source = strings.TrimSpace(payload.Source)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.AdversaryID
-		}
-		evt := command.NewEvent(cmd, EventTypeAdversaryDamageApplied, "adversary", entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+				p.AdversaryID = strings.TrimSpace(p.AdversaryID)
+				p.DamageType = strings.TrimSpace(p.DamageType)
+				p.Source = strings.TrimSpace(p.Source)
+				return nil
+			}, now)
 	case commandTypeDowntimeMoveApply:
 		return module.DecideFunc(cmd, EventTypeDowntimeMoveApplied, "character",
 			func(p *DowntimeMoveApplyPayload) string { return strings.TrimSpace(p.CharacterID) },

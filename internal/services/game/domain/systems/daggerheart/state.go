@@ -75,6 +75,22 @@ type AdversaryState struct {
 	Conditions  []string
 }
 
+// EnsureMaps initializes nil maps on SnapshotState. Call this for
+// deserialized states where maps may be nil (e.g. legacy snapshots loaded from
+// storage). NewSnapshotState already returns initialized maps, so this is only
+// needed for states not created through the factory.
+func (s *SnapshotState) EnsureMaps() {
+	if s.CharacterStates == nil {
+		s.CharacterStates = make(map[string]CharacterState)
+	}
+	if s.AdversaryStates == nil {
+		s.AdversaryStates = make(map[string]AdversaryState)
+	}
+	if s.CountdownStates == nil {
+		s.CountdownStates = make(map[string]CountdownState)
+	}
+}
+
 // CountdownState captures Daggerheart countdown state for aggregate projections.
 type CountdownState struct {
 	CampaignID  string

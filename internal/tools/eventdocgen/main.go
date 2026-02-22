@@ -1279,8 +1279,24 @@ func scanAppliers(dir, root string, valueByConstant map[string]string) (map[stri
 		relPath, _ := filepath.Rel(root, path)
 		relPath = filepath.ToSlash(relPath)
 		ast.Inspect(file, func(node ast.Node) bool {
+			// Match Apply methods with a switch on evt.Type.
 			fn, ok := node.(*ast.FuncDecl)
 			if !ok || fn.Body == nil || fn.Name == nil || fn.Name.Name != "Apply" {
+				// Also match module.HandleAdapter(r, EventType, handler) calls
+				// anywhere in the file — these register adapter handlers via
+				// the AdapterRouter instead of a switch in Apply.
+				if call, ok := node.(*ast.CallExpr); ok {
+					if idx, ok := moduleHandleAdapterArgIndex(call); ok {
+						if len(call.Args) > idx {
+							value := resolveEventValue(call.Args[idx], fileLookup, importAliases, root)
+							if value != "" {
+								pos := fset.Position(call.Args[idx].Pos())
+								location := fmt.Sprintf("%s:%d", relPath, pos.Line)
+								appliers[value] = append(appliers[value], location)
+							}
+						}
+					}
+				}
 				return true
 			}
 			ast.Inspect(fn.Body, func(inner ast.Node) bool {
@@ -1317,6 +1333,20 @@ func scanAppliers(dir, root string, valueByConstant map[string]string) (map[stri
 	return appliers, nil
 }
 
+// moduleHandleAdapterArgIndex returns the argument index that carries the
+// event type for module.HandleAdapter calls. Returns (1, true) for
+// HandleAdapter since the signature is HandleAdapter(router, eventType, handler).
+func moduleHandleAdapterArgIndex(call *ast.CallExpr) (int, bool) {
+	name, ok := moduleCallName(call)
+	if !ok {
+		return 0, false
+	}
+	if name == "HandleAdapter" {
+		return 1, true
+	}
+	return 0, false
+}
+
 func switchesOnEventType(tag ast.Expr) bool {
 	selector, ok := tag.(*ast.SelectorExpr)
 	if !ok {
@@ -1348,7 +1378,7 @@ func moduleDecideEventTypeArgIndex(call *ast.CallExpr) (int, bool) {
 	switch name {
 	case "DecideFunc":
 		return 1, true
-	case "DecideFuncWithState":
+	case "DecideFuncWithState", "DecideFuncTransform":
 		return 3, true
 	default:
 		return 0, false

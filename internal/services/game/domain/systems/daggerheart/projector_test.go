@@ -9,8 +9,85 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
+// assertTestSnapshotState extracts a *SnapshotState from an any value returned
+// by a fold, accepting both value and pointer types for test convenience.
+func assertTestSnapshotState(t *testing.T, v any) SnapshotState {
+	t.Helper()
+	switch typed := v.(type) {
+	case SnapshotState:
+		return typed
+	case *SnapshotState:
+		if typed != nil {
+			return *typed
+		}
+	}
+	t.Fatalf("expected SnapshotState or *SnapshotState, got %T", v)
+	return SnapshotState{}
+}
+
+func TestSnapshotOrDefault_NilReturnsFactoryDefaults(t *testing.T) {
+	s, hasState := snapshotOrDefault(nil)
+	if hasState {
+		t.Fatal("expected hasState=false for nil input")
+	}
+	if s.GMFear != GMFearDefault {
+		t.Fatalf("gm fear = %d, want %d", s.GMFear, GMFearDefault)
+	}
+	if s.CharacterStates == nil {
+		t.Fatal("CharacterStates should be initialized")
+	}
+	if s.AdversaryStates == nil {
+		t.Fatal("AdversaryStates should be initialized")
+	}
+	if s.CountdownStates == nil {
+		t.Fatal("CountdownStates should be initialized")
+	}
+}
+
+func TestSnapshotOrDefault_ValueReturnsState(t *testing.T) {
+	input := SnapshotState{CampaignID: "camp-1", GMFear: 5}
+	s, hasState := snapshotOrDefault(input)
+	if !hasState {
+		t.Fatal("expected hasState=true for value input")
+	}
+	if s.CampaignID != "camp-1" {
+		t.Fatalf("campaign id = %s, want camp-1", s.CampaignID)
+	}
+	if s.GMFear != 5 {
+		t.Fatalf("gm fear = %d, want 5", s.GMFear)
+	}
+}
+
+func TestSnapshotOrDefault_PointerReturnsState(t *testing.T) {
+	input := &SnapshotState{CampaignID: "camp-2", GMFear: 3}
+	s, hasState := snapshotOrDefault(input)
+	if !hasState {
+		t.Fatal("expected hasState=true for pointer input")
+	}
+	if s.CampaignID != "camp-2" {
+		t.Fatalf("campaign id = %s, want camp-2", s.CampaignID)
+	}
+	if s.GMFear != 3 {
+		t.Fatalf("gm fear = %d, want 3", s.GMFear)
+	}
+}
+
+func TestSnapshotOrDefault_NilPointerReturnsFactoryDefaults(t *testing.T) {
+	var input *SnapshotState
+	s, hasState := snapshotOrDefault(input)
+	if hasState {
+		t.Fatal("expected hasState=false for nil pointer input")
+	}
+	if s.GMFear != GMFearDefault {
+		t.Fatalf("gm fear = %d, want %d", s.GMFear, GMFearDefault)
+	}
+	if s.CharacterStates == nil {
+		t.Fatal("CharacterStates should be initialized")
+	}
+}
+
 func TestFolderApplyGMFearChanged_UpdatesState(t *testing.T) {
-	projector := Folder{}
+	projector := NewFolder()
 	state := SnapshotState{CampaignID: "camp-1", GMFear: 2}
 
 	payload, err := json.Marshal(GMFearChangedPayload{Before: 2, After: 5, Reason: "shift"})
@@ -27,10 +104,7 @@ func TestFolderApplyGMFearChanged_UpdatesState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("apply event: %v", err)
 	}
-	snapshot, ok := updated.(SnapshotState)
-	if !ok {
-		t.Fatalf("expected SnapshotState, got %T", updated)
-	}
+	snapshot := assertTestSnapshotState(t, updated)
 	if snapshot.GMFear != 5 {
 		t.Fatalf("gm fear = %d, want %d", snapshot.GMFear, 5)
 	}
@@ -40,7 +114,7 @@ func TestFolderApplyGMFearChanged_UpdatesState(t *testing.T) {
 }
 
 func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
-	projector := Folder{}
+	projector := NewFolder()
 	hpAfter := 6
 	hopeAfter := 2
 	payload, err := json.Marshal(CharacterStatePatchedPayload{
@@ -66,10 +140,7 @@ func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("apply event: %v", err)
 	}
-	snapshot, ok := updated.(SnapshotState)
-	if !ok {
-		t.Fatalf("expected SnapshotState, got %T", updated)
-	}
+	snapshot := assertTestSnapshotState(t, updated)
 	character, ok := snapshot.CharacterStates["char-1"]
 	if !ok {
 		t.Fatal("expected character state")
@@ -89,7 +160,7 @@ func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 }
 
 func TestFolderApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *testing.T) {
-	projector := Folder{}
+	projector := NewFolder()
 	hpBefore := 7
 	payload, err := json.Marshal(CharacterStatePatchedPayload{
 		CharacterID: "char-1",
@@ -118,10 +189,7 @@ func TestFolderApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *testing
 	if err != nil {
 		t.Fatalf("apply event: %v", err)
 	}
-	snapshot, ok := updated.(SnapshotState)
-	if !ok {
-		t.Fatalf("expected SnapshotState, got %T", updated)
-	}
+	snapshot := assertTestSnapshotState(t, updated)
 	character, ok := snapshot.CharacterStates["char-1"]
 	if !ok {
 		t.Fatal("expected character state")
@@ -132,7 +200,7 @@ func TestFolderApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *testing
 }
 
 func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
-	projector := Folder{}
+	projector := NewFolder()
 	state := SnapshotState{
 		CampaignID: "camp-1",
 		AdversaryStates: map[string]AdversaryState{
@@ -184,10 +252,7 @@ func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 	if err != nil {
 		t.Fatalf("apply event: %v", err)
 	}
-	snapshot, ok := updated.(SnapshotState)
-	if !ok {
-		t.Fatalf("expected SnapshotState, got %T", updated)
-	}
+	snapshot := assertTestSnapshotState(t, updated)
 	adversary, ok := snapshot.AdversaryStates["adv-1"]
 	if !ok {
 		t.Fatal("expected adversary state")
@@ -222,7 +287,7 @@ func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 }
 
 func TestFolderApplyHandlesAllRegisteredEvents(t *testing.T) {
-	projector := Folder{}
+	projector := NewFolder()
 	for _, def := range daggerheartEventDefinitions {
 		t.Run(string(def.Type), func(t *testing.T) {
 			payloadJSON := []byte(`{}`)
@@ -244,9 +309,7 @@ func TestFolderApplyHandlesAllRegisteredEvents(t *testing.T) {
 			if err != nil {
 				t.Fatalf("projector apply %s: %v", def.Type, err)
 			}
-			if _, ok := updated.(SnapshotState); !ok {
-				t.Fatalf("expected SnapshotState, got %T", updated)
-			}
+			assertTestSnapshotState(t, updated)
 		})
 	}
 }
@@ -255,7 +318,7 @@ func TestFolderApply_RejectsAggregateState(t *testing.T) {
 	// System folders should only receive their own state type, not the
 	// full aggregate.State. The aggregate folder extracts the system-specific
 	// state before calling RouteEvent.
-	folder := Folder{}
+	folder := NewFolder()
 	aggState := aggregate.State{
 		Systems: map[module.Key]any{
 			{ID: SystemID, Version: SystemVersion}: SnapshotState{
@@ -277,7 +340,7 @@ func TestFolderApply_RejectsAggregateState(t *testing.T) {
 }
 
 func TestFolderApplyUnknownEventReturnsError(t *testing.T) {
-	projector := Folder{}
+	projector := NewFolder()
 	_, err := projector.Fold(SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
 		Type:          event.Type("sys.daggerheart.unknown"),

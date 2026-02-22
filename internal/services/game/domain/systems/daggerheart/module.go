@@ -22,7 +22,7 @@ type Module struct {
 func NewModule() *Module {
 	return &Module{
 		decider: Decider{},
-		folder:  Folder{},
+		folder:  NewFolder(),
 		factory: NewStateFactory(),
 	}
 }

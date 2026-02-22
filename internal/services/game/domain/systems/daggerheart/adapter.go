@@ -2,23 +2,26 @@ package daggerheart
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // Adapter applies Daggerheart-specific events to system projections.
 type Adapter struct {
-	store storage.DaggerheartStore
+	store  storage.DaggerheartStore
+	router *module.AdapterRouter
 }
 
-// NewAdapter creates a Daggerheart adapter.
+// NewAdapter creates a Daggerheart adapter with all handlers registered.
 func NewAdapter(store storage.DaggerheartStore) *Adapter {
-	return &Adapter{store: store}
+	a := &Adapter{store: store}
+	a.router = a.buildRouter()
+	return a
 }
 
 // ID returns the Daggerheart system identifier.
@@ -43,42 +46,7 @@ func (a *Adapter) Apply(ctx context.Context, evt event.Event) error {
 	if a == nil || a.store == nil {
 		return fmt.Errorf("daggerheart store is not configured")
 	}
-	switch evt.Type {
-	case EventTypeDamageApplied:
-		return a.applyDamageApplied(ctx, evt)
-	case EventTypeRestTaken:
-		return a.applyRestTaken(ctx, evt)
-	case EventTypeCharacterTemporaryArmorApplied:
-		return a.applyCharacterTemporaryArmorApplied(ctx, evt)
-	case EventTypeDowntimeMoveApplied:
-		return a.applyDowntimeMoveApplied(ctx, evt)
-	case EventTypeLoadoutSwapped:
-		return a.applyLoadoutSwapped(ctx, evt)
-	case EventTypeCharacterStatePatched:
-		return a.applyCharacterStatePatched(ctx, evt)
-	case EventTypeConditionChanged:
-		return a.applyConditionChanged(ctx, evt)
-	case EventTypeAdversaryConditionChanged:
-		return a.applyAdversaryConditionChanged(ctx, evt)
-	case EventTypeGMFearChanged:
-		return a.applyGMFearChanged(ctx, evt)
-	case EventTypeCountdownCreated:
-		return a.applyCountdownCreated(ctx, evt)
-	case EventTypeCountdownUpdated:
-		return a.applyCountdownUpdated(ctx, evt)
-	case EventTypeCountdownDeleted:
-		return a.applyCountdownDeleted(ctx, evt)
-	case EventTypeAdversaryCreated:
-		return a.applyAdversaryCreated(ctx, evt)
-	case EventTypeAdversaryDamageApplied:
-		return a.applyAdversaryDamageApplied(ctx, evt)
-	case EventTypeAdversaryUpdated:
-		return a.applyAdversaryUpdated(ctx, evt)
-	case EventTypeAdversaryDeleted:
-		return a.applyAdversaryDeleted(ctx, evt)
-	default:
-		return fmt.Errorf("unhandled daggerheart event type %s for campaign %s", evt.Type, evt.CampaignID)
-	}
+	return a.router.Apply(ctx, evt)
 }
 
 // Snapshot loads the Daggerheart snapshot projection.
@@ -92,19 +60,33 @@ func (a *Adapter) Snapshot(ctx context.Context, campaignID string) (any, error) 
 	return a.store.GetDaggerheartSnapshot(ctx, campaignID)
 }
 
-func (a *Adapter) applyDamageApplied(ctx context.Context, evt event.Event) error {
-	var payload DamageAppliedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.damage_applied payload: %w", err)
-	}
+// buildRouter creates and populates the adapter router with all handlers.
+func (a *Adapter) buildRouter() *module.AdapterRouter {
+	r := module.NewAdapterRouter()
+	module.HandleAdapter(r, EventTypeDamageApplied, a.handleDamageApplied)
+	module.HandleAdapter(r, EventTypeRestTaken, a.handleRestTaken)
+	module.HandleAdapter(r, EventTypeCharacterTemporaryArmorApplied, a.handleCharacterTemporaryArmorApplied)
+	module.HandleAdapter(r, EventTypeDowntimeMoveApplied, a.handleDowntimeMoveApplied)
+	module.HandleAdapter(r, EventTypeLoadoutSwapped, a.handleLoadoutSwapped)
+	module.HandleAdapter(r, EventTypeCharacterStatePatched, a.handleCharacterStatePatched)
+	module.HandleAdapter(r, EventTypeConditionChanged, a.handleConditionChanged)
+	module.HandleAdapter(r, EventTypeAdversaryConditionChanged, a.handleAdversaryConditionChanged)
+	module.HandleAdapter(r, EventTypeGMFearChanged, a.handleGMFearChanged)
+	module.HandleAdapter(r, EventTypeCountdownCreated, a.handleCountdownCreated)
+	module.HandleAdapter(r, EventTypeCountdownUpdated, a.handleCountdownUpdated)
+	module.HandleAdapter(r, EventTypeCountdownDeleted, a.handleCountdownDeleted)
+	module.HandleAdapter(r, EventTypeAdversaryCreated, a.handleAdversaryCreated)
+	module.HandleAdapter(r, EventTypeAdversaryDamageApplied, a.handleAdversaryDamageApplied)
+	module.HandleAdapter(r, EventTypeAdversaryUpdated, a.handleAdversaryUpdated)
+	module.HandleAdapter(r, EventTypeAdversaryDeleted, a.handleAdversaryDeleted)
+	return r
+}
+
+func (a *Adapter) handleDamageApplied(ctx context.Context, evt event.Event, payload DamageAppliedPayload) error {
 	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, payload.HpAfter, nil, nil, nil, payload.ArmorAfter, nil)
 }
 
-func (a *Adapter) applyRestTaken(ctx context.Context, evt event.Event) error {
-	var payload RestTakenPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.rest_taken payload: %w", err)
-	}
+func (a *Adapter) handleRestTaken(ctx context.Context, evt event.Event, payload RestTakenPayload) error {
 	if err := a.store.PutDaggerheartSnapshot(ctx, storage.DaggerheartSnapshot{
 		CampaignID:            evt.CampaignID,
 		GMFear:                payload.GMFearAfter,
@@ -158,11 +140,7 @@ func (a *Adapter) clearRestTemporaryArmor(ctx context.Context, campaignID, chara
 	return nil
 }
 
-func (a *Adapter) applyDowntimeMoveApplied(ctx context.Context, evt event.Event) error {
-	var payload DowntimeMoveAppliedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.downtime_move_applied payload: %w", err)
-	}
+func (a *Adapter) handleDowntimeMoveApplied(ctx context.Context, evt event.Event, payload DowntimeMoveAppliedPayload) error {
 	if strings.TrimSpace(payload.Move) == "repair_all_armor" {
 		state, err := a.store.GetDaggerheartCharacterState(ctx, evt.CampaignID, payload.CharacterID)
 		if err != nil {
@@ -193,11 +171,7 @@ func (a *Adapter) applyDowntimeMoveApplied(ctx context.Context, evt event.Event)
 	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, nil, payload.HopeAfter, nil, payload.StressAfter, payload.ArmorAfter, nil)
 }
 
-func (a *Adapter) applyCharacterTemporaryArmorApplied(ctx context.Context, evt event.Event) error {
-	var payload CharacterTemporaryArmorAppliedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.character_temporary_armor_applied payload: %w", err)
-	}
+func (a *Adapter) handleCharacterTemporaryArmorApplied(ctx context.Context, evt event.Event, payload CharacterTemporaryArmorAppliedPayload) error {
 	characterID := strings.TrimSpace(payload.CharacterID)
 
 	state, err := a.store.GetDaggerheartCharacterState(ctx, evt.CampaignID, characterID)
@@ -228,27 +202,15 @@ func (a *Adapter) applyCharacterTemporaryArmorApplied(ctx context.Context, evt e
 	return a.store.PutDaggerheartCharacterState(ctx, state)
 }
 
-func (a *Adapter) applyLoadoutSwapped(ctx context.Context, evt event.Event) error {
-	var payload LoadoutSwappedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.loadout_swapped payload: %w", err)
-	}
+func (a *Adapter) handleLoadoutSwapped(ctx context.Context, evt event.Event, payload LoadoutSwappedPayload) error {
 	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, nil, nil, nil, payload.StressAfter, nil, nil)
 }
 
-func (a *Adapter) applyCharacterStatePatched(ctx context.Context, evt event.Event) error {
-	var payload CharacterStatePatchedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.character_state_patched payload: %w", err)
-	}
+func (a *Adapter) handleCharacterStatePatched(ctx context.Context, evt event.Event, payload CharacterStatePatchedPayload) error {
 	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, payload.HPAfter, payload.HopeAfter, payload.HopeMaxAfter, payload.StressAfter, payload.ArmorAfter, payload.LifeStateAfter)
 }
 
-func (a *Adapter) applyConditionChanged(ctx context.Context, evt event.Event) error {
-	var payload ConditionChangedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.condition_changed payload: %w", err)
-	}
+func (a *Adapter) handleConditionChanged(ctx context.Context, evt event.Event, payload ConditionChangedPayload) error {
 	// RollSeq is event-only metadata not validated in ValidatePayload.
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return fmt.Errorf("condition_changed roll_seq must be positive")
@@ -260,11 +222,7 @@ func (a *Adapter) applyConditionChanged(ctx context.Context, evt event.Event) er
 	return a.applyConditionPatch(ctx, evt.CampaignID, payload.CharacterID, normalizedAfter)
 }
 
-func (a *Adapter) applyAdversaryConditionChanged(ctx context.Context, evt event.Event) error {
-	var payload AdversaryConditionChangedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.adversary_condition_changed payload: %w", err)
-	}
+func (a *Adapter) handleAdversaryConditionChanged(ctx context.Context, evt event.Event, payload AdversaryConditionChangedPayload) error {
 	// RollSeq is event-only metadata not validated in ValidatePayload.
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return fmt.Errorf("adversary_condition_changed roll_seq must be positive")
@@ -276,11 +234,7 @@ func (a *Adapter) applyAdversaryConditionChanged(ctx context.Context, evt event.
 	return a.applyAdversaryConditionPatch(ctx, evt.CampaignID, payload.AdversaryID, normalizedAfter)
 }
 
-func (a *Adapter) applyGMFearChanged(ctx context.Context, evt event.Event) error {
-	var payload GMFearChangedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.gm_fear_changed payload: %w", err)
-	}
+func (a *Adapter) handleGMFearChanged(ctx context.Context, evt event.Event, payload GMFearChangedPayload) error {
 	// Range validation before writing to storage.
 	if payload.After < GMFearMin || payload.After > GMFearMax {
 		return fmt.Errorf("gm_fear_changed after must be in range %d..%d", GMFearMin, GMFearMax)
@@ -297,11 +251,7 @@ func (a *Adapter) applyGMFearChanged(ctx context.Context, evt event.Event) error
 	})
 }
 
-func (a *Adapter) applyCountdownCreated(ctx context.Context, evt event.Event) error {
-	var payload CountdownCreatedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.countdown_created payload: %w", err)
-	}
+func (a *Adapter) handleCountdownCreated(ctx context.Context, evt event.Event, payload CountdownCreatedPayload) error {
 	return a.store.PutDaggerheartCountdown(ctx, storage.DaggerheartCountdown{
 		CampaignID:  evt.CampaignID,
 		CountdownID: payload.CountdownID,
@@ -314,11 +264,7 @@ func (a *Adapter) applyCountdownCreated(ctx context.Context, evt event.Event) er
 	})
 }
 
-func (a *Adapter) applyCountdownUpdated(ctx context.Context, evt event.Event) error {
-	var payload CountdownUpdatedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.countdown_updated payload: %w", err)
-	}
+func (a *Adapter) handleCountdownUpdated(ctx context.Context, evt event.Event, payload CountdownUpdatedPayload) error {
 	countdown, err := a.store.GetDaggerheartCountdown(ctx, evt.CampaignID, payload.CountdownID)
 	if err != nil {
 		return err
@@ -333,19 +279,11 @@ func (a *Adapter) applyCountdownUpdated(ctx context.Context, evt event.Event) er
 	return a.store.PutDaggerheartCountdown(ctx, countdown)
 }
 
-func (a *Adapter) applyCountdownDeleted(ctx context.Context, evt event.Event) error {
-	var payload CountdownDeletedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.countdown_deleted payload: %w", err)
-	}
+func (a *Adapter) handleCountdownDeleted(ctx context.Context, evt event.Event, payload CountdownDeletedPayload) error {
 	return a.store.DeleteDaggerheartCountdown(ctx, evt.CampaignID, payload.CountdownID)
 }
 
-func (a *Adapter) applyAdversaryCreated(ctx context.Context, evt event.Event) error {
-	var payload AdversaryCreatedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.adversary_created payload: %w", err)
-	}
+func (a *Adapter) handleAdversaryCreated(ctx context.Context, evt event.Event, payload AdversaryCreatedPayload) error {
 	if err := validateAdversaryStats(payload.HP, payload.HPMax, payload.Stress, payload.StressMax, payload.Evasion, payload.Major, payload.Severe, payload.Armor); err != nil {
 		return err
 	}
@@ -370,11 +308,7 @@ func (a *Adapter) applyAdversaryCreated(ctx context.Context, evt event.Event) er
 	})
 }
 
-func (a *Adapter) applyAdversaryUpdated(ctx context.Context, evt event.Event) error {
-	var payload AdversaryUpdatedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.adversary_updated payload: %w", err)
-	}
+func (a *Adapter) handleAdversaryUpdated(ctx context.Context, evt event.Event, payload AdversaryUpdatedPayload) error {
 	adversaryID := strings.TrimSpace(payload.AdversaryID)
 	if err := validateAdversaryStats(payload.HP, payload.HPMax, payload.Stress, payload.StressMax, payload.Evasion, payload.Major, payload.Severe, payload.Armor); err != nil {
 		return err
@@ -405,11 +339,7 @@ func (a *Adapter) applyAdversaryUpdated(ctx context.Context, evt event.Event) er
 	})
 }
 
-func (a *Adapter) applyAdversaryDamageApplied(ctx context.Context, evt event.Event) error {
-	var payload AdversaryDamageAppliedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.adversary_damage_applied payload: %w", err)
-	}
+func (a *Adapter) handleAdversaryDamageApplied(ctx context.Context, evt event.Event, payload AdversaryDamageAppliedPayload) error {
 	adversaryID := strings.TrimSpace(payload.AdversaryID)
 	// State consistency: merge payload with current projection state.
 	current, err := a.store.GetDaggerheartAdversary(ctx, evt.CampaignID, adversaryID)
@@ -449,6 +379,10 @@ func (a *Adapter) applyAdversaryDamageApplied(ctx context.Context, evt event.Eve
 	})
 }
 
+func (a *Adapter) handleAdversaryDeleted(ctx context.Context, evt event.Event, payload AdversaryDeletedPayload) error {
+	return a.store.DeleteDaggerheartAdversary(ctx, evt.CampaignID, strings.TrimSpace(payload.AdversaryID))
+}
+
 func validateAdversaryStats(hp, hpMax, stress, stressMax, evasion, major, severe, armor int) error {
 	if hpMax <= 0 {
 		return fmt.Errorf("hp_max must be positive")
@@ -475,14 +409,6 @@ func validateAdversaryStats(hp, hpMax, stress, stressMax, evasion, major, severe
 		return fmt.Errorf("armor must be non-negative")
 	}
 	return nil
-}
-
-func (a *Adapter) applyAdversaryDeleted(ctx context.Context, evt event.Event) error {
-	var payload AdversaryDeletedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return fmt.Errorf("decode sys.daggerheart.adversary_deleted payload: %w", err)
-	}
-	return a.store.DeleteDaggerheartAdversary(ctx, evt.CampaignID, strings.TrimSpace(payload.AdversaryID))
 }
 
 func daggerheartCharacterStateFromStorage(state storage.DaggerheartCharacterState, armorMax int) CharacterState {
