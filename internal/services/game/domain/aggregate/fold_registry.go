@@ -26,6 +26,13 @@ type foldEntry struct {
 
 // coreFoldEntries returns the declarative fold dispatch table for all core
 // domains. Adding a new core domain requires only adding an entry here.
+//
+// Entity-keyed entries (participant, character, invite) perform an EntityID
+// presence check at fold time. This is intentional defense-in-depth:
+// ValidateEntityKeyedAddressing catches missing EntityIDs at startup, but the
+// runtime check guards against regression if a new event type is registered
+// without the startup validator being updated. Both checks are cheap and
+// should be preserved.
 func coreFoldEntries() []foldEntry {
 	return []foldEntry{
 		{

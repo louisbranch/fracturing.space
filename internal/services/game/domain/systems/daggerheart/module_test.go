@@ -70,7 +70,7 @@ func eventValidationCases() []eventValidationCase {
 }
 
 func TestFoldHandledTypes_DerivedFromEventDefinitions(t *testing.T) {
-	folder := Folder{}
+	folder := NewFolder()
 	foldTypes := folder.FoldHandledTypes()
 
 	// Build expected set from daggerheartEventDefinitions with replay intent.

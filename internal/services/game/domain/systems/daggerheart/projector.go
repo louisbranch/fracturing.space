@@ -1,158 +1,197 @@
 package daggerheart
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 // Folder folds Daggerheart system events into snapshot state.
-type Folder struct{}
+type Folder struct {
+	router *module.FoldRouter[*SnapshotState]
+}
+
+// NewFolder creates a Folder with all fold handlers registered.
+func NewFolder() *Folder {
+	router := module.NewFoldRouter(assertSnapshotState)
+	registerFoldHandlers(router)
+	return &Folder{router: router}
+}
 
 // FoldHandledTypes returns the event types this folder's Fold handles.
 // Derived from daggerheartEventDefinitions so the list stays in sync with the
 // authoritative registration slice. Used by ValidateSystemFoldCoverage to
 // verify every emittable event type has a fold handler.
-func (Folder) FoldHandledTypes() []event.Type {
+func (f *Folder) FoldHandledTypes() []event.Type {
 	return eventTypesWithReplayIntent()
 }
 
-// Fold folds a Daggerheart event into system state.
-func (Folder) Fold(state any, evt event.Event) (any, error) {
-	var fearPayload GMFearChangedPayload
-	current, ok := snapshotFromState(state)
-	if !ok && state != nil {
-		return state, fmt.Errorf("unsupported state type %T", state)
+// Fold folds a Daggerheart event into system state. It delegates to the
+// FoldRouter after ensuring the snapshot CampaignID is populated from the
+// event envelope — required because the first fold may receive nil state.
+func (f *Folder) Fold(state any, evt event.Event) (any, error) {
+	// Pre-assert and set CampaignID before router dispatch so individual
+	// fold handlers don't need to repeat this.
+	s, err := assertSnapshotState(state)
+	if err != nil {
+		return nil, err
 	}
-	if current.CampaignID == "" {
-		current.CampaignID = evt.CampaignID
+	if s.CampaignID == "" {
+		s.CampaignID = evt.CampaignID
 	}
-	switch evt.Type {
-	case EventTypeGMFearChanged:
-		if err := json.Unmarshal(evt.PayloadJSON, &fearPayload); err != nil {
-			return state, fmt.Errorf("decode gm_fear_changed payload: %w", err)
+	return f.router.Fold(s, evt)
+}
+
+// registerFoldHandlers registers all Daggerheart fold handlers on the router.
+func registerFoldHandlers(r *module.FoldRouter[*SnapshotState]) {
+	module.HandleFold(r, EventTypeGMFearChanged, foldGMFearChanged)
+	module.HandleFold(r, EventTypeCharacterStatePatched, foldCharacterStatePatched)
+	module.HandleFold(r, EventTypeConditionChanged, foldConditionChanged)
+	module.HandleFold(r, EventTypeLoadoutSwapped, foldLoadoutSwapped)
+	module.HandleFold(r, EventTypeCharacterTemporaryArmorApplied, foldCharacterTemporaryArmorApplied)
+	module.HandleFold(r, EventTypeRestTaken, foldRestTaken)
+	module.HandleFold(r, EventTypeCountdownCreated, foldCountdownCreated)
+	module.HandleFold(r, EventTypeCountdownUpdated, foldCountdownUpdated)
+	module.HandleFold(r, EventTypeCountdownDeleted, foldCountdownDeleted)
+	module.HandleFold(r, EventTypeDamageApplied, foldDamageApplied)
+	module.HandleFold(r, EventTypeAdversaryDamageApplied, foldAdversaryDamageApplied)
+	module.HandleFold(r, EventTypeDowntimeMoveApplied, foldDowntimeMoveApplied)
+	module.HandleFold(r, EventTypeAdversaryConditionChanged, foldAdversaryConditionChanged)
+	module.HandleFold(r, EventTypeAdversaryCreated, foldAdversaryCreated)
+	module.HandleFold(r, EventTypeAdversaryUpdated, foldAdversaryUpdated)
+	module.HandleFold(r, EventTypeAdversaryDeleted, foldAdversaryDeleted)
+}
+
+// assertSnapshotState converts untyped state to *SnapshotState for the fold
+// router. It handles nil (first event), value types, and pointer types.
+// EnsureMaps is called on the result so deserialized states with nil maps
+// are safe to use immediately.
+func assertSnapshotState(state any) (*SnapshotState, error) {
+	var s *SnapshotState
+	switch typed := state.(type) {
+	case nil:
+		v := SnapshotState{GMFear: GMFearDefault}
+		s = &v
+	case SnapshotState:
+		s = &typed
+	case *SnapshotState:
+		if typed != nil {
+			s = typed
+		} else {
+			v := SnapshotState{GMFear: GMFearDefault}
+			s = &v
 		}
-		if fearPayload.After < GMFearMin || fearPayload.After > GMFearMax {
-			return state, fmt.Errorf("gm fear after must be in range %d..%d", GMFearMin, GMFearMax)
-		}
-		current.GMFear = fearPayload.After
-	case EventTypeCharacterStatePatched:
-		var payload CharacterStatePatchedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode character_state_patched payload: %w", err)
-		}
-		applyCharacterStatePatched(&current, payload)
-	case EventTypeConditionChanged:
-		var payload ConditionChangedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode condition_changed payload: %w", err)
-		}
-		applyCharacterConditionsChanged(&current, payload)
-	case EventTypeLoadoutSwapped:
-		var payload LoadoutSwappedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode loadout_swapped payload: %w", err)
-		}
-		applyCharacterLoadoutSwapped(&current, payload)
-	case EventTypeCharacterTemporaryArmorApplied:
-		var payload CharacterTemporaryArmorAppliedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode character_temporary_armor_applied payload: %w", err)
-		}
-		applyCharacterTemporaryArmorApplied(&current, payload)
-	case EventTypeRestTaken:
-		var payload RestTakenPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode rest_taken payload: %w", err)
-		}
-		current.GMFear = payload.GMFearAfter
-		if current.GMFear < GMFearMin || current.GMFear > GMFearMax {
-			return state, fmt.Errorf("rest_taken gm_fear_after must be in range %d..%d", GMFearMin, GMFearMax)
-		}
-		for _, patch := range payload.CharacterStates {
-			applyRestCharacterPatch(&current, patch)
-			if payload.RefreshRest || payload.RefreshLongRest {
-				clearRestTemporaryArmor(&current, patch.CharacterID, payload.RefreshRest, payload.RefreshLongRest)
-			}
-		}
-	case EventTypeCountdownCreated:
-		var payload CountdownCreatedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode countdown_created payload: %w", err)
-		}
-		applyCountdownUpsert(&current, payload.CountdownID, func(state *CountdownState) {
-			state.Name = payload.Name
-			state.Kind = payload.Kind
-			state.Current = payload.Current
-			state.Max = payload.Max
-			state.Direction = payload.Direction
-			state.Looping = payload.Looping
-		})
-	case EventTypeCountdownUpdated:
-		var payload CountdownUpdatedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode countdown_updated payload: %w", err)
-		}
-		applyCountdownUpsert(&current, payload.CountdownID, func(state *CountdownState) {
-			state.Current = payload.After
-			if payload.Looped {
-				state.Looping = true
-			}
-		})
-	case EventTypeCountdownDeleted:
-		var payload CountdownDeletedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode countdown_deleted payload: %w", err)
-		}
-		deleteCountdownState(&current, payload.CountdownID)
-	case EventTypeDamageApplied:
-		var payload DamageAppliedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode damage_applied payload: %w", err)
-		}
-		applyDamageApplied(&current, payload.CharacterID, payload.HpAfter, payload.ArmorAfter)
-	case EventTypeAdversaryDamageApplied:
-		var payload AdversaryDamageAppliedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode adversary_damage_applied payload: %w", err)
-		}
-		applyAdversaryDamage(&current, payload.AdversaryID, payload.HpAfter, payload.ArmorAfter)
-	case EventTypeDowntimeMoveApplied:
-		var payload DowntimeMoveAppliedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode downtime_move_applied payload: %w", err)
-		}
-		applyDowntimeMove(&current, payload.CharacterID, payload.Move, payload.HopeAfter, payload.StressAfter, payload.ArmorAfter)
-	case EventTypeAdversaryConditionChanged:
-		var payload AdversaryConditionChangedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode adversary_condition_changed payload: %w", err)
-		}
-		applyAdversaryConditionsChanged(&current, payload.AdversaryID, payload.ConditionsAfter)
-	case EventTypeAdversaryCreated:
-		var payload AdversaryCreatedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode adversary_created payload: %w", err)
-		}
-		applyAdversaryCreated(&current, payload)
-	case EventTypeAdversaryUpdated:
-		var payload AdversaryUpdatedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode adversary_updated payload: %w", err)
-		}
-		applyAdversaryUpdated(&current, payload)
-	case EventTypeAdversaryDeleted:
-		var payload AdversaryDeletedPayload
-		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-			return state, fmt.Errorf("decode adversary_deleted payload: %w", err)
-		}
-		delete(current.AdversaryStates, strings.TrimSpace(payload.AdversaryID))
 	default:
-		return nil, fmt.Errorf("unhandled daggerheart folder event type: %s", evt.Type)
+		return nil, fmt.Errorf("unsupported state type %T", state)
 	}
-	return current, nil
+	s.EnsureMaps()
+	return s, nil
+}
+
+func foldGMFearChanged(state *SnapshotState, payload GMFearChangedPayload) error {
+	if payload.After < GMFearMin || payload.After > GMFearMax {
+		return fmt.Errorf("gm fear after must be in range %d..%d", GMFearMin, GMFearMax)
+	}
+	state.GMFear = payload.After
+	return nil
+}
+
+func foldCharacterStatePatched(state *SnapshotState, payload CharacterStatePatchedPayload) error {
+	applyCharacterStatePatched(state, payload)
+	return nil
+}
+
+func foldConditionChanged(state *SnapshotState, payload ConditionChangedPayload) error {
+	applyCharacterConditionsChanged(state, payload)
+	return nil
+}
+
+func foldLoadoutSwapped(state *SnapshotState, payload LoadoutSwappedPayload) error {
+	applyCharacterLoadoutSwapped(state, payload)
+	return nil
+}
+
+func foldCharacterTemporaryArmorApplied(state *SnapshotState, payload CharacterTemporaryArmorAppliedPayload) error {
+	applyCharacterTemporaryArmorApplied(state, payload)
+	return nil
+}
+
+func foldRestTaken(state *SnapshotState, payload RestTakenPayload) error {
+	state.GMFear = payload.GMFearAfter
+	if state.GMFear < GMFearMin || state.GMFear > GMFearMax {
+		return fmt.Errorf("rest_taken gm_fear_after must be in range %d..%d", GMFearMin, GMFearMax)
+	}
+	for _, patch := range payload.CharacterStates {
+		applyRestCharacterPatch(state, patch)
+		if payload.RefreshRest || payload.RefreshLongRest {
+			clearRestTemporaryArmor(state, patch.CharacterID, payload.RefreshRest, payload.RefreshLongRest)
+		}
+	}
+	return nil
+}
+
+func foldCountdownCreated(state *SnapshotState, payload CountdownCreatedPayload) error {
+	applyCountdownUpsert(state, payload.CountdownID, func(cs *CountdownState) {
+		cs.Name = payload.Name
+		cs.Kind = payload.Kind
+		cs.Current = payload.Current
+		cs.Max = payload.Max
+		cs.Direction = payload.Direction
+		cs.Looping = payload.Looping
+	})
+	return nil
+}
+
+func foldCountdownUpdated(state *SnapshotState, payload CountdownUpdatedPayload) error {
+	applyCountdownUpsert(state, payload.CountdownID, func(cs *CountdownState) {
+		cs.Current = payload.After
+		if payload.Looped {
+			cs.Looping = true
+		}
+	})
+	return nil
+}
+
+func foldCountdownDeleted(state *SnapshotState, payload CountdownDeletedPayload) error {
+	deleteCountdownState(state, payload.CountdownID)
+	return nil
+}
+
+func foldDamageApplied(state *SnapshotState, payload DamageAppliedPayload) error {
+	applyDamageApplied(state, payload.CharacterID, payload.HpAfter, payload.ArmorAfter)
+	return nil
+}
+
+func foldAdversaryDamageApplied(state *SnapshotState, payload AdversaryDamageAppliedPayload) error {
+	applyAdversaryDamage(state, payload.AdversaryID, payload.HpAfter, payload.ArmorAfter)
+	return nil
+}
+
+func foldDowntimeMoveApplied(state *SnapshotState, payload DowntimeMoveAppliedPayload) error {
+	applyDowntimeMove(state, payload.CharacterID, payload.Move, payload.HopeAfter, payload.StressAfter, payload.ArmorAfter)
+	return nil
+}
+
+func foldAdversaryConditionChanged(state *SnapshotState, payload AdversaryConditionChangedPayload) error {
+	applyAdversaryConditionsChanged(state, payload.AdversaryID, payload.ConditionsAfter)
+	return nil
+}
+
+func foldAdversaryCreated(state *SnapshotState, payload AdversaryCreatedPayload) error {
+	applyAdversaryCreated(state, payload)
+	return nil
+}
+
+func foldAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatedPayload) error {
+	applyAdversaryUpdated(state, payload)
+	return nil
+}
+
+func foldAdversaryDeleted(state *SnapshotState, payload AdversaryDeletedPayload) error {
+	delete(state.AdversaryStates, strings.TrimSpace(payload.AdversaryID))
+	return nil
 }
 
 func applyCharacterStatePatched(state *SnapshotState, payload CharacterStatePatchedPayload) {
@@ -181,9 +220,6 @@ func applyCharacterStatePatched(state *SnapshotState, payload CharacterStatePatc
 	if payload.LifeStateAfter != nil {
 		characterState.LifeState = *payload.LifeStateAfter
 	}
-	if state.CharacterStates == nil {
-		state.CharacterStates = make(map[string]CharacterState)
-	}
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -196,9 +232,6 @@ func applyCharacterConditionsChanged(state *SnapshotState, payload ConditionChan
 	characterState.CampaignID = state.CampaignID
 	characterState.CharacterID = characterID
 	characterState.Conditions = append([]string(nil), payload.ConditionsAfter...)
-	if state.CharacterStates == nil {
-		state.CharacterStates = make(map[string]CharacterState)
-	}
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -212,9 +245,6 @@ func applyCharacterLoadoutSwapped(state *SnapshotState, payload LoadoutSwappedPa
 	characterState.CharacterID = characterID
 	if payload.StressAfter != nil {
 		characterState.Stress = *payload.StressAfter
-	}
-	if state.CharacterStates == nil {
-		state.CharacterStates = make(map[string]CharacterState)
 	}
 	state.CharacterStates[characterID] = characterState
 }
@@ -233,9 +263,6 @@ func applyCharacterTemporaryArmorApplied(state *SnapshotState, payload Character
 		SourceID: strings.TrimSpace(payload.SourceID),
 		Amount:   payload.Amount,
 	})
-	if state.CharacterStates == nil {
-		state.CharacterStates = make(map[string]CharacterState)
-	}
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -256,9 +283,6 @@ func applyRestCharacterPatch(state *SnapshotState, payload RestCharacterStatePat
 	if payload.ArmorAfter != nil {
 		characterState.Armor = *payload.ArmorAfter
 	}
-	if state.CharacterStates == nil {
-		state.CharacterStates = make(map[string]CharacterState)
-	}
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -277,9 +301,6 @@ func clearRestTemporaryArmor(state *SnapshotState, characterID string, clearShor
 		characterState.ClearTemporaryArmorByDuration("long_rest")
 	}
 	characterState.SetArmor(characterState.ResourceCap(ResourceArmor))
-	if state.CharacterStates == nil {
-		state.CharacterStates = make(map[string]CharacterState)
-	}
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -293,9 +314,6 @@ func applyCountdownUpsert(state *SnapshotState, countdownID string, mutate func(
 	countdownState.CountdownID = countdownID
 	if mutate != nil {
 		mutate(&countdownState)
-	}
-	if state.CountdownStates == nil {
-		state.CountdownStates = make(map[string]CountdownState)
 	}
 	state.CountdownStates[countdownID] = countdownState
 }
@@ -321,9 +339,6 @@ func applyDamageApplied(state *SnapshotState, characterID string, hpAfter, armor
 	}
 	if armorAfter != nil {
 		characterState.Armor = *armorAfter
-	}
-	if state.CharacterStates == nil {
-		state.CharacterStates = make(map[string]CharacterState)
 	}
 	state.CharacterStates[characterID] = characterState
 }
@@ -352,9 +367,6 @@ func applyDowntimeMove(state *SnapshotState, characterID string, move string, ho
 			characterState.SetArmor(*armorAfter)
 		}
 	}
-	if state.CharacterStates == nil {
-		state.CharacterStates = make(map[string]CharacterState)
-	}
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -371,9 +383,6 @@ func applyAdversaryDamage(state *SnapshotState, adversaryID string, hpAfter, arm
 	}
 	if armorAfter != nil {
 		adversaryState.Armor = *armorAfter
-	}
-	if state.AdversaryStates == nil {
-		state.AdversaryStates = make(map[string]AdversaryState)
 	}
 	state.AdversaryStates[adversaryID] = adversaryState
 }
@@ -398,9 +407,6 @@ func applyAdversaryCreated(state *SnapshotState, payload AdversaryCreatePayload)
 	adversaryState.Major = payload.Major
 	adversaryState.Severe = payload.Severe
 	adversaryState.Armor = payload.Armor
-	if state.AdversaryStates == nil {
-		state.AdversaryStates = make(map[string]AdversaryState)
-	}
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
@@ -424,9 +430,6 @@ func applyAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatePayload)
 	adversaryState.Major = payload.Major
 	adversaryState.Severe = payload.Severe
 	adversaryState.Armor = payload.Armor
-	if state.AdversaryStates == nil {
-		state.AdversaryStates = make(map[string]AdversaryState)
-	}
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
@@ -439,25 +442,26 @@ func applyAdversaryConditionsChanged(state *SnapshotState, adversaryID string, a
 	adversaryState.CampaignID = state.CampaignID
 	adversaryState.AdversaryID = adversaryID
 	adversaryState.Conditions = append([]string(nil), after...)
-	if state.AdversaryStates == nil {
-		state.AdversaryStates = make(map[string]AdversaryState)
-	}
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
-// snapshotFromState extracts a SnapshotState from the state value.
-//
-// The aggregate applier already extracts the system-specific state before
-// calling RouteEvent/RouteCommand, so only SnapshotState and *SnapshotState
-// are expected in production. Any other type returns (zero, false).
-func snapshotFromState(state any) (SnapshotState, bool) {
+// snapshotOrDefault extracts a SnapshotState from the state value for the
+// decider path. Returns (state, true) for known types, or a factory-aligned
+// default with initialized maps on nil/unknown. Using the same defaults as
+// NewSnapshotState ensures decider defaults never silently diverge from the
+// factory.
+func snapshotOrDefault(state any) (SnapshotState, bool) {
 	switch typed := state.(type) {
 	case SnapshotState:
+		typed.EnsureMaps()
 		return typed, true
 	case *SnapshotState:
 		if typed != nil {
+			typed.EnsureMaps()
 			return *typed, true
 		}
 	}
-	return SnapshotState{GMFear: GMFearDefault}, false
+	s := SnapshotState{GMFear: GMFearDefault}
+	s.EnsureMaps()
+	return s, false
 }

@@ -158,6 +158,33 @@ Responsibilities:
 - register system-owned event definitions
 - provide decider/folder/state-factory implementations
 
+#### Infrastructure helpers for system authors
+
+The `module` package provides typed helpers that eliminate boilerplate in
+deciders, folders, and adapters. New system authors should use these
+instead of writing raw switch/unmarshal code:
+
+- **`module.FoldRouter[S]`** with **`module.HandleFold[S, P]`**: typed fold
+  dispatch by event type. Auto-unmarshals payloads into `P`, calls a typed
+  handler `func(S, P) error`. Eliminates the per-case unmarshal switch in
+  `Fold`. See `daggerheart/projector.go` for usage.
+
+- **`module.AdapterRouter`** with **`module.HandleAdapter[P]`**: typed adapter
+  dispatch by event type. Auto-unmarshals payloads, calls a typed handler
+  `func(context.Context, event.Event, P) error`. Eliminates unmarshal
+  boilerplate in projection adapters. See `daggerheart/adapter.go` for usage.
+
+- **`module.DecideFunc[P]`** / **`module.DecideFuncWithState[S, P]`**: typed
+  decider helpers for the common case where one command type maps to one event
+  type with the same payload. Handles unmarshal, validation, and event
+  construction.
+
+- **`module.DecideFuncTransform[S, PIn, POut]`**: like `DecideFuncWithState`
+  but for cases where the emitted event payload type (`POut`) differs from the
+  command payload type (`PIn`). Adds a `transform` function to convert between
+  them. See `daggerheart/decider.go` for GM fear, hope spend, and stress spend
+  cases.
+
 #### System state lifecycle
 
 When the aggregate folder encounters the first event for a given

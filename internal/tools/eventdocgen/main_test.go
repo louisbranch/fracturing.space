@@ -1464,3 +1464,83 @@ func TestScanAppliers_QualifiedSelector(t *testing.T) {
 		t.Fatalf("expected 1 applier for b.created, got %d", len(appliers["b.created"]))
 	}
 }
+
+func TestScanEmitterValues_DetectsDecideFuncTransform(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "emitters")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir emitters: %v", err)
+	}
+	src := strings.Join([]string{
+		"package sample",
+		"",
+		"import \"example.com/module\"",
+		"",
+		"const EventTypeTransformed = \"sys.sample.transformed\"",
+		"",
+		"type snapshot struct{}",
+		"type payloadIn struct{}",
+		"type payloadOut struct{}",
+		"",
+		"func emit(cmd any, s snapshot, hasState bool) any {",
+		"\treturn module.DecideFuncTransform(cmd, s, hasState, EventTypeTransformed, \"campaign\", nil, nil, nil, nil)",
+		"}",
+	}, "\n")
+	path := filepath.Join(dir, "emit.go")
+	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+		t.Fatalf("write emit.go: %v", err)
+	}
+
+	emitters, err := scanEmitterValues(root, root, map[string]string{})
+	if err != nil {
+		t.Fatalf("scanEmitterValues returned error: %v", err)
+	}
+	got := emitters["sys.sample.transformed"]
+	if len(got) != 1 {
+		t.Fatalf("expected one emitter for sys.sample.transformed, got %d (%v)", len(got), got)
+	}
+	if !strings.HasPrefix(got[0], "emitters/emit.go:") {
+		t.Fatalf("unexpected emitter path: %s", got[0])
+	}
+}
+
+func TestScanAppliers_DetectsHandleAdapter(t *testing.T) {
+	root := t.TempDir()
+	dir := filepath.Join(root, "applier")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir applier: %v", err)
+	}
+
+	src := strings.Join([]string{
+		"package sample",
+		"",
+		"import \"example.com/module\"",
+		"",
+		"const EventTypeFoo = \"sys.sample.foo\"",
+		"",
+		"func buildRouter() {",
+		"\tr := module.NewAdapterRouter()",
+		"\tmodule.HandleAdapter(r, EventTypeFoo, nil)",
+		"}",
+	}, "\n")
+
+	path := filepath.Join(dir, "adapter.go")
+	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
+		t.Fatalf("write adapter.go: %v", err)
+	}
+
+	lookup := map[string]string{
+		"EventTypeFoo": "sys.sample.foo",
+	}
+	appliers, err := scanAppliers(root, root, lookup)
+	if err != nil {
+		t.Fatalf("scanAppliers returned error: %v", err)
+	}
+	got := appliers["sys.sample.foo"]
+	if len(got) != 1 {
+		t.Fatalf("expected one applier for sys.sample.foo, got %d (%v)", len(got), got)
+	}
+	if !strings.HasPrefix(got[0], "applier/adapter.go:") {
+		t.Fatalf("unexpected applier path: %s", got[0])
+	}
+}

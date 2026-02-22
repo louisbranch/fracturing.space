@@ -18,6 +18,39 @@ func TestStateFactory_NewSnapshotStateDefaults(t *testing.T) {
 	if snapshot.GMFear != GMFearDefault {
 		t.Fatalf("gm fear = %d, want %d", snapshot.GMFear, GMFearDefault)
 	}
+	if snapshot.CharacterStates == nil {
+		t.Fatal("CharacterStates map should be initialized, got nil")
+	}
+	if snapshot.AdversaryStates == nil {
+		t.Fatal("AdversaryStates map should be initialized, got nil")
+	}
+	if snapshot.CountdownStates == nil {
+		t.Fatal("CountdownStates map should be initialized, got nil")
+	}
+}
+
+func TestSnapshotState_EnsureMaps(t *testing.T) {
+	s := SnapshotState{}
+	if s.CharacterStates != nil || s.AdversaryStates != nil || s.CountdownStates != nil {
+		t.Fatal("expected nil maps before EnsureMaps")
+	}
+	s.EnsureMaps()
+	if s.CharacterStates == nil {
+		t.Fatal("CharacterStates should be initialized after EnsureMaps")
+	}
+	if s.AdversaryStates == nil {
+		t.Fatal("AdversaryStates should be initialized after EnsureMaps")
+	}
+	if s.CountdownStates == nil {
+		t.Fatal("CountdownStates should be initialized after EnsureMaps")
+	}
+
+	// EnsureMaps should not overwrite existing maps.
+	s.CharacterStates["char-1"] = CharacterState{CharacterID: "char-1"}
+	s.EnsureMaps()
+	if _, ok := s.CharacterStates["char-1"]; !ok {
+		t.Fatal("EnsureMaps overwrote existing CharacterStates map")
+	}
 }
 
 func TestStateFactory_NewCharacterStateDefaults(t *testing.T) {

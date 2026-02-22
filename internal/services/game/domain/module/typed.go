@@ -11,6 +11,13 @@ import (
 // TypedFolder wraps a typed fold function to satisfy the Folder interface.
 // System authors provide strongly-typed fold logic; the wrapper handles the
 // any → S assertion so callers never see raw type switches.
+//
+// Error semantics: TypedFolder.Fold returns an error on state assertion
+// failure because fold runs post-persist — a type mismatch is an
+// infrastructure bug (wrong state wired to the wrong folder), not a domain
+// rejection. Compare with TypedDecider.Decide, which returns a Rejection
+// because the decider runs pre-persist and assertion failures are surfaced
+// to the caller as domain-level rejections. This asymmetry is intentional.
 type TypedFolder[S any] struct {
 	// Assert converts the untyped state to S, returning an error on mismatch.
 	Assert func(any) (S, error)

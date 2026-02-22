@@ -180,6 +180,51 @@ cmd/maintenance -campaign-ids camp_123,camp_456 -validate -json
 Warnings are capped by default (`-warnings-cap 25`). Set `-warnings-cap 0` to
 disable the cap.
 
+## Post-persist fold failure
+
+When the domain engine persists events to the journal and then folds them
+into in-memory aggregate state, the fold step can fail even though the
+events are already durable. This is signaled by `ErrPostPersistApplyFailed`.
+
+Caller responsibilities:
+
+- **Detect with `errors.Is`**: wrap checks with `errors.Is(err, engine.ErrPostPersistApplyFailed)`.
+- **Do not retry the command**: the events are already in the journal. Retrying
+  would create duplicates.
+- **Recover via replay**: the next command execution will replay from the
+  journal, which rebuilds aggregate state from scratch. The fold failure is
+  transient — replay will apply the same events deterministically.
+- **Projection adapters are unaffected**: adapter Apply runs independently
+  of the aggregate fold. Even if the aggregate fold fails, projection
+  updates proceed normally through the applier pipeline.
+
+### Adapter state reads during replay
+
+Several adapter handlers read existing projection state before writing
+(e.g. merging a delta with a current value). This is safe during ordered
+replay because events replay in strict sequence order, so the
+read-then-write chain reproduces the same final state. Adapter authors
+must handle `storage.ErrNotFound` during replay, since the projection
+table may be empty at early sequence numbers.
+
+### Three validation layers
+
+The system uses three layers of validation, each catching different failure modes:
+
+1. **Startup validation** (`engine.ValidateRegistries`): checks structural
+   correctness at process boot — command/event registration completeness,
+   entity-keyed addressing, fold coverage, and projection handler coverage.
+   Catches wiring bugs before any events flow.
+
+2. **Pre-persist validation** (decider + command registry): validates command
+   payloads, domain invariants, and business rules before events are appended
+   to the journal. Failures are domain rejections returned to the caller.
+
+3. **Fold-time validation** (folder + fold router): validates event payloads
+   during aggregate state folding. Failures here are infrastructure errors
+   (not domain rejections) because the events are already persisted. The
+   fold router returns errors for unknown event types and unmarshal failures.
+
 ## Operational notes
 
 - Event order is authoritative; projections assume sequential application.
