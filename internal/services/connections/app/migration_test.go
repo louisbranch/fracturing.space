@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"database/sql"
 	"path/filepath"
 	"testing"
@@ -11,7 +10,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func TestMigrateContactsFromAuth_CopiesDirectedContacts(t *testing.T) {
+func TestNewWithAddr_DoesNotMigrateAuthContacts(t *testing.T) {
 	authPath := filepath.Join(t.TempDir(), "auth.db")
 	authDB, err := sql.Open("sqlite", authPath)
 	if err != nil {
@@ -39,21 +38,28 @@ CREATE TABLE user_contacts (
 		t.Fatalf("seed user_contacts: %v", err)
 	}
 
-	connectionsStore, err := connectionssqlite.Open(filepath.Join(t.TempDir(), "connections.db"))
+	connectionsPath := filepath.Join(t.TempDir(), "connections.db")
+	t.Setenv("FRACTURING_SPACE_CONNECTIONS_DB_PATH", connectionsPath)
+	t.Setenv("FRACTURING_SPACE_AUTH_DB_PATH", authPath)
+	t.Setenv("FRACTURING_SPACE_CONNECTIONS_MIGRATE_AUTH_CONTACTS", "true")
+
+	srv, err := NewWithAddr("127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("new server: %v", err)
+	}
+	srv.Close()
+
+	connectionsStore, err := connectionssqlite.Open(connectionsPath)
 	if err != nil {
 		t.Fatalf("open connections store: %v", err)
 	}
 	t.Cleanup(func() { _ = connectionsStore.Close() })
 
-	if err := migrateContactsFromAuth(context.Background(), authPath, connectionsStore); err != nil {
-		t.Fatalf("migrate contacts: %v", err)
-	}
-
-	contacts, err := connectionsStore.ListContacts(context.Background(), "user-1", 10, "")
+	contacts, err := connectionsStore.ListContacts(t.Context(), "user-1", 10, "")
 	if err != nil {
 		t.Fatalf("list contacts: %v", err)
 	}
-	if len(contacts.Contacts) != 2 {
-		t.Fatalf("contacts len = %d, want 2", len(contacts.Contacts))
+	if len(contacts.Contacts) != 0 {
+		t.Fatalf("contacts len = %d, want 0", len(contacts.Contacts))
 	}
 }

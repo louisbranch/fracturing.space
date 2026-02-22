@@ -94,7 +94,7 @@ func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
 
 	createdAt := time.Date(2026, time.February, 22, 12, 0, 0, 0, time.UTC)
 	updatedAt := createdAt.Add(2 * time.Hour)
-	if err := store.PutUserProfile(context.Background(), storage.UserProfileRecord{
+	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:        "user-1",
 		Username:      "Alice_One",
 		Name:          "Alice",
@@ -124,7 +124,7 @@ func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
 		t.Fatalf("created_at = %v, want %v", gotByUser.CreatedAt, createdAt)
 	}
 
-	if err := store.PutUserProfile(context.Background(), storage.UserProfileRecord{
+	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:        "user-1",
 		Username:      "Alice-Two",
 		Name:          "Alice Two",
@@ -167,7 +167,7 @@ func TestUserProfileSameValueUpdateIsNoOp(t *testing.T) {
 	defer store.Close()
 
 	initial := time.Date(2026, time.February, 22, 17, 0, 0, 0, time.UTC)
-	if err := store.PutUserProfile(context.Background(), storage.UserProfileRecord{
+	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:        "user-1",
 		Username:      "Alice_One",
 		Name:          "Alice",
@@ -181,7 +181,7 @@ func TestUserProfileSameValueUpdateIsNoOp(t *testing.T) {
 	}
 
 	retryAt := initial.Add(2 * time.Hour)
-	if err := store.PutUserProfile(context.Background(), storage.UserProfileRecord{
+	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:        "user-1",
 		Username:      "ALICE_ONE",
 		Name:          "Alice",
@@ -217,7 +217,7 @@ func TestUserProfileConflictAcrossUsers(t *testing.T) {
 	defer store.Close()
 
 	now := time.Date(2026, time.February, 22, 16, 0, 0, 0, time.UTC)
-	if err := store.PutUserProfile(context.Background(), storage.UserProfileRecord{
+	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:    "user-1",
 		Username:  "conflict",
 		Name:      "Alice",
@@ -227,7 +227,7 @@ func TestUserProfileConflictAcrossUsers(t *testing.T) {
 		t.Fatalf("put user profile user-1: %v", err)
 	}
 
-	err = store.PutUserProfile(context.Background(), storage.UserProfileRecord{
+	err = store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:    "user-2",
 		Username:  "Conflict",
 		Name:      "Bob",

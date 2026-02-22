@@ -19,7 +19,7 @@ func TestPublicProfileRouteUsesConnectionsLookup(t *testing.T) {
 
 	connectionsClient := &fakeConnectionsClient{
 		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				Username: "alice",
 				Name:     "Alice Adventurer",
 				Bio:      "GM and worldbuilder.",

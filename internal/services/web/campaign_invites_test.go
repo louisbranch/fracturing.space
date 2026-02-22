@@ -267,7 +267,7 @@ func TestAppCampaignInviteCreateParticipantResolvesRecipientUsername(t *testing.
 	}
 	connectionsClient := &fakeConnectionsClient{
 		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -359,7 +359,7 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersVerificationCont
 	}
 	connectionsClient := &fakeConnectionsClient{
 		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				UserId:        "user-456",
 				Username:      "alice",
 				Name:          "Alice Verified",
@@ -460,7 +460,7 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRequiresAtPrefix(t *tes
 	}
 	connectionsClient := &fakeConnectionsClient{
 		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -546,7 +546,7 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersWhenProfileMissi
 	}
 	connectionsClient := &fakeConnectionsClient{
 		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -630,7 +630,7 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameLocalizesVerificationCo
 	}
 	connectionsClient := &fakeConnectionsClient{
 		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -859,7 +859,7 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameRequired(t *testing.
 	}
 	connectionsClient := &fakeConnectionsClient{
 		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				UserId:   "user-456",
 				Username: "alice",
 			},
@@ -1082,7 +1082,7 @@ func TestAppCampaignInviteCreateParticipantUsesRecipientUserIDFallback(t *testin
 	}
 	connectionsClient := &fakeConnectionsClient{
 		lookupUserProfileResp: &connectionsv1.LookupUserProfileResponse{
-			UserProfileRecord: &connectionsv1.UserProfileRecord{
+			UserProfile: &connectionsv1.UserProfile{
 				UserId:   "user-lookup",
 				Username: "user-456",
 			},

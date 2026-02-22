@@ -12,7 +12,26 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/connections/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
+
+func TestUserProfileResponsesUseUserProfileNaming(t *testing.T) {
+	assertUserProfileField := func(message protoreflect.ProtoMessage, responseName string) {
+		t.Helper()
+		fields := message.ProtoReflect().Descriptor().Fields()
+		field := fields.ByName(protoreflect.Name("user_profile"))
+		if field == nil {
+			t.Fatalf("%s missing user_profile field", responseName)
+		}
+		if got := string(field.Message().Name()); got != "UserProfile" {
+			t.Fatalf("%s.user_profile message = %q, want %q", responseName, got, "UserProfile")
+		}
+	}
+
+	assertUserProfileField(&connectionsv1.SetUserProfileResponse{}, "SetUserProfileResponse")
+	assertUserProfileField(&connectionsv1.GetUserProfileResponse{}, "GetUserProfileResponse")
+	assertUserProfileField(&connectionsv1.LookupUserProfileResponse{}, "LookupUserProfileResponse")
+}
 
 func TestAddContact_SuccessAndIdempotent(t *testing.T) {
 	store := newFakeContactStore()
@@ -70,10 +89,10 @@ func TestSetUserProfile_SuccessAndLookup(t *testing.T) {
 		if err != nil {
 			t.Fatalf("set user profile attempt %d: %v", i+1, err)
 		}
-		if setResp.GetUserProfileRecord() == nil {
+		if setResp.GetUserProfile() == nil {
 			t.Fatal("expected user profile record")
 		}
-		if got := setResp.GetUserProfileRecord().GetUsername(); got != "alice_one" {
+		if got := setResp.GetUserProfile().GetUsername(); got != "alice_one" {
 			t.Fatalf("username = %q, want alice_one", got)
 		}
 	}
@@ -82,7 +101,7 @@ func TestSetUserProfile_SuccessAndLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get user profile: %v", err)
 	}
-	if got := getResp.GetUserProfileRecord().GetName(); got != "Alice" {
+	if got := getResp.GetUserProfile().GetName(); got != "Alice" {
 		t.Fatalf("name = %q, want Alice", got)
 	}
 
@@ -92,10 +111,10 @@ func TestSetUserProfile_SuccessAndLookup(t *testing.T) {
 	if err != nil {
 		t.Fatalf("lookup user profile: %v", err)
 	}
-	if got := lookupResp.GetUserProfileRecord().GetUserId(); got != "user-1" {
+	if got := lookupResp.GetUserProfile().GetUserId(); got != "user-1" {
 		t.Fatalf("user_id = %q, want user-1", got)
 	}
-	if got := lookupResp.GetUserProfileRecord().GetBio(); got != "Campaign manager" {
+	if got := lookupResp.GetUserProfile().GetBio(); got != "Campaign manager" {
 		t.Fatalf("bio = %q, want Campaign manager", got)
 	}
 }
@@ -132,8 +151,8 @@ func TestSetUserProfile_SameCanonicalValueDoesNotChangeTimestamps(t *testing.T) 
 		t.Fatalf("set repeated user profile: %v", err)
 	}
 
-	firstRecord := first.GetUserProfileRecord()
-	secondRecord := second.GetUserProfileRecord()
+	firstRecord := first.GetUserProfile()
+	secondRecord := second.GetUserProfile()
 	if firstRecord == nil || secondRecord == nil {
 		t.Fatal("expected user profile record in both responses")
 	}
@@ -234,14 +253,14 @@ func TestLookupUserProfile_NotFoundReturnsNotFound(t *testing.T) {
 
 type fakeContactStore struct {
 	contacts               map[string]map[string]storage.Contact
-	profilesByUser         map[string]storage.UserProfileRecord
+	profilesByUser         map[string]storage.UserProfile
 	profileOwnerByUsername map[string]string
 }
 
 func newFakeContactStore() *fakeContactStore {
 	return &fakeContactStore{
 		contacts:               make(map[string]map[string]storage.Contact),
-		profilesByUser:         make(map[string]storage.UserProfileRecord),
+		profilesByUser:         make(map[string]storage.UserProfile),
 		profileOwnerByUsername: make(map[string]string),
 	}
 }
@@ -313,7 +332,7 @@ func (s *fakeContactStore) ListContacts(_ context.Context, ownerUserID string, p
 	return page, nil
 }
 
-func (s *fakeContactStore) PutUserProfile(_ context.Context, profile storage.UserProfileRecord) error {
+func (s *fakeContactStore) PutUserProfile(_ context.Context, profile storage.UserProfile) error {
 	userID := strings.TrimSpace(profile.UserID)
 	if userID == "" {
 		return errors.New("user id is required")
@@ -349,23 +368,23 @@ func (s *fakeContactStore) PutUserProfile(_ context.Context, profile storage.Use
 	return nil
 }
 
-func (s *fakeContactStore) GetUserProfileByUserID(_ context.Context, userID string) (storage.UserProfileRecord, error) {
+func (s *fakeContactStore) GetUserProfileByUserID(_ context.Context, userID string) (storage.UserProfile, error) {
 	record, ok := s.profilesByUser[strings.TrimSpace(userID)]
 	if !ok {
-		return storage.UserProfileRecord{}, storage.ErrNotFound
+		return storage.UserProfile{}, storage.ErrNotFound
 	}
 	return record, nil
 }
 
-func (s *fakeContactStore) GetUserProfileByUsername(_ context.Context, username string) (storage.UserProfileRecord, error) {
+func (s *fakeContactStore) GetUserProfileByUsername(_ context.Context, username string) (storage.UserProfile, error) {
 	canonical := strings.TrimSpace(strings.ToLower(username))
 	userID, ok := s.profileOwnerByUsername[canonical]
 	if !ok {
-		return storage.UserProfileRecord{}, storage.ErrNotFound
+		return storage.UserProfile{}, storage.ErrNotFound
 	}
 	record, ok := s.profilesByUser[userID]
 	if !ok {
-		return storage.UserProfileRecord{}, storage.ErrNotFound
+		return storage.UserProfile{}, storage.ErrNotFound
 	}
 	return record, nil
 }

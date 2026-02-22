@@ -27,8 +27,8 @@ type ContactPage struct {
 	NextPageToken string
 }
 
-// UserProfileRecord stores one social/discovery profile for a user.
-type UserProfileRecord struct {
+// UserProfile stores one social/discovery profile for a user.
+type UserProfile struct {
 	UserID        string
 	Username      string
 	Name          string
@@ -49,7 +49,7 @@ type ContactStore interface {
 
 // UserProfileStore persists social/discovery user profile records.
 type UserProfileStore interface {
-	PutUserProfile(ctx context.Context, profile UserProfileRecord) error
-	GetUserProfileByUserID(ctx context.Context, userID string) (UserProfileRecord, error)
-	GetUserProfileByUsername(ctx context.Context, username string) (UserProfileRecord, error)
+	PutUserProfile(ctx context.Context, profile UserProfile) error
+	GetUserProfileByUserID(ctx context.Context, userID string) (UserProfile, error)
+	GetUserProfileByUsername(ctx context.Context, username string) (UserProfile, error)
 }

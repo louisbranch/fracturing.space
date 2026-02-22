@@ -257,7 +257,7 @@ func (s *Store) ListContacts(ctx context.Context, ownerUserID string, pageSize i
 }
 
 // PutUserProfile upserts one social/discovery user profile record.
-func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfileRecord) error {
+func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfile) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -328,16 +328,16 @@ func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfileR
 }
 
 // GetUserProfileByUserID returns one social/discovery profile by owner user ID.
-func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (storage.UserProfileRecord, error) {
+func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (storage.UserProfile, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.UserProfileRecord{}, err
+		return storage.UserProfile{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.UserProfileRecord{}, fmt.Errorf("storage is not configured")
+		return storage.UserProfile{}, fmt.Errorf("storage is not configured")
 	}
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
-		return storage.UserProfileRecord{}, fmt.Errorf("user id is required")
+		return storage.UserProfile{}, fmt.Errorf("user id is required")
 	}
 
 	row := s.sqlDB.QueryRowContext(
@@ -347,7 +347,7 @@ func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (stor
 		 WHERE user_id = ?`,
 		userID,
 	)
-	var record storage.UserProfileRecord
+	var record storage.UserProfile
 	var createdAt int64
 	var updatedAt int64
 	err := row.Scan(
@@ -362,9 +362,9 @@ func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (stor
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.UserProfileRecord{}, storage.ErrNotFound
+			return storage.UserProfile{}, storage.ErrNotFound
 		}
-		return storage.UserProfileRecord{}, fmt.Errorf("get user profile by user id: %w", err)
+		return storage.UserProfile{}, fmt.Errorf("get user profile by user id: %w", err)
 	}
 	record.CreatedAt = fromMillis(createdAt)
 	record.UpdatedAt = fromMillis(updatedAt)
@@ -372,16 +372,16 @@ func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (stor
 }
 
 // GetUserProfileByUsername returns one social/discovery profile by canonical username.
-func (s *Store) GetUserProfileByUsername(ctx context.Context, username string) (storage.UserProfileRecord, error) {
+func (s *Store) GetUserProfileByUsername(ctx context.Context, username string) (storage.UserProfile, error) {
 	if err := ctx.Err(); err != nil {
-		return storage.UserProfileRecord{}, err
+		return storage.UserProfile{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.UserProfileRecord{}, fmt.Errorf("storage is not configured")
+		return storage.UserProfile{}, fmt.Errorf("storage is not configured")
 	}
 	canonicalUsername, err := usernameutil.Canonicalize(username)
 	if err != nil {
-		return storage.UserProfileRecord{}, fmt.Errorf("normalize username: %w", err)
+		return storage.UserProfile{}, fmt.Errorf("normalize username: %w", err)
 	}
 
 	row := s.sqlDB.QueryRowContext(
@@ -391,7 +391,7 @@ func (s *Store) GetUserProfileByUsername(ctx context.Context, username string) (
 		 WHERE username = ?`,
 		canonicalUsername,
 	)
-	var record storage.UserProfileRecord
+	var record storage.UserProfile
 	var createdAt int64
 	var updatedAt int64
 	err = row.Scan(
@@ -406,9 +406,9 @@ func (s *Store) GetUserProfileByUsername(ctx context.Context, username string) (
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.UserProfileRecord{}, storage.ErrNotFound
+			return storage.UserProfile{}, storage.ErrNotFound
 		}
-		return storage.UserProfileRecord{}, fmt.Errorf("get user profile by username: %w", err)
+		return storage.UserProfile{}, fmt.Errorf("get user profile by username: %w", err)
 	}
 	record.CreatedAt = fromMillis(createdAt)
 	record.UpdatedAt = fromMillis(updatedAt)

@@ -2,7 +2,6 @@ package templates
 
 // ProfileFormState represents pre-filled profile form values.
 type ProfileFormState struct {
-	Name          string
 	LocaleOptions []LanguageOption
 }
 
@@ -11,17 +10,6 @@ templ ProfilePage(page PageContext, state ProfileFormState) {
 		<div class="card bg-base-200 max-w-xl">
 			<div class="card-body">
 				<form method="post" action="/app/profile" class="space-y-4">
-					<div class="form-control">
-						<label class="label">
-							<span class="label-text">{ T(page.Loc, "web.profile.field_name") }</span>
-						</label>
-						<input
-							type="text"
-							name="name"
-							value={ state.Name }
-							class="input input-bordered w-full"
-						>
-					</div>
 					<div class="form-control">
 						<label class="label">
 							<span class="label-text">{ T(page.Loc, "web.profile.field_locale") }</span>

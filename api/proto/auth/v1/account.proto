@@ -7,15 +7,13 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1;authv1";
 
-// AccountProfile stores account-facing metadata for user display and preferences.
+// AccountProfile stores private account preferences owned by auth.
 message AccountProfile {
   string user_id = 1;
-  string name = 2;
   common.v1.Locale locale = 3;
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
-  string avatar_set_id = 6;
-  string avatar_asset_id = 7;
+  reserved 2, 6, 7;
 }
 
 message GetProfileRequest {
@@ -28,10 +26,8 @@ message GetProfileResponse {
 
 message UpdateProfileRequest {
   string user_id = 1;
-  string name = 2;
   common.v1.Locale locale = 3;
-  string avatar_set_id = 4;
-  string avatar_asset_id = 5;
+  reserved 2, 4, 5;
 }
 
 message UpdateProfileResponse {

@@ -67,7 +67,6 @@ func TestAppProfileRouteRendersFormForAuthenticatedUser(t *testing.T) {
 			getProfileResp: &authv1.GetProfileResponse{
 				Profile: &authv1.AccountProfile{
 					UserId: "user-1",
-					Name:   "Alice Profile",
 					Locale: commonv1.Locale_LOCALE_PT_BR,
 				},
 			},
@@ -87,9 +86,6 @@ func TestAppProfileRouteRendersFormForAuthenticatedUser(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, `value="Alice Profile"`) {
-		t.Fatalf("body should include pre-filled name input, got %q", body)
-	}
 	if !strings.Contains(body, `<option value="pt-BR" selected>`) {
 		t.Fatalf("body should include selected locale option, got %q", body)
 	}
@@ -124,8 +120,8 @@ func TestAppProfileRouteRendersFormWhenProfileDoesNotExist(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 	body := w.Body.String()
-	if !strings.Contains(body, `value="Alice"`) {
-		t.Fatalf("body should include session user name fallback, got %q", body)
+	if !strings.Contains(body, `<option value="en-US" selected>`) {
+		t.Fatalf("body should include default selected locale option, got %q", body)
 	}
 }
 
@@ -143,7 +139,6 @@ func TestAppProfileRouteUpdatesProfileOnPost(t *testing.T) {
 	sess.cachedUserIDResolved = true
 
 	body := url.Values{}
-	body.Set("name", "Nova Name")
 	body.Set("locale", "pt-BR")
 	req := httptest.NewRequest(http.MethodPost, "/app/profile", strings.NewReader(body.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -163,9 +158,6 @@ func TestAppProfileRouteUpdatesProfileOnPost(t *testing.T) {
 	}
 	if got := fakeAccount.lastUpdateReq.GetUserId(); strings.TrimSpace(got) != "user-1" {
 		t.Fatalf("user_id = %q, want user-1", got)
-	}
-	if got := fakeAccount.lastUpdateReq.GetName(); strings.TrimSpace(got) != "Nova Name" {
-		t.Fatalf("name = %q, want Nova Name", got)
 	}
 	if got := fakeAccount.lastUpdateReq.GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
 		t.Fatalf("locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
