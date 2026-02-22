@@ -5,11 +5,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
-	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/config"
-	"github.com/louisbranch/fracturing.space/internal/platform/otel"
+	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	server "github.com/louisbranch/fracturing.space/internal/services/chat/app"
 )
 
@@ -24,7 +21,7 @@ type Config struct {
 // ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
-	if err := config.ParseEnv(&cfg); err != nil {
+	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
 
@@ -32,7 +29,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "game service gRPC address")
 	fs.StringVar(&cfg.AuthBaseURL, "auth-base-url", cfg.AuthBaseURL, "auth service base URL")
 	fs.StringVar(&cfg.OAuthResourceSecret, "oauth-resource-secret", cfg.OAuthResourceSecret, "auth introspection resource secret")
-	if err := fs.Parse(args); err != nil {
+	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
@@ -40,25 +37,15 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run builds the chat app and starts realtime transport behavior.
 func Run(ctx context.Context, cfg Config) error {
-	shutdown, err := otel.Setup(ctx, "chat")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := shutdown(shutdownCtx); err != nil {
-			log.Printf("otel shutdown: %v", err)
+	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceChat, func(context.Context) error {
+		if err := server.Run(ctx, server.Config{
+			HTTPAddr:            cfg.HTTPAddr,
+			GameAddr:            cfg.GameAddr,
+			AuthBaseURL:         cfg.AuthBaseURL,
+			OAuthResourceSecret: cfg.OAuthResourceSecret,
+		}); err != nil {
+			return fmt.Errorf("serve chat: %w", err)
 		}
-	}()
-
-	if err := server.Run(ctx, server.Config{
-		HTTPAddr:            cfg.HTTPAddr,
-		GameAddr:            cfg.GameAddr,
-		AuthBaseURL:         cfg.AuthBaseURL,
-		OAuthResourceSecret: cfg.OAuthResourceSecret,
-	}); err != nil {
-		return fmt.Errorf("serve chat: %w", err)
-	}
-	return nil
+		return nil
+	})
 }

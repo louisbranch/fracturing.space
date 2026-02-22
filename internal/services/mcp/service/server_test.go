@@ -632,7 +632,10 @@ func TestNewServerNotifiesCampaignListUpdates(t *testing.T) {
 	}
 	defer conn.Close()
 
-	server := newServer(conn)
+	server, err := newServer(conn)
+	if err != nil {
+		t.Fatalf("newServer: %v", err)
+	}
 	serverTransport, clientTransport := mcp.NewInMemoryTransports()
 	serveErr := make(chan error, 1)
 	go func() {

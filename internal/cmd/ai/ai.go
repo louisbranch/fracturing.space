@@ -5,7 +5,7 @@ import (
 	"context"
 	"flag"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/config"
+	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	server "github.com/louisbranch/fracturing.space/internal/services/ai/app"
 )
 
@@ -17,11 +17,11 @@ type Config struct {
 // ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
-	if err := config.ParseEnv(&cfg); err != nil {
+	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The AI gRPC server port")
-	if err := fs.Parse(args); err != nil {
+	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
@@ -29,5 +29,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run starts the AI orchestration service.
 func Run(ctx context.Context, cfg Config) error {
-	return server.Run(ctx, cfg.Port)
+	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceAI, func(context.Context) error {
+		return server.Run(ctx, cfg.Port)
+	})
 }

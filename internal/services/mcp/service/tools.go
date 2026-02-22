@@ -1,70 +1,109 @@
 package service
 
 import (
+	"fmt"
+
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func registerDaggerheartTools(mcpServer *mcp.Server, client daggerheartv1.DaggerheartServiceClient) {
-	mcp.AddTool(mcpServer, domain.ActionRollTool(), domain.ActionRollHandler(client))
-	mcp.AddTool(mcpServer, domain.DualityExplainTool(), domain.DualityExplainHandler(client))
-	mcp.AddTool(mcpServer, domain.DualityOutcomeTool(), domain.DualityOutcomeHandler(client))
-	mcp.AddTool(mcpServer, domain.DualityProbabilityTool(), domain.DualityProbabilityHandler(client))
-	mcp.AddTool(mcpServer, domain.RulesVersionTool(), domain.RulesVersionHandler(client))
-	mcp.AddTool(mcpServer, domain.RollDiceTool(), domain.RollDiceHandler(client))
+type mcpRegistrationTarget interface {
+	AddTool(*mcp.Tool, any) error
+	AddResourceTemplate(*mcp.ResourceTemplate, mcp.ResourceHandler)
+	AddResource(*mcp.Resource, mcp.ResourceHandler)
+}
+
+func registerDaggerheartTools(registrar mcpRegistrationTarget, client daggerheartv1.DaggerheartServiceClient) error {
+	if err := registerTool(registrar, domain.ActionRollTool(), domain.ActionRollHandler(client)); err != nil {
+		return err
+	}
+	if err := registerTool(registrar, domain.DualityExplainTool(), domain.DualityExplainHandler(client)); err != nil {
+		return err
+	}
+	if err := registerTool(registrar, domain.DualityOutcomeTool(), domain.DualityOutcomeHandler(client)); err != nil {
+		return err
+	}
+	if err := registerTool(registrar, domain.DualityProbabilityTool(), domain.DualityProbabilityHandler(client)); err != nil {
+		return err
+	}
+	if err := registerTool(registrar, domain.RulesVersionTool(), domain.RulesVersionHandler(client)); err != nil {
+		return err
+	}
+	if err := registerTool(registrar, domain.RollDiceTool(), domain.RollDiceHandler(client)); err != nil {
+		return err
+	}
+	return nil
 }
 
 func registerCampaignTools(
-	mcpServer *mcp.Server,
+	registrar mcpRegistrationTarget,
 	campaignClient statev1.CampaignServiceClient,
 	participantClient statev1.ParticipantServiceClient,
 	characterClient statev1.CharacterServiceClient,
 	snapshotClient statev1.SnapshotServiceClient,
 	getContext func() domain.Context,
 	notify domain.ResourceUpdateNotifier,
-) {
-	mcp.AddTool(mcpServer, domain.CampaignCreateTool(), domain.CampaignCreateHandler(campaignClient, notify))
-	mcp.AddTool(mcpServer, domain.CampaignEndTool(), domain.CampaignEndHandler(campaignClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.CampaignArchiveTool(), domain.CampaignArchiveHandler(campaignClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.CampaignRestoreTool(), domain.CampaignRestoreHandler(campaignClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.ParticipantCreateTool(), domain.ParticipantCreateHandler(participantClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.ParticipantUpdateTool(), domain.ParticipantUpdateHandler(participantClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.ParticipantDeleteTool(), domain.ParticipantDeleteHandler(participantClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.CharacterCreateTool(), domain.CharacterCreateHandler(characterClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.CharacterUpdateTool(), domain.CharacterUpdateHandler(characterClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.CharacterDeleteTool(), domain.CharacterDeleteHandler(characterClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.CharacterControlSetTool(), domain.CharacterControlSetHandler(characterClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.CharacterSheetGetTool(), domain.CharacterSheetGetHandler(characterClient, getContext))
-	mcp.AddTool(mcpServer, domain.CharacterProfilePatchTool(), domain.CharacterProfilePatchHandler(characterClient, getContext, notify))
-	mcp.AddTool(mcpServer, domain.CharacterStatePatchTool(), domain.CharacterStatePatchHandler(snapshotClient, getContext, notify))
+) error {
+	registrations := []struct {
+		tool    *mcp.Tool
+		handler any
+	}{
+		{tool: domain.CampaignCreateTool(), handler: domain.CampaignCreateHandler(campaignClient, notify)},
+		{tool: domain.CampaignEndTool(), handler: domain.CampaignEndHandler(campaignClient, getContext, notify)},
+		{tool: domain.CampaignArchiveTool(), handler: domain.CampaignArchiveHandler(campaignClient, getContext, notify)},
+		{tool: domain.CampaignRestoreTool(), handler: domain.CampaignRestoreHandler(campaignClient, getContext, notify)},
+		{tool: domain.ParticipantCreateTool(), handler: domain.ParticipantCreateHandler(participantClient, getContext, notify)},
+		{tool: domain.ParticipantUpdateTool(), handler: domain.ParticipantUpdateHandler(participantClient, getContext, notify)},
+		{tool: domain.ParticipantDeleteTool(), handler: domain.ParticipantDeleteHandler(participantClient, getContext, notify)},
+		{tool: domain.CharacterCreateTool(), handler: domain.CharacterCreateHandler(characterClient, getContext, notify)},
+		{tool: domain.CharacterUpdateTool(), handler: domain.CharacterUpdateHandler(characterClient, getContext, notify)},
+		{tool: domain.CharacterDeleteTool(), handler: domain.CharacterDeleteHandler(characterClient, getContext, notify)},
+		{tool: domain.CharacterControlSetTool(), handler: domain.CharacterControlSetHandler(characterClient, getContext, notify)},
+		{tool: domain.CharacterSheetGetTool(), handler: domain.CharacterSheetGetHandler(characterClient, getContext)},
+		{tool: domain.CharacterProfilePatchTool(), handler: domain.CharacterProfilePatchHandler(characterClient, getContext, notify)},
+		{tool: domain.CharacterStatePatchTool(), handler: domain.CharacterStatePatchHandler(snapshotClient, getContext, notify)},
+	}
+	for _, registration := range registrations {
+		if err := registerTool(registrar, registration.tool, registration.handler); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func registerSessionTools(mcpServer *mcp.Server, client statev1.SessionServiceClient, getContext func() domain.Context, notify domain.ResourceUpdateNotifier) {
-	mcp.AddTool(mcpServer, domain.SessionStartTool(), domain.SessionStartHandler(client, getContext, notify))
-	mcp.AddTool(mcpServer, domain.SessionEndTool(), domain.SessionEndHandler(client, getContext, notify))
+func registerSessionTools(registrar mcpRegistrationTarget, client statev1.SessionServiceClient, getContext func() domain.Context, notify domain.ResourceUpdateNotifier) error {
+	if err := registerTool(registrar, domain.SessionStartTool(), domain.SessionStartHandler(client, getContext, notify)); err != nil {
+		return err
+	}
+	if err := registerTool(registrar, domain.SessionEndTool(), domain.SessionEndHandler(client, getContext, notify)); err != nil {
+		return err
+	}
+	return nil
 }
 
-func registerEventTools(mcpServer *mcp.Server, client statev1.EventServiceClient, getContext func() domain.Context) {
-	mcp.AddTool(mcpServer, domain.EventListTool(), domain.EventListHandler(client, getContext))
+func registerEventTools(registrar mcpRegistrationTarget, client statev1.EventServiceClient, getContext func() domain.Context) error {
+	return registerTool(registrar, domain.EventListTool(), domain.EventListHandler(client, getContext))
 }
 
-func registerForkTools(mcpServer *mcp.Server, client statev1.ForkServiceClient, notify domain.ResourceUpdateNotifier) {
-	mcp.AddTool(mcpServer, domain.CampaignForkTool(), domain.CampaignForkHandler(client, notify))
-	mcp.AddTool(mcpServer, domain.CampaignLineageTool(), domain.CampaignLineageHandler(client))
+func registerForkTools(registrar mcpRegistrationTarget, client statev1.ForkServiceClient, notify domain.ResourceUpdateNotifier) error {
+	if err := registerTool(registrar, domain.CampaignForkTool(), domain.CampaignForkHandler(client, notify)); err != nil {
+		return err
+	}
+	return registerTool(registrar, domain.CampaignLineageTool(), domain.CampaignLineageHandler(client))
 }
 
 // registerContextTools registers context management tools.
 func registerContextTools(
-	mcpServer *mcp.Server,
+	registrar mcpRegistrationTarget,
 	campaignClient statev1.CampaignServiceClient,
 	sessionClient statev1.SessionServiceClient,
 	participantClient statev1.ParticipantServiceClient,
 	server *Server,
 	notify domain.ResourceUpdateNotifier,
-) {
-	mcp.AddTool(mcpServer, domain.SetContextTool(), domain.SetContextHandler(
+) error {
+	return registerTool(registrar, domain.SetContextTool(), domain.SetContextHandler(
 		campaignClient,
 		sessionClient,
 		participantClient,
@@ -74,30 +113,37 @@ func registerContextTools(
 	))
 }
 
+func registerTool(registrar mcpRegistrationTarget, tool *mcp.Tool, handler any) error {
+	if tool == nil {
+		return fmt.Errorf("tool is nil")
+	}
+	return registrar.AddTool(tool, handler)
+}
+
 // registerCampaignResources registers readable campaign MCP resources.
 func registerCampaignResources(
-	mcpServer *mcp.Server,
+	registrar mcpRegistrationTarget,
 	campaignClient statev1.CampaignServiceClient,
 	participantClient statev1.ParticipantServiceClient,
 	characterClient statev1.CharacterServiceClient,
 ) {
-	mcpServer.AddResource(domain.CampaignListResource(), domain.CampaignListResourceHandler(campaignClient))
-	mcpServer.AddResourceTemplate(domain.CampaignResourceTemplate(), domain.CampaignResourceHandler(campaignClient))
-	mcpServer.AddResourceTemplate(domain.ParticipantListResourceTemplate(), domain.ParticipantListResourceHandler(participantClient))
-	mcpServer.AddResourceTemplate(domain.CharacterListResourceTemplate(), domain.CharacterListResourceHandler(characterClient))
+	registrar.AddResource(domain.CampaignListResource(), domain.CampaignListResourceHandler(campaignClient))
+	registrar.AddResourceTemplate(domain.CampaignResourceTemplate(), domain.CampaignResourceHandler(campaignClient))
+	registrar.AddResourceTemplate(domain.ParticipantListResourceTemplate(), domain.ParticipantListResourceHandler(participantClient))
+	registrar.AddResourceTemplate(domain.CharacterListResourceTemplate(), domain.CharacterListResourceHandler(characterClient))
 }
 
 // registerSessionResources registers readable session MCP resources.
-func registerSessionResources(mcpServer *mcp.Server, client statev1.SessionServiceClient) {
-	mcpServer.AddResourceTemplate(domain.SessionListResourceTemplate(), domain.SessionListResourceHandler(client))
+func registerSessionResources(registrar mcpRegistrationTarget, client statev1.SessionServiceClient) {
+	registrar.AddResourceTemplate(domain.SessionListResourceTemplate(), domain.SessionListResourceHandler(client))
 }
 
 // registerEventResources registers readable event MCP resources.
-func registerEventResources(mcpServer *mcp.Server, client statev1.EventServiceClient) {
-	mcpServer.AddResourceTemplate(domain.EventsListResourceTemplate(), domain.EventsListResourceHandler(client))
+func registerEventResources(registrar mcpRegistrationTarget, client statev1.EventServiceClient) {
+	registrar.AddResourceTemplate(domain.EventsListResourceTemplate(), domain.EventsListResourceHandler(client))
 }
 
 // registerContextResources registers readable context MCP resources.
-func registerContextResources(mcpServer *mcp.Server, server *Server) {
-	mcpServer.AddResource(domain.ContextResource(), domain.ContextResourceHandler(server.getContext))
+func registerContextResources(registrar mcpRegistrationTarget, server *Server) {
+	registrar.AddResource(domain.ContextResource(), domain.ContextResourceHandler(server.getContext))
 }

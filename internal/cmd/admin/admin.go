@@ -5,12 +5,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/config"
-	"github.com/louisbranch/fracturing.space/internal/platform/otel"
+	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin"
 )
@@ -29,7 +27,7 @@ type Config struct {
 // ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
-	if err := config.ParseEnv(&cfg); err != nil {
+	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
 	if cfg.GRPCDialTimeout <= 0 {
@@ -39,7 +37,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
 	fs.StringVar(&cfg.GRPCAddr, "grpc-addr", cfg.GRPCAddr, "game server address")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "auth server address")
-	if err := fs.Parse(args); err != nil {
+	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
 
@@ -48,18 +46,6 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run creates the admin control-plane and starts it for the current process.
 func Run(ctx context.Context, cfg Config) error {
-	shutdown, err := otel.Setup(ctx, "admin")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := shutdown(shutdownCtx); err != nil {
-			log.Printf("otel shutdown: %v", err)
-		}
-	}()
-
 	var authCfg *admin.AuthConfig
 	if strings.TrimSpace(cfg.AuthIntrospectURL) != "" && strings.TrimSpace(cfg.LoginURL) != "" {
 		authCfg = &admin.AuthConfig{
@@ -69,20 +55,22 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 	}
 
-	server, err := admin.NewServer(ctx, admin.Config{
-		HTTPAddr:        cfg.HTTPAddr,
-		GRPCAddr:        cfg.GRPCAddr,
-		AuthAddr:        cfg.AuthAddr,
-		GRPCDialTimeout: cfg.GRPCDialTimeout,
-		AuthConfig:      authCfg,
-	})
-	if err != nil {
-		return fmt.Errorf("init web server: %w", err)
-	}
-	defer server.Close()
+	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceAdmin, func(context.Context) error {
+		server, err := admin.NewServer(ctx, admin.Config{
+			HTTPAddr:        cfg.HTTPAddr,
+			GRPCAddr:        cfg.GRPCAddr,
+			AuthAddr:        cfg.AuthAddr,
+			GRPCDialTimeout: cfg.GRPCDialTimeout,
+			AuthConfig:      authCfg,
+		})
+		if err != nil {
+			return fmt.Errorf("init web server: %w", err)
+		}
+		defer server.Close()
 
-	if err := server.ListenAndServe(ctx); err != nil {
-		return fmt.Errorf("serve web: %w", err)
-	}
-	return nil
+		if err := server.ListenAndServe(ctx); err != nil {
+			return fmt.Errorf("serve web: %w", err)
+		}
+		return nil
+	})
 }

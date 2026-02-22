@@ -25,11 +25,6 @@ var (
 	ErrAvatarEntityIDRequired = errors.New("avatar entity id is required")
 )
 
-var (
-	avatarManifest      = avatarManifestData
-	avatarSheetsBySetID = avatarSheetsDataBySetID
-)
-
 // AvatarPortrait defines one crop region inside an avatar sprite sheet.
 type AvatarPortrait struct {
 	Slot     int
@@ -48,12 +43,20 @@ type AvatarSheet struct {
 
 // AvatarManifest returns the canonical built-in avatar set definition.
 func AvatarManifest() Manifest {
-	return copyManifest(avatarManifest)
+	_, avatarData, _, err := EmbeddedCatalogManifests()
+	if err != nil {
+		return Manifest{}
+	}
+	return copyManifest(avatarData)
 }
 
 // AvatarAssetIDs returns the stable ordered avatar asset ids for v1 avatars.
 func AvatarAssetIDs() []string {
-	avatarSet, ok := avatarManifest.Sets[AvatarSetV1]
+	_, avatarData, _, err := EmbeddedCatalogManifests()
+	if err != nil {
+		return []string{}
+	}
+	avatarSet, ok := avatarData.Sets[AvatarSetV1]
 	if !ok {
 		return []string{}
 	}
@@ -62,7 +65,11 @@ func AvatarAssetIDs() []string {
 
 // AvatarSheetBySetID returns avatar sprite-sheet metadata for one set id.
 func AvatarSheetBySetID(setID string) (AvatarSheet, bool) {
-	sheet, ok := avatarSheetsBySetID[strings.TrimSpace(setID)]
+	_, _, sheets, err := EmbeddedCatalogManifests()
+	if err != nil {
+		return AvatarSheet{}, false
+	}
+	sheet, ok := sheets[strings.TrimSpace(setID)]
 	if !ok {
 		return AvatarSheet{}, false
 	}

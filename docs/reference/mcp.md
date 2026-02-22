@@ -9,6 +9,38 @@ nav_order: 1
 The MCP server supports two transport modes: stdio (default) and HTTP.
 See [Quickstart](../running/quickstart.md) or [Local development](../running/local-dev.md) for run commands.
 
+## MCP Registration Architecture (contributor notes)
+
+The MCP bridge keeps protocol objects and domain handlers separate:
+
+- Domain-owned tool definitions and handlers live in `internal/services/mcp/domain`.
+- Transport/plugin wiring lives in `internal/services/mcp/service`.
+- `newServer` now builds registration modules in `internal/services/mcp/service/server.go` using `newMCPRegistrationModules`.
+
+Each module currently has one responsibility:
+
+- `daggerheart-tools`: dice and rule-resolution tools
+- `campaign-tools`: campaign/participant/character write tools
+- `session-tools`: session lifecycle write tools
+- `fork-tools`: campaign fork and lineage tools
+- `event-tools`: event list tooling
+- `context-tools`: context management tool
+- `campaign-resources`: campaign/participant/character resources
+- `session-resources`: session resources
+- `event-resources`: event resources
+- `context-resources`: context resource
+
+When adding or changing registrations:
+
+1. Add or update the domain tool/resource definitions and handlers.
+2. Keep each module registration function narrow and deterministic; module ownership should stay obvious in `newMCPRegistrationModules`.
+3. Use focused tests to verify module registration counts and isolation (`TestMCPRegistrationModules`, `TestMCPRegistrationModulesAreIsolated`).
+4. For game-system onboarding, confirm the system manifest descriptors in `internal/services/game/domain/systems/manifest` and run the catalog/system validation checks during startup (`ValidateEmbeddedCatalogManifests`, system registration parity tests) before touching transport wiring.
+
+For resolver decision-path helpers used by command projection writes, see
+`internal/services/game/api/grpc/internal/domainwrite/helper.go`, which now exposes
+an injectable intent resolver so tests can validate inline-apply policy.
+
 ## Transport Modes
 
 ### Stdio Transport (Default)

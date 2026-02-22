@@ -12,7 +12,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/config"
+	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/generator"
 )
@@ -37,7 +37,7 @@ type seedEnv struct {
 // ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var se seedEnv
-	if err := config.ParseEnv(&se); err != nil {
+	if err := entrypoint.ParseConfig(&se); err != nil {
 		return Config{}, err
 	}
 
@@ -60,7 +60,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&preset, "preset", string(generator.PresetDemo), "generation preset (demo, variety, session-heavy, stress-test)")
 	fs.Int64Var(&seedVal, "seed", 0, "random seed for reproducibility (0 = random)")
 	fs.IntVar(&campaigns, "campaigns", 0, "number of campaigns to generate (0 = use preset default)")
-	if err := fs.Parse(args); err != nil {
+	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
 
@@ -83,58 +83,60 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run executes the seed command across dynamic generation or fixture replay.
 func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
-	if out == nil {
-		out = io.Discard
-	}
-	if errOut == nil {
-		errOut = io.Discard
-	}
+	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceSeed, func(context.Context) error {
+		if out == nil {
+			out = io.Discard
+		}
+		if errOut == nil {
+			errOut = io.Discard
+		}
 
-	if cfg.List {
-		scenarios, err := seed.ListScenarios(cfg.SeedConfig)
-		if err != nil {
+		if cfg.List {
+			scenarios, err := seed.ListScenarios(cfg.SeedConfig)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintln(out, "Available scenarios:")
+			for _, name := range scenarios {
+				fmt.Fprintf(out, "  %s\n", name)
+			}
+			fmt.Fprintln(out, "\nAvailable presets (for -generate):")
+			fmt.Fprintln(out, "  demo         - Rich single campaign with full party")
+			fmt.Fprintln(out, "  variety      - 8 campaigns across all statuses/modes")
+			fmt.Fprintln(out, "  session-heavy - Few campaigns with many sessions")
+			fmt.Fprintln(out, "  stress-test  - 50 minimal campaigns")
+			return nil
+		}
+
+		if cfg.Generate {
+			if err := validatePreset(cfg.Preset); err != nil {
+				return err
+			}
+			genCfg := generator.Config{
+				GRPCAddr:  cfg.SeedConfig.GRPCAddr,
+				AuthAddr:  cfg.SeedConfig.AuthAddr,
+				Preset:    cfg.Preset,
+				Seed:      cfg.Seed,
+				Campaigns: cfg.Campaigns,
+				Verbose:   cfg.SeedConfig.Verbose,
+			}
+			gen, err := generator.New(ctx, genCfg)
+			if err != nil {
+				return err
+			}
+			defer gen.Close()
+
+			if err := gen.Run(ctx); err != nil {
+				return err
+			}
+			return nil
+		}
+
+		if err := seed.Run(ctx, cfg.SeedConfig); err != nil {
 			return err
 		}
-		fmt.Fprintln(out, "Available scenarios:")
-		for _, name := range scenarios {
-			fmt.Fprintf(out, "  %s\n", name)
-		}
-		fmt.Fprintln(out, "\nAvailable presets (for -generate):")
-		fmt.Fprintln(out, "  demo         - Rich single campaign with full party")
-		fmt.Fprintln(out, "  variety      - 8 campaigns across all statuses/modes")
-		fmt.Fprintln(out, "  session-heavy - Few campaigns with many sessions")
-		fmt.Fprintln(out, "  stress-test  - 50 minimal campaigns")
 		return nil
-	}
-
-	if cfg.Generate {
-		if err := validatePreset(cfg.Preset); err != nil {
-			return err
-		}
-		genCfg := generator.Config{
-			GRPCAddr:  cfg.SeedConfig.GRPCAddr,
-			AuthAddr:  cfg.SeedConfig.AuthAddr,
-			Preset:    cfg.Preset,
-			Seed:      cfg.Seed,
-			Campaigns: cfg.Campaigns,
-			Verbose:   cfg.SeedConfig.Verbose,
-		}
-		gen, err := generator.New(ctx, genCfg)
-		if err != nil {
-			return err
-		}
-		defer gen.Close()
-
-		if err := gen.Run(ctx); err != nil {
-			return err
-		}
-		return nil
-	}
-
-	if err := seed.Run(ctx, cfg.SeedConfig); err != nil {
-		return err
-	}
-	return nil
+	})
 }
 
 func validatePreset(preset generator.Preset) error {

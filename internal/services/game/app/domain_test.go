@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 )
@@ -122,5 +123,27 @@ func TestBuildCoreRouteTable_IncludesRegisteredCoreRoutes(t *testing.T) {
 	}
 	if _, ok := routes[command.Type("sys.alpha.action.attack.resolve")]; ok {
 		t.Fatal("did not expect system command route in core table")
+	}
+}
+
+func TestBuildCoreRouteTable_StaticRoutesMatchCoreRegistry(t *testing.T) {
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	definitions := registries.Commands.ListDefinitions()
+	routes := staticCoreCommandRoutes()
+
+	for commandType := range routes {
+		found := false
+		for _, definition := range definitions {
+			if definition.Type == commandType && definition.Owner == command.OwnerCore {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("static route %s is missing from core command registry", commandType)
+		}
 	}
 }

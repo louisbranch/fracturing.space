@@ -4,11 +4,9 @@ package game
 import (
 	"context"
 	"flag"
-	"log"
-	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/config"
-	"github.com/louisbranch/fracturing.space/internal/platform/otel"
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
 )
 
@@ -21,13 +19,12 @@ type Config struct {
 // ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
-	if err := config.ParseEnv(&cfg); err != nil {
+	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
-
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The game server port")
 	fs.StringVar(&cfg.Addr, "addr", cfg.Addr, "The game server listen address (overrides -port)")
-	if err := fs.Parse(args); err != nil {
+	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
@@ -35,20 +32,13 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run starts the game domain API service.
 func Run(ctx context.Context, cfg Config) error {
-	shutdown, err := otel.Setup(ctx, "game")
-	if err != nil {
+	if err := catalog.ValidateEmbeddedCatalogManifests(); err != nil {
 		return err
 	}
-	defer func() {
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := shutdown(shutdownCtx); err != nil {
-			log.Printf("otel shutdown: %v", err)
+	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceGame, func(context.Context) error {
+		if cfg.Addr != "" {
+			return server.RunWithAddr(ctx, cfg.Addr)
 		}
-	}()
-
-	if cfg.Addr != "" {
-		return server.RunWithAddr(ctx, cfg.Addr)
-	}
-	return server.Run(ctx, cfg.Port)
+		return server.Run(ctx, cfg.Port)
+	})
 }

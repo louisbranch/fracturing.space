@@ -76,10 +76,21 @@ func (s Stores) ValidateContent() error {
 // Only the stores available in the Daggerheart service are mapped; fields not
 // present (e.g., Invite, CampaignFork) remain nil and are unused by dispatch.
 func (s Stores) Applier() projection.Applier {
+	applier, err := s.TryApplier()
+	if err != nil {
+		panic(err)
+	}
+	return applier
+}
+
+// TryApplier returns a projection Applier wired to the stores in this bundle.
+// Only the stores available in the Daggerheart service are mapped; fields not
+// present (e.g., Invite, CampaignFork) remain nil and are unused by dispatch.
+func (s Stores) TryApplier() (projection.Applier, error) {
 	adapters := systems.NewAdapterRegistry()
 	if s.Daggerheart != nil {
 		if err := adapters.Register(daggerheartsystem.NewAdapter(s.Daggerheart)); err != nil {
-			panic("register daggerheart adapter: " + err.Error())
+			return projection.Applier{}, fmt.Errorf("register daggerheart adapter: %w", err)
 		}
 	}
 	return projection.Applier{
@@ -89,5 +100,5 @@ func (s Stores) Applier() projection.Applier {
 		SessionGate:      s.SessionGate,
 		SessionSpotlight: s.SessionSpotlight,
 		Adapters:         adapters,
-	}
+	}, nil
 }

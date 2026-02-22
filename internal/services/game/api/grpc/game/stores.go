@@ -42,6 +42,21 @@ type Stores struct {
 // The returned Applier can apply any event type; unused stores are simply not
 // invoked by the dispatch.
 func (s Stores) Applier() projection.Applier {
+	applier, err := s.TryApplier()
+	if err != nil {
+		panic(err)
+	}
+	return applier
+}
+
+// TryApplier returns a projection Applier wired to the stores in this bundle.
+// The returned Applier can apply any event type; unused stores are simply not
+// invoked by the dispatch.
+func (s Stores) TryApplier() (projection.Applier, error) {
+	adapters, err := TryAdapterRegistryForStores(s)
+	if err != nil {
+		return projection.Applier{}, fmt.Errorf("build adapter registry: %w", err)
+	}
 	return projection.Applier{
 		Campaign:         s.Campaign,
 		Character:        s.Character,
@@ -52,8 +67,8 @@ func (s Stores) Applier() projection.Applier {
 		Session:          s.Session,
 		SessionGate:      s.SessionGate,
 		SessionSpotlight: s.SessionSpotlight,
-		Adapters:         adapterRegistryForStores(s),
-	}
+		Adapters:         adapters,
+	}, nil
 }
 
 // Validate checks that every store field is non-nil. Call this at service

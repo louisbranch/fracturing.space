@@ -136,30 +136,37 @@ Responsibilities:
 Pass your module to `engine.BuildRegistries(...)` in
 `internal/services/game/app/domain.go`.
 
-### 5. Implement system projection adapter
+### 5. Register system entry metadata centrally
+
+In addition to engine registration, add or verify your system metadata and adapter
+construction entry in `internal/services/game/domain/systems/manifest/manifest.go` so
+`Modules()`, `MetadataSystems()`, and `AdapterRegistry(...)` stay aligned.
+Prefer this file as your first newcomer onboarding step when adding a system.
+
+### 6. Implement system projection adapter
 
 Create `internal/services/game/domain/systems/{system}/adapter.go` implementing
 `systems.Adapter`, then register it in
 `internal/services/game/api/grpc/game/system_adapters.go`.
 
-### 6. Add storage schema and queries
+### 7. Add storage schema and queries
 
 - Add migrations in `internal/services/game/storage/sqlite/migrations/`.
 - Add query definitions in `internal/services/game/storage/sqlite/queries/`.
 - Extend storage interfaces and conversion helpers.
 
-### 7. Add transport/API handlers
+### 8. Add transport/API handlers
 
 - gRPC endpoints: `internal/services/game/api/grpc/systems/{system}/`.
 - MCP mappings (if needed): `internal/services/mcp/`.
 
-### 8. Verify through tests
+### 9. Verify through tests
 
 - Unit tests for decider/projector/validators.
 - Projection tests for adapter/store behavior.
 - Integration tests across gRPC/MCP + storage.
 
-### 9. Confirm system extension contract (required in reviews)
+### 10. Confirm system extension contract (required in reviews)
 
 - All emitted system events are registered with explicit intent (`projection_and_replay`
   vs `audit_only`) so projection obligations are discoverable from registries.
