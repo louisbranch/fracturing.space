@@ -9,10 +9,13 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	sharedhtmx "github.com/louisbranch/fracturing.space/internal/services/shared/htmx"
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -46,6 +49,15 @@ func (h *handler) pageContext(w http.ResponseWriter, r *http.Request) webtemplat
 
 	sess := sessionFromRequest(r, h.sessions)
 	if sess != nil {
+		if accountLang := h.pageContextLanguage(r.Context(), sess, lang); strings.TrimSpace(accountLang) != "" {
+			page.Lang = accountLang
+			if tag, ok := platformi18n.ParseTag(accountLang); ok {
+				page.Loc = webi18n.Printer(tag)
+				if shouldSetLanguageCookie(r, tag.String()) {
+					webi18n.SetLanguageCookie(w, tag)
+				}
+			}
+		}
 		page.UserName = strings.TrimSpace(sess.displayName)
 		if page.UserName == "" {
 			page.UserName = webtemplates.T(page.Loc, "web.dashboard.user_name_fallback")
@@ -54,6 +66,56 @@ func (h *handler) pageContext(w http.ResponseWriter, r *http.Request) webtemplat
 	}
 
 	return page
+}
+
+func (h *handler) pageContextLanguage(ctx context.Context, sess *session, fallback string) string {
+	fallback = strings.TrimSpace(fallback)
+	if fallback == "" {
+		fallback = platformi18n.DefaultTag().String()
+	}
+	if h == nil || sess == nil || h.accountClient == nil {
+		return fallback
+	}
+
+	if cached, ok := sess.cachedLocaleTag(); ok {
+		cached = strings.TrimSpace(cached)
+		if cached == "" {
+			return fallback
+		}
+		return cached
+	}
+
+	userID, err := h.resolveProfileUserID(ctx, sess)
+	if err != nil || strings.TrimSpace(userID) == "" {
+		return fallback
+	}
+
+	profile, err := h.fetchAccountProfile(ctx, userID)
+	if err != nil || profile == nil {
+		return fallback
+	}
+	if profile.Locale == commonv1.Locale_LOCALE_UNSPECIFIED {
+		return fallback
+	}
+
+	accountLang := platformi18n.LocaleString(platformi18n.NormalizeLocale(profile.Locale))
+	sess.setCachedUserLocale(accountLang)
+	return accountLang
+}
+
+func shouldSetLanguageCookie(r *http.Request, expected string) bool {
+	expected = strings.TrimSpace(expected)
+	if expected == "" {
+		return false
+	}
+	if r == nil {
+		return true
+	}
+	cookie, err := r.Cookie(webi18n.LangCookieName)
+	if err != nil {
+		return true
+	}
+	return strings.TrimSpace(cookie.Value) != expected
 }
 
 func chatFallbackPort(rawAddr string) string {

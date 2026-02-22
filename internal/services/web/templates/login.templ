@@ -8,11 +8,18 @@ type LoginParams struct {
 	Error      string
 	Lang       string
 	Loc        Localizer
+	CurrentPath  string
+	CurrentQuery string
 }
 
 // LoginPage renders the passkey sign-in / registration page.
 templ LoginPage(params LoginParams) {
-	@ShellLayout(T(params.Loc, "title.login"), params.Lang, params.Loc) {
+	@ShellLayout(T(params.Loc, "title.login"), PageContext{
+		Lang:         params.Lang,
+		Loc:          params.Loc,
+		CurrentPath:  params.CurrentPath,
+		CurrentQuery: params.CurrentQuery,
+	}) {
 		<main class="landing-shell">
 			<div class="w-full grid gap-8">
 				<header class="grid gap-3">
@@ -183,12 +190,14 @@ templ loginScript() {
 		}
 
 		async function startPasskeyRegister(email, pendingId) {
+			const locale = document.documentElement ? document.documentElement.lang : "";
 			const response = await fetch("/passkeys/register/start", {
 				method: "POST",
 				headers: {"Content-Type": "application/json"},
 				body: JSON.stringify({
 					email,
 					pending_id: pendingId,
+					locale,
 				}),
 			});
 			if (!response.ok) {

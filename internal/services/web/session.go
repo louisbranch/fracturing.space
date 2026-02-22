@@ -38,6 +38,8 @@ type session struct {
 	cachedUserIDResolved   bool
 	cachedUserAvatarURL    string
 	cachedUserAvatarCached bool
+	cachedUserLocaleTag    string
+	cachedUserLocaleCached bool
 }
 
 // sessionStore keeps a process-local cache of active sessions and optionally reads
@@ -110,6 +112,29 @@ func (s *session) setCachedUserAvatar(avatarURL string) {
 	s.mu.Lock()
 	s.cachedUserAvatarURL = avatarURL
 	s.cachedUserAvatarCached = true
+	s.mu.Unlock()
+}
+
+// cachedLocaleTag resolves the cached locale tag for this session.
+func (s *session) cachedLocaleTag() (string, bool) {
+	if s == nil {
+		return "", false
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if !s.cachedUserLocaleCached {
+		return "", false
+	}
+	return s.cachedUserLocaleTag, true
+}
+
+func (s *session) setCachedUserLocale(locale string) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.cachedUserLocaleTag = strings.TrimSpace(locale)
+	s.cachedUserLocaleCached = true
 	s.mu.Unlock()
 }
 

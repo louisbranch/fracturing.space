@@ -17,7 +17,7 @@ templ ErrorPage(page PageContext, title string, message string) {
 			@errorPageContent(page, title, message)
 		}
 	} else {
-		@ShellLayout(title, page.Lang, page.Loc) {
+		@ShellLayout(title, page) {
 			@errorPageContent(page, title, message)
 		}
 	}

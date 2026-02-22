@@ -8,7 +8,7 @@ type LandingParams struct {
 
 // LandingPage renders the public-facing landing page.
 templ LandingPage(page PageContext, appName string, params LandingParams) {
-	@ShellLayout(T(page.Loc, "title.landing"), page.Lang, page.Loc) {
+	@ShellLayout(T(page.Loc, "title.landing"), page) {
 		<main class="landing-shell">
 			@LandingHero(page, appName, params)
 		</main>

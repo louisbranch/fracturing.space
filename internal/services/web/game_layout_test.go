@@ -8,10 +8,14 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"golang.org/x/text/message"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -33,6 +37,109 @@ func TestWriteGameContentType(t *testing.T) {
 
 	if got := w.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
 		t.Fatalf("Content-Type = %q, want %q", got, "text/html; charset=utf-8")
+	}
+}
+
+func TestPageContextUsesAccountLocaleForSignedInSession(t *testing.T) {
+	h := &handler{
+		config:       Config{AuthBaseURL: "http://auth.local"},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+		accountClient: &fakeAccountClient{
+			getProfileResp: &authv1.GetProfileResponse{
+				Profile: &authv1.AccountProfile{
+					UserId: "user-1",
+					Locale: commonv1.Locale_LOCALE_PT_BR,
+				},
+			},
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	req := httptest.NewRequest(http.MethodGet, "/campaigns?lang=en-US", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	page := h.pageContext(w, req)
+	if page.Lang != "pt-BR" {
+		t.Fatalf("Lang = %q, want %q", page.Lang, "pt-BR")
+	}
+}
+
+func TestPageContextLanguageDoesNotPermanentlyCacheUnspecifiedLocale(t *testing.T) {
+	fakeAccount := &fakeAccountClient{
+		getProfileResp: &authv1.GetProfileResponse{
+			Profile: &authv1.AccountProfile{
+				UserId: "user-1",
+				Locale: commonv1.Locale_LOCALE_UNSPECIFIED,
+			},
+		},
+	}
+	h := &handler{
+		config:        Config{AuthBaseURL: "http://auth.local"},
+		sessions:      newSessionStore(),
+		pendingFlows:  newPendingFlowStore(),
+		accountClient: fakeAccount,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	firstReq := httptest.NewRequest(http.MethodGet, "/campaigns?lang=en-US", nil)
+	firstReq.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	firstW := httptest.NewRecorder()
+	firstPage := h.pageContext(firstW, firstReq)
+	if firstPage.Lang != "en-US" {
+		t.Fatalf("first Lang = %q, want %q", firstPage.Lang, "en-US")
+	}
+
+	fakeAccount.getProfileResp = &authv1.GetProfileResponse{
+		Profile: &authv1.AccountProfile{
+			UserId: "user-1",
+			Locale: commonv1.Locale_LOCALE_PT_BR,
+		},
+	}
+	secondReq := httptest.NewRequest(http.MethodGet, "/campaigns?lang=en-US", nil)
+	secondReq.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	secondW := httptest.NewRecorder()
+	secondPage := h.pageContext(secondW, secondReq)
+	if secondPage.Lang != "pt-BR" {
+		t.Fatalf("second Lang = %q, want %q", secondPage.Lang, "pt-BR")
+	}
+}
+
+func TestPageContextLanguageCookieWriteIsDeduped(t *testing.T) {
+	h := &handler{
+		config:       Config{AuthBaseURL: "http://auth.local"},
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+		accountClient: &fakeAccountClient{
+			getProfileResp: &authv1.GetProfileResponse{
+				Profile: &authv1.AccountProfile{
+					UserId: "user-1",
+					Locale: commonv1.Locale_LOCALE_PT_BR,
+				},
+			},
+		},
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	req.AddCookie(&http.Cookie{Name: webi18n.LangCookieName, Value: "pt-BR"})
+	w := httptest.NewRecorder()
+
+	_ = h.pageContext(w, req)
+
+	if got := w.Header().Values("Set-Cookie"); len(got) != 0 {
+		t.Fatalf("Set-Cookie = %q, want no locale cookie rewrite", got)
 	}
 }
 
@@ -149,6 +256,22 @@ func TestGameLayoutIncludesCampaignsTopNavLink(t *testing.T) {
 	body := w.Body.String()
 	if !strings.Contains(body, `href="/campaigns"`) {
 		t.Fatalf("expected campaigns link in top navbar")
+	}
+}
+
+func TestChromeLayoutDoesNotRenderLocaleSwitcher(t *testing.T) {
+	w := httptest.NewRecorder()
+	renderAppCampaignCreatePage(w, httptest.NewRequest(http.MethodGet, "/campaigns/create", nil), webtemplates.PageContext{
+		CurrentPath: "/campaigns/create",
+		Lang:        "en-US",
+	})
+
+	body := w.Body.String()
+	if strings.Contains(body, `data-lang="`) {
+		t.Fatalf("chrome layout should not render shell language links, got %q", body)
+	}
+	if strings.Contains(body, "updateShellLanguageLinks") {
+		t.Fatalf("chrome layout should not render shell language script, got %q", body)
 	}
 }
 

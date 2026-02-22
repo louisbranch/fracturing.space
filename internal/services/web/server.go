@@ -19,6 +19,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
 	webstorage "github.com/louisbranch/fracturing.space/internal/services/web/storage"
@@ -313,12 +314,14 @@ func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
 		}
 
 		params := webtemplates.LoginParams{
-			AppName:    appName,
-			PendingID:  pendingID,
-			ClientName: clientName,
-			Error:      errorMessage,
-			Lang:       lang,
-			Loc:        printer,
+			AppName:      appName,
+			PendingID:    pendingID,
+			ClientName:   clientName,
+			Error:        errorMessage,
+			Lang:         lang,
+			Loc:          printer,
+			CurrentPath:  r.URL.Path,
+			CurrentQuery: r.URL.RawQuery,
 		}
 		loginPage := webtemplates.PageContext{
 			Lang:    lang,
@@ -792,6 +795,7 @@ func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 	var payload struct {
 		Email     string `json:"email"`
 		PendingID string `json:"pending_id"`
+		Locale    string `json:"locale"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.invalid_json_body")
@@ -801,11 +805,33 @@ func (h *handler) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.email_is_required")
 		return
 	}
+	requestedLocale := strings.TrimSpace(payload.Locale)
+	resolvedLocale := platformi18n.LocaleForTag(webi18n.Default())
+	if requestedLocale == "" {
+		tag, _ := webi18n.ResolveTag(r)
+		resolvedLocale = platformi18n.LocaleForTag(tag)
+	} else {
+		parsedLocale, ok := platformi18n.ParseLocale(requestedLocale)
+		if !ok {
+			localizeHTTPError(w, r, http.StatusBadRequest, "error.http.invalid_locale")
+			return
+		}
+		resolvedLocale = parsedLocale
+	}
 
 	createResp, err := h.authClient.CreateUser(r.Context(), &authv1.CreateUserRequest{Email: payload.Email})
 	if err != nil || createResp.GetUser() == nil {
 		localizeHTTPError(w, r, http.StatusBadRequest, "error.http.failed_to_create_user")
 		return
+	}
+	if h.accountClient != nil {
+		_, err = h.accountClient.UpdateProfile(r.Context(), &authv1.UpdateProfileRequest{
+			UserId: createResp.GetUser().GetId(),
+			Locale: resolvedLocale,
+		})
+		if err != nil {
+			log.Printf("web: continue passkey registration despite profile locale update failure for user %q: %v", createResp.GetUser().GetId(), err)
+		}
 	}
 
 	beginResp, err := h.authClient.BeginPasskeyRegistration(r.Context(), &authv1.BeginPasskeyRegistrationRequest{UserId: createResp.GetUser().GetId()})
@@ -941,6 +967,14 @@ func (h *handler) handleMagicLink(w http.ResponseWriter, r *http.Request) {
 
 // renderMagicPage writes the status code and renders the magic-link templ page.
 func (h *handler) renderMagicPage(w http.ResponseWriter, r *http.Request, status int, params webtemplates.MagicParams) {
+	if r != nil {
+		if strings.TrimSpace(params.CurrentPath) == "" {
+			params.CurrentPath = r.URL.Path
+		}
+		if strings.TrimSpace(params.CurrentQuery) == "" {
+			params.CurrentQuery = r.URL.RawQuery
+		}
+	}
 	writeGameContentType(w)
 	w.WriteHeader(status)
 	if err := h.writePage(

@@ -150,6 +150,7 @@ func init() {
 	message.SetString(lang, "error.http.pending_id_is_required", "pending_id é obrigatório")
 	message.SetString(lang, "error.http.auth_client_not_configured", "cliente de autenticação não configurado")
 	message.SetString(lang, "error.http.invalid_json_body", "corpo JSON inválido")
+	message.SetString(lang, "error.http.invalid_locale", "localidade inválida")
 	message.SetString(lang, "error.http.failed_to_start_passkey_login", "falha ao iniciar login por chave de acesso")
 	message.SetString(lang, "error.http.failed_to_finish_passkey_login", "falha ao concluir login por chave de acesso")
 	message.SetString(lang, "error.http.session_id_is_required", "session_id é obrigatório")

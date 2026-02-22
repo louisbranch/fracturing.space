@@ -17,6 +17,7 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -72,6 +73,44 @@ func TestLoginHandlerRendersForm(t *testing.T) {
 	}
 }
 
+func TestLoginHandlerRendersLocaleSwitcher(t *testing.T) {
+	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/login?pending_id=pending-1", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `data-lang="en-US"`) {
+		t.Fatalf("expected en-US locale option in shell locale switcher, got %q", body)
+	}
+	if !strings.Contains(body, `data-lang="pt-BR"`) {
+		t.Fatalf("expected pt-BR locale option in shell locale switcher, got %q", body)
+	}
+}
+
+func TestLoginHandlerLocaleLinksPreserveQuery(t *testing.T) {
+	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/login?pending_id=pending-1", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `href="/login?lang=en-US&amp;pending_id=pending-1"`) {
+		t.Fatalf("expected en-US link preserving query on login page, got %q", body)
+	}
+	if !strings.Contains(body, `href="/login?lang=pt-BR&amp;pending_id=pending-1"`) {
+		t.Fatalf("expected pt-BR link preserving query on login page, got %q", body)
+	}
+}
+
 func TestLandingPageRenders(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
@@ -92,6 +131,25 @@ func TestLandingPageRenders(t *testing.T) {
 	}
 	if !strings.Contains(body, `data-layout="auth"`) {
 		t.Fatalf("expected auth layout marker in landing page")
+	}
+}
+
+func TestLandingLocaleLinksPreserveQuery(t *testing.T) {
+	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/?src=landing", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `href="/?lang=en-US&amp;src=landing"`) {
+		t.Fatalf("expected en-US link preserving query on landing page, got %q", body)
+	}
+	if !strings.Contains(body, `href="/?lang=pt-BR&amp;src=landing"`) {
+		t.Fatalf("expected pt-BR link preserving query on landing page, got %q", body)
 	}
 }
 
@@ -247,6 +305,25 @@ func TestMagicLinkRequiresToken(t *testing.T) {
 	}
 }
 
+func TestMagicLocaleLinksPreserveQuery(t *testing.T) {
+	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
+	req := httptest.NewRequest(http.MethodGet, "/magic?src=magic", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `href="/magic?lang=en-US&amp;src=magic"`) {
+		t.Fatalf("expected en-US link preserving query on magic page, got %q", body)
+	}
+	if !strings.Contains(body, `href="/magic?lang=pt-BR&amp;src=magic"`) {
+		t.Fatalf("expected pt-BR link preserving query on magic page, got %q", body)
+	}
+}
+
 func TestMagicLinkRedirectsToConsent(t *testing.T) {
 	fake := &fakeAuthClient{
 		consumeMagicResp: &authv1.ConsumeMagicLinkResponse{PendingId: "pending-1"},
@@ -316,6 +393,124 @@ func TestPasskeyRegisterStartSuccess(t *testing.T) {
 	}
 	if payload["user_id"] != "user-1" {
 		t.Fatalf("user_id = %v", payload["user_id"])
+	}
+}
+
+func TestPasskeyRegisterStartPersistsLocaleToProfile(t *testing.T) {
+	fakeAuth := &fakeAuthClient{
+		createUserResp: &authv1.CreateUserResponse{
+			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
+		},
+		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
+			SessionId:                     "session-1",
+			CredentialCreationOptionsJson: []byte(`{"challenge":"test","user":{"id":"user"}}`),
+		},
+	}
+	fakeAccount := &fakeAccountClient{}
+	h := &handler{
+		config:        Config{AuthBaseURL: "http://auth.local"},
+		authClient:    fakeAuth,
+		accountClient: fakeAccount,
+		sessions:      newSessionStore(),
+		pendingFlows:  newPendingFlowStore(),
+	}
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/passkeys/register/start",
+		bytes.NewBufferString(`{"email":"alpha@example.com","locale":"pt-BR"}`),
+	)
+	w := httptest.NewRecorder()
+
+	h.handlePasskeyRegisterStart(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if fakeAccount.lastUpdateReq == nil {
+		t.Fatal("expected UpdateProfile call to persist locale")
+	}
+	if got := strings.TrimSpace(fakeAccount.lastUpdateReq.GetUserId()); got != "user-1" {
+		t.Fatalf("UpdateProfile user_id = %q, want %q", got, "user-1")
+	}
+	if got := fakeAccount.lastUpdateReq.GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("UpdateProfile locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
+	}
+}
+
+func TestPasskeyRegisterStartRejectsInvalidLocale(t *testing.T) {
+	fakeAuth := &fakeAuthClient{
+		createUserResp: &authv1.CreateUserResponse{
+			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
+		},
+		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
+			SessionId:                     "session-1",
+			CredentialCreationOptionsJson: []byte(`{"challenge":"test","user":{"id":"user"}}`),
+		},
+	}
+	h := &handler{
+		config:       Config{AuthBaseURL: "http://auth.local"},
+		authClient:   fakeAuth,
+		sessions:     newSessionStore(),
+		pendingFlows: newPendingFlowStore(),
+	}
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/passkeys/register/start",
+		bytes.NewBufferString(`{"email":"alpha@example.com","locale":"not-a-locale"}`),
+	)
+	w := httptest.NewRecorder()
+
+	h.handlePasskeyRegisterStart(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if body := w.Body.String(); !strings.Contains(body, "invalid locale") {
+		t.Fatalf("expected invalid locale error body, got %q", body)
+	}
+}
+
+func TestPasskeyRegisterStartContinuesWhenLocalePersistenceFails(t *testing.T) {
+	fakeAuth := &fakeAuthClient{
+		createUserResp: &authv1.CreateUserResponse{
+			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
+		},
+		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
+			SessionId:                     "session-1",
+			CredentialCreationOptionsJson: []byte(`{"challenge":"test","user":{"id":"user"}}`),
+		},
+	}
+	fakeAccount := &fakeAccountClient{
+		updateProfileErr: status.Error(codes.Unavailable, "profile write unavailable"),
+	}
+	h := &handler{
+		config:        Config{AuthBaseURL: "http://auth.local"},
+		authClient:    fakeAuth,
+		accountClient: fakeAccount,
+		sessions:      newSessionStore(),
+		pendingFlows:  newPendingFlowStore(),
+	}
+	req := httptest.NewRequest(
+		http.MethodPost,
+		"/passkeys/register/start",
+		bytes.NewBufferString(`{"email":"alpha@example.com","locale":"pt-BR"}`),
+	)
+	w := httptest.NewRecorder()
+
+	h.handlePasskeyRegisterStart(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if fakeAccount.lastUpdateReq == nil {
+		t.Fatal("expected UpdateProfile call to persist locale")
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload["session_id"] != "session-1" {
+		t.Fatalf("session_id = %v", payload["session_id"])
 	}
 }
 

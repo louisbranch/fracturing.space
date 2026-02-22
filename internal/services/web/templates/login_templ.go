@@ -12,12 +12,14 @@ import (
 
 // LoginParams holds values for the sign-in page.
 type LoginParams struct {
-	AppName    string
-	PendingID  string
-	ClientName string
-	Error      string
-	Lang       string
-	Loc        Localizer
+	AppName      string
+	PendingID    string
+	ClientName   string
+	Error        string
+	Lang         string
+	Loc          Localizer
+	CurrentPath  string
+	CurrentQuery string
 }
 
 // LoginPage renders the passkey sign-in / registration page.
@@ -61,7 +63,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.heading", params.AppName))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 19, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 26, Col: 84}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -74,7 +76,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.card_title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 23, Col: 72}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 30, Col: 72}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -87,7 +89,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.card_subtitle"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 24, Col: 66}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 31, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -105,7 +107,7 @@ func LoginPage(params LoginParams) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(params.Error)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 26, Col: 57}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 33, Col: 57}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -123,7 +125,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var7 string
 			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.email"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 33, Col: 82}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 40, Col: 82}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
@@ -136,7 +138,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(params.PendingID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 36, Col: 109}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 43, Col: 109}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -149,7 +151,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.create_passkey"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 36, Col: 151}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 43, Col: 151}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
@@ -162,7 +164,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.divider"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 38, Col: 59}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 45, Col: 59}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -175,7 +177,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(params.PendingID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 39, Col: 105}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 46, Col: 105}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -188,7 +190,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.sign_in_passkey"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 39, Col: 148}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 46, Col: 148}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -201,7 +203,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.js.missing_session"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 47, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 54, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
@@ -214,7 +216,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.js.passkey_failed"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 48, Col: 65}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 55, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -227,7 +229,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.js.email_required"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 49, Col: 65}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 56, Col: 65}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -240,7 +242,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.js.passkey_created"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 50, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 57, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -253,7 +255,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var17 string
 			templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.js.register_failed"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 51, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 58, Col: 67}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 			if templ_7745c5c3_Err != nil {
@@ -266,7 +268,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var18 string
 			templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.js.login_start_error"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 52, Col: 71}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 59, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 			if templ_7745c5c3_Err != nil {
@@ -279,7 +281,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.js.login_finish_error"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 53, Col: 73}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 60, Col: 73}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -292,7 +294,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var20 string
 			templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.js.register_start_error"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 54, Col: 77}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 61, Col: 77}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 			if templ_7745c5c3_Err != nil {
@@ -305,7 +307,7 @@ func LoginPage(params LoginParams) templ.Component {
 			var templ_7745c5c3_Var21 string
 			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(T(params.Loc, "login.js.register_finish_error"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 55, Col: 79}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/login.templ`, Line: 62, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {
@@ -321,7 +323,12 @@ func LoginPage(params LoginParams) templ.Component {
 			}
 			return nil
 		})
-		templ_7745c5c3_Err = ShellLayout(T(params.Loc, "title.login"), params.Lang, params.Loc).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = ShellLayout(T(params.Loc, "title.login"), PageContext{
+			Lang:         params.Lang,
+			Loc:          params.Loc,
+			CurrentPath:  params.CurrentPath,
+			CurrentQuery: params.CurrentQuery,
+		}).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -351,7 +358,7 @@ func loginScript() templ.Component {
 			templ_7745c5c3_Var22 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<script>\n\t\tconst i18nEl = document.getElementById(\"i18n-strings\");\n\t\tconst i18n = i18nEl ? i18nEl.dataset : {};\n\n\t\tconst passkeyButton = document.getElementById(\"passkey-login\");\n\t\tconst passkeyError = document.getElementById(\"passkey-error\");\n\t\tconst registerButton = document.getElementById(\"passkey-register\");\n\t\tconst registerEmail = document.getElementById(\"email\");\n\t\tconst registerError = document.getElementById(\"register-error\");\n\t\tconst registerSuccess = document.getElementById(\"register-success\");\n\n\t\tfunction showPasskeyError(message) {\n\t\t\tif (!passkeyError) return;\n\t\t\tpasskeyError.textContent = message;\n\t\t\tpasskeyError.hidden = false;\n\t\t}\n\n\t\tfunction showRegisterError(message) {\n\t\t\tif (!registerError) return;\n\t\t\tregisterError.textContent = message;\n\t\t\tregisterError.hidden = false;\n\t\t}\n\n\t\tfunction showRegisterSuccess(message) {\n\t\t\tif (!registerSuccess) return;\n\t\t\tregisterSuccess.textContent = message;\n\t\t\tregisterSuccess.hidden = false;\n\t\t}\n\n\t\tfunction bufferToBase64Url(buffer) {\n\t\t\tconst bytes = new Uint8Array(buffer);\n\t\t\tlet binary = \"\";\n\t\t\tbytes.forEach((b) => binary += String.fromCharCode(b));\n\t\t\treturn btoa(binary).replace(/\\+/g, \"-\").replace(/\\//g, \"_\").replace(/=+$/, \"\");\n\t\t}\n\n\t\tfunction base64UrlToBuffer(base64Url) {\n\t\t\tconst base64 = base64Url.replace(/-/g, \"+\").replace(/_/g, \"/\");\n\t\t\tconst pad = base64.length % 4 ? \"=\".repeat(4 - (base64.length % 4)) : \"\";\n\t\t\tconst binary = atob(base64 + pad);\n\t\t\tconst bytes = new Uint8Array(binary.length);\n\t\t\tfor (let i = 0; i < binary.length; i += 1) {\n\t\t\t\tbytes[i] = binary.charCodeAt(i);\n\t\t\t}\n\t\t\treturn bytes.buffer;\n\t\t}\n\n\t\tfunction credentialToJSON(credential) {\n\t\t\tif (!credential) return null;\n\t\t\tconst response = credential.response;\n\t\t\tconst data = {\n\t\t\t\tid: credential.id,\n\t\t\t\trawId: bufferToBase64Url(credential.rawId),\n\t\t\t\ttype: credential.type,\n\t\t\t};\n\t\t\tif (response) {\n\t\t\t\tdata.response = {\n\t\t\t\t\tclientDataJSON: bufferToBase64Url(response.clientDataJSON),\n\t\t\t\t\tattestationObject: response.attestationObject ? bufferToBase64Url(response.attestationObject) : undefined,\n\t\t\t\t\tauthenticatorData: response.authenticatorData ? bufferToBase64Url(response.authenticatorData) : undefined,\n\t\t\t\t\tsignature: response.signature ? bufferToBase64Url(response.signature) : undefined,\n\t\t\t\t\tuserHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : undefined,\n\t\t\t\t};\n\t\t\t}\n\t\t\treturn data;\n\t\t}\n\n\t\tfunction normalizeRequestOptions(options) {\n\t\t\tconst publicKey = options;\n\t\t\tpublicKey.challenge = base64UrlToBuffer(publicKey.challenge);\n\t\t\tif (Array.isArray(publicKey.allowCredentials)) {\n\t\t\t\tpublicKey.allowCredentials = publicKey.allowCredentials.map((cred) => ({\n\t\t\t\t\t...cred,\n\t\t\t\t\tid: base64UrlToBuffer(cred.id),\n\t\t\t\t}));\n\t\t\t}\n\t\t\treturn publicKey;\n\t\t}\n\n\t\tfunction normalizeCreationOptions(options) {\n\t\t\tconst publicKey = options;\n\t\t\tpublicKey.challenge = base64UrlToBuffer(publicKey.challenge);\n\t\t\tif (publicKey.user && publicKey.user.id) {\n\t\t\t\tpublicKey.user.id = base64UrlToBuffer(publicKey.user.id);\n\t\t\t}\n\t\t\tif (Array.isArray(publicKey.excludeCredentials)) {\n\t\t\t\tpublicKey.excludeCredentials = publicKey.excludeCredentials.map((cred) => ({\n\t\t\t\t\t...cred,\n\t\t\t\t\tid: base64UrlToBuffer(cred.id),\n\t\t\t\t}));\n\t\t\t}\n\t\t\treturn publicKey;\n\t\t}\n\n\t\tasync function startPasskeyLogin(pendingId) {\n\t\t\tconst response = await fetch(\"/passkeys/login/start\", {\n\t\t\t\tmethod: \"POST\",\n\t\t\t\theaders: {\"Content-Type\": \"application/json\"},\n\t\t\t\tbody: JSON.stringify({pending_id: pendingId}),\n\t\t\t});\n\t\t\tif (!response.ok) {\n\t\t\t\tthrow new Error(i18n.loginStartError || \"\");\n\t\t\t}\n\t\t\treturn response.json();\n\t\t}\n\n\t\tasync function finishPasskeyLogin(pendingId, sessionId, credential) {\n\t\t\tconst response = await fetch(\"/passkeys/login/finish\", {\n\t\t\t\tmethod: \"POST\",\n\t\t\t\theaders: {\"Content-Type\": \"application/json\"},\n\t\t\t\tbody: JSON.stringify({\n\t\t\t\t\tpending_id: pendingId,\n\t\t\t\t\tsession_id: sessionId,\n\t\t\t\t\tcredential,\n\t\t\t\t}),\n\t\t\t});\n\t\t\tif (!response.ok) {\n\t\t\t\tthrow new Error(i18n.loginFinishError || \"\");\n\t\t\t}\n\t\t\treturn response.json();\n\t\t}\n\n\t\tasync function startPasskeyRegister(email, pendingId) {\n\t\t\tconst response = await fetch(\"/passkeys/register/start\", {\n\t\t\t\tmethod: \"POST\",\n\t\t\t\theaders: {\"Content-Type\": \"application/json\"},\n\t\t\t\tbody: JSON.stringify({\n\t\t\t\t\temail,\n\t\t\t\t\tpending_id: pendingId,\n\t\t\t\t}),\n\t\t\t});\n\t\t\tif (!response.ok) {\n\t\t\t\tthrow new Error(i18n.registerStartError || \"\");\n\t\t\t}\n\t\t\treturn response.json();\n\t\t}\n\n\t\tasync function finishPasskeyRegister(sessionId, userId, credential, pendingId) {\n\t\t\tconst response = await fetch(\"/passkeys/register/finish\", {\n\t\t\t\tmethod: \"POST\",\n\t\t\t\theaders: {\"Content-Type\": \"application/json\"},\n\t\t\t\tbody: JSON.stringify({\n\t\t\t\t\tsession_id: sessionId,\n\t\t\t\t\tuser_id: userId,\n\t\t\t\t\tcredential,\n\t\t\t\t\tpending_id: pendingId,\n\t\t\t\t}),\n\t\t\t});\n\t\t\tif (!response.ok) {\n\t\t\t\tthrow new Error(i18n.registerFinishError || \"\");\n\t\t\t}\n\t\t\treturn response.json();\n\t\t}\n\n\t\tasync function performPasskeyLogin(pendingId) {\n\t\t\tconst start = await startPasskeyLogin(pendingId);\n\t\t\tconst publicKey = normalizeRequestOptions(start.public_key.publicKey);\n\t\t\tconst assertion = await navigator.credentials.get({publicKey});\n\t\t\tconst credentialJSON = credentialToJSON(assertion);\n\t\t\tconst finish = await finishPasskeyLogin(pendingId, start.session_id, credentialJSON);\n\t\t\tif (finish.redirect_url) {\n\t\t\t\twindow.location = finish.redirect_url;\n\t\t\t}\n\t\t}\n\n\t\t\t\tif (passkeyButton && window.PublicKeyCredential) {\n\t\t\t\t\tpasskeyButton.addEventListener(\"click\", async () => {\n\t\t\t\t\t\tpasskeyError.hidden = true;\n\t\t\t\t\t\tconst pendingId = passkeyButton.dataset.pendingId;\n\t\t\t\t\t\tif (!pendingId) {\n\t\t\t\t\t\t\tshowPasskeyError(i18n.missingSession || \"\");\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tawait performPasskeyLogin(pendingId);\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\tshowPasskeyError(err.message || i18n.passkeyFailed || \"\");\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t}\n\n\t\t\t\tif (registerButton && window.PublicKeyCredential) {\n\t\t\t\t\t\tregisterButton.addEventListener(\"click\", async () => {\n\t\t\t\tregisterError.hidden = true;\n\t\t\t\tregisterSuccess.hidden = true;\n\t\t\t\tconst pendingId = registerButton.dataset.pendingId || \"\";\n\t\t\t\t\t\tconst email = registerEmail ? registerEmail.value.trim() : \"\";\n\t\t\t\t\t\tif (!email) {\n\t\t\t\t\t\t\tshowRegisterError(i18n.emailRequired || \"\");\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\ttry {\n\t\t\t\t\tconst start = await startPasskeyRegister(email, pendingId);\n\t\t\t\t\tconst publicKey = normalizeCreationOptions(start.public_key.publicKey);\n\t\t\t\t\tconst credential = await navigator.credentials.create({publicKey});\n\t\t\t\t\tconst credentialJSON = credentialToJSON(credential);\n\t\t\t\t\tawait finishPasskeyRegister(start.session_id, start.user_id, credentialJSON, pendingId);\n\t\t\t\t\t\t\tif (pendingId) {\n\t\t\t\t\t\t\t\tawait performPasskeyLogin(pendingId);\n\t\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tshowRegisterSuccess(i18n.passkeyCreated || \"\");\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\tshowRegisterError(err.message || i18n.registerFailed || \"\");\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t}\n\t</script>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, "<script>\n\t\tconst i18nEl = document.getElementById(\"i18n-strings\");\n\t\tconst i18n = i18nEl ? i18nEl.dataset : {};\n\n\t\tconst passkeyButton = document.getElementById(\"passkey-login\");\n\t\tconst passkeyError = document.getElementById(\"passkey-error\");\n\t\tconst registerButton = document.getElementById(\"passkey-register\");\n\t\tconst registerEmail = document.getElementById(\"email\");\n\t\tconst registerError = document.getElementById(\"register-error\");\n\t\tconst registerSuccess = document.getElementById(\"register-success\");\n\n\t\tfunction showPasskeyError(message) {\n\t\t\tif (!passkeyError) return;\n\t\t\tpasskeyError.textContent = message;\n\t\t\tpasskeyError.hidden = false;\n\t\t}\n\n\t\tfunction showRegisterError(message) {\n\t\t\tif (!registerError) return;\n\t\t\tregisterError.textContent = message;\n\t\t\tregisterError.hidden = false;\n\t\t}\n\n\t\tfunction showRegisterSuccess(message) {\n\t\t\tif (!registerSuccess) return;\n\t\t\tregisterSuccess.textContent = message;\n\t\t\tregisterSuccess.hidden = false;\n\t\t}\n\n\t\tfunction bufferToBase64Url(buffer) {\n\t\t\tconst bytes = new Uint8Array(buffer);\n\t\t\tlet binary = \"\";\n\t\t\tbytes.forEach((b) => binary += String.fromCharCode(b));\n\t\t\treturn btoa(binary).replace(/\\+/g, \"-\").replace(/\\//g, \"_\").replace(/=+$/, \"\");\n\t\t}\n\n\t\tfunction base64UrlToBuffer(base64Url) {\n\t\t\tconst base64 = base64Url.replace(/-/g, \"+\").replace(/_/g, \"/\");\n\t\t\tconst pad = base64.length % 4 ? \"=\".repeat(4 - (base64.length % 4)) : \"\";\n\t\t\tconst binary = atob(base64 + pad);\n\t\t\tconst bytes = new Uint8Array(binary.length);\n\t\t\tfor (let i = 0; i < binary.length; i += 1) {\n\t\t\t\tbytes[i] = binary.charCodeAt(i);\n\t\t\t}\n\t\t\treturn bytes.buffer;\n\t\t}\n\n\t\tfunction credentialToJSON(credential) {\n\t\t\tif (!credential) return null;\n\t\t\tconst response = credential.response;\n\t\t\tconst data = {\n\t\t\t\tid: credential.id,\n\t\t\t\trawId: bufferToBase64Url(credential.rawId),\n\t\t\t\ttype: credential.type,\n\t\t\t};\n\t\t\tif (response) {\n\t\t\t\tdata.response = {\n\t\t\t\t\tclientDataJSON: bufferToBase64Url(response.clientDataJSON),\n\t\t\t\t\tattestationObject: response.attestationObject ? bufferToBase64Url(response.attestationObject) : undefined,\n\t\t\t\t\tauthenticatorData: response.authenticatorData ? bufferToBase64Url(response.authenticatorData) : undefined,\n\t\t\t\t\tsignature: response.signature ? bufferToBase64Url(response.signature) : undefined,\n\t\t\t\t\tuserHandle: response.userHandle ? bufferToBase64Url(response.userHandle) : undefined,\n\t\t\t\t};\n\t\t\t}\n\t\t\treturn data;\n\t\t}\n\n\t\tfunction normalizeRequestOptions(options) {\n\t\t\tconst publicKey = options;\n\t\t\tpublicKey.challenge = base64UrlToBuffer(publicKey.challenge);\n\t\t\tif (Array.isArray(publicKey.allowCredentials)) {\n\t\t\t\tpublicKey.allowCredentials = publicKey.allowCredentials.map((cred) => ({\n\t\t\t\t\t...cred,\n\t\t\t\t\tid: base64UrlToBuffer(cred.id),\n\t\t\t\t}));\n\t\t\t}\n\t\t\treturn publicKey;\n\t\t}\n\n\t\tfunction normalizeCreationOptions(options) {\n\t\t\tconst publicKey = options;\n\t\t\tpublicKey.challenge = base64UrlToBuffer(publicKey.challenge);\n\t\t\tif (publicKey.user && publicKey.user.id) {\n\t\t\t\tpublicKey.user.id = base64UrlToBuffer(publicKey.user.id);\n\t\t\t}\n\t\t\tif (Array.isArray(publicKey.excludeCredentials)) {\n\t\t\t\tpublicKey.excludeCredentials = publicKey.excludeCredentials.map((cred) => ({\n\t\t\t\t\t...cred,\n\t\t\t\t\tid: base64UrlToBuffer(cred.id),\n\t\t\t\t}));\n\t\t\t}\n\t\t\treturn publicKey;\n\t\t}\n\n\t\tasync function startPasskeyLogin(pendingId) {\n\t\t\tconst response = await fetch(\"/passkeys/login/start\", {\n\t\t\t\tmethod: \"POST\",\n\t\t\t\theaders: {\"Content-Type\": \"application/json\"},\n\t\t\t\tbody: JSON.stringify({pending_id: pendingId}),\n\t\t\t});\n\t\t\tif (!response.ok) {\n\t\t\t\tthrow new Error(i18n.loginStartError || \"\");\n\t\t\t}\n\t\t\treturn response.json();\n\t\t}\n\n\t\tasync function finishPasskeyLogin(pendingId, sessionId, credential) {\n\t\t\tconst response = await fetch(\"/passkeys/login/finish\", {\n\t\t\t\tmethod: \"POST\",\n\t\t\t\theaders: {\"Content-Type\": \"application/json\"},\n\t\t\t\tbody: JSON.stringify({\n\t\t\t\t\tpending_id: pendingId,\n\t\t\t\t\tsession_id: sessionId,\n\t\t\t\t\tcredential,\n\t\t\t\t}),\n\t\t\t});\n\t\t\tif (!response.ok) {\n\t\t\t\tthrow new Error(i18n.loginFinishError || \"\");\n\t\t\t}\n\t\t\treturn response.json();\n\t\t}\n\n\t\tasync function startPasskeyRegister(email, pendingId) {\n\t\t\tconst locale = document.documentElement ? document.documentElement.lang : \"\";\n\t\t\tconst response = await fetch(\"/passkeys/register/start\", {\n\t\t\t\tmethod: \"POST\",\n\t\t\t\theaders: {\"Content-Type\": \"application/json\"},\n\t\t\t\tbody: JSON.stringify({\n\t\t\t\t\temail,\n\t\t\t\t\tpending_id: pendingId,\n\t\t\t\t\tlocale,\n\t\t\t\t}),\n\t\t\t});\n\t\t\tif (!response.ok) {\n\t\t\t\tthrow new Error(i18n.registerStartError || \"\");\n\t\t\t}\n\t\t\treturn response.json();\n\t\t}\n\n\t\tasync function finishPasskeyRegister(sessionId, userId, credential, pendingId) {\n\t\t\tconst response = await fetch(\"/passkeys/register/finish\", {\n\t\t\t\tmethod: \"POST\",\n\t\t\t\theaders: {\"Content-Type\": \"application/json\"},\n\t\t\t\tbody: JSON.stringify({\n\t\t\t\t\tsession_id: sessionId,\n\t\t\t\t\tuser_id: userId,\n\t\t\t\t\tcredential,\n\t\t\t\t\tpending_id: pendingId,\n\t\t\t\t}),\n\t\t\t});\n\t\t\tif (!response.ok) {\n\t\t\t\tthrow new Error(i18n.registerFinishError || \"\");\n\t\t\t}\n\t\t\treturn response.json();\n\t\t}\n\n\t\tasync function performPasskeyLogin(pendingId) {\n\t\t\tconst start = await startPasskeyLogin(pendingId);\n\t\t\tconst publicKey = normalizeRequestOptions(start.public_key.publicKey);\n\t\t\tconst assertion = await navigator.credentials.get({publicKey});\n\t\t\tconst credentialJSON = credentialToJSON(assertion);\n\t\t\tconst finish = await finishPasskeyLogin(pendingId, start.session_id, credentialJSON);\n\t\t\tif (finish.redirect_url) {\n\t\t\t\twindow.location = finish.redirect_url;\n\t\t\t}\n\t\t}\n\n\t\t\t\tif (passkeyButton && window.PublicKeyCredential) {\n\t\t\t\t\tpasskeyButton.addEventListener(\"click\", async () => {\n\t\t\t\t\t\tpasskeyError.hidden = true;\n\t\t\t\t\t\tconst pendingId = passkeyButton.dataset.pendingId;\n\t\t\t\t\t\tif (!pendingId) {\n\t\t\t\t\t\t\tshowPasskeyError(i18n.missingSession || \"\");\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\t\t\ttry {\n\t\t\t\t\t\t\tawait performPasskeyLogin(pendingId);\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\tshowPasskeyError(err.message || i18n.passkeyFailed || \"\");\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t}\n\n\t\t\t\tif (registerButton && window.PublicKeyCredential) {\n\t\t\t\t\t\tregisterButton.addEventListener(\"click\", async () => {\n\t\t\t\tregisterError.hidden = true;\n\t\t\t\tregisterSuccess.hidden = true;\n\t\t\t\tconst pendingId = registerButton.dataset.pendingId || \"\";\n\t\t\t\t\t\tconst email = registerEmail ? registerEmail.value.trim() : \"\";\n\t\t\t\t\t\tif (!email) {\n\t\t\t\t\t\t\tshowRegisterError(i18n.emailRequired || \"\");\n\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t}\n\t\t\t\ttry {\n\t\t\t\t\tconst start = await startPasskeyRegister(email, pendingId);\n\t\t\t\t\tconst publicKey = normalizeCreationOptions(start.public_key.publicKey);\n\t\t\t\t\tconst credential = await navigator.credentials.create({publicKey});\n\t\t\t\t\tconst credentialJSON = credentialToJSON(credential);\n\t\t\t\t\tawait finishPasskeyRegister(start.session_id, start.user_id, credentialJSON, pendingId);\n\t\t\t\t\t\t\tif (pendingId) {\n\t\t\t\t\t\t\t\tawait performPasskeyLogin(pendingId);\n\t\t\t\t\t\t\t\treturn;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t\tshowRegisterSuccess(i18n.passkeyCreated || \"\");\n\t\t\t\t\t\t} catch (err) {\n\t\t\t\t\t\t\tshowRegisterError(err.message || i18n.registerFailed || \"\");\n\t\t\t\t\t\t}\n\t\t\t\t\t});\n\t\t\t\t}\n\t</script>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
