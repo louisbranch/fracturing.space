@@ -33,7 +33,7 @@
 
 
 <g>
-	<rect x="28.000000" y="41.600000" width="815.698118" height="570.400000" style="fill: rgb(105, 191, 99);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="28.000000" y="41.600000" width="815.698118" height="570.400000" style="fill: rgb(106, 191, 99);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
@@ -192,14 +192,14 @@
 
 
 <g>
-	<rect x="494.342291" y="63.200000" width="201.625589" height="250.960098" style="fill: rgb(132, 202, 102);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="494.342291" y="63.200000" width="201.625589" height="250.960098" style="fill: rgb(132, 203, 102);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(502.342291,78.800000) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">web 75.4%</text>
+	data-math="N">web 75.3%</text>
 		
 </g>
 
@@ -810,14 +810,14 @@
 
 
 <g>
-	<rect x="651.458471" y="158.695365" width="36.509409" height="34.880636" style="fill: rgb(58, 165, 86);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="651.458471" y="158.695365" width="36.509409" height="34.880636" style="fill: rgb(72, 172, 90);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(659.458471,174.295365) scale(0.133525)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">session.go 86.6%</text>
+	data-math="N">session.go 84.6%</text>
 		
 </g>
 
