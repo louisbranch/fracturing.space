@@ -70,11 +70,11 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 
 func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 	switch evt.Type {
-	case event.Type("campaign.created"), event.Type("campaign.forked"):
+	case eventTypeCampaignCreated, eventTypeCampaignForked:
 		return false, nil
-	case event.Type("participant.joined"), event.Type("participant.updated"), event.Type("participant.left"):
+	case eventTypeParticipantJoined, eventTypeParticipantUpdated, eventTypeParticipantLeft:
 		return copyParticipants, nil
-	case event.Type("character.updated"):
+	case eventTypeCharacterUpdated:
 		if copyParticipants {
 			return true, nil
 		}

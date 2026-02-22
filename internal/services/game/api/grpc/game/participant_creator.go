@@ -88,7 +88,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("participant.join"),
+			Type:         commandTypeParticipantJoin,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -215,7 +215,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("participant.update"),
+			Type:         commandTypeParticipantUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -286,7 +286,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("participant.leave"),
+			Type:         commandTypeParticipantLeave,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

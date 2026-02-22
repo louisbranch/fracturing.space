@@ -102,7 +102,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("character.create"),
+			Type:         commandTypeCharacterCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -180,7 +180,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		projectionApplier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("character.profile_update"),
+			Type:         commandTypeCharacterProfileUpdate,
 			ActorType:    profileCommandActorType,
 			ActorID:      actorID,
 			RequestID:    reqID,
@@ -222,7 +222,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		c.stores.Applier(),
 		command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("sys.daggerheart.character_state.patch"),
+			Type:          commandTypeDaggerheartCharacterStatePatch,
 			ActorType:     profileCommandActorType,
 			ActorID:       actorID,
 			SessionID:     grpcmeta.SessionIDFromContext(ctx),
@@ -370,7 +370,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("character.update"),
+			Type:         commandTypeCharacterUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -450,7 +450,7 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("character.delete"),
+			Type:         commandTypeCharacterDelete,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -522,7 +522,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("character.update"),
+			Type:         commandTypeCharacterUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -808,7 +808,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("character.profile_update"),
+			Type:         commandTypeCharacterProfileUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

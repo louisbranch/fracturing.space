@@ -104,7 +104,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("invite.create"),
+			Type:         commandTypeInviteCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -250,7 +250,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("participant.bind"),
+			Type:         commandTypeParticipantBind,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -287,7 +287,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("invite.claim"),
+			Type:         commandTypeInviteClaim,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -358,7 +358,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 		applier,
 		command.Command{
 			CampaignID:   inv.CampaignID,
-			Type:         command.Type("invite.revoke"),
+			Type:         commandTypeInviteRevoke,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -400,14 +400,14 @@ func findInviteClaimByJTI(ctx context.Context, store storage.EventStore, campaig
 			CursorDir:    "fwd",
 			Descending:   false,
 			FilterClause: "event_type = ?",
-			FilterParams: []any{string(event.Type("invite.claimed"))},
+			FilterParams: []any{string(eventTypeInviteClaimed)},
 		})
 		if err != nil {
 			return nil, err
 		}
 		for i := range page.Events {
 			evt := page.Events[i]
-			if evt.Type != event.Type("invite.claimed") {
+			if evt.Type != eventTypeInviteClaimed {
 				continue
 			}
 			var payload invite.ClaimPayload

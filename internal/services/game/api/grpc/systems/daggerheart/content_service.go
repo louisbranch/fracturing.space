@@ -3,6 +3,7 @@ package daggerheart
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -25,8 +26,11 @@ type DaggerheartContentService struct {
 }
 
 // NewDaggerheartContentService creates a configured gRPC handler for content catalog APIs.
-func NewDaggerheartContentService(stores Stores) *DaggerheartContentService {
-	return &DaggerheartContentService{stores: stores}
+func NewDaggerheartContentService(stores Stores) (*DaggerheartContentService, error) {
+	if err := stores.ValidateContent(); err != nil {
+		return nil, fmt.Errorf("validate stores: %w", err)
+	}
+	return &DaggerheartContentService{stores: stores}, nil
 }
 
 // GetContentCatalog returns the entire Daggerheart content catalog.

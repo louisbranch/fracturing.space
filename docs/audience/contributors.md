@@ -21,3 +21,4 @@ When you need context:
 - [Project overview](../project/overview.md)
 - [Architecture](../project/architecture.md)
 - [Domain language](../project/domain-language.md)
+- [Contributor map (where to edit for X)](contributor-map.md)

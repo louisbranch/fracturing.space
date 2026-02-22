@@ -49,14 +49,14 @@ use the Make targets documented in [integration tests](docs/running/integration-
 | Feature Type | Location |
 |--------------|----------|
 | Campaign settings | `internal/services/game/domain/campaign/` |
-| Player/GM management | `internal/services/game/domain/campaign/participant/` |
-| Character definitions | `internal/services/game/domain/campaign/character/` |
-| Persistent gameplay state | `internal/services/game/domain/campaign/snapshot/` |
-| Session mechanics | `internal/services/game/domain/campaign/session/` |
+| Player/GM management | `internal/services/game/domain/participant/` |
+| Character definitions | `internal/services/game/domain/character/` |
+| Persistent gameplay state | `internal/services/game/domain/action/`, `internal/services/game/projection/` |
+| Session mechanics | `internal/services/game/domain/session/` |
 | Game-system-specific rules | `internal/services/game/domain/systems/{system}/` |
 | Generic dice mechanics | `internal/services/game/core/dice/` |
 | gRPC API endpoints | `internal/services/game/api/grpc/` |
-| MCP tools | `internal/services/mcp/tool/` |
+| MCP tools/resources | `internal/services/mcp/domain/` |
 
 ------------------------------------------------------------------------
 
@@ -67,7 +67,7 @@ use the Make targets documented in [integration tests](docs/running/integration-
 3. Implement `systems.GameSystem` interface
 4. Create protos in `api/proto/systems/{name}/v1/`
 5. Create gRPC service in `internal/services/game/api/grpc/systems/{name}/`
-6. Register MCP tools in `internal/services/mcp/tool/systems/{name}/`
+6. Register MCP tools/resources in `internal/services/mcp/domain/`
 7. Add integration tests
 
 See [AGENTS.md](AGENTS.md) for detailed architecture documentation.

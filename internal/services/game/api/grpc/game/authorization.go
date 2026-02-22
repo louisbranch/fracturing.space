@@ -9,7 +9,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/telemetry"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
-	domainevent "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"go.opentelemetry.io/otel/trace"
@@ -284,7 +283,7 @@ func replayCharacterOwnership(ctx context.Context, events storage.EventStore, ca
 			}
 
 			switch evt.Type {
-			case domainevent.Type("character.created"):
+			case eventTypeCharacterCreated:
 				ownerParticipantID := ""
 				if len(evt.PayloadJSON) > 0 {
 					var payload character.CreatePayload
@@ -299,7 +298,7 @@ func replayCharacterOwnership(ctx context.Context, events storage.EventStore, ca
 				ownership[characterID] = characterOwnershipState{
 					ownerParticipantID: ownerParticipantID,
 				}
-			case domainevent.Type("character.updated"):
+			case eventTypeCharacterUpdated:
 				if len(evt.PayloadJSON) == 0 {
 					continue
 				}
@@ -312,7 +311,7 @@ func replayCharacterOwnership(ctx context.Context, events storage.EventStore, ca
 					state.ownerParticipantID = strings.TrimSpace(updatedOwnerParticipantID)
 					ownership[characterID] = state
 				}
-			case domainevent.Type("character.deleted"):
+			case eventTypeCharacterDeleted:
 				state := ownership[characterID]
 				state.deleted = true
 				ownership[characterID] = state

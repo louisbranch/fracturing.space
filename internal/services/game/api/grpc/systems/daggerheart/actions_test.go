@@ -3,7 +3,6 @@ package daggerheart
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"testing"
 	"time"
 
@@ -19,294 +18,27 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/testkit/gamefakes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 )
 
 // --- Fake stores for daggerheart action tests ---
 
-type fakeCampaignStore struct {
-	campaigns map[string]storage.CampaignRecord
-}
+type fakeCampaignStore = gamefakes.CampaignStore
+type fakeDaggerheartStore = gamefakes.DaggerheartStore
+type fakeEventStore = gamefakes.EventStore
 
 func newFakeCampaignStore() *fakeCampaignStore {
-	return &fakeCampaignStore{campaigns: make(map[string]storage.CampaignRecord)}
-}
-
-func (s *fakeCampaignStore) Put(_ context.Context, c storage.CampaignRecord) error {
-	s.campaigns[c.ID] = c
-	return nil
-}
-
-func (s *fakeCampaignStore) Get(_ context.Context, id string) (storage.CampaignRecord, error) {
-	c, ok := s.campaigns[id]
-	if !ok {
-		return storage.CampaignRecord{}, storage.ErrNotFound
-	}
-	return c, nil
-}
-
-func (s *fakeCampaignStore) List(_ context.Context, _ int, _ string) (storage.CampaignPage, error) {
-	return storage.CampaignPage{}, nil
-}
-
-type fakeDaggerheartStore struct {
-	profiles   map[string]storage.DaggerheartCharacterProfile
-	states     map[string]storage.DaggerheartCharacterState
-	snapshots  map[string]storage.DaggerheartSnapshot
-	countdowns map[string]storage.DaggerheartCountdown
+	return gamefakes.NewCampaignStore()
 }
 
 func newFakeDaggerheartStore() *fakeDaggerheartStore {
-	return &fakeDaggerheartStore{
-		profiles:   make(map[string]storage.DaggerheartCharacterProfile),
-		states:     make(map[string]storage.DaggerheartCharacterState),
-		snapshots:  make(map[string]storage.DaggerheartSnapshot),
-		countdowns: make(map[string]storage.DaggerheartCountdown),
-	}
-}
-
-func (s *fakeDaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, p storage.DaggerheartCharacterProfile) error {
-	s.profiles[p.CampaignID+":"+p.CharacterID] = p
-	return nil
-}
-
-func (s *fakeDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error) {
-	p, ok := s.profiles[campaignID+":"+characterID]
-	if !ok {
-		return storage.DaggerheartCharacterProfile{}, storage.ErrNotFound
-	}
-	return p, nil
-}
-
-func (s *fakeDaggerheartStore) PutDaggerheartCharacterState(_ context.Context, st storage.DaggerheartCharacterState) error {
-	s.states[st.CampaignID+":"+st.CharacterID] = st
-	return nil
-}
-
-func (s *fakeDaggerheartStore) GetDaggerheartCharacterState(_ context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, error) {
-	st, ok := s.states[campaignID+":"+characterID]
-	if !ok {
-		return storage.DaggerheartCharacterState{}, storage.ErrNotFound
-	}
-	return st, nil
-}
-
-func (s *fakeDaggerheartStore) PutDaggerheartSnapshot(_ context.Context, snap storage.DaggerheartSnapshot) error {
-	s.snapshots[snap.CampaignID] = snap
-	return nil
-}
-
-func (s *fakeDaggerheartStore) GetDaggerheartSnapshot(_ context.Context, campaignID string) (storage.DaggerheartSnapshot, error) {
-	snap, ok := s.snapshots[campaignID]
-	if !ok {
-		return storage.DaggerheartSnapshot{}, storage.ErrNotFound
-	}
-	return snap, nil
-}
-
-func (s *fakeDaggerheartStore) PutDaggerheartCountdown(_ context.Context, cd storage.DaggerheartCountdown) error {
-	s.countdowns[cd.CampaignID+":"+cd.CountdownID] = cd
-	return nil
-}
-
-func (s *fakeDaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (storage.DaggerheartCountdown, error) {
-	cd, ok := s.countdowns[campaignID+":"+countdownID]
-	if !ok {
-		return storage.DaggerheartCountdown{}, storage.ErrNotFound
-	}
-	return cd, nil
-}
-
-func (s *fakeDaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]storage.DaggerheartCountdown, error) {
-	var result []storage.DaggerheartCountdown
-	for key, cd := range s.countdowns {
-		if len(key) > len(campaignID) && key[:len(campaignID)] == campaignID {
-			result = append(result, cd)
-		}
-	}
-	return result, nil
-}
-
-func (s *fakeDaggerheartStore) DeleteDaggerheartCountdown(_ context.Context, campaignID, countdownID string) error {
-	delete(s.countdowns, campaignID+":"+countdownID)
-	return nil
-}
-
-func (s *fakeDaggerheartStore) PutDaggerheartAdversary(_ context.Context, _ storage.DaggerheartAdversary) error {
-	return nil
-}
-
-func (s *fakeDaggerheartStore) GetDaggerheartAdversary(_ context.Context, _, _ string) (storage.DaggerheartAdversary, error) {
-	return storage.DaggerheartAdversary{}, storage.ErrNotFound
-}
-
-func (s *fakeDaggerheartStore) ListDaggerheartAdversaries(_ context.Context, _, _ string) ([]storage.DaggerheartAdversary, error) {
-	return nil, nil
-}
-
-func (s *fakeDaggerheartStore) DeleteDaggerheartAdversary(_ context.Context, _, _ string) error {
-	return nil
-}
-
-type fakeEventStore struct {
-	events  map[string][]event.Event
-	byHash  map[string]event.Event
-	nextSeq map[string]uint64
+	return gamefakes.NewDaggerheartStore()
 }
 
 func newFakeActionEventStore() *fakeEventStore {
-	return &fakeEventStore{
-		events:  make(map[string][]event.Event),
-		byHash:  make(map[string]event.Event),
-		nextSeq: make(map[string]uint64),
-	}
-}
-
-func (s *fakeEventStore) AppendEvent(_ context.Context, evt event.Event) (event.Event, error) {
-	seq := s.nextSeq[evt.CampaignID]
-	if seq == 0 {
-		seq = 1
-	}
-	evt.Seq = seq
-	evt.Hash = "fakehash"
-	s.nextSeq[evt.CampaignID] = seq + 1
-	s.events[evt.CampaignID] = append(s.events[evt.CampaignID], evt)
-	s.byHash[evt.Hash] = evt
-	return evt, nil
-}
-
-func (s *fakeEventStore) GetEventByHash(_ context.Context, hash string) (event.Event, error) {
-	evt, ok := s.byHash[hash]
-	if !ok {
-		return event.Event{}, storage.ErrNotFound
-	}
-	return evt, nil
-}
-
-func (s *fakeEventStore) GetEventBySeq(_ context.Context, campaignID string, seq uint64) (event.Event, error) {
-	for _, evt := range s.events[campaignID] {
-		if evt.Seq == seq {
-			return evt, nil
-		}
-	}
-	return event.Event{}, storage.ErrNotFound
-}
-
-func (s *fakeEventStore) ListEvents(_ context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error) {
-	var result []event.Event
-	for _, e := range s.events[campaignID] {
-		if e.Seq > afterSeq {
-			result = append(result, e)
-			if limit > 0 && len(result) >= limit {
-				break
-			}
-		}
-	}
-	return result, nil
-}
-
-func (s *fakeEventStore) ListEventsBySession(_ context.Context, campaignID, sessionID string, afterSeq uint64, limit int) ([]event.Event, error) {
-	var result []event.Event
-	for _, e := range s.events[campaignID] {
-		if e.SessionID == sessionID && e.Seq > afterSeq {
-			result = append(result, e)
-			if limit > 0 && len(result) >= limit {
-				break
-			}
-		}
-	}
-	return result, nil
-}
-
-func (s *fakeEventStore) GetLatestEventSeq(_ context.Context, campaignID string) (uint64, error) {
-	seq := s.nextSeq[campaignID]
-	if seq == 0 {
-		return 0, nil
-	}
-	return seq - 1, nil
-}
-
-func (s *fakeEventStore) ListEventsPage(_ context.Context, req storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
-	pageSize := req.PageSize
-	if pageSize <= 0 {
-		pageSize = 50
-	}
-
-	filtered := make([]event.Event, 0)
-	for _, evt := range s.events[req.CampaignID] {
-		if evt.Seq <= req.AfterSeq {
-			continue
-		}
-		if !fakeEventMatchesPageFilter(evt, req.FilterClause, req.FilterParams) {
-			continue
-		}
-		filtered = append(filtered, evt)
-	}
-
-	if req.Descending {
-		for i, j := 0, len(filtered)-1; i < j; i, j = i+1, j-1 {
-			filtered[i], filtered[j] = filtered[j], filtered[i]
-		}
-	}
-
-	totalCount := len(filtered)
-	hasNextPage := len(filtered) > pageSize
-	if hasNextPage {
-		filtered = filtered[:pageSize]
-	}
-
-	return storage.ListEventsPageResult{
-		Events:      filtered,
-		HasNextPage: hasNextPage,
-		TotalCount:  totalCount,
-	}, nil
-}
-
-func fakeEventMatchesPageFilter(evt event.Event, clause string, params []any) bool {
-	if strings.TrimSpace(clause) == "" {
-		return true
-	}
-
-	paramIndex := 0
-	nextString := func() (string, bool) {
-		if paramIndex >= len(params) {
-			return "", false
-		}
-		value, ok := params[paramIndex].(string)
-		if !ok {
-			return "", false
-		}
-		paramIndex++
-		return value, true
-	}
-
-	if strings.Contains(clause, "session_id = ?") {
-		value, ok := nextString()
-		if !ok || evt.SessionID != value {
-			return false
-		}
-	}
-	if strings.Contains(clause, "request_id = ?") {
-		value, ok := nextString()
-		if !ok || evt.RequestID != value {
-			return false
-		}
-	}
-	if strings.Contains(clause, "event_type = ?") {
-		value, ok := nextString()
-		if !ok || string(evt.Type) != value {
-			return false
-		}
-	}
-	if strings.Contains(clause, "entity_id = ?") {
-		value, ok := nextString()
-		if !ok || evt.EntityID != value {
-			return false
-		}
-	}
-
-	return true
+	return gamefakes.NewEventStore()
 }
 
 type fakeDomainEngine struct {
@@ -347,33 +79,10 @@ func (f *fakeDomainEngine) Execute(ctx context.Context, cmd command.Command) (en
 	return result, nil
 }
 
-type fakeCharacterStore struct {
-	characters map[string]storage.CharacterRecord
-}
+type fakeCharacterStore = gamefakes.CharacterStore
 
 func newFakeCharacterStore() *fakeCharacterStore {
-	return &fakeCharacterStore{characters: make(map[string]storage.CharacterRecord)}
-}
-
-func (s *fakeCharacterStore) PutCharacter(_ context.Context, c storage.CharacterRecord) error {
-	s.characters[c.CampaignID+":"+c.ID] = c
-	return nil
-}
-
-func (s *fakeCharacterStore) GetCharacter(_ context.Context, campaignID, characterID string) (storage.CharacterRecord, error) {
-	c, ok := s.characters[campaignID+":"+characterID]
-	if !ok {
-		return storage.CharacterRecord{}, storage.ErrNotFound
-	}
-	return c, nil
-}
-
-func (s *fakeCharacterStore) DeleteCharacter(_ context.Context, _, _ string) error {
-	return nil
-}
-
-func (s *fakeCharacterStore) ListCharacters(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
-	return storage.CharacterPage{}, nil
+	return gamefakes.NewCharacterStore()
 }
 
 type fakeSessionGateStore struct{}
@@ -444,37 +153,10 @@ func (s *fakeSessionSpotlightStateStore) ClearSessionSpotlight(_ context.Context
 	return nil
 }
 
-type fakeSessionStore struct {
-	sessions map[string]storage.SessionRecord // campaignID:sessionID -> session
-}
+type fakeSessionStore = gamefakes.SessionStore
 
 func newFakeSessionStore() *fakeSessionStore {
-	return &fakeSessionStore{sessions: make(map[string]storage.SessionRecord)}
-}
-
-func (s *fakeSessionStore) PutSession(_ context.Context, sess storage.SessionRecord) error {
-	s.sessions[sess.CampaignID+":"+sess.ID] = sess
-	return nil
-}
-
-func (s *fakeSessionStore) EndSession(_ context.Context, _, _ string, _ time.Time) (storage.SessionRecord, bool, error) {
-	return storage.SessionRecord{}, false, nil
-}
-
-func (s *fakeSessionStore) GetSession(_ context.Context, campaignID, sessionID string) (storage.SessionRecord, error) {
-	sess, ok := s.sessions[campaignID+":"+sessionID]
-	if !ok {
-		return storage.SessionRecord{}, storage.ErrNotFound
-	}
-	return sess, nil
-}
-
-func (s *fakeSessionStore) GetActiveSession(_ context.Context, _ string) (storage.SessionRecord, error) {
-	return storage.SessionRecord{}, storage.ErrNotFound
-}
-
-func (s *fakeSessionStore) ListSessions(_ context.Context, _ string, _ int, _ string) (storage.SessionPage, error) {
-	return storage.SessionPage{}, nil
+	return gamefakes.NewSessionStore()
 }
 
 func contextWithSessionID(sessionID string) context.Context {
@@ -516,21 +198,21 @@ func configureActionRollDomain(t *testing.T, svc *DaggerheartService, requestID 
 
 func newActionTestService() *DaggerheartService {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{
+	campaignStore.Campaigns["camp-1"] = storage.CampaignRecord{
 		ID:     "camp-1",
 		Status: campaign.StatusActive,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 	}
 
 	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["camp-1:char-1"] = storage.DaggerheartCharacterProfile{
+	dhStore.Profiles["camp-1:char-1"] = storage.DaggerheartCharacterProfile{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		HpMax:       6,
 		StressMax:   6,
 		ArmorMax:    2,
 	}
-	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          6,
@@ -540,14 +222,14 @@ func newActionTestService() *DaggerheartService {
 		Armor:       0,
 		LifeState:   daggerheart.LifeStateAlive,
 	}
-	dhStore.profiles["camp-1:char-2"] = storage.DaggerheartCharacterProfile{
+	dhStore.Profiles["camp-1:char-2"] = storage.DaggerheartCharacterProfile{
 		CampaignID:  "camp-1",
 		CharacterID: "char-2",
 		HpMax:       8,
 		StressMax:   6,
 		ArmorMax:    1,
 	}
-	dhStore.states["camp-1:char-2"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-2"] = storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-2",
 		Hp:          8,
@@ -559,7 +241,7 @@ func newActionTestService() *DaggerheartService {
 	}
 
 	sessStore := newFakeSessionStore()
-	sessStore.sessions["camp-1:sess-1"] = storage.SessionRecord{
+	sessStore.Sessions["camp-1:sess-1"] = storage.SessionRecord{
 		ID:         "sess-1",
 		CampaignID: "camp-1",
 		Status:     session.StatusActive,
@@ -666,8 +348,8 @@ func TestApplyDowntimeMove_Success(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	current := dhStore.states["camp-1:char-1"]
-	profile := dhStore.profiles["camp-1:char-1"]
+	current := dhStore.States["camp-1:char-1"]
+	profile := dhStore.Profiles["camp-1:char-1"]
 	state := daggerheart.NewCharacterState(daggerheart.CharacterStateConfig{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
@@ -749,8 +431,8 @@ func TestApplyDowntimeMove_UsesDomainEngine(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	current := dhStore.states["camp-1:char-1"]
-	profile := dhStore.profiles["camp-1:char-1"]
+	current := dhStore.States["camp-1:char-1"]
+	profile := dhStore.Profiles["camp-1:char-1"]
 	state := daggerheart.NewCharacterState(daggerheart.CharacterStateConfig{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
@@ -1561,7 +1243,7 @@ func TestApplyDeathMove_UnspecifiedMove(t *testing.T) {
 func TestApplyDeathMove_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
@@ -1610,7 +1292,7 @@ func TestApplyDeathMove_AlreadyDead(t *testing.T) {
 	configureNoopDomain(svc)
 	// Set up state with hp=0 and life_state=dead
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
@@ -1628,7 +1310,7 @@ func TestApplyDeathMove_AlreadyDead(t *testing.T) {
 func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
@@ -1637,7 +1319,7 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 		Stress:      1,
 		LifeState:   daggerheart.LifeStateAlive,
 	}
-	profile := dhStore.profiles["camp-1:char-1"]
+	profile := dhStore.Profiles["camp-1:char-1"]
 	move, err := daggerheartDeathMoveFromProto(pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH)
 	if err != nil {
 		t.Fatalf("map death move: %v", err)
@@ -1737,8 +1419,8 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 		Stress:      1,
 		LifeState:   daggerheart.LifeStateAlive,
 	}
-	dhStore.states["camp-1:char-1"] = state
-	profile := dhStore.profiles["camp-1:char-1"]
+	dhStore.States["camp-1:char-1"] = state
+	profile := dhStore.Profiles["camp-1:char-1"]
 	move, err := daggerheartDeathMoveFromProto(pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH)
 	if err != nil {
 		t.Fatalf("map death move: %v", err)
@@ -1886,14 +1568,14 @@ func TestResolveBlazeOfGlory_MissingSessionId(t *testing.T) {
 func TestResolveBlazeOfGlory_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
 		LifeState:   daggerheart.LifeStateBlazeOfGlory,
 	}
 	charStore := svc.stores.Character.(*fakeCharacterStore)
-	charStore.characters["camp-1:char-1"] = storage.CharacterRecord{
+	charStore.Characters["camp-1:char-1"] = storage.CharacterRecord{
 		ID:         "char-1",
 		CampaignID: "camp-1",
 		Name:       "Hero",
@@ -1910,7 +1592,7 @@ func TestResolveBlazeOfGlory_RequiresDomainEngine(t *testing.T) {
 func TestResolveBlazeOfGlory_CharacterAlreadyDead(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		LifeState:   daggerheart.LifeStateDead,
@@ -1934,14 +1616,14 @@ func TestResolveBlazeOfGlory_NotInBlazeState(t *testing.T) {
 func TestResolveBlazeOfGlory_Success(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
 		LifeState:   daggerheart.LifeStateBlazeOfGlory,
 	}
 	charStore := svc.stores.Character.(*fakeCharacterStore)
-	charStore.characters["camp-1:char-1"] = storage.CharacterRecord{
+	charStore.Characters["camp-1:char-1"] = storage.CharacterRecord{
 		ID:         "char-1",
 		CampaignID: "camp-1",
 		Name:       "Hero",
@@ -2015,14 +1697,14 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
 		LifeState:   daggerheart.LifeStateBlazeOfGlory,
 	}
 	charStore := svc.stores.Character.(*fakeCharacterStore)
-	charStore.characters["camp-1:char-1"] = storage.CharacterRecord{
+	charStore.Characters["camp-1:char-1"] = storage.CharacterRecord{
 		ID:         "char-1",
 		CampaignID: "camp-1",
 		Name:       "Hero",
@@ -2098,14 +1780,14 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 	if domain.commands[1].Type != command.Type("character.delete") {
 		t.Fatalf("command[1] type = %s, want %s", domain.commands[1].Type, "character.delete")
 	}
-	if got := len(eventStore.events["camp-1"]); got != 2 {
+	if got := len(eventStore.Events["camp-1"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("sys.daggerheart.character_state_patched") {
-		t.Fatalf("event[0] type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("sys.daggerheart.character_state_patched"))
+	if eventStore.Events["camp-1"][0].Type != event.Type("sys.daggerheart.character_state_patched") {
+		t.Fatalf("event[0] type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("sys.daggerheart.character_state_patched"))
 	}
-	if eventStore.events["camp-1"][1].Type != event.Type("character.deleted") {
-		t.Fatalf("event[1] type = %s, want %s", eventStore.events["camp-1"][1].Type, event.Type("character.deleted"))
+	if eventStore.Events["camp-1"][1].Type != event.Type("character.deleted") {
+		t.Fatalf("event[1] type = %s, want %s", eventStore.Events["camp-1"][1].Type, event.Type("character.deleted"))
 	}
 }
 
@@ -2204,8 +1886,8 @@ func TestApplyDamage_Success(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	profile := dhStore.profiles["camp-1:char-1"]
-	state := dhStore.states["camp-1:char-1"]
+	profile := dhStore.Profiles["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	damage := &pb.DaggerheartDamageRequest{
 		Amount:     3,
 		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
@@ -2289,8 +1971,8 @@ func TestApplyDamage_UsesDomainEngine(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	profile := dhStore.profiles["camp-1:char-1"]
-	state := dhStore.states["camp-1:char-1"]
+	profile := dhStore.Profiles["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	damage := &pb.DaggerheartDamageRequest{
 		Amount:     3,
 		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
@@ -2400,16 +2082,16 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	profile := dhStore.profiles["camp-1:char-1"]
+	profile := dhStore.Profiles["camp-1:char-1"]
 	profile.MajorThreshold = 3
 	profile.SevereThreshold = 6
 	profile.ArmorMax = 1
-	dhStore.profiles["camp-1:char-1"] = profile
+	dhStore.Profiles["camp-1:char-1"] = profile
 
-	state := dhStore.states["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	state.Hp = 6
 	state.Armor = 1
-	dhStore.states["camp-1:char-1"] = state
+	dhStore.States["camp-1:char-1"] = state
 
 	damage := &pb.DaggerheartDamageRequest{
 		Amount:     4,
@@ -2478,7 +2160,7 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 		t.Fatalf("ApplyDamage returned error: %v", err)
 	}
 
-	events := eventStore.events["camp-1"]
+	events := eventStore.Events["camp-1"]
 	if len(events) == 0 {
 		t.Fatal("expected damage event")
 	}
@@ -2565,7 +2247,7 @@ func TestApplyConditions_LifeStateOnly(t *testing.T) {
 		t.Fatalf("life_state = %v, want UNCONSCIOUS", resp.State.LifeState)
 	}
 
-	events := eventStore.events["camp-1"]
+	events := eventStore.Events["camp-1"]
 	if len(events) == 0 {
 		t.Fatal("expected events")
 	}
@@ -2589,9 +2271,9 @@ func TestApplyConditions_LifeStateNoChange(t *testing.T) {
 func TestApplyConditions_InvalidStoredLifeState(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	state := dhStore.states["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	state.LifeState = "not-a-life-state"
-	dhStore.states["camp-1:char-1"] = state
+	dhStore.States["camp-1:char-1"] = state
 
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
@@ -2605,9 +2287,9 @@ func TestApplyConditions_InvalidStoredLifeState(t *testing.T) {
 func TestApplyConditions_NoConditionChanges(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	state := dhStore.states["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	state.Conditions = []string{"vulnerable"}
-	dhStore.states["camp-1:char-1"] = state
+	dhStore.States["camp-1:char-1"] = state
 
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
@@ -2699,7 +2381,7 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("command conditions_after = %v, want %s", got.ConditionsAfter, daggerheart.ConditionHidden)
 	}
 	var foundConditionEvent bool
-	for _, evt := range eventStore.events["camp-1"] {
+	for _, evt := range eventStore.Events["camp-1"] {
 		if evt.Type == event.Type("sys.daggerheart.condition_changed") {
 			foundConditionEvent = true
 			break
@@ -2784,7 +2466,7 @@ func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
 		t.Fatalf("command life_state_after = %v, want %s", got.LifeStateAfter, after)
 	}
 	var foundStateEvent bool
-	for _, evt := range eventStore.events["camp-1"] {
+	for _, evt := range eventStore.Events["camp-1"] {
 		if evt.Type == event.Type("sys.daggerheart.character_state_patched") {
 			foundStateEvent = true
 			break
@@ -3086,8 +2768,8 @@ func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 	})
 	assertStatusCode(t, err, codes.Internal)
 
-	if len(eventStore.events["camp-1"]) != 0 {
-		t.Fatalf("expected no events committed on failed rest flow, got %d", len(eventStore.events["camp-1"]))
+	if len(eventStore.Events["camp-1"]) != 0 {
+		t.Fatalf("expected no events committed on failed rest flow, got %d", len(eventStore.Events["camp-1"]))
 	}
 }
 
@@ -3095,7 +2777,7 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.countdowns["camp-1:cd-1"] = storage.DaggerheartCountdown{
+	dhStore.Countdowns["camp-1:cd-1"] = storage.DaggerheartCountdown{
 		CampaignID:  "camp-1",
 		CountdownID: "cd-1",
 		Name:        "Long Term",
@@ -3218,7 +2900,7 @@ func TestApplyGmMove_NegativeFearSpent(t *testing.T) {
 func TestApplyGmMove_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 3}
+	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 3}
 	ctx := context.Background()
 	_, err := svc.ApplyGmMove(ctx, &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Move: "change_environment", FearSpent: 1,
@@ -3249,7 +2931,7 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 	svc := newActionTestService()
 	// Pre-populate GM fear in snapshot
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 3}
+	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 3}
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	gmPayload := daggerheart.GMFearSetPayload{After: optionalInt(2), Reason: "gm_move"}
 	gmPayloadJSON, err := json.Marshal(gmPayload)
@@ -3290,11 +2972,11 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 	if resp.GetGmFearAfter() != 2 {
 		t.Fatalf("expected gm fear after = 2, got %d", resp.GetGmFearAfter())
 	}
-	if len(eventStore.events["camp-1"]) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(eventStore.events["camp-1"]))
+	if len(eventStore.Events["camp-1"]) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(eventStore.Events["camp-1"]))
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("sys.daggerheart.gm_fear_changed") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("sys.daggerheart.gm_fear_changed"))
+	if eventStore.Events["camp-1"][0].Type != event.Type("sys.daggerheart.gm_fear_changed") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("sys.daggerheart.gm_fear_changed"))
 	}
 }
 
@@ -3302,7 +2984,7 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 2}
+	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 2}
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
@@ -3357,11 +3039,11 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 	if got.After != 1 {
 		t.Fatalf("command fear value = %d, want 1", got.After)
 	}
-	if got := len(eventStore.events["camp-1"]); got != 1 {
+	if got := len(eventStore.Events["camp-1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("sys.daggerheart.gm_fear_changed") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("sys.daggerheart.gm_fear_changed"))
+	if eventStore.Events["camp-1"][0].Type != event.Type("sys.daggerheart.gm_fear_changed") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("sys.daggerheart.gm_fear_changed"))
 	}
 }
 
@@ -3558,11 +3240,11 @@ func TestCreateCountdown_UsesDomainEngine(t *testing.T) {
 	if domain.lastCommand.Type != command.Type("sys.daggerheart.countdown.create") {
 		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "sys.daggerheart.countdown.create")
 	}
-	if got := len(eventStore.events["camp-1"]); got != 1 {
+	if got := len(eventStore.Events["camp-1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("sys.daggerheart.countdown_created") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("sys.daggerheart.countdown_created"))
+	if eventStore.Events["camp-1"][0].Type != event.Type("sys.daggerheart.countdown_created") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("sys.daggerheart.countdown_created"))
 	}
 }
 
@@ -3732,7 +3414,7 @@ func TestUpdateCountdown_UsesDomainEngine(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 
-	dhStore.countdowns["camp-1:cd-1"] = storage.DaggerheartCountdown{
+	dhStore.Countdowns["camp-1:cd-1"] = storage.DaggerheartCountdown{
 		CampaignID:  "camp-1",
 		CountdownID: "cd-1",
 		Name:        "Update",
@@ -3852,7 +3534,7 @@ func TestDeleteCountdown_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.countdowns["camp-1:cd-delete"] = storage.DaggerheartCountdown{
+	dhStore.Countdowns["camp-1:cd-delete"] = storage.DaggerheartCountdown{
 		CampaignID:  "camp-1",
 		CountdownID: "cd-delete",
 		Name:        "Delete Test",
@@ -3901,7 +3583,7 @@ func TestDeleteCountdown_UsesDomainEngine(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 
-	dhStore.countdowns["camp-1:cd-1"] = storage.DaggerheartCountdown{
+	dhStore.Countdowns["camp-1:cd-1"] = storage.DaggerheartCountdown{
 		CampaignID:  "camp-1",
 		CountdownID: "cd-1",
 		Name:        "Cleanup",
@@ -4653,9 +4335,9 @@ func TestApplyConditions_AddCondition_Success(t *testing.T) {
 func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	state := dhStore.states["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	state.Conditions = []string{"hidden", "vulnerable"}
-	dhStore.states["camp-1:char-1"] = state
+	dhStore.States["camp-1:char-1"] = state
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	conditionPayload := daggerheart.ConditionChangedPayload{
 		CharacterID:      "char-1",
@@ -4702,9 +4384,9 @@ func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
 func TestApplyConditions_AddAndRemove(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	state := dhStore.states["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	state.Conditions = []string{"hidden"}
-	dhStore.states["camp-1:char-1"] = state
+	dhStore.States["camp-1:char-1"] = state
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	conditionPayload := daggerheart.ConditionChangedPayload{
 		CharacterID:      "char-1",
@@ -4933,11 +4615,11 @@ func TestSessionActionRoll_UsesDomainEngine(t *testing.T) {
 	if domain.commands[0].Type != command.Type("action.roll.resolve") {
 		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.roll.resolve")
 	}
-	if got := len(eventStore.events["camp-1"]); got != 1 {
+	if got := len(eventStore.Events["camp-1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("action.roll_resolved") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.roll_resolved"))
+	if eventStore.Events["camp-1"][0].Type != event.Type("action.roll_resolved") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("action.roll_resolved"))
 	}
 }
 
@@ -5057,7 +4739,7 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 		t.Fatalf("hope spend source = %s, want %s", spend.Source, "experience")
 	}
 	var foundPatchEvent bool
-	for _, evt := range eventStore.events["camp-1"] {
+	for _, evt := range eventStore.Events["camp-1"] {
 		if evt.Type == event.Type("sys.daggerheart.character_state_patched") {
 			foundPatchEvent = true
 			break
@@ -5158,7 +4840,7 @@ func TestSessionActionRoll_WithModifiers(t *testing.T) {
 		t.Fatal("expected non-zero roll seq")
 	}
 	var foundPatchEvent bool
-	for _, evt := range eventStore.events["camp-1"] {
+	for _, evt := range eventStore.Events["camp-1"] {
 		if evt.Type == event.Type("sys.daggerheart.character_state_patched") {
 			foundPatchEvent = true
 			break
@@ -5876,11 +5558,11 @@ func TestSessionAdversaryAttackRoll_UsesDomainEngine(t *testing.T) {
 	if domain.lastCommand.Type != command.Type("action.roll.resolve") {
 		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "action.roll.resolve")
 	}
-	if got := len(eventStore.events["camp-1"]); got != 1 {
+	if got := len(eventStore.Events["camp-1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["camp-1"][0].Type != event.Type("action.roll_resolved") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["camp-1"][0].Type, event.Type("action.roll_resolved"))
+	if eventStore.Events["camp-1"][0].Type != event.Type("action.roll_resolved") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("action.roll_resolved"))
 	}
 }
 
@@ -6245,7 +5927,7 @@ func TestApplyRollOutcome_IdempotentWhenAlreadyAppliedEvenWithOpenGate(t *testin
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{
+	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     3,
 	}
@@ -6345,7 +6027,7 @@ func TestApplyRollOutcome_AlreadyAppliedStillEnsuresComplicationGate(t *testing.
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{
+	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     2,
 	}
@@ -6481,7 +6163,7 @@ func TestApplyRollOutcome_PartialRetrySkipsRepeatedGMFearSet(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{
+	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     1,
 	}
@@ -6615,7 +6297,7 @@ func TestApplyRollOutcome_PartialRetrySkipsRepeatedGMFearSet(t *testing.T) {
 			t.Fatal("did not expect gm fear pre_effect on partial retry")
 		}
 	}
-	if snap := dhStore.snapshots["camp-1"]; snap.GMFear != 1 {
+	if snap := dhStore.Snapshots["camp-1"]; snap.GMFear != 1 {
 		t.Fatalf("gm fear = %d, want %d", snap.GMFear, 1)
 	}
 }
@@ -6714,7 +6396,7 @@ func TestApplyRollOutcome_AlreadyAppliedWithOpenGateRepairsSpotlight(t *testing.
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{
+	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     2,
 	}
@@ -6855,7 +6537,7 @@ func TestApplyRollOutcome_Success(t *testing.T) {
 	}
 
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	state := dhStore.states["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	hopeBefore := state.Hope
 	hopeMax := state.HopeMax
 	if hopeMax == 0 {
@@ -6927,7 +6609,7 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	state := dhStore.states["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	rollPayload := action.RollResolvePayload{
@@ -7041,7 +6723,7 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("pre_effects length = %d, want 0", len(outcomePayload.PreEffects))
 	}
 	found := false
-	for _, evt := range eventStore.events["camp-1"] {
+	for _, evt := range eventStore.Events["camp-1"] {
 		if evt.Type == event.Type("action.outcome_applied") {
 			found = true
 			break
@@ -7056,7 +6738,7 @@ func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	state := dhStore.states["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	rollPayload := action.RollResolvePayload{
@@ -7160,7 +6842,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 1}
+	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 1}
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	rollPayload := action.RollResolvePayload{
@@ -7304,7 +6986,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	var foundOutcomeEvent bool
 	var foundGateEvent bool
 	var foundSpotlightEvent bool
-	for _, evt := range eventStore.events["camp-1"] {
+	for _, evt := range eventStore.Events["camp-1"] {
 		switch evt.Type {
 		case event.Type("sys.daggerheart.gm_fear_changed"):
 			foundFearEvent = true
@@ -7481,7 +7163,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	state := dhStore.states["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	rollPayload := action.RollResolvePayload{
@@ -7597,7 +7279,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	}
 	var foundPatchEvent bool
 	var foundOutcomeEvent bool
-	for _, evt := range eventStore.events["camp-1"] {
+	for _, evt := range eventStore.Events["camp-1"] {
 		switch evt.Type {
 		case event.Type("sys.daggerheart.character_state_patched"):
 			foundPatchEvent = true
@@ -7617,11 +7299,11 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	profile := dhStore.profiles["camp-1:char-1"]
-	state := dhStore.states["camp-1:char-1"]
+	profile := dhStore.Profiles["camp-1:char-1"]
+	state := dhStore.States["camp-1:char-1"]
 	state.Stress = profile.StressMax
 	state.Conditions = []string{daggerheart.ConditionVulnerable}
-	dhStore.states["camp-1:char-1"] = state
+	dhStore.States["camp-1:char-1"] = state
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	rollPayload := action.RollResolvePayload{
@@ -7768,7 +7450,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	}
 	var foundConditionEvent bool
 	var foundPatchEvent bool
-	for _, evt := range eventStore.events["camp-1"] {
+	for _, evt := range eventStore.Events["camp-1"] {
 		switch evt.Type {
 		case event.Type("sys.daggerheart.condition_changed"):
 			foundConditionEvent = true

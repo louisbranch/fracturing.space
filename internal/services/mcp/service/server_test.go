@@ -17,6 +17,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/testkit/mcpfakes"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,29 +30,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-// fakeDaggerheartClient implements DaggerheartServiceClient for tests.
-type fakeDaggerheartClient struct {
-	pb.DaggerheartServiceClient // embed for forward-compatibility
-
-	response                      *pb.ActionRollResponse
-	rollDiceResponse              *pb.RollDiceResponse
-	dualityOutcomeResponse        *pb.DualityOutcomeResponse
-	dualityExplainResponse        *pb.DualityExplainResponse
-	dualityProbabilityResponse    *pb.DualityProbabilityResponse
-	rulesVersionResponse          *pb.RulesVersionResponse
-	err                           error
-	rollDiceErr                   error
-	dualityOutcomeErr             error
-	dualityExplainErr             error
-	dualityProbabilityErr         error
-	rulesVersionErr               error
-	lastRequest                   *pb.ActionRollRequest
-	lastRollDiceRequest           *pb.RollDiceRequest
-	lastDualityOutcomeRequest     *pb.DualityOutcomeRequest
-	lastDualityExplainRequest     *pb.DualityExplainRequest
-	lastDualityProbabilityRequest *pb.DualityProbabilityRequest
-	lastRulesVersionRequest       *pb.RulesVersionRequest
-}
+type fakeDaggerheartClient = mcpfakes.DaggerheartClient
+type fakeCampaignServiceServer = mcpfakes.CampaignServiceServer
 
 // requireToolMetadata asserts tool result metadata includes correlation IDs.
 func requireToolMetadata(t *testing.T, result *mcp.CallToolResult) (string, string) {
@@ -162,52 +142,6 @@ type failingTransport struct{}
 // Connect returns the configured error for tests.
 func (f failingTransport) Connect(context.Context) (mcp.Connection, error) {
 	return nil, errors.New("transport failure")
-}
-
-// ActionRoll records the request and returns the configured response.
-func (f *fakeDaggerheartClient) ActionRoll(ctx context.Context, req *pb.ActionRollRequest, opts ...grpc.CallOption) (*pb.ActionRollResponse, error) {
-	f.lastRequest = req
-	return f.response, f.err
-}
-
-// DualityOutcome records the request and returns the configured response.
-func (f *fakeDaggerheartClient) DualityOutcome(ctx context.Context, req *pb.DualityOutcomeRequest, opts ...grpc.CallOption) (*pb.DualityOutcomeResponse, error) {
-	f.lastDualityOutcomeRequest = req
-	return f.dualityOutcomeResponse, f.dualityOutcomeErr
-}
-
-// DualityExplain records the request and returns the configured response.
-func (f *fakeDaggerheartClient) DualityExplain(ctx context.Context, req *pb.DualityExplainRequest, opts ...grpc.CallOption) (*pb.DualityExplainResponse, error) {
-	f.lastDualityExplainRequest = req
-	return f.dualityExplainResponse, f.dualityExplainErr
-}
-
-// DualityProbability records the request and returns the configured response.
-func (f *fakeDaggerheartClient) DualityProbability(ctx context.Context, req *pb.DualityProbabilityRequest, opts ...grpc.CallOption) (*pb.DualityProbabilityResponse, error) {
-	f.lastDualityProbabilityRequest = req
-	return f.dualityProbabilityResponse, f.dualityProbabilityErr
-}
-
-// RulesVersion records the request and returns the configured response.
-func (f *fakeDaggerheartClient) RulesVersion(ctx context.Context, req *pb.RulesVersionRequest, opts ...grpc.CallOption) (*pb.RulesVersionResponse, error) {
-	f.lastRulesVersionRequest = req
-	return f.rulesVersionResponse, f.rulesVersionErr
-}
-
-// RollDice records the request and returns the configured response.
-func (f *fakeDaggerheartClient) RollDice(ctx context.Context, req *pb.RollDiceRequest, opts ...grpc.CallOption) (*pb.RollDiceResponse, error) {
-	f.lastRollDiceRequest = req
-	return f.rollDiceResponse, f.rollDiceErr
-}
-
-// SessionActionRoll returns an unimplemented error for tests.
-func (f *fakeDaggerheartClient) SessionActionRoll(ctx context.Context, req *pb.SessionActionRollRequest, opts ...grpc.CallOption) (*pb.SessionActionRollResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in test fake")
-}
-
-// ApplyRollOutcome returns an unimplemented error for tests.
-func (f *fakeDaggerheartClient) ApplyRollOutcome(ctx context.Context, req *pb.ApplyRollOutcomeRequest, opts ...grpc.CallOption) (*pb.ApplyRollOutcomeResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in test fake")
 }
 
 // CreateCampaign records the request and returns the configured response.
@@ -383,23 +317,6 @@ func (f *fakeSessionClient) ListSessions(ctx context.Context, req *statev1.ListS
 func (f *fakeSessionClient) GetSession(ctx context.Context, req *statev1.GetSessionRequest, opts ...grpc.CallOption) (*statev1.GetSessionResponse, error) {
 	f.lastGetSessionRequest = req
 	return f.getSessionResponse, f.getSessionErr
-}
-
-type fakeCampaignServiceServer struct {
-	statev1.UnimplementedCampaignServiceServer
-}
-
-func (f *fakeCampaignServiceServer) CreateCampaign(ctx context.Context, req *statev1.CreateCampaignRequest) (*statev1.CreateCampaignResponse, error) {
-	return &statev1.CreateCampaignResponse{
-		Campaign: &statev1.Campaign{
-			Id:           "camp-123",
-			Name:         req.GetName(),
-			GmMode:       req.GetGmMode(),
-			Intent:       req.GetIntent(),
-			AccessPolicy: req.GetAccessPolicy(),
-		},
-		OwnerParticipant: &statev1.Participant{Id: "part-123"},
-	}, nil
 }
 
 // TestGRPCAddressUsesFallbackOverEnv ensures the fallback wins over env.
@@ -803,7 +720,7 @@ func TestNewConfiguresServer(t *testing.T) {
 
 // TestActionRollHandlerPassesNegativeDifficulty ensures gRPC receives invalid difficulty.
 func TestActionRollHandlerPassesNegativeDifficulty(t *testing.T) {
-	client := &fakeDaggerheartClient{err: errors.New("boom")}
+	client := &fakeDaggerheartClient{Err: errors.New("boom")}
 	handler := domain.ActionRollHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActionRollInput{
@@ -816,17 +733,17 @@ func TestActionRollHandlerPassesNegativeDifficulty(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on error")
 	}
-	if client.lastRequest == nil {
+	if client.LastRequest == nil {
 		t.Fatal("expected gRPC call on invalid input")
 	}
-	if client.lastRequest.Difficulty == nil || *client.lastRequest.Difficulty != -1 {
-		t.Fatalf("expected difficulty -1, got %v", client.lastRequest.Difficulty)
+	if client.LastRequest.Difficulty == nil || *client.LastRequest.Difficulty != -1 {
+		t.Fatalf("expected difficulty -1, got %v", client.LastRequest.Difficulty)
 	}
 }
 
 // TestActionRollHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestActionRollHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDaggerheartClient{err: errors.New("boom")}
+	client := &fakeDaggerheartClient{Err: errors.New("boom")}
 	handler := domain.ActionRollHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.ActionRollInput{Modifier: 2})
@@ -842,7 +759,7 @@ func TestActionRollHandlerReturnsClientError(t *testing.T) {
 func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 	difficulty := int32(7)
 	client := &fakeDaggerheartClient{
-		response: &pb.ActionRollResponse{
+		Response: &pb.ActionRollResponse{
 			Hope:            4,
 			Fear:            6,
 			Modifier:        7,
@@ -874,23 +791,23 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	requireToolMetadata(t, result)
-	if client.lastRequest == nil {
+	if client.LastRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
-	if client.lastRequest.Modifier != 7 {
-		t.Fatalf("expected modifier 7, got %d", client.lastRequest.Modifier)
+	if client.LastRequest.Modifier != 7 {
+		t.Fatalf("expected modifier 7, got %d", client.LastRequest.Modifier)
 	}
-	if client.lastRequest.Difficulty == nil || *client.lastRequest.Difficulty != 7 {
-		t.Fatalf("expected difficulty 7, got %v", client.lastRequest.Difficulty)
+	if client.LastRequest.Difficulty == nil || *client.LastRequest.Difficulty != 7 {
+		t.Fatalf("expected difficulty 7, got %v", client.LastRequest.Difficulty)
 	}
-	if client.lastRequest.GetRng() == nil {
+	if client.LastRequest.GetRng() == nil {
 		t.Fatal("expected rng request")
 	}
-	if client.lastRequest.GetRng().GetSeed() != seed {
-		t.Fatalf("expected rng seed %d, got %d", seed, client.lastRequest.GetRng().GetSeed())
+	if client.LastRequest.GetRng().GetSeed() != seed {
+		t.Fatalf("expected rng seed %d, got %d", seed, client.LastRequest.GetRng().GetSeed())
 	}
-	if client.lastRequest.GetRng().GetRollMode() != commonv1.RollMode_REPLAY {
-		t.Fatalf("expected roll mode REPLAY, got %v", client.lastRequest.GetRng().GetRollMode())
+	if client.LastRequest.GetRng().GetRollMode() != commonv1.RollMode_REPLAY {
+		t.Fatalf("expected roll mode REPLAY, got %v", client.LastRequest.GetRng().GetRollMode())
 	}
 
 	if output.Hope != 4 || output.Fear != 6 || output.Total != 17 {
@@ -921,7 +838,7 @@ func TestActionRollHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestDualityOutcomeHandlerPassesInvalidDice ensures gRPC receives invalid dice.
 func TestDualityOutcomeHandlerPassesInvalidDice(t *testing.T) {
-	client := &fakeDaggerheartClient{dualityOutcomeErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{DualityOutcomeErr: errors.New("boom")}
 	handler := domain.DualityOutcomeHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityOutcomeInput{
@@ -934,17 +851,17 @@ func TestDualityOutcomeHandlerPassesInvalidDice(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on error")
 	}
-	if client.lastDualityOutcomeRequest == nil {
+	if client.LastDualityOutcomeRequest == nil {
 		t.Fatal("expected gRPC call on invalid input")
 	}
-	if client.lastDualityOutcomeRequest.GetHope() != 0 || client.lastDualityOutcomeRequest.GetFear() != 12 {
-		t.Fatalf("unexpected dice in request: %+v", client.lastDualityOutcomeRequest)
+	if client.LastDualityOutcomeRequest.GetHope() != 0 || client.LastDualityOutcomeRequest.GetFear() != 12 {
+		t.Fatalf("unexpected dice in request: %+v", client.LastDualityOutcomeRequest)
 	}
 }
 
 // TestDualityOutcomeHandlerPassesNegativeDifficulty ensures gRPC receives invalid difficulty.
 func TestDualityOutcomeHandlerPassesNegativeDifficulty(t *testing.T) {
-	client := &fakeDaggerheartClient{dualityOutcomeErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{DualityOutcomeErr: errors.New("boom")}
 	handler := domain.DualityOutcomeHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityOutcomeInput{
@@ -958,17 +875,17 @@ func TestDualityOutcomeHandlerPassesNegativeDifficulty(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on error")
 	}
-	if client.lastDualityOutcomeRequest == nil {
+	if client.LastDualityOutcomeRequest == nil {
 		t.Fatal("expected gRPC call on invalid input")
 	}
-	if client.lastDualityOutcomeRequest.Difficulty == nil || *client.lastDualityOutcomeRequest.Difficulty != -1 {
-		t.Fatalf("expected difficulty -1, got %v", client.lastDualityOutcomeRequest.Difficulty)
+	if client.LastDualityOutcomeRequest.Difficulty == nil || *client.LastDualityOutcomeRequest.Difficulty != -1 {
+		t.Fatalf("expected difficulty -1, got %v", client.LastDualityOutcomeRequest.Difficulty)
 	}
 }
 
 // TestDualityOutcomeHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestDualityOutcomeHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDaggerheartClient{dualityOutcomeErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{DualityOutcomeErr: errors.New("boom")}
 	handler := domain.DualityOutcomeHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityOutcomeInput{
@@ -987,7 +904,7 @@ func TestDualityOutcomeHandlerReturnsClientError(t *testing.T) {
 // TestDualityOutcomeHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 	difficulty := int32(10)
-	client := &fakeDaggerheartClient{dualityOutcomeResponse: &pb.DualityOutcomeResponse{
+	client := &fakeDaggerheartClient{DualityOutcomeResponse: &pb.DualityOutcomeResponse{
 		Hope:            10,
 		Fear:            4,
 		Modifier:        1,
@@ -1010,11 +927,11 @@ func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	requireToolMetadata(t, result)
-	if client.lastDualityOutcomeRequest == nil {
+	if client.LastDualityOutcomeRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
-	if client.lastDualityOutcomeRequest.GetHope() != 10 || client.lastDualityOutcomeRequest.GetFear() != 4 {
-		t.Fatalf("unexpected dice in request: %+v", client.lastDualityOutcomeRequest)
+	if client.LastDualityOutcomeRequest.GetHope() != 10 || client.LastDualityOutcomeRequest.GetFear() != 4 {
+		t.Fatalf("unexpected dice in request: %+v", client.LastDualityOutcomeRequest)
 	}
 	if output.Total != 15 {
 		t.Fatalf("expected total 15, got %d", output.Total)
@@ -1029,7 +946,7 @@ func TestDualityOutcomeHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestDualityExplainHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestDualityExplainHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDaggerheartClient{dualityExplainErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{DualityExplainErr: errors.New("boom")}
 	handler := domain.DualityExplainHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityExplainInput{
@@ -1052,7 +969,7 @@ func TestDualityExplainHandlerMapsRequestAndResponse(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected step data, got %v", err)
 	}
-	client := &fakeDaggerheartClient{dualityExplainResponse: &pb.DualityExplainResponse{
+	client := &fakeDaggerheartClient{DualityExplainResponse: &pb.DualityExplainResponse{
 		Hope:            10,
 		Fear:            4,
 		Modifier:        1,
@@ -1091,11 +1008,11 @@ func TestDualityExplainHandlerMapsRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	requireToolMetadata(t, result)
-	if client.lastDualityExplainRequest == nil {
+	if client.LastDualityExplainRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
-	if client.lastDualityExplainRequest.GetHope() != 10 || client.lastDualityExplainRequest.GetFear() != 4 {
-		t.Fatalf("unexpected dice in request: %+v", client.lastDualityExplainRequest)
+	if client.LastDualityExplainRequest.GetHope() != 10 || client.LastDualityExplainRequest.GetFear() != 4 {
+		t.Fatalf("unexpected dice in request: %+v", client.LastDualityExplainRequest)
 	}
 	if output.Total != 15 {
 		t.Fatalf("expected total 15, got %d", output.Total)
@@ -1119,7 +1036,7 @@ func TestDualityExplainHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestDualityProbabilityHandlerPassesNegativeDifficulty ensures gRPC receives invalid difficulty.
 func TestDualityProbabilityHandlerPassesNegativeDifficulty(t *testing.T) {
-	client := &fakeDaggerheartClient{dualityProbabilityErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{DualityProbabilityErr: errors.New("boom")}
 	handler := domain.DualityProbabilityHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityProbabilityInput{
@@ -1132,17 +1049,17 @@ func TestDualityProbabilityHandlerPassesNegativeDifficulty(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on error")
 	}
-	if client.lastDualityProbabilityRequest == nil {
+	if client.LastDualityProbabilityRequest == nil {
 		t.Fatal("expected gRPC call on invalid input")
 	}
-	if client.lastDualityProbabilityRequest.GetDifficulty() != -1 {
-		t.Fatalf("expected difficulty -1, got %d", client.lastDualityProbabilityRequest.GetDifficulty())
+	if client.LastDualityProbabilityRequest.GetDifficulty() != -1 {
+		t.Fatalf("expected difficulty -1, got %d", client.LastDualityProbabilityRequest.GetDifficulty())
 	}
 }
 
 // TestDualityProbabilityHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestDualityProbabilityHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDaggerheartClient{dualityProbabilityErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{DualityProbabilityErr: errors.New("boom")}
 	handler := domain.DualityProbabilityHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.DualityProbabilityInput{
@@ -1159,7 +1076,7 @@ func TestDualityProbabilityHandlerReturnsClientError(t *testing.T) {
 
 // TestDualityProbabilityHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
-	client := &fakeDaggerheartClient{dualityProbabilityResponse: &pb.DualityProbabilityResponse{
+	client := &fakeDaggerheartClient{DualityProbabilityResponse: &pb.DualityProbabilityResponse{
 		TotalOutcomes: 144,
 		CritCount:     12,
 		SuccessCount:  70,
@@ -1182,7 +1099,7 @@ func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	requireToolMetadata(t, result)
-	if client.lastDualityProbabilityRequest == nil {
+	if client.LastDualityProbabilityRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
 	if output.TotalOutcomes != 144 {
@@ -1210,7 +1127,7 @@ func TestDualityProbabilityHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestRollDiceHandlerPassesMissingDice ensures gRPC receives empty dice.
 func TestRollDiceHandlerPassesMissingDice(t *testing.T) {
-	client := &fakeDaggerheartClient{rollDiceErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{RollDiceErr: errors.New("boom")}
 	handler := domain.RollDiceHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.RollDiceInput{})
@@ -1220,17 +1137,17 @@ func TestRollDiceHandlerPassesMissingDice(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on error")
 	}
-	if client.lastRollDiceRequest == nil {
+	if client.LastRollDiceRequest == nil {
 		t.Fatal("expected gRPC call on invalid input")
 	}
-	if len(client.lastRollDiceRequest.GetDice()) != 0 {
-		t.Fatalf("expected empty dice, got %d", len(client.lastRollDiceRequest.GetDice()))
+	if len(client.LastRollDiceRequest.GetDice()) != 0 {
+		t.Fatalf("expected empty dice, got %d", len(client.LastRollDiceRequest.GetDice()))
 	}
 }
 
 // TestRollDiceHandlerPassesInvalidDice ensures gRPC receives invalid dice specs.
 func TestRollDiceHandlerPassesInvalidDice(t *testing.T) {
-	client := &fakeDaggerheartClient{rollDiceErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{RollDiceErr: errors.New("boom")}
 	handler := domain.RollDiceHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.RollDiceInput{
@@ -1242,20 +1159,20 @@ func TestRollDiceHandlerPassesInvalidDice(t *testing.T) {
 	if result != nil {
 		t.Fatal("expected nil result on error")
 	}
-	if client.lastRollDiceRequest == nil {
+	if client.LastRollDiceRequest == nil {
 		t.Fatal("expected gRPC call on invalid input")
 	}
-	if len(client.lastRollDiceRequest.GetDice()) != 1 {
-		t.Fatalf("expected 1 dice spec, got %d", len(client.lastRollDiceRequest.GetDice()))
+	if len(client.LastRollDiceRequest.GetDice()) != 1 {
+		t.Fatalf("expected 1 dice spec, got %d", len(client.LastRollDiceRequest.GetDice()))
 	}
-	if client.lastRollDiceRequest.Dice[0].Sides != -1 || client.lastRollDiceRequest.Dice[0].Count != 2 {
-		t.Fatalf("unexpected dice spec: %+v", client.lastRollDiceRequest.Dice[0])
+	if client.LastRollDiceRequest.Dice[0].Sides != -1 || client.LastRollDiceRequest.Dice[0].Count != 2 {
+		t.Fatalf("unexpected dice spec: %+v", client.LastRollDiceRequest.Dice[0])
 	}
 }
 
 // TestRollDiceHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestRollDiceHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDaggerheartClient{rollDiceErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{RollDiceErr: errors.New("boom")}
 	handler := domain.RollDiceHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.RollDiceInput{
@@ -1271,7 +1188,7 @@ func TestRollDiceHandlerReturnsClientError(t *testing.T) {
 
 // TestRollDiceHandlerMapsRequestAndResponse ensures inputs and outputs are mapped consistently.
 func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
-	client := &fakeDaggerheartClient{rollDiceResponse: &pb.RollDiceResponse{
+	client := &fakeDaggerheartClient{RollDiceResponse: &pb.RollDiceResponse{
 		Rolls: []*pb.DiceRoll{
 			{Sides: 6, Results: []int32{2, 5}, Total: 7},
 			{Sides: 8, Results: []int32{4}, Total: 4},
@@ -1299,26 +1216,26 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	requireToolMetadata(t, result)
-	if client.lastRollDiceRequest == nil {
+	if client.LastRollDiceRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
-	if len(client.lastRollDiceRequest.Dice) != 2 {
-		t.Fatalf("expected 2 dice specs, got %d", len(client.lastRollDiceRequest.Dice))
+	if len(client.LastRollDiceRequest.Dice) != 2 {
+		t.Fatalf("expected 2 dice specs, got %d", len(client.LastRollDiceRequest.Dice))
 	}
-	if client.lastRollDiceRequest.Dice[0].Sides != 6 || client.lastRollDiceRequest.Dice[0].Count != 2 {
-		t.Fatalf("unexpected first dice spec: %+v", client.lastRollDiceRequest.Dice[0])
+	if client.LastRollDiceRequest.Dice[0].Sides != 6 || client.LastRollDiceRequest.Dice[0].Count != 2 {
+		t.Fatalf("unexpected first dice spec: %+v", client.LastRollDiceRequest.Dice[0])
 	}
-	if client.lastRollDiceRequest.Dice[1].Sides != 8 || client.lastRollDiceRequest.Dice[1].Count != 1 {
-		t.Fatalf("unexpected second dice spec: %+v", client.lastRollDiceRequest.Dice[1])
+	if client.LastRollDiceRequest.Dice[1].Sides != 8 || client.LastRollDiceRequest.Dice[1].Count != 1 {
+		t.Fatalf("unexpected second dice spec: %+v", client.LastRollDiceRequest.Dice[1])
 	}
-	if client.lastRollDiceRequest.GetRng() == nil {
+	if client.LastRollDiceRequest.GetRng() == nil {
 		t.Fatal("expected rng on request")
 	}
-	if client.lastRollDiceRequest.GetRng().GetSeed() != seed {
-		t.Fatalf("expected rng seed %d, got %d", seed, client.lastRollDiceRequest.GetRng().GetSeed())
+	if client.LastRollDiceRequest.GetRng().GetSeed() != seed {
+		t.Fatalf("expected rng seed %d, got %d", seed, client.LastRollDiceRequest.GetRng().GetSeed())
 	}
-	if client.lastRollDiceRequest.GetRng().GetRollMode() != commonv1.RollMode_REPLAY {
-		t.Fatalf("expected roll mode REPLAY, got %v", client.lastRollDiceRequest.GetRng().GetRollMode())
+	if client.LastRollDiceRequest.GetRng().GetRollMode() != commonv1.RollMode_REPLAY {
+		t.Fatalf("expected roll mode REPLAY, got %v", client.LastRollDiceRequest.GetRng().GetRollMode())
 	}
 
 	if output.Total != 11 {
@@ -1346,7 +1263,7 @@ func TestRollDiceHandlerMapsRequestAndResponse(t *testing.T) {
 
 // TestRulesVersionHandlerReturnsClientError ensures gRPC errors are returned as tool errors.
 func TestRulesVersionHandlerReturnsClientError(t *testing.T) {
-	client := &fakeDaggerheartClient{rulesVersionErr: errors.New("boom")}
+	client := &fakeDaggerheartClient{RulesVersionErr: errors.New("boom")}
 	handler := domain.RulesVersionHandler(client)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.RulesVersionInput{})
@@ -1360,7 +1277,7 @@ func TestRulesVersionHandlerReturnsClientError(t *testing.T) {
 
 // TestRulesVersionHandlerMapsResponse ensures metadata is passed through.
 func TestRulesVersionHandlerMapsResponse(t *testing.T) {
-	client := &fakeDaggerheartClient{rulesVersionResponse: &pb.RulesVersionResponse{
+	client := &fakeDaggerheartClient{RulesVersionResponse: &pb.RulesVersionResponse{
 		System:         "Daggerheart",
 		Module:         "Duality",
 		RulesVersion:   "1.0.0",
@@ -1385,7 +1302,7 @@ func TestRulesVersionHandlerMapsResponse(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	requireToolMetadata(t, result)
-	if client.lastRulesVersionRequest == nil {
+	if client.LastRulesVersionRequest == nil {
 		t.Fatal("expected gRPC request")
 	}
 
@@ -1401,26 +1318,26 @@ func TestRulesVersionHandlerMapsResponse(t *testing.T) {
 	if !reflect.DeepEqual(output.Outcomes, expectedOutcomes) {
 		t.Fatalf("expected outcomes %v, got %v", expectedOutcomes, output.Outcomes)
 	}
-	if output.System != client.rulesVersionResponse.System {
-		t.Fatalf("expected system %q, got %q", client.rulesVersionResponse.System, output.System)
+	if output.System != client.RulesVersionResponse.System {
+		t.Fatalf("expected system %q, got %q", client.RulesVersionResponse.System, output.System)
 	}
-	if output.Module != client.rulesVersionResponse.Module {
-		t.Fatalf("expected module %q, got %q", client.rulesVersionResponse.Module, output.Module)
+	if output.Module != client.RulesVersionResponse.Module {
+		t.Fatalf("expected module %q, got %q", client.RulesVersionResponse.Module, output.Module)
 	}
-	if output.RulesVersion != client.rulesVersionResponse.RulesVersion {
-		t.Fatalf("expected rules version %q, got %q", client.rulesVersionResponse.RulesVersion, output.RulesVersion)
+	if output.RulesVersion != client.RulesVersionResponse.RulesVersion {
+		t.Fatalf("expected rules version %q, got %q", client.RulesVersionResponse.RulesVersion, output.RulesVersion)
 	}
-	if output.DiceModel != client.rulesVersionResponse.DiceModel {
-		t.Fatalf("expected dice model %q, got %q", client.rulesVersionResponse.DiceModel, output.DiceModel)
+	if output.DiceModel != client.RulesVersionResponse.DiceModel {
+		t.Fatalf("expected dice model %q, got %q", client.RulesVersionResponse.DiceModel, output.DiceModel)
 	}
-	if output.TotalFormula != client.rulesVersionResponse.TotalFormula {
-		t.Fatalf("expected total formula %q, got %q", client.rulesVersionResponse.TotalFormula, output.TotalFormula)
+	if output.TotalFormula != client.RulesVersionResponse.TotalFormula {
+		t.Fatalf("expected total formula %q, got %q", client.RulesVersionResponse.TotalFormula, output.TotalFormula)
 	}
-	if output.CritRule != client.rulesVersionResponse.CritRule {
-		t.Fatalf("expected crit rule %q, got %q", client.rulesVersionResponse.CritRule, output.CritRule)
+	if output.CritRule != client.RulesVersionResponse.CritRule {
+		t.Fatalf("expected crit rule %q, got %q", client.RulesVersionResponse.CritRule, output.CritRule)
 	}
-	if output.DifficultyRule != client.rulesVersionResponse.DifficultyRule {
-		t.Fatalf("expected difficulty rule %q, got %q", client.rulesVersionResponse.DifficultyRule, output.DifficultyRule)
+	if output.DifficultyRule != client.RulesVersionResponse.DifficultyRule {
+		t.Fatalf("expected difficulty rule %q, got %q", client.RulesVersionResponse.DifficultyRule, output.DifficultyRule)
 	}
 }
 

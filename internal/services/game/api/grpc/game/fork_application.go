@@ -109,7 +109,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		applier,
 		command.Command{
 			CampaignID:   f.NewCampaignID,
-			Type:         command.Type("campaign.create"),
+			Type:         commandTypeCampaignCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -146,7 +146,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		applier,
 		command.Command{
 			CampaignID:   f.NewCampaignID,
-			Type:         command.Type("campaign.fork"),
+			Type:         commandTypeCampaignFork,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,

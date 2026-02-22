@@ -1,0 +1,57 @@
+package game
+
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+)
+
+const (
+	commandTypeActionOutcomeApply             command.Type = "action.outcome.apply"
+	commandTypeActionOutcomeReject            command.Type = "action.outcome.reject"
+	commandTypeActionRollResolve              command.Type = "action.roll.resolve"
+	commandTypeCampaignArchive                command.Type = "campaign.archive"
+	commandTypeCampaignCreate                 command.Type = "campaign.create"
+	commandTypeCampaignEnd                    command.Type = "campaign.end"
+	commandTypeCampaignFork                   command.Type = "campaign.fork"
+	commandTypeCampaignRestore                command.Type = "campaign.restore"
+	commandTypeCampaignUpdate                 command.Type = "campaign.update"
+	commandTypeCharacterCreate                command.Type = "character.create"
+	commandTypeCharacterDelete                command.Type = "character.delete"
+	commandTypeCharacterProfileUpdate         command.Type = "character.profile_update"
+	commandTypeCharacterUpdate                command.Type = "character.update"
+	commandTypeInviteClaim                    command.Type = "invite.claim"
+	commandTypeInviteCreate                   command.Type = "invite.create"
+	commandTypeInviteRevoke                   command.Type = "invite.revoke"
+	commandTypeParticipantBind                command.Type = "participant.bind"
+	commandTypeParticipantJoin                command.Type = "participant.join"
+	commandTypeParticipantLeave               command.Type = "participant.leave"
+	commandTypeParticipantUpdate              command.Type = "participant.update"
+	commandTypeSessionEnd                     command.Type = "session.end"
+	commandTypeSessionGateAbandon             command.Type = "session.gate_abandon"
+	commandTypeSessionGateOpen                command.Type = "session.gate_open"
+	commandTypeSessionGateResolve             command.Type = "session.gate_resolve"
+	commandTypeSessionSpotlightClear          command.Type = "session.spotlight_clear"
+	commandTypeSessionSpotlightSet            command.Type = "session.spotlight_set"
+	commandTypeSessionStart                   command.Type = "session.start"
+	commandTypeStoryNoteAdd                   command.Type = "story.note.add"
+	commandTypeDaggerheartCharacterStatePatch command.Type = "sys.daggerheart.character_state.patch"
+	commandTypeDaggerheartConditionChange     command.Type = "sys.daggerheart.condition.change"
+	commandTypeDaggerheartGMFearSet           command.Type = "sys.daggerheart.gm_fear.set"
+)
+
+const (
+	eventTypeActionOutcomeApplied             event.Type = "action.outcome_applied"
+	eventTypeActionOutcomeRejected            event.Type = "action.outcome_rejected"
+	eventTypeActionRollResolved               event.Type = "action.roll_resolved"
+	eventTypeCampaignCreated                  event.Type = "campaign.created"
+	eventTypeCampaignForked                   event.Type = "campaign.forked"
+	eventTypeCharacterCreated                 event.Type = "character.created"
+	eventTypeCharacterDeleted                 event.Type = "character.deleted"
+	eventTypeCharacterUpdated                 event.Type = "character.updated"
+	eventTypeInviteClaimed                    event.Type = "invite.claimed"
+	eventTypeParticipantJoined                event.Type = "participant.joined"
+	eventTypeParticipantLeft                  event.Type = "participant.left"
+	eventTypeParticipantUpdated               event.Type = "participant.updated"
+	eventTypeStoryNoteAdded                   event.Type = "story.note_added"
+	eventTypeDaggerheartCharacterStatePatched event.Type = "sys.daggerheart.character_state_patched"
+)

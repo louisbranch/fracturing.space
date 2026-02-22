@@ -93,7 +93,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("campaign.create"),
+			Type:         commandTypeCampaignCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -159,7 +159,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("participant.join"),
+			Type:         commandTypeParticipantJoin,
 			ActorType:    command.ActorTypeSystem,
 			ActorID:      "",
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -214,7 +214,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 		c.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("campaign.end"),
+			Type:         commandTypeCampaignEnd,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -260,7 +260,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 		c.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("campaign.archive"),
+			Type:         commandTypeCampaignArchive,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -302,7 +302,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 		c.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("campaign.restore"),
+			Type:         commandTypeCampaignRestore,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -356,7 +356,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 		c.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("campaign.update"),
+			Type:         commandTypeCampaignUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
