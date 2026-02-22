@@ -22,7 +22,7 @@ Use this map to find the best first edit point for common contribution types.
 | Add/update game projection/storage behavior | `internal/services/game/storage/sqlite/store_*.go`, `internal/services/game/storage/storage.go` |
 | Add game transport-level handlers (non-system) | `internal/services/game/api/grpc/game/` |
 | Change game service startup/bootstrap flow | `internal/services/game/app/bootstrap.go`, `internal/services/game/app/server_bootstrap.go` |
-| Add shared game test fakes/builders | `internal/testkit/gamefakes/` |
+| Add shared game test fakes/builders | `internal/test/mock/gamefakes/` |
 | Update domain write flow/apply behavior | `internal/services/game/api/grpc/internal/domainwrite/` |
 | Refactor command startup/config wiring | `internal/platform/cmd`, `internal/cmd/{admin,ai,auth,chat,game,mcp,scenario,seed,web}` |
 
