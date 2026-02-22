@@ -20,20 +20,22 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_CreateUser_FullMethodName                = "/auth.v1.AuthService/CreateUser"
-	AuthService_BeginPasskeyRegistration_FullMethodName  = "/auth.v1.AuthService/BeginPasskeyRegistration"
-	AuthService_FinishPasskeyRegistration_FullMethodName = "/auth.v1.AuthService/FinishPasskeyRegistration"
-	AuthService_BeginPasskeyLogin_FullMethodName         = "/auth.v1.AuthService/BeginPasskeyLogin"
-	AuthService_FinishPasskeyLogin_FullMethodName        = "/auth.v1.AuthService/FinishPasskeyLogin"
-	AuthService_GenerateMagicLink_FullMethodName         = "/auth.v1.AuthService/GenerateMagicLink"
-	AuthService_ConsumeMagicLink_FullMethodName          = "/auth.v1.AuthService/ConsumeMagicLink"
-	AuthService_ListUserEmails_FullMethodName            = "/auth.v1.AuthService/ListUserEmails"
-	AuthService_IssueJoinGrant_FullMethodName            = "/auth.v1.AuthService/IssueJoinGrant"
-	AuthService_GetUser_FullMethodName                   = "/auth.v1.AuthService/GetUser"
-	AuthService_ListUsers_FullMethodName                 = "/auth.v1.AuthService/ListUsers"
-	AuthService_AddContact_FullMethodName                = "/auth.v1.AuthService/AddContact"
-	AuthService_RemoveContact_FullMethodName             = "/auth.v1.AuthService/RemoveContact"
-	AuthService_ListContacts_FullMethodName              = "/auth.v1.AuthService/ListContacts"
+	AuthService_CreateUser_FullMethodName                   = "/auth.v1.AuthService/CreateUser"
+	AuthService_BeginPasskeyRegistration_FullMethodName     = "/auth.v1.AuthService/BeginPasskeyRegistration"
+	AuthService_FinishPasskeyRegistration_FullMethodName    = "/auth.v1.AuthService/FinishPasskeyRegistration"
+	AuthService_BeginPasskeyLogin_FullMethodName            = "/auth.v1.AuthService/BeginPasskeyLogin"
+	AuthService_FinishPasskeyLogin_FullMethodName           = "/auth.v1.AuthService/FinishPasskeyLogin"
+	AuthService_GenerateMagicLink_FullMethodName            = "/auth.v1.AuthService/GenerateMagicLink"
+	AuthService_ConsumeMagicLink_FullMethodName             = "/auth.v1.AuthService/ConsumeMagicLink"
+	AuthService_ListUserEmails_FullMethodName               = "/auth.v1.AuthService/ListUserEmails"
+	AuthService_IssueJoinGrant_FullMethodName               = "/auth.v1.AuthService/IssueJoinGrant"
+	AuthService_GetUser_FullMethodName                      = "/auth.v1.AuthService/GetUser"
+	AuthService_ListUsers_FullMethodName                    = "/auth.v1.AuthService/ListUsers"
+	AuthService_AddContact_FullMethodName                   = "/auth.v1.AuthService/AddContact"
+	AuthService_RemoveContact_FullMethodName                = "/auth.v1.AuthService/RemoveContact"
+	AuthService_ListContacts_FullMethodName                 = "/auth.v1.AuthService/ListContacts"
+	AuthService_LeaseIntegrationOutboxEvents_FullMethodName = "/auth.v1.AuthService/LeaseIntegrationOutboxEvents"
+	AuthService_AckIntegrationOutboxEvent_FullMethodName    = "/auth.v1.AuthService/AckIntegrationOutboxEvent"
 )
 
 // AuthServiceClient is the client API for AuthService service.
@@ -70,6 +72,10 @@ type AuthServiceClient interface {
 	RemoveContact(ctx context.Context, in *RemoveContactRequest, opts ...grpc.CallOption) (*RemoveContactResponse, error)
 	// List contacts for a user.
 	ListContacts(ctx context.Context, in *ListContactsRequest, opts ...grpc.CallOption) (*ListContactsResponse, error)
+	// Lease due integration outbox events for background worker processing.
+	LeaseIntegrationOutboxEvents(ctx context.Context, in *LeaseIntegrationOutboxEventsRequest, opts ...grpc.CallOption) (*LeaseIntegrationOutboxEventsResponse, error)
+	// Acknowledge processing outcome for one leased integration outbox event.
+	AckIntegrationOutboxEvent(ctx context.Context, in *AckIntegrationOutboxEventRequest, opts ...grpc.CallOption) (*AckIntegrationOutboxEventResponse, error)
 }
 
 type authServiceClient struct {
@@ -220,6 +226,26 @@ func (c *authServiceClient) ListContacts(ctx context.Context, in *ListContactsRe
 	return out, nil
 }
 
+func (c *authServiceClient) LeaseIntegrationOutboxEvents(ctx context.Context, in *LeaseIntegrationOutboxEventsRequest, opts ...grpc.CallOption) (*LeaseIntegrationOutboxEventsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LeaseIntegrationOutboxEventsResponse)
+	err := c.cc.Invoke(ctx, AuthService_LeaseIntegrationOutboxEvents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) AckIntegrationOutboxEvent(ctx context.Context, in *AckIntegrationOutboxEventRequest, opts ...grpc.CallOption) (*AckIntegrationOutboxEventResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AckIntegrationOutboxEventResponse)
+	err := c.cc.Invoke(ctx, AuthService_AckIntegrationOutboxEvent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthServiceServer is the server API for AuthService service.
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
@@ -254,6 +280,10 @@ type AuthServiceServer interface {
 	RemoveContact(context.Context, *RemoveContactRequest) (*RemoveContactResponse, error)
 	// List contacts for a user.
 	ListContacts(context.Context, *ListContactsRequest) (*ListContactsResponse, error)
+	// Lease due integration outbox events for background worker processing.
+	LeaseIntegrationOutboxEvents(context.Context, *LeaseIntegrationOutboxEventsRequest) (*LeaseIntegrationOutboxEventsResponse, error)
+	// Acknowledge processing outcome for one leased integration outbox event.
+	AckIntegrationOutboxEvent(context.Context, *AckIntegrationOutboxEventRequest) (*AckIntegrationOutboxEventResponse, error)
 	mustEmbedUnimplementedAuthServiceServer()
 }
 
@@ -305,6 +335,12 @@ func (UnimplementedAuthServiceServer) RemoveContact(context.Context, *RemoveCont
 }
 func (UnimplementedAuthServiceServer) ListContacts(context.Context, *ListContactsRequest) (*ListContactsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListContacts not implemented")
+}
+func (UnimplementedAuthServiceServer) LeaseIntegrationOutboxEvents(context.Context, *LeaseIntegrationOutboxEventsRequest) (*LeaseIntegrationOutboxEventsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LeaseIntegrationOutboxEvents not implemented")
+}
+func (UnimplementedAuthServiceServer) AckIntegrationOutboxEvent(context.Context, *AckIntegrationOutboxEventRequest) (*AckIntegrationOutboxEventResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AckIntegrationOutboxEvent not implemented")
 }
 func (UnimplementedAuthServiceServer) mustEmbedUnimplementedAuthServiceServer() {}
 func (UnimplementedAuthServiceServer) testEmbeddedByValue()                     {}
@@ -579,6 +615,42 @@ func _AuthService_ListContacts_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_LeaseIntegrationOutboxEvents_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LeaseIntegrationOutboxEventsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).LeaseIntegrationOutboxEvents(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_LeaseIntegrationOutboxEvents_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).LeaseIntegrationOutboxEvents(ctx, req.(*LeaseIntegrationOutboxEventsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_AckIntegrationOutboxEvent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AckIntegrationOutboxEventRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AckIntegrationOutboxEvent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AckIntegrationOutboxEvent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AckIntegrationOutboxEvent(ctx, req.(*AckIntegrationOutboxEventRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthService_ServiceDesc is the grpc.ServiceDesc for AuthService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -641,6 +713,14 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListContacts",
 			Handler:    _AuthService_ListContacts_Handler,
+		},
+		{
+			MethodName: "LeaseIntegrationOutboxEvents",
+			Handler:    _AuthService_LeaseIntegrationOutboxEvents_Handler,
+		},
+		{
+			MethodName: "AckIntegrationOutboxEvent",
+			Handler:    _AuthService_AckIntegrationOutboxEvent_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

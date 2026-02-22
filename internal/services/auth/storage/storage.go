@@ -142,3 +142,50 @@ type StatisticsStore interface {
 	// When since is nil, counts are for all time.
 	GetAuthStatistics(ctx context.Context, since *time.Time) (AuthStatistics, error)
 }
+
+const (
+	// IntegrationOutboxStatusPending is ready for leasing and processing.
+	IntegrationOutboxStatusPending = "pending"
+	// IntegrationOutboxStatusLeased is currently leased by one worker.
+	IntegrationOutboxStatusLeased = "leased"
+	// IntegrationOutboxStatusSucceeded finished successfully.
+	IntegrationOutboxStatusSucceeded = "succeeded"
+	// IntegrationOutboxStatusDead exhausted retries and needs operator action.
+	IntegrationOutboxStatusDead = "dead"
+)
+
+// IntegrationOutboxEvent is one durable integration work item.
+//
+// It is produced by auth-authoritative flows and consumed by integration workers.
+type IntegrationOutboxEvent struct {
+	ID             string
+	EventType      string
+	PayloadJSON    string
+	DedupeKey      string
+	Status         string
+	AttemptCount   int
+	NextAttemptAt  time.Time
+	LeaseOwner     string
+	LeaseExpiresAt *time.Time
+	LastError      string
+	ProcessedAt    *time.Time
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+}
+
+// IntegrationOutboxStore persists durable integration work items for workers.
+type IntegrationOutboxStore interface {
+	EnqueueIntegrationOutboxEvent(ctx context.Context, event IntegrationOutboxEvent) error
+	GetIntegrationOutboxEvent(ctx context.Context, id string) (IntegrationOutboxEvent, error)
+	LeaseIntegrationOutboxEvents(ctx context.Context, consumer string, limit int, now time.Time, leaseTTL time.Duration) ([]IntegrationOutboxEvent, error)
+	MarkIntegrationOutboxSucceeded(ctx context.Context, id string, consumer string, processedAt time.Time) error
+	MarkIntegrationOutboxRetry(ctx context.Context, id string, consumer string, nextAttemptAt time.Time, lastError string) error
+	MarkIntegrationOutboxDead(ctx context.Context, id string, consumer string, lastError string, processedAt time.Time) error
+}
+
+// UserOutboxTransactionalStore persists user + outbox event in one write unit.
+//
+// This protects signup flows from partial writes when outbox persistence fails.
+type UserOutboxTransactionalStore interface {
+	PutUserWithIntegrationOutboxEvent(ctx context.Context, u user.User, event IntegrationOutboxEvent) error
+}

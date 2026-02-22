@@ -57,6 +57,12 @@ service AuthService {
 
   // List contacts for a user.
   rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
+
+  // Lease due integration outbox events for background worker processing.
+  rpc LeaseIntegrationOutboxEvents(LeaseIntegrationOutboxEventsRequest) returns (LeaseIntegrationOutboxEventsResponse);
+
+  // Acknowledge processing outcome for one leased integration outbox event.
+  rpc AckIntegrationOutboxEvent(AckIntegrationOutboxEventRequest) returns (AckIntegrationOutboxEventResponse);
 }
 
 message CreateUserRequest {
@@ -214,3 +220,48 @@ message ListContactsResponse {
   repeated Contact contacts = 1;
   string next_page_token = 2;
 }
+
+message IntegrationOutboxEvent {
+  string id = 1;
+  string event_type = 2;
+  string payload_json = 3;
+  string dedupe_key = 4;
+  string status = 5;
+  int32 attempt_count = 6;
+  google.protobuf.Timestamp next_attempt_at = 7;
+  string lease_owner = 8;
+  google.protobuf.Timestamp lease_expires_at = 9;
+  string last_error = 10;
+  google.protobuf.Timestamp processed_at = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+}
+
+message LeaseIntegrationOutboxEventsRequest {
+  string consumer = 1;
+  int32 limit = 2;
+  int64 lease_ttl_ms = 3;
+  google.protobuf.Timestamp now = 4;
+}
+
+message LeaseIntegrationOutboxEventsResponse {
+  repeated IntegrationOutboxEvent events = 1;
+}
+
+enum IntegrationOutboxAckOutcome {
+  INTEGRATION_OUTBOX_ACK_OUTCOME_UNSPECIFIED = 0;
+  INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED = 1;
+  INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY = 2;
+  INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD = 3;
+}
+
+message AckIntegrationOutboxEventRequest {
+  string event_id = 1;
+  string consumer = 2;
+  IntegrationOutboxAckOutcome outcome = 3;
+  google.protobuf.Timestamp next_attempt_at = 4;
+  string last_error = 5;
+  google.protobuf.Timestamp processed_at = 6;
+}
+
+message AckIntegrationOutboxEventResponse {}

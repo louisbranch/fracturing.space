@@ -27,6 +27,7 @@ const (
 	ServiceScenario      = "scenario"
 	ServiceSeed          = "seed"
 	ServiceWeb           = "web"
+	ServiceWorker        = "worker"
 )
 
 // RunOptions controls shared entrypoint behavior for service commands.
