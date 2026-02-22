@@ -19,6 +19,7 @@ const defaultOTelShutdownTimeout = 5 * time.Second
 const (
 	ServiceAdmin         = "admin"
 	ServiceAI            = "ai"
+	ServiceConnections   = "connections"
 	ServiceAuth          = "auth"
 	ServiceChat          = "chat"
 	ServiceGame          = "game"

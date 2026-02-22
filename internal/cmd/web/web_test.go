@@ -23,6 +23,9 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.AuthAddr != "auth:8083" {
 		t.Fatalf("expected default auth addr, got %q", cfg.AuthAddr)
 	}
+	if cfg.ConnectionsAddr != "connections:8090" {
+		t.Fatalf("expected default connections addr, got %q", cfg.ConnectionsAddr)
+	}
 	if cfg.OAuthClientID != "fracturing-space" {
 		t.Fatalf("expected default oauth client id, got %q", cfg.OAuthClientID)
 	}
@@ -53,6 +56,7 @@ func TestParseConfigOverrides(t *testing.T) {
 		"-chat-http-addr", "chat.internal:10001",
 		"-auth-base-url", "http://auth.test",
 		"-auth-addr", "auth:9000",
+		"-connections-addr", "connections:9004",
 		"-game-addr", "game:9001",
 		"-notifications-addr", "notifications:9003",
 		"-ai-addr", "ai:9002",
@@ -74,6 +78,9 @@ func TestParseConfigOverrides(t *testing.T) {
 	}
 	if cfg.AuthAddr != "auth:9000" {
 		t.Fatalf("expected overridden auth addr, got %q", cfg.AuthAddr)
+	}
+	if cfg.ConnectionsAddr != "connections:9004" {
+		t.Fatalf("expected overridden connections addr, got %q", cfg.ConnectionsAddr)
 	}
 	if cfg.GameAddr != "game:9001" {
 		t.Fatalf("expected overridden game addr, got %q", cfg.GameAddr)

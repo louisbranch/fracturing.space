@@ -10,10 +10,10 @@ nav_order: 2
 
 Fracturing.Space is split into four layers:
 
-- **Transport layer**: Game server (`cmd/game`) + Auth server (`cmd/auth`) + AI server (`cmd/ai`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
+- **Transport layer**: Game server (`cmd/game`) + Auth server (`cmd/auth`) + Connections server (`cmd/connections`) + AI server (`cmd/ai`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
 - **Platform layer**: Shared infrastructure (`internal/platform/`)
 - **Domain layer**: Core domain packages (`internal/services/game/domain/{campaign,participant,character,invite,session,action,...}`) + game systems (`internal/services/game/domain/systems/`)
-- **Storage layer**: SQLite persistence (`data/game-events.db`, `data/game-projections.db`, `data/game-content.db`, `data/auth.db`, `data/admin.db`, `data/ai.db`)
+- **Storage layer**: SQLite persistence (`data/game-events.db`, `data/game-projections.db`, `data/game-content.db`, `data/auth.db`, `data/connections.db`, `data/admin.db`, `data/ai.db`)
 
 The MCP server is a thin adapter that forwards requests to the game services.
 All rule evaluation and state changes live in the game server and domain
@@ -120,6 +120,13 @@ It owns provider secret lifecycle and AI agent configuration storage.
 
 Entry point: `cmd/ai`
 
+### Connections server
+
+The connections server hosts user-directed contact APIs used for discovery and
+invite targeting workflows.
+
+Entry point: `cmd/connections`
+
 ### MCP bridge
 
 The MCP server exposes the same capabilities over the MCP JSON-RPC protocol.
@@ -150,6 +157,7 @@ databases per service boundary:
 - Game service projections: `data/game-projections.db` (`FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH`)
 - Game service content catalog: `data/game-content.db` (`FRACTURING_SPACE_GAME_CONTENT_DB_PATH`)
 - Auth service: `data/auth.db` (`FRACTURING_SPACE_AUTH_DB_PATH`)
+- Connections service: `data/connections.db` (`FRACTURING_SPACE_CONNECTIONS_DB_PATH`)
 - Admin service: `data/admin.db` (`FRACTURING_SPACE_ADMIN_DB_PATH`)
 - AI service: `data/ai.db` (`FRACTURING_SPACE_AI_DB_PATH`)
 
@@ -174,6 +182,7 @@ The primary service boundaries are:
 - **MCP service** (`internal/services/mcp/`): JSON-RPC adapter for the MCP protocol; forwards to the game service and does not own rules or state.
 - **Admin service** (`internal/services/admin/`): HTTP admin dashboard; renders UI and calls the game service for data.
 - **Auth service** (`internal/services/auth/`): Authentication domain logic and gRPC API surface; owns the auth database.
+- **Connections service** (`internal/services/connections/`): Directed user contact APIs and connection metadata; owns the connections database.
 - **AI service** (`internal/services/ai/`): AI credential and agent domain logic + gRPC API surface; owns the AI database.
 
 Non-service utilities live in shared layers:

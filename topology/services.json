@@ -27,6 +27,10 @@
       ]
     },
     {
+      "name": "connections",
+      "grpc_port": 8090
+    },
+    {
       "name": "chat",
       "http_port": 8086,
       "public_routes": [

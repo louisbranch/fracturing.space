@@ -67,6 +67,8 @@ export FRACTURING_SPACE_GAME_PORT="${FRACTURING_SPACE_GAME_PORT:-8082}"
 export FRACTURING_SPACE_GAME_ADDR="${FRACTURING_SPACE_GAME_ADDR:-localhost:8082}"
 export FRACTURING_SPACE_AUTH_ADDR="${FRACTURING_SPACE_AUTH_ADDR:-localhost:8083}"
 export FRACTURING_SPACE_AUTH_HTTP_ADDR="${FRACTURING_SPACE_AUTH_HTTP_ADDR:-0.0.0.0:8084}"
+export FRACTURING_SPACE_CONNECTIONS_PORT="${FRACTURING_SPACE_CONNECTIONS_PORT:-8090}"
+export FRACTURING_SPACE_CONNECTIONS_ADDR="${FRACTURING_SPACE_CONNECTIONS_ADDR:-localhost:8090}"
 export FRACTURING_SPACE_ADMIN_ADDR="${FRACTURING_SPACE_ADMIN_ADDR:-0.0.0.0:8081}"
 export FRACTURING_SPACE_WEB_HTTP_ADDR="${FRACTURING_SPACE_WEB_HTTP_ADDR:-0.0.0.0:8080}"
 export FRACTURING_SPACE_WEB_AUTH_ADDR="${FRACTURING_SPACE_WEB_AUTH_ADDR:-localhost:8083}"
@@ -145,10 +147,12 @@ trap cleanup EXIT INT TERM
 
 start_service game FRACTURING_SPACE_GAME_ADDR=
 start_service auth
+start_service connections
 start_service ai
 start_service notifications
 wait_for_service_log_marker "game" "game server listening at"
 wait_for_service_log_marker "auth" "auth server listening at"
+wait_for_service_log_marker "connections" "connections server listening at"
 wait_for_service_log_marker "ai" "ai server listening at"
 wait_for_service_log_marker "notifications" "notifications server listening at"
 start_service mcp

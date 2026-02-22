@@ -21,6 +21,7 @@ type Config struct {
 	ChatHTTPAddr        string        `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR"         envDefault:"localhost:8086"`
 	AuthBaseURL         string        `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"       envDefault:"http://localhost:8084"`
 	AuthAddr            string        `env:"FRACTURING_SPACE_WEB_AUTH_ADDR"`
+	ConnectionsAddr     string        `env:"FRACTURING_SPACE_CONNECTIONS_ADDR"`
 	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"`
 	NotificationsAddr   string        `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`
 	AIAddr              string        `env:"FRACTURING_SPACE_AI_ADDR"`
@@ -45,6 +46,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 		cfg.GRPCDialTimeout = timeouts.GRPCDial
 	}
 	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
+	cfg.ConnectionsAddr = discovery.OrDefaultGRPCAddr(cfg.ConnectionsAddr, discovery.ServiceConnections)
 	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
 	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
 	cfg.AIAddr = strings.TrimSpace(cfg.AIAddr)
@@ -53,6 +55,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.ChatHTTPAddr, "chat-http-addr", cfg.ChatHTTPAddr, "Chat HTTP listen address")
 	fs.StringVar(&cfg.AuthBaseURL, "auth-base-url", cfg.AuthBaseURL, "Auth service HTTP base URL")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "Auth service gRPC address")
+	fs.StringVar(&cfg.ConnectionsAddr, "connections-addr", cfg.ConnectionsAddr, "Connections service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "Notifications service gRPC address")
 	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "AI service gRPC address")
@@ -77,6 +80,7 @@ func Run(ctx context.Context, cfg Config) error {
 			ChatHTTPAddr:         cfg.ChatHTTPAddr,
 			AuthBaseURL:          cfg.AuthBaseURL,
 			AuthAddr:             cfg.AuthAddr,
+			ConnectionsAddr:      cfg.ConnectionsAddr,
 			GameAddr:             cfg.GameAddr,
 			NotificationsAddr:    cfg.NotificationsAddr,
 			AIAddr:               cfg.AIAddr,

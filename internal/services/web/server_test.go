@@ -1318,16 +1318,12 @@ func TestListenAndServeRequiresContext(t *testing.T) {
 }
 
 type fakeAuthClient struct {
-	beginLoginResp    *authv1.BeginPasskeyLoginResponse
-	finishLoginResp   *authv1.FinishPasskeyLoginResponse
-	createUserResp    *authv1.CreateUserResponse
-	beginRegResp      *authv1.BeginPasskeyRegistrationResponse
-	finishRegResp     *authv1.FinishPasskeyRegistrationResponse
-	consumeMagicResp  *authv1.ConsumeMagicLinkResponse
-	listContactsResp  *authv1.ListContactsResponse
-	listContactsPages map[string]*authv1.ListContactsResponse
-	listContactsCalls int
-	listContactsReq   *authv1.ListContactsRequest
+	beginLoginResp   *authv1.BeginPasskeyLoginResponse
+	finishLoginResp  *authv1.FinishPasskeyLoginResponse
+	createUserResp   *authv1.CreateUserResponse
+	beginRegResp     *authv1.BeginPasskeyRegistrationResponse
+	finishRegResp    *authv1.FinishPasskeyRegistrationResponse
+	consumeMagicResp *authv1.ConsumeMagicLinkResponse
 }
 
 func (f *fakeAuthClient) CreateUser(ctx context.Context, req *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
@@ -1397,31 +1393,6 @@ func (f *fakeAuthClient) LeaseIntegrationOutboxEvents(ctx context.Context, req *
 }
 
 func (f *fakeAuthClient) AckIntegrationOutboxEvent(ctx context.Context, req *authv1.AckIntegrationOutboxEventRequest, opts ...grpc.CallOption) (*authv1.AckIntegrationOutboxEventResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) AddContact(ctx context.Context, req *authv1.AddContactRequest, opts ...grpc.CallOption) (*authv1.AddContactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) RemoveContact(ctx context.Context, req *authv1.RemoveContactRequest, opts ...grpc.CallOption) (*authv1.RemoveContactResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) ListContacts(ctx context.Context, req *authv1.ListContactsRequest, opts ...grpc.CallOption) (*authv1.ListContactsResponse, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	f.listContactsCalls++
-	f.listContactsReq = req
-	if f.listContactsPages != nil {
-		if resp, ok := f.listContactsPages[req.GetPageToken()]; ok {
-			return resp, nil
-		}
-	}
-	if f.listContactsResp != nil {
-		return f.listContactsResp, nil
-	}
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 

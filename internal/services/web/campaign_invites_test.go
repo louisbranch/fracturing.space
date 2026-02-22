@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -338,9 +338,9 @@ func TestAppCampaignInvitesPageRendersContactOptions(t *testing.T) {
 			Invites: []*statev1.Invite{},
 		},
 	}
-	authClient := &fakeAuthClient{
-		listContactsResp: &authv1.ListContactsResponse{
-			Contacts: []*authv1.Contact{
+	connectionsClient := &fakeConnectionsClient{
+		listContactsResp: &connectionsv1.ListContactsResponse{
+			Contacts: []*connectionsv1.Contact{
 				{OwnerUserId: "user-123", ContactUserId: "user-777"},
 			},
 		},
@@ -351,7 +351,7 @@ func TestAppCampaignInvitesPageRendersContactOptions(t *testing.T) {
 			AuthBaseURL:         authServer.URL,
 			OAuthResourceSecret: "secret-1",
 		},
-		authClient:        authClient,
+		connectionsClient: connectionsClient,
 		sessions:          newSessionStore(),
 		pendingFlows:      newPendingFlowStore(),
 		participantClient: participantClient,
@@ -373,11 +373,11 @@ func TestAppCampaignInvitesPageRendersContactOptions(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
-	if authClient.listContactsReq == nil {
+	if connectionsClient.listContactsReq == nil {
 		t.Fatal("expected ListContacts request")
 	}
-	if authClient.listContactsReq.GetOwnerUserId() != "user-123" {
-		t.Fatalf("owner_user_id = %q, want user-123", authClient.listContactsReq.GetOwnerUserId())
+	if connectionsClient.listContactsReq.GetOwnerUserId() != "user-123" {
+		t.Fatalf("owner_user_id = %q, want user-123", connectionsClient.listContactsReq.GetOwnerUserId())
 	}
 	if !strings.Contains(w.Body.String(), "value=\"user-777\"") {
 		t.Fatalf("expected contact option in response body")
@@ -415,9 +415,9 @@ func TestAppCampaignInvitesPageUsesCachedParticipantsForContactOptions(t *testin
 	inviteClient := &fakeWebInviteClient{
 		listInvitesResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{}},
 	}
-	authClient := &fakeAuthClient{
-		listContactsResp: &authv1.ListContactsResponse{
-			Contacts: []*authv1.Contact{
+	connectionsClient := &fakeConnectionsClient{
+		listContactsResp: &connectionsv1.ListContactsResponse{
+			Contacts: []*connectionsv1.Contact{
 				{OwnerUserId: "user-123", ContactUserId: "user-777"},
 			},
 		},
@@ -428,7 +428,7 @@ func TestAppCampaignInvitesPageUsesCachedParticipantsForContactOptions(t *testin
 			AuthBaseURL:         authServer.URL,
 			OAuthResourceSecret: "secret-1",
 		},
-		authClient:        authClient,
+		connectionsClient: connectionsClient,
 		cacheStore:        cacheStore,
 		sessions:          newSessionStore(),
 		pendingFlows:      newPendingFlowStore(),
@@ -493,7 +493,7 @@ func TestRenderAppCampaignInvitesPageSkipsRevokeForMissingInviteID(t *testing.T)
 
 func TestBuildInviteContactOptionsFiltersParticipantsAndPendingInvites(t *testing.T) {
 	options := buildInviteContactOptions(
-		[]*authv1.Contact{
+		[]*connectionsv1.Contact{
 			{OwnerUserId: "user-1", ContactUserId: "user-200"},
 			{OwnerUserId: "user-1", ContactUserId: "user-300"},
 			{OwnerUserId: "user-1", ContactUserId: "user-400"},
@@ -517,14 +517,14 @@ func TestBuildInviteContactOptionsFiltersParticipantsAndPendingInvites(t *testin
 
 func TestListAllContactsRejectsRepeatedPageToken(t *testing.T) {
 	h := &handler{
-		authClient: &fakeAuthClient{
-			listContactsPages: map[string]*authv1.ListContactsResponse{
+		connectionsClient: &fakeConnectionsClient{
+			listContactsPages: map[string]*connectionsv1.ListContactsResponse{
 				"": {
-					Contacts:      []*authv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-2"}},
+					Contacts:      []*connectionsv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-2"}},
 					NextPageToken: "loop",
 				},
 				"loop": {
-					Contacts:      []*authv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-3"}},
+					Contacts:      []*connectionsv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-3"}},
 					NextPageToken: "loop",
 				},
 			},
@@ -544,14 +544,14 @@ func TestListAllContactsRejectsRepeatedPageToken(t *testing.T) {
 
 func TestListAllContactsPaginates(t *testing.T) {
 	h := &handler{
-		authClient: &fakeAuthClient{
-			listContactsPages: map[string]*authv1.ListContactsResponse{
+		connectionsClient: &fakeConnectionsClient{
+			listContactsPages: map[string]*connectionsv1.ListContactsResponse{
 				"": {
-					Contacts:      []*authv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-2"}},
+					Contacts:      []*connectionsv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-2"}},
 					NextPageToken: "next",
 				},
 				"next": {
-					Contacts: []*authv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-3"}},
+					Contacts: []*connectionsv1.Contact{{OwnerUserId: "user-1", ContactUserId: "user-3"}},
 				},
 			},
 		},

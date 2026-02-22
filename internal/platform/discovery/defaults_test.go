@@ -13,6 +13,7 @@ func TestDefaultGRPCAddr(t *testing.T) {
 	cases := map[string]string{
 		ServiceGame:          "game:8082",
 		ServiceAuth:          "auth:8083",
+		ServiceConnections:   "connections:8090",
 		ServiceAI:            "ai:8087",
 		ServiceNotifications: "notifications:8088",
 	}

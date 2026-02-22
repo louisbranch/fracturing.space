@@ -17,6 +17,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -40,6 +41,7 @@ type Config struct {
 	ChatHTTPAddr         string
 	AuthBaseURL          string
 	AuthAddr             string
+	ConnectionsAddr      string
 	GameAddr             string
 	NotificationsAddr    string
 	AIAddr               string
@@ -65,6 +67,7 @@ type Server struct {
 	httpAddr                       string
 	httpServer                     *http.Server
 	authConn                       *grpc.ClientConn
+	connectionsConn                *grpc.ClientConn
 	gameConn                       *grpc.ClientConn
 	notificationsConn              *grpc.ClientConn
 	aiConn                         *grpc.ClientConn
@@ -78,6 +81,7 @@ type Server struct {
 type handler struct {
 	config              Config
 	authClient          authv1.AuthServiceClient
+	connectionsClient   connectionsv1.ConnectionsServiceClient
 	accountClient       authv1.AccountServiceClient
 	credentialClient    aiv1.CredentialServiceClient
 	sessions            *sessionStore
@@ -100,6 +104,7 @@ type handlerDependencies struct {
 	campaignAccess     campaignAccessChecker
 	cacheStore         webstorage.Store
 	accountClient      authv1.AccountServiceClient
+	connectionsClient  connectionsv1.ConnectionsServiceClient
 	credentialClient   aiv1.CredentialServiceClient
 	campaignClient     statev1.CampaignServiceClient
 	eventClient        statev1.EventServiceClient
@@ -115,6 +120,12 @@ type authGRPCClients struct {
 	conn          *grpc.ClientConn
 	authClient    authv1.AuthServiceClient
 	accountClient authv1.AccountServiceClient
+}
+
+// connectionsGRPCClients holds the connections clients used by the web service.
+type connectionsGRPCClients struct {
+	conn              *grpc.ClientConn
+	connectionsClient connectionsv1.ConnectionsServiceClient
 }
 
 // gameGRPCClients holds the game clients used by the web service.
@@ -241,6 +252,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	h := &handler{
 		config:             config,
 		authClient:         authClient,
+		connectionsClient:  deps.connectionsClient,
 		accountClient:      deps.accountClient,
 		credentialClient:   deps.credentialClient,
 		sessions:           newSessionStore(sessionPersistence),
@@ -409,6 +421,17 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		authClient = clients.authClient
 		accountClient = clients.accountClient
 	}
+	var connectionsConn *grpc.ClientConn
+	var connectionsClient connectionsv1.ConnectionsServiceClient
+	if strings.TrimSpace(config.ConnectionsAddr) != "" {
+		clients, err := dialConnectionsGRPC(ctx, config)
+		if err != nil {
+			log.Printf("connections gRPC dial failed, invite contact options disabled: %v", err)
+		} else {
+			connectionsConn = clients.conn
+			connectionsClient = clients.connectionsClient
+		}
+	}
 
 	var gameConn *grpc.ClientConn
 	var participantClient statev1.ParticipantServiceClient
@@ -458,6 +481,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		campaignAccess:     campaignAccess,
 		cacheStore:         cacheStore,
 		accountClient:      accountClient,
+		connectionsClient:  connectionsClient,
 		credentialClient:   credentialClient,
 		campaignClient:     campaignClient,
 		eventClient:        eventClient,
@@ -486,6 +510,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		httpAddr:                       httpAddr,
 		httpServer:                     httpServer,
 		authConn:                       authConn,
+		connectionsConn:                connectionsConn,
 		gameConn:                       gameConn,
 		notificationsConn:              notificationsConn,
 		aiConn:                         aiConn,
@@ -552,6 +577,11 @@ func (s *Server) Close() {
 	if s.authConn != nil {
 		if err := s.authConn.Close(); err != nil {
 			log.Printf("close auth gRPC connection: %v", err)
+		}
+	}
+	if s.connectionsConn != nil {
+		if err := s.connectionsConn.Close(); err != nil {
+			log.Printf("close connections gRPC connection: %v", err)
 		}
 	}
 	if s.gameConn != nil {
@@ -643,6 +673,45 @@ func dialAuthGRPC(ctx context.Context, config Config) (authGRPCClients, error) {
 		conn:          conn,
 		authClient:    authv1.NewAuthServiceClient(conn),
 		accountClient: authv1.NewAccountServiceClient(conn),
+	}, nil
+}
+
+// dialConnectionsGRPC returns a client for contact/discovery-oriented relationship data.
+func dialConnectionsGRPC(ctx context.Context, config Config) (connectionsGRPCClients, error) {
+	connectionsAddr := strings.TrimSpace(config.ConnectionsAddr)
+	if connectionsAddr == "" {
+		return connectionsGRPCClients{}, nil
+	}
+	if ctx == nil {
+		return connectionsGRPCClients{}, errors.New("context is required")
+	}
+	if config.GRPCDialTimeout <= 0 {
+		config.GRPCDialTimeout = timeouts.GRPCDial
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("connections %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		connectionsAddr,
+		config.GRPCDialTimeout,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return connectionsGRPCClients{}, fmt.Errorf("connections gRPC health check failed for %s: %w", connectionsAddr, dialErr.Err)
+			}
+			return connectionsGRPCClients{}, fmt.Errorf("dial connections gRPC %s: %w", connectionsAddr, dialErr.Err)
+		}
+		return connectionsGRPCClients{}, fmt.Errorf("dial connections gRPC %s: %w", connectionsAddr, err)
+	}
+	return connectionsGRPCClients{
+		conn:              conn,
+		connectionsClient: connectionsv1.NewConnectionsServiceClient(conn),
 	}, nil
 }
 

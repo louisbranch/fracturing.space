@@ -49,15 +49,6 @@ service AuthService {
   // List user records.
   rpc ListUsers(ListUsersRequest) returns (ListUsersResponse);
 
-  // Add a contact for quick user lookup.
-  rpc AddContact(AddContactRequest) returns (AddContactResponse);
-
-  // Remove a contact from a user's quick lookup list.
-  rpc RemoveContact(RemoveContactRequest) returns (RemoveContactResponse);
-
-  // List contacts for a user.
-  rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
-
   // Lease due integration outbox events for background worker processing.
   rpc LeaseIntegrationOutboxEvents(LeaseIntegrationOutboxEventsRequest) returns (LeaseIntegrationOutboxEventsResponse);
 
@@ -179,45 +170,6 @@ message ListUsersRequest {
 
 message ListUsersResponse {
   repeated User users = 1;
-  string next_page_token = 2;
-}
-
-message Contact {
-  string owner_user_id = 1;
-  string contact_user_id = 2;
-  google.protobuf.Timestamp created_at = 3;
-  google.protobuf.Timestamp updated_at = 4;
-}
-
-message AddContactRequest {
-  string owner_user_id = 1;
-  string contact_user_id = 2;
-}
-
-message AddContactResponse {
-  Contact contact = 1;
-}
-
-message RemoveContactRequest {
-  string owner_user_id = 1;
-  string contact_user_id = 2;
-}
-
-message RemoveContactResponse {}
-
-message ListContactsRequest {
-  string owner_user_id = 1;
-
-  // The maximum number of contacts to return.
-  // If zero, the server defaults to 10. The server clamps values above 50 to 50.
-  int32 page_size = 2;
-
-  // A page token received from a prior ListContactsResponse.
-  string page_token = 3;
-}
-
-message ListContactsResponse {
-  repeated Contact contacts = 1;
   string next_page_token = 2;
 }
 
