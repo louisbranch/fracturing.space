@@ -438,7 +438,7 @@ type Snapshot struct {
 	CreatedAt           int64  `json:"created_at"`
 }
 
-type TelemetryEvent struct {
+type AuditEvent struct {
 	ID             int64          `json:"id"`
 	Timestamp      int64          `json:"timestamp"`
 	EventName      string         `json:"event_name"`

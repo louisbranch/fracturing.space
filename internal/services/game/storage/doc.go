@@ -7,7 +7,7 @@
 // - It keeps command-safety checks and read-model shaping in one boundary.
 //
 // Covered domains include campaigns, participants, characters, invites, sessions,
-// events, snapshots, forks, telemetry, statistics, roll outcomes, and
+// events, snapshots, forks, audit, statistics, roll outcomes, and
 // Daggerheart extensions.
 //
 // Concrete implementations are in subpackages (for example: internal/services/game/storage/sqlite).

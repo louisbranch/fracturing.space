@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit/events"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
@@ -16,13 +17,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type fakeTelemetryStore struct {
-	last  storage.TelemetryEvent
+type fakeAuditStore struct {
+	last  storage.AuditEvent
 	count int
 	err   error
 }
 
-func (s *fakeTelemetryStore) AppendTelemetryEvent(ctx context.Context, evt storage.TelemetryEvent) error {
+func (s *fakeAuditStore) AppendAuditEvent(ctx context.Context, evt storage.AuditEvent) error {
 	s.last = evt
 	s.count++
 	return s.err
@@ -54,11 +55,11 @@ func (r sourceCampaignRequest) GetSessionId() string {
 	return r.sessionID
 }
 
-func TestIsReadMethod(t *testing.T) {
-	if !isReadMethod(campaignv1.CampaignService_GetCampaign_FullMethodName) {
+func TestClassifyMethodKind(t *testing.T) {
+	if classifyMethodKind(campaignv1.CampaignService_GetCampaign_FullMethodName) != "read" {
 		t.Fatal("expected get campaign to be read method")
 	}
-	if isReadMethod(campaignv1.CampaignService_CreateCampaign_FullMethodName) {
+	if classifyMethodKind(campaignv1.CampaignService_CreateCampaign_FullMethodName) != "write" {
 		t.Fatal("expected create campaign to be write method")
 	}
 }
@@ -80,8 +81,8 @@ func TestExtractScope(t *testing.T) {
 	}
 }
 
-func TestTelemetryInterceptorNoStore(t *testing.T) {
-	interceptor := TelemetryInterceptor(nil)
+func TestAuditInterceptorNoStore(t *testing.T) {
+	interceptor := AuditInterceptor(nil)
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 	called := false
 
@@ -97,9 +98,9 @@ func TestTelemetryInterceptorNoStore(t *testing.T) {
 	}
 }
 
-func TestTelemetryInterceptorEmitsEvent(t *testing.T) {
-	store := &fakeTelemetryStore{}
-	interceptor := TelemetryInterceptor(store)
+func TestAuditInterceptorEmitsEventForRead(t *testing.T) {
+	store := &fakeAuditStore{}
+	interceptor := AuditInterceptor(store)
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
@@ -117,8 +118,8 @@ func TestTelemetryInterceptorEmitsEvent(t *testing.T) {
 	if store.count != 1 {
 		t.Fatalf("expected event to be emitted, got %d", store.count)
 	}
-	if store.last.EventName != "telemetry.grpc.read" {
-		t.Fatalf("expected event name telemetry.grpc.read, got %s", store.last.EventName)
+	if store.last.EventName != events.GRPCRead {
+		t.Fatalf("expected event name %s, got %s", events.GRPCRead, store.last.EventName)
 	}
 	if store.last.ActorType != "participant" || store.last.ActorID != "participant-1" {
 		t.Fatalf("expected participant actor, got %s/%s", store.last.ActorType, store.last.ActorID)
@@ -131,9 +132,9 @@ func TestTelemetryInterceptorEmitsEvent(t *testing.T) {
 	}
 }
 
-func TestTelemetryInterceptorErrorSeverity(t *testing.T) {
-	store := &fakeTelemetryStore{}
-	interceptor := TelemetryInterceptor(store)
+func TestAuditInterceptorErrorSeverity(t *testing.T) {
+	store := &fakeAuditStore{}
+	interceptor := AuditInterceptor(store)
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	_, err := interceptor(context.Background(), &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {
@@ -153,9 +154,9 @@ func TestTelemetryInterceptorErrorSeverity(t *testing.T) {
 	}
 }
 
-func TestTelemetryInterceptorWriteMethodNoEmit(t *testing.T) {
-	store := &fakeTelemetryStore{}
-	interceptor := TelemetryInterceptor(store)
+func TestAuditInterceptorEmitsEventForWrite(t *testing.T) {
+	store := &fakeAuditStore{}
+	interceptor := AuditInterceptor(store)
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_CreateCampaign_FullMethodName}
 
 	_, err := interceptor(context.Background(), &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {
@@ -164,14 +165,20 @@ func TestTelemetryInterceptorWriteMethodNoEmit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if store.count != 0 {
-		t.Fatalf("expected no telemetry emit, got %d", store.count)
+	if store.count != 1 {
+		t.Fatalf("expected one audit emit, got %d", store.count)
+	}
+	if store.last.EventName != events.GRPCWrite {
+		t.Fatalf("expected event name %s, got %s", events.GRPCWrite, store.last.EventName)
+	}
+	if got, ok := store.last.Attributes["method_kind"].(string); !ok || got != "write" {
+		t.Fatalf("expected method_kind write, got %#v", store.last.Attributes["method_kind"])
 	}
 }
 
-func TestTelemetryInterceptorSystemActor(t *testing.T) {
-	store := &fakeTelemetryStore{}
-	interceptor := TelemetryInterceptor(store)
+func TestAuditInterceptorSystemActor(t *testing.T) {
+	store := &fakeAuditStore{}
+	interceptor := AuditInterceptor(store)
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	_, err := interceptor(context.Background(), &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {
@@ -188,9 +195,9 @@ func TestTelemetryInterceptorSystemActor(t *testing.T) {
 	}
 }
 
-func TestTelemetryInterceptorOTelTraceContext(t *testing.T) {
-	store := &fakeTelemetryStore{}
-	interceptor := TelemetryInterceptor(store)
+func TestAuditInterceptorOTelTraceContext(t *testing.T) {
+	store := &fakeAuditStore{}
+	interceptor := AuditInterceptor(store)
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	// Create an OTel span so the context carries a valid trace/span ID.
@@ -219,9 +226,9 @@ func TestTelemetryInterceptorOTelTraceContext(t *testing.T) {
 	}
 }
 
-func TestTelemetryInterceptorNoSpanEmptyIDs(t *testing.T) {
-	store := &fakeTelemetryStore{}
-	interceptor := TelemetryInterceptor(store)
+func TestAuditInterceptorNoSpanEmptyIDs(t *testing.T) {
+	store := &fakeAuditStore{}
+	interceptor := AuditInterceptor(store)
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	// No OTel span in context — trace/span IDs should remain empty.
@@ -239,9 +246,9 @@ func TestTelemetryInterceptorNoSpanEmptyIDs(t *testing.T) {
 	}
 }
 
-func TestTelemetryInterceptorStoreErrorIgnored(t *testing.T) {
-	store := &fakeTelemetryStore{err: context.Canceled}
-	interceptor := TelemetryInterceptor(store)
+func TestAuditInterceptorStoreErrorIgnored(t *testing.T) {
+	store := &fakeAuditStore{err: context.Canceled}
+	interceptor := AuditInterceptor(store)
 	info := &grpc.UnaryServerInfo{FullMethod: campaignv1.CampaignService_GetCampaign_FullMethodName}
 
 	_, err := interceptor(context.Background(), &campaignRequest{campaignID: "camp-1"}, info, func(ctx context.Context, req any) (any, error) {

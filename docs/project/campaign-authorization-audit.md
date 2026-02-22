@@ -38,6 +38,12 @@ Use telemetry events for:
 
 - `event_name`: `telemetry.authz.decision`
 
+## Package Ownership
+
+- `telemetry.authz.decision` and related game-facing audit events are now owned by the game service in `internal/services/game/observability/audit`.
+- Runtime emission points are the game gRPC interceptor (`GRPCRead`/`GRPCWrite`) and game authorization policy helpers (`AuthzDecision`).
+- Stable event names remain `telemetry.*` for downstream dashboard compatibility while the owning package is now game-specific.
+
 Required attributes:
 
 - `decision`: `allow` | `deny` | `override`

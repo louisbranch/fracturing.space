@@ -28,9 +28,9 @@ type Stores struct {
 	// projection.Applier directly.
 	Daggerheart storage.DaggerheartStore
 
-	// Infrastructure stores — event journal, snapshots, telemetry.
+	// Infrastructure stores — event journal, snapshots, audit.
 	Event      storage.EventStore
-	Telemetry  storage.TelemetryStore
+	Audit      storage.AuditEventStore
 	Statistics storage.StatisticsStore
 	Snapshot   storage.SnapshotStore
 
@@ -122,8 +122,8 @@ func (s *Stores) Validate() error {
 	if s.Event == nil {
 		missing = append(missing, "Event")
 	}
-	if s.Telemetry == nil {
-		missing = append(missing, "Telemetry")
+	if s.Audit == nil {
+		missing = append(missing, "Audit")
 	}
 	if s.Statistics == nil {
 		missing = append(missing, "Statistics")

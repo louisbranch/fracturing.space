@@ -12,8 +12,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
 
-// AppendTelemetryEvent records an operational telemetry event.
-func (s *Store) AppendTelemetryEvent(ctx context.Context, evt storage.TelemetryEvent) error {
+// AppendAuditEvent records an operational audit event.
+func (s *Store) AppendAuditEvent(ctx context.Context, evt storage.AuditEvent) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -32,12 +32,12 @@ func (s *Store) AppendTelemetryEvent(ctx context.Context, evt storage.TelemetryE
 	if len(evt.AttributesJSON) == 0 && len(evt.Attributes) > 0 {
 		payload, err := json.Marshal(evt.Attributes)
 		if err != nil {
-			return fmt.Errorf("marshal telemetry attributes: %w", err)
+			return fmt.Errorf("marshal audit attributes: %w", err)
 		}
 		evt.AttributesJSON = payload
 	}
 
-	return s.q.AppendTelemetryEvent(ctx, db.AppendTelemetryEventParams{
+	return s.q.AppendAuditEvent(ctx, db.AppendAuditEventParams{
 		Timestamp:      toMillis(evt.Timestamp),
 		EventName:      evt.EventName,
 		Severity:       evt.Severity,

@@ -7,6 +7,7 @@ import (
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit/events"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -18,12 +19,12 @@ type authzParticipantStore struct {
 	listByCampaign func(ctx context.Context, campaignID string) ([]storage.ParticipantRecord, error)
 }
 
-type authzTelemetryStore struct {
-	events []storage.TelemetryEvent
+type authzAuditStore struct {
+	events []storage.AuditEvent
 	err    error
 }
 
-func (s *authzTelemetryStore) AppendTelemetryEvent(_ context.Context, evt storage.TelemetryEvent) error {
+func (s *authzAuditStore) AppendAuditEvent(_ context.Context, evt storage.AuditEvent) error {
 	if s.err != nil {
 		return s.err
 	}
@@ -209,7 +210,7 @@ func TestRequirePolicyAllowsOwnerByUserIDFallback(t *testing.T) {
 }
 
 func TestRequirePolicyTelemetryDenied(t *testing.T) {
-	telemetryStore := &authzTelemetryStore{}
+	auditStore := &authzAuditStore{}
 	stores := Stores{
 		Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 			return storage.ParticipantRecord{
@@ -218,7 +219,7 @@ func TestRequirePolicyTelemetryDenied(t *testing.T) {
 				CampaignAccess: participant.CampaignAccessMember,
 			}, nil
 		}},
-		Telemetry: telemetryStore,
+		Audit: auditStore,
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "member-1"))
 
@@ -226,12 +227,12 @@ func TestRequirePolicyTelemetryDenied(t *testing.T) {
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
-	if len(telemetryStore.events) != 1 {
-		t.Fatalf("telemetry events = %d, want 1", len(telemetryStore.events))
+	if len(auditStore.events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(auditStore.events))
 	}
-	evt := telemetryStore.events[0]
-	if evt.EventName != "telemetry.authz.decision" {
-		t.Fatalf("event name = %q, want %q", evt.EventName, "telemetry.authz.decision")
+	evt := auditStore.events[0]
+	if evt.EventName != events.AuthzDecision {
+		t.Fatalf("event name = %q, want %q", evt.EventName, events.AuthzDecision)
 	}
 	if got, ok := evt.Attributes["decision"].(string); !ok || got != "deny" {
 		t.Fatalf("decision = %#v, want %q", evt.Attributes["decision"], "deny")
@@ -242,7 +243,7 @@ func TestRequirePolicyTelemetryDenied(t *testing.T) {
 }
 
 func TestRequirePolicyTelemetryAllowed(t *testing.T) {
-	telemetryStore := &authzTelemetryStore{}
+	auditStore := &authzAuditStore{}
 	stores := Stores{
 		Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 			return storage.ParticipantRecord{
@@ -251,17 +252,17 @@ func TestRequirePolicyTelemetryAllowed(t *testing.T) {
 				CampaignAccess: participant.CampaignAccessOwner,
 			}, nil
 		}},
-		Telemetry: telemetryStore,
+		Audit: auditStore,
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "owner-1"))
 
 	if err := requirePolicy(ctx, stores, policyActionManageCampaign, storage.CampaignRecord{ID: "camp"}); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if len(telemetryStore.events) != 1 {
-		t.Fatalf("telemetry events = %d, want 1", len(telemetryStore.events))
+	if len(auditStore.events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(auditStore.events))
 	}
-	evt := telemetryStore.events[0]
+	evt := auditStore.events[0]
 	if got, ok := evt.Attributes["decision"].(string); !ok || got != "allow" {
 		t.Fatalf("decision = %#v, want %q", evt.Attributes["decision"], "allow")
 	}
@@ -271,7 +272,7 @@ func TestRequirePolicyTelemetryAllowed(t *testing.T) {
 }
 
 func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
-	telemetryStore := &authzTelemetryStore{}
+	auditStore := &authzAuditStore{}
 	characterStore := newFakeCharacterStore()
 	if err := characterStore.PutCharacter(context.Background(), storage.CharacterRecord{
 		ID:            "char-1",
@@ -291,7 +292,7 @@ func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 			}, nil
 		}},
 		Character: characterStore,
-		Telemetry: telemetryStore,
+		Audit:     auditStore,
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "member-1"))
 
@@ -304,10 +305,10 @@ func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
-	if len(telemetryStore.events) != 1 {
-		t.Fatalf("telemetry events = %d, want 1", len(telemetryStore.events))
+	if len(auditStore.events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(auditStore.events))
 	}
-	evt := telemetryStore.events[0]
+	evt := auditStore.events[0]
 	if got, ok := evt.Attributes["decision"].(string); !ok || got != "deny" {
 		t.Fatalf("decision = %#v, want %q", evt.Attributes["decision"], "deny")
 	}
@@ -317,21 +318,21 @@ func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 }
 
 func TestRequirePolicyTelemetryAdminOverride(t *testing.T) {
-	telemetryStore := &authzTelemetryStore{}
+	auditStore := &authzAuditStore{}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-fracturing-space-platform-role", "ADMIN",
 		"x-fracturing-space-authz-override-reason", "incident-ops",
 		grpcmeta.UserIDHeader, "user-admin-1",
 	))
 
-	err := requirePolicy(ctx, Stores{Telemetry: telemetryStore}, policyActionManageCampaign, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, Stores{Audit: auditStore}, policyActionManageCampaign, storage.CampaignRecord{ID: "camp"})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if len(telemetryStore.events) != 1 {
-		t.Fatalf("telemetry events = %d, want 1", len(telemetryStore.events))
+	if len(auditStore.events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(auditStore.events))
 	}
-	evt := telemetryStore.events[0]
+	evt := auditStore.events[0]
 	if got, ok := evt.Attributes["decision"].(string); !ok || got != "override" {
 		t.Fatalf("decision = %#v, want %q", evt.Attributes["decision"], "override")
 	}
@@ -344,19 +345,19 @@ func TestRequirePolicyTelemetryAdminOverride(t *testing.T) {
 }
 
 func TestRequirePolicyDeniesAdminOverrideWhenReasonMissing(t *testing.T) {
-	telemetryStore := &authzTelemetryStore{}
+	auditStore := &authzAuditStore{}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-fracturing-space-platform-role", "ADMIN",
 	))
 
-	err := requirePolicy(ctx, Stores{Telemetry: telemetryStore}, policyActionManageCampaign, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, Stores{Audit: auditStore}, policyActionManageCampaign, storage.CampaignRecord{ID: "camp"})
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
-	if len(telemetryStore.events) != 1 {
-		t.Fatalf("telemetry events = %d, want 1", len(telemetryStore.events))
+	if len(auditStore.events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(auditStore.events))
 	}
-	evt := telemetryStore.events[0]
+	evt := auditStore.events[0]
 	if got, ok := evt.Attributes["decision"].(string); !ok || got != "deny" {
 		t.Fatalf("decision = %#v, want %q", evt.Attributes["decision"], "deny")
 	}
@@ -366,7 +367,7 @@ func TestRequirePolicyDeniesAdminOverrideWhenReasonMissing(t *testing.T) {
 }
 
 func TestRequireCharacterMutationPolicyTelemetryAdminOverride(t *testing.T) {
-	telemetryStore := &authzTelemetryStore{}
+	auditStore := &authzAuditStore{}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-fracturing-space-platform-role", "ADMIN",
 		"x-fracturing-space-authz-override-reason", "moderation",
@@ -375,17 +376,17 @@ func TestRequireCharacterMutationPolicyTelemetryAdminOverride(t *testing.T) {
 
 	_, err := requireCharacterMutationPolicy(
 		ctx,
-		Stores{Telemetry: telemetryStore},
+		Stores{Audit: auditStore},
 		storage.CampaignRecord{ID: "camp"},
 		"char-1",
 	)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
-	if len(telemetryStore.events) != 1 {
-		t.Fatalf("telemetry events = %d, want 1", len(telemetryStore.events))
+	if len(auditStore.events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(auditStore.events))
 	}
-	evt := telemetryStore.events[0]
+	evt := auditStore.events[0]
 	if got, ok := evt.Attributes["decision"].(string); !ok || got != "override" {
 		t.Fatalf("decision = %#v, want %q", evt.Attributes["decision"], "override")
 	}

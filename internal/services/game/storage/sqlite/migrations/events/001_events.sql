@@ -2,9 +2,9 @@
 
 DROP TRIGGER IF EXISTS events_no_delete;
 DROP TRIGGER IF EXISTS events_no_update;
-DROP INDEX IF EXISTS idx_telemetry_events_timestamp;
-DROP INDEX IF EXISTS idx_telemetry_events_campaign_id;
-DROP TABLE IF EXISTS telemetry_events;
+DROP INDEX IF EXISTS idx_audit_events_timestamp;
+DROP INDEX IF EXISTS idx_audit_events_campaign_id;
+DROP TABLE IF EXISTS audit_events;
 DROP TABLE IF EXISTS outcome_applied;
 DROP TABLE IF EXISTS event_seq;
 DROP INDEX IF EXISTS idx_events_system;
@@ -55,7 +55,7 @@ CREATE TABLE outcome_applied (
     PRIMARY KEY (campaign_id, session_id, request_id)
 );
 
-CREATE TABLE telemetry_events (
+CREATE TABLE audit_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   timestamp INTEGER NOT NULL,
   event_name TEXT NOT NULL,
@@ -71,8 +71,8 @@ CREATE TABLE telemetry_events (
   attributes_json BLOB
 );
 
-CREATE INDEX idx_telemetry_events_campaign_id ON telemetry_events (campaign_id);
-CREATE INDEX idx_telemetry_events_timestamp ON telemetry_events (timestamp);
+CREATE INDEX idx_audit_events_campaign_id ON audit_events (campaign_id);
+CREATE INDEX idx_audit_events_timestamp ON audit_events (timestamp);
 
 CREATE TRIGGER events_no_update
 BEFORE UPDATE ON events
@@ -89,9 +89,9 @@ END;
 -- +migrate Down
 DROP TRIGGER IF EXISTS events_no_delete;
 DROP TRIGGER IF EXISTS events_no_update;
-DROP INDEX IF EXISTS idx_telemetry_events_timestamp;
-DROP INDEX IF EXISTS idx_telemetry_events_campaign_id;
-DROP TABLE IF EXISTS telemetry_events;
+DROP INDEX IF EXISTS idx_audit_events_timestamp;
+DROP INDEX IF EXISTS idx_audit_events_campaign_id;
+DROP TABLE IF EXISTS audit_events;
 DROP TABLE IF EXISTS outcome_applied;
 DROP TABLE IF EXISTS event_seq;
 DROP INDEX IF EXISTS idx_events_system;

@@ -25,7 +25,7 @@ func TestStoresValidate(t *testing.T) {
 		for _, name := range []string{
 			"Campaign", "Participant", "ClaimIndex", "Invite",
 			"Character", "Daggerheart", "Session", "SessionGate",
-			"SessionSpotlight", "Event", "Telemetry", "Statistics",
+			"SessionSpotlight", "Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
 		} {
 			if !strings.Contains(msg, name) {
@@ -60,7 +60,7 @@ func validStores() Stores {
 		SessionGate:        &fakeSessionGateStore{},
 		SessionSpotlight:   &fakeSessionSpotlightStore{},
 		Event:              newFakeEventStore(),
-		Telemetry:          stubTelemetry{},
+		Audit:              stubAudit{},
 		Statistics:         &fakeStatisticsStore{},
 		Snapshot:           stubSnapshot{},
 		CampaignFork:       &fakeCampaignForkStore{},
@@ -114,7 +114,7 @@ func TestStoresApplier(t *testing.T) {
 // These only exist to satisfy non-nil checks in Validate().
 
 type stubClaimIndex struct{ storage.ClaimIndexStore }
-type stubTelemetry struct{ storage.TelemetryStore }
+type stubAudit struct{ storage.AuditEventStore }
 type stubSnapshot struct{ storage.SnapshotStore }
 type stubDaggerheartContent struct {
 	storage.DaggerheartContentReadStore

@@ -1,4 +1,4 @@
-package telemetry
+package audit
 
 import (
 	"context"
@@ -8,12 +8,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-type fakeTelemetryStore struct {
-	last  storage.TelemetryEvent
+type fakeAuditStore struct {
+	last  storage.AuditEvent
 	count int
 }
 
-func (s *fakeTelemetryStore) AppendTelemetryEvent(ctx context.Context, evt storage.TelemetryEvent) error {
+func (s *fakeAuditStore) AppendAuditEvent(ctx context.Context, evt storage.AuditEvent) error {
 	s.last = evt
 	s.count++
 	return nil
@@ -21,24 +21,24 @@ func (s *fakeTelemetryStore) AppendTelemetryEvent(ctx context.Context, evt stora
 
 func TestEmitterNoopWhenNil(t *testing.T) {
 	var emitter *Emitter
-	if err := emitter.Emit(context.Background(), storage.TelemetryEvent{}); err != nil {
+	if err := emitter.Emit(context.Background(), storage.AuditEvent{}); err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 }
 
 func TestEmitterNoopWhenStoreNil(t *testing.T) {
 	emitter := &Emitter{}
-	if err := emitter.Emit(context.Background(), storage.TelemetryEvent{}); err != nil {
+	if err := emitter.Emit(context.Background(), storage.AuditEvent{}); err != nil {
 		t.Fatalf("expected nil error, got %v", err)
 	}
 }
 
 func TestEmitterAddsTimestamp(t *testing.T) {
-	store := &fakeTelemetryStore{}
+	store := &fakeAuditStore{}
 	clockTime := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	emitter := &Emitter{store: store, clock: func() time.Time { return clockTime }}
 
-	if err := emitter.Emit(context.Background(), storage.TelemetryEvent{EventName: "test"}); err != nil {
+	if err := emitter.Emit(context.Background(), storage.AuditEvent{EventName: "test"}); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	if store.count != 1 {
@@ -53,12 +53,12 @@ func TestEmitterAddsTimestamp(t *testing.T) {
 }
 
 func TestEmitterPreservesTimestamp(t *testing.T) {
-	store := &fakeTelemetryStore{}
+	store := &fakeAuditStore{}
 	clockTime := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	setTime := time.Date(2026, 2, 1, 12, 0, 0, 0, time.UTC)
 	emitter := &Emitter{store: store, clock: func() time.Time { return clockTime }}
 
-	if err := emitter.Emit(context.Background(), storage.TelemetryEvent{EventName: "test", Timestamp: setTime}); err != nil {
+	if err := emitter.Emit(context.Background(), storage.AuditEvent{EventName: "test", Timestamp: setTime}); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	if store.count != 1 {
@@ -70,10 +70,10 @@ func TestEmitterPreservesTimestamp(t *testing.T) {
 }
 
 func TestEmitterUsesTimeNowWhenClockNil(t *testing.T) {
-	store := &fakeTelemetryStore{}
+	store := &fakeAuditStore{}
 	emitter := &Emitter{store: store, clock: nil}
 
-	if err := emitter.Emit(context.Background(), storage.TelemetryEvent{EventName: "test"}); err != nil {
+	if err := emitter.Emit(context.Background(), storage.AuditEvent{EventName: "test"}); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	if store.count != 1 {

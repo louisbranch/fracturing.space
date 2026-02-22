@@ -1,4 +1,4 @@
-package telemetry
+package audit
 
 import (
 	"context"
@@ -7,7 +7,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-// Severity describes the telemetry severity level.
+// Severity describes the audit severity level.
 type Severity string
 
 const (
@@ -16,19 +16,19 @@ const (
 	SeverityError Severity = "ERROR"
 )
 
-// Emitter records operational telemetry events.
+// Emitter records operational audit events.
 type Emitter struct {
-	store storage.TelemetryStore
+	store storage.AuditEventStore
 	clock func() time.Time
 }
 
-// NewEmitter creates a new telemetry emitter.
-func NewEmitter(store storage.TelemetryStore) *Emitter {
+// NewEmitter creates a new audit event emitter.
+func NewEmitter(store storage.AuditEventStore) *Emitter {
 	return &Emitter{store: store, clock: time.Now}
 }
 
-// Emit records a telemetry event. It is a no-op when the store is nil.
-func (e *Emitter) Emit(ctx context.Context, evt storage.TelemetryEvent) error {
+// Emit records an audit event. It is a no-op when the store is nil.
+func (e *Emitter) Emit(ctx context.Context, evt storage.AuditEvent) error {
 	if e == nil || e.store == nil {
 		return nil
 	}
@@ -39,5 +39,5 @@ func (e *Emitter) Emit(ctx context.Context, evt storage.TelemetryEvent) error {
 			evt.Timestamp = e.clock().UTC()
 		}
 	}
-	return e.store.AppendTelemetryEvent(ctx, evt)
+	return e.store.AppendAuditEvent(ctx, evt)
 }

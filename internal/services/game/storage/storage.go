@@ -238,8 +238,8 @@ type EventStore interface {
 	ListEventsPage(ctx context.Context, req ListEventsPageRequest) (ListEventsPageResult, error)
 }
 
-// TelemetryEvent captures operational observations emitted during command execution.
-type TelemetryEvent struct {
+// AuditEvent captures operational observations emitted during command execution.
+type AuditEvent struct {
 	Timestamp      time.Time
 	EventName      string
 	Severity       string
@@ -255,9 +255,9 @@ type TelemetryEvent struct {
 	AttributesJSON []byte
 }
 
-// TelemetryStore persists operational telemetry records for audits and incident analysis.
-type TelemetryStore interface {
-	AppendTelemetryEvent(ctx context.Context, evt TelemetryEvent) error
+// AuditEventStore persists operational audit records for audits and incident analysis.
+type AuditEventStore interface {
+	AppendAuditEvent(ctx context.Context, evt AuditEvent) error
 }
 
 // GameStatistics contains aggregate counters used by dashboards and housekeeping.
@@ -483,7 +483,7 @@ type Store interface {
 	DaggerheartStore
 	SessionStore
 	EventStore
-	TelemetryStore
+	AuditEventStore
 	StatisticsStore
 	SnapshotStore
 	CampaignForkStore

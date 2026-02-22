@@ -6,8 +6,9 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/telemetry"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit/events"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
@@ -15,21 +16,27 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// TelemetryInterceptor emits telemetry for read-only gRPC methods.
+// AuditInterceptor emits an audit event for each unary gRPC call handled by the game service.
 //
-// It is intentionally limited to read paths so write call telemetry can remain
-// in command/application layers where business errors are richer.
-func TelemetryInterceptor(store storage.TelemetryStore) grpc.UnaryServerInterceptor {
+// All unary calls are captured to make cross-service telemetry coverage explicit
+// while preserving existing read/write classification in event attributes.
+func AuditInterceptor(store storage.AuditEventStore) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		resp, err := handler(ctx, req)
-		if store == nil || !isReadMethod(info.FullMethod) {
+		if store == nil {
 			return resp, err
 		}
 
-		severity := telemetry.SeverityInfo
+		methodType := classifyMethodKind(info.FullMethod)
+		eventName := events.GRPCWrite
+		if methodType == "read" {
+			eventName = events.GRPCRead
+		}
+
+		severity := audit.SeverityInfo
 		code := codes.OK
 		if err != nil {
-			severity = telemetry.SeverityError
+			severity = audit.SeverityError
 			if st, ok := status.FromError(err); ok {
 				code = st.Code()
 			}
@@ -48,9 +55,9 @@ func TelemetryInterceptor(store storage.TelemetryStore) grpc.UnaryServerIntercep
 			spanID = sc.SpanID().String()
 		}
 
-		emitter := telemetry.NewEmitter(store)
-		emitErr := emitter.Emit(ctx, storage.TelemetryEvent{
-			EventName:    "telemetry.grpc.read",
+		emitter := audit.NewEmitter(store)
+		emitErr := emitter.Emit(ctx, storage.AuditEvent{
+			EventName:    eventName,
 			Severity:     string(severity),
 			CampaignID:   campaignID,
 			SessionID:    sessionID,
@@ -61,12 +68,13 @@ func TelemetryInterceptor(store storage.TelemetryStore) grpc.UnaryServerIntercep
 			TraceID:      traceID,
 			SpanID:       spanID,
 			Attributes: map[string]any{
-				"method": info.FullMethod,
-				"code":   code.String(),
+				"method":      info.FullMethod,
+				"method_kind": methodType,
+				"code":        code.String(),
 			},
 		})
 		if emitErr != nil {
-			log.Printf("telemetry emit %s: %v", info.FullMethod, emitErr)
+			log.Printf("audit emit %s: %v", info.FullMethod, emitErr)
 		}
 
 		return resp, err
@@ -106,7 +114,7 @@ func sessionIDFromRequest(req any) string {
 	return strings.TrimSpace(getter.GetSessionId())
 }
 
-func isReadMethod(fullMethod string) bool {
+func classifyMethodKind(fullMethod string) string {
 	switch fullMethod {
 	case campaignv1.CampaignService_ListCampaigns_FullMethodName,
 		campaignv1.CampaignService_GetCampaign_FullMethodName,
@@ -120,8 +128,8 @@ func isReadMethod(fullMethod string) bool {
 		campaignv1.EventService_ListEvents_FullMethodName,
 		campaignv1.ForkService_GetLineage_FullMethodName,
 		campaignv1.ForkService_ListForks_FullMethodName:
-		return true
+		return "read"
 	default:
-		return false
+		return "write"
 	}
 }
