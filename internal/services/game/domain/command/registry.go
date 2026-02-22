@@ -177,16 +177,8 @@ func (r *Registry) ValidateForDecision(cmd Command) (Command, error) {
 		if cmd.SystemID == "" || cmd.SystemVersion == "" {
 			return Command{}, ErrSystemMetadataRequired
 		}
-		if expectedSystemNamespace, ok := naming.NamespaceFromType(string(cmd.Type)); ok {
-			if naming.NormalizeSystemNamespace(cmd.SystemID) != expectedSystemNamespace {
-				return Command{}, fmt.Errorf(
-					"%w: type %s expects %s, got %s",
-					ErrSystemTypeNamespaceMismatch,
-					cmd.Type,
-					expectedSystemNamespace,
-					cmd.SystemID,
-				)
-			}
+		if err := naming.ValidateSystemNamespace(string(cmd.Type), cmd.SystemID); err != nil {
+			return Command{}, fmt.Errorf("%w: %v", ErrSystemTypeNamespaceMismatch, err)
 		}
 	case OwnerCore:
 		if cmd.SystemID != "" || cmd.SystemVersion != "" {

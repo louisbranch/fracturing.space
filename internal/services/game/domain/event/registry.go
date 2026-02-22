@@ -273,16 +273,8 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 		if evt.SystemID == "" || evt.SystemVersion == "" {
 			return Event{}, ErrSystemMetadataRequired
 		}
-		if expectedSystemNamespace, ok := naming.NamespaceFromType(string(evt.Type)); ok {
-			if naming.NormalizeSystemNamespace(evt.SystemID) != expectedSystemNamespace {
-				return Event{}, fmt.Errorf(
-					"%w: type %s expects %s, got %s",
-					ErrSystemTypeNamespaceMismatch,
-					evt.Type,
-					expectedSystemNamespace,
-					evt.SystemID,
-				)
-			}
+		if err := naming.ValidateSystemNamespace(string(evt.Type), evt.SystemID); err != nil {
+			return Event{}, fmt.Errorf("%w: %v", ErrSystemTypeNamespaceMismatch, err)
 		}
 		requireEntityType = true
 		requireEntityID = true
