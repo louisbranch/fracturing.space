@@ -56,7 +56,7 @@ Used by the domain engine to:
 
 - register system-owned command and event definitions
 - route system commands to module deciders
-- route system events to module projectors during replay/fold
+- route system events to module folders during replay/fold
 
 Module interface:
 
@@ -67,7 +67,7 @@ type Module interface {
     RegisterCommands(registry *command.Registry) error
     RegisterEvents(registry *event.Registry) error
     Decider() Decider
-    Projector() Projector
+    Folder() Folder
     StateFactory() StateFactory
 }
 ```
@@ -106,7 +106,7 @@ SystemDescriptor (manifest/manifest.go)
 │   ├── RegisterCommands  → command.Registry      (shared with core)
 │   ├── RegisterEvents    → event.Registry        (shared with core)
 │   ├── Decider()         → command decisions
-│   └── Projector()       → aggregate fold / replay
+│   └── Folder()          → aggregate fold / replay
 │
 ├── BuildMetadataSystem() → systems.Registry      (API metadata bridge)
 │   └── Maps system_id + version to protobuf enum for transport layers
@@ -116,7 +116,7 @@ SystemDescriptor (manifest/manifest.go)
 ```
 
 - **`module.Registry`** (`domain/module/registry.go`): Routes system commands to
-  deciders and system events to projectors. Used by the domain engine write-path
+  deciders and system events to folders. Used by the domain engine write-path
   and the replay pipeline.
 - **`systems.Registry`** (`domain/systems/registry_bridge.go`): Maps
   `system_id` + `system_version` to protobuf `GameSystem` enums. Used by gRPC
@@ -156,7 +156,7 @@ Responsibilities:
 
 - register system-owned command definitions
 - register system-owned event definitions
-- provide decider/projector/state-factory implementations
+- provide decider/folder/state-factory implementations
 
 ### 3. Define payload contracts and validation
 
@@ -195,7 +195,7 @@ Create `internal/services/game/domain/systems/{system}/adapter.go` implementing
 
 ### 9. Verify through tests
 
-- Unit tests for decider/projector/validators.
+- Unit tests for decider/folder/validators.
 - Projection tests for adapter/store behavior.
 - Integration tests across gRPC/MCP + storage.
 
@@ -204,7 +204,7 @@ Create `internal/services/game/domain/systems/{system}/adapter.go` implementing
 - All emitted system events are registered with explicit intent (`projection_and_replay`
   vs `audit_only`) so projection obligations are discoverable from registries.
 - Core decider outputs have a test that new events can be round-tripped through
-  `BuildRegistries` and replayed once in projector tests.
+  `BuildRegistries` and replayed once in folder tests.
 - Core applier and adapter coverage tests prove every `projection_and_replay` event
   is handled (or intentionally ignored by intent).
 - Command builders and payload validators reject malformed envelopes with clear
@@ -248,7 +248,7 @@ Use Daggerheart as the baseline for structure and naming.
 |---|---|
 | Module wiring | `internal/services/game/domain/systems/daggerheart/module.go` |
 | Command decisions | `internal/services/game/domain/systems/daggerheart/decider.go` |
-| Replay projector | `internal/services/game/domain/systems/daggerheart/projector.go` |
+| Replay folder | `internal/services/game/domain/systems/daggerheart/projector.go` |
 | Projection adapter | `internal/services/game/domain/systems/daggerheart/adapter.go` |
 | Event type constants | `internal/services/game/domain/systems/daggerheart/event_types.go` |
 | Payload contracts | `internal/services/game/domain/systems/daggerheart/payload.go` |
@@ -256,7 +256,7 @@ Use Daggerheart as the baseline for structure and naming.
 
 ## Consistency expectations for system authors
 
-1. Module deciders and projectors must be deterministic.
+1. Module deciders and folders must be deterministic.
 2. System events must be replay-safe and self-describing through payload + metadata.
 3. Projection adapter behavior must be idempotent under replay.
 4. Domain writes must happen through commands/events only, never direct projection mutation.
@@ -284,6 +284,30 @@ Bypass patterns that are not allowed in request handlers:
 2. Direct projection/store mutation for mutating domain outcomes.
 3. Local duplicated execute/reject/apply loops instead of shared orchestration helpers.
 
+## Projection replay safety
+
+System adapters apply events into denormalized projection tables. Several
+adapter handlers read existing projection state before writing (e.g. reading
+a current value to compute a delta). This is safe because:
+
+1. **Ordered replay**: Events replay in strict sequence order, so the
+   read-then-write chain reproduces the same final state deterministically.
+2. **Full replay recovers from corruption**: If projection state becomes
+   inconsistent, a full replay from the journal rebuilds it from scratch.
+
+Rules for adapter authors:
+
+- **Do not cache state across `Apply` calls.** Each call must read fresh
+  projection state. Stale in-memory caches can diverge during replay.
+- **Handle `storage.ErrNotFound` gracefully.** During replay the projection
+  table may be empty. Seed defaults when a record does not exist yet.
+- **Projection adapter behavior must be idempotent under replay.** The same
+  event sequence must produce the same projection state regardless of how many
+  times it is replayed.
+- **Never write projection records outside of adapter `Apply`.** All
+  projection mutations for system events must flow through the adapter
+  dispatch path so replay remains the single source of truth.
+
 ## Common failure modes
 
 1. Missing `system_id/system_version` on system-owned envelopes:
@@ -292,7 +316,7 @@ Bypass patterns that are not allowed in request handlers:
    - runtime route failures or replay failures.
 3. Forgetting projection adapter registration:
    - events append, but system projection state does not update.
-4. Non-deterministic decider/projector code:
+4. Non-deterministic decider/folder code:
    - replay divergence and integrity incidents.
 
 ## Related docs

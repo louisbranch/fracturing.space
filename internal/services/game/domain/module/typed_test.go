@@ -13,14 +13,14 @@ type testState struct {
 	Count int
 }
 
-// TypedProjector tests
+// TypedFolder tests
 
-func TestTypedProjector_SatisfiesProjectorInterface(t *testing.T) {
-	var _ Projector = TypedProjector[testState]{}
+func TestTypedFolder_SatisfiesFolderInterface(t *testing.T) {
+	var _ Folder = TypedFolder[testState]{}
 }
 
-func TestTypedProjector_Apply_DelegatesToFold(t *testing.T) {
-	p := TypedProjector[testState]{
+func TestTypedFolder_Apply_DelegatesToFold(t *testing.T) {
+	p := TypedFolder[testState]{
 		Assert: func(state any) (testState, error) {
 			if state == nil {
 				return testState{}, nil
@@ -53,8 +53,8 @@ func TestTypedProjector_Apply_DelegatesToFold(t *testing.T) {
 	}
 }
 
-func TestTypedProjector_Apply_PropagatesAssertError(t *testing.T) {
-	p := TypedProjector[testState]{
+func TestTypedFolder_Apply_PropagatesAssertError(t *testing.T) {
+	p := TypedFolder[testState]{
 		Assert: func(state any) (testState, error) {
 			return testState{}, errors.New("bad state")
 		},
@@ -71,8 +71,8 @@ func TestTypedProjector_Apply_PropagatesAssertError(t *testing.T) {
 	}
 }
 
-func TestTypedProjector_Apply_PropagatesFoldError(t *testing.T) {
-	p := TypedProjector[testState]{
+func TestTypedFolder_Apply_PropagatesFoldError(t *testing.T) {
+	p := TypedFolder[testState]{
 		Assert: func(state any) (testState, error) {
 			return testState{}, nil
 		},
@@ -88,9 +88,9 @@ func TestTypedProjector_Apply_PropagatesFoldError(t *testing.T) {
 	}
 }
 
-func TestTypedProjector_FoldHandledTypes(t *testing.T) {
+func TestTypedFolder_FoldHandledTypes(t *testing.T) {
 	expected := []event.Type{"a.done", "b.done"}
-	p := TypedProjector[testState]{
+	p := TypedFolder[testState]{
 		Types: func() []event.Type { return expected },
 	}
 	got := p.FoldHandledTypes()
@@ -104,8 +104,8 @@ func TestTypedProjector_FoldHandledTypes(t *testing.T) {
 	}
 }
 
-func TestTypedProjector_Apply_NilAssertReturnsError(t *testing.T) {
-	p := TypedProjector[testState]{
+func TestTypedFolder_Apply_NilAssertReturnsError(t *testing.T) {
+	p := TypedFolder[testState]{
 		Fold:  func(s testState, _ event.Event) (testState, error) { return s, nil },
 		Types: func() []event.Type { return nil },
 	}
@@ -115,8 +115,8 @@ func TestTypedProjector_Apply_NilAssertReturnsError(t *testing.T) {
 	}
 }
 
-func TestTypedProjector_Apply_NilFoldReturnsError(t *testing.T) {
-	p := TypedProjector[testState]{
+func TestTypedFolder_Apply_NilFoldReturnsError(t *testing.T) {
+	p := TypedFolder[testState]{
 		Assert: func(any) (testState, error) { return testState{}, nil },
 		Types:  func() []event.Type { return nil },
 	}
@@ -126,8 +126,8 @@ func TestTypedProjector_Apply_NilFoldReturnsError(t *testing.T) {
 	}
 }
 
-func TestTypedProjector_FoldHandledTypes_NilTypesReturnsNil(t *testing.T) {
-	p := TypedProjector[testState]{}
+func TestTypedFolder_FoldHandledTypes_NilTypesReturnsNil(t *testing.T) {
+	p := TypedFolder[testState]{}
 	got := p.FoldHandledTypes()
 	if got != nil {
 		t.Fatalf("expected nil, got %v", got)

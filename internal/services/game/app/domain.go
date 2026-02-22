@@ -55,7 +55,7 @@ func buildDomainEngine(eventStore storage.EventStore, registries engine.Registri
 	}
 
 	checkpoints := checkpoint.NewMemory()
-	applier := &aggregate.Applier{
+	folder := &aggregate.Folder{
 		Events:         registries.Events,
 		SystemRegistry: registries.Systems,
 	}
@@ -63,7 +63,7 @@ func buildDomainEngine(eventStore storage.EventStore, registries engine.Registri
 		Events:       gamegrpc.NewEventStoreAdapter(eventStore),
 		Checkpoints:  checkpoints,
 		Snapshots:    checkpoints,
-		Applier:      applier,
+		Applier:      folder,
 		StateFactory: func() any { return aggregate.State{} },
 	}
 	return engine.NewHandler(engine.HandlerConfig{
@@ -76,7 +76,7 @@ func buildDomainEngine(eventStore storage.EventStore, registries engine.Registri
 		GateStateLoader: engine.ReplayGateStateLoader{StateLoader: stateLoader},
 		StateLoader:     stateLoader,
 		Decider:         coreDecider{Systems: registries.Systems, routes: routes},
-		Applier:         applier,
+		Folder:          folder,
 	})
 }
 

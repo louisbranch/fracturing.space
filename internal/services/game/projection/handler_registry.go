@@ -101,6 +101,51 @@ func registeredHandlerTypes() []event.Type {
 	return types
 }
 
+// ValidateStorePreconditions verifies that every store dependency declared in
+// the handler registry is satisfied by this Applier. Call at startup to fail
+// fast on misconfiguration instead of discovering nil stores at runtime when the
+// first event of a given type arrives.
+func (a Applier) ValidateStorePreconditions() error {
+	// Collect the union of all store requirements across handlers.
+	var required storeRequirement
+	for _, h := range handlers {
+		required |= h.stores
+	}
+
+	var missing []string
+	if required&needCampaign != 0 && a.Campaign == nil {
+		missing = append(missing, "campaign")
+	}
+	if required&needCharacter != 0 && a.Character == nil {
+		missing = append(missing, "character")
+	}
+	if required&needCampaignFork != 0 && a.CampaignFork == nil {
+		missing = append(missing, "campaign fork")
+	}
+	if required&needInvite != 0 && a.Invite == nil {
+		missing = append(missing, "invite")
+	}
+	if required&needParticipant != 0 && a.Participant == nil {
+		missing = append(missing, "participant")
+	}
+	if required&needSession != 0 && a.Session == nil {
+		missing = append(missing, "session")
+	}
+	if required&needSessionGate != 0 && a.SessionGate == nil {
+		missing = append(missing, "session gate")
+	}
+	if required&needSessionSpotlight != 0 && a.SessionSpotlight == nil {
+		missing = append(missing, "session spotlight")
+	}
+	if required&needAdapters != 0 && a.Adapters == nil {
+		missing = append(missing, "system adapters")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("projection stores not configured: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 // validatePreconditions checks that the applier's stores and event envelope
 // fields satisfy the handler's declared requirements.
 func (a Applier) validatePreconditions(h handlerEntry, evt event.Event) error {

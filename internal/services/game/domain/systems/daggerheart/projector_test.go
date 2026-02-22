@@ -9,8 +9,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
-func TestProjectorApplyGMFearChanged_UpdatesState(t *testing.T) {
-	projector := Projector{}
+func TestFolderApplyGMFearChanged_UpdatesState(t *testing.T) {
+	projector := Folder{}
 	state := SnapshotState{CampaignID: "camp-1", GMFear: 2}
 
 	payload, err := json.Marshal(GMFearChangedPayload{Before: 2, After: 5, Reason: "shift"})
@@ -39,8 +39,8 @@ func TestProjectorApplyGMFearChanged_UpdatesState(t *testing.T) {
 	}
 }
 
-func TestProjectorApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
-	projector := Projector{}
+func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
+	projector := Folder{}
 	hpAfter := 6
 	hopeAfter := 2
 	payload, err := json.Marshal(CharacterStatePatchedPayload{
@@ -88,8 +88,8 @@ func TestProjectorApplyCharacterStatePatched_StoresCharacterState(t *testing.T) 
 	}
 }
 
-func TestProjectorApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *testing.T) {
-	projector := Projector{}
+func TestFolderApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *testing.T) {
+	projector := Folder{}
 	hpBefore := 7
 	payload, err := json.Marshal(CharacterStatePatchedPayload{
 		CharacterID: "char-1",
@@ -131,8 +131,8 @@ func TestProjectorApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *test
 	}
 }
 
-func TestProjectorApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
-	projector := Projector{}
+func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
+	projector := Folder{}
 	state := SnapshotState{
 		CampaignID: "camp-1",
 		AdversaryStates: map[string]AdversaryState{
@@ -221,8 +221,8 @@ func TestProjectorApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) 
 	}
 }
 
-func TestProjectorApplyHandlesAllRegisteredEvents(t *testing.T) {
-	projector := Projector{}
+func TestFolderApplyHandlesAllRegisteredEvents(t *testing.T) {
+	projector := Folder{}
 	for _, def := range daggerheartEventDefinitions {
 		t.Run(string(def.Type), func(t *testing.T) {
 			payloadJSON := []byte(`{}`)
@@ -251,11 +251,11 @@ func TestProjectorApplyHandlesAllRegisteredEvents(t *testing.T) {
 	}
 }
 
-func TestProjectorApply_RejectsAggregateState(t *testing.T) {
-	// System projectors should only receive their own state type, not the
-	// full aggregate.State. The aggregate applier extracts the system-specific
+func TestFolderApply_RejectsAggregateState(t *testing.T) {
+	// System folders should only receive their own state type, not the
+	// full aggregate.State. The aggregate folder extracts the system-specific
 	// state before calling RouteEvent.
-	projector := Projector{}
+	folder := Folder{}
 	aggState := aggregate.State{
 		Systems: map[module.Key]any{
 			{ID: SystemID, Version: SystemVersion}: SnapshotState{
@@ -264,7 +264,7 @@ func TestProjectorApply_RejectsAggregateState(t *testing.T) {
 			},
 		},
 	}
-	_, err := projector.Apply(aggState, event.Event{
+	_, err := folder.Apply(aggState, event.Event{
 		CampaignID:    "camp-1",
 		Type:          EventTypeGMFearChanged,
 		SystemID:      SystemID,
@@ -276,8 +276,8 @@ func TestProjectorApply_RejectsAggregateState(t *testing.T) {
 	}
 }
 
-func TestProjectorApplyUnknownEventReturnsError(t *testing.T) {
-	projector := Projector{}
+func TestFolderApplyUnknownEventReturnsError(t *testing.T) {
+	projector := Folder{}
 	_, err := projector.Apply(SnapshotState{CampaignID: "camp-1"}, event.Event{
 		CampaignID:    "camp-1",
 		Type:          event.Type("sys.daggerheart.unknown"),

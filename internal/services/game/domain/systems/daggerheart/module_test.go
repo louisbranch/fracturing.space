@@ -70,8 +70,8 @@ func eventValidationCases() []eventValidationCase {
 }
 
 func TestFoldHandledTypes_DerivedFromEventDefinitions(t *testing.T) {
-	projector := Projector{}
-	foldTypes := projector.FoldHandledTypes()
+	folder := Folder{}
+	foldTypes := folder.FoldHandledTypes()
 
 	// Build expected set from daggerheartEventDefinitions with replay intent.
 	expected := make(map[event.Type]struct{})
@@ -165,8 +165,8 @@ func TestModuleMetadata(t *testing.T) {
 	if module.Decider() == nil {
 		t.Fatal("expected decider")
 	}
-	if module.Projector() == nil {
-		t.Fatal("expected projector")
+	if module.Folder() == nil {
+		t.Fatal("expected folder")
 	}
 	if module.StateFactory() == nil {
 		t.Fatal("expected state factory")

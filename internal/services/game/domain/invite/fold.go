@@ -20,7 +20,8 @@ func FoldHandledTypes() []event.Type {
 // Fold applies an event to invite state. It returns an error if a recognized
 // event carries a payload that cannot be unmarshalled.
 func Fold(state State, evt event.Event) (State, error) {
-	if evt.Type == EventTypeCreated {
+	switch evt.Type {
+	case EventTypeCreated:
 		state.Created = true
 		var payload CreatePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
@@ -35,8 +36,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			status = normalized
 		}
 		state.Status = status
-	}
-	if evt.Type == EventTypeClaimed {
+	case EventTypeClaimed:
 		var payload ClaimPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
@@ -48,8 +48,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			state.ParticipantID = payload.ParticipantID
 		}
 		state.Status = statusClaimed
-	}
-	if evt.Type == EventTypeRevoked {
+	case EventTypeRevoked:
 		var payload RevokePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
@@ -58,8 +57,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			state.InviteID = payload.InviteID
 		}
 		state.Status = statusRevoked
-	}
-	if evt.Type == EventTypeUpdated {
+	case EventTypeUpdated:
 		var payload UpdatePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)

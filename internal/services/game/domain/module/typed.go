@@ -8,25 +8,25 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-// TypedProjector wraps a typed fold function to satisfy the Projector interface.
+// TypedFolder wraps a typed fold function to satisfy the Folder interface.
 // System authors provide strongly-typed fold logic; the wrapper handles the
 // any → S assertion so callers never see raw type switches.
-type TypedProjector[S any] struct {
+type TypedFolder[S any] struct {
 	// Assert converts the untyped state to S, returning an error on mismatch.
 	Assert func(any) (S, error)
 	// Fold applies an event to the typed state.
 	Fold func(S, event.Event) (S, error)
-	// Types declares which event types this projector handles.
+	// Types declares which event types this folder handles.
 	Types func() []event.Type
 }
 
-// Apply satisfies Projector by asserting state to S, folding, and returning as any.
-func (p TypedProjector[S]) Apply(state any, evt event.Event) (any, error) {
+// Apply satisfies Folder by asserting state to S, folding, and returning as any.
+func (p TypedFolder[S]) Apply(state any, evt event.Event) (any, error) {
 	if p.Assert == nil {
-		return nil, fmt.Errorf("typed projector: Assert function is nil")
+		return nil, fmt.Errorf("typed folder: Assert function is nil")
 	}
 	if p.Fold == nil {
-		return nil, fmt.Errorf("typed projector: Fold function is nil")
+		return nil, fmt.Errorf("typed folder: Fold function is nil")
 	}
 	s, err := p.Assert(state)
 	if err != nil {
@@ -35,8 +35,8 @@ func (p TypedProjector[S]) Apply(state any, evt event.Event) (any, error) {
 	return p.Fold(s, evt)
 }
 
-// FoldHandledTypes satisfies Projector by delegating to the Types function.
-func (p TypedProjector[S]) FoldHandledTypes() []event.Type {
+// FoldHandledTypes satisfies Folder by delegating to the Types function.
+func (p TypedFolder[S]) FoldHandledTypes() []event.Type {
 	if p.Types == nil {
 		return nil
 	}

@@ -9,8 +9,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
-func TestApplierApply_UpdatesSessionGateState(t *testing.T) {
-	applier := Applier{}
+func TestFolderApply_UpdatesSessionGateState(t *testing.T) {
+	applier := Folder{}
 	state := State{}
 
 	opened, err := applier.Apply(state, event.Event{
@@ -47,9 +47,9 @@ func TestApplierApply_UpdatesSessionGateState(t *testing.T) {
 	}
 }
 
-type fakeSystemProjector struct{}
+type fakeSystemFolder struct{}
 
-func (fakeSystemProjector) Apply(state any, _ event.Event) (any, error) {
+func (fakeSystemFolder) Apply(state any, _ event.Event) (any, error) {
 	count := 0
 	if existing, ok := state.(int); ok {
 		count = existing
@@ -58,7 +58,7 @@ func (fakeSystemProjector) Apply(state any, _ event.Event) (any, error) {
 	return count, nil
 }
 
-func (fakeSystemProjector) FoldHandledTypes() []event.Type { return nil }
+func (fakeSystemFolder) FoldHandledTypes() []event.Type { return nil }
 
 type fakeSystemModule struct{}
 
@@ -68,15 +68,15 @@ func (fakeSystemModule) RegisterCommands(_ *command.Registry) error { return nil
 func (fakeSystemModule) RegisterEvents(_ *event.Registry) error     { return nil }
 func (fakeSystemModule) EmittableEventTypes() []event.Type          { return nil }
 func (fakeSystemModule) Decider() module.Decider                    { return nil }
-func (fakeSystemModule) Projector() module.Projector                { return fakeSystemProjector{} }
+func (fakeSystemModule) Folder() module.Folder                      { return fakeSystemFolder{} }
 func (fakeSystemModule) StateFactory() module.StateFactory          { return nil }
 
-func TestApplierApply_RoutesSystemEvents(t *testing.T) {
+func TestFolderApply_RoutesSystemEvents(t *testing.T) {
 	registry := module.NewRegistry()
 	if err := registry.Register(fakeSystemModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	applier := Applier{SystemRegistry: registry}
+	applier := Folder{SystemRegistry: registry}
 	state := State{}
 	key := module.Key{ID: "system-1", Version: "v1"}
 
@@ -101,8 +101,8 @@ func TestApplierApply_RoutesSystemEvents(t *testing.T) {
 	}
 }
 
-func TestApplierApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
-	applier := Applier{SystemRegistry: module.NewRegistry()}
+func TestFolderApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
+	applier := Folder{SystemRegistry: module.NewRegistry()}
 	state := State{}
 
 	_, err := applier.Apply(state, event.Event{
@@ -115,8 +115,8 @@ func TestApplierApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
 	}
 }
 
-func TestApplierApply_PropagatesFoldError(t *testing.T) {
-	applier := Applier{}
+func TestFolderApply_PropagatesFoldError(t *testing.T) {
+	applier := Folder{}
 	state := State{}
 
 	_, err := applier.Apply(state, event.Event{
@@ -128,7 +128,7 @@ func TestApplierApply_PropagatesFoldError(t *testing.T) {
 	}
 }
 
-func TestApplierApply_SkipsAuditOnlyEvents(t *testing.T) {
+func TestFolderApply_SkipsAuditOnlyEvents(t *testing.T) {
 	registry := event.NewRegistry()
 	if err := registry.Register(event.Definition{
 		Type:   event.Type("test.audit_event"),
@@ -137,7 +137,7 @@ func TestApplierApply_SkipsAuditOnlyEvents(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("register event: %v", err)
 	}
-	applier := Applier{Events: registry}
+	applier := Folder{Events: registry}
 	state := State{Campaign: campaign.State{Name: "unchanged"}}
 
 	result, err := applier.Apply(state, event.Event{
@@ -157,8 +157,8 @@ func TestApplierApply_SkipsAuditOnlyEvents(t *testing.T) {
 	}
 }
 
-func TestApplierFoldDispatchedTypes_ReturnsNonEmpty(t *testing.T) {
-	applier := &Applier{}
+func TestFolderFoldDispatchedTypes_ReturnsNonEmpty(t *testing.T) {
+	applier := &Folder{}
 	types := applier.FoldDispatchedTypes()
 	if len(types) == 0 {
 		t.Fatal("expected FoldDispatchedTypes to return non-empty slice")
@@ -173,8 +173,8 @@ func TestApplierFoldDispatchedTypes_ReturnsNonEmpty(t *testing.T) {
 	}
 }
 
-func TestApplierApply_UpdatesInviteState(t *testing.T) {
-	applier := Applier{}
+func TestFolderApply_UpdatesInviteState(t *testing.T) {
+	applier := Folder{}
 	state := State{}
 
 	updated, err := applier.Apply(state, event.Event{

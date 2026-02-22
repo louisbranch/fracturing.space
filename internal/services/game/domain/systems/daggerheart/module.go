@@ -13,17 +13,17 @@ import (
 
 // Module wires Daggerheart system behavior into the runtime.
 type Module struct {
-	decider   module.Decider
-	projector module.Projector
-	factory   module.StateFactory
+	decider module.Decider
+	folder  module.Folder
+	factory module.StateFactory
 }
 
 // NewModule creates a Daggerheart system module.
 func NewModule() *Module {
 	return &Module{
-		decider:   Decider{},
-		projector: Projector{},
-		factory:   NewStateFactory(),
+		decider: Decider{},
+		folder:  Folder{},
+		factory: NewStateFactory(),
 	}
 }
 
@@ -79,7 +79,7 @@ var daggerheartEventDefinitions = []event.Definition{
 
 // eventTypesWithReplayIntent returns event types from daggerheartEventDefinitions
 // that require fold handling (IntentProjectionAndReplay or IntentReplayOnly).
-// Projector.FoldHandledTypes delegates to this so the list stays in sync with
+// Folder.FoldHandledTypes delegates to this so the list stays in sync with
 // the authoritative definitions slice.
 func eventTypesWithReplayIntent() []event.Type {
 	var types []event.Type
@@ -156,9 +156,9 @@ func (m *Module) Decider() module.Decider {
 	return m.decider
 }
 
-// Projector returns the system projector.
-func (m *Module) Projector() module.Projector {
-	return m.projector
+// Folder returns the system folder.
+func (m *Module) Folder() module.Folder {
+	return m.folder
 }
 
 // StateFactory returns the state factory.

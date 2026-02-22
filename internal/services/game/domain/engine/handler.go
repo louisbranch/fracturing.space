@@ -58,11 +58,13 @@ type EventJournal interface {
 	BatchAppend(ctx context.Context, events []event.Event) ([]event.Event, error)
 }
 
-// Applier folds events into state.
+// Folder folds events into aggregate state.
 //
-// The applier is intentionally shared between request-time execution and replay
+// The folder is intentionally shared between request-time execution and replay
 // so behavior is identical when handling new commands and reconstructing history.
-type Applier interface {
+// Named "Folder" (not "Applier") to distinguish pure state folds from
+// projection.Applier, which performs side-effecting I/O writes to stores.
+type Folder interface {
 	Apply(state any, evt event.Event) (any, error)
 }
 
@@ -92,7 +94,7 @@ type Handler struct {
 	GateStateLoader GateStateLoader
 	StateLoader     StateLoader
 	Decider         Decider
-	Applier         Applier
+	Folder          Folder
 	Now             func() time.Time
 }
 
@@ -107,7 +109,7 @@ type HandlerConfig struct {
 	GateStateLoader GateStateLoader
 	StateLoader     StateLoader
 	Decider         Decider
-	Applier         Applier
+	Folder          Folder
 	Now             func() time.Time
 }
 
@@ -138,7 +140,7 @@ func NewHandler(cfg HandlerConfig) (Handler, error) {
 		GateStateLoader: cfg.GateStateLoader,
 		StateLoader:     cfg.StateLoader,
 		Decider:         cfg.Decider,
-		Applier:         cfg.Applier,
+		Folder:          cfg.Folder,
 		Now:             cfg.Now,
 	}, nil
 }
@@ -262,10 +264,10 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		decision.Events = stored
 	}
 	// Required in production via NewHandler; nil here supports test-path flexibility.
-	if h.Applier != nil && len(decision.Events) > 0 {
+	if h.Folder != nil && len(decision.Events) > 0 {
 		journalPersisted := h.Journal != nil
 		for _, evt := range decision.Events {
-			stateAfter, err := h.Applier.Apply(state, evt)
+			stateAfter, err := h.Folder.Apply(state, evt)
 			if err != nil {
 				if journalPersisted {
 					return command.Command{}, nil, command.Decision{}, fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err)
