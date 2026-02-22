@@ -8,19 +8,19 @@
 }
 
 {$FRACTURING_SPACE_CADDY_SITE_PREFIX}{$FRACTURING_SPACE_DOMAIN} {
-  reverse_proxy web:8086
+  reverse_proxy web:8080
 }
 
 {$FRACTURING_SPACE_CADDY_SITE_PREFIX}chat.{$FRACTURING_SPACE_DOMAIN} {
-  reverse_proxy chat:8087
+  reverse_proxy chat:8086
 }
 
 {$FRACTURING_SPACE_CADDY_SITE_PREFIX}admin.{$FRACTURING_SPACE_DOMAIN} {
-  reverse_proxy admin:8082
+  reverse_proxy admin:8081
 }
 
 {$FRACTURING_SPACE_CADDY_SITE_PREFIX}mcp.{$FRACTURING_SPACE_DOMAIN} {
-  reverse_proxy mcp:8081
+  reverse_proxy mcp:8085
 }
 
 {$FRACTURING_SPACE_CADDY_SITE_PREFIX}jaeger.{$FRACTURING_SPACE_DOMAIN} {

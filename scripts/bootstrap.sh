@@ -120,6 +120,19 @@ generate_hmac_key() {
   printf 'Generated HMAC key\n'
 }
 
+generate_ai_encryption_key() {
+  local value
+
+  value="$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d '\r\n')"
+  if [[ -z "$value" ]]; then
+    printf 'Error: failed to generate FRACTURING_SPACE_AI_ENCRYPTION_KEY.\n' >&2
+    exit 1
+  fi
+
+  set_env_value "FRACTURING_SPACE_AI_ENCRYPTION_KEY" "$value"
+  printf 'Generated AI encryption key\n'
+}
+
 join_public="$(get_env_value FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY)"
 join_private="$(get_env_value FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY)"
 if [[ -z "$join_public" || -z "$join_private" ]]; then
@@ -132,6 +145,11 @@ if [[ -z "$hmac_keys" ]]; then
   if [[ -z "$hmac_key" || "$hmac_key" == "dev-secret" ]]; then
     generate_hmac_key
   fi
+fi
+
+ai_encryption_key="$(get_env_value FRACTURING_SPACE_AI_ENCRYPTION_KEY)"
+if [[ -z "$ai_encryption_key" || "$ai_encryption_key" == "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY" ]]; then
+  generate_ai_encryption_key
 fi
 
 if [[ "${BOOTSTRAP_SKIP_UP:-}" == "1" ]]; then

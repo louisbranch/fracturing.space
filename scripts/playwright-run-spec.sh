@@ -16,7 +16,7 @@ if [[ ! -f "$SPEC_FILE" ]]; then
   exit 1
 fi
 
-BASE_URL="${BASE_URL:-http://localhost:8082}"
+BASE_URL="${BASE_URL:-http://localhost:8081}"
 ARTIFACT_ROOT="${ARTIFACT_ROOT:-artifacts/playwright}"
 PLAYWRIGHT_CLI_PKG_DEFAULT="@playwright/cli@0.1.0"
 PLAYWRIGHT_CLI_PKG="${PLAYWRIGHT_CLI_PKG:-$PLAYWRIGHT_CLI_PKG_DEFAULT}"

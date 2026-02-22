@@ -17,6 +17,7 @@ services:
       init-data:
         condition: service_completed_successfully
     environment:
+      FRACTURING_SPACE_GAME_PORT: 8082
       FRACTURING_SPACE_GAME_EVENTS_DB_PATH: /data/game-events.db
       FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH: /data/game-projections.db
       FRACTURING_SPACE_GAME_CONTENT_DB_PATH: /data/game-content.db
@@ -70,6 +71,27 @@ services:
       - internal
     restart: unless-stopped
 
+  ai:
+    build:
+      context: .
+      target: ai
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.0}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/ai:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_AI_PORT: ${FRACTURING_SPACE_AI_PORT:-8087}
+      FRACTURING_SPACE_AI_DB_PATH: /data/ai.db
+      FRACTURING_SPACE_AI_ENCRYPTION_KEY: ${FRACTURING_SPACE_AI_ENCRYPTION_KEY?FRACTURING_SPACE_AI_ENCRYPTION_KEY must be set}
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
   mcp:
     build:
       context: .
@@ -80,8 +102,8 @@ services:
     depends_on:
       - game
     environment:
-      FRACTURING_SPACE_GAME_ADDR: game:8080
-      FRACTURING_SPACE_MCP_HTTP_ADDR: 0.0.0.0:8081
+      FRACTURING_SPACE_GAME_ADDR: game:8082
+      FRACTURING_SPACE_MCP_HTTP_ADDR: 0.0.0.0:8085
       FRACTURING_SPACE_MCP_TRANSPORT: http
       FRACTURING_SPACE_MCP_ALLOWED_HOSTS: ${FRACTURING_SPACE_MCP_ALLOWED_HOSTS:-mcp.${FRACTURING_SPACE_DOMAIN:-localhost}}
       FRACTURING_SPACE_MCP_OAUTH_ISSUER: ${FRACTURING_SPACE_MCP_OAUTH_ISSUER:-}
@@ -102,8 +124,8 @@ services:
       - game
       - auth
     environment:
-      FRACTURING_SPACE_ADMIN_ADDR: 0.0.0.0:8082
-      FRACTURING_SPACE_GAME_ADDR: game:8080
+      FRACTURING_SPACE_ADMIN_ADDR: 0.0.0.0:8081
+      FRACTURING_SPACE_GAME_ADDR: game:8082
       FRACTURING_SPACE_AUTH_ADDR: auth:8083
       FRACTURING_SPACE_ADMIN_DB_PATH: /data/admin.db
       # Admin auth requires a real domain (not localhost) for cross-subdomain cookies.
@@ -128,11 +150,14 @@ services:
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/web:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       - auth
+      - game
+      - ai
     environment:
-      FRACTURING_SPACE_WEB_HTTP_ADDR: 0.0.0.0:8086
+      FRACTURING_SPACE_WEB_HTTP_ADDR: 0.0.0.0:8080
       FRACTURING_SPACE_WEB_AUTH_BASE_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://auth.${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}
       FRACTURING_SPACE_WEB_AUTH_ADDR: auth:8083
-      FRACTURING_SPACE_GAME_ADDR: game:8080
+      FRACTURING_SPACE_GAME_ADDR: game:8082
+      FRACTURING_SPACE_AI_ADDR: ai:8087
       FRACTURING_SPACE_WEB_DIAL_TIMEOUT: ${FRACTURING_SPACE_WEB_DIAL_TIMEOUT:-2s}
       FRACTURING_SPACE_WEB_CACHE_DB_PATH: ${FRACTURING_SPACE_WEB_CACHE_DB_PATH:-/tmp/web-cache.db}
       FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID: fracturing-space
@@ -160,8 +185,8 @@ services:
       game:
         condition: service_started
     environment:
-      FRACTURING_SPACE_CHAT_HTTP_ADDR: ${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0.0:8087}
-      FRACTURING_SPACE_GAME_ADDR: game:8080
+      FRACTURING_SPACE_CHAT_HTTP_ADDR: ${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0.0:8086}
+      FRACTURING_SPACE_GAME_ADDR: game:8082
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     networks:
       - internal
@@ -216,7 +241,7 @@ services:
       - auth
     environment:
       FRACTURING_SPACE_AUTH_ADDR: auth:8083
-    entrypoint: ["go", "run", "./cmd/seed", "-grpc-addr", "game:8080"]
+    entrypoint: ["go", "run", "./cmd/seed", "-grpc-addr", "game:8082"]
     networks:
       - internal
 
@@ -232,7 +257,7 @@ services:
     depends_on:
       - game
     environment:
-      FRACTURING_SPACE_GAME_ADDR: game:8080
+      FRACTURING_SPACE_GAME_ADDR: game:8082
     entrypoint: ["go", "run", "./cmd/scenario"]
     networks:
       - internal
