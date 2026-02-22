@@ -13,6 +13,11 @@ set_devcontainer_user_env() {
   export DEVCONTAINER_UID DEVCONTAINER_GID
 }
 
+compose_devcontainer() {
+  FRACTURING_SPACE_AI_ENCRYPTION_KEY="${FRACTURING_SPACE_AI_ENCRYPTION_KEY:-devcontainer-stop-placeholder}" \
+    docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml "$@"
+}
+
 if [[ -f "/.dockerenv" ]]; then
   bash .devcontainer/scripts/stop-watch-services.sh
   exit 0
@@ -20,5 +25,5 @@ fi
 
 set_devcontainer_user_env
 
-docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "set -euo pipefail; if [ -d /workspace/${repo_name} ]; then cd /workspace/${repo_name}; else cd /workspace; fi; if [ ! -f .devcontainer/scripts/stop-watch-services.sh ]; then exit 0; fi; bash .devcontainer/scripts/stop-watch-services.sh" >/dev/null 2>&1 || true
-docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml down
+compose_devcontainer exec -T devcontainer bash -lc "set -euo pipefail; if [ -d /workspace/${repo_name} ]; then cd /workspace/${repo_name}; else cd /workspace; fi; if [ ! -f .devcontainer/scripts/stop-watch-services.sh ]; then exit 0; fi; bash .devcontainer/scripts/stop-watch-services.sh" >/dev/null 2>&1 || true
+compose_devcontainer down

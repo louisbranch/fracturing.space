@@ -105,12 +105,12 @@ wait_for_services_ready() {
 }
 
 run_post_start_in_container() {
-  docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "set -euo pipefail; if [ -d /workspace/${repo_name} ]; then cd /workspace/${repo_name}; else cd /workspace; fi; if [ ! -f .devcontainer/scripts/post-start.sh ]; then echo '.devcontainer/scripts/post-start.sh not found in container workspace' >&2; exit 1; fi; bash .devcontainer/scripts/post-start.sh"
+  docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "set -euo pipefail; if [ -d /workspace/${repo_name} ]; then cd /workspace/${repo_name}; else cd /workspace; fi; if [ ! -f .devcontainer/scripts/post-start.sh ]; then echo '.devcontainer/scripts/post-start.sh not found in container workspace' >&2; exit 1; fi; bash .devcontainer/scripts/post-start.sh"
 }
 
 wait_for_devcontainer_ready() {
   for _ in $(seq 1 20); do
-    if docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer true >/dev/null 2>&1; then
+    if docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer true >/dev/null 2>&1; then
       return 0
     fi
     sleep 1
@@ -121,15 +121,15 @@ wait_for_devcontainer_ready() {
 }
 
 ensure_go_toolchain() {
-  if docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "(command -v go >/dev/null 2>&1 || [ -x /usr/local/go/bin/go ]) && (command -v air >/dev/null 2>&1 || [ -x /go/bin/air ] || [ -x /root/go/bin/air ])"; then
+  if docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "(command -v go >/dev/null 2>&1 || [ -x /usr/local/go/bin/go ]) && (command -v air >/dev/null 2>&1 || [ -x /go/bin/air ] || [ -x /root/go/bin/air ])"; then
     return 0
   fi
 
   echo "devcontainer image missing required dev tooling (go/air); rebuilding devcontainer service" >&2
-  docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml up -d --build devcontainer
+  docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml up -d --build devcontainer
   wait_for_devcontainer_ready
 
-  if docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "(command -v go >/dev/null 2>&1 || [ -x /usr/local/go/bin/go ]) && (command -v air >/dev/null 2>&1 || [ -x /go/bin/air ] || [ -x /root/go/bin/air ])"; then
+  if docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "(command -v go >/dev/null 2>&1 || [ -x /usr/local/go/bin/go ]) && (command -v air >/dev/null 2>&1 || [ -x /go/bin/air ] || [ -x /root/go/bin/air ])"; then
     return 0
   fi
 
@@ -144,7 +144,9 @@ fi
 
 set_devcontainer_user_env
 
-docker compose -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml up -d devcontainer
+BOOTSTRAP_SKIP_UP=1 ./scripts/bootstrap.sh
+
+docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml up -d devcontainer
 wait_for_devcontainer_ready
 ensure_go_toolchain
 run_post_start_in_container

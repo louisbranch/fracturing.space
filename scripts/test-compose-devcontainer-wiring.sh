@@ -102,6 +102,14 @@ if ! rg -n "FRACTURING_SPACE_AI_PORT.*8087" .devcontainer/scripts/watch-services
   echo "expected watch-services.sh ai port to default to :8087" >&2
   exit 1
 fi
+if ! rg -n "FRACTURING_SPACE_OAUTH_LOGIN_UI_URL.*FRACTURING_SPACE_PUBLIC_PORT-:8080.*/login" .devcontainer/scripts/watch-services.sh >/dev/null; then
+  echo "expected watch-services.sh oauth login UI URL to include public port fallback (:8080) and /login path" >&2
+  exit 1
+fi
+if ! rg -n "FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS.*FRACTURING_SPACE_OAUTH_LOGIN_UI_URL" .devcontainer/scripts/watch-services.sh >/dev/null; then
+  echo "expected watch-services.sh oauth login redirects to default to oauth login UI URL" >&2
+  exit 1
+fi
 
 # Startup readiness should wait for chat + ai logs too.
 if ! rg -n '"chat"' .devcontainer/scripts/start-devcontainer.sh >/dev/null; then
