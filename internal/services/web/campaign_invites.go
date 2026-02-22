@@ -12,6 +12,7 @@ import (
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -126,7 +127,7 @@ func (h *handler) handleAppCampaignInviteCreate(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	http.Redirect(w, r, "/campaigns/"+campaignID+"/invites", http.StatusFound)
+	http.Redirect(w, r, routepath.CampaignInvites(campaignID), http.StatusFound)
 }
 
 func (h *handler) renderInviteRecipientLookupError(w http.ResponseWriter, r *http.Request, err error) {
@@ -264,7 +265,7 @@ func (h *handler) handleAppCampaignInviteRevoke(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	http.Redirect(w, r, "/campaigns/"+campaignID+"/invites", http.StatusFound)
+	http.Redirect(w, r, routepath.CampaignInvites(campaignID), http.StatusFound)
 }
 
 type campaignInviteActor struct {
@@ -282,7 +283,7 @@ func (h *handler) campaignInviteActorFromParticipant(participant *statev1.Partic
 	}
 	return &campaignInviteActor{
 		participantID:    participantID,
-		canManageInvites: canManageCampaignInvites(participant.GetCampaignAccess()),
+		canManageInvites: canManageCampaignAccess(participant.GetCampaignAccess()),
 	}
 }
 
@@ -338,10 +339,6 @@ func (h *handler) campaignParticipantByUserID(ctx context.Context, campaignID st
 	}
 
 	return nil, nil
-}
-
-func canManageCampaignInvites(access statev1.CampaignAccess) bool {
-	return access == statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER || access == statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
 }
 
 func renderAppCampaignInvitesPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, invites []*statev1.Invite, canManageInvites bool) {

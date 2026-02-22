@@ -9,6 +9,7 @@ import (
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -22,7 +23,7 @@ func (h *handler) handleAppSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if sessionFromRequest(r, h.sessions) == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 
@@ -42,7 +43,7 @@ func (h *handler) handleAppSettingsRoutes(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	path := strings.TrimPrefix(r.URL.Path, "/settings/")
+	path := strings.TrimPrefix(r.URL.Path, routepath.AppSettingsPrefix)
 	parts := splitSettingsPathParts(path)
 	if len(parts) == 1 && parts[0] == "username" {
 		h.handleAppUsernameSettings(w, r)
@@ -87,7 +88,7 @@ func (h *handler) handleAppUsernameSettings(w http.ResponseWriter, r *http.Reque
 func (h *handler) handleAppUsernameSettingsGet(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	page := h.pageContext(w, r)
@@ -120,7 +121,7 @@ func (h *handler) handleAppUsernameSettingsGet(w http.ResponseWriter, r *http.Re
 func (h *handler) handleAppUsernameSettingsPost(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	if err := r.ParseForm(); err != nil {
@@ -159,7 +160,7 @@ func (h *handler) handleAppUsernameSettingsPost(w http.ResponseWriter, r *http.R
 		}, statusCode)
 		return
 	}
-	http.Redirect(w, r, "/settings/username", http.StatusFound)
+	http.Redirect(w, r, routepath.AppSettingsPrefix+"username", http.StatusFound)
 }
 
 func (h *handler) handleAppAIKeys(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +178,7 @@ func (h *handler) handleAppAIKeys(w http.ResponseWriter, r *http.Request) {
 func (h *handler) handleAppAIKeysGet(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	page := h.pageContext(w, r)
@@ -214,7 +215,7 @@ func (h *handler) handleAppAIKeysGet(w http.ResponseWriter, r *http.Request) {
 func (h *handler) handleAppAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	if h.credentialClient == nil {
@@ -258,7 +259,7 @@ func (h *handler) handleAppAIKeysCreate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	http.Redirect(w, r, "/settings/ai-keys", http.StatusFound)
+	http.Redirect(w, r, routepath.AppSettingsPrefix+"ai-keys", http.StatusFound)
 }
 
 func (h *handler) handleAppAIKeyRevoke(w http.ResponseWriter, r *http.Request, credentialID string) {
@@ -269,7 +270,7 @@ func (h *handler) handleAppAIKeyRevoke(w http.ResponseWriter, r *http.Request, c
 	}
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	if h.credentialClient == nil {
@@ -296,7 +297,7 @@ func (h *handler) handleAppAIKeyRevoke(w http.ResponseWriter, r *http.Request, c
 		h.renderErrorPage(w, r, grpcErrorHTTPStatus(err, http.StatusBadGateway), "AI key action unavailable", "failed to revoke ai key")
 		return
 	}
-	http.Redirect(w, r, "/settings/ai-keys", http.StatusFound)
+	http.Redirect(w, r, routepath.AppSettingsPrefix+"ai-keys", http.StatusFound)
 }
 
 func (h *handler) resolveSettingsUserID(w http.ResponseWriter, r *http.Request, sess *session, title string) (string, bool) {

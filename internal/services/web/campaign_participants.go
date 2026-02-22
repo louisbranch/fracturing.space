@@ -6,6 +6,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -27,7 +28,7 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 		return
 	}
 	if participants, ok := h.cachedCampaignParticipants(readCtx, campaignID); ok {
-		canManageParticipants := canManageCampaignParticipants(campaignAccessForUser(participants, userID))
+		canManageParticipants := canManageCampaignAccess(campaignAccessForUser(participants, userID))
 		renderAppCampaignParticipantsPageWithContext(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, participants, canManageParticipants)
 		return
 	}
@@ -43,7 +44,7 @@ func (h *handler) handleAppCampaignParticipants(w http.ResponseWriter, r *http.R
 
 	participants := resp.GetParticipants()
 	h.setCampaignParticipantsCache(readCtx, campaignID, participants)
-	canManageParticipants := canManageCampaignParticipants(campaignAccessForUser(participants, userID))
+	canManageParticipants := canManageCampaignAccess(campaignAccessForUser(participants, userID))
 	renderAppCampaignParticipantsPageWithContext(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, participants, canManageParticipants)
 }
 
@@ -109,7 +110,7 @@ func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *h
 		return
 	}
 
-	if !canManageCampaignParticipants(actingParticipant.GetCampaignAccess()) {
+	if !canManageCampaignAccess(actingParticipant.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for participant action")
 		return
 	}
@@ -121,11 +122,7 @@ func (h *handler) handleAppCampaignParticipantUpdate(w http.ResponseWriter, r *h
 		return
 	}
 
-	http.Redirect(w, r, "/campaigns/"+campaignID+"/participants", http.StatusFound)
-}
-
-func canManageCampaignParticipants(access statev1.CampaignAccess) bool {
-	return access == statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER || access == statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
+	http.Redirect(w, r, routepath.CampaignParticipants(campaignID), http.StatusFound)
 }
 
 func campaignAccessForUser(participants []*statev1.Participant, userID string) statev1.CampaignAccess {

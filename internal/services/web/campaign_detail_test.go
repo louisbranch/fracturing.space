@@ -21,7 +21,7 @@ func TestAppCampaignDetailPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 		sessions:     newSessionStore(),
 		pendingFlows: newPendingFlowStore(),
 	}
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123", nil)
 	w := httptest.NewRecorder()
 
 	h.handleAppCampaignDetail(w, req)
@@ -40,7 +40,7 @@ func TestAppCampaignDetailCanonicalizesTrailingSlash(t *testing.T) {
 		sessions:     newSessionStore(),
 		pendingFlows: newPendingFlowStore(),
 	}
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
 	w := httptest.NewRecorder()
 
 	h.handleAppCampaignDetail(w, req)
@@ -48,8 +48,8 @@ func TestAppCampaignDetailCanonicalizesTrailingSlash(t *testing.T) {
 	if w.Code != http.StatusMovedPermanently {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusMovedPermanently)
 	}
-	if location := w.Header().Get("Location"); location != "/campaigns" {
-		t.Fatalf("location = %q, want %q", location, "/campaigns")
+	if location := w.Header().Get("Location"); location != "/app/campaigns" {
+		t.Fatalf("location = %q, want %q", location, "/app/campaigns")
 	}
 }
 
@@ -80,7 +80,7 @@ func TestAppCampaignDetailPageForbiddenForNonParticipant(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -130,7 +130,7 @@ func TestAppCampaignDetailPageParticipantRendersCampaign(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -143,19 +143,19 @@ func TestAppCampaignDetailPageParticipantRendersCampaign(t *testing.T) {
 	if !strings.Contains(body, "camp-123") {
 		t.Fatalf("expected campaign heading in body")
 	}
-	if !strings.Contains(body, "/campaigns/camp-123/sessions") {
+	if !strings.Contains(body, "/app/campaigns/camp-123/sessions") {
 		t.Fatalf("expected sessions link in body")
 	}
-	if !strings.Contains(body, "/campaigns/camp-123/participants") {
+	if !strings.Contains(body, "/app/campaigns/camp-123/participants") {
 		t.Fatalf("expected participants link in body")
 	}
-	if !strings.Contains(body, "/campaigns/camp-123/characters") {
+	if !strings.Contains(body, "/app/campaigns/camp-123/characters") {
 		t.Fatalf("expected characters link in body")
 	}
-	if !strings.Contains(body, "/campaigns/camp-123/invites") {
+	if !strings.Contains(body, "/app/campaigns/camp-123/invites") {
 		t.Fatalf("expected invites link in body")
 	}
-	chatMenuLink := `<a class="menu-active" href="/campaigns/camp-123" hx-get="/campaigns/camp-123"`
+	chatMenuLink := `<a class="menu-active" href="/app/campaigns/camp-123" hx-get="/app/campaigns/camp-123"`
 	if !strings.Contains(body, chatMenuLink) {
 		t.Fatalf("expected chat menu link to be active on campaign root")
 	}
@@ -213,7 +213,7 @@ func TestAppCampaignDetailPagePropagatesUserMetadataToCampaignRead(t *testing.T)
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -282,7 +282,7 @@ func TestAppCampaignDetailPageUsesCampaignNameFromService(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -327,7 +327,7 @@ func TestAppCampaignDetailPageReturnsBadGatewayOnAccessCheckerError(t *testing.T
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -344,7 +344,7 @@ func TestAppCampaignDetailPageRejectsInvalidPath(t *testing.T) {
 		sessions:     newSessionStore(),
 		pendingFlows: newPendingFlowStore(),
 	}
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/extra", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/extra", nil)
 	w := httptest.NewRecorder()
 
 	h.handleAppCampaignDetail(w, req)
@@ -360,7 +360,7 @@ func TestAppCampaignDetailPageRejectsNonGET(t *testing.T) {
 		sessions:     newSessionStore(),
 		pendingFlows: newPendingFlowStore(),
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123", nil)
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123", nil)
 	w := httptest.NewRecorder()
 
 	h.handleAppCampaignDetail(w, req)

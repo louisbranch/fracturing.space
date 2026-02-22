@@ -2,9 +2,11 @@ package web
 
 import (
 	"net/http"
+
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-// handleAppDashboard redirects users to the canonical logged-in shell at root.
+// handleAppDashboard redirects users to the canonical logged-in campaigns workspace.
 func (h *handler) handleAppDashboard(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
@@ -13,9 +15,9 @@ func (h *handler) handleAppDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if sessionFromRequest(r, h.sessions) == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 
-	http.Redirect(w, r, "/", http.StatusFound)
+	http.Redirect(w, r, routepath.AppCampaigns, http.StatusFound)
 }

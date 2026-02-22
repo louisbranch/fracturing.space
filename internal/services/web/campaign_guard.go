@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 // requireCampaignActor resolves and validates the current session member against the
@@ -12,7 +13,7 @@ import (
 func (h *handler) requireCampaignActor(w http.ResponseWriter, r *http.Request, campaignID string) (*statev1.Participant, bool) {
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return nil, false
 	}
 	if h.campaignAccess == nil {

@@ -1,6 +1,10 @@
 package templates
 
-import "strings"
+import (
+	"strings"
+
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+)
 
 func campaignNamesForPath(currentPath, campaignName string) map[string]string {
 	normalizedPath := strings.TrimSpace(currentPath)
@@ -8,10 +12,10 @@ func campaignNamesForPath(currentPath, campaignName string) map[string]string {
 	if normalizedPath == "" || normalizedCampaignName == "" {
 		return nil
 	}
-	if !strings.HasPrefix(normalizedPath, "/campaigns/") {
+	if !strings.HasPrefix(normalizedPath, routepath.AppCampaignsPrefix) {
 		return nil
 	}
-	rawCampaignID := strings.TrimPrefix(normalizedPath, "/campaigns/")
+	rawCampaignID := strings.TrimPrefix(normalizedPath, routepath.AppCampaignsPrefix)
 	parts := strings.SplitN(rawCampaignID, "/", 2)
 	campaignID := strings.TrimSpace(parts[0])
 	if campaignID == "" || campaignID == "create" {
@@ -24,11 +28,11 @@ func campaignNamesForPath(currentPath, campaignName string) map[string]string {
 
 func campaignWorkspaceInfo(currentPath string) (campaignID string, section string, ok bool) {
 	normalizedPath := strings.TrimSpace(currentPath)
-	if !strings.HasPrefix(normalizedPath, "/campaigns/") {
+	if !strings.HasPrefix(normalizedPath, routepath.AppCampaignsPrefix) {
 		return "", "", false
 	}
 
-	rawCampaignPath := strings.TrimPrefix(normalizedPath, "/campaigns/")
+	rawCampaignPath := strings.TrimPrefix(normalizedPath, routepath.AppCampaignsPrefix)
 	rawCampaignPath = strings.TrimSpace(strings.Trim(rawCampaignPath, "/"))
 	if rawCampaignPath == "" {
 		return "", "", false

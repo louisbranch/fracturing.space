@@ -22,7 +22,7 @@ import (
 
 func TestAppCampaignInvitesPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -87,7 +87,7 @@ func TestAppCampaignInvitesPageParticipantRendersInvites(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -117,7 +117,7 @@ func TestAppCampaignInvitesPageParticipantRendersInvites(t *testing.T) {
 
 func TestAppCampaignInviteCreateRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader("participant_id=part-1"))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader("participant_id=part-1"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
@@ -133,7 +133,7 @@ func TestAppCampaignInviteCreateRedirectsUnauthenticatedToLogin(t *testing.T) {
 
 func TestAppCampaignInviteRevokeRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/revoke", strings.NewReader("invite_id=inv-1"))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/revoke", strings.NewReader("invite_id=inv-1"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
@@ -201,7 +201,7 @@ func TestAppCampaignInviteCreateParticipantCallsCreateInvite(t *testing.T) {
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"user-456"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -211,8 +211,8 @@ func TestAppCampaignInviteCreateParticipantCallsCreateInvite(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/campaigns/camp-123/invites" {
-		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-123/invites")
+	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-123/invites" {
+		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-123/invites")
 	}
 	if inviteClient.createReq == nil {
 		t.Fatalf("expected CreateInvite request to be captured")
@@ -295,7 +295,7 @@ func TestAppCampaignInviteCreateParticipantResolvesRecipientUsername(t *testing.
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"@alice"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -401,7 +401,7 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersVerificationCont
 		"recipient_user_id": {"@alice"},
 		"action":            {"verify"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -498,7 +498,7 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRequiresAtPrefix(t *tes
 		"recipient_user_id": {"alice"},
 		"action":            {"verify"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -584,7 +584,7 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameRendersWhenProfileMissi
 		"recipient_user_id": {"@alice"},
 		"action":            {"verify"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -668,7 +668,7 @@ func TestAppCampaignInviteCreateParticipantVerifyUsernameLocalizesVerificationCo
 		"recipient_user_id": {"@alice"},
 		"action":            {"verify"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create?lang=pt-BR", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create?lang=pt-BR", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -742,7 +742,7 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameLookupNotFound(t *te
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"@missing"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -815,7 +815,7 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameInvalid(t *testing.T
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"@bad username"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -896,7 +896,7 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameRequired(t *testing.
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"@"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -968,7 +968,7 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameRequiresConnectionsC
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"@alice"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -1041,7 +1041,7 @@ func TestAppCampaignInviteCreateParticipantRecipientUsernameLookupEmptyRecord(t 
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"@alice"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -1119,7 +1119,7 @@ func TestAppCampaignInviteCreateParticipantUsesRecipientUserIDFallback(t *testin
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"user-456"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -1191,7 +1191,7 @@ func TestAppCampaignInviteRevokeParticipantCallsRevokeInvite(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	form := url.Values{"invite_id": {"inv-1"}}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/revoke", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/revoke", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -1201,8 +1201,8 @@ func TestAppCampaignInviteRevokeParticipantCallsRevokeInvite(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/campaigns/camp-123/invites" {
-		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-123/invites")
+	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-123/invites" {
+		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-123/invites")
 	}
 	if inviteClient.revokeReq == nil {
 		t.Fatalf("expected RevokeInvite request to be captured")
@@ -1274,7 +1274,7 @@ func TestAppCampaignInvitesPageRendersContactOptions(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -1355,7 +1355,7 @@ func TestAppCampaignInvitesPageUsesCachedParticipantsForContactOptions(t *testin
 		{Id: "part-owner", CampaignId: "camp-123", UserId: "user-123", CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER},
 	})
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -1372,15 +1372,15 @@ func TestAppCampaignInvitesPageUsesCachedParticipantsForContactOptions(t *testin
 func TestRenderAppCampaignInvitesPageHidesWriteActionsWithoutManageAccess(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
+	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
 		{Id: "inv-1", CampaignId: "camp-123", RecipientUserId: "user-456"},
 	}, false)
 
 	body := w.Body.String()
-	if strings.Contains(body, "/campaigns/camp-123/invites/create") {
+	if strings.Contains(body, "/app/campaigns/camp-123/invites/create") {
 		t.Fatalf("expected create invite form to be hidden")
 	}
-	if strings.Contains(body, "/campaigns/camp-123/invites/revoke") {
+	if strings.Contains(body, "/app/campaigns/camp-123/invites/revoke") {
 		t.Fatalf("expected revoke invite form to be hidden")
 	}
 }
@@ -1388,7 +1388,7 @@ func TestRenderAppCampaignInvitesPageHidesWriteActionsWithoutManageAccess(t *tes
 func TestRenderAppCampaignInvitesPageSkipsRevokeForMissingInviteID(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
+	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
 		{CampaignId: "camp-123", RecipientUserId: "user-456"},
 	}, true)
 
@@ -1396,14 +1396,14 @@ func TestRenderAppCampaignInvitesPageSkipsRevokeForMissingInviteID(t *testing.T)
 	if !strings.Contains(body, "unknown-invite - user-456") {
 		t.Fatalf("expected fallback invite id in response body")
 	}
-	if strings.Contains(body, "/campaigns/camp-123/invites/revoke") {
+	if strings.Contains(body, "/app/campaigns/camp-123/invites/revoke") {
 		t.Fatalf("expected revoke invite form to be hidden for missing invite id")
 	}
 }
 
 func TestRenderAppCampaignInvitesPageUsesRecipientUsernameCopy(t *testing.T) {
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil)
 	page := webtemplates.PageContext{
 		Lang: "en",
 		Loc:  webi18n.Printer(language.English),
@@ -1616,7 +1616,7 @@ func TestAppCampaignInvitesPageMemberCannotManageInvites(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -1682,7 +1682,7 @@ func TestAppCampaignInvitesPageDoesNotRequireParticipantLookup(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -1752,7 +1752,7 @@ func TestAppCampaignInviteCreateMemberCannotManageInvites(t *testing.T) {
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"user-456"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -1817,7 +1817,7 @@ func TestAppCampaignInviteRevokeMemberCannotManageInvites(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 	form := url.Values{"invite_id": {"inv-1"}}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/revoke", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/revoke", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -1879,7 +1879,7 @@ func TestAppCampaignInvitesPageMapsPermissionDeniedToForbidden(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -1937,7 +1937,7 @@ func TestAppCampaignInvitesPageMapsInvalidArgumentToBadRequest(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/invites", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -1999,7 +1999,7 @@ func TestAppCampaignInviteCreateMapsPermissionDeniedToForbidden(t *testing.T) {
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"user-456"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -2062,7 +2062,7 @@ func TestAppCampaignInviteCreateMapsUnavailableToServiceUnavailable(t *testing.T
 		"participant_id":    {"seat-1"},
 		"recipient_user_id": {"user-456"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/invites/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()

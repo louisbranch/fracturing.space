@@ -61,7 +61,7 @@ func TestPageContextUsesAccountLocaleForSignedInSession(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns?lang=en-US", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns?lang=en-US", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -91,7 +91,7 @@ func TestPageContextLanguageDoesNotPermanentlyCacheUnspecifiedLocale(t *testing.
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	firstReq := httptest.NewRequest(http.MethodGet, "/campaigns?lang=en-US", nil)
+	firstReq := httptest.NewRequest(http.MethodGet, "/app/campaigns?lang=en-US", nil)
 	firstReq.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	firstW := httptest.NewRecorder()
 	firstPage := h.pageContext(firstW, firstReq)
@@ -105,7 +105,7 @@ func TestPageContextLanguageDoesNotPermanentlyCacheUnspecifiedLocale(t *testing.
 			Locale: commonv1.Locale_LOCALE_PT_BR,
 		},
 	}
-	secondReq := httptest.NewRequest(http.MethodGet, "/campaigns?lang=en-US", nil)
+	secondReq := httptest.NewRequest(http.MethodGet, "/app/campaigns?lang=en-US", nil)
 	secondReq.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	secondW := httptest.NewRecorder()
 	secondPage := h.pageContext(secondW, secondReq)
@@ -133,7 +133,7 @@ func TestPageContextLanguageCookieWriteIsDeduped(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	req.AddCookie(&http.Cookie{Name: webi18n.LangCookieName, Value: "pt-BR"})
 	w := httptest.NewRecorder()
@@ -164,7 +164,7 @@ func TestPageContextIncludesUnreadNotificationsState(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -202,7 +202,7 @@ func TestPageContextUnreadNotificationsUsesFreshSessionCache(t *testing.T) {
 	sess.cachedHasUnreadNotificationsCached = true
 	sess.cachedHasUnreadNotificationsCheckedAt = time.Now()
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -233,7 +233,7 @@ func TestPageContextUnreadNotificationsFallsBackToStaleCacheOnProbeError(t *test
 	sess.cachedHasUnreadNotificationsCached = true
 	sess.cachedHasUnreadNotificationsCheckedAt = time.Now().Add(-unreadNotificationProbeTTL - time.Second)
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -261,7 +261,7 @@ func TestPageContextUnreadNotificationsProbeUsesDeadline(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -293,7 +293,7 @@ func TestPageContextUnreadNotificationsRefreshesExpiredCache(t *testing.T) {
 	oldCheck := time.Now().Add(-unreadNotificationProbeTTL - time.Second)
 	sess.cachedHasUnreadNotificationsCheckedAt = oldCheck
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -317,7 +317,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "campaigns",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns", nil), []*statev1.Campaign{
+				renderAppCampaignsPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns", nil), []*statev1.Campaign{
 					{Id: "camp-1", Name: "Campaign One"},
 				})
 			},
@@ -325,7 +325,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "invites",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppInvitesPage(w, httptest.NewRequest(http.MethodGet, "/invites", nil), []*statev1.PendingUserInvite{
+				renderAppInvitesPage(w, httptest.NewRequest(http.MethodGet, "/app/invites", nil), []*statev1.PendingUserInvite{
 					{
 						Campaign:    &statev1.Campaign{Id: "camp-1", Name: "Campaign One"},
 						Participant: &statev1.Participant{Id: "part-1", Name: "Alice"},
@@ -337,7 +337,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "sessions",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignSessionsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Session{
+				renderAppCampaignSessionsPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/sessions", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Session{
 					{Id: "sess-1", Name: "Session One", Status: statev1.SessionStatus_SESSION_ACTIVE},
 				}, true)
 			},
@@ -345,7 +345,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "session detail",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignSessionDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions/sess-1", nil), webtemplates.PageContext{}, "camp-1", &statev1.Session{
+				renderAppCampaignSessionDetailPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/sessions/sess-1", nil), webtemplates.PageContext{}, "camp-1", &statev1.Session{
 					Id:     "sess-1",
 					Name:   "Session One",
 					Status: statev1.SessionStatus_SESSION_ACTIVE,
@@ -355,7 +355,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "participants",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignParticipantsPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/participants", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Participant{
+				renderAppCampaignParticipantsPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/participants", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Participant{
 					{Id: "part-1", Name: "Alice"},
 				}, true)
 			},
@@ -363,7 +363,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "characters",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignCharactersPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/characters", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Character{
+				renderAppCampaignCharactersPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/characters", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Character{
 					{Id: "char-1", Name: "Mira", Kind: statev1.CharacterKind_PC},
 				}, true, []*statev1.Participant{
 					{Id: "part-1", Name: "Alice"},
@@ -373,7 +373,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "character detail",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignCharacterDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/characters/char-1", nil), webtemplates.PageContext{}, "camp-1", &statev1.Character{
+				renderAppCampaignCharacterDetailPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/characters/char-1", nil), webtemplates.PageContext{}, "camp-1", &statev1.Character{
 					Id:            "char-1",
 					Name:          "Mira",
 					Kind:          statev1.CharacterKind_PC,
@@ -384,7 +384,7 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 		{
 			name: "campaign invites",
 			render: func(w *httptest.ResponseRecorder) {
-				renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/invites", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Invite{
+				renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/invites", nil), webtemplates.PageContext{}, "camp-1", []*statev1.Invite{
 					{Id: "inv-1", RecipientUserId: "user-2"},
 				}, true)
 			},
@@ -417,18 +417,18 @@ func TestGameRenderersUseGameLayoutMarker(t *testing.T) {
 
 func TestGameLayoutIncludesCampaignsTopNavLink(t *testing.T) {
 	w := httptest.NewRecorder()
-	renderAppCampaignCreatePage(w, httptest.NewRequest(http.MethodGet, "/campaigns/create", nil), webtemplates.PageContext{})
+	renderAppCampaignCreatePage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/create", nil), webtemplates.PageContext{})
 
 	body := w.Body.String()
-	if !strings.Contains(body, `href="/campaigns"`) {
+	if !strings.Contains(body, `href="/app/campaigns"`) {
 		t.Fatalf("expected campaigns link in top navbar")
 	}
 }
 
 func TestChromeLayoutDoesNotRenderLocaleSwitcher(t *testing.T) {
 	w := httptest.NewRecorder()
-	renderAppCampaignCreatePage(w, httptest.NewRequest(http.MethodGet, "/campaigns/create", nil), webtemplates.PageContext{
-		CurrentPath: "/campaigns/create",
+	renderAppCampaignCreatePage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/create", nil), webtemplates.PageContext{
+		CurrentPath: "/app/campaigns/create",
 		Lang:        "en-US",
 	})
 
@@ -443,8 +443,8 @@ func TestChromeLayoutDoesNotRenderLocaleSwitcher(t *testing.T) {
 
 func TestGameLayoutIncludesBreadcrumbs(t *testing.T) {
 	w := httptest.NewRecorder()
-	renderAppCampaignSessionDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions/sess-1", nil), webtemplates.PageContext{
-		CurrentPath: "/campaigns/camp-1/sessions/sess-1",
+	renderAppCampaignSessionDetailPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/sessions/sess-1", nil), webtemplates.PageContext{
+		CurrentPath: "/app/campaigns/camp-1/sessions/sess-1",
 	}, "camp-1", &statev1.Session{
 		Id:     "sess-1",
 		Name:   "Session One",
@@ -453,9 +453,9 @@ func TestGameLayoutIncludesBreadcrumbs(t *testing.T) {
 
 	body := w.Body.String()
 	for _, marker := range []string{
-		`href="/campaigns"`,
-		`href="/campaigns/camp-1"`,
-		`href="/campaigns/camp-1/sessions"`,
+		`href="/app/campaigns"`,
+		`href="/app/campaigns/camp-1"`,
+		`href="/app/campaigns/camp-1/sessions"`,
 		`<li>sess-1</li>`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -466,8 +466,8 @@ func TestGameLayoutIncludesBreadcrumbs(t *testing.T) {
 
 func TestGameLayoutBreadcrumbsUseCampaignName(t *testing.T) {
 	w := httptest.NewRecorder()
-	renderAppCampaignSessionDetailPage(w, httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions/sess-1", nil), webtemplates.PageContext{
-		CurrentPath:  "/campaigns/camp-1/sessions/sess-1",
+	renderAppCampaignSessionDetailPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/sessions/sess-1", nil), webtemplates.PageContext{
+		CurrentPath:  "/app/campaigns/camp-1/sessions/sess-1",
 		CampaignName: "Guildhouse Campaign",
 	}, "camp-1", &statev1.Session{
 		Id:     "sess-1",
@@ -479,7 +479,7 @@ func TestGameLayoutBreadcrumbsUseCampaignName(t *testing.T) {
 	if !strings.Contains(body, "Guildhouse Campaign") {
 		t.Fatalf("expected campaign name in breadcrumb, got %q", body)
 	}
-	if !strings.Contains(body, `href="/campaigns/camp-1"`) {
+	if !strings.Contains(body, `href="/app/campaigns/camp-1"`) {
 		t.Fatalf("expected breadcrumb campaign link for campaign ID path")
 	}
 	if strings.Contains(body, `">camp-1</a>`) {

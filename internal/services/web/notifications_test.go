@@ -98,7 +98,7 @@ func (f *fakeWebNotificationClient) MarkNotificationRead(ctx context.Context, re
 
 func TestAppNotificationsPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/notifications", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -198,7 +198,7 @@ func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t 
 		notificationsNow = originalNow
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/notifications?filter=all", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/notifications?filter=all", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -254,10 +254,10 @@ func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t 
 	if !strings.Contains(body, `data-notification-id="notif-new"`) {
 		t.Fatalf("expected notification id marker for newest message")
 	}
-	if !strings.Contains(body, `href="/notifications?filter=all&amp;selected=notif-new"`) {
+	if !strings.Contains(body, `href="/app/notifications?filter=all&amp;selected=notif-new"`) {
 		t.Fatalf("expected notification row GET link with preserved list state")
 	}
-	if strings.Contains(body, `form method="POST" action="/notifications/notif-new`) {
+	if strings.Contains(body, `form method="POST" action="/app/notifications/notif-new`) {
 		t.Fatalf("expected no POST row form")
 	}
 	if !strings.Contains(body, `data-notification-unread="true"`) {
@@ -400,7 +400,7 @@ func TestAppNotificationsPageSelectedUnreadMarksRead(t *testing.T) {
 	t.Cleanup(func() {
 		notificationsNow = originalNow
 	})
-	req := httptest.NewRequest(http.MethodGet, "/notifications?filter=all&selected=notif-new", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/notifications?filter=all&selected=notif-new", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -466,7 +466,7 @@ func TestAppNotificationsPageDefaultsToUnreadFilterAndSelectsNewestUnread(t *tes
 		notificationsNow = originalNow
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/notifications", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -533,7 +533,7 @@ func TestAppNotificationsPageRenderedUnreadClearsUnreadCacheAfterMarkRead(t *tes
 	t.Cleanup(func() {
 		notificationsNow = originalNow
 	})
-	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/notifications", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -595,7 +595,7 @@ func TestAppNotificationsPageSelectsExplicitNotificationInAllFilter(t *testing.T
 		notificationsNow = originalNow
 	})
 
-	req := httptest.NewRequest(http.MethodGet, "/notifications?filter=all&selected=notif-old", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/notifications?filter=all&selected=notif-old", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -635,7 +635,7 @@ func TestAppNotificationOpenMarksReadAndRedirects(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodPost, "/notifications/notif-1?filter=unread", nil)
+	req := httptest.NewRequest(http.MethodPost, "/app/notifications/notif-1?filter=unread", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -649,8 +649,8 @@ func TestAppNotificationOpenMarksReadAndRedirects(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse location %q: %v", location, err)
 	}
-	if parsedLocation.Path != "/notifications" {
-		t.Fatalf("location path = %q, want %q", parsedLocation.Path, "/notifications")
+	if parsedLocation.Path != "/app/notifications" {
+		t.Fatalf("location path = %q, want %q", parsedLocation.Path, "/app/notifications")
 	}
 	if got := parsedLocation.Query().Get("filter"); got != "unread" {
 		t.Fatalf("location filter query = %q, want %q", got, "unread")
@@ -686,7 +686,7 @@ func TestAppNotificationOpenRejectsGetMutationRoute(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/notifications/notif-1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/notifications/notif-1", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 

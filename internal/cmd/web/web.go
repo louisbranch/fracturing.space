@@ -25,6 +25,7 @@ type Config struct {
 	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"`
 	NotificationsAddr   string        `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`
 	AIAddr              string        `env:"FRACTURING_SPACE_AI_ADDR"`
+	ListingAddr         string        `env:"FRACTURING_SPACE_LISTING_ADDR"`
 	CacheDBPath         string        `env:"FRACTURING_SPACE_WEB_CACHE_DB_PATH"      envDefault:"data/web-cache.db"`
 	AssetBaseURL        string        `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
 	AssetVersion        string        `env:"FRACTURING_SPACE_ASSET_VERSION"           envDefault:"v1"`
@@ -49,6 +50,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	cfg.ConnectionsAddr = discovery.OrDefaultGRPCAddr(cfg.ConnectionsAddr, discovery.ServiceConnections)
 	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
 	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
+	cfg.ListingAddr = discovery.OrDefaultGRPCAddr(cfg.ListingAddr, discovery.ServiceListing)
 	cfg.AIAddr = strings.TrimSpace(cfg.AIAddr)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
@@ -58,6 +60,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.ConnectionsAddr, "connections-addr", cfg.ConnectionsAddr, "Connections service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "Notifications service gRPC address")
+	fs.StringVar(&cfg.ListingAddr, "listing-addr", cfg.ListingAddr, "Listing service gRPC address")
 	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "AI service gRPC address")
 	fs.StringVar(&cfg.CacheDBPath, "cache-db-path", cfg.CacheDBPath, "Web cache SQLite path")
 	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "Asset base URL for image delivery")
@@ -84,6 +87,7 @@ func Run(ctx context.Context, cfg Config) error {
 			GameAddr:             cfg.GameAddr,
 			NotificationsAddr:    cfg.NotificationsAddr,
 			AIAddr:               cfg.AIAddr,
+			ListingAddr:          cfg.ListingAddr,
 			CacheDBPath:          cfg.CacheDBPath,
 			AssetBaseURL:         cfg.AssetBaseURL,
 			AssetManifestVersion: cfg.AssetVersion,

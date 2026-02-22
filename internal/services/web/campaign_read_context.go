@@ -6,12 +6,13 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 func (h *handler) campaignReadContext(w http.ResponseWriter, r *http.Request, unavailableTitle string) (context.Context, string, bool) {
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return nil, "", false
 	}
 

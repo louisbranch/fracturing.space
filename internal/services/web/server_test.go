@@ -966,8 +966,8 @@ func TestAuthLoginNotConfigured(t *testing.T) {
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
-	if w.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusNotFound)
+	if w.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
 	}
 }
 
@@ -985,14 +985,43 @@ func TestNewServerRequiresAuthBaseURL(t *testing.T) {
 	}
 }
 
+func TestNewServerRequiresOAuthClientID(t *testing.T) {
+	_, err := NewServer(Config{
+		HTTPAddr:    "127.0.0.1:0",
+		AuthBaseURL: "http://auth.local",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "oauth client id is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestNewServerRequiresCallbackURL(t *testing.T) {
+	_, err := NewServer(Config{
+		HTTPAddr:      "127.0.0.1:0",
+		AuthBaseURL:   "http://auth.local",
+		OAuthClientID: "fracturing-space",
+	})
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if !strings.Contains(err.Error(), "oauth callback url is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestNewServerOpensCacheStoreWhenConfigured(t *testing.T) {
 	cachePath := filepath.Join(t.TempDir(), "web-cache.db")
 	server, err := NewServer(Config{
-		HTTPAddr:    "127.0.0.1:0",
-		AuthBaseURL: "http://auth.local",
-		CacheDBPath: cachePath,
-		AuthAddr:    "",
-		GameAddr:    "",
+		HTTPAddr:      "127.0.0.1:0",
+		AuthBaseURL:   "http://auth.local",
+		OAuthClientID: "fracturing-space",
+		CallbackURL:   "http://localhost:8080/auth/callback",
+		CacheDBPath:   cachePath,
+		AuthAddr:      "",
+		GameAddr:      "",
 	})
 	if err != nil {
 		t.Fatalf("new server: %v", err)
@@ -1224,6 +1253,8 @@ func TestNewServerSuccessAndClose(t *testing.T) {
 	webServer, err := NewServer(Config{
 		HTTPAddr:        "127.0.0.1:0",
 		AuthBaseURL:     "http://auth.local",
+		OAuthClientID:   "fracturing-space",
+		CallbackURL:     "http://localhost:8080/auth/callback",
 		AuthAddr:        listener.Addr().String(),
 		GRPCDialTimeout: 2 * time.Second,
 	})
@@ -1296,6 +1327,8 @@ func TestListenAndServeShutsDown(t *testing.T) {
 	webServer, err := NewServer(Config{
 		HTTPAddr:        "127.0.0.1:0",
 		AuthBaseURL:     "http://auth.local",
+		OAuthClientID:   "fracturing-space",
+		CallbackURL:     "http://localhost:8080/auth/callback",
 		GRPCDialTimeout: 2 * time.Second,
 	})
 	if err != nil {

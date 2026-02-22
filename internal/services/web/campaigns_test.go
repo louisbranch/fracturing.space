@@ -177,7 +177,7 @@ func TestAppCampaignsPageRedirectsToLoginWhenUnauthenticated(t *testing.T) {
 		sessions:     newSessionStore(),
 		pendingFlows: newPendingFlowStore(),
 	}
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	w := httptest.NewRecorder()
 
 	h.handleAppCampaigns(w, req)
@@ -192,7 +192,7 @@ func TestAppCampaignsPageRedirectsToLoginWhenUnauthenticated(t *testing.T) {
 
 func TestAppCampaignCreateRedirectsToLoginWhenUnauthenticated(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/create", strings.NewReader("name=New+Campaign"))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/create", strings.NewReader("name=New+Campaign"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
@@ -243,7 +243,7 @@ func TestAppCampaignCreateGetRendersFormWithoutListingCampaigns(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/create", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/create", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -275,7 +275,7 @@ func TestAppCampaignCreateGetRendersFormWithoutUserLookup(t *testing.T) {
 		campaignClient: campaignClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/create", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/create", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -304,7 +304,7 @@ func TestAppCampaignCreateGetUsesDashboardShell(t *testing.T) {
 		campaignClient: campaignClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/create", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/create", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -334,7 +334,7 @@ func TestAppCampaignCreateGetUsesConfiguredAppNameInShell(t *testing.T) {
 		campaignClient: campaignClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/create", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/create", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -358,7 +358,7 @@ func TestAppCampaignCreateGetUsesCreateCampaignTitle(t *testing.T) {
 		campaignClient: campaignClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/create", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/create", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -419,7 +419,7 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -445,14 +445,14 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	if !strings.Contains(body, "/static/campaign-covers/abandoned_castle_courtyard.png") {
 		t.Fatalf("expected campaign cover image URL in response")
 	}
-	campOneIdx := strings.Index(body, "/campaigns/camp-1")
+	campOneIdx := strings.Index(body, "/app/campaigns/camp-1")
 	if campOneIdx == -1 {
 		t.Fatalf("expected campaign detail link for camp-1 in response")
 	}
-	if !strings.Contains(body, `<a href="/campaigns/camp-1" class="group block"><img`) {
+	if !strings.Contains(body, `<a href="/app/campaigns/camp-1" class="group block"><img`) {
 		t.Fatalf("expected campaign cover image link for camp-1")
 	}
-	if !strings.Contains(body, `<a href="/campaigns/camp-1">Campaign One</a>`) {
+	if !strings.Contains(body, `<a href="/app/campaigns/camp-1">Campaign One</a>`) {
 		t.Fatalf("expected campaign name link for camp-1")
 	}
 	expectedTheme := strings.Repeat("x", campaignThemePromptLimit) + "..."
@@ -468,7 +468,7 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	if campaignActionIdx > campOneIdx {
 		t.Fatalf("expected campaign action to render before campaign list items")
 	}
-	if !strings.Contains(body, "/campaigns/create") {
+	if !strings.Contains(body, "/app/campaigns/create") {
 		t.Fatalf("expected campaign create route in response")
 	}
 	if strings.Contains(body, "Campaign Name") {
@@ -486,7 +486,7 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 
 func TestAppCampaignsPageOrdersCampaignsNewestFirst(t *testing.T) {
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	renderAppCampaignsPage(w, req, []*statev1.Campaign{
 		{
 			Id:        "camp-old",
@@ -504,8 +504,8 @@ func TestAppCampaignsPageOrdersCampaignsNewestFirst(t *testing.T) {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 	body := w.Body.String()
-	newerIdx := strings.Index(body, `href="/campaigns/camp-new"`)
-	olderIdx := strings.Index(body, `href="/campaigns/camp-old"`)
+	newerIdx := strings.Index(body, `href="/app/campaigns/camp-new"`)
+	olderIdx := strings.Index(body, `href="/app/campaigns/camp-old"`)
 	if newerIdx == -1 || olderIdx == -1 {
 		t.Fatalf("expected both campaigns in response")
 	}
@@ -516,7 +516,7 @@ func TestAppCampaignsPageOrdersCampaignsNewestFirst(t *testing.T) {
 
 func TestCampaignsListPageRendersCreateButtonInHeadingRow(t *testing.T) {
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	renderAppCampaignsPage(w, req, []*statev1.Campaign{
 		{Id: "camp-1", Name: "Campaign One"},
 	})
@@ -530,7 +530,7 @@ func TestCampaignsListPageRendersCreateButtonInHeadingRow(t *testing.T) {
 	if headingRowIdx == -1 {
 		t.Fatalf("expected chrome heading row with flex alignment, got %q", body)
 	}
-	buttonIdx := strings.Index(body, `href="/campaigns/create"`)
+	buttonIdx := strings.Index(body, `href="/app/campaigns/create"`)
 	if buttonIdx == -1 {
 		t.Fatalf("expected create campaign button in output")
 	}
@@ -630,7 +630,7 @@ func TestAppCampaignsPageReturnsEmptyListWhenUserScopeHasNoCampaigns(t *testing.
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -671,7 +671,7 @@ func TestAppCampaignsPageRendersEmptyListWhenUserIdentityUnavailable(t *testing.
 		campaignAccess: nil,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -720,7 +720,7 @@ func TestAppCampaignsPageRendersEmptyListWhenCampaignServiceUnavailable(t *testi
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -780,7 +780,7 @@ func TestAppCampaignCreateCallsCreateCampaignAndRedirects(t *testing.T) {
 		"creator_display_name": {"Game Owner"},
 		"user_id":              {"ignored-user-id"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -790,8 +790,8 @@ func TestAppCampaignCreateCallsCreateCampaignAndRedirects(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/campaigns/camp-777" {
-		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-777")
+	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-777" {
+		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-777")
 	}
 	if campaignClient.createReq == nil {
 		t.Fatalf("expected CreateCampaign request to be captured")
@@ -865,7 +865,7 @@ func TestAppCampaignCreateExpiresUserCampaignListCache(t *testing.T) {
 	form := url.Values{
 		"name": {"New Campaign"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -909,7 +909,7 @@ func TestAppCampaignCreateRejectsEmptyName(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/create", strings.NewReader("name=   "))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/create", strings.NewReader("name=   "))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -940,7 +940,7 @@ func TestAppCampaignCreateErrorPageUsesGameLayout(t *testing.T) {
 		"system":  {"daggerheart"},
 		"gm_mode": {"human"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -1028,7 +1028,7 @@ func TestAppCampaignsPageCachesUserScopedCampaigns(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 
-	req1 := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req1 := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req1.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w1 := httptest.NewRecorder()
 	h.handleAppCampaigns(w1, req1)
@@ -1040,7 +1040,7 @@ func TestAppCampaignsPageCachesUserScopedCampaigns(t *testing.T) {
 		t.Fatalf("expected campaign name on first render")
 	}
 
-	req2 := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req2 := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req2.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w2 := httptest.NewRecorder()
 	h.handleAppCampaigns(w2, req2)

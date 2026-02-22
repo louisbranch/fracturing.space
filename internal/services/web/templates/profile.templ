@@ -10,7 +10,7 @@ templ ProfilePage(page PageContext, state ProfileFormState) {
 	@Layout(LayoutOptionsForPage(page, "layout.profile", true)) {
 		<div class="card bg-base-200 max-w-xl">
 			<div class="card-body">
-				<form method="post" action="/profile" class="space-y-4">
+				<form method="post" action="/app/profile" class="space-y-4">
 					<div class="form-control">
 						<label class="label">
 							<span class="label-text">{ T(page.Loc, "web.profile.field_name") }</span>
