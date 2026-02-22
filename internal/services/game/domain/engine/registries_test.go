@@ -542,25 +542,20 @@ func TestValidateSystemFoldCoverage_FailsOnMissingHandler(t *testing.T) {
 	}
 }
 
-func TestValidateSystemFoldCoverage_SkipsModulesWithoutFoldTyper(t *testing.T) {
-	registry := module.NewRegistry()
-	// fakeModule does NOT implement FoldTyper — should be skipped.
-	if err := registry.Register(fakeModule{}); err != nil {
-		t.Fatalf("register: %v", err)
+func TestValidateAggregateFoldDispatch_PassesWithCurrentDomains(t *testing.T) {
+	registries, err := BuildRegistries()
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
 	}
-
-	eventRegistry := event.NewRegistry()
-	if err := eventRegistry.Register(event.Definition{
-		Type:   event.Type("sys.system_1.action.tested"),
-		Owner:  event.OwnerSystem,
-		Intent: event.IntentProjectionAndReplay,
-	}); err != nil {
-		t.Fatalf("register event: %v", err)
-	}
-
-	// Should pass — the module doesn't declare fold types.
-	if err := ValidateSystemFoldCoverage(registry, eventRegistry); err != nil {
+	if err := ValidateAggregateFoldDispatch(registries.Events); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateAggregateFoldDispatch_RejectsNilRegistry(t *testing.T) {
+	err := ValidateAggregateFoldDispatch(nil)
+	if err == nil {
+		t.Fatal("expected error for nil event registry")
 	}
 }
 
@@ -593,6 +588,125 @@ func (p *fakeProjectorWithFoldTypes) Apply(state any, _ event.Event) (any, error
 
 func (p *fakeProjectorWithFoldTypes) FoldHandledTypes() []event.Type {
 	return p.handled
+}
+
+// CommandTyper tests ---
+
+func TestValidateDeciderCommandCoverage_PassesWhenAllCovered(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &fakeModuleWithCommandTypes{
+		id:              "system-1",
+		version:         "v1",
+		commandHandled:  []command.Type{"sys.system_1.cmd1", "sys.system_1.cmd2"},
+		commandsDefined: []command.Type{"sys.system_1.cmd1", "sys.system_1.cmd2"},
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	cmdRegistry := command.NewRegistry()
+	for _, ct := range mod.commandsDefined {
+		if err := cmdRegistry.Register(command.Definition{
+			Type:  ct,
+			Owner: command.OwnerSystem,
+		}); err != nil {
+			t.Fatalf("register command: %v", err)
+		}
+	}
+
+	if err := ValidateDeciderCommandCoverage(registry, cmdRegistry); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateDeciderCommandCoverage_FailsOnMissingHandler(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &fakeModuleWithCommandTypes{
+		id:      "system-1",
+		version: "v1",
+		// Decider only handles cmd1, not cmd2.
+		commandHandled:  []command.Type{"sys.system_1.cmd1"},
+		commandsDefined: []command.Type{"sys.system_1.cmd1", "sys.system_1.cmd2"},
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	cmdRegistry := command.NewRegistry()
+	for _, ct := range mod.commandsDefined {
+		if err := cmdRegistry.Register(command.Definition{
+			Type:  ct,
+			Owner: command.OwnerSystem,
+		}); err != nil {
+			t.Fatalf("register command: %v", err)
+		}
+	}
+
+	err := ValidateDeciderCommandCoverage(registry, cmdRegistry)
+	if err == nil {
+		t.Fatal("expected error for uncovered command type")
+	}
+	if !strings.Contains(err.Error(), "sys.system_1.cmd2") {
+		t.Fatalf("expected error to mention uncovered type, got: %v", err)
+	}
+}
+
+func TestValidateDeciderCommandCoverage_SkipsModulesWithoutCommandTyper(t *testing.T) {
+	registry := module.NewRegistry()
+	// fakeModule does NOT implement CommandTyper — should be skipped.
+	if err := registry.Register(fakeModule{}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("sys.system_1.action.test"),
+		Owner: command.OwnerSystem,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+
+	if err := ValidateDeciderCommandCoverage(registry, cmdRegistry); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+// fakeModuleWithCommandTypes is a test module whose decider implements CommandTyper.
+type fakeModuleWithCommandTypes struct {
+	id              string
+	version         string
+	commandHandled  []command.Type
+	commandsDefined []command.Type
+}
+
+func (m *fakeModuleWithCommandTypes) ID() string      { return m.id }
+func (m *fakeModuleWithCommandTypes) Version() string { return m.version }
+func (m *fakeModuleWithCommandTypes) RegisterCommands(registry *command.Registry) error {
+	for _, ct := range m.commandsDefined {
+		if err := registry.Register(command.Definition{Type: ct, Owner: command.OwnerSystem}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+func (m *fakeModuleWithCommandTypes) RegisterEvents(_ *event.Registry) error { return nil }
+func (m *fakeModuleWithCommandTypes) EmittableEventTypes() []event.Type      { return nil }
+func (m *fakeModuleWithCommandTypes) Decider() module.Decider {
+	return &fakeDeciderWithCommandTypes{handled: m.commandHandled}
+}
+func (m *fakeModuleWithCommandTypes) Projector() module.Projector       { return nil }
+func (m *fakeModuleWithCommandTypes) StateFactory() module.StateFactory { return nil }
+
+type fakeDeciderWithCommandTypes struct {
+	handled []command.Type
+}
+
+func (d *fakeDeciderWithCommandTypes) Decide(_ any, _ command.Command, _ func() time.Time) command.Decision {
+	return command.Decision{}
+}
+
+func (d *fakeDeciderWithCommandTypes) DeciderHandledCommands() []command.Type {
+	return d.handled
 }
 
 type unregisteredEmitModule struct {

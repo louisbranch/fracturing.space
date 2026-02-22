@@ -193,6 +193,7 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 }
 
 func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (command.Command, any, command.Decision, error) {
+	// Required in production via NewHandler; nil here supports test-path flexibility.
 	if h.Commands == nil {
 		return command.Command{}, nil, command.Decision{}, ErrCommandRegistryRequired
 	}
@@ -203,6 +204,7 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 	cmd = validated
 
 	if def, ok := h.Commands.Definition(cmd.Type); ok && def.Gate.Scope == command.GateScopeSession {
+		// Truly optional; only required for gate-scoped commands.
 		if h.GateStateLoader == nil {
 			return command.Command{}, nil, command.Decision{}, ErrGateStateLoaderRequired
 		}
@@ -216,16 +218,19 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		}
 	}
 
+	// Required in production via NewHandler; nil here supports test-path flexibility.
 	if h.Decider == nil {
 		return command.Command{}, nil, command.Decision{}, ErrDeciderRequired
 	}
 	var state any
+	// Truly optional; falls back to nil state (stateless deciders).
 	if h.StateLoader != nil {
 		state, err = h.StateLoader.Load(ctx, cmd)
 		if err != nil {
 			return command.Command{}, nil, command.Decision{}, err
 		}
 	}
+	// Truly optional; falls back to time.Now.
 	now := h.Now
 	if now == nil {
 		now = time.Now
@@ -236,6 +241,7 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		// once domain/write model counters are wired.
 		return command.Command{}, nil, command.Decision{}, ErrCommandMustMutate
 	}
+	// Required in production via NewHandler; nil here supports test-path flexibility.
 	if h.Events != nil && len(decision.Events) > 0 {
 		validated := make([]event.Event, 0, len(decision.Events))
 		for _, evt := range decision.Events {
@@ -247,6 +253,7 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		}
 		decision.Events = validated
 	}
+	// Required in production via NewHandler; nil here supports test-path flexibility.
 	if h.Journal != nil && len(decision.Events) > 0 {
 		stored, err := h.Journal.BatchAppend(ctx, decision.Events)
 		if err != nil {
@@ -254,6 +261,7 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		}
 		decision.Events = stored
 	}
+	// Required in production via NewHandler; nil here supports test-path flexibility.
 	if h.Applier != nil && len(decision.Events) > 0 {
 		journalPersisted := h.Journal != nil
 		for _, evt := range decision.Events {

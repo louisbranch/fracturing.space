@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -69,7 +70,15 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 		return Registries{}, err
 	}
 
+	if err := ValidateDeciderCommandCoverage(systemRegistry, commandRegistry); err != nil {
+		return Registries{}, err
+	}
+
 	if err := ValidateFoldCoverage(eventRegistry); err != nil {
+		return Registries{}, err
+	}
+
+	if err := ValidateAggregateFoldDispatch(eventRegistry); err != nil {
 		return Registries{}, err
 	}
 
@@ -265,10 +274,6 @@ func ValidateProjectionCoverage(events *event.Registry, handledTypes []event.Typ
 // event types with IntentProjectionAndReplay or IntentReplayOnly are handled
 // by the module's projector. This is the system-event counterpart of
 // ValidateFoldCoverage, which covers core domains.
-//
-// Only modules whose projector implements module.FoldTyper are checked.
-// Modules that don't declare fold types are silently skipped for backward
-// compatibility.
 func ValidateSystemFoldCoverage(modules *module.Registry, events *event.Registry) error {
 	if modules == nil || events == nil {
 		return fmt.Errorf("module registry and event registry are required")
@@ -280,12 +285,8 @@ func ValidateSystemFoldCoverage(modules *module.Registry, events *event.Registry
 		if projector == nil {
 			continue
 		}
-		typer, ok := projector.(module.FoldTyper)
-		if !ok {
-			continue
-		}
 		handled := make(map[event.Type]struct{})
-		for _, t := range typer.FoldHandledTypes() {
+		for _, t := range projector.FoldHandledTypes() {
 			handled[t] = struct{}{}
 		}
 		for _, t := range mod.EmittableEventTypes() {
@@ -303,6 +304,64 @@ func ValidateSystemFoldCoverage(modules *module.Registry, events *event.Registry
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("system emittable events missing projector fold handlers: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// ValidateDeciderCommandCoverage verifies that every system command type
+// registered by a module is handled by the module's decider. Only modules
+// whose decider implements module.CommandTyper are checked; modules that
+// don't declare handled commands are silently skipped.
+//
+// This closes the gap where a developer registers a command but forgets
+// the decider switch case — the server refuses to start instead of
+// returning a generic runtime rejection.
+func ValidateDeciderCommandCoverage(modules *module.Registry, commands *command.Registry) error {
+	if modules == nil || commands == nil {
+		return fmt.Errorf("module registry and command registry are required")
+	}
+
+	// Build a set of system-owned command types each module registered.
+	systemCommands := make(map[string]map[command.Type]struct{})
+	for _, def := range commands.ListDefinitions() {
+		if def.Owner != command.OwnerSystem {
+			continue
+		}
+		for _, mod := range modules.List() {
+			namespace := "sys." + naming.NormalizeSystemNamespace(mod.ID()) + "."
+			if strings.HasPrefix(string(def.Type), namespace) {
+				key := mod.ID() + "@" + mod.Version()
+				if systemCommands[key] == nil {
+					systemCommands[key] = make(map[command.Type]struct{})
+				}
+				systemCommands[key][def.Type] = struct{}{}
+			}
+		}
+	}
+
+	var missing []string
+	for _, mod := range modules.List() {
+		decider := mod.Decider()
+		if decider == nil {
+			continue
+		}
+		typer, ok := decider.(module.CommandTyper)
+		if !ok {
+			continue
+		}
+		handled := make(map[command.Type]struct{})
+		for _, t := range typer.DeciderHandledCommands() {
+			handled[t] = struct{}{}
+		}
+		key := mod.ID() + "@" + mod.Version()
+		for ct := range systemCommands[key] {
+			if _, ok := handled[ct]; !ok {
+				missing = append(missing, string(ct))
+			}
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("system commands missing decider handlers: %s", strings.Join(missing, ", "))
 	}
 	return nil
 }
@@ -341,6 +400,42 @@ func ValidateAdapterEventCoverage(modules *module.Registry, adapters *systems.Ad
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("system emittable events missing adapter handlers: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// ValidateAggregateFoldDispatch verifies that every core event type declared
+// in CoreDomains().FoldHandledTypes is actually wired into the aggregate
+// applier's fold dispatch sets. This catches the case where a developer adds
+// FoldHandledTypes for a new domain but forgets to wire initFoldSets and the
+// if-block in Apply.
+func ValidateAggregateFoldDispatch(events *event.Registry) error {
+	if events == nil {
+		return fmt.Errorf("event registry is required for aggregate fold dispatch validation")
+	}
+
+	applier := &aggregate.Applier{}
+	dispatched := make(map[event.Type]struct{})
+	for _, t := range applier.FoldDispatchedTypes() {
+		dispatched[t] = struct{}{}
+	}
+
+	declared := make(map[event.Type]struct{})
+	for _, domain := range CoreDomains() {
+		for _, t := range domain.FoldHandledTypes() {
+			declared[t] = struct{}{}
+		}
+	}
+
+	var missing []string
+	for t := range declared {
+		if _, ok := dispatched[t]; !ok {
+			missing = append(missing, string(t))
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("core fold types declared but not dispatched by aggregate applier: %s",
+			strings.Join(missing, ", "))
 	}
 	return nil
 }

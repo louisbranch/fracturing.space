@@ -12,27 +12,11 @@ import (
 type Projector struct{}
 
 // FoldHandledTypes returns the event types this projector's Apply handles.
-// Used by ValidateSystemFoldCoverage to verify every emittable event type
-// has a fold handler.
+// Derived from daggerheartEventDefinitions so the list stays in sync with the
+// authoritative registration slice. Used by ValidateSystemFoldCoverage to
+// verify every emittable event type has a fold handler.
 func (Projector) FoldHandledTypes() []event.Type {
-	return []event.Type{
-		EventTypeGMFearChanged,
-		EventTypeCharacterStatePatched,
-		EventTypeConditionChanged,
-		EventTypeLoadoutSwapped,
-		EventTypeCharacterTemporaryArmorApplied,
-		EventTypeRestTaken,
-		EventTypeCountdownCreated,
-		EventTypeCountdownUpdated,
-		EventTypeCountdownDeleted,
-		EventTypeDamageApplied,
-		EventTypeAdversaryDamageApplied,
-		EventTypeDowntimeMoveApplied,
-		EventTypeAdversaryConditionChanged,
-		EventTypeAdversaryCreated,
-		EventTypeAdversaryUpdated,
-		EventTypeAdversaryDeleted,
-	}
+	return eventTypesWithReplayIntent()
 }
 
 // Apply applies a Daggerheart event to state.

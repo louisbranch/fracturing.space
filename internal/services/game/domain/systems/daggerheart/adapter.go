@@ -33,25 +33,10 @@ func (a *Adapter) Version() string {
 }
 
 // HandledTypes returns the event types this adapter's Apply handles.
+// Derived from daggerheartEventDefinitions so the list stays in sync with the
+// authoritative registration slice.
 func (a *Adapter) HandledTypes() []event.Type {
-	return []event.Type{
-		EventTypeDamageApplied,
-		EventTypeRestTaken,
-		EventTypeCharacterTemporaryArmorApplied,
-		EventTypeDowntimeMoveApplied,
-		EventTypeLoadoutSwapped,
-		EventTypeCharacterStatePatched,
-		EventTypeConditionChanged,
-		EventTypeAdversaryConditionChanged,
-		EventTypeGMFearChanged,
-		EventTypeCountdownCreated,
-		EventTypeCountdownUpdated,
-		EventTypeCountdownDeleted,
-		EventTypeAdversaryCreated,
-		EventTypeAdversaryDamageApplied,
-		EventTypeAdversaryUpdated,
-		EventTypeAdversaryDeleted,
-	}
+	return eventTypesWithProjectionIntent()
 }
 
 // Apply applies a system-specific event to Daggerheart projections.
@@ -113,31 +98,6 @@ func (a *Adapter) applyDamageApplied(ctx context.Context, evt event.Event) error
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.damage_applied payload: %w", err)
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return fmt.Errorf("character_id is required")
-	}
-	if payload.ArmorSpent < 0 || payload.ArmorSpent > ArmorMaxCap {
-		return fmt.Errorf("damage_applied armor_spent must be in range 0..%d", ArmorMaxCap)
-	}
-	if payload.Marks < 0 || payload.Marks > 4 {
-		return fmt.Errorf("damage_applied marks must be in range 0..4")
-	}
-	if payload.RollSeq != nil && *payload.RollSeq == 0 {
-		return fmt.Errorf("damage_applied roll_seq must be positive")
-	}
-	if severity := strings.TrimSpace(payload.Severity); severity != "" {
-		switch severity {
-		case "none", "minor", "major", "severe", "massive":
-			// allowed
-		default:
-			return fmt.Errorf("damage_applied severity must be one of none, minor, major, severe, massive")
-		}
-	}
-	for _, id := range payload.SourceCharacterIDs {
-		if strings.TrimSpace(id) == "" {
-			return fmt.Errorf("damage_applied source_character_ids must not contain empty values")
-		}
-	}
 	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, payload.HpAfter, nil, nil, nil, payload.ArmorAfter, nil)
 }
 
@@ -145,12 +105,6 @@ func (a *Adapter) applyRestTaken(ctx context.Context, evt event.Event) error {
 	var payload RestTakenPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.rest_taken payload: %w", err)
-	}
-	if payload.GMFearAfter < GMFearMin || payload.GMFearAfter > GMFearMax {
-		return fmt.Errorf("rest_taken gm_fear_after must be in range %d..%d", GMFearMin, GMFearMax)
-	}
-	if payload.ShortRestsAfter < 0 {
-		return fmt.Errorf("rest_taken short_rests_after must be non-negative")
 	}
 	if err := a.store.PutDaggerheartSnapshot(ctx, storage.DaggerheartSnapshot{
 		CampaignID:            evt.CampaignID,
@@ -160,9 +114,6 @@ func (a *Adapter) applyRestTaken(ctx context.Context, evt event.Event) error {
 		return fmt.Errorf("put daggerheart snapshot: %w", err)
 	}
 	for _, patch := range payload.CharacterStates {
-		if strings.TrimSpace(patch.CharacterID) == "" {
-			return fmt.Errorf("character_id is required")
-		}
 		characterID := strings.TrimSpace(patch.CharacterID)
 		if payload.RefreshRest || payload.RefreshLongRest {
 			if err := a.clearRestTemporaryArmor(ctx, evt.CampaignID, characterID, payload.RefreshRest, payload.RefreshLongRest); err != nil {
@@ -213,9 +164,6 @@ func (a *Adapter) applyDowntimeMoveApplied(ctx context.Context, evt event.Event)
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.downtime_move_applied payload: %w", err)
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return fmt.Errorf("character_id is required")
-	}
 	if strings.TrimSpace(payload.Move) == "repair_all_armor" {
 		state, err := a.store.GetDaggerheartCharacterState(ctx, evt.CampaignID, payload.CharacterID)
 		if err != nil {
@@ -252,9 +200,6 @@ func (a *Adapter) applyCharacterTemporaryArmorApplied(ctx context.Context, evt e
 		return fmt.Errorf("decode sys.daggerheart.character_temporary_armor_applied payload: %w", err)
 	}
 	characterID := strings.TrimSpace(payload.CharacterID)
-	if characterID == "" {
-		return fmt.Errorf("character_id is required")
-	}
 
 	state, err := a.store.GetDaggerheartCharacterState(ctx, evt.CampaignID, characterID)
 	if err != nil {
@@ -289,9 +234,6 @@ func (a *Adapter) applyLoadoutSwapped(ctx context.Context, evt event.Event) erro
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.loadout_swapped payload: %w", err)
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return fmt.Errorf("character_id is required")
-	}
 	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, nil, nil, nil, payload.StressAfter, nil, nil)
 }
 
@@ -299,9 +241,6 @@ func (a *Adapter) applyCharacterStatePatched(ctx context.Context, evt event.Even
 	var payload CharacterStatePatchedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.character_state_patched payload: %w", err)
-	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return fmt.Errorf("character_id is required")
 	}
 	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, payload.HPAfter, payload.HopeAfter, payload.HopeMaxAfter, payload.StressAfter, payload.ArmorAfter, payload.LifeStateAfter)
 }
@@ -311,28 +250,13 @@ func (a *Adapter) applyConditionChanged(ctx context.Context, evt event.Event) er
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.condition_changed payload: %w", err)
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return fmt.Errorf("character_id is required")
-	}
+	// RollSeq is event-only metadata not validated in ValidatePayload.
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return fmt.Errorf("condition_changed roll_seq must be positive")
-	}
-	if payload.ConditionsAfter == nil {
-		return fmt.Errorf("condition_changed conditions_after is required")
 	}
 	normalizedAfter, err := NormalizeConditions(payload.ConditionsAfter)
 	if err != nil {
 		return fmt.Errorf("condition_changed conditions_after: %w", err)
-	}
-	if len(payload.Added) > 0 {
-		if _, err := NormalizeConditions(payload.Added); err != nil {
-			return fmt.Errorf("condition_changed added: %w", err)
-		}
-	}
-	if len(payload.Removed) > 0 {
-		if _, err := NormalizeConditions(payload.Removed); err != nil {
-			return fmt.Errorf("condition_changed removed: %w", err)
-		}
 	}
 	return a.applyConditionPatch(ctx, evt.CampaignID, payload.CharacterID, normalizedAfter)
 }
@@ -342,28 +266,13 @@ func (a *Adapter) applyAdversaryConditionChanged(ctx context.Context, evt event.
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.adversary_condition_changed payload: %w", err)
 	}
-	if strings.TrimSpace(payload.AdversaryID) == "" {
-		return fmt.Errorf("adversary_id is required")
-	}
+	// RollSeq is event-only metadata not validated in ValidatePayload.
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return fmt.Errorf("adversary_condition_changed roll_seq must be positive")
-	}
-	if payload.ConditionsAfter == nil {
-		return fmt.Errorf("adversary_condition_changed conditions_after is required")
 	}
 	normalizedAfter, err := NormalizeConditions(payload.ConditionsAfter)
 	if err != nil {
 		return fmt.Errorf("adversary_condition_changed conditions_after: %w", err)
-	}
-	if len(payload.Added) > 0 {
-		if _, err := NormalizeConditions(payload.Added); err != nil {
-			return fmt.Errorf("adversary_condition_changed added: %w", err)
-		}
-	}
-	if len(payload.Removed) > 0 {
-		if _, err := NormalizeConditions(payload.Removed); err != nil {
-			return fmt.Errorf("adversary_condition_changed removed: %w", err)
-		}
 	}
 	return a.applyAdversaryConditionPatch(ctx, evt.CampaignID, payload.AdversaryID, normalizedAfter)
 }
@@ -373,6 +282,7 @@ func (a *Adapter) applyGMFearChanged(ctx context.Context, evt event.Event) error
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.gm_fear_changed payload: %w", err)
 	}
+	// Range validation before writing to storage.
 	if payload.After < GMFearMin || payload.After > GMFearMax {
 		return fmt.Errorf("gm_fear_changed after must be in range %d..%d", GMFearMin, GMFearMax)
 	}
@@ -393,25 +303,6 @@ func (a *Adapter) applyCountdownCreated(ctx context.Context, evt event.Event) er
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.countdown_created payload: %w", err)
 	}
-	if strings.TrimSpace(payload.CountdownID) == "" {
-		return fmt.Errorf("countdown_id is required")
-	}
-	if strings.TrimSpace(payload.Name) == "" {
-		return fmt.Errorf("countdown name is required")
-	}
-	if payload.Max <= 0 {
-		return fmt.Errorf("countdown max must be positive")
-	}
-	if payload.Current < 0 || payload.Current > payload.Max {
-		return fmt.Errorf("countdown current must be in range 0..%d", payload.Max)
-	}
-	if _, err := NormalizeCountdownKind(payload.Kind); err != nil {
-		return err
-	}
-	if _, err := NormalizeCountdownDirection(payload.Direction); err != nil {
-		return err
-	}
-
 	return a.store.PutDaggerheartCountdown(ctx, storage.DaggerheartCountdown{
 		CampaignID:  evt.CampaignID,
 		CountdownID: payload.CountdownID,
@@ -429,13 +320,6 @@ func (a *Adapter) applyCountdownUpdated(ctx context.Context, evt event.Event) er
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.countdown_updated payload: %w", err)
 	}
-	if strings.TrimSpace(payload.CountdownID) == "" {
-		return fmt.Errorf("countdown_id is required")
-	}
-	if payload.Before < 0 || payload.After < 0 {
-		return fmt.Errorf("countdown values must be non-negative")
-	}
-
 	countdown, err := a.store.GetDaggerheartCountdown(ctx, evt.CampaignID, payload.CountdownID)
 	if err != nil {
 		return err
@@ -455,9 +339,6 @@ func (a *Adapter) applyCountdownDeleted(ctx context.Context, evt event.Event) er
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.countdown_deleted payload: %w", err)
 	}
-	if strings.TrimSpace(payload.CountdownID) == "" {
-		return fmt.Errorf("countdown_id is required")
-	}
 	return a.store.DeleteDaggerheartCountdown(ctx, evt.CampaignID, payload.CountdownID)
 }
 
@@ -466,22 +347,14 @@ func (a *Adapter) applyAdversaryCreated(ctx context.Context, evt event.Event) er
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.adversary_created payload: %w", err)
 	}
-	adversaryID := strings.TrimSpace(payload.AdversaryID)
-	if adversaryID == "" {
-		return fmt.Errorf("adversary_id is required")
-	}
-	name := strings.TrimSpace(payload.Name)
-	if name == "" {
-		return fmt.Errorf("name is required")
-	}
 	if err := validateAdversaryStats(payload.HP, payload.HPMax, payload.Stress, payload.StressMax, payload.Evasion, payload.Major, payload.Severe, payload.Armor); err != nil {
 		return err
 	}
 	createdAt := evt.Timestamp.UTC()
 	return a.store.PutDaggerheartAdversary(ctx, storage.DaggerheartAdversary{
 		CampaignID:  evt.CampaignID,
-		AdversaryID: adversaryID,
-		Name:        name,
+		AdversaryID: strings.TrimSpace(payload.AdversaryID),
+		Name:        strings.TrimSpace(payload.Name),
 		Kind:        strings.TrimSpace(payload.Kind),
 		SessionID:   strings.TrimSpace(payload.SessionID),
 		Notes:       strings.TrimSpace(payload.Notes),
@@ -504,13 +377,6 @@ func (a *Adapter) applyAdversaryUpdated(ctx context.Context, evt event.Event) er
 		return fmt.Errorf("decode sys.daggerheart.adversary_updated payload: %w", err)
 	}
 	adversaryID := strings.TrimSpace(payload.AdversaryID)
-	if adversaryID == "" {
-		return fmt.Errorf("adversary_id is required")
-	}
-	name := strings.TrimSpace(payload.Name)
-	if name == "" {
-		return fmt.Errorf("name is required")
-	}
 	if err := validateAdversaryStats(payload.HP, payload.HPMax, payload.Stress, payload.StressMax, payload.Evasion, payload.Major, payload.Severe, payload.Armor); err != nil {
 		return err
 	}
@@ -522,7 +388,7 @@ func (a *Adapter) applyAdversaryUpdated(ctx context.Context, evt event.Event) er
 	return a.store.PutDaggerheartAdversary(ctx, storage.DaggerheartAdversary{
 		CampaignID:  evt.CampaignID,
 		AdversaryID: adversaryID,
-		Name:        name,
+		Name:        strings.TrimSpace(payload.Name),
 		Kind:        strings.TrimSpace(payload.Kind),
 		SessionID:   strings.TrimSpace(payload.SessionID),
 		Notes:       strings.TrimSpace(payload.Notes),
@@ -546,12 +412,7 @@ func (a *Adapter) applyAdversaryDamageApplied(ctx context.Context, evt event.Eve
 		return fmt.Errorf("decode sys.daggerheart.adversary_damage_applied payload: %w", err)
 	}
 	adversaryID := strings.TrimSpace(payload.AdversaryID)
-	if adversaryID == "" {
-		return fmt.Errorf("adversary_id is required")
-	}
-	if payload.HpAfter == nil && payload.ArmorAfter == nil {
-		return fmt.Errorf("adversary_damage_applied requires hp_after or armor_after")
-	}
+	// State consistency: merge payload with current projection state.
 	current, err := a.store.GetDaggerheartAdversary(ctx, evt.CampaignID, adversaryID)
 	if err != nil {
 		return err
@@ -622,11 +483,7 @@ func (a *Adapter) applyAdversaryDeleted(ctx context.Context, evt event.Event) er
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return fmt.Errorf("decode sys.daggerheart.adversary_deleted payload: %w", err)
 	}
-	adversaryID := strings.TrimSpace(payload.AdversaryID)
-	if adversaryID == "" {
-		return fmt.Errorf("adversary_id is required")
-	}
-	return a.store.DeleteDaggerheartAdversary(ctx, evt.CampaignID, adversaryID)
+	return a.store.DeleteDaggerheartAdversary(ctx, evt.CampaignID, strings.TrimSpace(payload.AdversaryID))
 }
 
 func daggerheartCharacterStateFromStorage(state storage.DaggerheartCharacterState, armorMax int) CharacterState {

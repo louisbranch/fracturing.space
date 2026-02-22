@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 const (
@@ -49,6 +50,12 @@ const (
 
 // Decider handles Daggerheart system commands.
 type Decider struct{}
+
+// DeciderHandledCommands returns the command types this decider handles.
+// Derived from daggerheartCommandDefinitions so the list stays in sync.
+func (Decider) DeciderHandledCommands() []command.Type {
+	return commandTypesFromDefinitions()
+}
 
 // Decide returns the decision for a system command against current state.
 func (Decider) Decide(state any, cmd command.Command, now func() time.Time) command.Decision {
@@ -209,28 +216,15 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 
 		return command.Accept(evt)
 	case commandTypeLoadoutSwap:
-		var payload LoadoutSwapPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.CardID = strings.TrimSpace(payload.CardID)
-		payload.From = strings.TrimSpace(payload.From)
-		payload.To = strings.TrimSpace(payload.To)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CharacterID
-		}
-		evt := command.NewEvent(cmd, EventTypeLoadoutSwapped, "character", entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(cmd, EventTypeLoadoutSwapped, "character",
+			func(p *LoadoutSwapPayload) string { return strings.TrimSpace(p.CharacterID) },
+			func(p *LoadoutSwapPayload, _ func() time.Time) *command.Rejection {
+				p.CharacterID = strings.TrimSpace(p.CharacterID)
+				p.CardID = strings.TrimSpace(p.CardID)
+				p.From = strings.TrimSpace(p.From)
+				p.To = strings.TrimSpace(p.To)
+				return nil
+			}, now)
 	case commandTypeRestTake:
 		var payload RestTakePayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
@@ -266,32 +260,15 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 
 		return command.Accept(restEvent, countdownEvent)
 	case commandTypeCountdownCreate:
-		var payload CountdownCreatePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.CountdownID = strings.TrimSpace(payload.CountdownID)
-		payload.Name = strings.TrimSpace(payload.Name)
-		payload.Kind = strings.TrimSpace(payload.Kind)
-		payload.Direction = strings.TrimSpace(payload.Direction)
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "countdown"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CountdownID
-		}
-		evt := command.NewEvent(cmd, EventTypeCountdownCreated, entityType, entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(cmd, EventTypeCountdownCreated, "countdown",
+			func(p *CountdownCreatePayload) string { return strings.TrimSpace(p.CountdownID) },
+			func(p *CountdownCreatePayload, _ func() time.Time) *command.Rejection {
+				p.CountdownID = strings.TrimSpace(p.CountdownID)
+				p.Name = strings.TrimSpace(p.Name)
+				p.Kind = strings.TrimSpace(p.Kind)
+				p.Direction = strings.TrimSpace(p.Direction)
+				return nil
+			}, now)
 	case commandTypeCountdownUpdate:
 		var payload CountdownUpdatePayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
@@ -321,30 +298,13 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 
 		return command.Accept(evt)
 	case commandTypeCountdownDelete:
-		var payload CountdownDeletePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.CountdownID = strings.TrimSpace(payload.CountdownID)
-		payload.Reason = strings.TrimSpace(payload.Reason)
-		payloadJSON, _ := json.Marshal(payload)
-		entityType := strings.TrimSpace(cmd.EntityType)
-		if entityType == "" {
-			entityType = "countdown"
-		}
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CountdownID
-		}
-		evt := command.NewEvent(cmd, EventTypeCountdownDeleted, entityType, entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(cmd, EventTypeCountdownDeleted, "countdown",
+			func(p *CountdownDeletePayload) string { return strings.TrimSpace(p.CountdownID) },
+			func(p *CountdownDeletePayload, _ func() time.Time) *command.Rejection {
+				p.CountdownID = strings.TrimSpace(p.CountdownID)
+				p.Reason = strings.TrimSpace(p.Reason)
+				return nil
+			}, now)
 	case commandTypeDamageApply:
 		var payload DamageApplyPayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
@@ -428,49 +388,23 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 
 		return command.Accept(evt)
 	case commandTypeDowntimeMoveApply:
-		var payload DowntimeMoveApplyPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.Move = strings.TrimSpace(payload.Move)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CharacterID
-		}
-		evt := command.NewEvent(cmd, EventTypeDowntimeMoveApplied, "character", entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(cmd, EventTypeDowntimeMoveApplied, "character",
+			func(p *DowntimeMoveApplyPayload) string { return strings.TrimSpace(p.CharacterID) },
+			func(p *DowntimeMoveApplyPayload, _ func() time.Time) *command.Rejection {
+				p.CharacterID = strings.TrimSpace(p.CharacterID)
+				p.Move = strings.TrimSpace(p.Move)
+				return nil
+			}, now)
 	case commandTypeCharacterTemporaryArmorApply:
-		var payload CharacterTemporaryArmorApplyPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.CharacterID = strings.TrimSpace(payload.CharacterID)
-		payload.Source = strings.TrimSpace(payload.Source)
-		payload.Duration = strings.TrimSpace(payload.Duration)
-		payload.SourceID = strings.TrimSpace(payload.SourceID)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.CharacterID
-		}
-		evt := command.NewEvent(cmd, EventTypeCharacterTemporaryArmorApplied, "character", entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(cmd, EventTypeCharacterTemporaryArmorApplied, "character",
+			func(p *CharacterTemporaryArmorApplyPayload) string { return strings.TrimSpace(p.CharacterID) },
+			func(p *CharacterTemporaryArmorApplyPayload, _ func() time.Time) *command.Rejection {
+				p.CharacterID = strings.TrimSpace(p.CharacterID)
+				p.Source = strings.TrimSpace(p.Source)
+				p.Duration = strings.TrimSpace(p.Duration)
+				p.SourceID = strings.TrimSpace(p.SourceID)
+				return nil
+			}, now)
 	case commandTypeAdversaryConditionChange:
 		var payload AdversaryConditionChangePayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
@@ -537,50 +471,24 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 
 		return command.Accept(evt)
 	case commandTypeAdversaryUpdate:
-		var payload AdversaryUpdatePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.AdversaryID = strings.TrimSpace(payload.AdversaryID)
-		payload.Name = strings.TrimSpace(payload.Name)
-		payload.Kind = strings.TrimSpace(payload.Kind)
-		payload.SessionID = strings.TrimSpace(payload.SessionID)
-		payload.Notes = strings.TrimSpace(payload.Notes)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.AdversaryID
-		}
-		evt := command.NewEvent(cmd, EventTypeAdversaryUpdated, "adversary", entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(cmd, EventTypeAdversaryUpdated, "adversary",
+			func(p *AdversaryUpdatePayload) string { return strings.TrimSpace(p.AdversaryID) },
+			func(p *AdversaryUpdatePayload, _ func() time.Time) *command.Rejection {
+				p.AdversaryID = strings.TrimSpace(p.AdversaryID)
+				p.Name = strings.TrimSpace(p.Name)
+				p.Kind = strings.TrimSpace(p.Kind)
+				p.SessionID = strings.TrimSpace(p.SessionID)
+				p.Notes = strings.TrimSpace(p.Notes)
+				return nil
+			}, now)
 	case commandTypeAdversaryDelete:
-		var payload AdversaryDeletePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		payload.AdversaryID = strings.TrimSpace(payload.AdversaryID)
-		payload.Reason = strings.TrimSpace(payload.Reason)
-		payloadJSON, _ := json.Marshal(payload)
-		entityID := strings.TrimSpace(cmd.EntityID)
-		if entityID == "" {
-			entityID = payload.AdversaryID
-		}
-		evt := command.NewEvent(cmd, EventTypeAdversaryDeleted, "adversary", entityID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return module.DecideFunc(cmd, EventTypeAdversaryDeleted, "adversary",
+			func(p *AdversaryDeletePayload) string { return strings.TrimSpace(p.AdversaryID) },
+			func(p *AdversaryDeletePayload, _ func() time.Time) *command.Rejection {
+				p.AdversaryID = strings.TrimSpace(p.AdversaryID)
+				p.Reason = strings.TrimSpace(p.Reason)
+				return nil
+			}, now)
 	default:
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeCommandTypeUnsupported,
