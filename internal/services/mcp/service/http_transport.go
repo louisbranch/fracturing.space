@@ -3,15 +3,21 @@ package service
 import (
 	"context"
 	"crypto/rand"
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+var listenTCP = net.Listen
+var newTLSListener = tls.NewListener
 
 // mcpHTTPEnv holds env-parsed configuration for MCP HTTP transport.
 type mcpHTTPEnv struct {
@@ -56,18 +62,6 @@ const (
 // The implementation is intentionally explicit about session lifecycle and cleanup so
 // long-lived local MCP clients cannot leak resources even when upstream services
 // stop responding.
-//
-// Security and scale-related features are intentionally deferred:
-// - authentication/authorization for production exposure
-// - per-connection rate limiting
-// and are therefore documented as TODO near the relevant hot paths.
-//
-// TODO: Add authentication/authorization for production use
-// Without this, any network-reachable caller can open MCP sessions and invoke
-// tools. Keep this transport limited to trusted local usage until auth is added.
-// TODO: Add rate limiting per connection
-// Multiple chatty clients over long-lived SSE can otherwise monopolize worker
-// capacity; rate limiting belongs here to preserve fair scheduling and backpressure.
 type HTTPTransport struct {
 	addr         string
 	allowedHosts map[string]struct{}
@@ -80,10 +74,37 @@ type HTTPTransport struct {
 	serverOnceMu sync.Mutex
 	serverOnce   map[string]*sync.Once
 	oauth        *oauthAuth
+	requestAuthz RequestAuthorizer
+	apiToken     string
+	rateLimiter  RequestRateLimiter
+	tlsConfig    *tls.Config
 
 	serverReadyTimeout time.Duration
 	randomReader       func([]byte) (int, error)
 	readyAfter         func(time.Duration) <-chan time.Time
+}
+
+func (t *HTTPTransport) applyConfig(cfg Config) {
+	if t == nil {
+		return
+	}
+
+	t.tlsConfig = cfg.TLSConfig
+	t.rateLimiter = cfg.RateLimiter
+	t.apiToken = strings.TrimSpace(cfg.AuthToken)
+
+	if cfg.RequestAuthorizer != nil {
+		t.requestAuthz = cfg.RequestAuthorizer
+		return
+	}
+	if t.apiToken == "" && t.oauth == nil {
+		t.requestAuthz = nil
+		return
+	}
+	t.requestAuthz = &hybridRequestAuthorizer{
+		apiToken: t.apiToken,
+		oauth:    t.oauth,
+	}
 }
 
 // httpSession maintains state for a single MCP session in memory.
@@ -173,7 +194,18 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 	// Start server in goroutine
 	errChan := make(chan error, 1)
 	go func() {
-		if err := t.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		listener, err := listenTCP("tcp", t.addr)
+		if err != nil {
+			errChan <- err
+			return
+		}
+
+		serverListener := listener
+		if t.tlsConfig != nil {
+			serverListener = newTLSListener(listener, t.tlsConfig)
+		}
+
+		if err := t.httpServer.Serve(serverListener); err != nil && err != http.ErrServerClosed {
 			errChan <- err
 		}
 	}()
