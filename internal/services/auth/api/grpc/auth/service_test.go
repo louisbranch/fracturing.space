@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"testing"
 	"time"
 
@@ -17,11 +18,13 @@ import (
 )
 
 type fakeUserStore struct {
-	users    map[string]user.User
-	contacts map[string]map[string]storage.Contact
-	putErr   error
-	getErr   error
-	listErr  error
+	users        map[string]user.User
+	contacts     map[string]map[string]storage.Contact
+	outboxEvents []storage.IntegrationOutboxEvent
+	outboxPutErr error
+	putErr       error
+	getErr       error
+	listErr      error
 }
 
 type userOnlyStore struct {
@@ -63,6 +66,14 @@ func (s *fakeUserStore) ListUsers(_ context.Context, pageSize int, pageToken str
 		users = append(users, u)
 	}
 	return storage.UserPage{Users: users, NextPageToken: ""}, nil
+}
+
+func (s *fakeUserStore) EnqueueIntegrationOutboxEvent(_ context.Context, event storage.IntegrationOutboxEvent) error {
+	if s.outboxPutErr != nil {
+		return s.outboxPutErr
+	}
+	s.outboxEvents = append(s.outboxEvents, event)
+	return nil
 }
 
 func (s *userOnlyStore) PutUser(_ context.Context, u user.User) error {
@@ -160,6 +171,63 @@ func TestCreateUser_Success(t *testing.T) {
 	}
 	if resp.GetUser().GetEmail() != "alice@example.com" {
 		t.Fatalf("expected normalized email, got %q", resp.GetUser().GetEmail())
+	}
+}
+
+func TestCreateUser_EnqueuesSignupCompletedOutbox(t *testing.T) {
+	store := newFakeUserStore()
+	svc := NewAuthService(store, nil, nil)
+	fixedTime := time.Date(2026, 2, 21, 18, 0, 0, 0, time.UTC)
+	svc.clock = func() time.Time { return fixedTime }
+	svc.idGenerator = func() (string, error) { return "user-123", nil }
+
+	resp, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Email: "Alice@example.com"})
+	if err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	if resp.GetUser().GetId() != "user-123" {
+		t.Fatalf("user id = %q, want %q", resp.GetUser().GetId(), "user-123")
+	}
+
+	if len(store.outboxEvents) != 1 {
+		t.Fatalf("outbox events len = %d, want 1", len(store.outboxEvents))
+	}
+	event := store.outboxEvents[0]
+	if event.EventType != "auth.signup_completed" {
+		t.Fatalf("outbox event type = %q, want %q", event.EventType, "auth.signup_completed")
+	}
+	if event.DedupeKey != "signup_completed:user:user-123:v1" {
+		t.Fatalf("outbox dedupe key = %q, want %q", event.DedupeKey, "signup_completed:user:user-123:v1")
+	}
+}
+
+func TestCreateUser_OutboxFailureRollsBackUser(t *testing.T) {
+	store := openTempAuthStore(t)
+	seededAt := time.Date(2026, 2, 21, 19, 0, 0, 0, time.UTC)
+	if err := store.EnqueueIntegrationOutboxEvent(context.Background(), storage.IntegrationOutboxEvent{
+		ID:            "dup-id",
+		EventType:     "auth.signup_completed",
+		PayloadJSON:   "{}",
+		DedupeKey:     "seed:dup-id",
+		Status:        storage.IntegrationOutboxStatusPending,
+		AttemptCount:  0,
+		NextAttemptAt: seededAt,
+		CreatedAt:     seededAt,
+		UpdatedAt:     seededAt,
+	}); err != nil {
+		t.Fatalf("seed integration outbox: %v", err)
+	}
+
+	svc := NewAuthService(store, store, nil)
+	svc.clock = func() time.Time { return seededAt.Add(time.Minute) }
+	svc.idGenerator = func() (string, error) { return "dup-id", nil }
+
+	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Email: "Alice@example.com"})
+	assertStatusCode(t, err, codes.Internal)
+
+	_, getErr := store.GetUser(context.Background(), "dup-id")
+	if !errors.Is(getErr, storage.ErrNotFound) {
+		t.Fatalf("get user err = %v, want %v", getErr, storage.ErrNotFound)
 	}
 }
 

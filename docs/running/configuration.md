@@ -44,6 +44,28 @@ This is the full environment variable reference. For setup steps, see
 - `FRACTURING_SPACE_AI_DB_PATH`: AI SQLite path. Default: `data/ai.db`.
 - `FRACTURING_SPACE_AI_ENCRYPTION_KEY`: base64-encoded AES key used to encrypt provider secrets at rest (must decode to 16/24/32 bytes).
 
+### Notifications
+
+- `FRACTURING_SPACE_NOTIFICATIONS_PORT`: gRPC port for notifications service. Default: `8088`.
+- `FRACTURING_SPACE_NOTIFICATIONS_DB_PATH`: notifications SQLite path. Default: `data/notifications.db`.
+- `FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_ENABLED`: enable dispatch attempts to an email sender implementation. Default: `false`.
+- `FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_ENABLED`: enable background observation of pending email deliveries. Default: `false`.
+- `FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_POLL_INTERVAL`: poll cadence for pending email delivery checks. Default: `5s`.
+
+### Worker
+
+- `FRACTURING_SPACE_WORKER_PORT`: gRPC port for worker health endpoint. Default: `8089`.
+- `FRACTURING_SPACE_WORKER_AUTH_ADDR`: auth gRPC dependency address. Default: `localhost:8083`.
+- `FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR`: notifications gRPC dependency address. Default: `localhost:8088`.
+- `FRACTURING_SPACE_WORKER_DB_PATH`: worker SQLite path for durable attempt logs. Default: `data/worker.db`.
+- `FRACTURING_SPACE_WORKER_CONSUMER`: auth outbox consumer identifier. Default: `worker-onboarding`.
+- `FRACTURING_SPACE_WORKER_POLL_INTERVAL`: auth outbox poll interval. Default: `2s`.
+- `FRACTURING_SPACE_WORKER_LEASE_TTL`: auth outbox lease duration. Default: `30s`.
+- `FRACTURING_SPACE_WORKER_MAX_ATTEMPTS`: max processing attempts before dead-letter. Default: `8`.
+- `FRACTURING_SPACE_WORKER_RETRY_BACKOFF`: base retry delay before exponential backoff. Default: `5s`.
+- `FRACTURING_SPACE_WORKER_RETRY_MAX_DELAY`: upper bound for retry delay growth. Default: `5m`.
+- `FRACTURING_SPACE_WORKER_DIAL_TIMEOUT`: gRPC dependency dial timeout. Default: `2s`.
+
 ### WebAuthn / Passkeys
 
 - `FRACTURING_SPACE_WEBAUTHN_RP_ID`: WebAuthn relying party ID (the domain the user sees). Default: `localhost`.
@@ -179,3 +201,42 @@ The AI service (`cmd/ai`) accepts the following flags:
 The AI service accepts the `-port` flag. If `FRACTURING_SPACE_AI_PORT` is set,
 it provides the default when the flag is omitted. Command-line flags take
 precedence over env values.
+
+## Notifications Service Configuration
+
+### Command-line Flags
+
+The notifications service (`cmd/notifications`) accepts the following flags:
+
+- `-port`: gRPC server port. Default: `8088`
+
+### Address Overrides
+
+The notifications service accepts the `-port` flag. If
+`FRACTURING_SPACE_NOTIFICATIONS_PORT` is set, it provides the default when the
+flag is omitted. Command-line flags take precedence over env values.
+
+## Worker Service Configuration
+
+### Command-line Flags
+
+The worker service (`cmd/worker`) accepts the following flags:
+
+- `-port`: worker health gRPC server port. Default: `8089`
+- `-auth-addr`: auth gRPC dependency address. Default: `localhost:8083`
+- `-notifications-addr`: notifications gRPC dependency address. Default: `localhost:8088`
+- `-db-path`: worker SQLite path. Default: `data/worker.db`
+- `-consumer`: auth outbox consumer identifier. Default: `worker-onboarding`
+- `-poll-interval`: auth outbox poll interval. Default: `2s`
+- `-lease-ttl`: auth outbox lease duration. Default: `30s`
+- `-max-attempts`: max attempts before dead-letter. Default: `8`
+- `-retry-backoff`: base retry delay. Default: `5s`
+- `-retry-max-delay`: max retry delay. Default: `5m`
+- `-dial-timeout`: gRPC dependency dial timeout. Default: `2s`
+
+### Address Overrides
+
+The worker service accepts flags for dependency addresses and runtime timing. If
+the corresponding `FRACTURING_SPACE_WORKER_*` variables are set, they provide
+defaults when flags are omitted. Command-line flags take precedence over env
+values.

@@ -316,7 +316,7 @@ func (s *Server) ensureUserForProfile(ctx context.Context, providerID string, pr
 	if err != nil {
 		return "", err
 	}
-	if err := s.userStore.PutUser(ctx, created); err != nil {
+	if err := persistUserWithSignupCompleted(ctx, s.userStore, s.clock, id.NewID, created, "oauth:"+providerID); err != nil {
 		return "", err
 	}
 	return created.ID, nil

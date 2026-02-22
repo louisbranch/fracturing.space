@@ -1021,6 +1021,14 @@ func (c *testAuthClient) ListUsers(ctx context.Context, in *authv1.ListUsersRequ
 	return &authv1.ListUsersResponse{Users: c.users}, nil
 }
 
+func (c *testAuthClient) LeaseIntegrationOutboxEvents(ctx context.Context, in *authv1.LeaseIntegrationOutboxEventsRequest, opts ...grpc.CallOption) (*authv1.LeaseIntegrationOutboxEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
+func (c *testAuthClient) AckIntegrationOutboxEvent(ctx context.Context, in *authv1.AckIntegrationOutboxEventRequest, opts ...grpc.CallOption) (*authv1.AckIntegrationOutboxEventResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
 func (c *testAuthClient) AddContact(ctx context.Context, in *authv1.AddContactRequest, opts ...grpc.CallOption) (*authv1.AddContactResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }

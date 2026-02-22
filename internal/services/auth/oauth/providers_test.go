@@ -3,13 +3,16 @@ package oauth
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
+	authstorage "github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 )
 
 func TestIsAllowedRedirect(t *testing.T) {
@@ -447,6 +450,57 @@ func TestEnsureUserForProfile(t *testing.T) {
 		if userID == "" {
 			t.Fatal("expected non-empty user ID")
 		}
+
+		leased, err := authStore.LeaseIntegrationOutboxEvents(
+			context.Background(),
+			"test-worker",
+			10,
+			fixedTime,
+			time.Minute,
+		)
+		if err != nil {
+			t.Fatalf("lease integration outbox events: %v", err)
+		}
+		if len(leased) != 1 {
+			t.Fatalf("leased outbox len = %d, want 1", len(leased))
+		}
+		if leased[0].EventType != "auth.signup_completed" {
+			t.Fatalf("outbox event type = %q, want %q", leased[0].EventType, "auth.signup_completed")
+		}
+		if leased[0].DedupeKey != "signup_completed:user:"+userID+":v1" {
+			t.Fatalf("outbox dedupe key = %q, want %q", leased[0].DedupeKey, "signup_completed:user:"+userID+":v1")
+		}
+	})
+
+	t.Run("enqueue failure does not leave orphan user", func(t *testing.T) {
+		path := t.TempDir() + "/auth.db"
+		authStore, err := authsqlite.Open(path)
+		if err != nil {
+			t.Fatalf("open store: %v", err)
+		}
+		t.Cleanup(func() { authStore.Close() })
+		oauthStore := NewStore(authStore.DB())
+
+		userStore := &atomicTestUserStore{
+			users:     map[string]user.User{},
+			outboxErr: errors.New("outbox unavailable"),
+		}
+		s := &Server{
+			store:     oauthStore,
+			userStore: userStore,
+			clock:     func() time.Time { return time.Date(2026, 2, 21, 19, 0, 0, 0, time.UTC) },
+		}
+
+		_, err = s.ensureUserForProfile(context.Background(), "github", providerProfile{
+			ProviderUserID: "github-77",
+			DisplayName:    "Rollback User",
+		})
+		if err == nil {
+			t.Fatal("expected enqueue error")
+		}
+		if len(userStore.users) != 0 {
+			t.Fatalf("users len = %d, want 0 after rollback", len(userStore.users))
+		}
 	})
 
 	t.Run("nil user store", func(t *testing.T) {
@@ -472,6 +526,36 @@ func TestEnsureUserForProfile(t *testing.T) {
 			t.Fatal("expected error when user store is nil")
 		}
 	})
+}
+
+type atomicTestUserStore struct {
+	users     map[string]user.User
+	outboxErr error
+}
+
+func (s *atomicTestUserStore) PutUser(_ context.Context, u user.User) error {
+	s.users[u.ID] = u
+	return nil
+}
+
+func (s *atomicTestUserStore) GetUser(_ context.Context, userID string) (user.User, error) {
+	found, ok := s.users[userID]
+	if !ok {
+		return user.User{}, authstorage.ErrNotFound
+	}
+	return found, nil
+}
+
+func (s *atomicTestUserStore) EnqueueIntegrationOutboxEvent(_ context.Context, _ authstorage.IntegrationOutboxEvent) error {
+	return s.outboxErr
+}
+
+func (s *atomicTestUserStore) PutUserWithIntegrationOutboxEvent(_ context.Context, u user.User, _ authstorage.IntegrationOutboxEvent) error {
+	if s.outboxErr != nil {
+		return s.outboxErr
+	}
+	s.users[u.ID] = u
+	return nil
 }
 
 func TestHandleProviderRoutes(t *testing.T) {

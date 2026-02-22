@@ -42,6 +42,14 @@ FROM base AS build-ai
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/ai ./cmd/ai
 
+FROM base AS build-notifications
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/notifications ./cmd/notifications
+
+FROM base AS build-worker
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/worker ./cmd/worker
+
 FROM gcr.io/distroless/static-debian12:nonroot AS game
 
 WORKDIR /app
@@ -111,3 +119,23 @@ COPY --from=build-ai /out/ai /app/ai
 EXPOSE 8087
 
 ENTRYPOINT ["/app/ai"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS notifications
+
+WORKDIR /app
+
+COPY --from=build-notifications /out/notifications /app/notifications
+
+EXPOSE 8088
+
+ENTRYPOINT ["/app/notifications"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS worker
+
+WORKDIR /app
+
+COPY --from=build-worker /out/worker /app/worker
+
+EXPOSE 8089
+
+ENTRYPOINT ["/app/worker"]

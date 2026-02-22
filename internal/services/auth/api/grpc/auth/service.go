@@ -99,12 +99,15 @@ func (s *AuthService) CreateUser(ctx context.Context, in *authv1.CreateUserReque
 		return nil, status.Error(codes.InvalidArgument, "create user request is required")
 	}
 
-	created, err := newUserCreator(s).create(ctx, in)
+	created, err := newUserCreator(s).create(in)
 	if err != nil {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return nil, handleDomainError(err)
 		}
 		return nil, err
+	}
+	if err := s.persistUserWithSignupCompletedOutbox(ctx, created, "create_user"); err != nil {
+		return nil, status.Errorf(codes.Internal, "persist signup completion: %v", err)
 	}
 
 	return &authv1.CreateUserResponse{User: userToProto(created)}, nil

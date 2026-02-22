@@ -838,6 +838,9 @@ func TestFinishPasskeyRegistration_Success(t *testing.T) {
 	if _, ok := passkeyStore.sessions["session-1"]; ok {
 		t.Fatalf("expected session deleted")
 	}
+	if len(userStore.outboxEvents) != 0 {
+		t.Fatalf("expected no outbox event from passkey completion, got %d", len(userStore.outboxEvents))
+	}
 }
 
 func TestFinishPasskeyRegistrationMissingUserID(t *testing.T) {

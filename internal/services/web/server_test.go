@@ -1392,6 +1392,14 @@ func (f *fakeAuthClient) ListUsers(ctx context.Context, req *authv1.ListUsersReq
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (f *fakeAuthClient) LeaseIntegrationOutboxEvents(ctx context.Context, req *authv1.LeaseIntegrationOutboxEventsRequest, opts ...grpc.CallOption) (*authv1.LeaseIntegrationOutboxEventsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (f *fakeAuthClient) AckIntegrationOutboxEvent(ctx context.Context, req *authv1.AckIntegrationOutboxEventRequest, opts ...grpc.CallOption) (*authv1.AckIntegrationOutboxEventResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 func (f *fakeAuthClient) AddContact(ctx context.Context, req *authv1.AddContactRequest, opts ...grpc.CallOption) (*authv1.AddContactResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }

@@ -16,6 +16,8 @@ For the one-line command, see [quickstart](quickstart.md).
 - Auth: `http://auth.localhost:8080`
 - Admin: `http://admin.localhost:8080`
 - MCP health: `http://mcp.localhost:8080/mcp/health`
+- Notifications gRPC (internal): `notifications:8088`
+- Worker gRPC health (internal): `worker:8089`
 
 ## Configuration
 

@@ -11,6 +11,7 @@ nav_order: 1
 - Event model and write flow: [Event-driven system](event-driven-system.md)
 - Replay and recovery: [Event replay](event-replay.md)
 - System extension model: [Game systems](game-systems.md)
+- Cross-service background orchestration: [Worker Service Topology](worker-service-topology.md)
 - Authorization model and permission matrix: [Campaign Authorization Model](campaign-authorization-model.md)
 - Authorization audit and telemetry contract: [Campaign Authorization Audit and Telemetry](campaign-authorization-audit.md)
 

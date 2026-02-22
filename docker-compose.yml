@@ -92,6 +92,58 @@ services:
       - internal
     restart: unless-stopped
 
+  notifications:
+    build:
+      context: .
+      target: notifications
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.0}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/notifications:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+    environment:
+      FRACTURING_SPACE_NOTIFICATIONS_PORT: 8088
+      FRACTURING_SPACE_NOTIFICATIONS_DB_PATH: /data/notifications.db
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      target: worker
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.0}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/worker:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    depends_on:
+      init-data:
+        condition: service_completed_successfully
+      auth:
+        condition: service_started
+      notifications:
+        condition: service_started
+    environment:
+      FRACTURING_SPACE_WORKER_PORT: 8089
+      FRACTURING_SPACE_WORKER_AUTH_ADDR: auth:8083
+      FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR: notifications:8088
+      FRACTURING_SPACE_WORKER_DB_PATH: /data/worker.db
+      FRACTURING_SPACE_WORKER_CONSUMER: ${FRACTURING_SPACE_WORKER_CONSUMER:-worker-onboarding}
+      FRACTURING_SPACE_WORKER_POLL_INTERVAL: ${FRACTURING_SPACE_WORKER_POLL_INTERVAL:-2s}
+      FRACTURING_SPACE_WORKER_LEASE_TTL: ${FRACTURING_SPACE_WORKER_LEASE_TTL:-30s}
+      FRACTURING_SPACE_WORKER_MAX_ATTEMPTS: ${FRACTURING_SPACE_WORKER_MAX_ATTEMPTS:-8}
+      FRACTURING_SPACE_WORKER_RETRY_BACKOFF: ${FRACTURING_SPACE_WORKER_RETRY_BACKOFF:-5s}
+      FRACTURING_SPACE_WORKER_RETRY_MAX_DELAY: ${FRACTURING_SPACE_WORKER_RETRY_MAX_DELAY:-5m}
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    volumes:
+      - fracturing-space-data:/data
+    networks:
+      - internal
+    restart: unless-stopped
+
   mcp:
     build:
       context: .

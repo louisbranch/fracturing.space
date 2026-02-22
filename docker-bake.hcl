@@ -22,8 +22,16 @@ variable "WEB_IMAGE" {
   default = "ghcr.io/fracturing-space/web:dev"
 }
 
+variable "NOTIFICATIONS_IMAGE" {
+  default = "ghcr.io/fracturing-space/notifications:dev"
+}
+
+variable "WORKER_IMAGE" {
+  default = "ghcr.io/fracturing-space/worker:dev"
+}
+
 group "default" {
-  targets = ["game", "mcp", "admin", "auth", "web"]
+  targets = ["game", "mcp", "admin", "auth", "web", "notifications", "worker"]
 }
 
 target "base" {
@@ -62,4 +70,16 @@ target "web" {
   inherits = ["base"]
   target   = "web"
   tags     = ["${WEB_IMAGE}"]
+}
+
+target "notifications" {
+  inherits = ["base"]
+  target   = "notifications"
+  tags     = ["${NOTIFICATIONS_IMAGE}"]
+}
+
+target "worker" {
+  inherits = ["base"]
+  target   = "worker"
+  tags     = ["${WORKER_IMAGE}"]
 }
