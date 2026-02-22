@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -125,10 +126,219 @@ func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t 
 					ReadAt:    timestamppb.New(readAt),
 				},
 				{
-					Id:        "notif-new",
-					Topic:     "Campaign invite accepted",
-					Source:    notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
-					CreatedAt: timestamppb.New(newCreatedAt),
+					Id:          "notif-new",
+					Topic:       "Campaign invite accepted",
+					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+					CreatedAt:   timestamppb.New(newCreatedAt),
+					PayloadJson: `{"event_type":"campaign.invite.accepted"}`,
+				},
+			},
+		},
+	}
+
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeClient,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	originalNow := notificationsNow
+	notificationsNow = func() time.Time { return now }
+	t.Cleanup(func() {
+		notificationsNow = originalNow
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/notifications?filter=all", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppNotifications(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if fakeClient.listReq == nil {
+		t.Fatal("expected ListNotifications call")
+	}
+	if got := fakeClient.listReq.GetPageSize(); got != 50 {
+		t.Fatalf("page_size = %d, want %d", got, 50)
+	}
+	userIDs := fakeClient.listMD.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "user-1" {
+		t.Fatalf("metadata %s = %v, want [user-1]", grpcmeta.UserIDHeader, userIDs)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, `data-notifications-layout="split"`) {
+		t.Fatalf("expected split layout marker")
+	}
+	if strings.Contains(body, `class="breadcrumbs text-sm"`) {
+		t.Fatalf("expected notifications page to render with empty breadcrumbs")
+	}
+	if !strings.Contains(body, `data-notification-tab-content`) {
+		t.Fatalf("expected connected tab-content marker")
+	}
+	if strings.Contains(body, `border border-base-300 border-t-0 bg-base-200/70`) {
+		t.Fatalf("expected notifications list wrapper to avoid extra layered border/background styles")
+	}
+	if !strings.Contains(body, `class="menu bg-base-200 rounded-box w-full"`) {
+		t.Fatalf("expected notifications list to use standard app menu classes")
+	}
+	if !strings.Contains(body, `data-notification-detail`) {
+		t.Fatalf("expected detail panel marker")
+	}
+	if !strings.Contains(body, `data-notifications-filter="all"`) {
+		t.Fatalf("expected all filter state marker")
+	}
+	if !strings.Contains(body, "Campaign invite accepted") {
+		t.Fatalf("expected newest notification topic in response")
+	}
+	if !strings.Contains(body, "Welcome to Fracturing Space") {
+		t.Fatalf("expected oldest notification topic in response")
+	}
+	newIdx := strings.Index(body, "Campaign invite accepted")
+	oldIdx := strings.Index(body, "Welcome to Fracturing Space")
+	if newIdx < 0 || oldIdx < 0 {
+		t.Fatalf("expected both notification topics in rendered output")
+	}
+	if newIdx > oldIdx {
+		t.Fatalf("expected newer notification to render first")
+	}
+	if !strings.Contains(body, `data-notification-id="notif-new"`) {
+		t.Fatalf("expected notification id marker for newest message")
+	}
+	if !strings.Contains(body, `href="/notifications?filter=all&amp;selected=notif-new"`) {
+		t.Fatalf("expected notification row GET link with preserved list state")
+	}
+	if strings.Contains(body, `form method="POST" action="/notifications/notif-new`) {
+		t.Fatalf("expected no POST row form")
+	}
+	if !strings.Contains(body, `data-notification-unread="true"`) {
+		t.Fatalf("expected unread marker for unread message")
+	}
+	newRowID := `data-notification-id="notif-new"`
+	newRowPos := strings.Index(body, newRowID)
+	if newRowPos < 0 {
+		t.Fatalf("expected notification row markup for notif-new")
+	}
+	newRowStart := strings.LastIndex(body[:newRowPos], "<a")
+	if newRowStart < 0 {
+		t.Fatalf("expected notif-new row to render as anchor")
+	}
+	newRowEndOffset := strings.Index(body[newRowPos:], "</a>")
+	if newRowEndOffset < 0 {
+		t.Fatalf("expected notif-new row to have closing anchor tag")
+	}
+	newRowMarkup := body[newRowStart : newRowPos+newRowEndOffset]
+	if strings.Contains(newRowMarkup, `class="text-xs opacity-70 whitespace-nowrap"`) {
+		t.Fatalf("expected notification list row to omit created time metadata")
+	}
+	if strings.Contains(newRowMarkup, `class="text-sm opacity-75"`) {
+		t.Fatalf("expected notification list row to omit source metadata")
+	}
+	if !strings.Contains(body, "font-semibold") {
+		t.Fatalf("expected unread message to render with emphasized class")
+	}
+	if !strings.Contains(body, `data-notification-selected="true"`) {
+		t.Fatalf("expected selected row marker")
+	}
+	if !strings.Contains(body, "event_type") {
+		t.Fatalf("expected payload fallback content in detail pane")
+	}
+	if !strings.Contains(body, `class="text-sm opacity-80">System</p>`) {
+		t.Fatalf("expected localized source label in detail pane")
+	}
+	if !strings.Contains(body, "<time datetime=") {
+		t.Fatalf("expected created time element in response")
+	}
+	if !strings.Contains(body, "ago</time>") {
+		t.Fatalf("expected relative time in \"... ago\" format")
+	}
+}
+
+func TestAppNotificationsPageSelectedUnreadMarksRead(t *testing.T) {
+	now := time.Date(2026, 2, 21, 22, 0, 0, 0, time.UTC)
+	newCreatedAt := now.Add(-10 * time.Minute)
+
+	fakeClient := &fakeWebNotificationClient{
+		listResp: &notificationsv1.ListNotificationsResponse{
+			Notifications: []*notificationsv1.Notification{
+				{
+					Id:          "notif-new",
+					Topic:       "Newest unread",
+					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+					CreatedAt:   timestamppb.New(newCreatedAt),
+					PayloadJson: `{"event_type":"auth.signup_completed"}`,
+				},
+			},
+		},
+	}
+
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeClient,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	originalNow := notificationsNow
+	notificationsNow = func() time.Time { return now }
+	t.Cleanup(func() {
+		notificationsNow = originalNow
+	})
+	req := httptest.NewRequest(http.MethodGet, "/notifications?filter=all&selected=notif-new", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppNotifications(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if fakeClient.markReq == nil {
+		t.Fatal("expected mark-read call for selected unread notification")
+	}
+	if got := fakeClient.markReq.GetNotificationId(); got != "notif-new" {
+		t.Fatalf("notification_id = %q, want %q", got, "notif-new")
+	}
+	userIDs := fakeClient.markMD.Get(grpcmeta.UserIDHeader)
+	if len(userIDs) != 1 || userIDs[0] != "user-1" {
+		t.Fatalf("metadata %s = %v, want [user-1]", grpcmeta.UserIDHeader, userIDs)
+	}
+}
+
+func TestAppNotificationsPageDefaultsToUnreadFilterAndSelectsNewestUnread(t *testing.T) {
+	now := time.Date(2026, 2, 21, 22, 0, 0, 0, time.UTC)
+	oldCreatedAt := now.Add(-2 * time.Hour)
+	newCreatedAt := now.Add(-10 * time.Minute)
+	readAt := now.Add(-30 * time.Minute)
+
+	fakeClient := &fakeWebNotificationClient{
+		listResp: &notificationsv1.ListNotificationsResponse{
+			Notifications: []*notificationsv1.Notification{
+				{
+					Id:          "notif-old",
+					Topic:       "Already read",
+					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+					CreatedAt:   timestamppb.New(oldCreatedAt),
+					ReadAt:      timestamppb.New(readAt),
+					PayloadJson: `{"foo":"bar"}`,
+				},
+				{
+					Id:          "notif-new",
+					Topic:       "Newest unread",
+					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+					CreatedAt:   timestamppb.New(newCreatedAt),
+					PayloadJson: `{"event_type":"auth.signup_completed"}`,
 				},
 			},
 		},
@@ -160,55 +370,147 @@ func TestAppNotificationsPageRendersNewestFirstWithUnreadStateAndRelativeTime(t 
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
 	}
-	if fakeClient.listReq == nil {
-		t.Fatal("expected ListNotifications call")
-	}
-	if got := fakeClient.listReq.GetPageSize(); got != 50 {
-		t.Fatalf("page_size = %d, want %d", got, 50)
-	}
-	userIDs := fakeClient.listMD.Get(grpcmeta.UserIDHeader)
-	if len(userIDs) != 1 || userIDs[0] != "user-1" {
-		t.Fatalf("metadata %s = %v, want [user-1]", grpcmeta.UserIDHeader, userIDs)
-	}
-
 	body := w.Body.String()
-	if !strings.Contains(body, "Campaign invite accepted") {
-		t.Fatalf("expected newest notification topic in response")
+	if !strings.Contains(body, `data-notifications-filter="unread"`) {
+		t.Fatalf("expected unread filter to be default")
 	}
-	if !strings.Contains(body, "Welcome to Fracturing Space") {
-		t.Fatalf("expected oldest notification topic in response")
-	}
-	newIdx := strings.Index(body, "Campaign invite accepted")
-	oldIdx := strings.Index(body, "Welcome to Fracturing Space")
-	if newIdx < 0 || oldIdx < 0 {
-		t.Fatalf("expected both notification topics in rendered output")
-	}
-	if newIdx > oldIdx {
-		t.Fatalf("expected newer notification to render first")
+	if strings.Contains(body, "Already read") {
+		t.Fatalf("expected read-only row to be hidden under unread filter")
 	}
 	if !strings.Contains(body, `data-notification-id="notif-new"`) {
-		t.Fatalf("expected notification id marker for newest message")
+		t.Fatalf("expected newest unread row")
 	}
-	if !strings.Contains(body, `form method="POST" action="/notifications/notif-new"`) {
-		t.Fatalf("expected notification row submit form for mark-read action")
+	if !strings.Contains(body, `data-notification-selected="true"`) {
+		t.Fatalf("expected selected unread row marker")
 	}
-	if !strings.Contains(body, `type="submit"`) {
-		t.Fatalf("expected submit button for notification row")
+	if !strings.Contains(body, "Newest unread") {
+		t.Fatalf("expected selected unread detail content")
 	}
-	if strings.Contains(body, `href="/notifications/notif-new"`) {
-		t.Fatalf("expected no direct GET mutation link for notification row")
+	if fakeClient.markReq == nil {
+		t.Fatal("expected rendered default-selected unread notification to mark as read")
 	}
-	if !strings.Contains(body, `data-notification-unread="true"`) {
-		t.Fatalf("expected unread marker for unread message")
+	if got := fakeClient.markReq.GetNotificationId(); got != "notif-new" {
+		t.Fatalf("notification_id = %q, want %q", got, "notif-new")
 	}
-	if !strings.Contains(body, "font-semibold") {
-		t.Fatalf("expected unread message to render with emphasized class")
+}
+
+func TestAppNotificationsPageRenderedUnreadClearsUnreadCacheAfterMarkRead(t *testing.T) {
+	now := time.Date(2026, 2, 21, 22, 0, 0, 0, time.UTC)
+	newCreatedAt := now.Add(-10 * time.Minute)
+
+	fakeClient := &fakeWebNotificationClient{
+		listResp: &notificationsv1.ListNotificationsResponse{
+			Notifications: []*notificationsv1.Notification{
+				{
+					Id:          "notif-new",
+					Topic:       "Newest unread",
+					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+					CreatedAt:   timestamppb.New(newCreatedAt),
+					PayloadJson: `{"event_type":"auth.signup_completed"}`,
+				},
+			},
+		},
 	}
-	if !strings.Contains(body, "<time datetime=") {
-		t.Fatalf("expected created time element in response")
+
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeClient,
 	}
-	if !strings.Contains(body, "ago</time>") {
-		t.Fatalf("expected relative time in \"... ago\" format")
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	originalNow := notificationsNow
+	notificationsNow = func() time.Time { return now }
+	t.Cleanup(func() {
+		notificationsNow = originalNow
+	})
+	req := httptest.NewRequest(http.MethodGet, "/notifications", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppNotifications(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	if fakeClient.markReq == nil {
+		t.Fatal("expected rendered default-selected unread notification to mark as read")
+	}
+	if _, ok := sess.cachedUnreadNotifications(unreadNotificationProbeTTL); ok {
+		t.Fatalf("expected unread cache to be invalidated after rendered read mutation")
+	}
+}
+
+func TestAppNotificationsPageSelectsExplicitNotificationInAllFilter(t *testing.T) {
+	now := time.Date(2026, 2, 21, 22, 0, 0, 0, time.UTC)
+	oldCreatedAt := now.Add(-2 * time.Hour)
+	newCreatedAt := now.Add(-10 * time.Minute)
+	readAt := now.Add(-30 * time.Minute)
+
+	fakeClient := &fakeWebNotificationClient{
+		listResp: &notificationsv1.ListNotificationsResponse{
+			Notifications: []*notificationsv1.Notification{
+				{
+					Id:          "notif-old",
+					Topic:       "Old read message",
+					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+					CreatedAt:   timestamppb.New(oldCreatedAt),
+					ReadAt:      timestamppb.New(readAt),
+					PayloadJson: `{"event_type":"old"}`,
+				},
+				{
+					Id:          "notif-new",
+					Topic:       "New unread message",
+					Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
+					CreatedAt:   timestamppb.New(newCreatedAt),
+					PayloadJson: `{"event_type":"new"}`,
+				},
+			},
+		},
+	}
+
+	h := &handler{
+		config:             Config{AuthBaseURL: "http://auth.local"},
+		sessions:           newSessionStore(),
+		pendingFlows:       newPendingFlowStore(),
+		notificationClient: fakeClient,
+	}
+	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
+	sess := h.sessions.get(sessionID, "token-1")
+	sess.cachedUserID = "user-1"
+	sess.cachedUserIDResolved = true
+
+	originalNow := notificationsNow
+	notificationsNow = func() time.Time { return now }
+	t.Cleanup(func() {
+		notificationsNow = originalNow
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/notifications?filter=all&selected=notif-old", nil)
+	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
+	w := httptest.NewRecorder()
+
+	h.handleAppNotifications(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, `data-notifications-filter="all"`) {
+		t.Fatalf("expected all filter state marker")
+	}
+	if !strings.Contains(body, `data-notification-id="notif-old"`) {
+		t.Fatalf("expected selected row id marker")
+	}
+	if !strings.Contains(body, `data-notification-selected="true"`) {
+		t.Fatalf("expected selected row marker")
+	}
+	if !strings.Contains(body, "Old read message") {
+		t.Fatalf("expected explicit selected detail content")
 	}
 }
 
@@ -228,7 +530,7 @@ func TestAppNotificationOpenMarksReadAndRedirects(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodPost, "/notifications/notif-1", nil)
+	req := httptest.NewRequest(http.MethodPost, "/notifications/notif-1?filter=unread", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -237,8 +539,19 @@ func TestAppNotificationOpenMarksReadAndRedirects(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/notifications" {
-		t.Fatalf("location = %q, want %q", location, "/notifications")
+	location := w.Header().Get("Location")
+	parsedLocation, err := url.Parse(location)
+	if err != nil {
+		t.Fatalf("parse location %q: %v", location, err)
+	}
+	if parsedLocation.Path != "/notifications" {
+		t.Fatalf("location path = %q, want %q", parsedLocation.Path, "/notifications")
+	}
+	if got := parsedLocation.Query().Get("filter"); got != "unread" {
+		t.Fatalf("location filter query = %q, want %q", got, "unread")
+	}
+	if got := parsedLocation.Query().Get("selected"); got != "notif-1" {
+		t.Fatalf("location selected query = %q, want %q", got, "notif-1")
 	}
 	if fakeClient.markReq == nil {
 		t.Fatal("expected MarkNotificationRead call")

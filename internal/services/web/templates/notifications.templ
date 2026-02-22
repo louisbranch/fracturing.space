@@ -2,63 +2,175 @@ package templates
 
 // NotificationListItem models one notification row in the inbox.
 type NotificationListItem struct {
-	ID            string
-	CanOpen       bool
-	Topic         string
-	Source        string
-	CreatedAtISO  string
-	CreatedAtText string
-	Unread        bool
+	ID               string
+	CanOpen          bool
+	Topic            string
+	Source           string
+	CreatedAtISO     string
+	CreatedAtText    string
+	CreatedAtAbsolute string
+	Payload          string
+	ActionURL        string
+	Selected         bool
+	Unread           bool
 }
 
-templ NotificationsPage(page PageContext, notifications []NotificationListItem) {
-	@GamePageShell(page, T(page.Loc, "game.notifications.title")) {
-		<ul class="space-y-3">
-			if len(notifications) == 0 {
-				<li class="rounded-lg border border-base-300 bg-base-100 px-4 py-3 text-sm opacity-80">{ T(page.Loc, "game.notifications.empty") }</li>
-			}
-			for _, notification := range notifications {
-				<li>
-					if notification.CanOpen {
-						<form method="POST" action={ "/notifications/" + notification.ID } class="m-0">
-							<button
-								type="submit"
-								class={ notificationRowClass(notification.Unread) }
-								data-notification-id={ notification.ID }
-								data-notification-unread={ boolString(notification.Unread) }
-							>
-								<div class="flex items-start justify-between gap-3">
-									<p class="leading-tight">{ notification.Topic }</p>
-									<time datetime={ notification.CreatedAtISO } class="text-xs opacity-70 whitespace-nowrap">{ notification.CreatedAtText }</time>
-								</div>
-								<p class="mt-1 text-sm opacity-75">{ notification.Source }</p>
-							</button>
-						</form>
-					} else {
-						<div
-							class={ notificationRowClass(notification.Unread) }
-							data-notification-id={ notification.ID }
-							data-notification-unread={ boolString(notification.Unread) }
-						>
-							<div class="flex items-start justify-between gap-3">
-								<p class="leading-tight">{ notification.Topic }</p>
-								<time datetime={ notification.CreatedAtISO } class="text-xs opacity-70 whitespace-nowrap">{ notification.CreatedAtText }</time>
-							</div>
-							<p class="mt-1 text-sm opacity-75">{ notification.Source }</p>
+// NotificationDetail models the selected notification detail panel content.
+type NotificationDetail struct {
+	HasSelection    bool
+	Topic           string
+	Source          string
+	CreatedAtISO    string
+	CreatedAtText   string
+	CreatedAtAbsolute string
+	Body            string
+	HasBody         bool
+	Unread          bool
+}
+
+// NotificationsPageState models the list/detail notifications page state.
+type NotificationsPageState struct {
+	Filter      string
+	UnreadCount int
+	AllCount    int
+	Items       []NotificationListItem
+	Detail      NotificationDetail
+}
+
+templ NotificationsPage(page PageContext, state NotificationsPageState) {
+	@Layout(NotificationsLayoutOptions(page)) {
+		<div
+			class="grid gap-6 lg:grid-cols-[20rem_1fr]"
+			data-notifications-layout="split"
+			data-notifications-filter={ state.Filter }
+		>
+			<section class="space-y-3">
+				<div class="tabs tabs-box bg-base-200 w-full rounded-b-none" role="tablist" aria-label={ T(page.Loc, "game.notifications.filter.label") }>
+					<a
+						role="tab"
+						class={ notificationsFilterClass(state.Filter == "unread") }
+						data-notification-filter="unread"
+						href="/notifications?filter=unread"
+						hx-get="/notifications?filter=unread"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+					>{ T(page.Loc, "game.notifications.filter.unread", state.UnreadCount) }</a>
+					<a
+						role="tab"
+						class={ notificationsFilterClass(state.Filter == "all") }
+						data-notification-filter="all"
+						href="/notifications?filter=all"
+						hx-get="/notifications?filter=all"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+					>{ T(page.Loc, "game.notifications.filter.all", state.AllCount) }</a>
+				</div>
+				<div data-notification-tab-content>
+					<nav aria-label={ T(page.Loc, "game.notifications.list.aria_label") }>
+						<ul class="menu bg-base-200 rounded-box w-full">
+							if len(state.Items) == 0 {
+								<li class="px-4 py-3 text-sm opacity-80">
+									if state.Filter == "unread" {
+										{ T(page.Loc, "game.notifications.empty_unread") }
+									} else {
+										{ T(page.Loc, "game.notifications.empty") }
+									}
+								</li>
+							}
+							for _, notification := range state.Items {
+								<li>
+									if notification.CanOpen {
+										<a
+											class={ notificationRowClass(notification.Unread, notification.Selected) }
+											data-notification-id={ notification.ID }
+											data-notification-selected={ boolString(notification.Selected) }
+											data-notification-unread={ boolString(notification.Unread) }
+											href={ notification.ActionURL }
+											hx-get={ notification.ActionURL }
+											hx-target="#main"
+											hx-swap="innerHTML"
+											hx-push-url="true"
+											if notification.Selected {
+												aria-current="true"
+											}
+										>
+											@NotificationRowBody(page, notification)
+										</a>
+									} else {
+										<div
+											class={ notificationRowClass(notification.Unread, notification.Selected) }
+											data-notification-id={ notification.ID }
+											data-notification-selected={ boolString(notification.Selected) }
+											data-notification-unread={ boolString(notification.Unread) }
+										>
+											@NotificationRowBody(page, notification)
+										</div>
+									}
+								</li>
+							}
+						</ul>
+					</nav>
+				</div>
+			</section>
+			<section class="card bg-base-200 min-h-72" data-notification-detail>
+				<div class="card-body">
+					if state.Detail.HasSelection {
+						<div class="flex items-start justify-between gap-3">
+							<h2 class="card-title">{ state.Detail.Topic }</h2>
+							if state.Detail.Unread {
+								<span class="badge badge-primary badge-outline">{ T(page.Loc, "game.notifications.unread_badge") }</span>
+							}
 						</div>
+						<p class="text-sm opacity-80">{ state.Detail.Source }</p>
+						<p class="text-xs opacity-70">
+							<time datetime={ state.Detail.CreatedAtISO }>{ state.Detail.CreatedAtText }</time>
+							<span aria-hidden="true"> • </span>
+							<span>{ state.Detail.CreatedAtAbsolute }</span>
+						</p>
+						<div class="divider my-1"></div>
+						if state.Detail.HasBody {
+							<pre class="whitespace-pre-wrap text-sm leading-relaxed font-sans m-0">{ state.Detail.Body }</pre>
+						} else {
+							<p class="text-sm opacity-75">{ T(page.Loc, "game.notifications.detail_empty") }</p>
+						}
+					} else {
+						<h2 class="card-title">{ T(page.Loc, "game.notifications.title") }</h2>
+						<p class="text-sm opacity-80">{ T(page.Loc, "game.notifications.no_selection") }</p>
 					}
-				</li>
-			}
-		</ul>
+				</div>
+			</section>
+		</div>
 	}
 }
 
-func notificationRowClass(unread bool) string {
-	base := "block w-full text-left rounded-lg border border-base-300 bg-base-100 px-4 py-3 transition-colors"
-	if unread {
-		return base + " font-semibold hover:bg-base-200/70"
+templ NotificationRowBody(page PageContext, notification NotificationListItem) {
+	<div class="flex items-start justify-between gap-3">
+		<p class="leading-tight">{ notification.Topic }</p>
+		if notification.Unread {
+			<span class="badge badge-primary badge-outline badge-xs">{ T(page.Loc, "game.notifications.unread_badge") }</span>
+		}
+	</div>
+}
+
+func notificationRowClass(unread bool, selected bool) string {
+	base := "transition-colors"
+	if selected {
+		base = base + " menu-active"
 	}
-	return base + " opacity-80 hover:opacity-100 hover:bg-base-200/50"
+	if unread {
+		return base + " font-semibold"
+	}
+	return base + " opacity-80 hover:opacity-100"
+}
+
+func notificationsFilterClass(active bool) string {
+	base := "tab"
+	if active {
+		return base + " tab-active font-semibold"
+	}
+	return base
 }
 
 func boolString(value bool) string {
