@@ -187,7 +187,7 @@ The primary service boundaries are:
 - **Web service** (`internal/services/web/`): Browser-facing BFF for end-user flows.
   - Public/auth/discovery surface: `/`, `/login`, `/auth/*`, `/magic`, `/passkeys/*`, `/u/{username}`, `/discover`, `/discover/campaigns/{campaignID}`.
   - Authenticated surface: canonical `/app/*` routes (`/app/campaigns`, `/app/campaigns/{id}/*`, `/app/invites`, `/app/notifications`, `/app/profile`, `/app/settings/*`) with OAuth-required startup contract.
-  - Internal boundaries: route modules under `internal/services/web/module/*` and composition seams under `internal/services/web/integration/*` and `internal/services/web/transport/httpmux`.
+  - Internal boundaries: route modules under `internal/services/web/module/*` (module-local path dispatch + callback-backed service constructors), shared module runtime helpers under `internal/services/web/module/runtime`, and composition seams under `internal/services/web/integration/*` and `internal/services/web/transport/httpmux`.
 - **Auth service** (`internal/services/auth/`): AuthN/authZ domain logic and gRPC API surface (identity proof and access artifacts); owns the auth database.
 - **Connections service** (`internal/services/connections/`): Social/discovery domain logic and gRPC API surface (contacts and unified user profile metadata); owns the connections database.
 - **Listing service** (`internal/services/listing/`): Public campaign listing metadata APIs; owns the listing database.

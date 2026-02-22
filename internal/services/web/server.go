@@ -284,7 +284,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	h.registerGameRoutes(gameMux)
 
 	publicMux := http.NewServeMux()
-	h.registerPublicRoutes(publicMux, h.resolvedAppName())
+	h.registerPublicRoutes(publicMux)
 	httpmux.MountAppAndPublicRoutes(rootMux, gameMux, publicMux)
 
 	return rootMux, nil
@@ -293,17 +293,17 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 func (h *handler) registerGameRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(routepath.AppRoot, h.handleAppHome)
 	mux.HandleFunc(routepath.AppRootPrefix, h.handleAppHome)
-	profilemodule.RegisterRoutes(mux, newProfileModuleService(h))
-	settingsmodule.RegisterRoutes(mux, newSettingsModuleService(h))
-	campaignsmodule.RegisterRoutes(mux, h)
-	invitesmodule.RegisterRoutes(mux, newInvitesModuleService(h))
-	notificationsmodule.RegisterRoutes(mux, newNotificationsModuleService(h))
+	profilemodule.RegisterRoutes(mux, buildProfileModuleService(h))
+	settingsmodule.RegisterRoutes(mux, buildSettingsModuleService(h))
+	campaignsmodule.RegisterRoutes(mux, buildCampaignModuleService(h))
+	invitesmodule.RegisterRoutes(mux, buildInvitesModuleService(h))
+	notificationsmodule.RegisterRoutes(mux, buildNotificationsModuleService(h))
 }
 
-func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
-	authmodule.RegisterPublicRoutes(mux, newAuthPublicModuleService(h, appName))
-	publicprofilemodule.RegisterRoutes(mux, newPublicProfileModuleService(h))
-	discoverymodule.RegisterRoutes(mux, newDiscoveryModuleService(h))
+func (h *handler) registerPublicRoutes(mux *http.ServeMux) {
+	authmodule.RegisterPublicRoutes(mux, buildPublicAuthModuleService(h))
+	publicprofilemodule.RegisterRoutes(mux, buildPublicProfileModuleService(h))
+	discoverymodule.RegisterRoutes(mux, buildDiscoveryModuleService(h))
 }
 
 // NewServer builds a configured web server.

@@ -7,15 +7,17 @@ import (
 )
 
 type fakeNotificationsService struct {
-	lastCall string
+	lastCall         string
+	lastNotification string
 }
 
 func (f *fakeNotificationsService) HandleNotifications(http.ResponseWriter, *http.Request) {
 	f.lastCall = "notifications"
 }
 
-func (f *fakeNotificationsService) HandleNotificationsSubroutes(http.ResponseWriter, *http.Request) {
-	f.lastCall = "notifications_subroutes"
+func (f *fakeNotificationsService) HandleNotificationOpen(_ http.ResponseWriter, _ *http.Request, notificationID string) {
+	f.lastCall = "notification_open"
+	f.lastNotification = notificationID
 }
 
 func TestRegisterRoutes(t *testing.T) {
@@ -30,7 +32,7 @@ func TestRegisterRoutes(t *testing.T) {
 		wantCall string
 	}{
 		{path: "/app/notifications", wantCall: "notifications"},
-		{path: "/app/notifications/item-1", wantCall: "notifications_subroutes"},
+		{path: "/app/notifications/item-1", wantCall: "notification_open"},
 	}
 
 	for _, tc := range tests {
@@ -49,5 +51,22 @@ func TestRegisterRoutes(t *testing.T) {
 				t.Fatalf("lastCall = %q, want %q", svc.lastCall, tc.wantCall)
 			}
 		})
+	}
+}
+
+func TestHandleNotificationSubpathRejectsInvalidID(t *testing.T) {
+	t.Parallel()
+
+	svc := &fakeNotificationsService{}
+	req := httptest.NewRequest(http.MethodPost, "/app/notifications/item-1/extra", nil)
+	rec := httptest.NewRecorder()
+
+	HandleNotificationSubpath(rec, req, svc)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNotFound)
+	}
+	if svc.lastCall != "" {
+		t.Fatalf("lastCall = %q, want empty", svc.lastCall)
 	}
 }
