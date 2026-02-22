@@ -55,8 +55,8 @@ This is the full environment variable reference. For setup steps, see
 ### Worker
 
 - `FRACTURING_SPACE_WORKER_PORT`: gRPC port for worker health endpoint. Default: `8089`.
-- `FRACTURING_SPACE_WORKER_AUTH_ADDR`: auth gRPC dependency address. Default: `localhost:8083`.
-- `FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR`: notifications gRPC dependency address. Default: `localhost:8088`.
+- `FRACTURING_SPACE_WORKER_AUTH_ADDR`: auth gRPC dependency address. Default: `auth:8083`.
+- `FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR`: notifications gRPC dependency address. Default: `notifications:8088`.
 - `FRACTURING_SPACE_WORKER_DB_PATH`: worker SQLite path for durable attempt logs. Default: `data/worker.db`.
 - `FRACTURING_SPACE_WORKER_CONSUMER`: auth outbox consumer identifier. Default: `worker-onboarding`.
 - `FRACTURING_SPACE_WORKER_POLL_INTERVAL`: auth outbox poll interval. Default: `2s`.
@@ -83,7 +83,9 @@ This is the full environment variable reference. For setup steps, see
 
 ### MCP
 
-- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, and web. Default: `localhost:8082`.
+Internal gRPC dependencies default to Compose service DNS names (`service:port`). For direct local binary workflows, override these values to `localhost` in `.env.local`.
+
+- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, and web. Default: `game:8082`.
 - `FRACTURING_SPACE_MCP_HTTP_ADDR`: HTTP bind address for MCP when using HTTP transport. Default: `localhost:8085`.
 - `FRACTURING_SPACE_MCP_TRANSPORT`: transport type (`stdio` or `http`). Default: `stdio`.
 - `FRACTURING_SPACE_MCP_ALLOWED_HOSTS`: comma-separated allowed Host/Origin values for MCP HTTP. Defaults to loopback-only when unset.
@@ -94,14 +96,14 @@ This is the full environment variable reference. For setup steps, see
 
 - `FRACTURING_SPACE_ADMIN_ADDR`: HTTP bind address for the admin dashboard. Default: `:8081`.
 - `FRACTURING_SPACE_ADMIN_DB_PATH`: admin SQLite path. Default: `data/admin.db`.
-- `FRACTURING_SPACE_AUTH_ADDR`: auth gRPC address used by the game, admin dashboard, and web login server.
+- `FRACTURING_SPACE_AUTH_ADDR`: auth gRPC address used by the game, admin dashboard, and web login server. Default: `auth:8083`.
 
 ### Web
 
 - `FRACTURING_SPACE_WEB_HTTP_ADDR`: HTTP bind address for the web login server. Default: `localhost:8080`.
 - `FRACTURING_SPACE_CHAT_HTTP_ADDR`: chat HTTP bind address used for campaign chat fallback host candidates. Default: `localhost:8086`.
 - `FRACTURING_SPACE_WEB_AUTH_BASE_URL`: external auth base URL for login redirects.
-- `FRACTURING_SPACE_WEB_AUTH_ADDR`: auth gRPC address used by the web login server.
+- `FRACTURING_SPACE_WEB_AUTH_ADDR`: auth gRPC address used by the web login server. Default: `auth:8083`.
 - `FRACTURING_SPACE_WEB_DIAL_TIMEOUT`: gRPC dial timeout for the web login server. Default: `2s`.
 - `FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID`: first-party OAuth client ID used by the web server. Default: `fracturing-space`.
 - `FRACTURING_SPACE_WEB_CALLBACK_URL`: public OAuth callback URL (e.g., `http://localhost:8080/auth/callback`).
@@ -133,7 +135,7 @@ This is the full environment variable reference. For setup steps, see
 
 The MCP server (`cmd/mcp`) accepts the following flags:
 
-- `-addr`: game server address. Default: `localhost:8082`
+- `-addr`: game server address. Default: `game:8082`
 - `-http-addr`: HTTP server address (for HTTP transport). Default: `localhost:8085`
   
   When running the `cmd/mcp` binary, this value is provided by the flag definition. When constructing the MCP server programmatically and leaving the HTTP address empty in the `Config` struct, the server also falls back to `localhost:8085` internally.
@@ -158,8 +160,8 @@ The MCP server supports `stdio` (default) and `http` transports. See
 The admin dashboard (`cmd/admin`) accepts the following flags:
 
 - `-http-addr`: HTTP server address. Default: `:8081`
-- `-grpc-addr`: game server address. Default: `localhost:8082`
-- `-auth-addr`: auth server address. Default: `localhost:8083`
+- `-grpc-addr`: game server address. Default: `game:8082`
+- `-auth-addr`: auth server address. Default: `auth:8083`
 
 ### Address Overrides
 
@@ -176,7 +178,7 @@ The web login server (`cmd/web`) accepts the following flags:
 - `-http-addr`: HTTP server address. Default: `localhost:8080`
 - `-chat-http-addr`: Chat HTTP server address. Default: `localhost:8086`
 - `-auth-base-url`: external auth base URL used in login redirects.
-- `-auth-addr`: auth server address. Default: `localhost:8083`
+- `-auth-addr`: auth server address. Default: `auth:8083`
 - `-asset-base-url`: external base URL used for image asset delivery.
 - `-asset-version`: version prefix used when building external asset keys.
 
@@ -223,8 +225,8 @@ flag is omitted. Command-line flags take precedence over env values.
 The worker service (`cmd/worker`) accepts the following flags:
 
 - `-port`: worker health gRPC server port. Default: `8089`
-- `-auth-addr`: auth gRPC dependency address. Default: `localhost:8083`
-- `-notifications-addr`: notifications gRPC dependency address. Default: `localhost:8088`
+- `-auth-addr`: auth gRPC dependency address. Default: `auth:8083`
+- `-notifications-addr`: notifications gRPC dependency address. Default: `notifications:8088`
 - `-db-path`: worker SQLite path. Default: `data/worker.db`
 - `-consumer`: auth outbox consumer identifier. Default: `worker-onboarding`
 - `-poll-interval`: auth outbox poll interval. Default: `2s`

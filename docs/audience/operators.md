@@ -17,4 +17,6 @@ Start here:
 Useful files:
 
 - Compose topology: `../../docker-compose.yml`
-- Caddy routing: `../../Caddyfile`
+- Topology catalog: `../../topology/services.json`
+- Caddy entrypoint: `../../Caddyfile`
+- Generated Caddy routes: `../../Caddyfile.routes.generated`

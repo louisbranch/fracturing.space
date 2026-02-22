@@ -24,7 +24,6 @@ services:
       FRACTURING_SPACE_GAME_EVENT_HMAC_KEY: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY:-dev-secret}
       FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS:-}
       FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID: ${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID:-v1}
-      FRACTURING_SPACE_AUTH_ADDR: auth:8083
       FRACTURING_SPACE_JOIN_GRANT_ISSUER: ${FRACTURING_SPACE_JOIN_GRANT_ISSUER:-fracturing.space/auth}
       FRACTURING_SPACE_JOIN_GRANT_AUDIENCE: ${FRACTURING_SPACE_JOIN_GRANT_AUDIENCE:-fracturing.space/game}
       # Dev-only join-grant key for local quickstart. Override for real deployments.
@@ -128,8 +127,6 @@ services:
         condition: service_started
     environment:
       FRACTURING_SPACE_WORKER_PORT: 8089
-      FRACTURING_SPACE_WORKER_AUTH_ADDR: auth:8083
-      FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR: notifications:8088
       FRACTURING_SPACE_WORKER_DB_PATH: /data/worker.db
       FRACTURING_SPACE_WORKER_CONSUMER: ${FRACTURING_SPACE_WORKER_CONSUMER:-worker-onboarding}
       FRACTURING_SPACE_WORKER_POLL_INTERVAL: ${FRACTURING_SPACE_WORKER_POLL_INTERVAL:-2s}
@@ -154,7 +151,6 @@ services:
     depends_on:
       - game
     environment:
-      FRACTURING_SPACE_GAME_ADDR: game:8082
       FRACTURING_SPACE_MCP_HTTP_ADDR: 0.0.0.0:8085
       FRACTURING_SPACE_MCP_TRANSPORT: http
       FRACTURING_SPACE_MCP_ALLOWED_HOSTS: ${FRACTURING_SPACE_MCP_ALLOWED_HOSTS:-mcp.${FRACTURING_SPACE_DOMAIN:-localhost}}
@@ -177,8 +173,6 @@ services:
       - auth
     environment:
       FRACTURING_SPACE_ADMIN_ADDR: 0.0.0.0:8081
-      FRACTURING_SPACE_GAME_ADDR: game:8082
-      FRACTURING_SPACE_AUTH_ADDR: auth:8083
       FRACTURING_SPACE_ADMIN_DB_PATH: /data/admin.db
       # Admin auth requires a real domain (not localhost) for cross-subdomain cookies.
       # To enable locally, set FRACTURING_SPACE_DOMAIN to a real domain in .env and
@@ -209,10 +203,7 @@ services:
       FRACTURING_SPACE_WEB_HTTP_ADDR: 0.0.0.0:8080
       FRACTURING_SPACE_CHAT_HTTP_ADDR: ${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0.0:8086}
       FRACTURING_SPACE_WEB_AUTH_BASE_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://auth.${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}
-      FRACTURING_SPACE_WEB_AUTH_ADDR: auth:8083
-      FRACTURING_SPACE_GAME_ADDR: game:8082
       FRACTURING_SPACE_NOTIFICATIONS_ADDR: notifications:8088
-      FRACTURING_SPACE_AI_ADDR: ai:8087
       FRACTURING_SPACE_WEB_DIAL_TIMEOUT: ${FRACTURING_SPACE_WEB_DIAL_TIMEOUT:-2s}
       FRACTURING_SPACE_WEB_CACHE_DB_PATH: ${FRACTURING_SPACE_WEB_CACHE_DB_PATH:-/tmp/web-cache.db}
       FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID: fracturing-space
@@ -241,7 +232,6 @@ services:
         condition: service_started
     environment:
       FRACTURING_SPACE_CHAT_HTTP_ADDR: ${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0.0:8086}
-      FRACTURING_SPACE_GAME_ADDR: game:8082
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     networks:
       - internal
@@ -267,6 +257,7 @@ services:
       - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:${FRACTURING_SPACE_HTTPS_PORT:-8443}:443"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./Caddyfile.routes.generated:/etc/caddy/Caddyfile.routes.generated:ro
       - caddy-data:/data
       - caddy-config:/config
     networks:
@@ -294,8 +285,6 @@ services:
     depends_on:
       - game
       - auth
-    environment:
-      FRACTURING_SPACE_AUTH_ADDR: auth:8083
     entrypoint: ["go", "run", "./cmd/seed", "-grpc-addr", "game:8082"]
     networks:
       - internal
@@ -311,8 +300,6 @@ services:
       - tools
     depends_on:
       - game
-    environment:
-      FRACTURING_SPACE_GAME_ADDR: game:8082
     entrypoint: ["go", "run", "./cmd/scenario"]
     networks:
       - internal

@@ -7,13 +7,14 @@ import (
 	"fmt"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
+	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	server "github.com/louisbranch/fracturing.space/internal/services/chat/app"
 )
 
 // Config holds chat command configuration.
 type Config struct {
 	HTTPAddr            string `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR"       envDefault:":8086"`
-	GameAddr            string `env:"FRACTURING_SPACE_GAME_ADDR"            envDefault:"localhost:8082"`
+	GameAddr            string `env:"FRACTURING_SPACE_GAME_ADDR"`
 	AuthBaseURL         string `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"    envDefault:"http://localhost:8084"`
 	OAuthResourceSecret string `env:"FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET"`
 }
@@ -24,6 +25,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
+	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "chat HTTP listen address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "game service gRPC address")

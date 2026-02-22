@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "services": [
+    {
+      "name": "admin",
+      "http_port": 8081,
+      "public_routes": [
+        {
+          "host_prefix": "admin",
+          "http_port": 8081
+        }
+      ]
+    },
+    {
+      "name": "ai",
+      "grpc_port": 8087
+    },
+    {
+      "name": "auth",
+      "grpc_port": 8083,
+      "http_port": 8084,
+      "public_routes": [
+        {
+          "host_prefix": "auth",
+          "http_port": 8084
+        }
+      ]
+    },
+    {
+      "name": "chat",
+      "http_port": 8086,
+      "public_routes": [
+        {
+          "host_prefix": "chat",
+          "http_port": 8086
+        }
+      ]
+    },
+    {
+      "name": "game",
+      "grpc_port": 8082
+    },
+    {
+      "name": "jaeger",
+      "http_port": 16686,
+      "public_routes": [
+        {
+          "host_prefix": "jaeger",
+          "http_port": 16686,
+          "extra_directive": "{$FRACTURING_SPACE_JAEGER_BASIC_AUTH}"
+        }
+      ]
+    },
+    {
+      "name": "mcp",
+      "http_port": 8085,
+      "public_routes": [
+        {
+          "host_prefix": "mcp",
+          "http_port": 8085
+        }
+      ]
+    },
+    {
+      "name": "notifications",
+      "grpc_port": 8088
+    },
+    {
+      "name": "web",
+      "http_port": 8080,
+      "public_routes": [
+        {
+          "host_prefix": "",
+          "http_port": 8080
+        }
+      ]
+    },
+    {
+      "name": "worker",
+      "grpc_port": 8089
+    }
+  ]
+}

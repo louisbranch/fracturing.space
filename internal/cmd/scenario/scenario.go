@@ -10,12 +10,13 @@ import (
 	"time"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
+	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 )
 
 // Config holds scenario command configuration.
 type Config struct {
-	GRPCAddr         string        `env:"FRACTURING_SPACE_GAME_ADDR"               envDefault:"localhost:8082"`
+	GRPCAddr         string        `env:"FRACTURING_SPACE_GAME_ADDR"`
 	Scenario         string        `env:"FRACTURING_SPACE_SCENARIO_FILE"`
 	Assertions       bool          `env:"FRACTURING_SPACE_SCENARIO_ASSERT"         envDefault:"true"`
 	Verbose          bool          `env:"FRACTURING_SPACE_SCENARIO_VERBOSE"`
@@ -29,6 +30,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
+	cfg.GRPCAddr = discovery.OrDefaultGRPCAddr(cfg.GRPCAddr, discovery.ServiceGame)
 
 	fs.StringVar(&cfg.GRPCAddr, "grpc-addr", cfg.GRPCAddr, "game server address")
 	fs.StringVar(&cfg.Scenario, "scenario", cfg.Scenario, "path to scenario lua file")

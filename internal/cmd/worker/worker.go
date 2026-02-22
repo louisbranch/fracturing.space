@@ -7,14 +7,15 @@ import (
 	"time"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
+	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	workerserver "github.com/louisbranch/fracturing.space/internal/services/worker/app"
 )
 
 // Config holds worker command configuration.
 type Config struct {
 	Port              int           `env:"FRACTURING_SPACE_WORKER_PORT" envDefault:"8089"`
-	AuthAddr          string        `env:"FRACTURING_SPACE_WORKER_AUTH_ADDR" envDefault:"localhost:8083"`
-	NotificationsAddr string        `env:"FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR" envDefault:"localhost:8088"`
+	AuthAddr          string        `env:"FRACTURING_SPACE_WORKER_AUTH_ADDR"`
+	NotificationsAddr string        `env:"FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR"`
 	DBPath            string        `env:"FRACTURING_SPACE_WORKER_DB_PATH" envDefault:"data/worker.db"`
 	Consumer          string        `env:"FRACTURING_SPACE_WORKER_CONSUMER" envDefault:"worker-onboarding"`
 	PollInterval      time.Duration `env:"FRACTURING_SPACE_WORKER_POLL_INTERVAL" envDefault:"2s"`
@@ -31,6 +32,8 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
+	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
+	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The worker health gRPC server port")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "The auth gRPC server address")
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "The notifications gRPC server address")

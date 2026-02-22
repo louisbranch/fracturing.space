@@ -9,6 +9,7 @@ import (
 	"time"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
+	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin"
 )
@@ -16,8 +17,8 @@ import (
 // Config holds the admin command configuration.
 type Config struct {
 	HTTPAddr            string        `env:"FRACTURING_SPACE_ADMIN_ADDR"                    envDefault:":8081"`
-	GRPCAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"                     envDefault:"localhost:8082"`
-	AuthAddr            string        `env:"FRACTURING_SPACE_AUTH_ADDR"                     envDefault:"localhost:8083"`
+	GRPCAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"`
+	AuthAddr            string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
 	GRPCDialTimeout     time.Duration `env:"FRACTURING_SPACE_ADMIN_DIAL_TIMEOUT"             envDefault:"2s"`
 	AuthIntrospectURL   string        `env:"FRACTURING_SPACE_ADMIN_AUTH_INTROSPECT_URL"`
 	OAuthResourceSecret string        `env:"FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET"`
@@ -33,6 +34,8 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if cfg.GRPCDialTimeout <= 0 {
 		cfg.GRPCDialTimeout = timeouts.GRPCDial
 	}
+	cfg.GRPCAddr = discovery.OrDefaultGRPCAddr(cfg.GRPCAddr, discovery.ServiceGame)
+	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
 	fs.StringVar(&cfg.GRPCAddr, "grpc-addr", cfg.GRPCAddr, "game server address")
