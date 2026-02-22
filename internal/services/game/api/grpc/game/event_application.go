@@ -137,10 +137,10 @@ func isEventValidationError(err error) bool {
 }
 
 var compatibilityEventCommandMap = map[event.Type]command.Type{
-	event.Type("story.note_added"):        command.Type("story.note.add"),
-	event.Type("action.roll_resolved"):    command.Type("action.roll.resolve"),
-	event.Type("action.outcome_applied"):  command.Type("action.outcome.apply"),
-	event.Type("action.outcome_rejected"): command.Type("action.outcome.reject"),
+	eventTypeStoryNoteAdded:        commandTypeStoryNoteAdd,
+	eventTypeActionRollResolved:    commandTypeActionRollResolve,
+	eventTypeActionOutcomeApplied:  commandTypeActionOutcomeApply,
+	eventTypeActionOutcomeRejected: commandTypeActionOutcomeReject,
 }
 
 func domainCommandTypeForEvent(eventType event.Type) (command.Type, bool) {

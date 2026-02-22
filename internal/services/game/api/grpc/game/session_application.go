@@ -82,7 +82,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 			applier,
 			command.Command{
 				CampaignID:   campaignID,
-				Type:         command.Type("campaign.update"),
+				Type:         commandTypeCampaignUpdate,
 				ActorType:    actorType,
 				ActorID:      actorID,
 				RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -115,7 +115,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		applier,
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("session.start"),
+			Type:         commandTypeSessionStart,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,
@@ -179,7 +179,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 		a.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("session.end"),
+			Type:         commandTypeSessionEnd,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,
@@ -274,7 +274,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 		a.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("session.gate_open"),
+			Type:         commandTypeSessionGateOpen,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,
@@ -354,7 +354,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 		a.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("session.gate_resolve"),
+			Type:         commandTypeSessionGateResolve,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,
@@ -428,7 +428,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 		a.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("session.gate_abandon"),
+			Type:         commandTypeSessionGateAbandon,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,
@@ -505,7 +505,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 		a.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("session.spotlight_set"),
+			Type:         commandTypeSessionSpotlightSet,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,
@@ -571,7 +571,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 		a.stores.Applier(),
 		command.Command{
 			CampaignID:   campaignID,
-			Type:         command.Type("session.spotlight_clear"),
+			Type:         commandTypeSessionSpotlightClear,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,

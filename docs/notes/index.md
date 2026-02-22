@@ -8,4 +8,4 @@ has_children: true
 
 Short-lived engineering notes and checklists.
 
-No short-lived notes are currently active.
+- [2026-02 Newcomer Refactor Program](2026-02-21-newcomer-refactor-program.md)

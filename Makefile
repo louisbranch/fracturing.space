@@ -1,6 +1,6 @@
 PROTO_DIR := api/proto
 GEN_GO_DIR := api/gen/go
-COVER_EXCLUDE_REGEX := (api/gen/|_templ\.go|internal/services/admin/templates/|internal/services/game/storage/sqlite/db/|internal/services/auth/storage/sqlite/db/|internal/services/admin/storage/sqlite/db/|internal/tools/eventdocgen/|cmd/|internal/cmd/)
+COVER_EXCLUDE_REGEX := (api/gen/|_templ[.]go|internal/services/admin/templates/|internal/services/game/storage/sqlite/db/|internal/services/auth/storage/sqlite/db/|internal/services/admin/storage/sqlite/db/|internal/tools/eventdocgen/|cmd/|internal/cmd/)
 
 PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
@@ -9,7 +9,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-treemap test integration scenario scenario-missing-doc-check templ-generate event-catalog-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration scenario scenario-missing-doc-check templ-generate event-catalog-check docs-path-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -72,6 +72,12 @@ cover-treemap: cover
 test:
 	go test ./...
 
+test-unit:
+	go test ./...
+
+test-changed:
+	@bash ./scripts/test-changed.sh
+
 integration:
 	$(MAKE) event-catalog-check
 	go test -tags=integration ./...
@@ -81,6 +87,9 @@ scenario:
 
 scenario-missing-doc-check:
 	@bash ./scripts/check-scenario-missing-mechanics.sh
+
+docs-path-check:
+	@bash ./scripts/check-doc-paths.sh
 
 event-catalog-check:
 	@bash -euo pipefail -c 'go run ./internal/tools/eventdocgen >/dev/null 2>&1; git diff --exit-code -- docs/events/event-catalog.md docs/events/usage-map.md docs/events/command-catalog.md'

@@ -198,7 +198,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 			applier,
 			command.Command{
 				CampaignID:    campaignID,
-				Type:          command.Type("sys.daggerheart.character_state.patch"),
+				Type:          commandTypeDaggerheartCharacterStatePatch,
 				ActorType:     actorTypeForCommand,
 				ActorID:       actorID,
 				SessionID:     grpcmeta.SessionIDFromContext(ctx),
@@ -265,7 +265,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 					applier,
 					command.Command{
 						CampaignID:    campaignID,
-						Type:          command.Type("sys.daggerheart.condition.change"),
+						Type:          commandTypeDaggerheartConditionChange,
 						ActorType:     actorTypeForCommand,
 						ActorID:       actorID,
 						SessionID:     grpcmeta.SessionIDFromContext(ctx),
@@ -351,7 +351,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 			applier,
 			command.Command{
 				CampaignID:    campaignID,
-				Type:          command.Type("sys.daggerheart.gm_fear.set"),
+				Type:          commandTypeDaggerheartGMFearSet,
 				ActorType:     actorTypeForCommand,
 				ActorID:       actorID,
 				SessionID:     grpcmeta.SessionIDFromContext(ctx),
@@ -478,7 +478,7 @@ func applyStressVulnerableCondition(
 		stores.Applier(),
 		command.Command{
 			CampaignID:    campaignID,
-			Type:          command.Type("sys.daggerheart.condition.change"),
+			Type:          commandTypeDaggerheartConditionChange,
 			ActorType:     actorTypeForCommand,
 			ActorID:       actorID,
 			SessionID:     sessionID,

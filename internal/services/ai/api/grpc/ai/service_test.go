@@ -3,9 +3,6 @@ package ai
 import (
 	"context"
 	"errors"
-	"fmt"
-	"sort"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -13,387 +10,18 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/testkit/aifakes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-type fakeSealer struct {
-	sealErr error
-	openErr error
-}
-
-func (f *fakeSealer) Seal(value string) (string, error) {
-	if f.sealErr != nil {
-		return "", f.sealErr
-	}
-	return "enc:" + value, nil
-}
-
-func (f *fakeSealer) Open(sealed string) (string, error) {
-	if f.openErr != nil {
-		return "", f.openErr
-	}
-	const prefix = "enc:"
-	if len(sealed) >= len(prefix) && sealed[:len(prefix)] == prefix {
-		return sealed[len(prefix):], nil
-	}
-	return sealed, nil
-}
-
-type fakeStore struct {
-	credentials     map[string]storage.CredentialRecord
-	agents          map[string]storage.AgentRecord
-	accessRequests  map[string]storage.AccessRequestRecord
-	providerGrants  map[string]storage.ProviderGrantRecord
-	connectSessions map[string]storage.ProviderConnectSessionRecord
-	auditEvents     []storage.AuditEventRecord
-	auditEventNames []string
-
-	listAccessRequestsByRequesterErr   error
-	listAccessRequestsByRequesterCalls int
-	getApprovedInvokeAccessCalls       int
-}
+type fakeSealer = aifakes.Sealer
+type fakeStore = aifakes.Store
 
 func newFakeStore() *fakeStore {
-	return &fakeStore{
-		credentials:     make(map[string]storage.CredentialRecord),
-		agents:          make(map[string]storage.AgentRecord),
-		accessRequests:  make(map[string]storage.AccessRequestRecord),
-		providerGrants:  make(map[string]storage.ProviderGrantRecord),
-		connectSessions: make(map[string]storage.ProviderConnectSessionRecord),
-	}
-}
-
-func (s *fakeStore) PutCredential(_ context.Context, record storage.CredentialRecord) error {
-	s.credentials[record.ID] = record
-	return nil
-}
-
-func (s *fakeStore) GetCredential(_ context.Context, credentialID string) (storage.CredentialRecord, error) {
-	rec, ok := s.credentials[credentialID]
-	if !ok {
-		return storage.CredentialRecord{}, storage.ErrNotFound
-	}
-	return rec, nil
-}
-
-func (s *fakeStore) ListCredentialsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (storage.CredentialPage, error) {
-	items := make([]storage.CredentialRecord, 0)
-	for _, rec := range s.credentials {
-		if rec.OwnerUserID == ownerUserID {
-			items = append(items, rec)
-		}
-	}
-	return storage.CredentialPage{Credentials: items}, nil
-}
-
-func (s *fakeStore) RevokeCredential(_ context.Context, ownerUserID string, credentialID string, revokedAt time.Time) error {
-	rec, ok := s.credentials[credentialID]
-	if !ok || rec.OwnerUserID != ownerUserID {
-		return storage.ErrNotFound
-	}
-	rec.Status = "revoked"
-	rec.RevokedAt = &revokedAt
-	rec.UpdatedAt = revokedAt
-	s.credentials[credentialID] = rec
-	return nil
-}
-
-func (s *fakeStore) PutAgent(_ context.Context, record storage.AgentRecord) error {
-	s.agents[record.ID] = record
-	return nil
-}
-
-func (s *fakeStore) GetAgent(_ context.Context, agentID string) (storage.AgentRecord, error) {
-	rec, ok := s.agents[agentID]
-	if !ok {
-		return storage.AgentRecord{}, storage.ErrNotFound
-	}
-	return rec, nil
-}
-
-func (s *fakeStore) ListAgentsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (storage.AgentPage, error) {
-	items := make([]storage.AgentRecord, 0)
-	for _, rec := range s.agents {
-		if rec.OwnerUserID == ownerUserID {
-			items = append(items, rec)
-		}
-	}
-	return storage.AgentPage{Agents: items}, nil
-}
-
-func (s *fakeStore) DeleteAgent(_ context.Context, ownerUserID string, agentID string) error {
-	rec, ok := s.agents[agentID]
-	if !ok || rec.OwnerUserID != ownerUserID {
-		return storage.ErrNotFound
-	}
-	delete(s.agents, agentID)
-	return nil
-}
-
-func (s *fakeStore) PutAccessRequest(_ context.Context, record storage.AccessRequestRecord) error {
-	s.accessRequests[record.ID] = record
-	return nil
-}
-
-func (s *fakeStore) GetAccessRequest(_ context.Context, accessRequestID string) (storage.AccessRequestRecord, error) {
-	rec, ok := s.accessRequests[accessRequestID]
-	if !ok {
-		return storage.AccessRequestRecord{}, storage.ErrNotFound
-	}
-	return rec, nil
-}
-
-func (s *fakeStore) ListAccessRequestsByRequester(_ context.Context, requesterUserID string, _ int, _ string) (storage.AccessRequestPage, error) {
-	s.listAccessRequestsByRequesterCalls++
-	if s.listAccessRequestsByRequesterErr != nil {
-		return storage.AccessRequestPage{}, s.listAccessRequestsByRequesterErr
-	}
-	items := make([]storage.AccessRequestRecord, 0)
-	for _, rec := range s.accessRequests {
-		if rec.RequesterUserID == requesterUserID {
-			items = append(items, rec)
-		}
-	}
-	return storage.AccessRequestPage{AccessRequests: items}, nil
-}
-
-func (s *fakeStore) GetApprovedInvokeAccessByRequesterForAgent(_ context.Context, requesterUserID string, ownerUserID string, agentID string) (storage.AccessRequestRecord, error) {
-	s.getApprovedInvokeAccessCalls++
-	requesterUserID = strings.TrimSpace(requesterUserID)
-	ownerUserID = strings.TrimSpace(ownerUserID)
-	agentID = strings.TrimSpace(agentID)
-	for _, rec := range s.accessRequests {
-		if strings.TrimSpace(rec.RequesterUserID) != requesterUserID {
-			continue
-		}
-		if strings.TrimSpace(rec.OwnerUserID) != ownerUserID {
-			continue
-		}
-		if strings.TrimSpace(rec.AgentID) != agentID {
-			continue
-		}
-		if strings.ToLower(strings.TrimSpace(rec.Scope)) != "invoke" {
-			continue
-		}
-		if strings.ToLower(strings.TrimSpace(rec.Status)) != "approved" {
-			continue
-		}
-		return rec, nil
-	}
-	return storage.AccessRequestRecord{}, storage.ErrNotFound
-}
-
-func (s *fakeStore) ListApprovedInvokeAccessRequestsByRequester(_ context.Context, requesterUserID string, _ int, _ string) (storage.AccessRequestPage, error) {
-	requesterUserID = strings.TrimSpace(requesterUserID)
-	items := make([]storage.AccessRequestRecord, 0)
-	for _, rec := range s.accessRequests {
-		if strings.TrimSpace(rec.RequesterUserID) != requesterUserID {
-			continue
-		}
-		if strings.ToLower(strings.TrimSpace(rec.Scope)) != "invoke" {
-			continue
-		}
-		if strings.ToLower(strings.TrimSpace(rec.Status)) != "approved" {
-			continue
-		}
-		items = append(items, rec)
-	}
-	return storage.AccessRequestPage{AccessRequests: items}, nil
-}
-
-func (s *fakeStore) ListAccessRequestsByOwner(_ context.Context, ownerUserID string, _ int, _ string) (storage.AccessRequestPage, error) {
-	items := make([]storage.AccessRequestRecord, 0)
-	for _, rec := range s.accessRequests {
-		if rec.OwnerUserID == ownerUserID {
-			items = append(items, rec)
-		}
-	}
-	return storage.AccessRequestPage{AccessRequests: items}, nil
-}
-
-func (s *fakeStore) ReviewAccessRequest(_ context.Context, ownerUserID string, accessRequestID string, status string, reviewerUserID string, reviewNote string, reviewedAt time.Time) error {
-	rec, ok := s.accessRequests[accessRequestID]
-	if !ok || rec.OwnerUserID != ownerUserID {
-		return storage.ErrNotFound
-	}
-	if rec.Status != "pending" {
-		return storage.ErrConflict
-	}
-	rec.Status = status
-	rec.ReviewerUserID = reviewerUserID
-	rec.ReviewNote = reviewNote
-	rec.UpdatedAt = reviewedAt
-	rec.ReviewedAt = &reviewedAt
-	s.accessRequests[accessRequestID] = rec
-	return nil
-}
-
-func (s *fakeStore) RevokeAccessRequest(_ context.Context, ownerUserID string, accessRequestID string, status string, reviewerUserID string, reviewNote string, revokedAt time.Time) error {
-	rec, ok := s.accessRequests[accessRequestID]
-	if !ok || rec.OwnerUserID != ownerUserID {
-		return storage.ErrNotFound
-	}
-	if rec.Status != "approved" {
-		return storage.ErrConflict
-	}
-	rec.Status = status
-	rec.ReviewerUserID = reviewerUserID
-	rec.ReviewNote = reviewNote
-	rec.UpdatedAt = revokedAt
-	s.accessRequests[accessRequestID] = rec
-	return nil
-}
-
-func (s *fakeStore) PutAuditEvent(_ context.Context, record storage.AuditEventRecord) error {
-	if strings.TrimSpace(record.ID) == "" {
-		record.ID = fmt.Sprintf("%d", len(s.auditEvents)+1)
-	}
-	s.auditEvents = append(s.auditEvents, record)
-	s.auditEventNames = append(s.auditEventNames, record.EventName)
-	return nil
-}
-
-func (s *fakeStore) ListAuditEventsByOwner(_ context.Context, ownerUserID string, pageSize int, pageToken string, filter storage.AuditEventFilter) (storage.AuditEventPage, error) {
-	if pageSize <= 0 {
-		return storage.AuditEventPage{}, errors.New("page size must be greater than zero")
-	}
-	eventName := strings.TrimSpace(filter.EventName)
-	agentID := strings.TrimSpace(filter.AgentID)
-	var (
-		createdAfter  *time.Time
-		createdBefore *time.Time
-	)
-	if filter.CreatedAfter != nil {
-		timestamp := filter.CreatedAfter.UTC()
-		createdAfter = &timestamp
-	}
-	if filter.CreatedBefore != nil {
-		timestamp := filter.CreatedBefore.UTC()
-		createdBefore = &timestamp
-	}
-	items := make([]storage.AuditEventRecord, 0, len(s.auditEvents))
-	for _, rec := range s.auditEvents {
-		if rec.OwnerUserID == ownerUserID {
-			if eventName != "" && rec.EventName != eventName {
-				continue
-			}
-			if agentID != "" && rec.AgentID != agentID {
-				continue
-			}
-			if createdAfter != nil && rec.CreatedAt.Before(*createdAfter) {
-				continue
-			}
-			if createdBefore != nil && rec.CreatedAt.After(*createdBefore) {
-				continue
-			}
-			items = append(items, rec)
-		}
-	}
-	sort.Slice(items, func(i int, j int) bool {
-		return compareAuditEventID(items[i].ID, items[j].ID) < 0
-	})
-	start := 0
-	pageToken = strings.TrimSpace(pageToken)
-	if pageToken != "" {
-		start = len(items)
-		for idx, rec := range items {
-			if compareAuditEventID(rec.ID, pageToken) > 0 {
-				start = idx
-				break
-			}
-		}
-	}
-	if start >= len(items) {
-		return storage.AuditEventPage{AuditEvents: []storage.AuditEventRecord{}}, nil
-	}
-
-	end := start + pageSize
-	nextPageToken := ""
-	if end < len(items) {
-		nextPageToken = items[end-1].ID
-	} else {
-		end = len(items)
-	}
-	return storage.AuditEventPage{
-		AuditEvents:   items[start:end],
-		NextPageToken: nextPageToken,
-	}, nil
-}
-
-func compareAuditEventID(left string, right string) int {
-	leftID, leftErr := strconv.ParseInt(strings.TrimSpace(left), 10, 64)
-	rightID, rightErr := strconv.ParseInt(strings.TrimSpace(right), 10, 64)
-	if leftErr == nil && rightErr == nil {
-		if leftID < rightID {
-			return -1
-		}
-		if leftID > rightID {
-			return 1
-		}
-		return 0
-	}
-	return strings.Compare(strings.TrimSpace(left), strings.TrimSpace(right))
-}
-
-func (s *fakeStore) PutProviderGrant(_ context.Context, record storage.ProviderGrantRecord) error {
-	s.providerGrants[record.ID] = record
-	return nil
-}
-
-func (s *fakeStore) GetProviderGrant(_ context.Context, providerGrantID string) (storage.ProviderGrantRecord, error) {
-	rec, ok := s.providerGrants[providerGrantID]
-	if !ok {
-		return storage.ProviderGrantRecord{}, storage.ErrNotFound
-	}
-	return rec, nil
-}
-
-func (s *fakeStore) ListProviderGrantsByOwner(_ context.Context, ownerUserID string, _ int, _ string, filter storage.ProviderGrantFilter) (storage.ProviderGrantPage, error) {
-	provider := strings.ToLower(strings.TrimSpace(filter.Provider))
-	status := strings.ToLower(strings.TrimSpace(filter.Status))
-	items := make([]storage.ProviderGrantRecord, 0)
-	for _, rec := range s.providerGrants {
-		if rec.OwnerUserID == ownerUserID {
-			if provider != "" && !strings.EqualFold(strings.TrimSpace(rec.Provider), provider) {
-				continue
-			}
-			if status != "" && !strings.EqualFold(strings.TrimSpace(rec.Status), status) {
-				continue
-			}
-			items = append(items, rec)
-		}
-	}
-	return storage.ProviderGrantPage{ProviderGrants: items}, nil
-}
-
-func (s *fakeStore) RevokeProviderGrant(_ context.Context, ownerUserID string, providerGrantID string, revokedAt time.Time) error {
-	rec, ok := s.providerGrants[providerGrantID]
-	if !ok || rec.OwnerUserID != ownerUserID {
-		return storage.ErrNotFound
-	}
-	rec.Status = "revoked"
-	rec.RevokedAt = &revokedAt
-	rec.UpdatedAt = revokedAt
-	s.providerGrants[providerGrantID] = rec
-	return nil
-}
-
-func (s *fakeStore) UpdateProviderGrantToken(_ context.Context, ownerUserID string, providerGrantID string, tokenCiphertext string, refreshedAt time.Time, expiresAt *time.Time, status string, lastRefreshError string) error {
-	rec, ok := s.providerGrants[providerGrantID]
-	if !ok || rec.OwnerUserID != ownerUserID {
-		return storage.ErrNotFound
-	}
-	rec.TokenCiphertext = tokenCiphertext
-	rec.UpdatedAt = refreshedAt
-	rec.LastRefreshedAt = &refreshedAt
-	rec.ExpiresAt = expiresAt
-	rec.Status = status
-	rec.LastRefreshError = lastRefreshError
-	s.providerGrants[providerGrantID] = rec
-	return nil
+	return aifakes.NewStore()
 }
 
 type fakeProviderOAuthAdapter struct {
@@ -454,31 +82,6 @@ func (f *fakeProviderInvocationAdapter) Invoke(_ context.Context, input Provider
 	return f.invokeResult, nil
 }
 
-func (s *fakeStore) PutProviderConnectSession(_ context.Context, record storage.ProviderConnectSessionRecord) error {
-	s.connectSessions[record.ID] = record
-	return nil
-}
-
-func (s *fakeStore) GetProviderConnectSession(_ context.Context, connectSessionID string) (storage.ProviderConnectSessionRecord, error) {
-	rec, ok := s.connectSessions[connectSessionID]
-	if !ok {
-		return storage.ProviderConnectSessionRecord{}, storage.ErrNotFound
-	}
-	return rec, nil
-}
-
-func (s *fakeStore) CompleteProviderConnectSession(_ context.Context, ownerUserID string, connectSessionID string, completedAt time.Time) error {
-	rec, ok := s.connectSessions[connectSessionID]
-	if !ok || rec.OwnerUserID != ownerUserID || rec.Status != "pending" {
-		return storage.ErrNotFound
-	}
-	rec.Status = "completed"
-	rec.CompletedAt = &completedAt
-	rec.UpdatedAt = completedAt
-	s.connectSessions[connectSessionID] = rec
-	return nil
-}
-
 func TestCreateCredentialRequiresUserID(t *testing.T) {
 	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.CreateCredential(context.Background(), &aiv1.CreateCredentialRequest{
@@ -508,7 +111,7 @@ func TestCreateCredentialEncryptsSecret(t *testing.T) {
 		t.Fatalf("credential id = %q, want %q", resp.GetCredential().GetId(), "cred-1")
 	}
 
-	stored := store.credentials["cred-1"]
+	stored := store.Credentials["cred-1"]
 	if stored.SecretCiphertext != "enc:sk-1" {
 		t.Fatalf("stored ciphertext = %q, want %q", stored.SecretCiphertext, "enc:sk-1")
 	}
@@ -516,17 +119,17 @@ func TestCreateCredentialEncryptsSecret(t *testing.T) {
 
 func TestListCredentialsReturnsOwnerRecords(t *testing.T) {
 	store := newFakeStore()
-	store.credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	store.credentials["cred-2"] = storage.CredentialRecord{ID: "cred-2", OwnerUserID: "user-2", Provider: "openai", Label: "B", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.Credentials["cred-2"] = storage.CredentialRecord{ID: "cred-2", OwnerUserID: "user-2", Provider: "openai", Label: "B", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
 	svc := NewService(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListCredentials(ctx, &aiv1.ListCredentialsRequest{PageSize: 10})
 	if err != nil {
-		t.Fatalf("list credentials: %v", err)
+		t.Fatalf("list Credentials: %v", err)
 	}
 	if len(resp.GetCredentials()) != 1 {
-		t.Fatalf("credentials len = %d, want 1", len(resp.GetCredentials()))
+		t.Fatalf("Credentials len = %d, want 1", len(resp.GetCredentials()))
 	}
 	if resp.GetCredentials()[0].GetId() != "cred-1" {
 		t.Fatalf("credential id = %q, want %q", resp.GetCredentials()[0].GetId(), "cred-1")
@@ -535,7 +138,7 @@ func TestListCredentialsReturnsOwnerRecords(t *testing.T) {
 
 func TestRevokeCredential(t *testing.T) {
 	store := newFakeStore()
-	store.credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
 	svc := NewService(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 22, 55, 0, 0, time.UTC) }
@@ -552,7 +155,7 @@ func TestRevokeCredential(t *testing.T) {
 
 func TestCreateAgentRequiresActiveOwnedCredential(t *testing.T) {
 	store := newFakeStore()
-	store.credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "revoked", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "revoked", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
 	svc := NewService(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
@@ -567,7 +170,7 @@ func TestCreateAgentRequiresActiveOwnedCredential(t *testing.T) {
 
 func TestCreateAgentSuccess(t *testing.T) {
 	store := newFakeStore()
-	store.credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
 	svc := NewService(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 22, 57, 0, 0, time.UTC) }
@@ -590,7 +193,7 @@ func TestCreateAgentSuccess(t *testing.T) {
 
 func TestCreateAgentWithProviderGrantSuccess(t *testing.T) {
 	store := newFakeStore()
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
 		Provider:        "openai",
@@ -618,7 +221,7 @@ func TestCreateAgentWithProviderGrantSuccess(t *testing.T) {
 	if resp.GetAgent().GetId() != "agent-1" {
 		t.Fatalf("agent id = %q, want %q", resp.GetAgent().GetId(), "agent-1")
 	}
-	stored := store.agents["agent-1"]
+	stored := store.Agents["agent-1"]
 	if stored.ProviderGrantID != "grant-1" {
 		t.Fatalf("provider_grant_id = %q, want %q", stored.ProviderGrantID, "grant-1")
 	}
@@ -629,8 +232,8 @@ func TestCreateAgentWithProviderGrantSuccess(t *testing.T) {
 
 func TestCreateAgentRejectsMultipleAuthReferences(t *testing.T) {
 	store := newFakeStore()
-	store.credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
 		Provider:        "openai",
@@ -656,7 +259,7 @@ func TestCreateAgentRejectsMultipleAuthReferences(t *testing.T) {
 func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
 		Name:            "Narrator",
@@ -668,7 +271,7 @@ func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.agents["agent-2"] = storage.AgentRecord{
+	store.Agents["agent-2"] = storage.AgentRecord{
 		ID:              "agent-2",
 		OwnerUserID:     "user-2",
 		Name:            "Planner",
@@ -685,10 +288,10 @@ func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListAgents(ctx, &aiv1.ListAgentsRequest{PageSize: 10})
 	if err != nil {
-		t.Fatalf("list agents: %v", err)
+		t.Fatalf("list Agents: %v", err)
 	}
 	if len(resp.GetAgents()) != 1 {
-		t.Fatalf("agents len = %d, want 1", len(resp.GetAgents()))
+		t.Fatalf("Agents len = %d, want 1", len(resp.GetAgents()))
 	}
 	if got := resp.GetAgents()[0].GetId(); got != "agent-1" {
 		t.Fatalf("agent id = %q, want %q", got, "agent-1")
@@ -698,7 +301,7 @@ func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-own-1"] = storage.AgentRecord{
+	store.Agents["agent-own-1"] = storage.AgentRecord{
 		ID:           "agent-own-1",
 		OwnerUserID:  "user-1",
 		Name:         "Owner Agent",
@@ -709,7 +312,7 @@ func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.agents["agent-shared-1"] = storage.AgentRecord{
+	store.Agents["agent-shared-1"] = storage.AgentRecord{
 		ID:           "agent-shared-1",
 		OwnerUserID:  "user-owner",
 		Name:         "Shared Agent",
@@ -720,7 +323,7 @@ func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.accessRequests["request-approved"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-approved"] = storage.AccessRequestRecord{
 		ID:              "request-approved",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "user-owner",
@@ -735,10 +338,10 @@ func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListAccessibleAgents(ctx, &aiv1.ListAccessibleAgentsRequest{PageSize: 10})
 	if err != nil {
-		t.Fatalf("list accessible agents: %v", err)
+		t.Fatalf("list accessible Agents: %v", err)
 	}
 	if len(resp.GetAgents()) != 2 {
-		t.Fatalf("agents len = %d, want 2", len(resp.GetAgents()))
+		t.Fatalf("Agents len = %d, want 2", len(resp.GetAgents()))
 	}
 	got := []string{resp.GetAgents()[0].GetId(), resp.GetAgents()[1].GetId()}
 	want := []string{"agent-own-1", "agent-shared-1"}
@@ -752,7 +355,7 @@ func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-approved"] = storage.AgentRecord{
+	store.Agents["agent-approved"] = storage.AgentRecord{
 		ID:           "agent-approved",
 		OwnerUserID:  "owner-1",
 		Name:         "Approved",
@@ -763,7 +366,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.agents["agent-pending"] = storage.AgentRecord{
+	store.Agents["agent-pending"] = storage.AgentRecord{
 		ID:           "agent-pending",
 		OwnerUserID:  "owner-1",
 		Name:         "Pending",
@@ -774,7 +377,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.agents["agent-denied"] = storage.AgentRecord{
+	store.Agents["agent-denied"] = storage.AgentRecord{
 		ID:           "agent-denied",
 		OwnerUserID:  "owner-1",
 		Name:         "Denied",
@@ -785,7 +388,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.accessRequests["request-approved"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-approved"] = storage.AccessRequestRecord{
 		ID:              "request-approved",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -795,7 +398,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.accessRequests["request-pending"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-pending"] = storage.AccessRequestRecord{
 		ID:              "request-pending",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -805,7 +408,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.accessRequests["request-denied"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-denied"] = storage.AccessRequestRecord{
 		ID:              "request-denied",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -815,7 +418,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.accessRequests["request-stale-agent"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-stale-agent"] = storage.AccessRequestRecord{
 		ID:              "request-stale-agent",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -825,7 +428,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.accessRequests["request-wrong-owner"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-wrong-owner"] = storage.AccessRequestRecord{
 		ID:              "request-wrong-owner",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-other",
@@ -840,10 +443,10 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListAccessibleAgents(ctx, &aiv1.ListAccessibleAgentsRequest{PageSize: 10})
 	if err != nil {
-		t.Fatalf("list accessible agents: %v", err)
+		t.Fatalf("list accessible Agents: %v", err)
 	}
 	if len(resp.GetAgents()) != 1 {
-		t.Fatalf("agents len = %d, want 1", len(resp.GetAgents()))
+		t.Fatalf("Agents len = %d, want 1", len(resp.GetAgents()))
 	}
 	if got := resp.GetAgents()[0].GetId(); got != "agent-approved" {
 		t.Fatalf("agent id = %q, want %q", got, "agent-approved")
@@ -859,7 +462,7 @@ func TestListAccessibleAgentsRequiresUserID(t *testing.T) {
 func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-a"] = storage.AgentRecord{
+	store.Agents["agent-a"] = storage.AgentRecord{
 		ID:           "agent-a",
 		OwnerUserID:  "user-1",
 		Name:         "A",
@@ -870,7 +473,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.agents["agent-b"] = storage.AgentRecord{
+	store.Agents["agent-b"] = storage.AgentRecord{
 		ID:           "agent-b",
 		OwnerUserID:  "owner-1",
 		Name:         "B",
@@ -881,7 +484,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.agents["agent-c"] = storage.AgentRecord{
+	store.Agents["agent-c"] = storage.AgentRecord{
 		ID:           "agent-c",
 		OwnerUserID:  "owner-2",
 		Name:         "C",
@@ -892,7 +495,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.accessRequests["request-b"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-b"] = storage.AccessRequestRecord{
 		ID:              "request-b",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -902,7 +505,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.accessRequests["request-c"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-c"] = storage.AccessRequestRecord{
 		ID:              "request-c",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-2",
@@ -918,10 +521,10 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 
 	first, err := svc.ListAccessibleAgents(ctx, &aiv1.ListAccessibleAgentsRequest{PageSize: 2})
 	if err != nil {
-		t.Fatalf("list accessible agents first page: %v", err)
+		t.Fatalf("list accessible Agents first page: %v", err)
 	}
 	if len(first.GetAgents()) != 2 {
-		t.Fatalf("first page agents len = %d, want 2", len(first.GetAgents()))
+		t.Fatalf("first page Agents len = %d, want 2", len(first.GetAgents()))
 	}
 	if got := first.GetAgents()[0].GetId(); got != "agent-a" {
 		t.Fatalf("first page agent[0] = %q, want %q", got, "agent-a")
@@ -938,10 +541,10 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 		PageToken: first.GetNextPageToken(),
 	})
 	if err != nil {
-		t.Fatalf("list accessible agents second page: %v", err)
+		t.Fatalf("list accessible Agents second page: %v", err)
 	}
 	if len(second.GetAgents()) != 1 {
-		t.Fatalf("second page agents len = %d, want 1", len(second.GetAgents()))
+		t.Fatalf("second page Agents len = %d, want 1", len(second.GetAgents()))
 	}
 	if got := second.GetAgents()[0].GetId(); got != "agent-c" {
 		t.Fatalf("second page agent[0] = %q, want %q", got, "agent-c")
@@ -976,7 +579,7 @@ func TestGetAccessibleAgentMissingAgent(t *testing.T) {
 func TestGetAccessibleAgentOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 30, 0, 0, time.UTC)
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Owner Agent",
@@ -1002,7 +605,7 @@ func TestGetAccessibleAgentOwner(t *testing.T) {
 func TestGetAccessibleAgentApprovedRequester(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 30, 0, 0, time.UTC)
-	store.agents["agent-shared"] = storage.AgentRecord{
+	store.Agents["agent-shared"] = storage.AgentRecord{
 		ID:           "agent-shared",
 		OwnerUserID:  "owner-1",
 		Name:         "Shared Agent",
@@ -1013,7 +616,7 @@ func TestGetAccessibleAgentApprovedRequester(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -1038,7 +641,7 @@ func TestGetAccessibleAgentApprovedRequester(t *testing.T) {
 func TestGetAccessibleAgentPendingRequesterHidden(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 30, 0, 0, time.UTC)
-	store.agents["agent-shared"] = storage.AgentRecord{
+	store.Agents["agent-shared"] = storage.AgentRecord{
 		ID:           "agent-shared",
 		OwnerUserID:  "owner-1",
 		Name:         "Shared Agent",
@@ -1049,7 +652,7 @@ func TestGetAccessibleAgentPendingRequesterHidden(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -1069,7 +672,7 @@ func TestGetAccessibleAgentPendingRequesterHidden(t *testing.T) {
 func TestUpdateAgentSwitchesCredentialToProviderGrant(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 10, 0, 0, time.UTC)
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
 		Name:            "Narrator",
@@ -1081,7 +684,7 @@ func TestUpdateAgentSwitchesCredentialToProviderGrant(t *testing.T) {
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Hour),
 	}
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
 		Provider:        "openai",
@@ -1117,7 +720,7 @@ func TestUpdateAgentSwitchesCredentialToProviderGrant(t *testing.T) {
 func TestDeleteAgentRemovesOwnedRecord(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
 		Name:            "Narrator",
@@ -1135,13 +738,13 @@ func TestDeleteAgentRemovesOwnedRecord(t *testing.T) {
 	if _, err := svc.DeleteAgent(ctx, &aiv1.DeleteAgentRequest{AgentId: "agent-1"}); err != nil {
 		t.Fatalf("delete agent: %v", err)
 	}
-	if _, ok := store.agents["agent-1"]; ok {
+	if _, ok := store.Agents["agent-1"]; ok {
 		t.Fatal("agent should be deleted")
 	}
 }
 
 func TestCreateCredentialSealError(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{sealErr: errors.New("seal fail")})
+	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{SealErr: errors.New("seal fail")})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateCredential(ctx, &aiv1.CreateCredentialRequest{
 		Provider: aiv1.Provider_PROVIDER_OPENAI,
@@ -1189,7 +792,7 @@ func TestInvokeAgentRequiresInput(t *testing.T) {
 
 func TestInvokeAgentRequiresActiveOwnedCredential(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Narrator",
@@ -1200,7 +803,7 @@ func TestInvokeAgentRequiresActiveOwnedCredential(t *testing.T) {
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -1222,7 +825,7 @@ func TestInvokeAgentRequiresActiveOwnedCredential(t *testing.T) {
 
 func TestInvokeAgentProviderGrantPathWithoutCredentialStore(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
 		Name:            "Narrator",
@@ -1233,7 +836,7 @@ func TestInvokeAgentProviderGrantPathWithoutCredentialStore(t *testing.T) {
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
 		Provider:        "openai",
@@ -1260,7 +863,7 @@ func TestInvokeAgentProviderGrantPathWithoutCredentialStore(t *testing.T) {
 
 func TestInvokeAgentCredentialPathWithoutCredentialStore(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Narrator",
@@ -1287,7 +890,7 @@ func TestInvokeAgentCredentialPathWithoutCredentialStore(t *testing.T) {
 
 func TestInvokeAgentSuccess(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Narrator",
@@ -1298,7 +901,7 @@ func TestInvokeAgentSuccess(t *testing.T) {
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -1343,7 +946,7 @@ func TestInvokeAgentWithProviderGrantRefreshesNearExpiry(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
 	expiresAt := now.Add(30 * time.Second)
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
 		Name:            "Narrator",
@@ -1355,7 +958,7 @@ func TestInvokeAgentWithProviderGrantRefreshesNearExpiry(t *testing.T) {
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -1407,7 +1010,7 @@ func TestInvokeAgentWithProviderGrantRefreshesNearExpiry(t *testing.T) {
 func TestInvokeAgentWithRefreshFailedGrantWithoutRefreshSupport(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
 		Name:            "Narrator",
@@ -1418,7 +1021,7 @@ func TestInvokeAgentWithRefreshFailedGrantWithoutRefreshSupport(t *testing.T) {
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Hour),
 	}
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -1447,7 +1050,7 @@ func TestInvokeAgentWithExpiredGrantWithoutRefreshSupport(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
 	expiresAt := now.Add(-time.Minute)
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
 		Name:            "Narrator",
@@ -1458,7 +1061,7 @@ func TestInvokeAgentWithExpiredGrantWithoutRefreshSupport(t *testing.T) {
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Hour),
 	}
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -1491,7 +1094,7 @@ func TestInvokeAgentWithExpiredGrantWithoutRefreshSupport(t *testing.T) {
 func TestInvokeAgentWithRefreshFailedGrantRefreshesAndInvokes(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
 		Name:            "Narrator",
@@ -1502,7 +1105,7 @@ func TestInvokeAgentWithRefreshFailedGrantRefreshesAndInvokes(t *testing.T) {
 		CreatedAt:       now.Add(-time.Hour),
 		UpdatedAt:       now.Add(-time.Hour),
 	}
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -1542,7 +1145,7 @@ func TestInvokeAgentWithRefreshFailedGrantRefreshesAndInvokes(t *testing.T) {
 func TestInvokeAgentWithProviderGrantMissingAccessToken(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
 		Name:            "Narrator",
@@ -1553,7 +1156,7 @@ func TestInvokeAgentWithProviderGrantMissingAccessToken(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -1589,7 +1192,7 @@ func TestInvokeAgentMissingAgentIsNotFound(t *testing.T) {
 
 func TestInvokeAgentHiddenForNonOwner(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-2",
 		Name:         "Narrator",
@@ -1613,7 +1216,7 @@ func TestInvokeAgentHiddenForNonOwner(t *testing.T) {
 func TestInvokeAgentApprovedRequesterCanInvokeOwnerAgent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
 		Name:         "Narrator",
@@ -1624,7 +1227,7 @@ func TestInvokeAgentApprovedRequesterCanInvokeOwnerAgent(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
 		Provider:         "openai",
@@ -1634,7 +1237,7 @@ func TestInvokeAgentApprovedRequesterCanInvokeOwnerAgent(t *testing.T) {
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
@@ -1670,7 +1273,7 @@ func TestInvokeAgentApprovedRequesterCanInvokeOwnerAgent(t *testing.T) {
 func TestInvokeAgentApprovedRequesterWritesAuditEvent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
 		Name:         "Narrator",
@@ -1681,7 +1284,7 @@ func TestInvokeAgentApprovedRequesterWritesAuditEvent(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
 		Provider:         "openai",
@@ -1691,7 +1294,7 @@ func TestInvokeAgentApprovedRequesterWritesAuditEvent(t *testing.T) {
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
@@ -1714,10 +1317,10 @@ func TestInvokeAgentApprovedRequesterWritesAuditEvent(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("invoke agent: %v", err)
 	}
-	if len(store.auditEventNames) != 1 {
-		t.Fatalf("audit events len = %d, want 1", len(store.auditEventNames))
+	if len(store.AuditEventNames) != 1 {
+		t.Fatalf("audit events len = %d, want 1", len(store.AuditEventNames))
 	}
-	if got := store.auditEventNames[0]; got != "agent.invoke.shared" {
+	if got := store.AuditEventNames[0]; got != "agent.invoke.shared" {
 		t.Fatalf("audit event = %q, want %q", got, "agent.invoke.shared")
 	}
 }
@@ -1725,8 +1328,8 @@ func TestInvokeAgentApprovedRequesterWritesAuditEvent(t *testing.T) {
 func TestInvokeAgentSharedAccessUsesTargetedLookup(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.listAccessRequestsByRequesterErr = errors.New("unexpected requester-wide list call")
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.ListAccessRequestsByRequesterErr = errors.New("unexpected requester-wide list call")
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "owner-1",
 		Name:         "Narrator",
@@ -1737,7 +1340,7 @@ func TestInvokeAgentSharedAccessUsesTargetedLookup(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "owner-1",
 		Provider:         "openai",
@@ -1747,7 +1350,7 @@ func TestInvokeAgentSharedAccessUsesTargetedLookup(t *testing.T) {
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -1775,10 +1378,10 @@ func TestInvokeAgentSharedAccessUsesTargetedLookup(t *testing.T) {
 	if got := resp.GetOutputText(); got != "Hello from shared access" {
 		t.Fatalf("output_text = %q, want %q", got, "Hello from shared access")
 	}
-	if store.listAccessRequestsByRequesterCalls != 0 {
-		t.Fatalf("requester-wide list calls = %d, want 0", store.listAccessRequestsByRequesterCalls)
+	if store.ListAccessRequestsByRequesterCalls != 0 {
+		t.Fatalf("requester-wide list calls = %d, want 0", store.ListAccessRequestsByRequesterCalls)
 	}
-	if store.getApprovedInvokeAccessCalls == 0 {
+	if store.GetApprovedInvokeAccessCalls == 0 {
 		t.Fatal("expected targeted approved invoke lookup to be used")
 	}
 }
@@ -1786,7 +1389,7 @@ func TestInvokeAgentSharedAccessUsesTargetedLookup(t *testing.T) {
 func TestInvokeAgentApprovedRequesterDeniedAfterRevocation(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
 		Name:         "Narrator",
@@ -1797,7 +1400,7 @@ func TestInvokeAgentApprovedRequesterDeniedAfterRevocation(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
 		Provider:         "openai",
@@ -1807,7 +1410,7 @@ func TestInvokeAgentApprovedRequesterDeniedAfterRevocation(t *testing.T) {
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
@@ -1841,7 +1444,7 @@ func TestInvokeAgentApprovedRequesterDeniedAfterRevocation(t *testing.T) {
 func TestInvokeAgentPendingRequesterCannotInvokeOwnerAgent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
 		Name:         "Narrator",
@@ -1852,7 +1455,7 @@ func TestInvokeAgentPendingRequesterCannotInvokeOwnerAgent(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
 		Provider:         "openai",
@@ -1862,7 +1465,7 @@ func TestInvokeAgentPendingRequesterCannotInvokeOwnerAgent(t *testing.T) {
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
@@ -1885,7 +1488,7 @@ func TestInvokeAgentPendingRequesterCannotInvokeOwnerAgent(t *testing.T) {
 func TestInvokeAgentDeniedRequesterCannotInvokeOwnerAgent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
 		Name:         "Narrator",
@@ -1896,7 +1499,7 @@ func TestInvokeAgentDeniedRequesterCannotInvokeOwnerAgent(t *testing.T) {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-owner",
 		Provider:         "openai",
@@ -1906,7 +1509,7 @@ func TestInvokeAgentDeniedRequesterCannotInvokeOwnerAgent(t *testing.T) {
 		CreatedAt:        now,
 		UpdatedAt:        now,
 	}
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-requester",
 		OwnerUserID:     "user-owner",
@@ -1928,7 +1531,7 @@ func TestInvokeAgentDeniedRequesterCannotInvokeOwnerAgent(t *testing.T) {
 
 func TestInvokeAgentMissingCredentialIsFailedPrecondition(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Narrator",
@@ -1951,7 +1554,7 @@ func TestInvokeAgentMissingCredentialIsFailedPrecondition(t *testing.T) {
 
 func TestInvokeAgentProviderInvokeError(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Narrator",
@@ -1962,7 +1565,7 @@ func TestInvokeAgentProviderInvokeError(t *testing.T) {
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -1986,7 +1589,7 @@ func TestInvokeAgentProviderInvokeError(t *testing.T) {
 
 func TestInvokeAgentEmptyProviderOutputIsInternal(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Narrator",
@@ -1997,7 +1600,7 @@ func TestInvokeAgentEmptyProviderOutputIsInternal(t *testing.T) {
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -2023,7 +1626,7 @@ func TestInvokeAgentEmptyProviderOutputIsInternal(t *testing.T) {
 
 func TestInvokeAgentAdapterUnavailable(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Narrator",
@@ -2034,7 +1637,7 @@ func TestInvokeAgentAdapterUnavailable(t *testing.T) {
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -2058,7 +1661,7 @@ func TestInvokeAgentAdapterUnavailable(t *testing.T) {
 
 func TestInvokeAgentSecretOpenError(t *testing.T) {
 	store := newFakeStore()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Narrator",
@@ -2069,7 +1672,7 @@ func TestInvokeAgentSecretOpenError(t *testing.T) {
 		CreatedAt:    time.Now(),
 		UpdatedAt:    time.Now(),
 	}
-	store.credentials["cred-1"] = storage.CredentialRecord{
+	store.Credentials["cred-1"] = storage.CredentialRecord{
 		ID:               "cred-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -2080,7 +1683,7 @@ func TestInvokeAgentSecretOpenError(t *testing.T) {
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{openErr: errors.New("open fail")})
+	svc := NewService(store, store, &fakeSealer{OpenErr: errors.New("open fail")})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -2135,7 +1738,7 @@ func TestStartProviderConnectUsesS256CodeChallenge(t *testing.T) {
 		t.Fatalf("code challenge must not equal verifier: %q", got)
 	}
 
-	stored := store.connectSessions[resp.GetConnectSessionId()]
+	stored := store.ConnectSessions[resp.GetConnectSessionId()]
 	if got := stored.CodeVerifierCiphertext; got != "enc:"+codeVerifier {
 		t.Fatalf("stored code verifier ciphertext = %q, want %q", got, "enc:"+codeVerifier)
 	}
@@ -2176,7 +1779,7 @@ func TestFinishProviderConnectCreatesProviderGrant(t *testing.T) {
 	if finishResp.GetProviderGrant().GetId() != "grant-1" {
 		t.Fatalf("provider grant id = %q, want %q", finishResp.GetProviderGrant().GetId(), "grant-1")
 	}
-	stored := store.providerGrants["grant-1"]
+	stored := store.ProviderGrants["grant-1"]
 	if stored.TokenCiphertext != "enc:token:auth-code-1" {
 		t.Fatalf("stored token ciphertext = %q, want %q", stored.TokenCiphertext, "enc:token:auth-code-1")
 	}
@@ -2214,15 +1817,54 @@ func TestFinishProviderConnectDoesNotSealRawAuthorizationCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("finish provider connect: %v", err)
 	}
-	stored := store.providerGrants["grant-1"]
+	stored := store.ProviderGrants["grant-1"]
 	if stored.TokenCiphertext == "enc:auth-code-1" {
 		t.Fatalf("stored ciphertext should not seal raw authorization code: %q", stored.TokenCiphertext)
 	}
 }
 
+func TestFinishProviderConnectKeepsSessionPendingOnExchangeFailure(t *testing.T) {
+	store := newFakeStore()
+	svc := NewService(store, store, &fakeSealer{})
+	svc.providerOAuthAdapters[providergrant.ProviderOpenAI] = &fakeProviderOAuthAdapter{
+		exchangeErr: errors.New("exchange failed"),
+	}
+
+	idValues := []string{"session-1", "state-1"}
+	svc.idGenerator = func() (string, error) {
+		if len(idValues) == 0 {
+			return "", errors.New("unexpected id call")
+		}
+		value := idValues[0]
+		idValues = idValues[1:]
+		return value, nil
+	}
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
+	startResp, err := svc.StartProviderConnect(ctx, &aiv1.StartProviderConnectRequest{
+		Provider:        aiv1.Provider_PROVIDER_OPENAI,
+		RequestedScopes: []string{"responses.read"},
+	})
+	if err != nil {
+		t.Fatalf("start provider connect: %v", err)
+	}
+
+	_, err = svc.FinishProviderConnect(ctx, &aiv1.FinishProviderConnectRequest{
+		ConnectSessionId:  startResp.GetConnectSessionId(),
+		State:             startResp.GetState(),
+		AuthorizationCode: "auth-code-1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+
+	stored := store.ConnectSessions[startResp.GetConnectSessionId()]
+	if stored.Status != "pending" {
+		t.Fatalf("connect session status = %q, want %q", stored.Status, "pending")
+	}
+}
+
 func TestListProviderGrantsReturnsOwnerRecords(t *testing.T) {
 	store := newFakeStore()
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
 		Provider:        "openai",
@@ -2232,7 +1874,7 @@ func TestListProviderGrantsReturnsOwnerRecords(t *testing.T) {
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
-	store.providerGrants["grant-2"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-2"] = storage.ProviderGrantRecord{
 		ID:              "grant-2",
 		OwnerUserID:     "user-2",
 		Provider:        "openai",
@@ -2260,7 +1902,7 @@ func TestListProviderGrantsReturnsOwnerRecords(t *testing.T) {
 func TestListProviderGrantsFiltersByProvider(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 0, 0, 0, time.UTC)
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
 		Provider:        "openai",
@@ -2270,7 +1912,7 @@ func TestListProviderGrantsFiltersByProvider(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.providerGrants["grant-2"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-2"] = storage.ProviderGrantRecord{
 		ID:              "grant-2",
 		OwnerUserID:     "user-1",
 		Provider:        "other",
@@ -2280,7 +1922,7 @@ func TestListProviderGrantsFiltersByProvider(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.providerGrants["grant-3"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-3"] = storage.ProviderGrantRecord{
 		ID:              "grant-3",
 		OwnerUserID:     "user-2",
 		Provider:        "openai",
@@ -2311,7 +1953,7 @@ func TestListProviderGrantsFiltersByProvider(t *testing.T) {
 func TestListProviderGrantsFiltersByStatus(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 2, 0, 0, 0, time.UTC)
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
 		Provider:        "openai",
@@ -2321,7 +1963,7 @@ func TestListProviderGrantsFiltersByStatus(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.providerGrants["grant-2"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-2"] = storage.ProviderGrantRecord{
 		ID:              "grant-2",
 		OwnerUserID:     "user-1",
 		Provider:        "openai",
@@ -2331,7 +1973,7 @@ func TestListProviderGrantsFiltersByStatus(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	store.providerGrants["grant-3"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-3"] = storage.ProviderGrantRecord{
 		ID:              "grant-3",
 		OwnerUserID:     "user-2",
 		Provider:        "openai",
@@ -2361,7 +2003,7 @@ func TestListProviderGrantsFiltersByStatus(t *testing.T) {
 
 func TestRevokeProviderGrant(t *testing.T) {
 	store := newFakeStore()
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
 		Provider:        "openai",
@@ -2393,7 +2035,7 @@ func TestRevokeProviderGrant(t *testing.T) {
 func TestRefreshProviderGrantSuccessUpdatesStoredToken(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -2434,7 +2076,7 @@ func TestRefreshProviderGrantSuccessUpdatesStoredToken(t *testing.T) {
 func TestRefreshProviderGrantMarksRefreshFailed(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
-	store.providerGrants["grant-1"] = storage.ProviderGrantRecord{
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
 		ID:               "grant-1",
 		OwnerUserID:      "user-1",
 		Provider:         "openai",
@@ -2454,7 +2096,7 @@ func TestRefreshProviderGrantMarksRefreshFailed(t *testing.T) {
 	if _, err := svc.refreshProviderGrant(context.Background(), "user-1", "grant-1"); err == nil {
 		t.Fatal("expected refresh error")
 	}
-	updated := store.providerGrants["grant-1"]
+	updated := store.ProviderGrants["grant-1"]
 	if updated.Status != "refresh_failed" {
 		t.Fatalf("status = %q, want %q", updated.Status, "refresh_failed")
 	}
@@ -2466,7 +2108,7 @@ func TestRefreshProviderGrantMarksRefreshFailed(t *testing.T) {
 func TestCreateAccessRequestSuccess(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 5, 0, 0, time.UTC)
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "owner-1",
 		Name:         "Narrator",
@@ -2502,7 +2144,7 @@ func TestCreateAccessRequestSuccess(t *testing.T) {
 func TestCreateAccessRequestWritesAuditEvent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 5, 0, 0, time.UTC)
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "owner-1",
 		Name:         "Narrator",
@@ -2526,10 +2168,10 @@ func TestCreateAccessRequestWritesAuditEvent(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("create access request: %v", err)
 	}
-	if len(store.auditEventNames) != 1 {
-		t.Fatalf("audit events len = %d, want 1", len(store.auditEventNames))
+	if len(store.AuditEventNames) != 1 {
+		t.Fatalf("audit events len = %d, want 1", len(store.AuditEventNames))
 	}
-	if got := store.auditEventNames[0]; got != "access_request.created" {
+	if got := store.AuditEventNames[0]; got != "access_request.created" {
 		t.Fatalf("audit event = %q, want %q", got, "access_request.created")
 	}
 }
@@ -2537,7 +2179,7 @@ func TestCreateAccessRequestWritesAuditEvent(t *testing.T) {
 func TestCreateAccessRequestRejectsOwnAgent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
 		Name:         "Narrator",
@@ -2561,7 +2203,7 @@ func TestCreateAccessRequestRejectsOwnAgent(t *testing.T) {
 func TestCreateAccessRequestRejectsUnsupportedScope(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.agents["agent-1"] = storage.AgentRecord{
+	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "owner-1",
 		Name:         "Narrator",
@@ -2585,9 +2227,9 @@ func TestCreateAccessRequestRejectsUnsupportedScope(t *testing.T) {
 func TestListAccessRequestsByRole(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now}
-	store.accessRequests["request-2"] = storage.AccessRequestRecord{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "owner-2", AgentID: "agent-2", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now}
-	store.accessRequests["request-3"] = storage.AccessRequestRecord{ID: "request-3", RequesterUserID: "user-3", OwnerUserID: "owner-1", AgentID: "agent-3", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now}
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{ID: "request-1", RequesterUserID: "user-1", OwnerUserID: "owner-1", AgentID: "agent-1", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now}
+	store.AccessRequests["request-2"] = storage.AccessRequestRecord{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "owner-2", AgentID: "agent-2", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now}
+	store.AccessRequests["request-3"] = storage.AccessRequestRecord{ID: "request-3", RequesterUserID: "user-3", OwnerUserID: "owner-1", AgentID: "agent-3", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now}
 
 	svc := NewService(store, store, &fakeSealer{})
 
@@ -2623,7 +2265,7 @@ func TestListAuditEventsRequiresUserID(t *testing.T) {
 func TestListAuditEventsOwnerScoped(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 10, 0, 0, time.UTC)
-	store.auditEvents = []storage.AuditEventRecord{
+	store.AuditEvents = []storage.AuditEventRecord{
 		{ID: "1", EventName: "access_request.created", ActorUserID: "user-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "pending", CreatedAt: now},
 		{ID: "2", EventName: "access_request.reviewed", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "approved", CreatedAt: now.Add(time.Minute)},
 		{ID: "3", EventName: "access_request.created", ActorUserID: "user-2", OwnerUserID: "owner-2", RequesterUserID: "user-2", AgentID: "agent-2", AccessRequestID: "request-2", Outcome: "pending", CreatedAt: now},
@@ -2649,7 +2291,7 @@ func TestListAuditEventsOwnerScoped(t *testing.T) {
 func TestListAuditEventsPaginates(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 10, 0, 0, time.UTC)
-	store.auditEvents = []storage.AuditEventRecord{
+	store.AuditEvents = []storage.AuditEventRecord{
 		{ID: "1", EventName: "access_request.created", ActorUserID: "user-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "pending", CreatedAt: now},
 		{ID: "2", EventName: "access_request.reviewed", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "approved", CreatedAt: now.Add(time.Minute)},
 		{ID: "3", EventName: "access_request.revoked", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "revoked", CreatedAt: now.Add(2 * time.Minute)},
@@ -2690,7 +2332,7 @@ func TestListAuditEventsPaginates(t *testing.T) {
 func TestListAuditEventsFiltersByEventName(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 20, 0, 0, time.UTC)
-	store.auditEvents = []storage.AuditEventRecord{
+	store.AuditEvents = []storage.AuditEventRecord{
 		{ID: "1", EventName: "access_request.created", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now},
 		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(time.Minute)},
 	}
@@ -2715,7 +2357,7 @@ func TestListAuditEventsFiltersByEventName(t *testing.T) {
 func TestListAuditEventsFiltersByAgentID(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 20, 0, 0, time.UTC)
-	store.auditEvents = []storage.AuditEventRecord{
+	store.AuditEvents = []storage.AuditEventRecord{
 		{ID: "1", EventName: "access_request.created", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now},
 		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-2", CreatedAt: now.Add(time.Minute)},
 	}
@@ -2740,7 +2382,7 @@ func TestListAuditEventsFiltersByAgentID(t *testing.T) {
 func TestListAuditEventsFiltersByTimeWindow(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 20, 0, 0, time.UTC)
-	store.auditEvents = []storage.AuditEventRecord{
+	store.AuditEvents = []storage.AuditEventRecord{
 		{ID: "1", EventName: "access_request.created", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now},
 		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(2 * time.Minute)},
 		{ID: "3", EventName: "access_request.revoked", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(4 * time.Minute)},
@@ -2780,7 +2422,7 @@ func TestListAuditEventsRejectsInvalidTimeWindow(t *testing.T) {
 func TestReviewAccessRequestByOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 7, 0, 0, time.UTC)
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -2810,7 +2452,7 @@ func TestReviewAccessRequestByOwner(t *testing.T) {
 func TestReviewAccessRequestWritesAuditEvent(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 7, 0, 0, time.UTC)
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -2831,10 +2473,10 @@ func TestReviewAccessRequestWritesAuditEvent(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("review access request: %v", err)
 	}
-	if len(store.auditEventNames) != 1 {
-		t.Fatalf("audit events len = %d, want 1", len(store.auditEventNames))
+	if len(store.AuditEventNames) != 1 {
+		t.Fatalf("audit events len = %d, want 1", len(store.AuditEventNames))
 	}
-	if got := store.auditEventNames[0]; got != "access_request.reviewed" {
+	if got := store.AuditEventNames[0]; got != "access_request.reviewed" {
 		t.Fatalf("audit event = %q, want %q", got, "access_request.reviewed")
 	}
 }
@@ -2842,7 +2484,7 @@ func TestReviewAccessRequestWritesAuditEvent(t *testing.T) {
 func TestReviewAccessRequestRejectsNonOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -2866,7 +2508,7 @@ func TestReviewAccessRequestRejectsNonOwner(t *testing.T) {
 func TestRevokeAccessRequestByOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 1, 9, 0, 0, time.UTC)
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -2893,10 +2535,10 @@ func TestRevokeAccessRequestByOwner(t *testing.T) {
 	if got := resp.GetAccessRequest().GetStatus(); got != aiv1.AccessRequestStatus_ACCESS_REQUEST_STATUS_REVOKED {
 		t.Fatalf("status = %v, want revoked", got)
 	}
-	if len(store.auditEventNames) != 1 {
-		t.Fatalf("audit events len = %d, want 1", len(store.auditEventNames))
+	if len(store.AuditEventNames) != 1 {
+		t.Fatalf("audit events len = %d, want 1", len(store.AuditEventNames))
 	}
-	if got := store.auditEventNames[0]; got != "access_request.revoked" {
+	if got := store.AuditEventNames[0]; got != "access_request.revoked" {
 		t.Fatalf("audit event = %q, want %q", got, "access_request.revoked")
 	}
 }
@@ -2904,7 +2546,7 @@ func TestRevokeAccessRequestByOwner(t *testing.T) {
 func TestRevokeAccessRequestRejectsNonOwner(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",
@@ -2927,7 +2569,7 @@ func TestRevokeAccessRequestRejectsNonOwner(t *testing.T) {
 func TestRevokeAccessRequestRejectsNonApproved(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now()
-	store.accessRequests["request-1"] = storage.AccessRequestRecord{
+	store.AccessRequests["request-1"] = storage.AccessRequestRecord{
 		ID:              "request-1",
 		RequesterUserID: "user-1",
 		OwnerUserID:     "owner-1",

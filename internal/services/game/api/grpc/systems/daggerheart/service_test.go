@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"reflect"
+	"strings"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -14,6 +15,42 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func TestNewDaggerheartServiceRejectsMissingStores(t *testing.T) {
+	svc, err := NewDaggerheartService(Stores{}, random.NewSeed)
+	if err == nil {
+		t.Fatal("expected constructor error for missing stores")
+	}
+	if svc != nil {
+		t.Fatal("expected nil service on constructor error")
+	}
+	if !strings.Contains(err.Error(), "stores not configured") {
+		t.Fatalf("error = %q, want stores validation error", err.Error())
+	}
+}
+
+func TestNewDaggerheartServiceRejectsMissingSeedFunc(t *testing.T) {
+	svc, err := NewDaggerheartService(validDaggerheartStoresForConstructorTests(), nil)
+	if err == nil {
+		t.Fatal("expected constructor error for nil seed func")
+	}
+	if svc != nil {
+		t.Fatal("expected nil service on constructor error")
+	}
+	if !strings.Contains(err.Error(), "seed generator") {
+		t.Fatalf("error = %q, want seed generator validation error", err.Error())
+	}
+}
+
+func TestNewDaggerheartServiceAcceptsValidDependencies(t *testing.T) {
+	svc, err := NewDaggerheartService(validDaggerheartStoresForConstructorTests(), random.NewSeed)
+	if err != nil {
+		t.Fatalf("unexpected constructor error: %v", err)
+	}
+	if svc == nil {
+		t.Fatal("expected non-nil service")
+	}
+}
 
 func TestActionRollRejectsNilRequest(t *testing.T) {
 	server := newTestService(42)
@@ -734,6 +771,19 @@ func intPointer(value *int32) *int {
 
 func stringPointer(value string) *string {
 	return &value
+}
+
+func validDaggerheartStoresForConstructorTests() Stores {
+	return Stores{
+		Campaign:         &fakeCampaignStore{},
+		Character:        &fakeCharacterStore{},
+		Session:          &fakeSessionStore{},
+		SessionGate:      &fakeSessionGateStore{},
+		SessionSpotlight: &fakeSessionSpotlightStore{},
+		Daggerheart:      &fakeDaggerheartStore{},
+		Event:            &fakeEventStore{},
+		Domain:           &fakeDomainEngine{},
+	}
 }
 
 // structInt extracts a numeric value from a map payload for tests.

@@ -2,6 +2,8 @@ package daggerheart
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -27,6 +29,47 @@ type Stores struct {
 	DaggerheartContent storage.DaggerheartContentStore
 	Event              storage.EventStore
 	Domain             Domain
+}
+
+// Validate checks that Daggerheart gameplay service dependencies are configured.
+func (s Stores) Validate() error {
+	var missing []string
+	if s.Campaign == nil {
+		missing = append(missing, "Campaign")
+	}
+	if s.Character == nil {
+		missing = append(missing, "Character")
+	}
+	if s.Session == nil {
+		missing = append(missing, "Session")
+	}
+	if s.SessionGate == nil {
+		missing = append(missing, "SessionGate")
+	}
+	if s.SessionSpotlight == nil {
+		missing = append(missing, "SessionSpotlight")
+	}
+	if s.Daggerheart == nil {
+		missing = append(missing, "Daggerheart")
+	}
+	if s.Event == nil {
+		missing = append(missing, "Event")
+	}
+	if s.Domain == nil {
+		missing = append(missing, "Domain")
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// ValidateContent checks that Daggerheart content service dependencies are configured.
+func (s Stores) ValidateContent() error {
+	if s.DaggerheartContent == nil {
+		return fmt.Errorf("stores not configured: DaggerheartContent")
+	}
+	return nil
 }
 
 // Applier returns a projection Applier wired to the stores in this bundle.

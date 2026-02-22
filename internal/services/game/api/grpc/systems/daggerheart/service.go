@@ -23,8 +23,14 @@ type DaggerheartService struct {
 }
 
 // NewDaggerheartService creates a configured gRPC handler with a seed generator.
-func NewDaggerheartService(stores Stores, seedFunc func() (int64, error)) *DaggerheartService {
-	return &DaggerheartService{stores: stores, seedFunc: seedFunc}
+func NewDaggerheartService(stores Stores, seedFunc func() (int64, error)) (*DaggerheartService, error) {
+	if err := stores.Validate(); err != nil {
+		return nil, fmt.Errorf("validate stores: %w", err)
+	}
+	if seedFunc == nil {
+		return nil, fmt.Errorf("seed generator is required")
+	}
+	return &DaggerheartService{stores: stores, seedFunc: seedFunc}, nil
 }
 
 // ActionRoll handles action roll requests.

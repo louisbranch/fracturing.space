@@ -93,6 +93,41 @@ type coreDecider struct {
 // coreCommandRoute maps a normalized aggregate state + command into one decision path.
 type coreCommandRoute func(d coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision
 
+const (
+	coreCommandTypeCampaignCreate          command.Type = "campaign.create"
+	coreCommandTypeCampaignUpdate          command.Type = "campaign.update"
+	coreCommandTypeCampaignFork            command.Type = "campaign.fork"
+	coreCommandTypeCampaignEnd             command.Type = "campaign.end"
+	coreCommandTypeCampaignArchive         command.Type = "campaign.archive"
+	coreCommandTypeCampaignRestore         command.Type = "campaign.restore"
+	coreCommandTypeActionRollResolve       command.Type = "action.roll.resolve"
+	coreCommandTypeActionOutcomeApply      command.Type = "action.outcome.apply"
+	coreCommandTypeActionOutcomeReject     command.Type = "action.outcome.reject"
+	coreCommandTypeStoryNoteAdd            command.Type = "story.note.add"
+	coreCommandTypeSessionStart            command.Type = "session.start"
+	coreCommandTypeSessionEnd              command.Type = "session.end"
+	coreCommandTypeSessionGateOpen         command.Type = "session.gate_open"
+	coreCommandTypeSessionGateResolve      command.Type = "session.gate_resolve"
+	coreCommandTypeSessionGateAbandon      command.Type = "session.gate_abandon"
+	coreCommandTypeSessionSpotlightSet     command.Type = "session.spotlight_set"
+	coreCommandTypeSessionSpotlightClear   command.Type = "session.spotlight_clear"
+	coreCommandTypeParticipantJoin         command.Type = "participant.join"
+	coreCommandTypeParticipantSeatReassign command.Type = "participant.seat.reassign"
+	coreCommandTypeParticipantUpdate       command.Type = "participant.update"
+	coreCommandTypeParticipantLeave        command.Type = "participant.leave"
+	coreCommandTypeParticipantBind         command.Type = "participant.bind"
+	coreCommandTypeParticipantUnbind       command.Type = "participant.unbind"
+	coreCommandTypeSeatReassign            command.Type = "seat.reassign"
+	coreCommandTypeInviteCreate            command.Type = "invite.create"
+	coreCommandTypeInviteClaim             command.Type = "invite.claim"
+	coreCommandTypeInviteRevoke            command.Type = "invite.revoke"
+	coreCommandTypeInviteUpdate            command.Type = "invite.update"
+	coreCommandTypeCharacterCreate         command.Type = "character.create"
+	coreCommandTypeCharacterUpdate         command.Type = "character.update"
+	coreCommandTypeCharacterDelete         command.Type = "character.delete"
+	coreCommandTypeCharacterProfileUpdate  command.Type = "character.profile_update"
+)
+
 // campaignRoute routes campaign-level commands to campaign deciders.
 func campaignRoute(_ coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return campaign.Decide(current.Campaign, cmd, now)
@@ -128,38 +163,38 @@ func characterRoute(_ coreDecider, current aggregate.State, cmd command.Command,
 // This table is the onboarding-friendly contract for what the core decider owns.
 func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 	return map[command.Type]coreCommandRoute{
-		command.Type("campaign.create"):           campaignRoute,
-		command.Type("campaign.update"):           campaignRoute,
-		command.Type("campaign.fork"):             campaignRoute,
-		command.Type("campaign.end"):              campaignRoute,
-		command.Type("campaign.archive"):          campaignRoute,
-		command.Type("campaign.restore"):          campaignRoute,
-		command.Type("action.roll.resolve"):       actionRoute,
-		command.Type("action.outcome.apply"):      actionRoute,
-		command.Type("action.outcome.reject"):     actionRoute,
-		command.Type("story.note.add"):            actionRoute,
-		command.Type("session.start"):             sessionRoute,
-		command.Type("session.end"):               sessionRoute,
-		command.Type("session.gate_open"):         sessionRoute,
-		command.Type("session.gate_resolve"):      sessionRoute,
-		command.Type("session.gate_abandon"):      sessionRoute,
-		command.Type("session.spotlight_set"):     sessionRoute,
-		command.Type("session.spotlight_clear"):   sessionRoute,
-		command.Type("participant.join"):          participantRoute,
-		command.Type("participant.seat.reassign"): participantRoute,
-		command.Type("participant.update"):        participantRoute,
-		command.Type("participant.leave"):         participantRoute,
-		command.Type("participant.bind"):          participantRoute,
-		command.Type("participant.unbind"):        participantRoute,
-		command.Type("seat.reassign"):             participantRoute,
-		command.Type("invite.create"):             inviteRoute,
-		command.Type("invite.claim"):              inviteRoute,
-		command.Type("invite.revoke"):             inviteRoute,
-		command.Type("invite.update"):             inviteRoute,
-		command.Type("character.create"):          characterRoute,
-		command.Type("character.update"):          characterRoute,
-		command.Type("character.delete"):          characterRoute,
-		command.Type("character.profile_update"):  characterRoute,
+		coreCommandTypeCampaignCreate:          campaignRoute,
+		coreCommandTypeCampaignUpdate:          campaignRoute,
+		coreCommandTypeCampaignFork:            campaignRoute,
+		coreCommandTypeCampaignEnd:             campaignRoute,
+		coreCommandTypeCampaignArchive:         campaignRoute,
+		coreCommandTypeCampaignRestore:         campaignRoute,
+		coreCommandTypeActionRollResolve:       actionRoute,
+		coreCommandTypeActionOutcomeApply:      actionRoute,
+		coreCommandTypeActionOutcomeReject:     actionRoute,
+		coreCommandTypeStoryNoteAdd:            actionRoute,
+		coreCommandTypeSessionStart:            sessionRoute,
+		coreCommandTypeSessionEnd:              sessionRoute,
+		coreCommandTypeSessionGateOpen:         sessionRoute,
+		coreCommandTypeSessionGateResolve:      sessionRoute,
+		coreCommandTypeSessionGateAbandon:      sessionRoute,
+		coreCommandTypeSessionSpotlightSet:     sessionRoute,
+		coreCommandTypeSessionSpotlightClear:   sessionRoute,
+		coreCommandTypeParticipantJoin:         participantRoute,
+		coreCommandTypeParticipantSeatReassign: participantRoute,
+		coreCommandTypeParticipantUpdate:       participantRoute,
+		coreCommandTypeParticipantLeave:        participantRoute,
+		coreCommandTypeParticipantBind:         participantRoute,
+		coreCommandTypeParticipantUnbind:       participantRoute,
+		coreCommandTypeSeatReassign:            participantRoute,
+		coreCommandTypeInviteCreate:            inviteRoute,
+		coreCommandTypeInviteClaim:             inviteRoute,
+		coreCommandTypeInviteRevoke:            inviteRoute,
+		coreCommandTypeInviteUpdate:            inviteRoute,
+		coreCommandTypeCharacterCreate:         characterRoute,
+		coreCommandTypeCharacterUpdate:         characterRoute,
+		coreCommandTypeCharacterDelete:         characterRoute,
+		coreCommandTypeCharacterProfileUpdate:  characterRoute,
 	}
 }
 

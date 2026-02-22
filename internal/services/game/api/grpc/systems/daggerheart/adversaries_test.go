@@ -134,19 +134,19 @@ func (d *dynamicDomainEngine) Execute(ctx context.Context, cmd command.Command) 
 
 func newAdversaryTestService() *DaggerheartService {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{
+	campaignStore.Campaigns["camp-1"] = storage.CampaignRecord{
 		ID:     "camp-1",
 		Status: campaign.StatusActive,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 	}
-	campaignStore.campaigns["camp-non-dh"] = storage.CampaignRecord{
+	campaignStore.Campaigns["camp-non-dh"] = storage.CampaignRecord{
 		ID:     "camp-non-dh",
 		Status: campaign.StatusActive,
 		System: commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED,
 	}
 
 	sessStore := newFakeSessionStore()
-	sessStore.sessions["camp-1:sess-1"] = storage.SessionRecord{
+	sessStore.Sessions["camp-1:sess-1"] = storage.SessionRecord{
 		ID:         "sess-1",
 		CampaignID: "camp-1",
 		Status:     session.StatusActive,

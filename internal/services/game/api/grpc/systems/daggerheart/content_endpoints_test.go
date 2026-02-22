@@ -436,7 +436,11 @@ func newContentTestService() *DaggerheartContentService {
 	cs.items["item-1"] = storage.DaggerheartItem{ID: "item-1", Name: "Potion"}
 	cs.environments["env-1"] = storage.DaggerheartEnvironment{ID: "env-1", Name: "Forest"}
 
-	return NewDaggerheartContentService(Stores{DaggerheartContent: cs})
+	svc, err := NewDaggerheartContentService(Stores{DaggerheartContent: cs})
+	if err != nil {
+		panic(err)
+	}
+	return svc
 }
 
 // --- GetContentCatalog tests ---
@@ -913,9 +917,22 @@ func TestListEnvironments_Success(t *testing.T) {
 
 func TestNewDaggerheartContentService(t *testing.T) {
 	cs := newFakeContentStore()
-	svc := NewDaggerheartContentService(Stores{DaggerheartContent: cs})
+	svc, err := NewDaggerheartContentService(Stores{DaggerheartContent: cs})
+	if err != nil {
+		t.Fatalf("unexpected constructor error: %v", err)
+	}
 	if svc == nil {
 		t.Fatal("expected non-nil service")
+	}
+}
+
+func TestNewDaggerheartContentServiceRejectsMissingStore(t *testing.T) {
+	svc, err := NewDaggerheartContentService(Stores{})
+	if err == nil {
+		t.Fatal("expected constructor error for missing content store")
+	}
+	if svc != nil {
+		t.Fatal("expected nil service on constructor error")
 	}
 }
 
