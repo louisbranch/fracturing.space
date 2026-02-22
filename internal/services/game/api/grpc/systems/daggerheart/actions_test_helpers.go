@@ -15,7 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"github.com/louisbranch/fracturing.space/internal/testkit/gamefakes"
+	"github.com/louisbranch/fracturing.space/internal/test/mock/gamefakes"
 	"google.golang.org/grpc/metadata"
 )
 

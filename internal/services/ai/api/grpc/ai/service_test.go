@@ -10,7 +10,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
-	"github.com/louisbranch/fracturing.space/internal/testkit/aifakes"
+	"github.com/louisbranch/fracturing.space/internal/test/mock/aifakes"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"

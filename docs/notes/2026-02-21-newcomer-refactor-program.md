@@ -28,7 +28,7 @@ High-friction hotspots were:
    slices first to preserve runtime behavior.
 2. Enforce constructor-time dependency validation for Daggerheart services so
    misconfiguration fails fast at startup.
-3. Introduce shared game test fakes under `internal/testkit/gamefakes` and
+3. Introduce shared game test fakes under `internal/test/mock/gamefakes` and
    migrate low-risk duplicate test fakes to improve test readability.
 4. Centralize Daggerheart command/event type identifiers behind typed constants
    to reduce string-literal drift in production call sites.

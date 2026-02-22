@@ -17,7 +17,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
-	"github.com/louisbranch/fracturing.space/internal/testkit/mcpfakes"
+	"github.com/louisbranch/fracturing.space/internal/test/mock/mcpfakes"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
