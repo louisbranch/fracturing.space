@@ -183,3 +183,35 @@ func TestHandleCampaignPathRedirectsTrailingSlash(t *testing.T) {
 		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-1")
 	}
 }
+
+func TestDispatchCampaignPathPrefersMostSpecificMatch(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions/table", nil)
+	rec := httptest.NewRecorder()
+	called := ""
+	descriptors := []campaignRouteDescriptor{
+		{
+			length:   3,
+			literals: map[int]string{1: "sessions"},
+			handle: func(Service, http.ResponseWriter, *http.Request, []string) {
+				called = "generic"
+			},
+		},
+		{
+			length:   3,
+			literals: map[int]string{1: "sessions", 2: "table"},
+			handle: func(Service, http.ResponseWriter, *http.Request, []string) {
+				called = "specific"
+			},
+		},
+	}
+
+	ok := dispatchMostSpecificCampaignPath(descriptors, &fakeService{}, rec, req, []string{"camp-1", "sessions", "table"})
+	if !ok {
+		t.Fatalf("dispatch returned false, want true")
+	}
+	if called != "specific" {
+		t.Fatalf("called = %q, want %q", called, "specific")
+	}
+}

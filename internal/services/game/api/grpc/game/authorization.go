@@ -94,7 +94,6 @@ func requireCharacterMutationPolicy(
 	stores Stores,
 	campaignRecord storage.CampaignRecord,
 	characterID string,
-	fallbackOwnerParticipantID string,
 ) (storage.ParticipantRecord, error) {
 	actor, reasonCode, err := authorizePolicyActor(ctx, stores, policyActionManageCharacters, campaignRecord)
 	characterAttributes := map[string]any{
@@ -144,18 +143,7 @@ func requireCharacterMutationPolicy(
 		)
 		return actor, nil
 	}
-	if stores.Event == nil {
-		err := status.Error(codes.Internal, "event store is not configured")
-		emitAuthzDecisionTelemetry(ctx, stores.Telemetry, campaignRecord.ID, policyActionManageCharacters, authzDecisionDeny, authzReasonErrorDependencyUnavailable, actor, err, characterAttributes)
-		return storage.ParticipantRecord{}, err
-	}
-	ownerParticipantID, err := resolveCharacterOwnerParticipantID(
-		ctx,
-		stores.Event,
-		campaignRecord.ID,
-		characterID,
-		fallbackOwnerParticipantID,
-	)
+	ownerParticipantID, err := resolveCharacterMutationOwnerParticipantID(ctx, stores, campaignRecord.ID, characterID)
 	if err != nil {
 		emitAuthzDecisionTelemetry(ctx, stores.Telemetry, campaignRecord.ID, policyActionManageCharacters, authzDecisionDeny, authzReasonErrorOwnerResolution, actor, err, characterAttributes)
 		return storage.ParticipantRecord{}, err
@@ -252,9 +240,8 @@ type characterOwnershipState struct {
 }
 
 // replayCharacterOwnership replays the event journal for a campaign and returns
-// a map from character ID to its ownership state. Both character-mutation policy
-// checks and participant-deletion guards consume this map to avoid duplicating
-// the pagination and event-matching logic.
+// a map from character ID to its ownership state. Participant-deletion guards
+// consume this map to avoid duplicating pagination and event-matching logic.
 func replayCharacterOwnership(ctx context.Context, events storage.EventStore, campaignID string) (map[string]characterOwnershipState, error) {
 	if events == nil {
 		return nil, status.Error(codes.Internal, "event store is not configured")
@@ -326,24 +313,46 @@ func replayCharacterOwnership(ctx context.Context, events storage.EventStore, ca
 	return ownership, nil
 }
 
-// resolveCharacterOwnerParticipantID replays the event journal to determine the
-// current owner of a single character. Falls back to fallbackOwnerParticipantID
-// when no ownership events exist for the character.
-func resolveCharacterOwnerParticipantID(
+// resolveCharacterMutationOwnerParticipantID resolves the owner participant for
+// member-only character mutation checks.
+//
+// The lookup prefers event-backed ownership when an event store is available,
+// because ownership and controller can diverge. When event replay is not
+// configured, it falls back to the character projection participant id.
+func resolveCharacterMutationOwnerParticipantID(
 	ctx context.Context,
-	events storage.EventStore,
+	stores Stores,
 	campaignID string,
 	characterID string,
-	fallbackOwnerParticipantID string,
 ) (string, error) {
-	ownership, err := replayCharacterOwnership(ctx, events, campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if characterID == "" {
+		return "", nil
+	}
+
+	if stores.Event != nil {
+		ownership, err := replayCharacterOwnership(ctx, stores.Event, campaignID)
+		if err != nil {
+			return "", err
+		}
+		state, ok := ownership[characterID]
+		if !ok {
+			return "", nil
+		}
+		return strings.TrimSpace(state.ownerParticipantID), nil
+	}
+
+	if stores.Character == nil {
+		return "", status.Error(codes.Internal, "character owner store is not configured")
+	}
+	characterRecord, err := stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		return "", err
+		if err == storage.ErrNotFound {
+			return "", nil
+		}
+		return "", status.Errorf(codes.Internal, "load character owner: %v", err)
 	}
-	if state, ok := ownership[characterID]; ok {
-		return state.ownerParticipantID, nil
-	}
-	return strings.TrimSpace(fallbackOwnerParticipantID), nil
+	return strings.TrimSpace(characterRecord.ParticipantID), nil
 }
 
 func adminOverrideFromContext(ctx context.Context) (string, bool) {

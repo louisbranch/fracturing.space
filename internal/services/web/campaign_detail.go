@@ -10,7 +10,7 @@ import (
 // handleAppCampaignDetail parses campaign workspace routes and dispatches each
 // subpath to the ownership/authorization-aware leaf handler.
 func (h *handler) handleAppCampaignDetail(w http.ResponseWriter, r *http.Request) {
-	campaignsmodule.HandleCampaignDetailPath(w, r, newCampaignModuleService(h))
+	campaignsmodule.HandleCampaignDetailPath(w, r, h)
 }
 
 func (h *handler) handleAppCampaignOverview(w http.ResponseWriter, r *http.Request, campaignID string) {

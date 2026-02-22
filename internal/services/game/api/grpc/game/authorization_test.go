@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -273,22 +272,15 @@ func TestRequirePolicyTelemetryAllowed(t *testing.T) {
 
 func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 	telemetryStore := &authzTelemetryStore{}
-	eventStore := newFakeEventStore()
-	eventStore.events["camp"] = []event.Event{
-		{
-			Seq:        1,
-			CampaignID: "camp",
-			Type:       event.Type("character.created"),
-			EntityType: "character",
-			EntityID:   "char-1",
-			ActorType:  event.ActorTypeParticipant,
-			ActorID:    "member-owner",
-			PayloadJSON: []byte(
-				`{"character_id":"char-1","name":"Hero","kind":"pc","owner_participant_id":"member-owner"}`,
-			),
-		},
+	characterStore := newFakeCharacterStore()
+	if err := characterStore.PutCharacter(context.Background(), storage.CharacterRecord{
+		ID:            "char-1",
+		CampaignID:    "camp",
+		ParticipantID: "member-owner",
+		Name:          "Hero",
+	}); err != nil {
+		t.Fatalf("put character: %v", err)
 	}
-	eventStore.nextSeq["camp"] = 2
 
 	stores := Stores{
 		Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
@@ -298,7 +290,7 @@ func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 				CampaignAccess: participant.CampaignAccessMember,
 			}, nil
 		}},
-		Event:     eventStore,
+		Character: characterStore,
 		Telemetry: telemetryStore,
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "member-1"))
@@ -308,7 +300,6 @@ func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 		stores,
 		storage.CampaignRecord{ID: "camp"},
 		"char-1",
-		"",
 	)
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
@@ -387,7 +378,6 @@ func TestRequireCharacterMutationPolicyTelemetryAdminOverride(t *testing.T) {
 		Stores{Telemetry: telemetryStore},
 		storage.CampaignRecord{ID: "camp"},
 		"char-1",
-		"",
 	)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)

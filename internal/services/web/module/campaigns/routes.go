@@ -8,6 +8,161 @@ import (
 	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
+type campaignDetailRouteDescriptor struct {
+	length   int
+	literals map[int]string
+	handle   func(Service, http.ResponseWriter, *http.Request, []string)
+}
+
+func (d campaignDetailRouteDescriptor) matches(parts []string) bool {
+	if len(parts) != d.length {
+		return false
+	}
+	for index, value := range d.literals {
+		if parts[index] != value {
+			return false
+		}
+	}
+	return true
+}
+
+var campaignDetailRouteDescriptors = []campaignDetailRouteDescriptor{
+	{
+		length:   2,
+		literals: map[int]string{1: "sessions"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignSessions(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "sessions", 2: "start"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignSessionStart(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "sessions", 2: "end"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignSessionEnd(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "sessions"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignSessionDetail(w, r, parts[0], parts[2])
+		},
+	},
+	{
+		length:   2,
+		literals: map[int]string{1: "participants"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignParticipants(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "participants", 2: "update"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignParticipantUpdate(w, r, parts[0])
+		},
+	},
+	{
+		length:   2,
+		literals: map[int]string{1: "characters"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignCharacters(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "characters", 2: "create"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignCharacterCreate(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "characters", 2: "update"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignCharacterUpdate(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "characters", 2: "control"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignCharacterControl(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "characters"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignCharacterDetail(w, r, parts[0], parts[2])
+		},
+	},
+	{
+		length:   2,
+		literals: map[int]string{1: "invites"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignInvites(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "invites", 2: "create"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignInviteCreate(w, r, parts[0])
+		},
+	},
+	{
+		length:   3,
+		literals: map[int]string{1: "invites", 2: "revoke"},
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignInviteRevoke(w, r, parts[0])
+		},
+	},
+	{
+		length: 1,
+		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
+			service.HandleCampaignOverview(w, r, parts[0])
+		},
+	},
+}
+
+func dispatchCampaignDetailPath(service Service, w http.ResponseWriter, r *http.Request, parts []string) bool {
+	return dispatchMostSpecificCampaignDetailPath(campaignDetailRouteDescriptors, service, w, r, parts)
+}
+
+func dispatchMostSpecificCampaignDetailPath(
+	descriptors []campaignDetailRouteDescriptor,
+	service Service,
+	w http.ResponseWriter,
+	r *http.Request,
+	parts []string,
+) bool {
+	bestIndex := -1
+	bestSpecificity := -1
+	for index, descriptor := range descriptors {
+		if !descriptor.matches(parts) {
+			continue
+		}
+		specificity := len(descriptor.literals)
+		if specificity > bestSpecificity {
+			bestSpecificity = specificity
+			bestIndex = index
+		}
+	}
+	if bestIndex < 0 {
+		return false
+	}
+	descriptors[bestIndex].handle(service, w, r, parts)
+	return true
+}
+
 // Service is the campaign workspace transport contract consumed by the route module.
 type Service interface {
 	HandleCampaigns(w http.ResponseWriter, r *http.Request)
@@ -65,67 +220,7 @@ func HandleCampaignDetailPath(w http.ResponseWriter, r *http.Request, service Se
 		}
 		parts = append(parts, part)
 	}
-
-	if len(parts) == 2 && parts[1] == "sessions" {
-		service.HandleCampaignSessions(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "sessions" && parts[2] == "start" {
-		service.HandleCampaignSessionStart(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "sessions" && parts[2] == "end" {
-		service.HandleCampaignSessionEnd(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "sessions" {
-		service.HandleCampaignSessionDetail(w, r, parts[0], parts[2])
-		return
-	}
-	if len(parts) == 2 && parts[1] == "participants" {
-		service.HandleCampaignParticipants(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "participants" && parts[2] == "update" {
-		service.HandleCampaignParticipantUpdate(w, r, parts[0])
-		return
-	}
-	if len(parts) == 2 && parts[1] == "characters" {
-		service.HandleCampaignCharacters(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "characters" && parts[2] == "create" {
-		service.HandleCampaignCharacterCreate(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "characters" && parts[2] == "update" {
-		service.HandleCampaignCharacterUpdate(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "characters" && parts[2] == "control" {
-		service.HandleCampaignCharacterControl(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "characters" {
-		service.HandleCampaignCharacterDetail(w, r, parts[0], parts[2])
-		return
-	}
-	if len(parts) == 2 && parts[1] == "invites" {
-		service.HandleCampaignInvites(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "invites" && parts[2] == "create" {
-		service.HandleCampaignInviteCreate(w, r, parts[0])
-		return
-	}
-	if len(parts) == 3 && parts[1] == "invites" && parts[2] == "revoke" {
-		service.HandleCampaignInviteRevoke(w, r, parts[0])
-		return
-	}
-	if len(parts) != 1 {
+	if !dispatchCampaignDetailPath(service, w, r, parts) {
 		http.NotFound(w, r)
-		return
 	}
-
-	service.HandleCampaignOverview(w, r, parts[0])
 }

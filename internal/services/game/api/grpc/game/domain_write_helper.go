@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"sync/atomic"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -14,18 +13,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var (
-	inlineProjectionApplyEnabled atomic.Bool
-
-	// intentFilter is the event intent filter used to decide which emitted events
-	// should be applied inline to projections. Set once at startup via
-	// SetIntentFilter; defaults to fail-closed (no events applied).
-	intentFilter = func(event.Event) bool { return false }
-)
-
-func init() {
-	inlineProjectionApplyEnabled.Store(true)
-}
+var writeRuntime = domainwrite.NewRuntime()
 
 type domainCommandApplyOptions struct {
 	requireEvents     bool
@@ -40,14 +28,14 @@ type domainCommandApplyOptions struct {
 // SetInlineProjectionApplyEnabled controls whether request-path helpers apply
 // emitted domain events to projections inline.
 func SetInlineProjectionApplyEnabled(enabled bool) {
-	inlineProjectionApplyEnabled.Store(enabled)
+	writeRuntime.SetInlineApplyEnabled(enabled)
 }
 
 // SetIntentFilter configures the event intent filter built from the event
 // registry. Call this once at server startup; the filter is used by every
 // request-path domain command helper.
 func SetIntentFilter(registry *event.Registry) {
-	intentFilter = domainwrite.NewIntentFilter(registry)
+	writeRuntime.SetIntentFilter(registry)
 }
 
 func executeAndApplyDomainCommand(
@@ -58,14 +46,12 @@ func executeAndApplyDomainCommand(
 	options domainCommandApplyOptions,
 ) (engine.Result, error) {
 	options = normalizeDomainCommandOptions(options)
-	return domainwrite.ExecuteAndApply(ctx, domain, applier, cmd, domainwrite.Options{
-		RequireEvents:      options.requireEvents,
-		MissingEventMsg:    options.missingEventMsg,
-		InlineApplyEnabled: inlineProjectionApplyEnabled.Load(),
-		ShouldApply:        intentFilter,
-		ExecuteErr:         options.executeErr,
-		ApplyErr:           options.applyErr,
-		RejectErr:          options.rejectErr,
+	return writeRuntime.ExecuteAndApply(ctx, domain, applier, cmd, domainwrite.Options{
+		RequireEvents:   options.requireEvents,
+		MissingEventMsg: options.missingEventMsg,
+		ExecuteErr:      options.executeErr,
+		ApplyErr:        options.applyErr,
+		RejectErr:       options.rejectErr,
 	})
 }
 
@@ -76,14 +62,12 @@ func executeDomainCommandWithoutInlineApply(
 	options domainCommandApplyOptions,
 ) (engine.Result, error) {
 	options = normalizeDomainCommandOptions(options)
-	return domainwrite.ExecuteAndApply(ctx, domain, projection.Applier{}, cmd, domainwrite.Options{
-		RequireEvents:      options.requireEvents,
-		MissingEventMsg:    options.missingEventMsg,
-		InlineApplyEnabled: false,
-		ShouldApply:        nil,
-		ExecuteErr:         options.executeErr,
-		ApplyErr:           options.applyErr,
-		RejectErr:          options.rejectErr,
+	return writeRuntime.ExecuteWithoutInlineApply(ctx, domain, cmd, domainwrite.Options{
+		RequireEvents:   options.requireEvents,
+		MissingEventMsg: options.missingEventMsg,
+		ExecuteErr:      options.executeErr,
+		ApplyErr:        options.applyErr,
+		RejectErr:       options.rejectErr,
 	})
 }
 

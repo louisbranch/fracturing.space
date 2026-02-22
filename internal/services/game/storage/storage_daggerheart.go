@@ -389,86 +389,142 @@ type DaggerheartStore interface {
 	DeleteDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) error
 }
 
-// DaggerheartContentStore provides read/write access to Daggerheart campaign
-// content catalog rows used by bootstrap and content import tooling.
-type DaggerheartContentStore interface {
-	PutDaggerheartClass(ctx context.Context, class DaggerheartClass) error
+// DaggerheartCharacterBuildContentReader provides read access to ancestry and
+// progression catalog content.
+type DaggerheartCharacterBuildContentReader interface {
 	GetDaggerheartClass(ctx context.Context, id string) (DaggerheartClass, error)
 	ListDaggerheartClasses(ctx context.Context) ([]DaggerheartClass, error)
-	DeleteDaggerheartClass(ctx context.Context, id string) error
-
-	PutDaggerheartSubclass(ctx context.Context, subclass DaggerheartSubclass) error
 	GetDaggerheartSubclass(ctx context.Context, id string) (DaggerheartSubclass, error)
 	ListDaggerheartSubclasses(ctx context.Context) ([]DaggerheartSubclass, error)
-	DeleteDaggerheartSubclass(ctx context.Context, id string) error
-
-	PutDaggerheartHeritage(ctx context.Context, heritage DaggerheartHeritage) error
 	GetDaggerheartHeritage(ctx context.Context, id string) (DaggerheartHeritage, error)
 	ListDaggerheartHeritages(ctx context.Context) ([]DaggerheartHeritage, error)
-	DeleteDaggerheartHeritage(ctx context.Context, id string) error
-
-	PutDaggerheartExperience(ctx context.Context, experience DaggerheartExperienceEntry) error
 	GetDaggerheartExperience(ctx context.Context, id string) (DaggerheartExperienceEntry, error)
 	ListDaggerheartExperiences(ctx context.Context) ([]DaggerheartExperienceEntry, error)
-	DeleteDaggerheartExperience(ctx context.Context, id string) error
+}
 
-	PutDaggerheartAdversaryEntry(ctx context.Context, adversary DaggerheartAdversaryEntry) error
+// DaggerheartEncounterContentReader provides read access to encounter-facing
+// catalog content.
+type DaggerheartEncounterContentReader interface {
 	GetDaggerheartAdversaryEntry(ctx context.Context, id string) (DaggerheartAdversaryEntry, error)
 	ListDaggerheartAdversaryEntries(ctx context.Context) ([]DaggerheartAdversaryEntry, error)
-	DeleteDaggerheartAdversaryEntry(ctx context.Context, id string) error
-
-	PutDaggerheartBeastform(ctx context.Context, beastform DaggerheartBeastformEntry) error
 	GetDaggerheartBeastform(ctx context.Context, id string) (DaggerheartBeastformEntry, error)
 	ListDaggerheartBeastforms(ctx context.Context) ([]DaggerheartBeastformEntry, error)
-	DeleteDaggerheartBeastform(ctx context.Context, id string) error
-
-	PutDaggerheartCompanionExperience(ctx context.Context, experience DaggerheartCompanionExperienceEntry) error
 	GetDaggerheartCompanionExperience(ctx context.Context, id string) (DaggerheartCompanionExperienceEntry, error)
 	ListDaggerheartCompanionExperiences(ctx context.Context) ([]DaggerheartCompanionExperienceEntry, error)
-	DeleteDaggerheartCompanionExperience(ctx context.Context, id string) error
-
-	PutDaggerheartLootEntry(ctx context.Context, entry DaggerheartLootEntry) error
 	GetDaggerheartLootEntry(ctx context.Context, id string) (DaggerheartLootEntry, error)
 	ListDaggerheartLootEntries(ctx context.Context) ([]DaggerheartLootEntry, error)
-	DeleteDaggerheartLootEntry(ctx context.Context, id string) error
-
-	PutDaggerheartDamageType(ctx context.Context, entry DaggerheartDamageTypeEntry) error
 	GetDaggerheartDamageType(ctx context.Context, id string) (DaggerheartDamageTypeEntry, error)
 	ListDaggerheartDamageTypes(ctx context.Context) ([]DaggerheartDamageTypeEntry, error)
-	DeleteDaggerheartDamageType(ctx context.Context, id string) error
+	GetDaggerheartEnvironment(ctx context.Context, id string) (DaggerheartEnvironment, error)
+	ListDaggerheartEnvironments(ctx context.Context) ([]DaggerheartEnvironment, error)
+}
 
-	PutDaggerheartDomain(ctx context.Context, domain DaggerheartDomain) error
+// DaggerheartDomainContentReader provides read access to domain and card catalog
+// content.
+type DaggerheartDomainContentReader interface {
 	GetDaggerheartDomain(ctx context.Context, id string) (DaggerheartDomain, error)
 	ListDaggerheartDomains(ctx context.Context) ([]DaggerheartDomain, error)
-	DeleteDaggerheartDomain(ctx context.Context, id string) error
-
-	PutDaggerheartDomainCard(ctx context.Context, card DaggerheartDomainCard) error
 	GetDaggerheartDomainCard(ctx context.Context, id string) (DaggerheartDomainCard, error)
 	ListDaggerheartDomainCards(ctx context.Context) ([]DaggerheartDomainCard, error)
 	ListDaggerheartDomainCardsByDomain(ctx context.Context, domainID string) ([]DaggerheartDomainCard, error)
-	DeleteDaggerheartDomainCard(ctx context.Context, id string) error
+}
 
-	PutDaggerheartWeapon(ctx context.Context, weapon DaggerheartWeapon) error
+// DaggerheartEquipmentContentReader provides read access to equipment catalog
+// content.
+type DaggerheartEquipmentContentReader interface {
 	GetDaggerheartWeapon(ctx context.Context, id string) (DaggerheartWeapon, error)
 	ListDaggerheartWeapons(ctx context.Context) ([]DaggerheartWeapon, error)
-	DeleteDaggerheartWeapon(ctx context.Context, id string) error
-
-	PutDaggerheartArmor(ctx context.Context, armor DaggerheartArmor) error
 	GetDaggerheartArmor(ctx context.Context, id string) (DaggerheartArmor, error)
 	ListDaggerheartArmor(ctx context.Context) ([]DaggerheartArmor, error)
-	DeleteDaggerheartArmor(ctx context.Context, id string) error
-
-	PutDaggerheartItem(ctx context.Context, item DaggerheartItem) error
 	GetDaggerheartItem(ctx context.Context, id string) (DaggerheartItem, error)
 	ListDaggerheartItems(ctx context.Context) ([]DaggerheartItem, error)
-	DeleteDaggerheartItem(ctx context.Context, id string) error
+}
 
-	PutDaggerheartEnvironment(ctx context.Context, env DaggerheartEnvironment) error
-	GetDaggerheartEnvironment(ctx context.Context, id string) (DaggerheartEnvironment, error)
-	ListDaggerheartEnvironments(ctx context.Context) ([]DaggerheartEnvironment, error)
-	DeleteDaggerheartEnvironment(ctx context.Context, id string) error
-
+// DaggerheartContentLocalizationReader provides read access to localized
+// content strings.
+type DaggerheartContentLocalizationReader interface {
 	ListDaggerheartContentStrings(ctx context.Context, contentType string, contentIDs []string, locale string) ([]DaggerheartContentString, error)
+}
 
+// DaggerheartContentReadStore provides grouped read access to all Daggerheart
+// catalog content used by APIs.
+type DaggerheartContentReadStore interface {
+	DaggerheartCharacterBuildContentReader
+	DaggerheartEncounterContentReader
+	DaggerheartDomainContentReader
+	DaggerheartEquipmentContentReader
+	DaggerheartContentLocalizationReader
+}
+
+// DaggerheartCharacterBuildContentWriter provides write access to ancestry and
+// progression catalog content.
+type DaggerheartCharacterBuildContentWriter interface {
+	PutDaggerheartClass(ctx context.Context, class DaggerheartClass) error
+	DeleteDaggerheartClass(ctx context.Context, id string) error
+	PutDaggerheartSubclass(ctx context.Context, subclass DaggerheartSubclass) error
+	DeleteDaggerheartSubclass(ctx context.Context, id string) error
+	PutDaggerheartHeritage(ctx context.Context, heritage DaggerheartHeritage) error
+	DeleteDaggerheartHeritage(ctx context.Context, id string) error
+	PutDaggerheartExperience(ctx context.Context, experience DaggerheartExperienceEntry) error
+	DeleteDaggerheartExperience(ctx context.Context, id string) error
+}
+
+// DaggerheartEncounterContentWriter provides write access to encounter-facing
+// catalog content.
+type DaggerheartEncounterContentWriter interface {
+	PutDaggerheartAdversaryEntry(ctx context.Context, adversary DaggerheartAdversaryEntry) error
+	DeleteDaggerheartAdversaryEntry(ctx context.Context, id string) error
+	PutDaggerheartBeastform(ctx context.Context, beastform DaggerheartBeastformEntry) error
+	DeleteDaggerheartBeastform(ctx context.Context, id string) error
+	PutDaggerheartCompanionExperience(ctx context.Context, experience DaggerheartCompanionExperienceEntry) error
+	DeleteDaggerheartCompanionExperience(ctx context.Context, id string) error
+	PutDaggerheartLootEntry(ctx context.Context, entry DaggerheartLootEntry) error
+	DeleteDaggerheartLootEntry(ctx context.Context, id string) error
+	PutDaggerheartDamageType(ctx context.Context, entry DaggerheartDamageTypeEntry) error
+	DeleteDaggerheartDamageType(ctx context.Context, id string) error
+	PutDaggerheartEnvironment(ctx context.Context, env DaggerheartEnvironment) error
+	DeleteDaggerheartEnvironment(ctx context.Context, id string) error
+}
+
+// DaggerheartDomainContentWriter provides write access to domain and card
+// catalog content.
+type DaggerheartDomainContentWriter interface {
+	PutDaggerheartDomain(ctx context.Context, domain DaggerheartDomain) error
+	DeleteDaggerheartDomain(ctx context.Context, id string) error
+	PutDaggerheartDomainCard(ctx context.Context, card DaggerheartDomainCard) error
+	DeleteDaggerheartDomainCard(ctx context.Context, id string) error
+}
+
+// DaggerheartEquipmentContentWriter provides write access to equipment catalog
+// content.
+type DaggerheartEquipmentContentWriter interface {
+	PutDaggerheartWeapon(ctx context.Context, weapon DaggerheartWeapon) error
+	DeleteDaggerheartWeapon(ctx context.Context, id string) error
+	PutDaggerheartArmor(ctx context.Context, armor DaggerheartArmor) error
+	DeleteDaggerheartArmor(ctx context.Context, id string) error
+	PutDaggerheartItem(ctx context.Context, item DaggerheartItem) error
+	DeleteDaggerheartItem(ctx context.Context, id string) error
+}
+
+// DaggerheartContentLocalizationWriter provides write access to localized
+// content strings.
+type DaggerheartContentLocalizationWriter interface {
 	PutDaggerheartContentString(ctx context.Context, entry DaggerheartContentString) error
+}
+
+// DaggerheartContentWriteStore provides grouped write access to all Daggerheart
+// catalog content used by import tooling.
+type DaggerheartContentWriteStore interface {
+	DaggerheartCharacterBuildContentWriter
+	DaggerheartEncounterContentWriter
+	DaggerheartDomainContentWriter
+	DaggerheartEquipmentContentWriter
+	DaggerheartContentLocalizationWriter
+}
+
+// DaggerheartContentStore provides read/write access to Daggerheart campaign
+// content catalog rows used by bootstrap and content import tooling.
+type DaggerheartContentStore interface {
+	DaggerheartContentReadStore
+	DaggerheartContentWriteStore
 }

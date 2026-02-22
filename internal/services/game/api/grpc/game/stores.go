@@ -35,7 +35,7 @@ type Stores struct {
 	Snapshot   storage.SnapshotStore
 
 	// System content stores — read-only content used by gRPC handlers.
-	DaggerheartContent storage.DaggerheartContentStore
+	DaggerheartContent storage.DaggerheartContentReadStore
 
 	Domain Domain
 

@@ -16,11 +16,11 @@ type contentDescriptor[T any, P any] struct {
 	getAction      string
 	listAction     string
 	localizeAction string
-	get            func(context.Context, storage.DaggerheartContentStore, string) (T, error)
-	list           func(context.Context, storage.DaggerheartContentStore) ([]T, error)
-	listByRequest  func(context.Context, storage.DaggerheartContentStore, contentListRequest) ([]T, error)
+	get            func(context.Context, storage.DaggerheartContentReadStore, string) (T, error)
+	list           func(context.Context, storage.DaggerheartContentReadStore) ([]T, error)
+	listByRequest  func(context.Context, storage.DaggerheartContentReadStore, contentListRequest) ([]T, error)
 	filterHashSeed func(contentListRequest) string
-	localize       func(context.Context, storage.DaggerheartContentStore, commonv1.Locale, []T) error
+	localize       func(context.Context, storage.DaggerheartContentReadStore, commonv1.Locale, []T) error
 	toProto        func(T) *P
 	toProtoList    func([]T) []*P
 	listConfig     contentListConfig[T]
@@ -28,7 +28,7 @@ type contentDescriptor[T any, P any] struct {
 
 func getContentEntry[T any, P any](
 	ctx context.Context,
-	store storage.DaggerheartContentStore,
+	store storage.DaggerheartContentReadStore,
 	id string,
 	locale commonv1.Locale,
 	descriptor contentDescriptor[T, P],
@@ -46,14 +46,14 @@ func getContentEntry[T any, P any](
 
 func listContentEntries[T any, P any](
 	ctx context.Context,
-	store storage.DaggerheartContentStore,
+	store storage.DaggerheartContentReadStore,
 	req contentListRequest,
 	locale commonv1.Locale,
 	descriptor contentDescriptor[T, P],
 ) ([]*P, contentPage[T], error) {
 	listFunc := descriptor.list
 	if descriptor.listByRequest != nil {
-		listFunc = func(listCtx context.Context, listStore storage.DaggerheartContentStore) ([]T, error) {
+		listFunc = func(listCtx context.Context, listStore storage.DaggerheartContentReadStore) ([]T, error) {
 			return descriptor.listByRequest(listCtx, listStore, req)
 		}
 	}
@@ -79,13 +79,13 @@ var classDescriptor = contentDescriptor[storage.DaggerheartClass, pb.Daggerheart
 	getAction:      "get class",
 	listAction:     "list classes",
 	localizeAction: "localize classes",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartClass, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartClass, error) {
 		return store.GetDaggerheartClass(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartClass, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartClass, error) {
 		return store.ListDaggerheartClasses(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartClass) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartClass) error {
 		return localizeClasses(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartClass,
@@ -130,13 +130,13 @@ var subclassDescriptor = contentDescriptor[storage.DaggerheartSubclass, pb.Dagge
 	getAction:      "get subclass",
 	listAction:     "list subclasses",
 	localizeAction: "localize subclasses",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartSubclass, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartSubclass, error) {
 		return store.GetDaggerheartSubclass(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartSubclass, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartSubclass, error) {
 		return store.ListDaggerheartSubclasses(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartSubclass) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartSubclass) error {
 		return localizeSubclasses(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartSubclass,
@@ -184,13 +184,13 @@ var heritageDescriptor = contentDescriptor[storage.DaggerheartHeritage, pb.Dagge
 	getAction:      "get heritage",
 	listAction:     "list heritages",
 	localizeAction: "localize heritages",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartHeritage, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartHeritage, error) {
 		return store.GetDaggerheartHeritage(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartHeritage, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartHeritage, error) {
 		return store.ListDaggerheartHeritages(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartHeritage) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartHeritage) error {
 		return localizeHeritages(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartHeritage,
@@ -238,13 +238,13 @@ var experienceDescriptor = contentDescriptor[storage.DaggerheartExperienceEntry,
 	getAction:      "get experience",
 	listAction:     "list experiences",
 	localizeAction: "localize experiences",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartExperienceEntry, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartExperienceEntry, error) {
 		return store.GetDaggerheartExperience(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartExperienceEntry, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartExperienceEntry, error) {
 		return store.ListDaggerheartExperiences(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartExperienceEntry) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartExperienceEntry) error {
 		return localizeExperiences(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartExperience,
@@ -289,13 +289,13 @@ var adversaryDescriptor = contentDescriptor[storage.DaggerheartAdversaryEntry, p
 	getAction:      "get adversary",
 	listAction:     "list adversaries",
 	localizeAction: "localize adversaries",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartAdversaryEntry, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartAdversaryEntry, error) {
 		return store.GetDaggerheartAdversaryEntry(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartAdversaryEntry, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartAdversaryEntry, error) {
 		return store.ListDaggerheartAdversaryEntries(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartAdversaryEntry) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartAdversaryEntry) error {
 		return localizeAdversaries(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartAdversaryEntry,
@@ -346,13 +346,13 @@ var beastformDescriptor = contentDescriptor[storage.DaggerheartBeastformEntry, p
 	getAction:      "get beastform",
 	listAction:     "list beastforms",
 	localizeAction: "localize beastforms",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartBeastformEntry, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartBeastformEntry, error) {
 		return store.GetDaggerheartBeastform(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartBeastformEntry, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartBeastformEntry, error) {
 		return store.ListDaggerheartBeastforms(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartBeastformEntry) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartBeastformEntry) error {
 		return localizeBeastforms(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartBeastform,
@@ -403,13 +403,13 @@ var companionExperienceDescriptor = contentDescriptor[storage.DaggerheartCompani
 	getAction:      "get companion experience",
 	listAction:     "list companion experiences",
 	localizeAction: "localize companion experiences",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartCompanionExperienceEntry, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartCompanionExperienceEntry, error) {
 		return store.GetDaggerheartCompanionExperience(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartCompanionExperienceEntry, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartCompanionExperienceEntry, error) {
 		return store.ListDaggerheartCompanionExperiences(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartCompanionExperienceEntry) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartCompanionExperienceEntry) error {
 		return localizeCompanionExperiences(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartCompanionExperience,
@@ -454,13 +454,13 @@ var lootEntryDescriptor = contentDescriptor[storage.DaggerheartLootEntry, pb.Dag
 	getAction:      "get loot entry",
 	listAction:     "list loot entries",
 	localizeAction: "localize loot entries",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartLootEntry, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartLootEntry, error) {
 		return store.GetDaggerheartLootEntry(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartLootEntry, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartLootEntry, error) {
 		return store.ListDaggerheartLootEntries(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartLootEntry) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartLootEntry) error {
 		return localizeLootEntries(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartLootEntry,
@@ -508,13 +508,13 @@ var damageTypeDescriptor = contentDescriptor[storage.DaggerheartDamageTypeEntry,
 	getAction:      "get damage type",
 	listAction:     "list damage types",
 	localizeAction: "localize damage types",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartDamageTypeEntry, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartDamageTypeEntry, error) {
 		return store.GetDaggerheartDamageType(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartDamageTypeEntry, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartDamageTypeEntry, error) {
 		return store.ListDaggerheartDamageTypes(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartDamageTypeEntry) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartDamageTypeEntry) error {
 		return localizeDamageTypes(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartDamageType,
@@ -559,13 +559,13 @@ var domainDescriptor = contentDescriptor[storage.DaggerheartDomain, pb.Daggerhea
 	getAction:      "get domain",
 	listAction:     "list domains",
 	localizeAction: "localize domains",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartDomain, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartDomain, error) {
 		return store.GetDaggerheartDomain(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartDomain, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartDomain, error) {
 		return store.ListDaggerheartDomains(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartDomain) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartDomain) error {
 		return localizeDomains(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartDomain,
@@ -610,10 +610,10 @@ var domainCardDescriptor = contentDescriptor[storage.DaggerheartDomainCard, pb.D
 	getAction:      "get domain card",
 	listAction:     "list domain cards",
 	localizeAction: "localize domain cards",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartDomainCard, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartDomainCard, error) {
 		return store.GetDaggerheartDomainCard(ctx, id)
 	},
-	listByRequest: func(ctx context.Context, store storage.DaggerheartContentStore, req contentListRequest) ([]storage.DaggerheartDomainCard, error) {
+	listByRequest: func(ctx context.Context, store storage.DaggerheartContentReadStore, req contentListRequest) ([]storage.DaggerheartDomainCard, error) {
 		if req.DomainID != "" {
 			return store.ListDaggerheartDomainCardsByDomain(ctx, req.DomainID)
 		}
@@ -625,7 +625,7 @@ var domainCardDescriptor = contentDescriptor[storage.DaggerheartDomainCard, pb.D
 		}
 		return "domain_id=" + req.DomainID
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartDomainCard) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartDomainCard) error {
 		return localizeDomainCards(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartDomainCard,
@@ -681,13 +681,13 @@ var weaponDescriptor = contentDescriptor[storage.DaggerheartWeapon, pb.Daggerhea
 	getAction:      "get weapon",
 	listAction:     "list weapons",
 	localizeAction: "localize weapons",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartWeapon, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartWeapon, error) {
 		return store.GetDaggerheartWeapon(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartWeapon, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartWeapon, error) {
 		return store.ListDaggerheartWeapons(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartWeapon) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartWeapon) error {
 		return localizeWeapons(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartWeapon,
@@ -744,13 +744,13 @@ var armorDescriptor = contentDescriptor[storage.DaggerheartArmor, pb.Daggerheart
 	getAction:      "get armor",
 	listAction:     "list armor",
 	localizeAction: "localize armor",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartArmor, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartArmor, error) {
 		return store.GetDaggerheartArmor(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartArmor, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartArmor, error) {
 		return store.ListDaggerheartArmor(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartArmor) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartArmor) error {
 		return localizeArmor(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartArmor,
@@ -798,13 +798,13 @@ var itemDescriptor = contentDescriptor[storage.DaggerheartItem, pb.DaggerheartIt
 	getAction:      "get item",
 	listAction:     "list items",
 	localizeAction: "localize items",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartItem, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartItem, error) {
 		return store.GetDaggerheartItem(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartItem, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartItem, error) {
 		return store.ListDaggerheartItems(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartItem) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartItem) error {
 		return localizeItems(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartItem,
@@ -855,13 +855,13 @@ var environmentDescriptor = contentDescriptor[storage.DaggerheartEnvironment, pb
 	getAction:      "get environment",
 	listAction:     "list environments",
 	localizeAction: "localize environments",
-	get: func(ctx context.Context, store storage.DaggerheartContentStore, id string) (storage.DaggerheartEnvironment, error) {
+	get: func(ctx context.Context, store storage.DaggerheartContentReadStore, id string) (storage.DaggerheartEnvironment, error) {
 		return store.GetDaggerheartEnvironment(ctx, id)
 	},
-	list: func(ctx context.Context, store storage.DaggerheartContentStore) ([]storage.DaggerheartEnvironment, error) {
+	list: func(ctx context.Context, store storage.DaggerheartContentReadStore) ([]storage.DaggerheartEnvironment, error) {
 		return store.ListDaggerheartEnvironments(ctx)
 	},
-	localize: func(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartEnvironment) error {
+	localize: func(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartEnvironment) error {
 		return localizeEnvironments(ctx, store, locale, items)
 	},
 	toProto:     toProtoDaggerheartEnvironment,

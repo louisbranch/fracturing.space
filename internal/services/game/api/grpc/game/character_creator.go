@@ -329,7 +329,6 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 			c.stores,
 			campaignRecord,
 			characterID,
-			"",
 		)
 		if err != nil {
 			return storage.CharacterRecord{}, err
@@ -417,7 +416,6 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 		c.stores,
 		campaignRecord,
 		characterID,
-		"",
 	)
 	if err != nil {
 		return storage.CharacterRecord{}, err
@@ -777,7 +775,6 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		c.stores,
 		campaignRecord,
 		characterID,
-		"",
 	)
 	if err != nil {
 		return "", storage.DaggerheartCharacterProfile{}, err

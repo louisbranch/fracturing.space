@@ -117,5 +117,5 @@ type stubClaimIndex struct{ storage.ClaimIndexStore }
 type stubTelemetry struct{ storage.TelemetryStore }
 type stubSnapshot struct{ storage.SnapshotStore }
 type stubDaggerheartContent struct {
-	storage.DaggerheartContentStore
+	storage.DaggerheartContentReadStore
 }

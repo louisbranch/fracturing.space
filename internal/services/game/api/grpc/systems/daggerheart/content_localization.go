@@ -45,7 +45,7 @@ func localeString(locale commonv1.Locale) (string, bool) {
 	return i18n.LocaleString(i18n.NormalizeLocale(locale)), true
 }
 
-func fetchContentStrings(ctx context.Context, store storage.DaggerheartContentStore, contentType string, ids []string, locale string) (contentStringLookup, error) {
+func fetchContentStrings(ctx context.Context, store storage.DaggerheartContentReadStore, contentType string, ids []string, locale string) (contentStringLookup, error) {
 	if store == nil || len(ids) == 0 || locale == "" {
 		return contentStringLookup{}, nil
 	}
@@ -100,7 +100,7 @@ func applyLocalizedBeastformFeatures(features []storage.DaggerheartBeastformFeat
 	}
 }
 
-func localizeClasses(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, classes []storage.DaggerheartClass) error {
+func localizeClasses(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, classes []storage.DaggerheartClass) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(classes) == 0 {
 		return nil
@@ -135,7 +135,7 @@ func localizeClasses(ctx context.Context, store storage.DaggerheartContentStore,
 	return nil
 }
 
-func localizeSubclasses(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, subclasses []storage.DaggerheartSubclass) error {
+func localizeSubclasses(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, subclasses []storage.DaggerheartSubclass) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(subclasses) == 0 {
 		return nil
@@ -165,7 +165,7 @@ func localizeSubclasses(ctx context.Context, store storage.DaggerheartContentSto
 	return nil
 }
 
-func localizeHeritages(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, heritages []storage.DaggerheartHeritage) error {
+func localizeHeritages(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, heritages []storage.DaggerheartHeritage) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(heritages) == 0 {
 		return nil
@@ -191,7 +191,7 @@ func localizeHeritages(ctx context.Context, store storage.DaggerheartContentStor
 	return nil
 }
 
-func localizeExperiences(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, experiences []storage.DaggerheartExperienceEntry) error {
+func localizeExperiences(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, experiences []storage.DaggerheartExperienceEntry) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(experiences) == 0 {
 		return nil
@@ -211,7 +211,7 @@ func localizeExperiences(ctx context.Context, store storage.DaggerheartContentSt
 	return nil
 }
 
-func localizeAdversaries(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, adversaries []storage.DaggerheartAdversaryEntry) error {
+func localizeAdversaries(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, adversaries []storage.DaggerheartAdversaryEntry) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(adversaries) == 0 {
 		return nil
@@ -245,7 +245,7 @@ func localizeAdversaries(ctx context.Context, store storage.DaggerheartContentSt
 	return nil
 }
 
-func localizeBeastforms(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, beastforms []storage.DaggerheartBeastformEntry) error {
+func localizeBeastforms(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, beastforms []storage.DaggerheartBeastformEntry) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(beastforms) == 0 {
 		return nil
@@ -280,7 +280,7 @@ func localizeBeastforms(ctx context.Context, store storage.DaggerheartContentSto
 	return nil
 }
 
-func localizeCompanionExperiences(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, experiences []storage.DaggerheartCompanionExperienceEntry) error {
+func localizeCompanionExperiences(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, experiences []storage.DaggerheartCompanionExperienceEntry) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(experiences) == 0 {
 		return nil
@@ -300,7 +300,7 @@ func localizeCompanionExperiences(ctx context.Context, store storage.Daggerheart
 	return nil
 }
 
-func localizeLootEntries(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, entries []storage.DaggerheartLootEntry) error {
+func localizeLootEntries(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, entries []storage.DaggerheartLootEntry) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(entries) == 0 {
 		return nil
@@ -320,7 +320,7 @@ func localizeLootEntries(ctx context.Context, store storage.DaggerheartContentSt
 	return nil
 }
 
-func localizeDamageTypes(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, entries []storage.DaggerheartDamageTypeEntry) error {
+func localizeDamageTypes(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, entries []storage.DaggerheartDamageTypeEntry) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(entries) == 0 {
 		return nil
@@ -340,7 +340,7 @@ func localizeDamageTypes(ctx context.Context, store storage.DaggerheartContentSt
 	return nil
 }
 
-func localizeDomains(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, domains []storage.DaggerheartDomain) error {
+func localizeDomains(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, domains []storage.DaggerheartDomain) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(domains) == 0 {
 		return nil
@@ -360,7 +360,7 @@ func localizeDomains(ctx context.Context, store storage.DaggerheartContentStore,
 	return nil
 }
 
-func localizeDomainCards(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, cards []storage.DaggerheartDomainCard) error {
+func localizeDomainCards(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, cards []storage.DaggerheartDomainCard) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(cards) == 0 {
 		return nil
@@ -381,7 +381,7 @@ func localizeDomainCards(ctx context.Context, store storage.DaggerheartContentSt
 	return nil
 }
 
-func localizeWeapons(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, weapons []storage.DaggerheartWeapon) error {
+func localizeWeapons(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, weapons []storage.DaggerheartWeapon) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(weapons) == 0 {
 		return nil
@@ -401,7 +401,7 @@ func localizeWeapons(ctx context.Context, store storage.DaggerheartContentStore,
 	return nil
 }
 
-func localizeArmor(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, armor []storage.DaggerheartArmor) error {
+func localizeArmor(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, armor []storage.DaggerheartArmor) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(armor) == 0 {
 		return nil
@@ -421,7 +421,7 @@ func localizeArmor(ctx context.Context, store storage.DaggerheartContentStore, l
 	return nil
 }
 
-func localizeItems(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, items []storage.DaggerheartItem) error {
+func localizeItems(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, items []storage.DaggerheartItem) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(items) == 0 {
 		return nil
@@ -442,7 +442,7 @@ func localizeItems(ctx context.Context, store storage.DaggerheartContentStore, l
 	return nil
 }
 
-func localizeEnvironments(ctx context.Context, store storage.DaggerheartContentStore, locale commonv1.Locale, envs []storage.DaggerheartEnvironment) error {
+func localizeEnvironments(ctx context.Context, store storage.DaggerheartContentReadStore, locale commonv1.Locale, envs []storage.DaggerheartEnvironment) error {
 	localeValue, ok := localeString(locale)
 	if !ok || len(envs) == 0 {
 		return nil

@@ -209,3 +209,35 @@ func TestRegisterRoutesWiresCampaignEndpoints(t *testing.T) {
 		})
 	}
 }
+
+func TestDispatchCampaignDetailPathPrefersMostSpecificMatch(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/sessions/start", nil)
+	rec := httptest.NewRecorder()
+	called := ""
+	descriptors := []campaignDetailRouteDescriptor{
+		{
+			length:   3,
+			literals: map[int]string{1: "sessions"},
+			handle: func(Service, http.ResponseWriter, *http.Request, []string) {
+				called = "generic"
+			},
+		},
+		{
+			length:   3,
+			literals: map[int]string{1: "sessions", 2: "start"},
+			handle: func(Service, http.ResponseWriter, *http.Request, []string) {
+				called = "specific"
+			},
+		},
+	}
+
+	ok := dispatchMostSpecificCampaignDetailPath(descriptors, &fakeService{}, rec, req, []string{"camp-1", "sessions", "start"})
+	if !ok {
+		t.Fatalf("dispatch returned false, want true")
+	}
+	if called != "specific" {
+		t.Fatalf("called = %q, want %q", called, "specific")
+	}
+}

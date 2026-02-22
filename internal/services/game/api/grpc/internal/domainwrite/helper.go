@@ -2,6 +2,7 @@ package domainwrite
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -39,6 +40,98 @@ type ErrorHandlerOptions struct {
 	RejectErr         func(string) error
 	ExecuteErrMessage string
 	ApplyErrMessage   string
+}
+
+// Runtime owns request-path write execution flags shared by service helpers.
+type Runtime struct {
+	inlineApplyEnabled atomic.Bool
+	shouldApply        atomic.Value // stores func(event.Event) bool
+}
+
+// NewRuntime creates a runtime with inline apply enabled and fail-closed
+// intent filtering.
+func NewRuntime() *Runtime {
+	runtime := &Runtime{}
+	runtime.inlineApplyEnabled.Store(true)
+	runtime.shouldApply.Store(func(event.Event) bool { return false })
+	return runtime
+}
+
+// SetInlineApplyEnabled sets whether write helpers apply events inline.
+func (r *Runtime) SetInlineApplyEnabled(enabled bool) {
+	if r == nil {
+		return
+	}
+	r.inlineApplyEnabled.Store(enabled)
+}
+
+// SetShouldApply sets the runtime event intent filter.
+func (r *Runtime) SetShouldApply(filter func(event.Event) bool) {
+	if r == nil {
+		return
+	}
+	if filter == nil {
+		filter = func(event.Event) bool { return false }
+	}
+	r.shouldApply.Store(filter)
+}
+
+// SetIntentFilter sets the runtime event intent filter from the registry.
+func (r *Runtime) SetIntentFilter(registry *event.Registry) {
+	r.SetShouldApply(NewIntentFilter(registry))
+}
+
+// ShouldApply returns the runtime event intent filter.
+func (r *Runtime) ShouldApply() func(event.Event) bool {
+	if r == nil {
+		return func(event.Event) bool { return false }
+	}
+	filter, ok := r.shouldApply.Load().(func(event.Event) bool)
+	if !ok || filter == nil {
+		return func(event.Event) bool { return false }
+	}
+	return filter
+}
+
+// InlineApplyEnabled reports whether inline apply is enabled.
+func (r *Runtime) InlineApplyEnabled() bool {
+	if r == nil {
+		return false
+	}
+	return r.inlineApplyEnabled.Load()
+}
+
+// ExecuteAndApply executes a command using runtime apply configuration.
+func (r *Runtime) ExecuteAndApply(
+	ctx context.Context,
+	executor Executor,
+	applier EventApplier,
+	cmd command.Command,
+	options Options,
+) (engine.Result, error) {
+	options.InlineApplyEnabled = r.InlineApplyEnabled()
+	if options.ShouldApply == nil {
+		options.ShouldApply = r.ShouldApply()
+	}
+	return ExecuteAndApply(ctx, executor, applier, cmd, options)
+}
+
+// ExecuteWithoutInlineApply executes a command without applying projections.
+func (r *Runtime) ExecuteWithoutInlineApply(
+	ctx context.Context,
+	executor Executor,
+	cmd command.Command,
+	options Options,
+) (engine.Result, error) {
+	options.InlineApplyEnabled = false
+	options.ShouldApply = nil
+	return ExecuteAndApply(ctx, executor, nilEventApplier{}, cmd, options)
+}
+
+type nilEventApplier struct{}
+
+func (nilEventApplier) Apply(context.Context, event.Event) error {
+	return nil
 }
 
 // ExecuteAndApply executes the command, handles rejections, and applies events.
