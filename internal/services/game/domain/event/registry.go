@@ -325,6 +325,31 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 	return evt, nil
 }
 
+// ShouldFold returns true when the event type should be folded into aggregate
+// state. Events with IntentAuditOnly are skipped; all others (including
+// unknown types) are folded. This centralizes the intent contract that
+// the aggregate folder and domain replay depend on.
+func (r *Registry) ShouldFold(eventType Type) bool {
+	def, ok := r.Definition(eventType)
+	if !ok {
+		return true
+	}
+	return def.Intent != IntentAuditOnly
+}
+
+// ShouldProject returns true when the event type should be applied to
+// projection stores. Only IntentProjectionAndReplay events are projected;
+// IntentReplayOnly and IntentAuditOnly are skipped. Unknown types default
+// to projectable so unregistered events surface as routing errors rather
+// than silent drops.
+func (r *Registry) ShouldProject(eventType Type) bool {
+	def, ok := r.Definition(eventType)
+	if !ok {
+		return true
+	}
+	return def.Intent == IntentProjectionAndReplay
+}
+
 // Definition returns the event definition for a given type.
 func (r *Registry) Definition(eventType Type) (Definition, bool) {
 	if r == nil {
@@ -374,6 +399,25 @@ func (r *Registry) Resolve(t Type) Type {
 		return canonical
 	}
 	return t
+}
+
+// MissingPayloadValidators returns event types that have IntentProjectionAndReplay
+// or IntentReplayOnly but no ValidatePayload function. Audit-only events are
+// excluded because their payloads are not consumed by projections or fold logic.
+func (r *Registry) MissingPayloadValidators() []Type {
+	if r == nil || len(r.definitions) == 0 {
+		return nil
+	}
+	var missing []Type
+	for _, def := range r.ListDefinitions() {
+		if def.Intent == IntentAuditOnly {
+			continue
+		}
+		if def.ValidatePayload == nil {
+			missing = append(missing, def.Type)
+		}
+	}
+	return missing
 }
 
 // ListDefinitions returns a stable, sorted snapshot of registered definitions.

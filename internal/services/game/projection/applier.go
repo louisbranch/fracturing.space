@@ -51,11 +51,9 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 	if a.Events != nil {
 		resolved := a.Events.Resolve(evt.Type)
 		evt.Type = resolved
-		// Skip audit-only and replay-only events — they do not affect read-model
-		// state and must not reach the default error case.  The aggregate applier
-		// has a similar guard; adding it here makes the projection applier
-		// self-guarding.
-		if def, ok := a.Events.Definition(resolved); ok && (def.Intent == event.IntentAuditOnly || def.Intent == event.IntentReplayOnly) {
+		// Skip events that should not be projected (audit-only and replay-only).
+		// ShouldProject centralizes the intent contract.
+		if !a.Events.ShouldProject(resolved) {
 			return nil
 		}
 	}
@@ -85,7 +83,10 @@ func (a Applier) routeEvent(ctx context.Context, evt event.Event) error {
 		}
 		return h.apply(a, ctx, evt)
 	}
-	if strings.TrimSpace(evt.SystemID) != "" {
+	// ValidateForAppend guarantees SystemID and SystemVersion are trimmed,
+	// so a simple non-empty check matches the aggregate folder's routing
+	// condition (which checks either field non-empty).
+	if evt.SystemID != "" || evt.SystemVersion != "" {
 		return a.applySystemEvent(ctx, evt)
 	}
 	return fmt.Errorf("unhandled projection event type: %s", evt.Type)

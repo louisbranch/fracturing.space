@@ -782,6 +782,115 @@ func TestBuildRegistries_PassesWhenEmittableEventsAllRegistered(t *testing.T) {
 	}
 }
 
+// --- StateFactory determinism tests ---
+
+func TestValidateStateFactoryDeterminism_PassesForDeterministicFactory(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &fakeModuleWithStateFactory{
+		id:      "system-1",
+		version: "v1",
+		factory: &deterministicFactory{},
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	if err := ValidateStateFactoryDeterminism(registry); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateStateFactoryDeterminism_RejectsNonDeterministicSnapshot(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &fakeModuleWithStateFactory{
+		id:      "system-1",
+		version: "v1",
+		factory: &nonDeterministicSnapshotFactory{},
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	err := ValidateStateFactoryDeterminism(registry)
+	if err == nil {
+		t.Fatal("expected error for non-deterministic factory")
+	}
+	if !strings.Contains(err.Error(), "NewSnapshotState") {
+		t.Fatalf("expected NewSnapshotState determinism error, got: %v", err)
+	}
+}
+
+func TestValidateStateFactoryDeterminism_RejectsNonDeterministicCharacterState(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &fakeModuleWithStateFactory{
+		id:      "system-1",
+		version: "v1",
+		factory: &nonDeterministicCharacterFactory{},
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	err := ValidateStateFactoryDeterminism(registry)
+	if err == nil {
+		t.Fatal("expected error for non-deterministic character state factory")
+	}
+	if !strings.Contains(err.Error(), "NewCharacterState") {
+		t.Fatalf("expected NewCharacterState determinism error, got: %v", err)
+	}
+}
+
+type fakeModuleWithStateFactory struct {
+	id      string
+	version string
+	factory module.StateFactory
+}
+
+func (m *fakeModuleWithStateFactory) ID() string                                 { return m.id }
+func (m *fakeModuleWithStateFactory) Version() string                            { return m.version }
+func (m *fakeModuleWithStateFactory) RegisterCommands(_ *command.Registry) error { return nil }
+func (m *fakeModuleWithStateFactory) RegisterEvents(_ *event.Registry) error     { return nil }
+func (m *fakeModuleWithStateFactory) EmittableEventTypes() []event.Type          { return nil }
+func (m *fakeModuleWithStateFactory) Decider() module.Decider                    { return nil }
+func (m *fakeModuleWithStateFactory) Folder() module.Folder                      { return nil }
+func (m *fakeModuleWithStateFactory) StateFactory() module.StateFactory          { return m.factory }
+
+type deterministicFactory struct{}
+
+func (f *deterministicFactory) NewSnapshotState(_ string) (any, error) {
+	return map[string]int{"counter": 0}, nil
+}
+
+func (f *deterministicFactory) NewCharacterState(_, _, _ string) (any, error) {
+	return map[string]int{"hp": 10}, nil
+}
+
+type nonDeterministicSnapshotFactory struct {
+	calls int
+}
+
+func (f *nonDeterministicSnapshotFactory) NewSnapshotState(_ string) (any, error) {
+	f.calls++
+	return map[string]int{"counter": f.calls}, nil
+}
+
+func (f *nonDeterministicSnapshotFactory) NewCharacterState(_, _, _ string) (any, error) {
+	return map[string]int{"hp": 10}, nil
+}
+
+type nonDeterministicCharacterFactory struct {
+	calls int
+}
+
+func (f *nonDeterministicCharacterFactory) NewSnapshotState(_ string) (any, error) {
+	return map[string]int{"counter": 0}, nil
+}
+
+func (f *nonDeterministicCharacterFactory) NewCharacterState(_, _, _ string) (any, error) {
+	f.calls++
+	return map[string]int{"hp": f.calls}, nil
+}
+
 func TestBuildRegistries_SyntheticModuleRejectsLegacyActionPrefix(t *testing.T) {
 	legacy := syntheticModule{
 		id:          "GAME_SYSTEM_ALPHA",

@@ -792,6 +792,28 @@ func TestReplayCampaignWith_EmptyCampaignID(t *testing.T) {
 	}
 }
 
+func TestReplayCampaignWith_DetectsSequenceGap(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	participantStore := newProjectionParticipantStore()
+	applier := Applier{Campaign: campaignStore, Participant: participantStore}
+	eventStore := &projectionEventStore{
+		events: []event.Event{
+			newCampaignCreatedEvent("camp-1", 1),
+			// Seq 2 is missing — jump straight to 3.
+			newParticipantJoinedEvent("camp-1", "part-1", 3),
+		},
+	}
+
+	_, err := ReplayCampaignWith(ctx, eventStore, applier, "camp-1", ReplayOptions{})
+	if err == nil {
+		t.Fatal("expected error for sequence gap")
+	}
+	if !strings.Contains(err.Error(), "sequence gap") {
+		t.Fatalf("expected sequence gap error, got: %v", err)
+	}
+}
+
 func TestReplayCampaignWith_ApplyError(t *testing.T) {
 	ctx := context.Background()
 	applier := Applier{}

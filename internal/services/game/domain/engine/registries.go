@@ -2,6 +2,8 @@ package engine
 
 import (
 	"fmt"
+	"log"
+	"reflect"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
@@ -98,6 +100,18 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 	}
 	if err := ValidateNoFoldHandlersForAuditOnlyEvents(eventRegistry, allFoldHandled); err != nil {
 		return Registries{}, err
+	}
+
+	if err := ValidateStateFactoryDeterminism(systemRegistry); err != nil {
+		return Registries{}, err
+	}
+
+	if missing := eventRegistry.MissingPayloadValidators(); len(missing) > 0 {
+		names := make([]string, len(missing))
+		for i, t := range missing {
+			names[i] = string(t)
+		}
+		log.Printf("WARNING: non-audit events without payload validators: %s", strings.Join(names, ", "))
 	}
 
 	return Registries{
@@ -514,6 +528,51 @@ func ValidateEntityKeyedAddressing(events *event.Registry) error {
 	if len(missing) > 0 {
 		return fmt.Errorf("entity-keyed fold types missing AddressingPolicyEntityTarget: %s",
 			strings.Join(missing, ", "))
+	}
+	return nil
+}
+
+// ValidateStateFactoryDeterminism verifies that each module's StateFactory
+// produces identical output across repeated calls with the same input for
+// both NewSnapshotState and NewCharacterState. A non-deterministic factory
+// (e.g. one using time.Now() or random IDs) would cause silent replay
+// divergence.
+func ValidateStateFactoryDeterminism(modules *module.Registry) error {
+	if modules == nil {
+		return fmt.Errorf("module registry is required for state factory determinism check")
+	}
+
+	const checkID = "determinism-check"
+	for _, mod := range modules.List() {
+		factory := mod.StateFactory()
+		if factory == nil {
+			continue
+		}
+		label := mod.ID() + "@" + mod.Version()
+
+		firstSnap, err := factory.NewSnapshotState(checkID)
+		if err != nil {
+			return fmt.Errorf("state factory %s NewSnapshotState error: %w", label, err)
+		}
+		secondSnap, err := factory.NewSnapshotState(checkID)
+		if err != nil {
+			return fmt.Errorf("state factory %s NewSnapshotState error: %w", label, err)
+		}
+		if !reflect.DeepEqual(firstSnap, secondSnap) {
+			return fmt.Errorf("state factory determinism check failed for %s: NewSnapshotState returned different results", label)
+		}
+
+		firstChar, err := factory.NewCharacterState(checkID, checkID, checkID)
+		if err != nil {
+			return fmt.Errorf("state factory %s NewCharacterState error: %w", label, err)
+		}
+		secondChar, err := factory.NewCharacterState(checkID, checkID, checkID)
+		if err != nil {
+			return fmt.Errorf("state factory %s NewCharacterState error: %w", label, err)
+		}
+		if !reflect.DeepEqual(firstChar, secondChar) {
+			return fmt.Errorf("state factory determinism check failed for %s: NewCharacterState returned different results", label)
+		}
 	}
 	return nil
 }

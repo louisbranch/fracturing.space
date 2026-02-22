@@ -319,6 +319,61 @@ Rules for adapter authors:
   projection mutations for system events must flow through the adapter
   dispatch path so replay remains the single source of truth.
 
+## Idempotency testing for system adapters
+
+System adapter `Apply()` methods must be idempotent: replaying the same event
+sequence must produce identical projection state regardless of how many times
+it runs. The most common mistake is an adapter that increments a counter or
+appends to a list instead of setting an absolute value.
+
+### Test pattern
+
+Use this pattern to verify idempotency for each adapter handler:
+
+```go
+func TestAdapter_Apply_Idempotent(t *testing.T) {
+    ctx := context.Background()
+    store := newFakeStore()
+    adapter := NewAdapter(store)
+
+    evt := event.Event{
+        CampaignID:    "camp-1",
+        Seq:           1,
+        Type:          EventTypeMyAction,
+        SystemID:      SystemID,
+        SystemVersion: SystemVersion,
+        EntityType:    "character",
+        EntityID:      "char-1",
+        PayloadJSON:   []byte(`{"hp_after": 5}`),
+    }
+
+    // First apply.
+    if err := adapter.Apply(ctx, evt); err != nil {
+        t.Fatalf("first apply: %v", err)
+    }
+    stateAfterFirst := store.Get(ctx, "camp-1", "char-1")
+
+    // Second apply of the same event.
+    if err := adapter.Apply(ctx, evt); err != nil {
+        t.Fatalf("second apply: %v", err)
+    }
+    stateAfterSecond := store.Get(ctx, "camp-1", "char-1")
+
+    if !reflect.DeepEqual(stateAfterFirst, stateAfterSecond) {
+        t.Fatalf("adapter is not idempotent:\n  first:  %+v\n  second: %+v",
+            stateAfterFirst, stateAfterSecond)
+    }
+}
+```
+
+Key points:
+
+- Apply the same event twice (not two different events).
+- Compare projection state after each apply using `reflect.DeepEqual`.
+- Use absolute values in payloads (e.g. `hp_after`) rather than deltas to
+  make idempotency natural.
+- See the Daggerheart adapter tests for working examples.
+
 ## Common failure modes
 
 1. Missing `system_id/system_version` on system-owned envelopes:
