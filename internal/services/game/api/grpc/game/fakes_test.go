@@ -33,12 +33,10 @@ type fakeCampaignStore struct {
 }
 
 func newFakeCampaignStore() *fakeCampaignStore {
-	return &fakeCampaignStore{
-		campaigns: make(map[string]storage.CampaignRecord),
-	}
+	return &fakeCampaignStore{campaigns: make(map[string]storage.CampaignRecord)}
 }
 
-func (s *fakeCampaignStore) Put(_ context.Context, c storage.CampaignRecord) error {
+func (s *fakeCampaignStore) Put(ctx context.Context, c storage.CampaignRecord) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
@@ -46,7 +44,7 @@ func (s *fakeCampaignStore) Put(_ context.Context, c storage.CampaignRecord) err
 	return nil
 }
 
-func (s *fakeCampaignStore) Get(_ context.Context, id string) (storage.CampaignRecord, error) {
+func (s *fakeCampaignStore) Get(ctx context.Context, id string) (storage.CampaignRecord, error) {
 	if s.getErr != nil {
 		return storage.CampaignRecord{}, s.getErr
 	}
@@ -57,7 +55,7 @@ func (s *fakeCampaignStore) Get(_ context.Context, id string) (storage.CampaignR
 	return c, nil
 }
 
-func (s *fakeCampaignStore) List(_ context.Context, pageSize int, pageToken string) (storage.CampaignPage, error) {
+func (s *fakeCampaignStore) List(ctx context.Context, pageSize int, pageToken string) (storage.CampaignPage, error) {
 	if s.listErr != nil {
 		return storage.CampaignPage{}, s.listErr
 	}

@@ -21,7 +21,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.SessionActionRollRequest) (*pb.SessionActionRollResponse, error) {
+func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.SessionActionRollRequest) (*pb.SessionActionRollResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session action roll request is required")
 	}
@@ -317,7 +317,7 @@ func (s *DaggerheartService) SessionActionRoll(ctx context.Context, in *pb.Sessi
 	}, nil
 }
 
-func (s *DaggerheartService) SessionDamageRoll(ctx context.Context, in *pb.SessionDamageRollRequest) (*pb.SessionDamageRollResponse, error) {
+func (s *DaggerheartService) runSessionDamageRoll(ctx context.Context, in *pb.SessionDamageRollRequest) (*pb.SessionDamageRollResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session damage roll request is required")
 	}
@@ -482,7 +482,7 @@ func (s *DaggerheartService) SessionDamageRoll(ctx context.Context, in *pb.Sessi
 	return response, nil
 }
 
-func (s *DaggerheartService) SessionAttackFlow(ctx context.Context, in *pb.SessionAttackFlowRequest) (*pb.SessionAttackFlowResponse, error) {
+func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.SessionAttackFlowRequest) (*pb.SessionAttackFlowResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session attack flow request is required")
 	}
@@ -620,7 +620,7 @@ func (s *DaggerheartService) SessionAttackFlow(ctx context.Context, in *pb.Sessi
 	return response, nil
 }
 
-func (s *DaggerheartService) SessionReactionFlow(ctx context.Context, in *pb.SessionReactionFlowRequest) (*pb.SessionReactionFlowResponse, error) {
+func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.SessionReactionFlowRequest) (*pb.SessionReactionFlowResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session reaction flow request is required")
 	}
@@ -699,7 +699,7 @@ func (s *DaggerheartService) SessionReactionFlow(ctx context.Context, in *pb.Ses
 	return response, nil
 }
 
-func (s *DaggerheartService) SessionAdversaryAttackRoll(ctx context.Context, in *pb.SessionAdversaryAttackRollRequest) (*pb.SessionAdversaryAttackRollResponse, error) {
+func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, in *pb.SessionAdversaryAttackRollRequest) (*pb.SessionAdversaryAttackRollResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session adversary attack roll request is required")
 	}
@@ -881,7 +881,7 @@ func (s *DaggerheartService) SessionAdversaryAttackRoll(ctx context.Context, in 
 	}, nil
 }
 
-func (s *DaggerheartService) SessionAdversaryActionCheck(ctx context.Context, in *pb.SessionAdversaryActionCheckRequest) (*pb.SessionAdversaryActionCheckResponse, error) {
+func (s *DaggerheartService) runSessionAdversaryActionCheck(ctx context.Context, in *pb.SessionAdversaryActionCheckRequest) (*pb.SessionAdversaryActionCheckResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session adversary action check request is required")
 	}
@@ -1000,7 +1000,7 @@ func (s *DaggerheartService) SessionAdversaryActionCheck(ctx context.Context, in
 	}, nil
 }
 
-func (s *DaggerheartService) SessionAdversaryAttackFlow(ctx context.Context, in *pb.SessionAdversaryAttackFlowRequest) (*pb.SessionAdversaryAttackFlowResponse, error) {
+func (s *DaggerheartService) runSessionAdversaryAttackFlow(ctx context.Context, in *pb.SessionAdversaryAttackFlowRequest) (*pb.SessionAdversaryAttackFlowResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session adversary attack flow request is required")
 	}
@@ -1130,7 +1130,7 @@ func (s *DaggerheartService) SessionAdversaryAttackFlow(ctx context.Context, in 
 	return response, nil
 }
 
-func (s *DaggerheartService) SessionGroupActionFlow(ctx context.Context, in *pb.SessionGroupActionFlowRequest) (*pb.SessionGroupActionFlowResponse, error) {
+func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *pb.SessionGroupActionFlowRequest) (*pb.SessionGroupActionFlowResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session group action flow request is required")
 	}
@@ -1258,7 +1258,7 @@ func (s *DaggerheartService) SessionGroupActionFlow(ctx context.Context, in *pb.
 	}, nil
 }
 
-func (s *DaggerheartService) SessionTagTeamFlow(ctx context.Context, in *pb.SessionTagTeamFlowRequest) (*pb.SessionTagTeamFlowResponse, error) {
+func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.SessionTagTeamFlowRequest) (*pb.SessionTagTeamFlowResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session tag team flow request is required")
 	}

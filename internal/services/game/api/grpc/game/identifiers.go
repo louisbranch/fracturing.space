@@ -2,41 +2,42 @@ package game
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
 const (
-	commandTypeActionOutcomeApply             command.Type = "action.outcome.apply"
-	commandTypeActionOutcomeReject            command.Type = "action.outcome.reject"
-	commandTypeActionRollResolve              command.Type = "action.roll.resolve"
-	commandTypeCampaignArchive                command.Type = "campaign.archive"
-	commandTypeCampaignCreate                 command.Type = "campaign.create"
-	commandTypeCampaignEnd                    command.Type = "campaign.end"
-	commandTypeCampaignFork                   command.Type = "campaign.fork"
-	commandTypeCampaignRestore                command.Type = "campaign.restore"
-	commandTypeCampaignUpdate                 command.Type = "campaign.update"
-	commandTypeCharacterCreate                command.Type = "character.create"
-	commandTypeCharacterDelete                command.Type = "character.delete"
-	commandTypeCharacterProfileUpdate         command.Type = "character.profile_update"
-	commandTypeCharacterUpdate                command.Type = "character.update"
-	commandTypeInviteClaim                    command.Type = "invite.claim"
-	commandTypeInviteCreate                   command.Type = "invite.create"
-	commandTypeInviteRevoke                   command.Type = "invite.revoke"
-	commandTypeParticipantBind                command.Type = "participant.bind"
-	commandTypeParticipantJoin                command.Type = "participant.join"
-	commandTypeParticipantLeave               command.Type = "participant.leave"
-	commandTypeParticipantUpdate              command.Type = "participant.update"
-	commandTypeSessionEnd                     command.Type = "session.end"
-	commandTypeSessionGateAbandon             command.Type = "session.gate_abandon"
-	commandTypeSessionGateOpen                command.Type = "session.gate_open"
-	commandTypeSessionGateResolve             command.Type = "session.gate_resolve"
-	commandTypeSessionSpotlightClear          command.Type = "session.spotlight_clear"
-	commandTypeSessionSpotlightSet            command.Type = "session.spotlight_set"
-	commandTypeSessionStart                   command.Type = "session.start"
-	commandTypeStoryNoteAdd                   command.Type = "story.note.add"
-	commandTypeDaggerheartCharacterStatePatch command.Type = "sys.daggerheart.character_state.patch"
-	commandTypeDaggerheartConditionChange     command.Type = "sys.daggerheart.condition.change"
-	commandTypeDaggerheartGMFearSet           command.Type = "sys.daggerheart.gm_fear.set"
+	commandTypeActionOutcomeApply             command.Type = commandids.ActionOutcomeApply
+	commandTypeActionOutcomeReject            command.Type = commandids.ActionOutcomeReject
+	commandTypeActionRollResolve              command.Type = commandids.ActionRollResolve
+	commandTypeCampaignArchive                command.Type = commandids.CampaignArchive
+	commandTypeCampaignCreate                 command.Type = commandids.CampaignCreate
+	commandTypeCampaignEnd                    command.Type = commandids.CampaignEnd
+	commandTypeCampaignFork                   command.Type = commandids.CampaignFork
+	commandTypeCampaignRestore                command.Type = commandids.CampaignRestore
+	commandTypeCampaignUpdate                 command.Type = commandids.CampaignUpdate
+	commandTypeCharacterCreate                command.Type = commandids.CharacterCreate
+	commandTypeCharacterDelete                command.Type = commandids.CharacterDelete
+	commandTypeCharacterProfileUpdate         command.Type = commandids.CharacterProfileUpdate
+	commandTypeCharacterUpdate                command.Type = commandids.CharacterUpdate
+	commandTypeInviteClaim                    command.Type = commandids.InviteClaim
+	commandTypeInviteCreate                   command.Type = commandids.InviteCreate
+	commandTypeInviteRevoke                   command.Type = commandids.InviteRevoke
+	commandTypeParticipantBind                command.Type = commandids.ParticipantBind
+	commandTypeParticipantJoin                command.Type = commandids.ParticipantJoin
+	commandTypeParticipantLeave               command.Type = commandids.ParticipantLeave
+	commandTypeParticipantUpdate              command.Type = commandids.ParticipantUpdate
+	commandTypeSessionEnd                     command.Type = commandids.SessionEnd
+	commandTypeSessionGateAbandon             command.Type = commandids.SessionGateAbandon
+	commandTypeSessionGateOpen                command.Type = commandids.SessionGateOpen
+	commandTypeSessionGateResolve             command.Type = commandids.SessionGateResolve
+	commandTypeSessionSpotlightClear          command.Type = commandids.SessionSpotlightClear
+	commandTypeSessionSpotlightSet            command.Type = commandids.SessionSpotlightSet
+	commandTypeSessionStart                   command.Type = commandids.SessionStart
+	commandTypeStoryNoteAdd                   command.Type = commandids.StoryNoteAdd
+	commandTypeDaggerheartCharacterStatePatch command.Type = commandids.DaggerheartCharacterStatePatch
+	commandTypeDaggerheartConditionChange     command.Type = commandids.DaggerheartConditionChange
+	commandTypeDaggerheartGMFearSet           command.Type = commandids.DaggerheartGMFearSet
 )
 
 const (

@@ -40,111 +40,98 @@ func (s *DaggerheartContentService) GetContentCatalog(ctx context.Context, in *p
 		return nil, err
 	}
 
-	classes, err := store.ListDaggerheartClasses(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list classes: %v", err)
-	}
-	subclasses, err := store.ListDaggerheartSubclasses(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list subclasses: %v", err)
-	}
-	heritages, err := store.ListDaggerheartHeritages(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list heritages: %v", err)
-	}
-	experiences, err := store.ListDaggerheartExperiences(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list experiences: %v", err)
-	}
-	adversaries, err := store.ListDaggerheartAdversaryEntries(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list adversaries: %v", err)
-	}
-	beastforms, err := store.ListDaggerheartBeastforms(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list beastforms: %v", err)
-	}
-	companionExperiences, err := store.ListDaggerheartCompanionExperiences(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list companion experiences: %v", err)
-	}
-	lootEntries, err := store.ListDaggerheartLootEntries(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list loot entries: %v", err)
-	}
-	damageTypes, err := store.ListDaggerheartDamageTypes(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list damage types: %v", err)
-	}
-	domains, err := store.ListDaggerheartDomains(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list domains: %v", err)
-	}
-	domainCards, err := store.ListDaggerheartDomainCards(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list domain cards: %v", err)
-	}
-	weapons, err := store.ListDaggerheartWeapons(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list weapons: %v", err)
-	}
-	armor, err := store.ListDaggerheartArmor(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list armor: %v", err)
-	}
-	items, err := store.ListDaggerheartItems(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list items: %v", err)
-	}
-	environments, err := store.ListDaggerheartEnvironments(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list environments: %v", err)
-	}
+	var (
+		classes              []storage.DaggerheartClass
+		subclasses           []storage.DaggerheartSubclass
+		heritages            []storage.DaggerheartHeritage
+		experiences          []storage.DaggerheartExperienceEntry
+		adversaries          []storage.DaggerheartAdversaryEntry
+		beastforms           []storage.DaggerheartBeastformEntry
+		companionExperiences []storage.DaggerheartCompanionExperienceEntry
+		lootEntries          []storage.DaggerheartLootEntry
+		damageTypes          []storage.DaggerheartDamageTypeEntry
+		domains              []storage.DaggerheartDomain
+		domainCards          []storage.DaggerheartDomainCard
+		weapons              []storage.DaggerheartWeapon
+		armor                []storage.DaggerheartArmor
+		items                []storage.DaggerheartItem
+		environments         []storage.DaggerheartEnvironment
+	)
 
-	if err := localizeClasses(ctx, store, in.GetLocale(), classes); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize classes: %v", err)
+	steps := []contentCatalogStep{
+		{name: "list classes", run: func() error { var stepErr error; classes, stepErr = store.ListDaggerheartClasses(ctx); return stepErr }},
+		{name: "list subclasses", run: func() error {
+			var stepErr error
+			subclasses, stepErr = store.ListDaggerheartSubclasses(ctx)
+			return stepErr
+		}},
+		{name: "list heritages", run: func() error {
+			var stepErr error
+			heritages, stepErr = store.ListDaggerheartHeritages(ctx)
+			return stepErr
+		}},
+		{name: "list experiences", run: func() error {
+			var stepErr error
+			experiences, stepErr = store.ListDaggerheartExperiences(ctx)
+			return stepErr
+		}},
+		{name: "list adversaries", run: func() error {
+			var stepErr error
+			adversaries, stepErr = store.ListDaggerheartAdversaryEntries(ctx)
+			return stepErr
+		}},
+		{name: "list beastforms", run: func() error {
+			var stepErr error
+			beastforms, stepErr = store.ListDaggerheartBeastforms(ctx)
+			return stepErr
+		}},
+		{name: "list companion experiences", run: func() error {
+			var stepErr error
+			companionExperiences, stepErr = store.ListDaggerheartCompanionExperiences(ctx)
+			return stepErr
+		}},
+		{name: "list loot entries", run: func() error {
+			var stepErr error
+			lootEntries, stepErr = store.ListDaggerheartLootEntries(ctx)
+			return stepErr
+		}},
+		{name: "list damage types", run: func() error {
+			var stepErr error
+			damageTypes, stepErr = store.ListDaggerheartDamageTypes(ctx)
+			return stepErr
+		}},
+		{name: "list domains", run: func() error { var stepErr error; domains, stepErr = store.ListDaggerheartDomains(ctx); return stepErr }},
+		{name: "list domain cards", run: func() error {
+			var stepErr error
+			domainCards, stepErr = store.ListDaggerheartDomainCards(ctx)
+			return stepErr
+		}},
+		{name: "list weapons", run: func() error { var stepErr error; weapons, stepErr = store.ListDaggerheartWeapons(ctx); return stepErr }},
+		{name: "list armor", run: func() error { var stepErr error; armor, stepErr = store.ListDaggerheartArmor(ctx); return stepErr }},
+		{name: "list items", run: func() error { var stepErr error; items, stepErr = store.ListDaggerheartItems(ctx); return stepErr }},
+		{name: "list environments", run: func() error {
+			var stepErr error
+			environments, stepErr = store.ListDaggerheartEnvironments(ctx)
+			return stepErr
+		}},
+		{name: "localize classes", run: func() error { return localizeClasses(ctx, store, in.GetLocale(), classes) }},
+		{name: "localize subclasses", run: func() error { return localizeSubclasses(ctx, store, in.GetLocale(), subclasses) }},
+		{name: "localize heritages", run: func() error { return localizeHeritages(ctx, store, in.GetLocale(), heritages) }},
+		{name: "localize experiences", run: func() error { return localizeExperiences(ctx, store, in.GetLocale(), experiences) }},
+		{name: "localize adversaries", run: func() error { return localizeAdversaries(ctx, store, in.GetLocale(), adversaries) }},
+		{name: "localize beastforms", run: func() error { return localizeBeastforms(ctx, store, in.GetLocale(), beastforms) }},
+		{name: "localize companion experiences", run: func() error { return localizeCompanionExperiences(ctx, store, in.GetLocale(), companionExperiences) }},
+		{name: "localize loot entries", run: func() error { return localizeLootEntries(ctx, store, in.GetLocale(), lootEntries) }},
+		{name: "localize damage types", run: func() error { return localizeDamageTypes(ctx, store, in.GetLocale(), damageTypes) }},
+		{name: "localize domains", run: func() error { return localizeDomains(ctx, store, in.GetLocale(), domains) }},
+		{name: "localize domain cards", run: func() error { return localizeDomainCards(ctx, store, in.GetLocale(), domainCards) }},
+		{name: "localize weapons", run: func() error { return localizeWeapons(ctx, store, in.GetLocale(), weapons) }},
+		{name: "localize armor", run: func() error { return localizeArmor(ctx, store, in.GetLocale(), armor) }},
+		{name: "localize items", run: func() error { return localizeItems(ctx, store, in.GetLocale(), items) }},
+		{name: "localize environments", run: func() error { return localizeEnvironments(ctx, store, in.GetLocale(), environments) }},
 	}
-	if err := localizeSubclasses(ctx, store, in.GetLocale(), subclasses); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize subclasses: %v", err)
-	}
-	if err := localizeHeritages(ctx, store, in.GetLocale(), heritages); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize heritages: %v", err)
-	}
-	if err := localizeExperiences(ctx, store, in.GetLocale(), experiences); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize experiences: %v", err)
-	}
-	if err := localizeAdversaries(ctx, store, in.GetLocale(), adversaries); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize adversaries: %v", err)
-	}
-	if err := localizeBeastforms(ctx, store, in.GetLocale(), beastforms); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize beastforms: %v", err)
-	}
-	if err := localizeCompanionExperiences(ctx, store, in.GetLocale(), companionExperiences); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize companion experiences: %v", err)
-	}
-	if err := localizeLootEntries(ctx, store, in.GetLocale(), lootEntries); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize loot entries: %v", err)
-	}
-	if err := localizeDamageTypes(ctx, store, in.GetLocale(), damageTypes); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize damage types: %v", err)
-	}
-	if err := localizeDomains(ctx, store, in.GetLocale(), domains); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize domains: %v", err)
-	}
-	if err := localizeDomainCards(ctx, store, in.GetLocale(), domainCards); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize domain cards: %v", err)
-	}
-	if err := localizeWeapons(ctx, store, in.GetLocale(), weapons); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize weapons: %v", err)
-	}
-	if err := localizeArmor(ctx, store, in.GetLocale(), armor); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize armor: %v", err)
-	}
-	if err := localizeItems(ctx, store, in.GetLocale(), items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize items: %v", err)
-	}
-	if err := localizeEnvironments(ctx, store, in.GetLocale(), environments); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize environments: %v", err)
+	if err := runContentCatalogSteps(steps); err != nil {
+		return nil, status.Errorf(codes.Internal, "content catalog pipeline: %v", err)
 	}
 
 	return &pb.GetDaggerheartContentCatalogResponse{

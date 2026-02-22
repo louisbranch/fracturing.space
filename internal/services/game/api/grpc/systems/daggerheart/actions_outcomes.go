@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -21,7 +22,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *DaggerheartService) ApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeRequest) (*pb.ApplyRollOutcomeResponse, error) {
+func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeRequest) (*pb.ApplyRollOutcomeResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply roll outcome request is required")
 	}
@@ -420,19 +421,20 @@ type daggerheartSystemCommandInput struct {
 
 func (s *DaggerheartService) executeAndApplyDaggerheartSystemCommand(ctx context.Context, in daggerheartSystemCommandInput) error {
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-	_, err := s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    in.campaignID,
-		Type:          in.commandType,
-		ActorType:     command.ActorTypeSystem,
-		SessionID:     in.sessionID,
-		RequestID:     in.requestID,
-		InvocationID:  in.invocationID,
-		EntityType:    in.entityType,
-		EntityID:      in.entityID,
-		SystemID:      daggerheart.SystemID,
-		SystemVersion: daggerheart.SystemVersion,
-		PayloadJSON:   in.payloadJSON,
-	}, adapter, domainCommandApplyOptions{
+	cmd := commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
+		CoreInput: commandbuild.CoreInput{
+			CampaignID:   in.campaignID,
+			Type:         in.commandType,
+			ActorType:    command.ActorTypeSystem,
+			SessionID:    in.sessionID,
+			RequestID:    in.requestID,
+			InvocationID: in.invocationID,
+			EntityType:   in.entityType,
+			EntityID:     in.entityID,
+			PayloadJSON:  in.payloadJSON,
+		},
+	})
+	_, err := s.executeAndApplyDomainCommand(ctx, cmd, adapter, domainCommandApplyOptions{
 		requireEvents:   true,
 		missingEventMsg: in.missingEventMsg,
 		applyErrMessage: in.applyErrMessage,
@@ -667,7 +669,7 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 	return nil
 }
 
-func (s *DaggerheartService) ApplyAttackOutcome(ctx context.Context, in *pb.DaggerheartApplyAttackOutcomeRequest) (*pb.DaggerheartApplyAttackOutcomeResponse, error) {
+func (s *DaggerheartService) runApplyAttackOutcome(ctx context.Context, in *pb.DaggerheartApplyAttackOutcomeRequest) (*pb.DaggerheartApplyAttackOutcomeResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply attack outcome request is required")
 	}
@@ -784,7 +786,7 @@ func (s *DaggerheartService) ApplyAttackOutcome(ctx context.Context, in *pb.Dagg
 	}, nil
 }
 
-func (s *DaggerheartService) ApplyAdversaryAttackOutcome(ctx context.Context, in *pb.DaggerheartApplyAdversaryAttackOutcomeRequest) (*pb.DaggerheartApplyAdversaryAttackOutcomeResponse, error) {
+func (s *DaggerheartService) runApplyAdversaryAttackOutcome(ctx context.Context, in *pb.DaggerheartApplyAdversaryAttackOutcomeRequest) (*pb.DaggerheartApplyAdversaryAttackOutcomeResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply adversary attack outcome request is required")
 	}
@@ -908,7 +910,7 @@ func (s *DaggerheartService) ApplyAdversaryAttackOutcome(ctx context.Context, in
 	}, nil
 }
 
-func (s *DaggerheartService) ApplyReactionOutcome(ctx context.Context, in *pb.DaggerheartApplyReactionOutcomeRequest) (*pb.DaggerheartApplyReactionOutcomeResponse, error) {
+func (s *DaggerheartService) runApplyReactionOutcome(ctx context.Context, in *pb.DaggerheartApplyReactionOutcomeRequest) (*pb.DaggerheartApplyReactionOutcomeResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply reaction outcome request is required")
 	}

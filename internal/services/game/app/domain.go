@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/checkpoint"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -93,38 +94,38 @@ type coreDecider struct {
 type coreCommandRoute func(d coreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision
 
 const (
-	coreCommandTypeCampaignCreate          command.Type = "campaign.create"
-	coreCommandTypeCampaignUpdate          command.Type = "campaign.update"
-	coreCommandTypeCampaignFork            command.Type = "campaign.fork"
-	coreCommandTypeCampaignEnd             command.Type = "campaign.end"
-	coreCommandTypeCampaignArchive         command.Type = "campaign.archive"
-	coreCommandTypeCampaignRestore         command.Type = "campaign.restore"
-	coreCommandTypeActionRollResolve       command.Type = "action.roll.resolve"
-	coreCommandTypeActionOutcomeApply      command.Type = "action.outcome.apply"
-	coreCommandTypeActionOutcomeReject     command.Type = "action.outcome.reject"
-	coreCommandTypeStoryNoteAdd            command.Type = "story.note.add"
-	coreCommandTypeSessionStart            command.Type = "session.start"
-	coreCommandTypeSessionEnd              command.Type = "session.end"
-	coreCommandTypeSessionGateOpen         command.Type = "session.gate_open"
-	coreCommandTypeSessionGateResolve      command.Type = "session.gate_resolve"
-	coreCommandTypeSessionGateAbandon      command.Type = "session.gate_abandon"
-	coreCommandTypeSessionSpotlightSet     command.Type = "session.spotlight_set"
-	coreCommandTypeSessionSpotlightClear   command.Type = "session.spotlight_clear"
-	coreCommandTypeParticipantJoin         command.Type = "participant.join"
-	coreCommandTypeParticipantSeatReassign command.Type = "participant.seat.reassign"
-	coreCommandTypeParticipantUpdate       command.Type = "participant.update"
-	coreCommandTypeParticipantLeave        command.Type = "participant.leave"
-	coreCommandTypeParticipantBind         command.Type = "participant.bind"
-	coreCommandTypeParticipantUnbind       command.Type = "participant.unbind"
-	coreCommandTypeSeatReassign            command.Type = "seat.reassign"
-	coreCommandTypeInviteCreate            command.Type = "invite.create"
-	coreCommandTypeInviteClaim             command.Type = "invite.claim"
-	coreCommandTypeInviteRevoke            command.Type = "invite.revoke"
-	coreCommandTypeInviteUpdate            command.Type = "invite.update"
-	coreCommandTypeCharacterCreate         command.Type = "character.create"
-	coreCommandTypeCharacterUpdate         command.Type = "character.update"
-	coreCommandTypeCharacterDelete         command.Type = "character.delete"
-	coreCommandTypeCharacterProfileUpdate  command.Type = "character.profile_update"
+	coreCommandTypeCampaignCreate          command.Type = commandids.CampaignCreate
+	coreCommandTypeCampaignUpdate          command.Type = commandids.CampaignUpdate
+	coreCommandTypeCampaignFork            command.Type = commandids.CampaignFork
+	coreCommandTypeCampaignEnd             command.Type = commandids.CampaignEnd
+	coreCommandTypeCampaignArchive         command.Type = commandids.CampaignArchive
+	coreCommandTypeCampaignRestore         command.Type = commandids.CampaignRestore
+	coreCommandTypeActionRollResolve       command.Type = commandids.ActionRollResolve
+	coreCommandTypeActionOutcomeApply      command.Type = commandids.ActionOutcomeApply
+	coreCommandTypeActionOutcomeReject     command.Type = commandids.ActionOutcomeReject
+	coreCommandTypeStoryNoteAdd            command.Type = commandids.StoryNoteAdd
+	coreCommandTypeSessionStart            command.Type = commandids.SessionStart
+	coreCommandTypeSessionEnd              command.Type = commandids.SessionEnd
+	coreCommandTypeSessionGateOpen         command.Type = commandids.SessionGateOpen
+	coreCommandTypeSessionGateResolve      command.Type = commandids.SessionGateResolve
+	coreCommandTypeSessionGateAbandon      command.Type = commandids.SessionGateAbandon
+	coreCommandTypeSessionSpotlightSet     command.Type = commandids.SessionSpotlightSet
+	coreCommandTypeSessionSpotlightClear   command.Type = commandids.SessionSpotlightClear
+	coreCommandTypeParticipantJoin         command.Type = commandids.ParticipantJoin
+	coreCommandTypeParticipantSeatReassign command.Type = commandids.ParticipantSeatReassign
+	coreCommandTypeParticipantUpdate       command.Type = commandids.ParticipantUpdate
+	coreCommandTypeParticipantLeave        command.Type = commandids.ParticipantLeave
+	coreCommandTypeParticipantBind         command.Type = commandids.ParticipantBind
+	coreCommandTypeParticipantUnbind       command.Type = commandids.ParticipantUnbind
+	coreCommandTypeSeatReassign            command.Type = commandids.SeatReassign
+	coreCommandTypeInviteCreate            command.Type = commandids.InviteCreate
+	coreCommandTypeInviteClaim             command.Type = commandids.InviteClaim
+	coreCommandTypeInviteRevoke            command.Type = commandids.InviteRevoke
+	coreCommandTypeInviteUpdate            command.Type = commandids.InviteUpdate
+	coreCommandTypeCharacterCreate         command.Type = commandids.CharacterCreate
+	coreCommandTypeCharacterUpdate         command.Type = commandids.CharacterUpdate
+	coreCommandTypeCharacterDelete         command.Type = commandids.CharacterDelete
+	coreCommandTypeCharacterProfileUpdate  command.Type = commandids.CharacterProfileUpdate
 )
 
 // campaignRoute routes campaign-level commands to campaign deciders.

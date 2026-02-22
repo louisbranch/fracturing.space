@@ -7,28 +7,29 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 const (
-	commandTypeGMFearSet                    command.Type = "sys.daggerheart.gm_fear.set"
-	commandTypeCharacterStatePatch          command.Type = "sys.daggerheart.character_state.patch"
-	commandTypeConditionChange              command.Type = "sys.daggerheart.condition.change"
-	commandTypeHopeSpend                    command.Type = "sys.daggerheart.hope.spend"
-	commandTypeStressSpend                  command.Type = "sys.daggerheart.stress.spend"
-	commandTypeLoadoutSwap                  command.Type = "sys.daggerheart.loadout.swap"
-	commandTypeRestTake                     command.Type = "sys.daggerheart.rest.take"
-	commandTypeCountdownCreate              command.Type = "sys.daggerheart.countdown.create"
-	commandTypeCountdownUpdate              command.Type = "sys.daggerheart.countdown.update"
-	commandTypeCountdownDelete              command.Type = "sys.daggerheart.countdown.delete"
-	commandTypeDamageApply                  command.Type = "sys.daggerheart.damage.apply"
-	commandTypeAdversaryDamageApply         command.Type = "sys.daggerheart.adversary_damage.apply"
-	commandTypeDowntimeMoveApply            command.Type = "sys.daggerheart.downtime_move.apply"
-	commandTypeCharacterTemporaryArmorApply command.Type = "sys.daggerheart.character_temporary_armor.apply"
-	commandTypeAdversaryConditionChange     command.Type = "sys.daggerheart.adversary_condition.change"
-	commandTypeAdversaryCreate              command.Type = "sys.daggerheart.adversary.create"
-	commandTypeAdversaryUpdate              command.Type = "sys.daggerheart.adversary.update"
-	commandTypeAdversaryDelete              command.Type = "sys.daggerheart.adversary.delete"
+	commandTypeGMFearSet                    command.Type = commandids.DaggerheartGMFearSet
+	commandTypeCharacterStatePatch          command.Type = commandids.DaggerheartCharacterStatePatch
+	commandTypeConditionChange              command.Type = commandids.DaggerheartConditionChange
+	commandTypeHopeSpend                    command.Type = commandids.DaggerheartHopeSpend
+	commandTypeStressSpend                  command.Type = commandids.DaggerheartStressSpend
+	commandTypeLoadoutSwap                  command.Type = commandids.DaggerheartLoadoutSwap
+	commandTypeRestTake                     command.Type = commandids.DaggerheartRestTake
+	commandTypeCountdownCreate              command.Type = commandids.DaggerheartCountdownCreate
+	commandTypeCountdownUpdate              command.Type = commandids.DaggerheartCountdownUpdate
+	commandTypeCountdownDelete              command.Type = commandids.DaggerheartCountdownDelete
+	commandTypeDamageApply                  command.Type = commandids.DaggerheartDamageApply
+	commandTypeAdversaryDamageApply         command.Type = commandids.DaggerheartAdversaryDamageApply
+	commandTypeDowntimeMoveApply            command.Type = commandids.DaggerheartDowntimeMoveApply
+	commandTypeCharacterTemporaryArmorApply command.Type = commandids.DaggerheartCharacterTemporaryArmorApply
+	commandTypeAdversaryConditionChange     command.Type = commandids.DaggerheartAdversaryConditionChange
+	commandTypeAdversaryCreate              command.Type = commandids.DaggerheartAdversaryCreate
+	commandTypeAdversaryUpdate              command.Type = commandids.DaggerheartAdversaryUpdate
+	commandTypeAdversaryDelete              command.Type = commandids.DaggerheartAdversaryDelete
 
 	rejectionCodeGMFearAfterRequired             = "GM_FEAR_AFTER_REQUIRED"
 	rejectionCodeGMFearOutOfRange                = "GM_FEAR_AFTER_OUT_OF_RANGE"
