@@ -123,16 +123,19 @@ func (h *handler) handleAppUsernameSettingsPost(w http.ResponseWriter, r *http.R
 		http.Redirect(w, r, "/auth/login", http.StatusFound)
 		return
 	}
-	if h.connectionsClient == nil {
-		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Username settings unavailable", "connections service is not configured")
-		return
-	}
 	if err := r.ParseForm(); err != nil {
 		h.renderErrorPage(w, r, http.StatusBadRequest, "Username settings unavailable", "failed to parse username form")
 		return
 	}
 	page := h.pageContext(w, r)
 	username := strings.TrimSpace(r.FormValue("username"))
+	if h.connectionsClient == nil {
+		writeUsernameSettingsPage(w, r, page, webtemplates.UsernameSettingsPageState{
+			Username:     username,
+			ErrorMessage: webtemplates.T(page.Loc, "web.settings.username.error_connections_unavailable"),
+		}, http.StatusOK)
+		return
+	}
 	if username == "" {
 		writeUsernameSettingsPage(w, r, page, webtemplates.UsernameSettingsPageState{
 			ErrorMessage: webtemplates.T(page.Loc, "web.settings.username.error_required"),
