@@ -3,6 +3,7 @@ package templates
 import (
 	"strings"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"golang.org/x/text/message"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
@@ -13,22 +14,22 @@ type Localizer interface {
 }
 
 type ChromeLayoutOptions struct {
-	Theme       string
-	DataLayout  string
-	MainAria    string
-	Nav         templ.Component
-	HeadExtras  templ.Component
-	BodyScripts templ.Component
-	UserName    string
+	Theme         string
+	DataLayout    string
+	MainAria      string
+	Nav           templ.Component
+	HeadExtras    templ.Component
+	BodyScripts   templ.Component
+	UserName      string
 	UserAvatarURL string
 }
 
 type AppChromeLayoutOptions struct {
-	Title      string
-	Lang       string
-	AppName    string
-	Loc        Localizer
-	Breadcrumbs []BreadcrumbItem
+	Title         string
+	Lang          string
+	AppName       string
+	Loc           Localizer
+	Breadcrumbs   []BreadcrumbItem
 	ChromeOptions ChromeLayoutOptions
 }
 
@@ -70,12 +71,12 @@ func pageHeadingFromTitle(title string, appName string) string {
 }
 
 templ pageHead(title string, loc Localizer) {
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta charset="utf-8"/>
+	<meta name="viewport" content="width=device-width, initial-scale=1"/>
 	<title>{ ComposePageTitle(title) }</title>
-	<meta name="description" content={ T(loc, "layout.meta_description") }>
+	<meta name="description" content={ T(loc, "layout.meta_description") }/>
 	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18" rel="stylesheet" type="text/css" integrity="sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq" crossorigin="anonymous"/>
-	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/retro.css" rel="stylesheet" type="text/css" crossorigin="anonymous">
+	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/retro.css" rel="stylesheet" type="text/css" crossorigin="anonymous"/>
 	<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18" integrity="sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij" crossorigin="anonymous"></script>
 }
 
@@ -84,7 +85,7 @@ templ ShellLayout(title string, lang string, loc Localizer) {
 	<html lang={ lang } data-theme="retro">
 		<head>
 			@pageHead(title, loc)
-			<link rel="stylesheet" href="/static/shell.css">
+			<link rel="stylesheet" href="/static/shell.css"/>
 		</head>
 		<body class="landing-body" data-layout="auth">
 			@LucideSprite()
@@ -93,13 +94,12 @@ templ ShellLayout(title string, lang string, loc Localizer) {
 	</html>
 }
 
-
 templ AppChromeLayout(options AppChromeLayoutOptions) {
 	<!DOCTYPE html>
 	<html lang={ options.Lang } data-theme={ chromeTheme(options.ChromeOptions) }>
 		<head>
 			@pageHead(options.Title, options.Loc)
-			<link rel="stylesheet" href="/static/theme.css">
+			<link rel="stylesheet" href="/static/theme.css"/>
 			if options.ChromeOptions.HeadExtras == nil {
 				<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
 			}
@@ -108,7 +108,7 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 			}
 		</head>
 		<body data-layout={ chromeDataLayout(options.ChromeOptions) }>
-				@LucideSprite()
+			@LucideSprite()
 			if options.ChromeOptions.Nav != nil {
 				@options.ChromeOptions.Nav
 			} else {
@@ -118,7 +118,7 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 							{ options.AppName }
 						</a>
 					</div>
-				<div class="navbar-end w-full justify-end gap-3">
+					<div class="navbar-end w-full justify-end gap-3">
 						<a
 							href="/"
 							hx-get="/"
@@ -128,56 +128,66 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 							data-nav-item="true"
 							class="btn btn-ghost btn-sm"
 						>{ T(options.Loc, "dashboard.title") }</a>
-					<a
-						href="/campaigns"
-						hx-get="/campaigns"
-						hx-target="#main"
-						hx-swap="innerHTML"
-						hx-push-url="true"
-						data-nav-item="true"
-						class="btn btn-ghost btn-sm"
-					>{ T(options.Loc, "game.campaigns.title") }</a>
-					if strings.TrimSpace(options.ChromeOptions.UserAvatarURL) != "" {
-						<div class="dropdown dropdown-end">
-							<button type="button" class="btn btn-ghost btn-circle avatar">
-								<div class="w-10 rounded-full">
-									<img
-										src={ options.ChromeOptions.UserAvatarURL }
-										alt={ options.ChromeOptions.UserName }
-										class="rounded-full"
-									/>
+						<a
+							href="/campaigns"
+							hx-get="/campaigns"
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+							data-nav-item="true"
+							class="btn btn-ghost btn-sm"
+						>{ T(options.Loc, "game.campaigns.title") }</a>
+						if strings.TrimSpace(options.ChromeOptions.UserAvatarURL) != "" {
+							<div class="dropdown dropdown-end">
+								<button type="button" class="btn btn-ghost btn-circle avatar">
+									<div class="w-10 rounded-full">
+										<img
+											src={ options.ChromeOptions.UserAvatarURL }
+											alt={ options.ChromeOptions.UserName }
+											class="rounded-full"
+										/>
+									</div>
+								</button>
+								<div class="dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow">
+									<a
+										href="/profile"
+										hx-get="/profile"
+										hx-target="#main"
+										hx-swap="innerHTML"
+										hx-push-url="true"
+										class="btn btn-ghost btn-sm w-full justify-start"
+									>
+										@LucideIconID(commonv1.IconId_ICON_ID_CHARACTER, "size-4 me-2")
+										{ T(options.Loc, "layout.profile") }
+									</a>
+									<a
+										href="/settings"
+										hx-get="/settings"
+										hx-target="#main"
+										hx-swap="innerHTML"
+										hx-push-url="true"
+										class="btn btn-ghost btn-sm w-full justify-start"
+									>
+										@LucideIconID(commonv1.IconId_ICON_ID_SETTINGS, "size-4 me-2")
+										{ T(options.Loc, "layout.settings") }
+									</a>
+									<form method="POST" action="/auth/logout">
+										<button type="submit" class="btn btn-ghost btn-sm w-full justify-start">
+											@LucideIconID(commonv1.IconId_ICON_ID_LOG_OUT, "size-4 me-2")
+											{ T(options.Loc, "layout.sign_out") }
+										</button>
+									</form>
 								</div>
-							</button>
-						<div class="dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow">
-							<a
-								href="/profile"
-								hx-get="/profile"
-								hx-target="#main"
-								hx-swap="innerHTML"
-								hx-push-url="true"
-								class="btn btn-ghost btn-sm w-full justify-start"
-							>{ T(options.Loc, "layout.profile") }</a>
-							<a
-								href="/settings"
-								hx-get="/settings"
-								hx-target="#main"
-								hx-swap="innerHTML"
-								hx-push-url="true"
-								class="btn btn-ghost btn-sm w-full justify-start"
-							>{ T(options.Loc, "layout.settings") }</a>
+							</div>
+						} else {
 							<form method="POST" action="/auth/logout">
-								<button type="submit" class="btn btn-ghost btn-sm w-full justify-start">
+								<button type="submit" class="btn btn-ghost btn-sm justify-start">
+									@LucideIconID(commonv1.IconId_ICON_ID_LOG_OUT, "size-4 me-2")
 									{ T(options.Loc, "layout.sign_out") }
 								</button>
 							</form>
-						</div>
-						</div>
-					} else {
-						<form method="POST" action="/auth/logout">
-							<button type="submit" class="btn btn-ghost btn-sm">{ T(options.Loc, "layout.sign_out") }</button>
-						</form>
-					}
-				</div>
+						}
+					</div>
 				</nav>
 			}
 			<main class="max-w-screen-xl mx-auto px-4 pt-20" id="main" aria-label={ chromeMainAria(options.Loc, options.ChromeOptions) }>
@@ -188,12 +198,12 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 				{ children... }
 			</main>
 			<script>
-				function syncChromeNavActiveLinks() {
-					var currentPath = window.location.pathname;
-					var links = document.querySelectorAll("a[data-nav-item]");
-					if (!links.length) {
-						return;
-					}
+			function syncChromeNavActiveLinks() {
+				var currentPath = window.location.pathname;
+				var links = document.querySelectorAll("a[data-nav-item]");
+				if (!links.length) {
+					return;
+				}
 				links.forEach(function(link) {
 					var href = link.getAttribute("href");
 					link.classList.remove("active");
@@ -202,12 +212,12 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 					if (!href) {
 						return;
 					}
-						var target;
-						try {
-							target = new URL(href, window.location.origin);
-						} catch (err) {
-							return;
-						}
+					var target;
+					try {
+						target = new URL(href, window.location.origin);
+					} catch (err) {
+						return;
+					}
 					var shouldBeActive = currentPath === target.pathname;
 					if (!shouldBeActive && target.pathname !== "/") {
 						shouldBeActive = currentPath.indexOf(target.pathname + "/") === 0;
@@ -220,12 +230,12 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 					}
 				});
 			}
-				syncChromeNavActiveLinks();
-				document.addEventListener("DOMContentLoaded", syncChromeNavActiveLinks);
-				window.addEventListener("popstate", syncChromeNavActiveLinks);
-				document.addEventListener("htmx:afterSwap", syncChromeNavActiveLinks);
-				document.addEventListener("htmx:afterSettle", syncChromeNavActiveLinks);
-			</script>
+			syncChromeNavActiveLinks();
+			document.addEventListener("DOMContentLoaded", syncChromeNavActiveLinks);
+			window.addEventListener("popstate", syncChromeNavActiveLinks);
+			document.addEventListener("htmx:afterSwap", syncChromeNavActiveLinks);
+			document.addEventListener("htmx:afterSettle", syncChromeNavActiveLinks);
+		</script>
 			if options.ChromeOptions.BodyScripts != nil {
 				@options.ChromeOptions.BodyScripts
 			}

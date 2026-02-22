@@ -172,7 +172,22 @@ var catalog = []Definition{
 	{
 		ID:          commonv1.IconId_ICON_ID_ANIMAL,
 		Name:        "Animal",
-		Description: "animal encounters",
+		Description: "Animal encounters.",
+	},
+	{
+		ID:          commonv1.IconId_ICON_ID_KEY,
+		Name:        "Key",
+		Description: "Secret or API key actions.",
+	},
+	{
+		ID:          commonv1.IconId_ICON_ID_LOG_OUT,
+		Name:        "Log Out",
+		Description: "User logout actions.",
+	},
+	{
+		ID:          commonv1.IconId_ICON_ID_SETTINGS,
+		Name:        "Settings",
+		Description: "Application settings and configuration.",
 	},
 }
 

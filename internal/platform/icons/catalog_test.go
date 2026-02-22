@@ -54,3 +54,24 @@ func TestCatalogMarkdownIncludesIconIds(t *testing.T) {
 		}
 	}
 }
+
+func TestLucideMappingsAreCataloged(t *testing.T) {
+	catalogIDs := make(map[commonv1.IconId]struct{}, len(Catalog()))
+	for _, def := range Catalog() {
+		catalogIDs[def.ID] = struct{}{}
+	}
+
+	for id, name := range lucideIconNames {
+		if _, ok := catalogIDs[id]; !ok {
+			t.Errorf("lucide mapping for %s exists but icon id is missing from catalog", name)
+		}
+	}
+}
+
+func TestCatalogIconsHaveLucideMappings(t *testing.T) {
+	for _, def := range Catalog() {
+		if _, ok := LucideName(def.ID); !ok {
+			t.Errorf("catalog icon %s does not have a Lucide mapping", def.ID.String())
+		}
+	}
+}
