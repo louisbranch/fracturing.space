@@ -117,6 +117,25 @@ func TestDecideUnsupportedCommandRejected(t *testing.T) {
 	}
 }
 
+func TestDaggerheartDecisionHandlers_CoversHandledCommands(t *testing.T) {
+	handled := Decider{}.DeciderHandledCommands()
+	if len(handled) != len(daggerheartDecisionHandlers) {
+		t.Fatalf("handled command count = %d, decision handler count = %d", len(handled), len(daggerheartDecisionHandlers))
+	}
+	handledSet := make(map[command.Type]struct{}, len(handled))
+	for _, typ := range handled {
+		handledSet[typ] = struct{}{}
+		if _, ok := daggerheartDecisionHandlers[typ]; !ok {
+			t.Fatalf("missing decision handler for command type %s", typ)
+		}
+	}
+	for typ := range daggerheartDecisionHandlers {
+		if _, ok := handledSet[typ]; !ok {
+			t.Fatalf("decision handler registered for unsupported command type %s", typ)
+		}
+	}
+}
+
 func TestDecideRegisteredCommandsDoNotReturnEmptyDecision(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	for _, tc := range commandValidationCases() {

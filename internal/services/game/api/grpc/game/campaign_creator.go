@@ -12,6 +12,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -91,7 +92,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignCreate,
 			ActorType:    actorType,
@@ -101,7 +102,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 			EntityType:   "campaign",
 			EntityID:     campaignID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{},
 	)
 	if err != nil {
@@ -157,7 +158,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeParticipantJoin,
 			ActorType:    command.ActorTypeSystem,
@@ -167,7 +168,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 			EntityType:   "participant",
 			EntityID:     creatorID,
 			PayloadJSON:  participantPayloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErrMessage: "apply participant event",
 		},
@@ -212,7 +213,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 		ctx,
 		c.stores.Domain,
 		c.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignEnd,
 			ActorType:    actorType,
@@ -221,7 +222,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 			EntityType:   "campaign",
 			EntityID:     campaignID,
-		},
+		}),
 		domainCommandApplyOptions{},
 	)
 	if err != nil {
@@ -258,7 +259,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 		ctx,
 		c.stores.Domain,
 		c.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignArchive,
 			ActorType:    actorType,
@@ -267,7 +268,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 			EntityType:   "campaign",
 			EntityID:     campaignID,
-		},
+		}),
 		domainCommandApplyOptions{},
 	)
 	if err != nil {
@@ -300,7 +301,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 		ctx,
 		c.stores.Domain,
 		c.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignRestore,
 			ActorType:    actorType,
@@ -309,7 +310,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 			EntityType:   "campaign",
 			EntityID:     campaignID,
-		},
+		}),
 		domainCommandApplyOptions{},
 	)
 	if err != nil {
@@ -354,7 +355,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 		ctx,
 		c.stores.Domain,
 		c.stores.Applier(),
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignUpdate,
 			ActorType:    actorType,
@@ -364,7 +365,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 			EntityType:   "campaign",
 			EntityID:     campaignID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{},
 	)
 	if err != nil {

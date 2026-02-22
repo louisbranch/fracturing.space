@@ -41,389 +41,402 @@ const (
 	rejectionCodeParticipantUserIDMismatch     = "PARTICIPANT_USER_ID_MISMATCH"
 )
 
+type participantDecisionHandler func(State, command.Command, func() time.Time) command.Decision
+
+var participantDecisionHandlers = map[command.Type]participantDecisionHandler{
+	CommandTypeJoin:               decideJoin,
+	CommandTypeUpdate:             decideUpdate,
+	CommandTypeLeave:              decideLeave,
+	CommandTypeBind:               decideBind,
+	CommandTypeUnbind:             decideUnbind,
+	CommandTypeSeatReassign:       decideSeatReassign,
+	CommandTypeSeatReassignLegacy: decideSeatReassign,
+}
+
 // Decide returns the decision for a participant command against current state.
 //
 // Participant commands define membership and authorization context. This decider keeps
 // that context explicit by emitting identity/role/capability changes as immutable
 // events rather than mutating shared storage directly.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	switch cmd.Type {
-	case CommandTypeJoin:
-		if state.Joined {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantAlreadyJoined,
-				Message: "participant already joined",
-			})
-		}
-		var payload JoinPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-
-		participantID := strings.TrimSpace(payload.ParticipantID)
-		if participantID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantIDRequired,
-				Message: "participant id is required",
-			})
-		}
-		userID := strings.TrimSpace(payload.UserID)
-		name := strings.TrimSpace(payload.Name)
-		if name == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantNameEmpty,
-				Message: "name is required",
-			})
-		}
-		role, ok := normalizeRoleLabel(payload.Role)
-		if !ok {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantRoleInvalid,
-				Message: "participant role is required",
-			})
-		}
-		controller, ok := normalizeControllerLabel(payload.Controller)
-		if !ok {
-			if strings.TrimSpace(payload.Controller) != "" {
-				return command.Reject(command.Rejection{
-					Code:    rejectionCodeParticipantControllerInvalid,
-					Message: "participant controller is invalid",
-				})
-			}
-			controller = "human"
-		}
-		access, ok := normalizeCampaignAccessLabel(payload.CampaignAccess)
-		if !ok {
-			if strings.TrimSpace(payload.CampaignAccess) != "" {
-				return command.Reject(command.Rejection{
-					Code:    rejectionCodeParticipantAccessInvalid,
-					Message: "campaign access is invalid",
-				})
-			}
-			access = "member"
-		}
-		avatarSetID, avatarAssetID, err := resolveParticipantAvatarSelection(
-			participantID,
-			userID,
-			payload.AvatarSetID,
-			payload.AvatarAssetID,
-		)
-		if err != nil {
-			return command.Reject(participantAvatarRejection(err))
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := JoinPayload{
-			ParticipantID:  participantID,
-			UserID:         userID,
-			Name:           name,
-			Role:           role,
-			Controller:     controller,
-			CampaignAccess: access,
-			AvatarSetID:    avatarSetID,
-			AvatarAssetID:  avatarAssetID,
-		}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-
-		evt := command.NewEvent(cmd, EventTypeJoined, "participant", participantID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
-	case CommandTypeUpdate:
-		if !state.Joined || state.Left {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantNotJoined,
-				Message: "participant not joined",
-			})
-		}
-		var payload UpdatePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		participantID := strings.TrimSpace(payload.ParticipantID)
-		if participantID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantIDRequired,
-				Message: "participant id is required",
-			})
-		}
-		if len(payload.Fields) == 0 {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantUpdateEmpty,
-				Message: "participant update requires fields",
-			})
-		}
-
-		rawAvatarSetID, avatarSetProvided := payload.Fields["avatar_set_id"]
-		rawAvatarAssetID, avatarAssetProvided := payload.Fields["avatar_asset_id"]
-		normalizedFields := make(map[string]string, len(payload.Fields))
-		for key, value := range payload.Fields {
-			switch key {
-			case "user_id":
-				normalizedFields[key] = strings.TrimSpace(value)
-			case "name":
-				trimmed := strings.TrimSpace(value)
-				if trimmed == "" {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeParticipantNameEmpty,
-						Message: "name is required",
-					})
-				}
-				normalizedFields[key] = trimmed
-			case "role":
-				normalizedRole, ok := normalizeRoleLabel(value)
-				if !ok {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeParticipantRoleInvalid,
-						Message: "participant role is invalid",
-					})
-				}
-				normalizedFields[key] = normalizedRole
-			case "controller":
-				normalizedController, ok := normalizeControllerLabel(value)
-				if !ok {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeParticipantControllerInvalid,
-						Message: "participant controller is invalid",
-					})
-				}
-				normalizedFields[key] = normalizedController
-			case "campaign_access":
-				normalizedAccess, ok := normalizeCampaignAccessLabel(value)
-				if !ok {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeParticipantAccessInvalid,
-						Message: "campaign access is invalid",
-					})
-				}
-				normalizedFields[key] = normalizedAccess
-			case "avatar_set_id":
-			case "avatar_asset_id":
-			default:
-				return command.Reject(command.Rejection{
-					Code:    rejectionCodeParticipantUpdateFieldInvalid,
-					Message: "participant update field is invalid",
-				})
-			}
-		}
-		if avatarSetProvided || avatarAssetProvided {
-			avatarUserID := strings.TrimSpace(state.UserID)
-			if rawUserID, ok := normalizedFields["user_id"]; ok {
-				avatarUserID = strings.TrimSpace(rawUserID)
-			}
-
-			avatarSetInput := strings.TrimSpace(state.AvatarSetID)
-			if avatarSetProvided {
-				avatarSetInput = rawAvatarSetID
-			}
-
-			avatarAssetInput := strings.TrimSpace(state.AvatarAssetID)
-			if avatarAssetProvided {
-				avatarAssetInput = rawAvatarAssetID
-			} else if avatarSetProvided {
-				avatarAssetInput = ""
-			}
-
-			resolvedSetID, resolvedAssetID, err := resolveParticipantAvatarSelection(
-				participantID,
-				avatarUserID,
-				avatarSetInput,
-				avatarAssetInput,
-			)
-			if err != nil {
-				return command.Reject(participantAvatarRejection(err))
-			}
-			if avatarSetProvided {
-				normalizedFields["avatar_set_id"] = resolvedSetID
-			}
-			if avatarAssetProvided || avatarSetProvided {
-				normalizedFields["avatar_asset_id"] = resolvedAssetID
-			}
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := UpdatePayload{ParticipantID: participantID, Fields: normalizedFields}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeUpdated, "participant", participantID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
-	case CommandTypeLeave:
-		if !state.Joined || state.Left {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantNotJoined,
-				Message: "participant not joined",
-			})
-		}
-		var payload LeavePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		participantID := strings.TrimSpace(payload.ParticipantID)
-		if participantID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantIDRequired,
-				Message: "participant id is required",
-			})
-		}
-		reason := strings.TrimSpace(payload.Reason)
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := LeavePayload{ParticipantID: participantID, Reason: reason}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeLeft, "participant", participantID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
-	case CommandTypeBind:
-		if !state.Joined || state.Left {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantNotJoined,
-				Message: "participant not joined",
-			})
-		}
-		var payload BindPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		participantID := strings.TrimSpace(payload.ParticipantID)
-		if participantID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantIDRequired,
-				Message: "participant id is required",
-			})
-		}
-		userID := strings.TrimSpace(payload.UserID)
-		if userID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantUserIDRequired,
-				Message: "user id is required",
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := BindPayload{ParticipantID: participantID, UserID: userID}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeBound, "participant", participantID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
-	case CommandTypeUnbind:
-		if !state.Joined || state.Left {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantNotJoined,
-				Message: "participant not joined",
-			})
-		}
-		var payload UnbindPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		participantID := strings.TrimSpace(payload.ParticipantID)
-		if participantID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantIDRequired,
-				Message: "participant id is required",
-			})
-		}
-		userID := strings.TrimSpace(payload.UserID)
-		if userID != "" && userID != strings.TrimSpace(state.UserID) {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantUserIDMismatch,
-				Message: "participant user id mismatch",
-			})
-		}
-		reason := strings.TrimSpace(payload.Reason)
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := UnbindPayload{ParticipantID: participantID, UserID: userID, Reason: reason}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeUnbound, "participant", participantID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
-	case CommandTypeSeatReassign, CommandTypeSeatReassignLegacy:
-		if !state.Joined || state.Left {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantNotJoined,
-				Message: "participant not joined",
-			})
-		}
-		var payload SeatReassignPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		participantID := strings.TrimSpace(payload.ParticipantID)
-		if participantID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantIDRequired,
-				Message: "participant id is required",
-			})
-		}
-		priorUserID := strings.TrimSpace(payload.PriorUserID)
-		if priorUserID != "" && priorUserID != strings.TrimSpace(state.UserID) {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantUserIDMismatch,
-				Message: "participant user id mismatch",
-			})
-		}
-		userID := strings.TrimSpace(payload.UserID)
-		if userID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeParticipantUserIDRequired,
-				Message: "user id is required",
-			})
-		}
-		reason := strings.TrimSpace(payload.Reason)
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := SeatReassignPayload{
-			ParticipantID: participantID,
-			PriorUserID:   priorUserID,
-			UserID:        userID,
-			Reason:        reason,
-		}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeSeatReassigned, "participant", participantID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
-	default:
+	handler, ok := participantDecisionHandlers[cmd.Type]
+	if !ok {
 		return command.Reject(command.Rejection{
 			Code:    "COMMAND_TYPE_UNSUPPORTED",
 			Message: fmt.Sprintf("command type %s is not supported by participant decider", cmd.Type),
 		})
 	}
+	return handler(state, cmd, now)
+}
+
+func decideJoin(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if state.Joined {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantAlreadyJoined,
+			Message: "participant already joined",
+		})
+	}
+	var payload JoinPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+
+	participantID := strings.TrimSpace(payload.ParticipantID)
+	if participantID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantIDRequired,
+			Message: "participant id is required",
+		})
+	}
+	userID := strings.TrimSpace(payload.UserID)
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantNameEmpty,
+			Message: "name is required",
+		})
+	}
+	role, ok := normalizeRoleLabel(payload.Role)
+	if !ok {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantRoleInvalid,
+			Message: "participant role is required",
+		})
+	}
+	controller, ok := normalizeControllerLabel(payload.Controller)
+	if !ok {
+		if strings.TrimSpace(payload.Controller) != "" {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeParticipantControllerInvalid,
+				Message: "participant controller is invalid",
+			})
+		}
+		controller = "human"
+	}
+	access, ok := normalizeCampaignAccessLabel(payload.CampaignAccess)
+	if !ok {
+		if strings.TrimSpace(payload.CampaignAccess) != "" {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeParticipantAccessInvalid,
+				Message: "campaign access is invalid",
+			})
+		}
+		access = "member"
+	}
+	avatarSetID, avatarAssetID, err := resolveParticipantAvatarSelection(
+		participantID,
+		userID,
+		payload.AvatarSetID,
+		payload.AvatarAssetID,
+	)
+	if err != nil {
+		return command.Reject(participantAvatarRejection(err))
+	}
+	if now == nil {
+		now = time.Now
+	}
+
+	normalizedPayload := JoinPayload{
+		ParticipantID:  participantID,
+		UserID:         userID,
+		Name:           name,
+		Role:           role,
+		Controller:     controller,
+		CampaignAccess: access,
+		AvatarSetID:    avatarSetID,
+		AvatarAssetID:  avatarAssetID,
+	}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+
+	evt := command.NewEvent(cmd, EventTypeJoined, "participant", participantID, payloadJSON, now().UTC())
+	return command.Accept(evt)
+}
+
+func decideUpdate(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Joined || state.Left {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantNotJoined,
+			Message: "participant not joined",
+		})
+	}
+	var payload UpdatePayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	participantID := strings.TrimSpace(payload.ParticipantID)
+	if participantID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantIDRequired,
+			Message: "participant id is required",
+		})
+	}
+	if len(payload.Fields) == 0 {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantUpdateEmpty,
+			Message: "participant update requires fields",
+		})
+	}
+
+	rawAvatarSetID, avatarSetProvided := payload.Fields["avatar_set_id"]
+	rawAvatarAssetID, avatarAssetProvided := payload.Fields["avatar_asset_id"]
+	normalizedFields := make(map[string]string, len(payload.Fields))
+	for key, value := range payload.Fields {
+		switch key {
+		case "user_id":
+			normalizedFields[key] = strings.TrimSpace(value)
+		case "name":
+			trimmed := strings.TrimSpace(value)
+			if trimmed == "" {
+				return command.Reject(command.Rejection{
+					Code:    rejectionCodeParticipantNameEmpty,
+					Message: "name is required",
+				})
+			}
+			normalizedFields[key] = trimmed
+		case "role":
+			normalizedRole, ok := normalizeRoleLabel(value)
+			if !ok {
+				return command.Reject(command.Rejection{
+					Code:    rejectionCodeParticipantRoleInvalid,
+					Message: "participant role is invalid",
+				})
+			}
+			normalizedFields[key] = normalizedRole
+		case "controller":
+			normalizedController, ok := normalizeControllerLabel(value)
+			if !ok {
+				return command.Reject(command.Rejection{
+					Code:    rejectionCodeParticipantControllerInvalid,
+					Message: "participant controller is invalid",
+				})
+			}
+			normalizedFields[key] = normalizedController
+		case "campaign_access":
+			normalizedAccess, ok := normalizeCampaignAccessLabel(value)
+			if !ok {
+				return command.Reject(command.Rejection{
+					Code:    rejectionCodeParticipantAccessInvalid,
+					Message: "campaign access is invalid",
+				})
+			}
+			normalizedFields[key] = normalizedAccess
+		case "avatar_set_id":
+		case "avatar_asset_id":
+		default:
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeParticipantUpdateFieldInvalid,
+				Message: "participant update field is invalid",
+			})
+		}
+	}
+	if avatarSetProvided || avatarAssetProvided {
+		avatarUserID := strings.TrimSpace(state.UserID)
+		if rawUserID, ok := normalizedFields["user_id"]; ok {
+			avatarUserID = strings.TrimSpace(rawUserID)
+		}
+
+		avatarSetInput := strings.TrimSpace(state.AvatarSetID)
+		if avatarSetProvided {
+			avatarSetInput = rawAvatarSetID
+		}
+
+		avatarAssetInput := strings.TrimSpace(state.AvatarAssetID)
+		if avatarAssetProvided {
+			avatarAssetInput = rawAvatarAssetID
+		} else if avatarSetProvided {
+			avatarAssetInput = ""
+		}
+
+		resolvedSetID, resolvedAssetID, err := resolveParticipantAvatarSelection(
+			participantID,
+			avatarUserID,
+			avatarSetInput,
+			avatarAssetInput,
+		)
+		if err != nil {
+			return command.Reject(participantAvatarRejection(err))
+		}
+		if avatarSetProvided {
+			normalizedFields["avatar_set_id"] = resolvedSetID
+		}
+		if avatarAssetProvided || avatarSetProvided {
+			normalizedFields["avatar_asset_id"] = resolvedAssetID
+		}
+	}
+	if now == nil {
+		now = time.Now
+	}
+
+	normalizedPayload := UpdatePayload{ParticipantID: participantID, Fields: normalizedFields}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeUpdated, "participant", participantID, payloadJSON, now().UTC())
+	return command.Accept(evt)
+}
+
+func decideLeave(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Joined || state.Left {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantNotJoined,
+			Message: "participant not joined",
+		})
+	}
+	var payload LeavePayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	participantID := strings.TrimSpace(payload.ParticipantID)
+	if participantID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantIDRequired,
+			Message: "participant id is required",
+		})
+	}
+	reason := strings.TrimSpace(payload.Reason)
+	if now == nil {
+		now = time.Now
+	}
+
+	normalizedPayload := LeavePayload{ParticipantID: participantID, Reason: reason}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeLeft, "participant", participantID, payloadJSON, now().UTC())
+	return command.Accept(evt)
+}
+
+func decideBind(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Joined || state.Left {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantNotJoined,
+			Message: "participant not joined",
+		})
+	}
+	var payload BindPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	participantID := strings.TrimSpace(payload.ParticipantID)
+	if participantID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantIDRequired,
+			Message: "participant id is required",
+		})
+	}
+	userID := strings.TrimSpace(payload.UserID)
+	if userID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantUserIDRequired,
+			Message: "user id is required",
+		})
+	}
+	if now == nil {
+		now = time.Now
+	}
+
+	normalizedPayload := BindPayload{ParticipantID: participantID, UserID: userID}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeBound, "participant", participantID, payloadJSON, now().UTC())
+	return command.Accept(evt)
+}
+
+func decideUnbind(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Joined || state.Left {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantNotJoined,
+			Message: "participant not joined",
+		})
+	}
+	var payload UnbindPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	participantID := strings.TrimSpace(payload.ParticipantID)
+	if participantID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantIDRequired,
+			Message: "participant id is required",
+		})
+	}
+	userID := strings.TrimSpace(payload.UserID)
+	if userID != "" && userID != strings.TrimSpace(state.UserID) {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantUserIDMismatch,
+			Message: "participant user id mismatch",
+		})
+	}
+	reason := strings.TrimSpace(payload.Reason)
+	if now == nil {
+		now = time.Now
+	}
+
+	normalizedPayload := UnbindPayload{ParticipantID: participantID, UserID: userID, Reason: reason}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeUnbound, "participant", participantID, payloadJSON, now().UTC())
+	return command.Accept(evt)
+}
+
+func decideSeatReassign(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Joined || state.Left {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantNotJoined,
+			Message: "participant not joined",
+		})
+	}
+	var payload SeatReassignPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	participantID := strings.TrimSpace(payload.ParticipantID)
+	if participantID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantIDRequired,
+			Message: "participant id is required",
+		})
+	}
+	priorUserID := strings.TrimSpace(payload.PriorUserID)
+	if priorUserID != "" && priorUserID != strings.TrimSpace(state.UserID) {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantUserIDMismatch,
+			Message: "participant user id mismatch",
+		})
+	}
+	userID := strings.TrimSpace(payload.UserID)
+	if userID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantUserIDRequired,
+			Message: "user id is required",
+		})
+	}
+	reason := strings.TrimSpace(payload.Reason)
+	if now == nil {
+		now = time.Now
+	}
+
+	normalizedPayload := SeatReassignPayload{
+		ParticipantID: participantID,
+		PriorUserID:   priorUserID,
+		UserID:        userID,
+		Reason:        reason,
+	}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeSeatReassigned, "participant", participantID, payloadJSON, now().UTC())
+	return command.Accept(evt)
 }
 
 // normalizeRoleLabel returns a canonical role label.

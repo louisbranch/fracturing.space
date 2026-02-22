@@ -9,6 +9,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -106,7 +107,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		ctx,
 		a.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
 			Type:         commandTypeCampaignCreate,
 			ActorType:    actorType,
@@ -116,7 +117,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 			EntityType:   "campaign",
 			EntityID:     f.NewCampaignID,
 			PayloadJSON:  campaignJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErrMessage: "apply campaign.created",
 		},
@@ -143,7 +144,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		ctx,
 		a.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
 			Type:         commandTypeCampaignFork,
 			ActorType:    actorType,
@@ -153,7 +154,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 			EntityType:   "campaign",
 			EntityID:     f.NewCampaignID,
 			PayloadJSON:  forkJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErrMessage: "apply campaign.forked",
 		},

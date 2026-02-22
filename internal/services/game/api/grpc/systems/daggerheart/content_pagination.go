@@ -30,6 +30,7 @@ type contentListRequest struct {
 	PageToken string
 	OrderBy   string
 	Filter    string
+	DomainID  string
 }
 
 type contentPage[T any] struct {

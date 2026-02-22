@@ -91,66 +91,16 @@ func (h *Handler) handleDashboardContent(w http.ResponseWriter, r *http.Request)
 	}
 
 	// Fetch recent activity (last 15 events across all campaigns)
-	if eventClient := h.eventClient(); eventClient != nil {
-		if campaignClient := h.campaignClient(); campaignClient != nil {
-			campaignsResp, err := campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
-			if err == nil && campaignsResp != nil {
-				// Get events from each campaign and merge
-				allEvents := make([]struct {
-					event        *statev1.Event
-					campaignName string
-				}, 0)
-
-				for _, campaign := range campaignsResp.GetCampaigns() {
-					if campaign == nil {
-						continue
-					}
-					eventsResp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
-						CampaignId: campaign.GetId(),
-						PageSize:   5, // Get top 5 from each campaign
-						OrderBy:    "seq desc",
-					})
-					if err == nil && eventsResp != nil {
-						for _, event := range eventsResp.GetEvents() {
-							if event != nil {
-								allEvents = append(allEvents, struct {
-									event        *statev1.Event
-									campaignName string
-								}{event, campaign.GetName()})
-							}
-						}
-					}
-				}
-
-				// Sort by timestamp descending and take top 15
-				// Simple bubble sort for small datasets
-				for i := 0; i < len(allEvents); i++ {
-					for j := i + 1; j < len(allEvents); j++ {
-						iTs := allEvents[i].event.GetTs()
-						jTs := allEvents[j].event.GetTs()
-						if iTs != nil && jTs != nil && iTs.AsTime().Before(jTs.AsTime()) {
-							allEvents[i], allEvents[j] = allEvents[j], allEvents[i]
-						}
-					}
-				}
-
-				maxEvents := 15
-				if len(allEvents) < maxEvents {
-					maxEvents = len(allEvents)
-				}
-
-				for i := 0; i < maxEvents; i++ {
-					evt := allEvents[i].event
-					activities = append(activities, templates.ActivityEvent{
-						CampaignID:   evt.GetCampaignId(),
-						CampaignName: allEvents[i].campaignName,
-						EventType:    formatEventType(evt.GetType(), loc),
-						Timestamp:    formatTimestamp(evt.GetTs()),
-						Description:  formatEventDescription(evt, loc),
-					})
-				}
-			}
-		}
+	activityService := newDashboardActivityService(h.campaignClient(), h.eventClient())
+	for _, record := range activityService.listRecent(ctx) {
+		evt := record.event
+		activities = append(activities, templates.ActivityEvent{
+			CampaignID:   evt.GetCampaignId(),
+			CampaignName: record.campaignName,
+			EventType:    formatEventType(evt.GetType(), loc),
+			Timestamp:    formatTimestamp(evt.GetTs()),
+			Description:  formatEventDescription(evt, loc),
+		})
 	}
 
 	templ.Handler(templates.DashboardContent(stats, activities, loc)).ServeHTTP(w, r)

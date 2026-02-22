@@ -8,9 +8,9 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -86,7 +86,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeParticipantJoin,
 			ActorType:    actorType,
@@ -96,7 +96,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 			EntityType:   "participant",
 			EntityID:     participantID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErr: domainApplyErrorWithCodePreserve("apply event"),
 		},
@@ -213,7 +213,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeParticipantUpdate,
 			ActorType:    actorType,
@@ -223,7 +223,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 			EntityType:   "participant",
 			EntityID:     participantID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErr: domainApplyErrorWithCodePreserve("apply event"),
 		},
@@ -284,7 +284,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeParticipantLeave,
 			ActorType:    actorType,
@@ -294,7 +294,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 			EntityType:   "participant",
 			EntityID:     participantID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErr: domainApplyErrorWithCodePreserve("apply event"),
 		},

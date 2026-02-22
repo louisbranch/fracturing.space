@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
-	contentfilter "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/content/filter"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -356,17 +354,11 @@ func (s *DaggerheartContentService) GetAdversary(ctx context.Context, in *pb.Get
 		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
 	}
 
-	adversary, err := store.GetDaggerheartAdversaryEntry(ctx, in.GetId())
+	adversary, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), adversaryDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get adversary", err)
+		return nil, err
 	}
-	adversaries := []storage.DaggerheartAdversaryEntry{adversary}
-	if err := localizeAdversaries(ctx, store, in.GetLocale(), adversaries); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize adversaries: %v", err)
-	}
-	adversary = adversaries[0]
-
-	return &pb.GetDaggerheartAdversaryResponse{Adversary: toProtoDaggerheartAdversaryEntry(adversary)}, nil
+	return &pb.GetDaggerheartAdversaryResponse{Adversary: adversary}, nil
 }
 
 // ListAdversaries returns Daggerheart adversary catalog entries.
@@ -379,65 +371,18 @@ func (s *DaggerheartContentService) ListAdversaries(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	adversaries, err := store.ListDaggerheartAdversaryEntries(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list adversaries: %v", err)
-	}
-
-	page, err := listContentPage(adversaries, contentListRequest{
+	adversaries, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartAdversaryEntry]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":   contentfilter.FieldString,
-			"name": contentfilter.FieldString,
-			"tier": contentfilter.FieldInt,
-			"role": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartAdversaryEntry) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartAdversaryEntry, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "tier":
-				return int64(item.Tier), true
-			case "role":
-				return item.Role, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), adversaryDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list adversaries: %v", err)
-	}
-	if err := localizeAdversaries(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize adversaries: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartAdversariesResponse{
-		Adversaries:       toProtoDaggerheartAdversaryEntries(page.Items),
+		Adversaries:       adversaries,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -457,17 +402,11 @@ func (s *DaggerheartContentService) GetBeastform(ctx context.Context, in *pb.Get
 		return nil, status.Error(codes.InvalidArgument, "beastform id is required")
 	}
 
-	beastform, err := store.GetDaggerheartBeastform(ctx, in.GetId())
+	beastform, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), beastformDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get beastform", err)
+		return nil, err
 	}
-	beastforms := []storage.DaggerheartBeastformEntry{beastform}
-	if err := localizeBeastforms(ctx, store, in.GetLocale(), beastforms); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize beastforms: %v", err)
-	}
-	beastform = beastforms[0]
-
-	return &pb.GetDaggerheartBeastformResponse{Beastform: toProtoDaggerheartBeastform(beastform)}, nil
+	return &pb.GetDaggerheartBeastformResponse{Beastform: beastform}, nil
 }
 
 // ListBeastforms returns Daggerheart beastform catalog entries.
@@ -480,65 +419,18 @@ func (s *DaggerheartContentService) ListBeastforms(ctx context.Context, in *pb.L
 		return nil, err
 	}
 
-	beastforms, err := store.ListDaggerheartBeastforms(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list beastforms: %v", err)
-	}
-
-	page, err := listContentPage(beastforms, contentListRequest{
+	beastforms, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartBeastformEntry]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":    contentfilter.FieldString,
-			"name":  contentfilter.FieldString,
-			"tier":  contentfilter.FieldInt,
-			"trait": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartBeastformEntry) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartBeastformEntry, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "tier":
-				return int64(item.Tier), true
-			case "trait":
-				return item.Trait, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), beastformDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list beastforms: %v", err)
-	}
-	if err := localizeBeastforms(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize beastforms: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartBeastformsResponse{
-		Beastforms:        toProtoDaggerheartBeastforms(page.Items),
+		Beastforms:        beastforms,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -558,17 +450,11 @@ func (s *DaggerheartContentService) GetCompanionExperience(ctx context.Context, 
 		return nil, status.Error(codes.InvalidArgument, "companion experience id is required")
 	}
 
-	experience, err := store.GetDaggerheartCompanionExperience(ctx, in.GetId())
+	experience, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), companionExperienceDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get companion experience", err)
+		return nil, err
 	}
-	experiences := []storage.DaggerheartCompanionExperienceEntry{experience}
-	if err := localizeCompanionExperiences(ctx, store, in.GetLocale(), experiences); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize companion experiences: %v", err)
-	}
-	experience = experiences[0]
-
-	return &pb.GetDaggerheartCompanionExperienceResponse{Experience: toProtoDaggerheartCompanionExperience(experience)}, nil
+	return &pb.GetDaggerheartCompanionExperienceResponse{Experience: experience}, nil
 }
 
 // ListCompanionExperiences returns Daggerheart companion experience catalog entries.
@@ -581,59 +467,18 @@ func (s *DaggerheartContentService) ListCompanionExperiences(ctx context.Context
 		return nil, err
 	}
 
-	experiences, err := store.ListDaggerheartCompanionExperiences(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list companion experiences: %v", err)
-	}
-
-	page, err := listContentPage(experiences, contentListRequest{
+	experiences, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartCompanionExperienceEntry]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":   contentfilter.FieldString,
-			"name": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartCompanionExperienceEntry) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartCompanionExperienceEntry, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), companionExperienceDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list companion experiences: %v", err)
-	}
-	if err := localizeCompanionExperiences(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize companion experiences: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartCompanionExperiencesResponse{
-		Experiences:       toProtoDaggerheartCompanionExperiences(page.Items),
+		Experiences:       experiences,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -653,17 +498,11 @@ func (s *DaggerheartContentService) GetLootEntry(ctx context.Context, in *pb.Get
 		return nil, status.Error(codes.InvalidArgument, "loot entry id is required")
 	}
 
-	entry, err := store.GetDaggerheartLootEntry(ctx, in.GetId())
+	entry, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), lootEntryDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get loot entry", err)
+		return nil, err
 	}
-	entries := []storage.DaggerheartLootEntry{entry}
-	if err := localizeLootEntries(ctx, store, in.GetLocale(), entries); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize loot entries: %v", err)
-	}
-	entry = entries[0]
-
-	return &pb.GetDaggerheartLootEntryResponse{Entry: toProtoDaggerheartLootEntry(entry)}, nil
+	return &pb.GetDaggerheartLootEntryResponse{Entry: entry}, nil
 }
 
 // ListLootEntries returns Daggerheart loot catalog entries.
@@ -676,62 +515,18 @@ func (s *DaggerheartContentService) ListLootEntries(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	entries, err := store.ListDaggerheartLootEntries(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list loot entries: %v", err)
-	}
-
-	page, err := listContentPage(entries, contentListRequest{
+	entries, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartLootEntry]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "roll",
-			Allowed: []string{"roll", "roll desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":   contentfilter.FieldString,
-			"name": contentfilter.FieldString,
-			"roll": contentfilter.FieldInt,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "roll", Kind: pagination.CursorValueInt},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartLootEntry) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.IntValue("roll", int64(item.Roll)),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartLootEntry, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "roll":
-				return int64(item.Roll), true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), lootEntryDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list loot entries: %v", err)
-	}
-	if err := localizeLootEntries(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize loot entries: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartLootEntriesResponse{
-		Entries:           toProtoDaggerheartLootEntries(page.Items),
+		Entries:           entries,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -751,17 +546,11 @@ func (s *DaggerheartContentService) GetDamageType(ctx context.Context, in *pb.Ge
 		return nil, status.Error(codes.InvalidArgument, "damage type id is required")
 	}
 
-	entry, err := store.GetDaggerheartDamageType(ctx, in.GetId())
+	entry, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), damageTypeDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get damage type", err)
+		return nil, err
 	}
-	entries := []storage.DaggerheartDamageTypeEntry{entry}
-	if err := localizeDamageTypes(ctx, store, in.GetLocale(), entries); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize damage types: %v", err)
-	}
-	entry = entries[0]
-
-	return &pb.GetDaggerheartDamageTypeResponse{DamageType: toProtoDaggerheartDamageType(entry)}, nil
+	return &pb.GetDaggerheartDamageTypeResponse{DamageType: entry}, nil
 }
 
 // ListDamageTypes returns Daggerheart damage type catalog entries.
@@ -774,59 +563,18 @@ func (s *DaggerheartContentService) ListDamageTypes(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	entries, err := store.ListDaggerheartDamageTypes(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list damage types: %v", err)
-	}
-
-	page, err := listContentPage(entries, contentListRequest{
+	entries, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartDamageTypeEntry]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":   contentfilter.FieldString,
-			"name": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartDamageTypeEntry) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartDamageTypeEntry, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), damageTypeDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list damage types: %v", err)
-	}
-	if err := localizeDamageTypes(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize damage types: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartDamageTypesResponse{
-		DamageTypes:       toProtoDaggerheartDamageTypes(page.Items),
+		DamageTypes:       entries,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -846,17 +594,11 @@ func (s *DaggerheartContentService) GetDomain(ctx context.Context, in *pb.GetDag
 		return nil, status.Error(codes.InvalidArgument, "domain id is required")
 	}
 
-	domain, err := store.GetDaggerheartDomain(ctx, in.GetId())
+	domain, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), domainDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get domain", err)
+		return nil, err
 	}
-	domains := []storage.DaggerheartDomain{domain}
-	if err := localizeDomains(ctx, store, in.GetLocale(), domains); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize domains: %v", err)
-	}
-	domain = domains[0]
-
-	return &pb.GetDaggerheartDomainResponse{Domain: toProtoDaggerheartDomain(domain)}, nil
+	return &pb.GetDaggerheartDomainResponse{Domain: domain}, nil
 }
 
 // ListDomains returns Daggerheart domains.
@@ -869,59 +611,18 @@ func (s *DaggerheartContentService) ListDomains(ctx context.Context, in *pb.List
 		return nil, err
 	}
 
-	domains, err := store.ListDaggerheartDomains(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list domains: %v", err)
-	}
-
-	page, err := listContentPage(domains, contentListRequest{
+	domains, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartDomain]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":   contentfilter.FieldString,
-			"name": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartDomain) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartDomain, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), domainDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list domains: %v", err)
-	}
-	if err := localizeDomains(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize domains: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartDomainsResponse{
-		Domains:           toProtoDaggerheartDomains(page.Items),
+		Domains:           domains,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -941,17 +642,11 @@ func (s *DaggerheartContentService) GetDomainCard(ctx context.Context, in *pb.Ge
 		return nil, status.Error(codes.InvalidArgument, "domain card id is required")
 	}
 
-	card, err := store.GetDaggerheartDomainCard(ctx, in.GetId())
+	card, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), domainCardDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get domain card", err)
+		return nil, err
 	}
-	cards := []storage.DaggerheartDomainCard{card}
-	if err := localizeDomainCards(ctx, store, in.GetLocale(), cards); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize domain cards: %v", err)
-	}
-	card = cards[0]
-
-	return &pb.GetDaggerheartDomainCardResponse{DomainCard: toProtoDaggerheartDomainCard(card)}, nil
+	return &pb.GetDaggerheartDomainCardResponse{DomainCard: card}, nil
 }
 
 // ListDomainCards returns Daggerheart domain cards, optionally filtered by domain.
@@ -964,82 +659,20 @@ func (s *DaggerheartContentService) ListDomainCards(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	var cards []storage.DaggerheartDomainCard
 	domainID := strings.TrimSpace(in.GetDomainId())
-	if domainID != "" {
-		cards, err = store.ListDaggerheartDomainCardsByDomain(ctx, domainID)
-	} else {
-		cards, err = store.ListDaggerheartDomainCards(ctx)
-	}
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list domain cards: %v", err)
-	}
-
-	filterHashSeed := ""
-	if domainID != "" {
-		filterHashSeed = "domain_id=" + domainID
-	}
-
-	page, err := listContentPage(cards, contentListRequest{
+	cards, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartDomainCard]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "level",
-			Allowed: []string{"level", "level desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":        contentfilter.FieldString,
-			"name":      contentfilter.FieldString,
-			"domain_id": contentfilter.FieldString,
-			"level":     contentfilter.FieldInt,
-			"type":      contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "level", Kind: pagination.CursorValueInt},
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartDomainCard) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.IntValue("level", int64(item.Level)),
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartDomainCard, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "domain_id":
-				return item.DomainID, true
-			case "level":
-				return int64(item.Level), true
-			case "type":
-				return item.Type, true
-			default:
-				return nil, false
-			}
-		},
-		FilterHashSeed: filterHashSeed,
-	})
+		DomainID:  domainID,
+	}, in.GetLocale(), domainCardDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list domain cards: %v", err)
-	}
-	if err := localizeDomainCards(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize domain cards: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartDomainCardsResponse{
-		DomainCards:       toProtoDaggerheartDomainCards(page.Items),
+		DomainCards:       cards,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -1059,17 +692,11 @@ func (s *DaggerheartContentService) GetWeapon(ctx context.Context, in *pb.GetDag
 		return nil, status.Error(codes.InvalidArgument, "weapon id is required")
 	}
 
-	weapon, err := store.GetDaggerheartWeapon(ctx, in.GetId())
+	weapon, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), weaponDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get weapon", err)
+		return nil, err
 	}
-	weapons := []storage.DaggerheartWeapon{weapon}
-	if err := localizeWeapons(ctx, store, in.GetLocale(), weapons); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize weapons: %v", err)
-	}
-	weapon = weapons[0]
-
-	return &pb.GetDaggerheartWeaponResponse{Weapon: toProtoDaggerheartWeapon(weapon)}, nil
+	return &pb.GetDaggerheartWeaponResponse{Weapon: weapon}, nil
 }
 
 // ListWeapons returns Daggerheart weapons.
@@ -1082,71 +709,18 @@ func (s *DaggerheartContentService) ListWeapons(ctx context.Context, in *pb.List
 		return nil, err
 	}
 
-	weapons, err := store.ListDaggerheartWeapons(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list weapons: %v", err)
-	}
-
-	page, err := listContentPage(weapons, contentListRequest{
+	weapons, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartWeapon]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":          contentfilter.FieldString,
-			"name":        contentfilter.FieldString,
-			"category":    contentfilter.FieldString,
-			"tier":        contentfilter.FieldInt,
-			"trait":       contentfilter.FieldString,
-			"damage_type": contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartWeapon) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartWeapon, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "category":
-				return item.Category, true
-			case "tier":
-				return int64(item.Tier), true
-			case "trait":
-				return item.Trait, true
-			case "damage_type":
-				return item.DamageType, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), weaponDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list weapons: %v", err)
-	}
-	if err := localizeWeapons(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize weapons: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartWeaponsResponse{
-		Weapons:           toProtoDaggerheartWeapons(page.Items),
+		Weapons:           weapons,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -1166,17 +740,11 @@ func (s *DaggerheartContentService) GetArmor(ctx context.Context, in *pb.GetDagg
 		return nil, status.Error(codes.InvalidArgument, "armor id is required")
 	}
 
-	armor, err := store.GetDaggerheartArmor(ctx, in.GetId())
+	armor, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), armorDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get armor", err)
+		return nil, err
 	}
-	armorItems := []storage.DaggerheartArmor{armor}
-	if err := localizeArmor(ctx, store, in.GetLocale(), armorItems); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize armor: %v", err)
-	}
-	armor = armorItems[0]
-
-	return &pb.GetDaggerheartArmorResponse{Armor: toProtoDaggerheartArmor(armor)}, nil
+	return &pb.GetDaggerheartArmorResponse{Armor: armor}, nil
 }
 
 // ListArmor returns Daggerheart armor entries.
@@ -1189,62 +757,18 @@ func (s *DaggerheartContentService) ListArmor(ctx context.Context, in *pb.ListDa
 		return nil, err
 	}
 
-	armor, err := store.ListDaggerheartArmor(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list armor: %v", err)
-	}
-
-	page, err := listContentPage(armor, contentListRequest{
+	armor, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartArmor]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":   contentfilter.FieldString,
-			"name": contentfilter.FieldString,
-			"tier": contentfilter.FieldInt,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartArmor) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartArmor, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "tier":
-				return int64(item.Tier), true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), armorDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list armor: %v", err)
-	}
-	if err := localizeArmor(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize armor: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartArmorResponse{
-		Armor:             toProtoDaggerheartArmorList(page.Items),
+		Armor:             armor,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -1264,17 +788,11 @@ func (s *DaggerheartContentService) GetItem(ctx context.Context, in *pb.GetDagge
 		return nil, status.Error(codes.InvalidArgument, "item id is required")
 	}
 
-	item, err := store.GetDaggerheartItem(ctx, in.GetId())
+	item, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), itemDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get item", err)
+		return nil, err
 	}
-	items := []storage.DaggerheartItem{item}
-	if err := localizeItems(ctx, store, in.GetLocale(), items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize items: %v", err)
-	}
-	item = items[0]
-
-	return &pb.GetDaggerheartItemResponse{Item: toProtoDaggerheartItem(item)}, nil
+	return &pb.GetDaggerheartItemResponse{Item: item}, nil
 }
 
 // ListItems returns Daggerheart items.
@@ -1287,65 +805,18 @@ func (s *DaggerheartContentService) ListItems(ctx context.Context, in *pb.ListDa
 		return nil, err
 	}
 
-	items, err := store.ListDaggerheartItems(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list items: %v", err)
-	}
-
-	page, err := listContentPage(items, contentListRequest{
+	items, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartItem]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":     contentfilter.FieldString,
-			"name":   contentfilter.FieldString,
-			"rarity": contentfilter.FieldString,
-			"kind":   contentfilter.FieldString,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartItem) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartItem, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "rarity":
-				return item.Rarity, true
-			case "kind":
-				return item.Kind, true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), itemDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list items: %v", err)
-	}
-	if err := localizeItems(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize items: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartItemsResponse{
-		Items:             toProtoDaggerheartItems(page.Items),
+		Items:             items,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),
@@ -1365,17 +836,11 @@ func (s *DaggerheartContentService) GetEnvironment(ctx context.Context, in *pb.G
 		return nil, status.Error(codes.InvalidArgument, "environment id is required")
 	}
 
-	env, err := store.GetDaggerheartEnvironment(ctx, in.GetId())
+	env, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), environmentDescriptor)
 	if err != nil {
-		return nil, mapContentErr("get environment", err)
+		return nil, err
 	}
-	envs := []storage.DaggerheartEnvironment{env}
-	if err := localizeEnvironments(ctx, store, in.GetLocale(), envs); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize environments: %v", err)
-	}
-	env = envs[0]
-
-	return &pb.GetDaggerheartEnvironmentResponse{Environment: toProtoDaggerheartEnvironment(env)}, nil
+	return &pb.GetDaggerheartEnvironmentResponse{Environment: env}, nil
 }
 
 // ListEnvironments returns Daggerheart environments.
@@ -1388,68 +853,18 @@ func (s *DaggerheartContentService) ListEnvironments(ctx context.Context, in *pb
 		return nil, err
 	}
 
-	items, err := store.ListDaggerheartEnvironments(ctx)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list environments: %v", err)
-	}
-
-	page, err := listContentPage(items, contentListRequest{
+	items, page, err := listContentEntries(ctx, store, contentListRequest{
 		PageSize:  in.GetPageSize(),
 		PageToken: in.GetPageToken(),
 		OrderBy:   in.GetOrderBy(),
 		Filter:    in.GetFilter(),
-	}, contentListConfig[storage.DaggerheartEnvironment]{
-		PageSizeConfig: pagination.PageSizeConfig{
-			Default: defaultListDaggerheartContentPageSize,
-			Max:     maxListDaggerheartContentPageSize,
-		},
-		OrderByConfig: pagination.OrderByConfig{
-			Default: "name",
-			Allowed: []string{"name", "name desc"},
-		},
-		FilterFields: contentfilter.Fields{
-			"id":         contentfilter.FieldString,
-			"name":       contentfilter.FieldString,
-			"tier":       contentfilter.FieldInt,
-			"type":       contentfilter.FieldString,
-			"difficulty": contentfilter.FieldInt,
-		},
-		KeySpec: []contentKeySpec{
-			{Name: "name", Kind: pagination.CursorValueString},
-			{Name: "id", Kind: pagination.CursorValueString},
-		},
-		KeyFunc: func(item storage.DaggerheartEnvironment) []pagination.CursorValue {
-			return []pagination.CursorValue{
-				pagination.StringValue("name", item.Name),
-				pagination.StringValue("id", item.ID),
-			}
-		},
-		Resolver: func(item storage.DaggerheartEnvironment, field string) (any, bool) {
-			switch field {
-			case "id":
-				return item.ID, true
-			case "name":
-				return item.Name, true
-			case "tier":
-				return int64(item.Tier), true
-			case "type":
-				return item.Type, true
-			case "difficulty":
-				return int64(item.Difficulty), true
-			default:
-				return nil, false
-			}
-		},
-	})
+	}, in.GetLocale(), environmentDescriptor)
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "list environments: %v", err)
-	}
-	if err := localizeEnvironments(ctx, store, in.GetLocale(), page.Items); err != nil {
-		return nil, status.Errorf(codes.Internal, "localize environments: %v", err)
+		return nil, err
 	}
 
 	return &pb.ListDaggerheartEnvironmentsResponse{
-		Environments:      toProtoDaggerheartEnvironments(page.Items),
+		Environments:      items,
 		NextPageToken:     page.NextPageToken,
 		PreviousPageToken: page.PreviousPageToken,
 		TotalSize:         int32(page.TotalSize),

@@ -8,6 +8,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -100,7 +101,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterCreate,
 			ActorType:    actorType,
@@ -110,7 +111,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 			EntityType:   "character",
 			EntityID:     characterID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{},
 	)
 	if err != nil {
@@ -178,7 +179,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		ctx,
 		c.stores.Domain,
 		projectionApplier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterProfileUpdate,
 			ActorType:    profileCommandActorType,
@@ -188,7 +189,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 			EntityType:   "character",
 			EntityID:     created.ID,
 			PayloadJSON:  commandPayloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErrMessage: "apply profile event",
 		},
@@ -220,20 +221,20 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		ctx,
 		c.stores.Domain,
 		c.stores.Applier(),
-		command.Command{
-			CampaignID:    campaignID,
-			Type:          commandTypeDaggerheartCharacterStatePatch,
-			ActorType:     profileCommandActorType,
-			ActorID:       actorID,
-			SessionID:     grpcmeta.SessionIDFromContext(ctx),
-			RequestID:     reqID,
-			InvocationID:  invocationID,
-			EntityType:    "character",
-			EntityID:      created.ID,
-			SystemID:      daggerheart.SystemID,
-			SystemVersion: daggerheart.SystemVersion,
-			PayloadJSON:   stateJSON,
-		},
+		commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
+			CoreInput: commandbuild.CoreInput{
+				CampaignID:   campaignID,
+				Type:         commandTypeDaggerheartCharacterStatePatch,
+				ActorType:    profileCommandActorType,
+				ActorID:      actorID,
+				SessionID:    grpcmeta.SessionIDFromContext(ctx),
+				RequestID:    reqID,
+				InvocationID: invocationID,
+				EntityType:   "character",
+				EntityID:     created.ID,
+				PayloadJSON:  stateJSON,
+			},
+		}),
 		domainCommandApplyOptions{
 			requireEvents:   true,
 			missingEventMsg: "character state patch did not emit an event",
@@ -368,7 +369,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterUpdate,
 			ActorType:    actorType,
@@ -378,7 +379,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 			EntityType:   "character",
 			EntityID:     characterID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{},
 	)
 	if err != nil {
@@ -448,7 +449,7 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterDelete,
 			ActorType:    actorType,
@@ -458,7 +459,7 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 			EntityType:   "character",
 			EntityID:     characterID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErrMessage: "apply event",
 		},
@@ -520,7 +521,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterUpdate,
 			ActorType:    actorType,
@@ -530,7 +531,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 			EntityType:   "character",
 			EntityID:     characterID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErrMessage: "apply event",
 		},
@@ -806,7 +807,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		ctx,
 		c.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterProfileUpdate,
 			ActorType:    actorType,
@@ -816,7 +817,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 			EntityType:   "character",
 			EntityID:     characterID,
 			PayloadJSON:  commandPayloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{},
 	)
 	if err != nil {

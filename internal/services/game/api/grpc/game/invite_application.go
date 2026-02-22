@@ -11,6 +11,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -102,7 +103,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 		ctx,
 		a.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeInviteCreate,
 			ActorType:    actorType,
@@ -112,7 +113,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 			EntityType:   "invite",
 			EntityID:     inviteID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErr: domainApplyErrorWithCodePreserve("apply invite event"),
 		},
@@ -248,7 +249,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		ctx,
 		a.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeParticipantBind,
 			ActorType:    actorType,
@@ -258,7 +259,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 			EntityType:   "participant",
 			EntityID:     seat.ID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErr: domainApplyErrorWithCodePreserve("apply participant event"),
 		},
@@ -285,7 +286,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		ctx,
 		a.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeInviteClaim,
 			ActorType:    actorType,
@@ -295,7 +296,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 			EntityType:   "invite",
 			EntityID:     inv.ID,
 			PayloadJSON:  claimJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErr: domainApplyErrorWithCodePreserve("apply invite event"),
 		},
@@ -356,7 +357,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 		ctx,
 		a.stores.Domain,
 		applier,
-		command.Command{
+		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   inv.CampaignID,
 			Type:         commandTypeInviteRevoke,
 			ActorType:    actorType,
@@ -366,7 +367,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 			EntityType:   "invite",
 			EntityID:     inv.ID,
 			PayloadJSON:  payloadJSON,
-		},
+		}),
 		domainCommandApplyOptions{
 			applyErr: domainApplyErrorWithCodePreserve("apply invite event"),
 		},
