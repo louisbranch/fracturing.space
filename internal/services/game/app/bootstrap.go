@@ -100,7 +100,7 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 				grpc.StatsHandler(otelgrpc.NewServerHandler()),
 				grpc.ChainUnaryInterceptor(
 					grpcmeta.UnaryServerInterceptor(nil),
-					interceptors.TelemetryInterceptor(bundle.events),
+					interceptors.AuditInterceptor(bundle.events),
 					interceptors.SessionLockInterceptor(bundle.projections),
 				),
 				grpc.ChainStreamInterceptor(
@@ -167,7 +167,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		SessionGate:        bundle.projections,
 		SessionSpotlight:   bundle.projections,
 		Event:              bundle.events,
-		Telemetry:          bundle.events,
+		Audit:              bundle.events,
 		Statistics:         bundle.projections,
 		Snapshot:           bundle.projections,
 		CampaignFork:       bundle.projections,

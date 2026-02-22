@@ -1,5 +1,5 @@
--- name: AppendTelemetryEvent :exec
-INSERT INTO telemetry_events (
+-- name: AppendAuditEvent :exec
+INSERT INTO audit_events (
   timestamp,
   event_name,
   severity,

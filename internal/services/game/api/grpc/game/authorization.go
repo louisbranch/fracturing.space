@@ -6,10 +6,11 @@ import (
 	"log"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/telemetry"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit/events"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
@@ -36,7 +37,7 @@ const (
 )
 
 const (
-	authzEventDecisionName                = "telemetry.authz.decision"
+	authzEventDecisionName                = events.AuthzDecision
 	authzDecisionAllow                    = "allow"
 	authzDecisionDeny                     = "deny"
 	authzDecisionOverride                 = "override"
@@ -71,12 +72,12 @@ func requireReadPolicy(ctx context.Context, stores Stores, campaignRecord storag
 func requirePolicyActor(ctx context.Context, stores Stores, action policyAction, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, error) {
 	actor, reasonCode, err := authorizePolicyActor(ctx, stores, action, campaignRecord)
 	if err != nil {
-		emitAuthzDecisionTelemetry(ctx, stores.Telemetry, campaignRecord.ID, action, authzDecisionDeny, reasonCode, actor, err, nil)
+		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, action, authzDecisionDeny, reasonCode, actor, err, nil)
 		return storage.ParticipantRecord{}, err
 	}
 	emitAuthzDecisionTelemetry(
 		ctx,
-		stores.Telemetry,
+		stores.Audit,
 		campaignRecord.ID,
 		action,
 		authzDecisionForReason(reasonCode),
@@ -102,7 +103,7 @@ func requireCharacterMutationPolicy(
 	if err != nil {
 		emitAuthzDecisionTelemetry(
 			ctx,
-			stores.Telemetry,
+			stores.Audit,
 			campaignRecord.ID,
 			policyActionManageCharacters,
 			authzDecisionDeny,
@@ -118,7 +119,7 @@ func requireCharacterMutationPolicy(
 	if decision == authzDecisionOverride {
 		emitAuthzDecisionTelemetry(
 			ctx,
-			stores.Telemetry,
+			stores.Audit,
 			campaignRecord.ID,
 			policyActionManageCharacters,
 			decision,
@@ -132,7 +133,7 @@ func requireCharacterMutationPolicy(
 	if actor.CampaignAccess != participant.CampaignAccessMember {
 		emitAuthzDecisionTelemetry(
 			ctx,
-			stores.Telemetry,
+			stores.Audit,
 			campaignRecord.ID,
 			policyActionManageCharacters,
 			authzDecisionAllow,
@@ -145,18 +146,18 @@ func requireCharacterMutationPolicy(
 	}
 	ownerParticipantID, err := resolveCharacterMutationOwnerParticipantID(ctx, stores, campaignRecord.ID, characterID)
 	if err != nil {
-		emitAuthzDecisionTelemetry(ctx, stores.Telemetry, campaignRecord.ID, policyActionManageCharacters, authzDecisionDeny, authzReasonErrorOwnerResolution, actor, err, characterAttributes)
+		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, policyActionManageCharacters, authzDecisionDeny, authzReasonErrorOwnerResolution, actor, err, characterAttributes)
 		return storage.ParticipantRecord{}, err
 	}
 	if ownerParticipantID == "" || ownerParticipantID != actor.ID {
 		err := status.Error(codes.PermissionDenied, "participant lacks permission")
-		emitAuthzDecisionTelemetry(ctx, stores.Telemetry, campaignRecord.ID, policyActionManageCharacters, authzDecisionDeny, authzReasonDenyNotResourceOwner, actor, err, map[string]any{
+		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, policyActionManageCharacters, authzDecisionDeny, authzReasonDenyNotResourceOwner, actor, err, map[string]any{
 			"character_id":         characterAttributes["character_id"],
 			"owner_participant_id": ownerParticipantID,
 		})
 		return storage.ParticipantRecord{}, err
 	}
-	emitAuthzDecisionTelemetry(ctx, stores.Telemetry, campaignRecord.ID, policyActionManageCharacters, authzDecisionAllow, authzReasonAllowResourceOwner, actor, nil, characterAttributes)
+	emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, policyActionManageCharacters, authzDecisionAllow, authzReasonAllowResourceOwner, actor, nil, characterAttributes)
 	return actor, nil
 }
 
@@ -428,7 +429,7 @@ func policyActionLabel(action policyAction) string {
 
 func emitAuthzDecisionTelemetry(
 	ctx context.Context,
-	store storage.TelemetryStore,
+	store storage.AuditEventStore,
 	campaignID string,
 	action policyAction,
 	decision string,
@@ -437,15 +438,15 @@ func emitAuthzDecisionTelemetry(
 	authErr error,
 	extraAttributes map[string]any,
 ) {
-	severity := telemetry.SeverityInfo
+	severity := audit.SeverityInfo
 	code := codes.OK
 	if authErr != nil {
-		severity = telemetry.SeverityWarn
+		severity = audit.SeverityWarn
 		if st, ok := status.FromError(authErr); ok {
 			code = st.Code()
 		}
 		if code == codes.Internal {
-			severity = telemetry.SeverityError
+			severity = audit.SeverityError
 		}
 	}
 
@@ -480,8 +481,8 @@ func emitAuthzDecisionTelemetry(
 		attributes[key] = value
 	}
 
-	emitter := telemetry.NewEmitter(store)
-	if err := emitter.Emit(ctx, storage.TelemetryEvent{
+	emitter := audit.NewEmitter(store)
+	if err := emitter.Emit(ctx, storage.AuditEvent{
 		EventName:    authzEventDecisionName,
 		Severity:     string(severity),
 		CampaignID:   strings.TrimSpace(campaignID),
@@ -493,6 +494,6 @@ func emitAuthzDecisionTelemetry(
 		SpanID:       spanID,
 		Attributes:   attributes,
 	}); err != nil {
-		log.Printf("telemetry emit %s: %v", authzEventDecisionName, err)
+		log.Printf("audit emit %s: %v", authzEventDecisionName, err)
 	}
 }

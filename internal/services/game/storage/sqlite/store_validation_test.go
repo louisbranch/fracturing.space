@@ -121,8 +121,8 @@ func TestNilStoreErrors(t *testing.T) {
 	if _, err := s.ListSnapshots(ctx, "c", 10); err == nil {
 		t.Fatal("expected error from nil store ListSnapshots")
 	}
-	if err := s.AppendTelemetryEvent(ctx, storage.TelemetryEvent{EventName: "e", Severity: "info"}); err == nil {
-		t.Fatal("expected error from nil store AppendTelemetryEvent")
+	if err := s.AppendAuditEvent(ctx, storage.AuditEvent{EventName: "e", Severity: "info"}); err == nil {
+		t.Fatal("expected error from nil store AppendAuditEvent")
 	}
 	if _, err := s.GetGameStatistics(ctx, nil); err == nil {
 		t.Fatal("expected error from nil store GetGameStatistics")
@@ -248,8 +248,8 @@ func TestCancelledContextErrors(t *testing.T) {
 	if _, err := store.ListSnapshots(ctx, "c", 10); err == nil {
 		t.Fatal("expected context error from ListSnapshots")
 	}
-	if err := store.AppendTelemetryEvent(ctx, storage.TelemetryEvent{EventName: "e", Severity: "info"}); err == nil {
-		t.Fatal("expected context error from AppendTelemetryEvent")
+	if err := store.AppendAuditEvent(ctx, storage.AuditEvent{EventName: "e", Severity: "info"}); err == nil {
+		t.Fatal("expected context error from AppendAuditEvent")
 	}
 	if _, err := store.GetGameStatistics(ctx, nil); err == nil {
 		t.Fatal("expected context error from GetGameStatistics")

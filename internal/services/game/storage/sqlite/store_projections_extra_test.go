@@ -255,12 +255,12 @@ func TestGetGameStatistics(t *testing.T) {
 	}
 }
 
-func TestAppendTelemetryEvent(t *testing.T) {
+func TestAppendAuditEvent(t *testing.T) {
 	store := openTestEventsStore(t)
 	now := time.Date(2026, 2, 3, 15, 0, 0, 0, time.UTC)
 
 	// With Attributes map
-	err := store.AppendTelemetryEvent(context.Background(), storage.TelemetryEvent{
+	err := store.AppendAuditEvent(context.Background(), storage.AuditEvent{
 		Timestamp:  now,
 		EventName:  "test.event",
 		Severity:   "info",
@@ -275,7 +275,7 @@ func TestAppendTelemetryEvent(t *testing.T) {
 	}
 
 	// With AttributesJSON
-	err = store.AppendTelemetryEvent(context.Background(), storage.TelemetryEvent{
+	err = store.AppendAuditEvent(context.Background(), storage.AuditEvent{
 		Timestamp:      now,
 		EventName:      "test.event2",
 		Severity:       "warn",
@@ -286,7 +286,7 @@ func TestAppendTelemetryEvent(t *testing.T) {
 	}
 
 	// Required field validation: missing event name
-	err = store.AppendTelemetryEvent(context.Background(), storage.TelemetryEvent{
+	err = store.AppendAuditEvent(context.Background(), storage.AuditEvent{
 		Timestamp: now,
 		Severity:  "info",
 	})
@@ -295,7 +295,7 @@ func TestAppendTelemetryEvent(t *testing.T) {
 	}
 
 	// Required field validation: missing severity
-	err = store.AppendTelemetryEvent(context.Background(), storage.TelemetryEvent{
+	err = store.AppendAuditEvent(context.Background(), storage.AuditEvent{
 		Timestamp: now,
 		EventName: "test.event3",
 	})
