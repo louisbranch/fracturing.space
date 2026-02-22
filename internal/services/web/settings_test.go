@@ -56,8 +56,8 @@ func TestAppSettingsPageRendersForAuthenticatedUser(t *testing.T) {
 	if !strings.Contains(body, "AI Keys") {
 		t.Fatalf("body should include settings ai keys entry, got %q", body)
 	}
-	if !strings.Contains(body, "menu-title") {
-		t.Fatalf("body should include sidebar menu title styling, got %q", body)
+	if !strings.Contains(body, `class="menu bg-base-200 rounded-box w-full"`) {
+		t.Fatalf("body should include sidebar menu, got %q", body)
 	}
 }
 
