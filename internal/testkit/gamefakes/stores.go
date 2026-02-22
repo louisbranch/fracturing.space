@@ -326,6 +326,16 @@ func (s *CharacterStore) DeleteCharacter(_ context.Context, _, _ string) error {
 	return nil
 }
 
+func (s *CharacterStore) CountCharacters(_ context.Context, campaignID string) (int, error) {
+	count := 0
+	for key := range s.Characters {
+		if strings.HasPrefix(key, campaignID+":") {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (s *CharacterStore) ListCharacters(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
 	return storage.CharacterPage{}, nil
 }

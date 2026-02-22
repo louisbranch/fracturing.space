@@ -120,6 +120,10 @@ func (f *fakeProjectionStore) DeleteParticipant(context.Context, string, string)
 	return fmt.Errorf("not implemented")
 }
 
+func (f *fakeProjectionStore) CountParticipants(context.Context, string) (int, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+
 func (f *fakeProjectionStore) ListParticipantsByCampaign(context.Context, string) ([]storage.ParticipantRecord, error) {
 	return nil, fmt.Errorf("not implemented")
 }
@@ -182,6 +186,10 @@ func (f *fakeProjectionStore) GetCharacter(context.Context, string, string) (sto
 
 func (f *fakeProjectionStore) DeleteCharacter(context.Context, string, string) error {
 	return fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) CountCharacters(context.Context, string) (int, error) {
+	return 0, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
@@ -326,6 +334,18 @@ func (f *fakeProjectionStore) SetCampaignForkMetadata(context.Context, string, s
 
 func (f *fakeProjectionStore) GetGameStatistics(context.Context, *time.Time) (storage.GameStatistics, error) {
 	return storage.GameStatistics{}, fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) GetProjectionWatermark(context.Context, string) (storage.ProjectionWatermark, error) {
+	return storage.ProjectionWatermark{}, storage.ErrNotFound
+}
+
+func (f *fakeProjectionStore) SaveProjectionWatermark(context.Context, storage.ProjectionWatermark) error {
+	return nil
+}
+
+func (f *fakeProjectionStore) ListProjectionWatermarks(context.Context) ([]storage.ProjectionWatermark, error) {
+	return nil, nil
 }
 
 // fakeClosableProjectionStore wraps fakeProjectionStore with a closable interface.

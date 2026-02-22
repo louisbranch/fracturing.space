@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -36,6 +38,12 @@ type Stores struct {
 	DaggerheartContent storage.DaggerheartContentStore
 
 	Domain Domain
+
+	// Events is the event registry used for intent filtering at request time.
+	Events *event.Registry
+
+	// adapters is built eagerly during Validate and cached for Applier.
+	adapters *systems.AdapterRegistry
 }
 
 // Applier returns a projection Applier wired to the stores in this bundle.
@@ -52,10 +60,17 @@ func (s Stores) Applier() projection.Applier {
 // TryApplier returns a projection Applier wired to the stores in this bundle.
 // The returned Applier can apply any event type; unused stores are simply not
 // invoked by the dispatch.
+//
+// If Validate was called first the cached adapter registry is used; otherwise
+// a fresh one is built on-the-fly so partial-Stores test helpers keep working.
 func (s Stores) TryApplier() (projection.Applier, error) {
-	adapters, err := TryAdapterRegistryForStores(s)
-	if err != nil {
-		return projection.Applier{}, fmt.Errorf("build adapter registry: %w", err)
+	adapters := s.adapters
+	if adapters == nil {
+		var err error
+		adapters, err = TryAdapterRegistryForStores(s)
+		if err != nil {
+			return projection.Applier{}, fmt.Errorf("build adapter registry: %w", err)
+		}
 	}
 	return projection.Applier{
 		Campaign:         s.Campaign,
@@ -71,9 +86,11 @@ func (s Stores) TryApplier() (projection.Applier, error) {
 	}, nil
 }
 
-// Validate checks that every store field is non-nil. Call this at service
-// construction time so that handlers do not need per-method nil guards.
-func (s Stores) Validate() error {
+// Validate checks that every store field is non-nil and eagerly builds the
+// adapter registry. Call this at service construction time so that handlers
+// do not need per-method nil guards and adapter registration errors surface
+// at startup instead of at runtime.
+func (s *Stores) Validate() error {
 	var missing []string
 	if s.Campaign == nil {
 		missing = append(missing, "Campaign")
@@ -123,5 +140,11 @@ func (s Stores) Validate() error {
 	if len(missing) > 0 {
 		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))
 	}
+
+	adapters, err := TryAdapterRegistryForStores(*s)
+	if err != nil {
+		return fmt.Errorf("build adapter registry: %w", err)
+	}
+	s.adapters = adapters
 	return nil
 }

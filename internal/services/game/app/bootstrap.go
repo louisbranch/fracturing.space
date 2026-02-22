@@ -16,7 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -35,14 +35,14 @@ type serverBootstrapConfig struct {
 	loadEnv                         func() serverEnv
 	listen                          func(network, address string) (net.Listener, error)
 	openStorageBundle               storageBundleOpener
-	configureDomain                 func(serverEnv, *gamegrpc.Stores) error
+	configureDomain                 func(serverEnv, *gamegrpc.Stores, engine.Registries) error
 	buildSystemRegistry             func() (*systems.Registry, error)
-	validateSystemRegistration      func([]system.Module, *systems.Registry, *systems.AdapterRegistry) error
+	validateSystemRegistration      func([]module.Module, *systems.Registry, *systems.AdapterRegistry) error
 	dialAuthGRPC                    func(context.Context, string) (authGRPCClients, error)
 	newGRPCServer                   func(*storageBundle) *grpc.Server
 	newHealthServer                 func() *health.Server
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
-	buildProjectionRegistries       func() (*event.Registry, error)
+	buildProjectionRegistries       func(engine.Registries) (*event.Registry, error)
 	buildProjectionApplyOutboxApply func(*storagesqlite.Store, *event.Registry) func(context.Context, event.Event) error
 }
 
@@ -50,15 +50,15 @@ type serverBootstrapConfig struct {
 // This interface keeps storage construction injectable for tests and future
 // non-SQLite implementations.
 type storageBundleOpener interface {
-	Open(serverEnv) (*storageBundle, error)
+	Open(serverEnv, *event.Registry) (*storageBundle, error)
 }
 
 // storageBundleOpenerFunc adapts an existing function to storageBundleOpener.
-type storageBundleOpenerFunc func(serverEnv) (*storageBundle, error)
+type storageBundleOpenerFunc func(serverEnv, *event.Registry) (*storageBundle, error)
 
 // Open satisfies storageBundleOpener.
-func (openFn storageBundleOpenerFunc) Open(env serverEnv) (*storageBundle, error) {
-	return openFn(env)
+func (openFn storageBundleOpenerFunc) Open(env serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
+	return openFn(env, eventRegistry)
 }
 
 func newServerBootstrap() *serverBootstrap {
@@ -78,7 +78,9 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 		cfg.listen = net.Listen
 	}
 	if cfg.openStorageBundle == nil {
-		cfg.openStorageBundle = storageBundleOpenerFunc(openStorageBundle)
+		cfg.openStorageBundle = storageBundleOpenerFunc(func(env serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
+			return openStorageBundle(env, eventRegistry)
+		})
 	}
 	if cfg.configureDomain == nil {
 		cfg.configureDomain = configureDomain
@@ -114,13 +116,7 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 		cfg.resolveProjectionApplyModes = resolveProjectionApplyOutboxModes
 	}
 	if cfg.buildProjectionRegistries == nil {
-		cfg.buildProjectionRegistries = func() (*event.Registry, error) {
-			registries, err := engine.BuildRegistries(registeredSystemModules()...)
-			if err != nil {
-				return nil, err
-			}
-			return registries.Events, nil
-		}
+		cfg.buildProjectionRegistries = buildProjectionRegistries
 	}
 	if cfg.buildProjectionApplyOutboxApply == nil {
 		cfg.buildProjectionApplyOutboxApply = buildProjectionApplyOutboxApply
@@ -132,6 +128,12 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 // It preserves the previous startup behavior while improving testability through dependency seams.
 func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	srvEnv := b.config.loadEnv()
+
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		return nil, fmt.Errorf("build registries: %w", err)
+	}
+
 	listener, err := b.config.listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen on %s: %w", addr, err)
@@ -143,7 +145,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		_ = listener.Close()
 	}()
 
-	bundle, err := b.config.openStorageBundle.Open(srvEnv)
+	bundle, err := b.config.openStorageBundle.Open(srvEnv, registries.Events)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +176,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	if err := stores.Validate(); err != nil {
 		return nil, fmt.Errorf("validate stores: %w", err)
 	}
-	if err := b.config.configureDomain(srvEnv, &stores); err != nil {
+	if err := b.config.configureDomain(srvEnv, &stores, registries); err != nil {
 		return nil, fmt.Errorf("configure domain: %w", err)
 	}
 	systemRegistry, err := b.config.buildSystemRegistry()
@@ -185,6 +187,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("build projection applier: %w", err)
 	}
+	repairProjectionGaps(bundle, applier)
 	if err := b.config.validateSystemRegistration(registeredSystemModules(), systemRegistry, applier.Adapters); err != nil {
 		return nil, fmt.Errorf("validate system parity: %w", err)
 	}
@@ -217,10 +220,12 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	daggerheartservice.SetInlineProjectionApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
 	log.Printf("projection apply mode = %s", projectionApplyMode)
 
-	projectionRegistries, err := b.config.buildProjectionRegistries()
+	projectionRegistries, err := b.config.buildProjectionRegistries(registries)
 	if err != nil {
 		return nil, fmt.Errorf("build projection registries: %w", err)
 	}
+	gamegrpc.SetIntentFilter(projectionRegistries)
+	daggerheartservice.SetIntentFilter(projectionRegistries)
 
 	server = &Server{
 		listener:                                 listener,

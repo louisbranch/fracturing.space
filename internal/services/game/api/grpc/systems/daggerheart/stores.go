@@ -29,10 +29,15 @@ type Stores struct {
 	DaggerheartContent storage.DaggerheartContentStore
 	Event              storage.EventStore
 	Domain             Domain
+
+	// adapters is built eagerly during Validate and cached for Applier.
+	adapters *systems.AdapterRegistry
 }
 
-// Validate checks that Daggerheart gameplay service dependencies are configured.
-func (s Stores) Validate() error {
+// Validate checks that Daggerheart gameplay service dependencies are configured
+// and eagerly builds the adapter registry so registration errors surface at
+// startup instead of at runtime.
+func (s *Stores) Validate() error {
 	var missing []string
 	if s.Campaign == nil {
 		missing = append(missing, "Campaign")
@@ -61,6 +66,14 @@ func (s Stores) Validate() error {
 	if len(missing) > 0 {
 		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))
 	}
+
+	adapters := systems.NewAdapterRegistry()
+	if s.Daggerheart != nil {
+		if err := adapters.Register(daggerheartsystem.NewAdapter(s.Daggerheart)); err != nil {
+			return fmt.Errorf("register daggerheart adapter: %w", err)
+		}
+	}
+	s.adapters = adapters
 	return nil
 }
 
@@ -86,11 +99,17 @@ func (s Stores) Applier() projection.Applier {
 // TryApplier returns a projection Applier wired to the stores in this bundle.
 // Only the stores available in the Daggerheart service are mapped; fields not
 // present (e.g., Invite, CampaignFork) remain nil and are unused by dispatch.
+//
+// If Validate was called first the cached adapter registry is used; otherwise
+// a fresh one is built on-the-fly.
 func (s Stores) TryApplier() (projection.Applier, error) {
-	adapters := systems.NewAdapterRegistry()
-	if s.Daggerheart != nil {
-		if err := adapters.Register(daggerheartsystem.NewAdapter(s.Daggerheart)); err != nil {
-			return projection.Applier{}, fmt.Errorf("register daggerheart adapter: %w", err)
+	adapters := s.adapters
+	if adapters == nil {
+		adapters = systems.NewAdapterRegistry()
+		if s.Daggerheart != nil {
+			if err := adapters.Register(daggerheartsystem.NewAdapter(s.Daggerheart)); err != nil {
+				return projection.Applier{}, fmt.Errorf("register daggerheart adapter: %w", err)
+			}
 		}
 	}
 	return projection.Applier{

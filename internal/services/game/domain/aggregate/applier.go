@@ -2,15 +2,16 @@ package aggregate
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
 )
 
 // Applier folds events into aggregate state.
@@ -23,7 +24,36 @@ type Applier struct {
 	// events that do not affect aggregate state.
 	Events *event.Registry
 	// SystemRegistry routes system events to their module-specific projector.
-	SystemRegistry *system.Registry
+	SystemRegistry *module.Registry
+
+	// foldSets are lazily built on first Apply to avoid dispatch into fold
+	// functions that cannot possibly handle the event type.
+	foldOnce         sync.Once
+	campaignTypes    map[event.Type]struct{}
+	sessionTypes     map[event.Type]struct{}
+	actionTypes      map[event.Type]struct{}
+	participantTypes map[event.Type]struct{}
+	characterTypes   map[event.Type]struct{}
+	inviteTypes      map[event.Type]struct{}
+}
+
+// initFoldSets builds per-fold type lookup sets from FoldHandledTypes.
+func (a *Applier) initFoldSets() {
+	a.foldOnce.Do(func() {
+		toSet := func(types []event.Type) map[event.Type]struct{} {
+			s := make(map[event.Type]struct{}, len(types))
+			for _, t := range types {
+				s[t] = struct{}{}
+			}
+			return s
+		}
+		a.campaignTypes = toSet(campaign.FoldHandledTypes())
+		a.sessionTypes = toSet(session.FoldHandledTypes())
+		a.actionTypes = toSet(action.FoldHandledTypes())
+		a.participantTypes = toSet(participant.FoldHandledTypes())
+		a.characterTypes = toSet(character.FoldHandledTypes())
+		a.inviteTypes = toSet(invite.FoldHandledTypes())
+	})
 }
 
 // Apply applies a single event to aggregate state.
@@ -31,49 +61,53 @@ type Applier struct {
 // The function only mutates aggregate state through fold functions so state
 // transitions remain visible in one place per subdomain and replay behavior matches
 // request-time behavior.
-func (a Applier) Apply(state any, evt event.Event) (any, error) {
+func (a *Applier) Apply(state any, evt event.Event) (any, error) {
 	// Skip audit-only events: they do not affect aggregate state and should
 	// not be passed to fold functions.
 	if a.Events != nil {
 		if def, ok := a.Events.Definition(evt.Type); ok && def.Intent == event.IntentAuditOnly {
-			if existing, ok := state.(State); ok {
-				return existing, nil
+			current, err := AssertState[State](state)
+			if err != nil {
+				return State{}, err
 			}
-			if existingPtr, ok := state.(*State); ok && existingPtr != nil {
-				return *existingPtr, nil
-			}
-			return State{}, nil
+			return current, nil
 		}
 	}
 
-	current := State{}
-	if existing, ok := state.(State); ok {
-		current = existing
-	} else if existingPtr, ok := state.(*State); ok && existingPtr != nil {
-		current = *existingPtr
+	a.initFoldSets()
+
+	current, err := AssertState[State](state)
+	if err != nil {
+		return State{}, err
 	}
 
-	campaignState, err := campaign.Fold(current.Campaign, evt)
-	if err != nil {
-		return current, err
+	if _, ok := a.campaignTypes[evt.Type]; ok {
+		campaignState, err := campaign.Fold(current.Campaign, evt)
+		if err != nil {
+			return current, err
+		}
+		current.Campaign = campaignState
 	}
-	current.Campaign = campaignState
 
-	sessionState, err := session.Fold(current.Session, evt)
-	if err != nil {
-		return current, err
+	if _, ok := a.sessionTypes[evt.Type]; ok {
+		sessionState, err := session.Fold(current.Session, evt)
+		if err != nil {
+			return current, err
+		}
+		current.Session = sessionState
 	}
-	current.Session = sessionState
 
-	actionState, err := action.Fold(current.Action, evt)
-	if err != nil {
-		return current, err
+	if _, ok := a.actionTypes[evt.Type]; ok {
+		actionState, err := action.Fold(current.Action, evt)
+		if err != nil {
+			return current, err
+		}
+		current.Action = actionState
 	}
-	current.Action = actionState
 
 	if evt.SystemID != "" || evt.SystemVersion != "" {
 		if current.Systems == nil {
-			current.Systems = make(map[system.Key]any)
+			current.Systems = make(map[module.Key]any)
 		}
 		if evt.SystemID == "" || evt.SystemVersion == "" {
 			return current, errors.New("system id and version are required")
@@ -82,11 +116,11 @@ func (a Applier) Apply(state any, evt event.Event) (any, error) {
 		if registry == nil {
 			return current, errors.New("system registry is required")
 		}
-		key := system.Key{ID: evt.SystemID, Version: evt.SystemVersion}
+		key := module.Key{ID: evt.SystemID, Version: evt.SystemVersion}
 		systemState := current.Systems[key]
-		module := registry.Get(evt.SystemID, evt.SystemVersion)
-		if module != nil && systemState == nil {
-			if factory := module.StateFactory(); factory != nil {
+		mod := registry.Get(evt.SystemID, evt.SystemVersion)
+		if mod != nil && systemState == nil {
+			if factory := mod.StateFactory(); factory != nil {
 				seed, err := factory.NewSnapshotState(evt.CampaignID)
 				if err != nil {
 					return current, err
@@ -94,16 +128,15 @@ func (a Applier) Apply(state any, evt event.Event) (any, error) {
 				systemState = seed
 			}
 		}
-		updated, err := system.RouteEvent(registry, systemState, evt)
+		updated, err := module.RouteEvent(registry, systemState, evt)
 		if err != nil {
 			return current, err
 		}
 		current.Systems[key] = updated
 	}
 
-	switch evt.EntityType {
-	case "participant":
-		if evt.EntityID != "" {
+	if evt.EntityID != "" {
+		if _, ok := a.participantTypes[evt.Type]; ok {
 			if current.Participants == nil {
 				current.Participants = make(map[string]participant.State)
 			}
@@ -114,8 +147,7 @@ func (a Applier) Apply(state any, evt event.Event) (any, error) {
 			}
 			current.Participants[evt.EntityID] = pState
 		}
-	case "character":
-		if evt.EntityID != "" {
+		if _, ok := a.characterTypes[evt.Type]; ok {
 			if current.Characters == nil {
 				current.Characters = make(map[string]character.State)
 			}
@@ -126,8 +158,7 @@ func (a Applier) Apply(state any, evt event.Event) (any, error) {
 			}
 			current.Characters[evt.EntityID] = cState
 		}
-	case "invite":
-		if evt.EntityID != "" {
+		if _, ok := a.inviteTypes[evt.Type]; ok {
 			if current.Invites == nil {
 				current.Invites = make(map[string]invite.State)
 			}

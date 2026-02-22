@@ -32,6 +32,28 @@ func (a *Adapter) Version() string {
 	return SystemVersion
 }
 
+// HandledTypes returns the event types this adapter's Apply handles.
+func (a *Adapter) HandledTypes() []event.Type {
+	return []event.Type{
+		EventTypeDamageApplied,
+		EventTypeRestTaken,
+		EventTypeCharacterTemporaryArmorApplied,
+		EventTypeDowntimeMoveApplied,
+		EventTypeLoadoutSwapped,
+		EventTypeCharacterStatePatched,
+		EventTypeConditionChanged,
+		EventTypeAdversaryConditionChanged,
+		EventTypeGMFearChanged,
+		EventTypeCountdownCreated,
+		EventTypeCountdownUpdated,
+		EventTypeCountdownDeleted,
+		EventTypeAdversaryCreated,
+		EventTypeAdversaryDamageApplied,
+		EventTypeAdversaryUpdated,
+		EventTypeAdversaryDeleted,
+	}
+}
+
 // Apply applies a system-specific event to Daggerheart projections.
 func (a *Adapter) Apply(ctx context.Context, evt event.Event) error {
 	if a == nil || a.store == nil {

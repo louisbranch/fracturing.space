@@ -694,3 +694,30 @@ func TestDecideCharacterUpdate_InvalidAvatarAssetRejected(t *testing.T) {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCharacterAvatarAssetInvalid)
 	}
 }
+
+func TestDecide_UnrecognizedCommandTypeRejected(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("character.nonexistent"),
+	}, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "COMMAND_TYPE_UNSUPPORTED" {
+		t.Fatalf("rejection code = %s, want COMMAND_TYPE_UNSUPPORTED", decision.Rejections[0].Code)
+	}
+}
+
+func TestDecide_MalformedCreatePayloadRejected(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("character.create"),
+		PayloadJSON: []byte(`{corrupt`),
+	}, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "PAYLOAD_DECODE_FAILED" {
+		t.Fatalf("rejection code = %s, want PAYLOAD_DECODE_FAILED", decision.Rejections[0].Code)
+	}
+}

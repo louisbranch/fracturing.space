@@ -16,9 +16,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -26,18 +26,18 @@ import (
 //
 // This is intentionally guarded by config so deployments can run without domain
 // execution in specific environments (for example, projection-only workflows).
-func configureDomain(srvEnv serverEnv, stores *gamegrpc.Stores) error {
+func configureDomain(srvEnv serverEnv, stores *gamegrpc.Stores, registries engine.Registries) error {
 	if !srvEnv.DomainEnabled {
 		return nil
 	}
 	if stores == nil {
 		return errors.New("stores are required")
 	}
-	buildDomainEngine, err := buildDomainEngine(stores.Event)
+	domainEngine, err := buildDomainEngine(stores.Event, registries)
 	if err != nil {
 		return fmt.Errorf("build domain engine: %w", err)
 	}
-	stores.Domain = buildDomainEngine
+	stores.Domain = domainEngine
 	return nil
 }
 
@@ -45,13 +45,9 @@ func configureDomain(srvEnv serverEnv, stores *gamegrpc.Stores) error {
 //
 // It composes registries, replay-based state loading, gate evaluation, and
 // decider routing once, so command execution stays consistent for every request.
-func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
+func buildDomainEngine(eventStore storage.EventStore, registries engine.Registries) (gamegrpc.Domain, error) {
 	if eventStore == nil {
 		return nil, errors.New("event store is required")
-	}
-	registries, err := engine.BuildRegistries(registeredSystemModules()...)
-	if err != nil {
-		return nil, fmt.Errorf("build registries: %w", err)
 	}
 	routes, err := buildCoreRouteTable(registries.Commands.ListDefinitions())
 	if err != nil {
@@ -59,7 +55,7 @@ func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
 	}
 
 	checkpoints := checkpoint.NewMemory()
-	applier := aggregate.Applier{
+	applier := &aggregate.Applier{
 		Events:         registries.Events,
 		SystemRegistry: registries.Systems,
 	}
@@ -89,7 +85,7 @@ func buildDomainEngine(eventStore storage.EventStore) (gamegrpc.Domain, error) {
 // It keeps command routing explicit: each command type maps to exactly one
 // aggregate route, while system commands are dispatched by system id/version.
 type coreDecider struct {
-	Systems *system.Registry
+	Systems *module.Registry
 	routes  map[command.Type]coreCommandRoute
 }
 
@@ -223,9 +219,9 @@ func buildCoreRouteTable(definitions []command.Definition) (map[command.Type]cor
 func (d coreDecider) Decide(state any, cmd command.Command, now func() time.Time) command.Decision {
 	current := aggregateState(state)
 	if strings.TrimSpace(cmd.SystemID) != "" || strings.TrimSpace(cmd.SystemVersion) != "" {
-		key := system.Key{ID: cmd.SystemID, Version: cmd.SystemVersion}
+		key := module.Key{ID: cmd.SystemID, Version: cmd.SystemVersion}
 		systemState := current.Systems[key]
-		decision, err := system.RouteCommand(d.Systems, systemState, cmd, now)
+		decision, err := module.RouteCommand(d.Systems, systemState, cmd, now)
 		if err != nil {
 			return command.Reject(command.Rejection{Code: "SYSTEM_COMMAND_REJECTED", Message: err.Error()})
 		}

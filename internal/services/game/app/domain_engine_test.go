@@ -37,7 +37,7 @@ func TestDomainCampaignUpdateAfterCreate(t *testing.T) {
 		}
 	})
 
-	engine, err := buildDomainEngine(store)
+	domainEngine, err := buildDomainEngine(store, registries)
 	if err != nil {
 		t.Fatalf("build domain engine: %v", err)
 	}
@@ -53,7 +53,7 @@ func TestDomainCampaignUpdateAfterCreate(t *testing.T) {
 		t.Fatalf("marshal create payload: %v", err)
 	}
 
-	result, err := engine.Execute(context.Background(), command.Command{
+	result, err := domainEngine.Execute(context.Background(), command.Command{
 		CampaignID:  "camp-1",
 		Type:        command.Type("campaign.create"),
 		ActorType:   command.ActorTypeSystem,
@@ -77,7 +77,7 @@ func TestDomainCampaignUpdateAfterCreate(t *testing.T) {
 		t.Fatalf("marshal update payload: %v", err)
 	}
 
-	updateResult, err := engine.Execute(context.Background(), command.Command{
+	updateResult, err := domainEngine.Execute(context.Background(), command.Command{
 		CampaignID:  "camp-1",
 		Type:        command.Type("campaign.update"),
 		ActorType:   command.ActorTypeSystem,

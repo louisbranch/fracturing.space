@@ -10,9 +10,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/replay"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
 )
 
 var (
@@ -175,7 +175,7 @@ func cloneAggregateState(source aggregate.State) aggregate.State {
 		}
 	}
 	if source.Systems != nil {
-		cloned.Systems = make(map[system.Key]any, len(source.Systems))
+		cloned.Systems = make(map[module.Key]any, len(source.Systems))
 		for key, value := range source.Systems {
 			cloned.Systems[key] = value
 		}

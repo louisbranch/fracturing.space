@@ -3,6 +3,7 @@ package maintenance
 import (
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -46,6 +47,7 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 		return event.Event{
 			CampaignID:    "camp-1",
 			Type:          event.Type("sys.daggerheart.character_state_patched"),
+			Timestamp:     time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC),
 			EntityType:    "action",
 			EntityID:      "entity-1",
 			SystemID:      daggerheart.SystemID,
@@ -78,6 +80,7 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 		evt := event.Event{
 			CampaignID:    "camp-1",
 			Type:          event.Type("sys.daggerheart.character_state_patched"),
+			Timestamp:     time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC),
 			EntityType:    "action",
 			EntityID:      "entity-1",
 			SystemID:      daggerheart.SystemID,
@@ -97,6 +100,7 @@ func TestValidateSnapshotEvent_GMFearChanged(t *testing.T) {
 		return event.Event{
 			CampaignID:    "camp-1",
 			Type:          event.Type("sys.daggerheart.gm_fear_changed"),
+			Timestamp:     time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC),
 			EntityType:    "action",
 			EntityID:      "entity-1",
 			SystemID:      daggerheart.SystemID,
@@ -122,7 +126,7 @@ func TestValidateSnapshotEvent_GMFearChanged(t *testing.T) {
 
 func TestValidateSnapshotEvent_UnknownType(t *testing.T) {
 	registry := testEventRegistry(t)
-	evt := event.Event{CampaignID: "camp-1", Type: "unknown.event", PayloadJSON: []byte("{}")}
+	evt := event.Event{CampaignID: "camp-1", Type: "unknown.event", Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC), PayloadJSON: []byte("{}")}
 	if err := validateSnapshotEvent(registry, evt); err != nil {
 		t.Errorf("unknown event type should not error: %v", err)
 	}

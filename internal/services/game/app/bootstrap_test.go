@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
 type trackedListener struct {
@@ -72,7 +74,7 @@ func TestServerBootstrapListensAndClosesOnOpenStorageFailure(t *testing.T) {
 		listen: func(_ string, _ string) (net.Listener, error) {
 			return rawListener, nil
 		},
-		openStorageBundle: storageBundleOpenerFunc(func(_ serverEnv) (*storageBundle, error) {
+		openStorageBundle: storageBundleOpenerFunc(func(_ serverEnv, _ *event.Registry) (*storageBundle, error) {
 			return nil, errors.New("unable to open storage")
 		}),
 	})

@@ -18,6 +18,10 @@ type Adapter interface {
 	Version() string
 	Apply(context.Context, event.Event) error
 	Snapshot(context.Context, string) (any, error)
+	// HandledTypes returns the event types this adapter's Apply handles.
+	// Used by startup validation to ensure every emittable event type
+	// declared by the system module has a projection handler.
+	HandledTypes() []event.Type
 }
 
 // ProfileAdapter is an optional interface for adapters that handle
@@ -83,6 +87,20 @@ func (r *AdapterRegistry) Register(adapter Adapter) error {
 	}
 	r.adapters[key] = adapter
 	return nil
+}
+
+// Adapters returns all registered adapters.
+func (r *AdapterRegistry) Adapters() []Adapter {
+	if r == nil {
+		return nil
+	}
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	adapters := make([]Adapter, 0, len(r.adapters))
+	for _, adapter := range r.adapters {
+		adapters = append(adapters, adapter)
+	}
+	return adapters
 }
 
 // Get returns the adapter for the system + version.

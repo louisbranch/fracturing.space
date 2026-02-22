@@ -2,6 +2,7 @@ package participant
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -46,7 +47,8 @@ const (
 // that context explicit by emitting identity/role/capability changes as immutable
 // events rather than mutating shared storage directly.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	if cmd.Type == commandTypeJoin {
+	switch cmd.Type {
+	case commandTypeJoin:
 		if state.Joined {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantAlreadyJoined,
@@ -54,7 +56,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload JoinPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 
 		participantID := strings.TrimSpace(payload.ParticipantID)
 		if participantID == "" {
@@ -126,8 +133,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeJoined, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
-	if cmd.Type == commandTypeUpdate {
+
+	case commandTypeUpdate:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,
@@ -135,7 +142,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload UpdatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		participantID := strings.TrimSpace(payload.ParticipantID)
 		if participantID == "" {
 			return command.Reject(command.Rejection{
@@ -245,9 +257,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeUpdated, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if cmd.Type == commandTypeLeave {
+	case commandTypeLeave:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,
@@ -255,7 +266,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload LeavePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		participantID := strings.TrimSpace(payload.ParticipantID)
 		if participantID == "" {
 			return command.Reject(command.Rejection{
@@ -273,9 +289,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeLeft, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if cmd.Type == commandTypeBind {
+	case commandTypeBind:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,
@@ -283,7 +298,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload BindPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		participantID := strings.TrimSpace(payload.ParticipantID)
 		if participantID == "" {
 			return command.Reject(command.Rejection{
@@ -307,9 +327,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeBound, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if cmd.Type == commandTypeUnbind {
+	case commandTypeUnbind:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,
@@ -317,7 +336,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload UnbindPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		participantID := strings.TrimSpace(payload.ParticipantID)
 		if participantID == "" {
 			return command.Reject(command.Rejection{
@@ -342,9 +366,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeUnbound, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if cmd.Type == commandTypeSeatReassign || cmd.Type == commandTypeSeatReassignLegacy {
+	case commandTypeSeatReassign, commandTypeSeatReassignLegacy:
 		if !state.Joined || state.Left {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantNotJoined,
@@ -352,7 +375,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload SeatReassignPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		participantID := strings.TrimSpace(payload.ParticipantID)
 		if participantID == "" {
 			return command.Reject(command.Rejection{
@@ -389,9 +417,13 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeSeatReassigned, "participant", participantID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	return command.Decision{}
+	default:
+		return command.Reject(command.Rejection{
+			Code:    "COMMAND_TYPE_UNSUPPORTED",
+			Message: fmt.Sprintf("command type %s is not supported by participant decider", cmd.Type),
+		})
+	}
 }
 
 // normalizeRoleLabel returns a canonical role label.

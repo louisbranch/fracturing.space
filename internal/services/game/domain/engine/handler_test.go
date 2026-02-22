@@ -249,7 +249,7 @@ func TestExecute_AppliesEventsToState(t *testing.T) {
 	handler := Handler{
 		Commands: cmdRegistry,
 		Decider:  decider,
-		Applier:  aggregate.Applier{},
+		Applier:  &aggregate.Applier{},
 	}
 	cmd := command.Command{
 		CampaignID: "camp-1",

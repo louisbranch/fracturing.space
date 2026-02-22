@@ -2,23 +2,13 @@ package domainwrite
 
 import (
 	"context"
-	"sync"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/manifest"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-var (
-	defaultInlineApplyIntentIndexOnce sync.Once
-	defaultInlineApplyIntentIndex     map[event.Type]event.Intent
-)
-
-// EventIntentResolver resolves metadata intent for a specific event type.
-type EventIntentResolver func(event.Type) (event.Intent, bool)
 
 // Executor executes a domain command and returns the domain result.
 type Executor interface {
@@ -32,14 +22,13 @@ type EventApplier interface {
 
 // Options controls command execution and emitted-event application behavior.
 type Options struct {
-	RequireEvents        bool
-	MissingEventMsg      string
-	InlineApplyEnabled   bool
-	ShouldApply          func(event.Event) bool
-	ExecuteErr           func(error) error
-	ApplyErr             func(error) error
-	RejectErr            func(string) error
-	DefaultEventResolver EventIntentResolver
+	RequireEvents      bool
+	MissingEventMsg    string
+	InlineApplyEnabled bool
+	ShouldApply        func(event.Event) bool
+	ExecuteErr         func(error) error
+	ApplyErr           func(error) error
+	RejectErr          func(string) error
 }
 
 // ExecuteAndApply executes the command, handles rejections, and applies events.
@@ -80,50 +69,26 @@ func ExecuteAndApply(
 	return result, nil
 }
 
-// ShouldApplyProjectionInline enforces request-path inline-apply policy using
-// event registry intent metadata.
-func ShouldApplyProjectionInline(evt event.Event) bool {
-	return ShouldApplyProjectionInlineWithResolver(NewDefaultEventIntentResolver(), evt)
-}
-
-// ShouldApplyProjectionInlineWithResolver enforces inline-apply policy using the
-// provided event intent resolver.
-func ShouldApplyProjectionInlineWithResolver(resolve EventIntentResolver, evt event.Event) bool {
-	if resolve == nil {
-		resolve = NewDefaultEventIntentResolver()
+// NewIntentFilter returns a filter function that checks event intent against
+// the provided registry, skipping audit-only and replay-only events. If the
+// registry is nil or the event type is unknown, the filter fails closed
+// (returns false).
+func NewIntentFilter(registry *event.Registry) func(event.Event) bool {
+	if registry == nil {
+		return func(_ event.Event) bool { return false }
 	}
-	intent, ok := resolve(evt.Type)
-	if !ok {
-		// Fail closed when intent cannot be resolved; this avoids mutating
-		// projections inline under degraded registry bootstrap conditions.
-		return false
-	}
-	return intent != event.IntentAuditOnly
-}
-
-func buildInlineApplyIntentIndex() map[event.Type]event.Intent {
-	registries, err := engine.BuildRegistries(systemmanifest.Modules()...)
-	if err != nil {
-		return nil
-	}
-	definitions := registries.Events.ListDefinitions()
+	// Pre-build an intent index for O(1) lookup at request time.
+	definitions := registry.ListDefinitions()
 	index := make(map[event.Type]event.Intent, len(definitions))
-	for _, definition := range definitions {
-		index[definition.Type] = definition.Intent
+	for _, def := range definitions {
+		index[def.Type] = def.Intent
 	}
-	return index
-}
-
-// NewDefaultEventIntentResolver creates a process-wide cached resolver backed by
-// registry intent metadata.
-func NewDefaultEventIntentResolver() EventIntentResolver {
-	defaultInlineApplyIntentIndexOnce.Do(func() {
-		defaultInlineApplyIntentIndex = buildInlineApplyIntentIndex()
-	})
-	intentIndex := defaultInlineApplyIntentIndex
-	return func(eventType event.Type) (event.Intent, bool) {
-		intent, ok := intentIndex[eventType]
-		return intent, ok
+	return func(evt event.Event) bool {
+		intent, ok := index[evt.Type]
+		if !ok {
+			return false
+		}
+		return intent == event.IntentProjectionAndReplay
 	}
 }
 
@@ -141,14 +106,6 @@ func normalizeOptions(options Options) Options {
 	if options.RejectErr == nil {
 		options.RejectErr = func(message string) error {
 			return status.Error(codes.FailedPrecondition, message)
-		}
-	}
-	if options.DefaultEventResolver == nil {
-		options.DefaultEventResolver = NewDefaultEventIntentResolver()
-	}
-	if options.ShouldApply == nil {
-		options.ShouldApply = func(evt event.Event) bool {
-			return ShouldApplyProjectionInlineWithResolver(options.DefaultEventResolver, evt)
 		}
 	}
 	return options

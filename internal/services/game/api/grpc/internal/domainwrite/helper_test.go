@@ -6,116 +6,64 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
-func TestNormalizeOptions_CreatesDefaultShouldApplyResolver(t *testing.T) {
-	called := 0
-	resolver := func(_ event.Type) (event.Intent, bool) {
-		called++
-		return event.IntentProjectionAndReplay, true
+func TestNewIntentFilter_SkipsAuditOnlyEvents(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := registry.Register(event.Definition{
+		Type:   event.Type("action.roll_resolved"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+	if err := registry.Register(event.Definition{
+		Type:   event.Type("story.note_added"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentAuditOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
 	}
 
-	options := normalizeOptions(Options{
-		DefaultEventResolver: resolver,
-	})
-	if options.ShouldApply == nil {
-		t.Fatal("expected default ShouldApply to be injected")
-	}
-	if !options.ShouldApply(event.Event{Type: event.Type("action.roll_resolved")}) {
-		t.Fatal("expected resolver-driven ShouldApply decision to be true")
-	}
-	if called != 1 {
-		t.Fatalf("expected resolver called once, got %d", called)
-	}
-}
-
-func TestShouldApplyProjectionInline_FailsClosedWhenIntentIndexMissing(t *testing.T) {
-	resolver := func(_ event.Type) (event.Intent, bool) {
-		return "", false
-	}
+	filter := NewIntentFilter(registry)
 
 	tests := []struct {
 		name      string
 		eventType event.Type
 		want      bool
 	}{
-		{name: "story note remains skipped", eventType: event.Type("story.note_added"), want: false},
-		{name: "outcome rejection remains skipped", eventType: event.Type("action.outcome_rejected"), want: false},
-		{name: "unknown event now skips", eventType: event.Type("custom.unknown"), want: false},
+		{"projection event applies", event.Type("action.roll_resolved"), true},
+		{"audit-only event skipped", event.Type("story.note_added"), false},
+		{"unknown event skipped (fail closed)", event.Type("custom.unknown"), false},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ShouldApplyProjectionInlineWithResolver(resolver, event.Event{Type: tt.eventType})
+			got := filter(event.Event{Type: tt.eventType})
 			if got != tt.want {
-				t.Fatalf("ShouldApplyProjectionInline(%s) = %t, want %t", tt.eventType, got, tt.want)
+				t.Fatalf("filter(%s) = %t, want %t", tt.eventType, got, tt.want)
 			}
 		})
 	}
 }
 
-func TestShouldApplyProjectionInline_UsesEventIntent(t *testing.T) {
-	resolver := buildTestEventIntentResolver()
-
-	tests := []struct {
-		name      string
-		eventType event.Type
-		want      bool
-	}{
-		{name: "audit note event", eventType: event.Type("story.note_added"), want: false},
-		{name: "audit outcome rejected event", eventType: event.Type("action.outcome_rejected"), want: false},
-		{name: "projection roll event", eventType: event.Type("action.roll_resolved"), want: true},
-		{name: "projection outcome applied event", eventType: event.Type("action.outcome_applied"), want: true},
-		{name: "projection system event", eventType: event.Type("sys.daggerheart.gm_fear_changed"), want: true},
-		{name: "unknown event defaults to skip", eventType: event.Type("custom.unknown"), want: false},
+func TestNewIntentFilter_SkipsReplayOnlyEvents(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := registry.Register(event.Definition{
+		Type:   event.Type("action.roll_resolved"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentReplayOnly,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got := ShouldApplyProjectionInlineWithResolver(resolver, event.Event{Type: tt.eventType})
-			if got != tt.want {
-				t.Fatalf("ShouldApplyProjectionInline(%s) = %t, want %t", tt.eventType, got, tt.want)
-			}
-		})
+	filter := NewIntentFilter(registry)
+	if filter(event.Event{Type: event.Type("action.roll_resolved")}) {
+		t.Fatal("expected replay-only event to be filtered out")
 	}
 }
 
-func TestShouldApplyProjectionInline_FailsClosedWhenIntentUnknown(t *testing.T) {
-	resolver := func(_ event.Type) (event.Intent, bool) {
-		return "", false
-	}
+func TestNewIntentFilter_NilRegistryFailsClosed(t *testing.T) {
+	filter := NewIntentFilter(nil)
 
-	if ShouldApplyProjectionInlineWithResolver(resolver, event.Event{Type: event.Type("custom.unknown")}) {
-		t.Fatal("expected unknown event intent to skip inline apply")
-	}
-}
-
-func TestShouldApplyProjectionInline_RetriesBootstrapAfterCachedFailure(t *testing.T) {
-	resolver := func(eventType event.Type) (event.Intent, bool) {
-		if eventType == event.Type("action.roll_resolved") {
-			return event.IntentProjectionAndReplay, true
-		}
-		return "", false
-	}
-
-	evt := event.Event{Type: event.Type("action.roll_resolved")}
-	if !ShouldApplyProjectionInlineWithResolver(resolver, evt) {
-		t.Fatal("expected resolver decision to be deterministic")
-	}
-	if !ShouldApplyProjectionInlineWithResolver(resolver, evt) {
-		t.Fatal("expected resolver decision to remain deterministic across calls")
-	}
-}
-
-func buildTestEventIntentResolver() EventIntentResolver {
-	intentIndex := map[event.Type]event.Intent{
-		"story.note_added":                event.IntentAuditOnly,
-		"action.outcome_rejected":         event.IntentAuditOnly,
-		"action.roll_resolved":            event.IntentProjectionAndReplay,
-		"action.outcome_applied":          event.IntentProjectionAndReplay,
-		"sys.daggerheart.gm_fear_changed": event.IntentProjectionAndReplay,
-	}
-
-	return func(eventType event.Type) (event.Intent, bool) {
-		intent, ok := intentIndex[eventType]
-		return intent, ok
+	if filter(event.Event{Type: event.Type("action.roll_resolved")}) {
+		t.Fatal("expected nil registry filter to fail closed")
 	}
 }

@@ -2,6 +2,7 @@ package daggerheart
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -42,6 +43,7 @@ const (
 	rejectionCodeAdversaryConditionNoMutation    = "ADVERSARY_CONDITION_NO_MUTATION"
 	rejectionCodeAdversaryConditionRemoveMissing = "ADVERSARY_CONDITION_REMOVE_MISSING"
 	rejectionCodeAdversaryCreateNoMutation       = "ADVERSARY_CREATE_NO_MUTATION"
+	rejectionCodePayloadDecodeFailed             = "PAYLOAD_DECODE_FAILED"
 	rejectionCodeCommandTypeUnsupported          = "COMMAND_TYPE_UNSUPPORTED"
 )
 
@@ -54,7 +56,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 	switch cmd.Type {
 	case commandTypeGMFearSet:
 		var payload GMFearSetPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if payload.After == nil {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeGMFearAfterRequired,
@@ -94,7 +101,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeCharacterStatePatch:
 		var payload CharacterStatePatchPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if isCharacterStatePatchNoMutation(snapshotState, payload) {
 			// FIXME(telemetry): metric for idempotent character state patch commands.
 			return command.Reject(command.Rejection{
@@ -116,7 +128,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeConditionChange:
 		var payload ConditionChangePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if hasMissingCharacterConditionRemovals(snapshotState, payload) {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeConditionChangeRemoveMissing,
@@ -145,7 +162,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeHopeSpend:
 		var payload HopeSpendPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -164,7 +186,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeStressSpend:
 		var payload StressSpendPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -183,7 +210,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeLoadoutSwap:
 		var payload LoadoutSwapPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -201,7 +233,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeRestTake:
 		var payload RestTakePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -230,7 +267,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(restEvent, countdownEvent)
 	case commandTypeCountdownCreate:
 		var payload CountdownCreatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -252,7 +294,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeCountdownUpdate:
 		var payload CountdownUpdatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if rejection := countdownUpdateSnapshotRejection(snapshotState, payload); rejection != nil {
 			return command.Reject(*rejection)
 		}
@@ -275,7 +322,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeCountdownDelete:
 		var payload CountdownDeletePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -295,7 +347,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeDamageApply:
 		var payload DamageApplyPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if payload.ArmorSpent > 1 {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeDamageArmorSpendLimit,
@@ -334,7 +391,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeAdversaryDamageApply:
 		var payload AdversaryDamageApplyPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if hasSnapshot {
 			if adversary, ok := snapshotAdversaryState(snapshotState, payload.AdversaryID); ok {
 				if payload.HpBefore != nil && adversary.HP != *payload.HpBefore {
@@ -367,7 +429,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeDowntimeMoveApply:
 		var payload DowntimeMoveApplyPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -383,7 +450,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeCharacterTemporaryArmorApply:
 		var payload CharacterTemporaryArmorApplyPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -401,7 +473,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeAdversaryConditionChange:
 		var payload AdversaryConditionChangePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if hasMissingAdversaryConditionRemovals(snapshotState, payload) {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeAdversaryConditionRemoveMissing,
@@ -430,7 +507,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeAdversaryCreate:
 		var payload AdversaryCreatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if isAdversaryCreateNoMutation(snapshotState, payload) {
 			// FIXME(telemetry): metric for idempotent adversary creation commands.
 			return command.Reject(command.Rejection{
@@ -456,7 +538,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeAdversaryUpdate:
 		var payload AdversaryUpdatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}
@@ -475,7 +562,12 @@ func (Decider) Decide(state any, cmd command.Command, now func() time.Time) comm
 		return command.Accept(evt)
 	case commandTypeAdversaryDelete:
 		var payload AdversaryDeletePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodePayloadDecodeFailed,
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		if now == nil {
 			now = time.Now
 		}

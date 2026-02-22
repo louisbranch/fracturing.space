@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -18,6 +18,13 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+// ProjectionHandledTypes returns the core event types handled by the projection
+// layer. The list is derived from the handler registry map so there is a single
+// source of truth for which event types have projection handlers.
+func ProjectionHandledTypes() []event.Type {
+	return registeredHandlerTypes()
+}
+
 // Apply routes domain events into denormalized read-model stores.
 //
 // The projection layer is the reason projections remain current for APIs and
@@ -25,88 +32,49 @@ import (
 // gets mirrored here according to projection semantics.
 func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 	if a.Events != nil {
-		evt.Type = a.Events.Resolve(evt.Type)
-	}
-	switch evt.Type {
-	case campaign.EventTypeCreated:
-		return a.applyCampaignCreated(ctx, evt)
-	case campaign.EventTypeUpdated:
-		return a.applyCampaignUpdated(ctx, evt)
-	case campaign.EventTypeForked:
-		return a.applyCampaignForked(ctx, evt)
-	case participant.EventTypeJoined:
-		return a.applyParticipantJoined(ctx, evt)
-	case participant.EventTypeUpdated:
-		return a.applyParticipantUpdated(ctx, evt)
-	case participant.EventTypeLeft:
-		return a.applyParticipantLeft(ctx, evt)
-	case participant.EventTypeBound:
-		return a.applyParticipantBound(ctx, evt)
-	case participant.EventTypeUnbound:
-		return a.applyParticipantUnbound(ctx, evt)
-	case participant.EventTypeSeatReassigned:
-		return a.applySeatReassigned(ctx, evt)
-	case character.EventTypeCreated:
-		return a.applyCharacterCreated(ctx, evt)
-	case character.EventTypeUpdated:
-		return a.applyCharacterUpdated(ctx, evt)
-	case character.EventTypeDeleted:
-		return a.applyCharacterDeleted(ctx, evt)
-	case character.EventTypeProfileUpdated:
-		return a.applyCharacterProfileUpdated(ctx, evt)
-	case invite.EventTypeCreated:
-		return a.applyInviteCreated(ctx, evt)
-	case invite.EventTypeClaimed:
-		return a.applyInviteClaimed(ctx, evt)
-	case invite.EventTypeRevoked:
-		return a.applyInviteRevoked(ctx, evt)
-	case invite.EventTypeUpdated:
-		return a.applyInviteUpdated(ctx, evt)
-	case session.EventTypeStarted:
-		return a.applySessionStarted(ctx, evt)
-	case session.EventTypeEnded:
-		return a.applySessionEnded(ctx, evt)
-	case session.EventTypeGateOpened:
-		return a.applySessionGateOpened(ctx, evt)
-	case session.EventTypeGateResolved:
-		return a.applySessionGateResolved(ctx, evt)
-	case session.EventTypeGateAbandoned:
-		return a.applySessionGateAbandoned(ctx, evt)
-	case session.EventTypeSpotlightSet:
-		return a.applySessionSpotlightSet(ctx, evt)
-	case session.EventTypeSpotlightCleared:
-		return a.applySessionSpotlightCleared(ctx, evt)
-	case action.EventTypeRollResolved:
-		return a.applyActionRollResolved(ctx, evt)
-	case action.EventTypeOutcomeApplied:
-		return a.applyActionOutcomeApplied(ctx, evt)
-	default:
-		if strings.TrimSpace(evt.SystemID) != "" {
-			return a.applySystemEvent(ctx, evt)
+		resolved := a.Events.Resolve(evt.Type)
+		evt.Type = resolved
+		// Skip audit-only and replay-only events — they do not affect read-model
+		// state and must not reach the default error case.  The aggregate applier
+		// has a similar guard; adding it here makes the projection applier
+		// self-guarding.
+		if def, ok := a.Events.Definition(resolved); ok && (def.Intent == event.IntentAuditOnly || def.Intent == event.IntentReplayOnly) {
+			return nil
 		}
-		return fmt.Errorf("unhandled projection event type: %s", evt.Type)
 	}
-}
-
-func (a Applier) applyActionRollResolved(_ context.Context, _ event.Event) error {
-	// Action roll envelopes are replay-authoritative for command invariants but
-	// do not currently materialize a dedicated read-model projection.
+	if err := a.routeEvent(ctx, evt); err != nil {
+		return err
+	}
+	if a.Watermarks != nil && evt.Seq > 0 && strings.TrimSpace(evt.CampaignID) != "" {
+		if err := a.Watermarks.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{
+			CampaignID: evt.CampaignID,
+			AppliedSeq: evt.Seq,
+			UpdatedAt:  time.Now().UTC(),
+		}); err != nil {
+			return fmt.Errorf("save projection watermark: %w", err)
+		}
+	}
 	return nil
 }
 
-func (a Applier) applyActionOutcomeApplied(_ context.Context, _ event.Event) error {
-	// Outcome envelopes are replay-authoritative and may fan out to system events,
-	// but the core projection store has no direct read-model mutation for them.
-	return nil
+// routeEvent dispatches a single event to the appropriate projection handler
+// using the handler registry map. Core event types are looked up in the
+// registry; events with a non-empty SystemID fall through to the system adapter
+// path; anything else is rejected.
+func (a Applier) routeEvent(ctx context.Context, evt event.Event) error {
+	if h, ok := handlers[evt.Type]; ok {
+		if err := a.validatePreconditions(h, evt); err != nil {
+			return err
+		}
+		return h.apply(a, ctx, evt)
+	}
+	if strings.TrimSpace(evt.SystemID) != "" {
+		return a.applySystemEvent(ctx, evt)
+	}
+	return fmt.Errorf("unhandled projection event type: %s", evt.Type)
 }
 
 func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) error {
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.EntityID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	var payload campaign.CreatePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "campaign.created"); err != nil {
 		return err
@@ -141,7 +109,10 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) erro
 		return err
 	}
 
-	createdAt := ensureTimestamp(evt.Timestamp)
+	createdAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	return a.Campaign.Put(ctx, storage.CampaignRecord{
 		ID:               evt.EntityID,
 		Name:             normalized.Name,
@@ -162,12 +133,6 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event) erro
 }
 
 func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event) error {
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	var payload campaign.UpdatePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "campaign.updated"); err != nil {
 		return err
@@ -189,7 +154,11 @@ func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event) erro
 			if err != nil {
 				return err
 			}
-			updated, err = applyCampaignStatusTransition(updated, status, ensureTimestamp(evt.Timestamp))
+			statusTS, tsErr := ensureTimestamp(evt.Timestamp)
+			if tsErr != nil {
+				return tsErr
+			}
+			updated, err = applyCampaignStatusTransition(updated, status, statusTS)
 			if err != nil {
 				return err
 			}
@@ -208,19 +177,16 @@ func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event) erro
 		}
 	}
 
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	updated.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, updated)
 }
 
 func (a Applier) applyCampaignForked(ctx context.Context, evt event.Event) error {
-	if a.CampaignFork == nil {
-		return fmt.Errorf("campaign fork store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	var payload campaign.ForkPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "campaign.forked"); err != nil {
 		return err
@@ -233,19 +199,7 @@ func (a Applier) applyCampaignForked(ctx context.Context, evt event.Event) error
 }
 
 func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) error {
-	if a.Participant == nil {
-		return fmt.Errorf("participant store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
 	participantID := strings.TrimSpace(evt.EntityID)
-	if participantID == "" {
-		return fmt.Errorf("participant id is required")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 
 	var payload participant.JoinPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "participant.joined"); err != nil {
@@ -270,7 +224,10 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 	}
 	userID := strings.TrimSpace(payload.UserID)
 
-	createdAt := ensureTimestamp(evt.Timestamp)
+	createdAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	if err := a.Participant.PutParticipant(ctx, storage.ParticipantRecord{
 		ID:             participantID,
 		CampaignID:     strings.TrimSpace(evt.CampaignID),
@@ -291,26 +248,18 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event) er
 	if err != nil {
 		return err
 	}
-	campaignRecord.ParticipantCount++
+	pCount, err := a.Participant.CountParticipants(ctx, evt.CampaignID)
+	if err != nil {
+		return err
+	}
+	campaignRecord.ParticipantCount = pCount
 	campaignRecord.UpdatedAt = createdAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
 func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event) error {
-	if a.Participant == nil {
-		return fmt.Errorf("participant store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	participantID := strings.TrimSpace(evt.EntityID)
-	if participantID == "" {
-		return fmt.Errorf("participant id is required")
-	}
 
 	var payload participant.UpdatePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "participant.updated"); err != nil {
@@ -361,7 +310,10 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event) e
 		}
 	}
 
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	updated.UpdatedAt = updatedAt
 
 	if err := a.Participant.PutParticipant(ctx, updated); err != nil {
@@ -378,19 +330,7 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event) e
 }
 
 func (a Applier) applyParticipantLeft(ctx context.Context, evt event.Event) error {
-	if a.Participant == nil {
-		return fmt.Errorf("participant store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	participantID := strings.TrimSpace(evt.EntityID)
-	if participantID == "" {
-		return fmt.Errorf("participant id is required")
-	}
 
 	if err := a.Participant.DeleteParticipant(ctx, evt.CampaignID, participantID); err != nil {
 		return err
@@ -400,29 +340,22 @@ func (a Applier) applyParticipantLeft(ctx context.Context, evt event.Event) erro
 	if err != nil {
 		return err
 	}
-	if campaignRecord.ParticipantCount > 0 {
-		campaignRecord.ParticipantCount--
+	pCount, err := a.Participant.CountParticipants(ctx, evt.CampaignID)
+	if err != nil {
+		return err
 	}
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	campaignRecord.ParticipantCount = pCount
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
 func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event) error {
-	if a.Participant == nil {
-		return fmt.Errorf("participant store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	participantID := strings.TrimSpace(evt.EntityID)
-	if participantID == "" {
-		return fmt.Errorf("participant id is required")
-	}
 
 	var payload participant.BindPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "participant.bound"); err != nil {
@@ -440,7 +373,10 @@ func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event) err
 
 	updated := current
 	updated.UserID = userID
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	updated.UpdatedAt = updatedAt
 
 	if a.ClaimIndex != nil {
@@ -463,19 +399,7 @@ func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event) err
 }
 
 func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event) error {
-	if a.Participant == nil {
-		return fmt.Errorf("participant store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	participantID := strings.TrimSpace(evt.EntityID)
-	if participantID == "" {
-		return fmt.Errorf("participant id is required")
-	}
 
 	var payload participant.UnbindPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "participant.unbound"); err != nil {
@@ -500,7 +424,10 @@ func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event) e
 
 	updated := current
 	updated.UserID = ""
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	updated.UpdatedAt = updatedAt
 
 	if err := a.Participant.PutParticipant(ctx, updated); err != nil {
@@ -517,26 +444,10 @@ func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event) e
 }
 
 func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event) error {
-	if a.Participant == nil {
-		return fmt.Errorf("participant store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	participantID := strings.TrimSpace(evt.EntityID)
-	if participantID == "" {
-		return fmt.Errorf("participant id is required")
-	}
 
 	var payload participant.SeatReassignPayload
-	payloadType := "seat.reassigned"
-	if strings.TrimSpace(string(evt.Type)) == "participant.seat_reassigned" {
-		payloadType = "participant.seat_reassigned"
-	}
-	if err := decodePayload(evt.PayloadJSON, &payload, payloadType); err != nil {
+	if err := decodePayload(evt.PayloadJSON, &payload, "participant.seat_reassigned"); err != nil {
 		return err
 	}
 	newUserID := strings.TrimSpace(payload.UserID)
@@ -554,20 +465,24 @@ func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event) error
 		return fmt.Errorf("seat.reassigned prior_user_id mismatch")
 	}
 
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+
 	if a.ClaimIndex != nil {
 		if currentUserID != "" {
 			if err := a.ClaimIndex.DeleteParticipantClaim(ctx, evt.CampaignID, currentUserID); err != nil {
 				return err
 			}
 		}
-		if err := a.ClaimIndex.PutParticipantClaim(ctx, evt.CampaignID, newUserID, participantID, ensureTimestamp(evt.Timestamp)); err != nil {
+		if err := a.ClaimIndex.PutParticipantClaim(ctx, evt.CampaignID, newUserID, participantID, updatedAt); err != nil {
 			return err
 		}
 	}
 
 	updated := current
 	updated.UserID = newUserID
-	updatedAt := ensureTimestamp(evt.Timestamp)
 	updated.UpdatedAt = updatedAt
 
 	if err := a.Participant.PutParticipant(ctx, updated); err != nil {
@@ -584,19 +499,7 @@ func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event) error
 }
 
 func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event) error {
-	if a.Character == nil {
-		return fmt.Errorf("character store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
 	characterID := strings.TrimSpace(evt.EntityID)
-	if characterID == "" {
-		return fmt.Errorf("character id is required")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 
 	var payload character.CreatePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "character.created"); err != nil {
@@ -616,7 +519,10 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event) err
 		return fmt.Errorf("character name is required")
 	}
 
-	createdAt := ensureTimestamp(evt.Timestamp)
+	createdAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	ch := storage.CharacterRecord{
 		ID:            characterID,
 		CampaignID:    strings.TrimSpace(evt.CampaignID),
@@ -636,26 +542,18 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event) err
 	if err != nil {
 		return err
 	}
-	campaignRecord.CharacterCount++
+	cCount, err := a.Character.CountCharacters(ctx, evt.CampaignID)
+	if err != nil {
+		return err
+	}
+	campaignRecord.CharacterCount = cCount
 	campaignRecord.UpdatedAt = createdAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
 func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event) error {
-	if a.Character == nil {
-		return fmt.Errorf("character store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	characterID := strings.TrimSpace(evt.EntityID)
-	if characterID == "" {
-		return fmt.Errorf("character id is required")
-	}
 
 	var payload character.UpdatePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "character.updated"); err != nil {
@@ -699,7 +597,10 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event) err
 		}
 	}
 
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	updated.UpdatedAt = updatedAt
 
 	if err := a.Character.PutCharacter(ctx, updated); err != nil {
@@ -716,19 +617,7 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event) err
 }
 
 func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event) error {
-	if a.Character == nil {
-		return fmt.Errorf("character store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	characterID := strings.TrimSpace(evt.EntityID)
-	if characterID == "" {
-		return fmt.Errorf("character id is required")
-	}
 
 	var payload character.DeletePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "character.deleted"); err != nil {
@@ -746,26 +635,22 @@ func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event) err
 	if err != nil {
 		return err
 	}
-	if campaignRecord.CharacterCount > 0 {
-		campaignRecord.CharacterCount--
+	cCount, err := a.Character.CountCharacters(ctx, evt.CampaignID)
+	if err != nil {
+		return err
 	}
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	campaignRecord.CharacterCount = cCount
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
 func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Event) error {
-	if a.Adapters == nil {
-		return fmt.Errorf("system adapters are not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	characterID := strings.TrimSpace(evt.EntityID)
-	if characterID == "" {
-		return fmt.Errorf("character id is required")
-	}
 
 	var payload character.ProfileUpdatePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "character.profile_updated"); err != nil {
@@ -806,15 +691,6 @@ func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Eve
 }
 
 func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event) error {
-	if a.Invite == nil {
-		return fmt.Errorf("invite store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	var payload invite.CreatePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "invite.created"); err != nil {
 		return err
@@ -835,7 +711,10 @@ func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event) error 
 		return err
 	}
 
-	createdAt := ensureTimestamp(evt.Timestamp)
+	createdAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	inv := storage.InviteRecord{
 		ID:                     inviteID,
 		CampaignID:             evt.CampaignID,
@@ -861,16 +740,7 @@ func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event) error 
 }
 
 func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event) error {
-	if a.Invite == nil {
-		return fmt.Errorf("invite store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
 	inviteID := strings.TrimSpace(evt.EntityID)
-	if inviteID == "" {
-		return fmt.Errorf("invite id is required")
-	}
 
 	var payload invite.ClaimPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "invite.claimed"); err != nil {
@@ -880,7 +750,10 @@ func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event) error 
 		return fmt.Errorf("invite.claimed invite_id mismatch")
 	}
 
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	if err := a.Invite.UpdateInviteStatus(ctx, inviteID, invite.StatusClaimed, updatedAt); err != nil {
 		return err
 	}
@@ -895,16 +768,7 @@ func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event) error 
 }
 
 func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event) error {
-	if a.Invite == nil {
-		return fmt.Errorf("invite store is not configured")
-	}
-	if a.Campaign == nil {
-		return fmt.Errorf("campaign store is not configured")
-	}
 	inviteID := strings.TrimSpace(evt.EntityID)
-	if inviteID == "" {
-		return fmt.Errorf("invite id is required")
-	}
 
 	var payload invite.RevokePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "invite.revoked"); err != nil {
@@ -914,7 +778,10 @@ func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event) error 
 		return fmt.Errorf("invite.revoked invite_id mismatch")
 	}
 
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	if err := a.Invite.UpdateInviteStatus(ctx, inviteID, invite.StatusRevoked, updatedAt); err != nil {
 		return err
 	}
@@ -929,9 +796,6 @@ func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event) error 
 }
 
 func (a Applier) applyInviteUpdated(ctx context.Context, evt event.Event) error {
-	if a.Invite == nil {
-		return fmt.Errorf("invite store is not configured")
-	}
 	var payload invite.UpdatePayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "invite.updated"); err != nil {
 		return err
@@ -947,17 +811,14 @@ func (a Applier) applyInviteUpdated(ctx context.Context, evt event.Event) error 
 	if err != nil {
 		return err
 	}
-	updatedAt := ensureTimestamp(evt.Timestamp)
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	return a.Invite.UpdateInviteStatus(ctx, inviteID, status, updatedAt)
 }
 
 func (a Applier) applySessionStarted(ctx context.Context, evt event.Event) error {
-	if a.Session == nil {
-		return fmt.Errorf("session store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	var payload session.StartPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "session.started"); err != nil {
 		return err
@@ -969,7 +830,10 @@ func (a Applier) applySessionStarted(ctx context.Context, evt event.Event) error
 	if sessionID == "" {
 		return fmt.Errorf("session id is required")
 	}
-	startedAt := ensureTimestamp(evt.Timestamp)
+	startedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	return a.Session.PutSession(ctx, storage.SessionRecord{
 		ID:         sessionID,
 		CampaignID: evt.CampaignID,
@@ -981,12 +845,6 @@ func (a Applier) applySessionStarted(ctx context.Context, evt event.Event) error
 }
 
 func (a Applier) applySessionEnded(ctx context.Context, evt event.Event) error {
-	if a.Session == nil {
-		return fmt.Errorf("session store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
 	var payload session.EndPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "session.ended"); err != nil {
 		return err
@@ -998,20 +856,15 @@ func (a Applier) applySessionEnded(ctx context.Context, evt event.Event) error {
 	if sessionID == "" {
 		return fmt.Errorf("session id is required")
 	}
-	_, _, err := a.Session.EndSession(ctx, evt.CampaignID, sessionID, ensureTimestamp(evt.Timestamp))
+	endedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+	_, _, err = a.Session.EndSession(ctx, evt.CampaignID, sessionID, endedAt)
 	return err
 }
 
 func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event) error {
-	if a.SessionGate == nil {
-		return fmt.Errorf("session gate store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(evt.SessionID) == "" {
-		return fmt.Errorf("session id is required")
-	}
 	var payload session.GateOpenedPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "session.gate_opened"); err != nil {
 		return err
@@ -1032,7 +885,10 @@ func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event) er
 	if err != nil {
 		return fmt.Errorf("encode gate metadata: %w", err)
 	}
-	createdAt := ensureTimestamp(evt.Timestamp)
+	createdAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	return a.SessionGate.PutSessionGate(ctx, storage.SessionGate{
 		CampaignID:         evt.CampaignID,
 		SessionID:          evt.SessionID,
@@ -1048,15 +904,6 @@ func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event) er
 }
 
 func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event) error {
-	if a.SessionGate == nil {
-		return fmt.Errorf("session gate store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(evt.SessionID) == "" {
-		return fmt.Errorf("session id is required")
-	}
 	var payload session.GateResolvedPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "session.gate_resolved"); err != nil {
 		return err
@@ -1076,7 +923,10 @@ func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event) 
 	if err != nil {
 		return fmt.Errorf("encode gate resolution: %w", err)
 	}
-	resolvedAt := ensureTimestamp(evt.Timestamp)
+	resolvedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	gate.Status = session.GateStatusResolved
 	gate.ResolvedAt = &resolvedAt
 	gate.ResolvedByActorType = string(evt.ActorType)
@@ -1086,15 +936,6 @@ func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event) 
 }
 
 func (a Applier) applySessionGateAbandoned(ctx context.Context, evt event.Event) error {
-	if a.SessionGate == nil {
-		return fmt.Errorf("session gate store is not configured")
-	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(evt.SessionID) == "" {
-		return fmt.Errorf("session id is required")
-	}
 	var payload session.GateAbandonedPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "session.gate_abandoned"); err != nil {
 		return err
@@ -1114,7 +955,10 @@ func (a Applier) applySessionGateAbandoned(ctx context.Context, evt event.Event)
 	if err != nil {
 		return fmt.Errorf("encode gate resolution: %w", err)
 	}
-	resolvedAt := ensureTimestamp(evt.Timestamp)
+	resolvedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	gate.Status = session.GateStatusAbandoned
 	gate.ResolvedAt = &resolvedAt
 	gate.ResolvedByActorType = string(evt.ActorType)
@@ -1124,12 +968,6 @@ func (a Applier) applySessionGateAbandoned(ctx context.Context, evt event.Event)
 }
 
 func (a Applier) applySessionSpotlightSet(ctx context.Context, evt event.Event) error {
-	if a.SessionSpotlight == nil {
-		return fmt.Errorf("session spotlight store is not configured")
-	}
-	if strings.TrimSpace(evt.SessionID) == "" {
-		return fmt.Errorf("session id is required")
-	}
 	var payload session.SpotlightSetPayload
 	if err := decodePayload(evt.PayloadJSON, &payload, "session.spotlight_set"); err != nil {
 		return err
@@ -1142,24 +980,22 @@ func (a Applier) applySessionSpotlightSet(ctx context.Context, evt event.Event) 
 		return err
 	}
 
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
 	return a.SessionSpotlight.PutSessionSpotlight(ctx, storage.SessionSpotlight{
 		CampaignID:         evt.CampaignID,
 		SessionID:          evt.SessionID,
 		SpotlightType:      spotlightType,
 		CharacterID:        strings.TrimSpace(payload.CharacterID),
-		UpdatedAt:          ensureTimestamp(evt.Timestamp),
+		UpdatedAt:          updatedAt,
 		UpdatedByActorType: string(evt.ActorType),
 		UpdatedByActorID:   evt.ActorID,
 	})
 }
 
 func (a Applier) applySessionSpotlightCleared(ctx context.Context, evt event.Event) error {
-	if a.SessionSpotlight == nil {
-		return fmt.Errorf("session spotlight store is not configured")
-	}
-	if strings.TrimSpace(evt.SessionID) == "" {
-		return fmt.Errorf("session id is required")
-	}
 	return a.SessionSpotlight.ClearSessionSpotlight(ctx, evt.CampaignID, evt.SessionID)
 }
 

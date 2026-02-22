@@ -2,6 +2,7 @@ package character
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -36,7 +37,8 @@ const (
 // Character changes are intentionally event-driven so ownership and profile edits
 // can be replayed and projected consistently across tools and clients.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	if cmd.Type == commandTypeCreate {
+	switch cmd.Type {
+	case commandTypeCreate:
 		if state.Created {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterAlreadyExists,
@@ -44,7 +46,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload CreatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		characterID := strings.TrimSpace(payload.CharacterID)
 		if characterID == "" {
 			return command.Reject(command.Rejection{
@@ -93,9 +100,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeCreated, "character", characterID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if cmd.Type == commandTypeUpdate {
+	case commandTypeUpdate:
 		if !state.Created || state.Deleted {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterNotCreated,
@@ -103,7 +109,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload UpdatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		characterID := strings.TrimSpace(payload.CharacterID)
 		if characterID == "" {
 			return command.Reject(command.Rejection{
@@ -199,9 +210,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeUpdated, "character", characterID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if cmd.Type == commandTypeDelete {
+	case commandTypeDelete:
 		if !state.Created || state.Deleted {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterNotCreated,
@@ -209,7 +219,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload DeletePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		characterID := strings.TrimSpace(payload.CharacterID)
 		if characterID == "" {
 			return command.Reject(command.Rejection{
@@ -227,9 +242,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeDeleted, "character", characterID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	if cmd.Type == commandTypeProfileUpdate {
+	case commandTypeProfileUpdate:
 		if !state.Created || state.Deleted {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterNotCreated,
@@ -237,7 +251,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		var payload ProfileUpdatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_DECODE_FAILED",
+				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+			})
+		}
 		characterID := strings.TrimSpace(payload.CharacterID)
 		if characterID == "" {
 			return command.Reject(command.Rejection{
@@ -257,9 +276,13 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		evt := command.NewEvent(cmd, EventTypeProfileUpdated, "character", characterID, payloadJSON, now().UTC())
 
 		return command.Accept(evt)
-	}
 
-	return command.Decision{}
+	default:
+		return command.Reject(command.Rejection{
+			Code:    "COMMAND_TYPE_UNSUPPORTED",
+			Message: fmt.Sprintf("command type %s is not supported by character decider", cmd.Type),
+		})
+	}
 }
 
 // normalizeCharacterKindLabel returns a canonical character kind label.

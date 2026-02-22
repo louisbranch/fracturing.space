@@ -2,6 +2,7 @@ package invite
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -38,12 +39,15 @@ const (
 // campaign. Each transition emits an immutable state event that can be audited
 // and replayed for investigation or migration.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	if cmd.Type == commandTypeCreate {
+	switch cmd.Type {
+	case commandTypeCreate:
 		if state.Created {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteAlreadyExists, Message: "invite already exists"})
 		}
 		var payload CreatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+		}
 		inviteID := strings.TrimSpace(payload.InviteID)
 		if inviteID == "" {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"})
@@ -65,9 +69,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		return command.Accept(command.NewEvent(cmd, EventTypeCreated, "invite", inviteID, payloadJSON, now().UTC()))
-	}
 
-	if cmd.Type == commandTypeClaim {
+	case commandTypeClaim:
 		if !state.Created {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
 		}
@@ -75,7 +78,9 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
 		}
 		var payload ClaimPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+		}
 		inviteID := strings.TrimSpace(payload.InviteID)
 		if inviteID == "" {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"})
@@ -104,9 +109,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		return command.Accept(command.NewEvent(cmd, EventTypeClaimed, "invite", inviteID, payloadJSON, now().UTC()))
-	}
 
-	if cmd.Type == commandTypeRevoke {
+	case commandTypeRevoke:
 		if !state.Created {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
 		}
@@ -114,7 +118,9 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
 		}
 		var payload RevokePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+		}
 		inviteID := strings.TrimSpace(payload.InviteID)
 		if inviteID == "" {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"})
@@ -124,14 +130,15 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 		payloadJSON, _ := json.Marshal(RevokePayload{InviteID: inviteID})
 		return command.Accept(command.NewEvent(cmd, EventTypeRevoked, "invite", inviteID, payloadJSON, now().UTC()))
-	}
 
-	if cmd.Type == commandTypeUpdate {
+	case commandTypeUpdate:
 		if !state.Created {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
 		}
 		var payload UpdatePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+		}
 		inviteID := strings.TrimSpace(payload.InviteID)
 		if inviteID == "" {
 			return command.Reject(command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"})
@@ -145,7 +152,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 		payloadJSON, _ := json.Marshal(UpdatePayload{InviteID: inviteID, Status: status})
 		return command.Accept(command.NewEvent(cmd, EventTypeUpdated, "invite", inviteID, payloadJSON, now().UTC()))
-	}
 
-	return command.Decision{}
+	default:
+		return command.Reject(command.Rejection{Code: "COMMAND_TYPE_UNSUPPORTED", Message: fmt.Sprintf("command type %s is not supported by invite decider", cmd.Type)})
+	}
 }

@@ -1072,10 +1072,11 @@ func TestScanSnapshotEventsCountsSnapshotEvents(t *testing.T) {
 }
 
 func TestScanSnapshotEventsWithValidation(t *testing.T) {
+	ts := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.Type("sys.daggerheart.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"character_id":"ch1","hp_before":3,"hp_after":2}`)},
-			{Seq: 2, Type: event.Type("sys.daggerheart.character_state_patched"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
+			{Seq: 1, Type: event.Type("sys.daggerheart.character_state_patched"), CampaignID: "c1", Timestamp: ts, EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"character_id":"ch1","hp_before":3,"hp_after":2}`)},
+			{Seq: 2, Type: event.Type("sys.daggerheart.character_state_patched"), CampaignID: "c1", Timestamp: ts, EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{invalid`)},
 		},
 	}}
 	report, warnings, err := scanSnapshotEvents(t.Context(), store, "c1", 0, 0, true)
@@ -1152,6 +1153,7 @@ func makeDaggerheartEvent(campaignID string, eventType string, payload []byte) e
 	return event.Event{
 		CampaignID:    campaignID,
 		Type:          event.Type(eventType),
+		Timestamp:     time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC),
 		EntityType:    "action",
 		EntityID:      "entity-1",
 		SystemID:      daggerheart.SystemID,
@@ -1270,7 +1272,7 @@ func TestRunCampaignScanWarningsCapped(t *testing.T) {
 func TestRunCampaignValidateNoInvalid(t *testing.T) {
 	store := &fakeEventStore{events: map[string][]event.Event{
 		"c1": {
-			{Seq: 1, Type: event.Type("sys.daggerheart.gm_fear_changed"), CampaignID: "c1", EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"after":3}`)},
+			{Seq: 1, Type: event.Type("sys.daggerheart.gm_fear_changed"), CampaignID: "c1", Timestamp: time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC), EntityType: "action", EntityID: "entity-1", SystemID: daggerheart.SystemID, SystemVersion: daggerheart.SystemVersion, PayloadJSON: []byte(`{"after":3}`)},
 		},
 	}}
 	result := runCampaign(t.Context(), store, nil, "c1", runOptions{DryRun: true, Validate: true, WarningsCap: 25}, io.Discard)

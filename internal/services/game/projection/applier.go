@@ -2,6 +2,7 @@ package projection
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -35,15 +36,18 @@ type Applier struct {
 	// Adapters holds extension-specific projection hooks including
 	// system event application and character profile updates.
 	Adapters *systems.AdapterRegistry
+	// Watermarks tracks per-campaign projection progress so startup can
+	// detect and repair gaps. When nil, watermark tracking is disabled.
+	Watermarks storage.ProjectionWatermarkStore
 }
 
-// ensureTimestamp normalizes timestamps so projections always persist UTC, defaulting
-// to now for defensive event payloads that do not set time.
-func ensureTimestamp(ts time.Time) time.Time {
+// ensureTimestamp normalizes timestamps to UTC and rejects zero values to
+// preserve replay determinism — projections must never fabricate wall-clock time.
+func ensureTimestamp(ts time.Time) (time.Time, error) {
 	if ts.IsZero() {
-		return time.Now().UTC()
+		return time.Time{}, fmt.Errorf("event timestamp is required for projection")
 	}
-	return ts.UTC()
+	return ts.UTC(), nil
 }
 
 // marshalResolutionPayload returns a compact JSON payload for gate resolution.

@@ -45,7 +45,28 @@ func (f fakeDomainExecutor) Execute(context.Context, command.Command) (engine.Re
 	return f.result, f.err
 }
 
+// setTestIntentFilter configures the package-level intent filter with a
+// registry containing common test event types and restores the previous
+// filter on cleanup.
+func setTestIntentFilter(t *testing.T) {
+	t.Helper()
+	prev := intentFilter
+	t.Cleanup(func() { intentFilter = prev })
+
+	registry := event.NewRegistry()
+	for _, def := range []event.Definition{
+		{Type: event.Type("sys.daggerheart.gm_fear_changed"), Owner: event.OwnerSystem, Intent: event.IntentProjectionAndReplay},
+		{Type: event.Type("story.note_added"), Owner: event.OwnerCore, Intent: event.IntentAuditOnly},
+	} {
+		if err := registry.Register(def); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+	}
+	SetIntentFilter(registry)
+}
+
 func TestExecuteAndApplyDomainCommandRequiresEvents(t *testing.T) {
+	setTestIntentFilter(t)
 	SetInlineProjectionApplyEnabled(true)
 
 	svc := &DaggerheartService{
@@ -74,6 +95,7 @@ func TestExecuteAndApplyDomainCommandRequiresEvents(t *testing.T) {
 }
 
 func TestExecuteAndApplyDomainCommandSkipsApplyWhenInlineDisabled(t *testing.T) {
+	setTestIntentFilter(t)
 	SetInlineProjectionApplyEnabled(false)
 	t.Cleanup(func() { SetInlineProjectionApplyEnabled(true) })
 
@@ -103,6 +125,7 @@ func TestExecuteAndApplyDomainCommandSkipsApplyWhenInlineDisabled(t *testing.T) 
 }
 
 func TestExecuteAndApplyDomainCommandAppliesWhenInlineEnabled(t *testing.T) {
+	setTestIntentFilter(t)
 	SetInlineProjectionApplyEnabled(true)
 
 	applier := &fakeEventApplier{}
@@ -131,6 +154,7 @@ func TestExecuteAndApplyDomainCommandAppliesWhenInlineEnabled(t *testing.T) {
 }
 
 func TestExecuteAndApplyDomainCommandReturnsApplyErrorWhenInlineEnabled(t *testing.T) {
+	setTestIntentFilter(t)
 	SetInlineProjectionApplyEnabled(true)
 
 	applier := &fakeEventApplier{err: errors.New("boom")}
@@ -162,6 +186,7 @@ func TestExecuteAndApplyDomainCommandReturnsApplyErrorWhenInlineEnabled(t *testi
 }
 
 func TestExecuteAndApplyDomainCommandSkipsJournalOnlyInlineApply(t *testing.T) {
+	setTestIntentFilter(t)
 	SetInlineProjectionApplyEnabled(true)
 	applier := &fakeEventApplier{err: errors.New("should not apply")}
 	svc := &DaggerheartService{

@@ -6,7 +6,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 func TestApplierApply_UpdatesSessionGateState(t *testing.T) {
@@ -65,18 +65,18 @@ func (fakeSystemModule) Version() string                            { return "v1
 func (fakeSystemModule) RegisterCommands(_ *command.Registry) error { return nil }
 func (fakeSystemModule) RegisterEvents(_ *event.Registry) error     { return nil }
 func (fakeSystemModule) EmittableEventTypes() []event.Type          { return nil }
-func (fakeSystemModule) Decider() system.Decider                    { return nil }
-func (fakeSystemModule) Projector() system.Projector                { return fakeSystemProjector{} }
-func (fakeSystemModule) StateFactory() system.StateFactory          { return nil }
+func (fakeSystemModule) Decider() module.Decider                    { return nil }
+func (fakeSystemModule) Projector() module.Projector                { return fakeSystemProjector{} }
+func (fakeSystemModule) StateFactory() module.StateFactory          { return nil }
 
 func TestApplierApply_RoutesSystemEvents(t *testing.T) {
-	registry := system.NewRegistry()
+	registry := module.NewRegistry()
 	if err := registry.Register(fakeSystemModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
 	applier := Applier{SystemRegistry: registry}
 	state := State{}
-	key := system.Key{ID: "system-1", Version: "v1"}
+	key := module.Key{ID: "system-1", Version: "v1"}
 
 	updated, err := applier.Apply(state, event.Event{
 		Type:          event.Type("action.tested"),
@@ -100,7 +100,7 @@ func TestApplierApply_RoutesSystemEvents(t *testing.T) {
 }
 
 func TestApplierApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
-	applier := Applier{SystemRegistry: system.NewRegistry()}
+	applier := Applier{SystemRegistry: module.NewRegistry()}
 	state := State{}
 
 	_, err := applier.Apply(state, event.Event{

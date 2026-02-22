@@ -5,10 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/system"
 )
 
 func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
@@ -197,13 +195,11 @@ func TestDecideGMFearSet_UnchangedStateRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"after":4}`),
 	}
 
-	state := aggregate.State{
-		Systems: map[system.Key]any{
-			{ID: SystemID, Version: SystemVersion}: SnapshotState{
-				CampaignID: "camp-1",
-				GMFear:     4,
-			},
-		},
+	// The aggregate applier extracts system-specific state before calling
+	// RouteCommand, so the decider receives SnapshotState directly.
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		GMFear:     4,
 	}
 
 	decision := Decider{}.Decide(state, cmd, nil)

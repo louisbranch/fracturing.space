@@ -12,7 +12,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var inlineProjectionApplyEnabled atomic.Bool
+var (
+	inlineProjectionApplyEnabled atomic.Bool
+
+	// intentFilter is the event intent filter used to decide which emitted events
+	// should be applied inline to projections. Set once at startup via
+	// SetIntentFilter; defaults to fail-closed (no events applied).
+	intentFilter = func(event.Event) bool { return false }
+)
 
 func init() {
 	inlineProjectionApplyEnabled.Store(true)
@@ -30,10 +37,17 @@ type domainCommandApplyOptions struct {
 	rejectErr       func(string) error
 }
 
-// SetInlineProjectionApplyEnabled controls whether request-path handlers apply
+// SetInlineProjectionApplyEnabled controls whether request-path helpers apply
 // emitted domain events to projections inline.
 func SetInlineProjectionApplyEnabled(enabled bool) {
 	inlineProjectionApplyEnabled.Store(enabled)
+}
+
+// SetIntentFilter configures the event intent filter built from the event
+// registry. Call this once at server startup; the filter is used by every
+// request-path domain command helper.
+func SetIntentFilter(registry *event.Registry) {
+	intentFilter = domainwrite.NewIntentFilter(registry)
 }
 
 func (s *DaggerheartService) executeAndApplyDomainCommand(
@@ -47,7 +61,7 @@ func (s *DaggerheartService) executeAndApplyDomainCommand(
 		RequireEvents:      options.requireEvents,
 		MissingEventMsg:    options.missingEventMsg,
 		InlineApplyEnabled: inlineProjectionApplyEnabled.Load(),
-		ShouldApply:        domainwrite.ShouldApplyProjectionInline,
+		ShouldApply:        intentFilter,
 		ExecuteErr: func(err error) error {
 			return status.Errorf(codes.Internal, "%s: %v", options.executeErrMsg, err)
 		},

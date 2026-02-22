@@ -32,7 +32,28 @@ func testDecisionEvent() event.Event {
 	}
 }
 
+// setTestIntentFilter configures the package-level intent filter with a
+// registry containing common test event types and restores the previous
+// filter on cleanup.
+func setTestIntentFilter(t *testing.T) {
+	t.Helper()
+	prev := intentFilter
+	t.Cleanup(func() { intentFilter = prev })
+
+	registry := event.NewRegistry()
+	for _, def := range []event.Definition{
+		{Type: event.Type("campaign.created"), Owner: event.OwnerCore, Intent: event.IntentProjectionAndReplay},
+		{Type: event.Type("story.note_added"), Owner: event.OwnerCore, Intent: event.IntentAuditOnly},
+	} {
+		if err := registry.Register(def); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+	}
+	SetIntentFilter(registry)
+}
+
 func TestExecuteAndApplyDomainCommand_AppliesEventsByDefault(t *testing.T) {
+	setTestIntentFilter(t)
 	SetInlineProjectionApplyEnabled(true)
 	domain := fakeDomainExecutor{
 		result: engine.Result{
@@ -52,6 +73,7 @@ func TestExecuteAndApplyDomainCommand_AppliesEventsByDefault(t *testing.T) {
 }
 
 func TestExecuteAndApplyDomainCommand_SkipsInlineApplyWhenDisabled(t *testing.T) {
+	setTestIntentFilter(t)
 	SetInlineProjectionApplyEnabled(false)
 	t.Cleanup(func() { SetInlineProjectionApplyEnabled(true) })
 
@@ -73,6 +95,7 @@ func TestExecuteAndApplyDomainCommand_SkipsInlineApplyWhenDisabled(t *testing.T)
 }
 
 func TestExecuteAndApplyDomainCommand_SkipsJournalOnlyInlineApply(t *testing.T) {
+	setTestIntentFilter(t)
 	SetInlineProjectionApplyEnabled(true)
 	domain := fakeDomainExecutor{
 		result: engine.Result{
