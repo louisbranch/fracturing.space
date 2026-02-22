@@ -31,6 +31,10 @@
       "grpc_port": 8090
     },
     {
+      "name": "listing",
+      "grpc_port": 8091
+    },
+    {
       "name": "chat",
       "http_port": 8086,
       "public_routes": [

@@ -34,6 +34,10 @@ FROM base AS build-connections
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/connections ./cmd/connections
 
+FROM base AS build-listing
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/listing ./cmd/listing
+
 FROM base AS build-web
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/web ./cmd/web
@@ -103,6 +107,16 @@ COPY --from=build-connections /out/connections /app/connections
 EXPOSE 8090
 
 ENTRYPOINT ["/app/connections"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS listing
+
+WORKDIR /app
+
+COPY --from=build-listing /out/listing /app/listing
+
+EXPOSE 8091
+
+ENTRYPOINT ["/app/listing"]
 
 FROM gcr.io/distroless/static-debian12:nonroot AS web
 

@@ -22,6 +22,10 @@ variable "CONNECTIONS_IMAGE" {
   default = "ghcr.io/fracturing-space/connections:dev"
 }
 
+variable "LISTING_IMAGE" {
+  default = "ghcr.io/fracturing-space/listing:dev"
+}
+
 variable "WEB_IMAGE" {
   default = "ghcr.io/fracturing-space/web:dev"
 }
@@ -35,7 +39,7 @@ variable "WORKER_IMAGE" {
 }
 
 group "default" {
-  targets = ["game", "mcp", "admin", "auth", "connections", "web", "notifications", "worker"]
+  targets = ["game", "mcp", "admin", "auth", "connections", "listing", "web", "notifications", "worker"]
 }
 
 target "base" {
@@ -74,6 +78,12 @@ target "connections" {
   inherits = ["base"]
   target   = "connections"
   tags     = ["${CONNECTIONS_IMAGE}"]
+}
+
+target "listing" {
+  inherits = ["base"]
+  target   = "listing"
+  tags     = ["${LISTING_IMAGE}"]
 }
 
 target "web" {

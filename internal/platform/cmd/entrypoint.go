@@ -20,6 +20,7 @@ const (
 	ServiceAdmin         = "admin"
 	ServiceAI            = "ai"
 	ServiceConnections   = "connections"
+	ServiceListing       = "listing"
 	ServiceAuth          = "auth"
 	ServiceChat          = "chat"
 	ServiceGame          = "game"

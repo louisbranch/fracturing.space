@@ -6,6 +6,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/auth/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/connections/v1/*.proto) \
+	$(wildcard $(PROTO_DIR)/listing/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/ai/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/game/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/notifications/v1/*.proto) \
