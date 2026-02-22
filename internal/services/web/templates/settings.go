@@ -1,6 +1,9 @@
 package templates
 
-import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+import (
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+)
 
 // AIKeyRow is one AI key row rendered in settings.
 type AIKeyRow struct {
@@ -39,7 +42,7 @@ func SettingsLayoutOptions(page PageContext) LayoutOptions {
 func SettingsAIKeysLayoutOptions(page PageContext) LayoutOptions {
 	options := LayoutOptionsForPage(page, "layout.settings_ai_keys", true)
 	options.CustomBreadcrumbs = []sharedtemplates.BreadcrumbItem{
-		{Label: T(page.Loc, "layout.settings"), URL: "/settings"},
+		{Label: T(page.Loc, "layout.settings"), URL: routepath.AppSettings},
 		{Label: T(page.Loc, "layout.settings_ai_keys"), URL: ""},
 	}
 	options.ChromeMenu = SettingsMenu(page)
@@ -50,7 +53,7 @@ func SettingsAIKeysLayoutOptions(page PageContext) LayoutOptions {
 func SettingsUsernameLayoutOptions(page PageContext) LayoutOptions {
 	options := LayoutOptionsForPage(page, "layout.settings_username", true)
 	options.CustomBreadcrumbs = []sharedtemplates.BreadcrumbItem{
-		{Label: T(page.Loc, "layout.settings"), URL: "/settings"},
+		{Label: T(page.Loc, "layout.settings"), URL: routepath.AppSettings},
 		{Label: T(page.Loc, "layout.settings_username"), URL: ""},
 	}
 	options.ChromeMenu = SettingsMenu(page)

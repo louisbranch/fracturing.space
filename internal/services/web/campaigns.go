@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/imagecdn"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -29,7 +30,7 @@ func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
 
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 
@@ -78,7 +79,7 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 	if r.Method == http.MethodGet {
 		sess := sessionFromRequest(r, h.sessions)
 		if sess == nil {
-			http.Redirect(w, r, "/auth/login", http.StatusFound)
+			http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 			return
 		}
 		renderAppCampaignCreatePage(w, r, h.pageContext(w, r))
@@ -92,7 +93,7 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	if err := h.ensureCampaignClients(r.Context()); err != nil {
@@ -166,7 +167,7 @@ func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request
 	}
 	h.expireUserCampaignsCache(ctx, userID)
 
-	http.Redirect(w, r, "/campaigns/"+url.PathEscape(campaignID), http.StatusFound)
+	http.Redirect(w, r, routepath.Campaign(campaignID), http.StatusFound)
 }
 
 func (h *handler) sessionUserID(ctx context.Context, accessToken string) (string, error) {

@@ -105,7 +105,7 @@ func TestAppChromeLayoutRendersAvatarDropdownWhenAvatarURLProvided(t *testing.T)
 	if !strings.Contains(got, `class="dropdown dropdown-end"`) {
 		t.Fatalf("expected avatar dropdown wrapper, got %q", got)
 	}
-	if !strings.Contains(got, `href="/profile"`) {
+	if !strings.Contains(got, `href="/app/profile"`) {
 		t.Fatalf("expected profile link in avatar dropdown, got %q", got)
 	}
 	if !strings.Contains(got, `src="https://example.com/avatar.png"`) {
@@ -161,7 +161,7 @@ func TestAppChromeLayoutRendersNotificationButtonLeftOfAvatar(t *testing.T) {
 		t.Fatalf("AppChromeLayout() = %v", err)
 	}
 	got := b.String()
-	if !strings.Contains(got, `href="/notifications"`) {
+	if !strings.Contains(got, `href="/app/notifications"`) {
 		t.Fatalf("expected notifications button link, got %q", got)
 	}
 	if !strings.Contains(got, `href="#lucide-bell"`) {
@@ -170,7 +170,7 @@ func TestAppChromeLayoutRendersNotificationButtonLeftOfAvatar(t *testing.T) {
 	if strings.Contains(got, `href="#lucide-bell-dot"`) {
 		t.Fatalf("expected read notification state to avoid bell-dot icon, got %q", got)
 	}
-	notificationIndex := strings.Index(got, `href="/notifications"`)
+	notificationIndex := strings.Index(got, `href="/app/notifications"`)
 	avatarIndex := strings.Index(got, `class="btn btn-ghost btn-circle avatar"`)
 	if notificationIndex < 0 || avatarIndex < 0 {
 		t.Fatalf("missing notification or avatar controls in output")
@@ -211,6 +211,27 @@ func TestAppChromeLayoutRendersUnreadNotificationBellDot(t *testing.T) {
 	}
 }
 
+func TestAppChromeLayoutDashboardNavTargetsDashboardRoot(t *testing.T) {
+	var b strings.Builder
+	err := AppChromeLayout(AppChromeLayoutOptions{
+		Title:   "Campaigns",
+		Lang:    "en-US",
+		AppName: branding.AppName,
+		Loc:     breadcrumbLocalizer{},
+	}).Render(context.Background(), &b)
+	if err != nil {
+		t.Fatalf("AppChromeLayout() = %v", err)
+	}
+
+	got := b.String()
+	if !strings.Contains(got, `href="/" hx-get="/"`) {
+		t.Fatalf("expected dashboard nav to target root via href and hx-get, got %q", got)
+	}
+	if !strings.Contains(got, `>Dashboard</a>`) {
+		t.Fatalf("expected dashboard nav label, got %q", got)
+	}
+}
+
 func TestChromeMainClassFromStyleDefaultDoesNotCenter(t *testing.T) {
 	got := chromeMainClassFromStyle("", "")
 	if strings.Contains(got, "mx-auto") {
@@ -226,7 +247,7 @@ func TestAppChromeLayoutRendersHeadingActionOnSameLine(t *testing.T) {
 		AppName: branding.AppName,
 		Loc:     breadcrumbLocalizer{},
 		HeadingAction: templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
-			_, err := io.WriteString(w, `<a id="heading-action-test" class="btn btn-primary btn-sm" href="/campaigns/create">Start</a>`)
+			_, err := io.WriteString(w, `<a id="heading-action-test" class="btn btn-primary btn-sm" href="/app/campaigns/create">Start</a>`)
 			return err
 		}),
 	}).Render(context.Background(), &b)

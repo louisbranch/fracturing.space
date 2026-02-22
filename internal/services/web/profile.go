@@ -12,6 +12,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/authctx"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,7 +26,7 @@ type accountProfileView struct {
 func (h *handler) handleAppProfile(w http.ResponseWriter, r *http.Request) {
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	if h.accountClient == nil {
@@ -105,7 +106,7 @@ func (h *handler) handleAppProfilePost(w http.ResponseWriter, r *http.Request, s
 		return
 	}
 	sess.setCachedUserLocale(platformi18n.LocaleString(parsedLocale))
-	http.Redirect(w, r, "/profile", http.StatusFound)
+	http.Redirect(w, r, routepath.AppProfile, http.StatusFound)
 }
 
 func (h *handler) resolveProfileUserID(ctx context.Context, sess *session) (string, error) {

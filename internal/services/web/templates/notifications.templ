@@ -50,8 +50,8 @@ templ NotificationsPage(page PageContext, state NotificationsPageState) {
 						role="tab"
 						class={ notificationsFilterClass(state.Filter == "unread") }
 						data-notification-filter="unread"
-						href="/notifications?filter=unread"
-						hx-get="/notifications?filter=unread"
+						href="/app/notifications?filter=unread"
+						hx-get="/app/notifications?filter=unread"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -60,8 +60,8 @@ templ NotificationsPage(page PageContext, state NotificationsPageState) {
 						role="tab"
 						class={ notificationsFilterClass(state.Filter == "all") }
 						data-notification-filter="all"
-						href="/notifications?filter=all"
-						hx-get="/notifications?filter=all"
+						href="/app/notifications?filter=all"
+						hx-get="/app/notifications?filter=all"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"

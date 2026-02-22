@@ -2,6 +2,8 @@ package templates
 
 import (
 	"strings"
+
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 // PageContext provides shared layout context for pages.
@@ -24,22 +26,22 @@ func isGamePagePath(path string) bool {
 	if path == "" {
 		return false
 	}
-	if path == "/dashboard" {
+	if path == routepath.AppRoot {
 		return true
 	}
-	if path == "/profile" {
+	if path == routepath.AppProfile {
 		return true
 	}
-	if path == "/settings" || strings.HasPrefix(path, "/settings/") {
+	if path == routepath.AppSettings || strings.HasPrefix(path, routepath.AppSettingsPrefix) {
 		return true
 	}
-	if path == "/campaigns" || strings.HasPrefix(path, "/campaigns/") {
+	if path == routepath.AppCampaigns || strings.HasPrefix(path, routepath.AppCampaignsPrefix) {
 		return true
 	}
-	if path == "/invites" || strings.HasPrefix(path, "/invites/") {
+	if path == routepath.AppInvites || strings.HasPrefix(path, routepath.AppInvites+"/") {
 		return true
 	}
-	if path == "/notifications" || strings.HasPrefix(path, "/notifications/") {
+	if path == routepath.AppNotifications || strings.HasPrefix(path, routepath.AppNotificationsPrefix) {
 		return true
 	}
 	return false

@@ -155,8 +155,8 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 							class="btn btn-ghost btn-sm"
 						>{ T(options.Loc, "dashboard.title") }</a>
 						<a
-							href="/campaigns"
-							hx-get="/campaigns"
+							href="/app/campaigns"
+							hx-get="/app/campaigns"
 							hx-target="#main"
 							hx-swap="innerHTML"
 							hx-push-url="true"
@@ -164,8 +164,8 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 							class="btn btn-ghost btn-sm"
 						>{ T(options.Loc, "game.campaigns.title") }</a>
 						<a
-							href="/notifications"
-							hx-get="/notifications"
+							href="/app/notifications"
+							hx-get="/app/notifications"
 							hx-target="#main"
 							hx-swap="innerHTML"
 							hx-push-url="true"
@@ -193,8 +193,8 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 								</button>
 								<div class="dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow">
 									<a
-										href="/profile"
-										hx-get="/profile"
+										href="/app/profile"
+										hx-get="/app/profile"
 										hx-target="#main"
 										hx-swap="innerHTML"
 										hx-push-url="true"
@@ -204,8 +204,8 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 										{ T(options.Loc, "layout.profile") }
 									</a>
 									<a
-										href="/settings"
-										hx-get="/settings"
+										href="/app/settings"
+										hx-get="/app/settings"
 										hx-target="#main"
 										hx-swap="innerHTML"
 										hx-push-url="true"
@@ -321,7 +321,7 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 				});
 			}
 
-			var campaignWorkspaceRoutePattern = /^\/campaigns\/(?!create(?:\/|$))[^/]+(?:\/|$)/;
+			var campaignWorkspaceRoutePattern = /^\/app\/campaigns\/(?!create(?:\/|$))[^/]+(?:\/|$)/;
 			var campaignMainCoverClass = "w-full max-w-none px-0 pt-20 flex-1";
 			var fallbackMainClass = "w-full max-w-none px-4 pt-20 flex-1";
 

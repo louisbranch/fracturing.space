@@ -75,7 +75,7 @@ func TestLanguageURL(t *testing.T) {
 
 	t.Run("preserves existing query params", func(t *testing.T) {
 		page := PageContext{
-			CurrentPath:  "/campaigns",
+			CurrentPath:  "/app/campaigns",
 			CurrentQuery: "page=2",
 		}
 		got := LanguageURL(page, "pt-BR")

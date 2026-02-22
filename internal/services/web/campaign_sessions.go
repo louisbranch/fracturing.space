@@ -6,6 +6,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -33,7 +34,7 @@ func (h *handler) handleAppCampaignSessions(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if participant != nil {
-		canManageSessions = canManageCampaignSessions(participant.GetCampaignAccess())
+		canManageSessions = canManageCampaignAccess(participant.GetCampaignAccess())
 	}
 	if sessions, ok := h.cachedCampaignSessions(readCtx, campaignID); ok {
 		renderAppCampaignSessionsPage(w, readReq, h.pageContextForCampaign(w, readReq, campaignID), campaignID, sessions, canManageSessions)
@@ -120,7 +121,7 @@ func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	if !canManageCampaignSessions(actor.GetCampaignAccess()) {
+	if !canManageCampaignAccess(actor.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for session action")
 		return
 	}
@@ -135,7 +136,7 @@ func (h *handler) handleAppCampaignSessionStart(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	http.Redirect(w, r, "/campaigns/"+campaignID+"/sessions", http.StatusFound)
+	http.Redirect(w, r, routepath.CampaignSessions(campaignID), http.StatusFound)
 }
 
 func (h *handler) handleAppCampaignSessionEnd(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -164,7 +165,7 @@ func (h *handler) handleAppCampaignSessionEnd(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if !canManageCampaignSessions(actor.GetCampaignAccess()) {
+	if !canManageCampaignAccess(actor.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for session action")
 		return
 	}
@@ -179,11 +180,7 @@ func (h *handler) handleAppCampaignSessionEnd(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	http.Redirect(w, r, "/campaigns/"+campaignID+"/sessions", http.StatusFound)
-}
-
-func canManageCampaignSessions(access statev1.CampaignAccess) bool {
-	return access == statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER || access == statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
+	http.Redirect(w, r, routepath.CampaignSessions(campaignID), http.StatusFound)
 }
 
 func renderAppCampaignSessionsPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaignID string, sessions []*statev1.Session, canManageSessions bool) {

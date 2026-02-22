@@ -21,7 +21,7 @@ func (f fakeCampaignAccessChecker) IsCampaignParticipant(_ context.Context, _ st
 
 func TestCampaignPageRequiresAuthentication(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -36,7 +36,7 @@ func TestCampaignPageRequiresAuthentication(t *testing.T) {
 
 func TestCampaignPageRejectsNonGET(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123", nil)
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -48,7 +48,7 @@ func TestCampaignPageRejectsNonGET(t *testing.T) {
 
 func TestCampaignPageRejectsInvalidPath(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/extra", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/extra", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)

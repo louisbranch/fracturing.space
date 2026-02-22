@@ -15,12 +15,23 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
+	authmodule "github.com/louisbranch/fracturing.space/internal/services/web/module/auth"
+	campaignsmodule "github.com/louisbranch/fracturing.space/internal/services/web/module/campaigns"
+	discoverymodule "github.com/louisbranch/fracturing.space/internal/services/web/module/discovery"
+	invitesmodule "github.com/louisbranch/fracturing.space/internal/services/web/module/invites"
+	notificationsmodule "github.com/louisbranch/fracturing.space/internal/services/web/module/notifications"
+	profilemodule "github.com/louisbranch/fracturing.space/internal/services/web/module/profile"
+	publicprofilemodule "github.com/louisbranch/fracturing.space/internal/services/web/module/publicprofile"
+	settingsmodule "github.com/louisbranch/fracturing.space/internal/services/web/module/settings"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webstorage "github.com/louisbranch/fracturing.space/internal/services/web/storage"
 	websqlite "github.com/louisbranch/fracturing.space/internal/services/web/storage/sqlite"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	httpmux "github.com/louisbranch/fracturing.space/internal/services/web/transport/httpmux"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc"
 )
@@ -39,6 +50,7 @@ type Config struct {
 	GameAddr             string
 	NotificationsAddr    string
 	AIAddr               string
+	ListingAddr          string
 	CacheDBPath          string
 	AssetBaseURL         string
 	AssetManifestVersion string
@@ -65,6 +77,7 @@ type Server struct {
 	gameConn                       *grpc.ClientConn
 	notificationsConn              *grpc.ClientConn
 	aiConn                         *grpc.ClientConn
+	listingConn                    *grpc.ClientConn
 	cacheStore                     *websqlite.Store
 	cacheInvalidationDone          chan struct{}
 	cacheInvalidationStop          context.CancelFunc
@@ -91,6 +104,7 @@ type handler struct {
 	characterClient     statev1.CharacterServiceClient
 	inviteClient        statev1.InviteServiceClient
 	notificationClient  notificationsv1.NotificationServiceClient
+	listingClient       listingv1.CampaignListingServiceClient
 	campaignAccess      campaignAccessChecker
 }
 
@@ -107,6 +121,7 @@ type handlerDependencies struct {
 	characterClient    statev1.CharacterServiceClient
 	inviteClient       statev1.InviteServiceClient
 	notificationClient notificationsv1.NotificationServiceClient
+	listingClient      listingv1.CampaignListingServiceClient
 }
 
 // authGRPCClients holds the auth clients created during web startup.
@@ -143,6 +158,12 @@ type aiGRPCClients struct {
 type notificationsGRPCClients struct {
 	conn               *grpc.ClientConn
 	notificationClient notificationsv1.NotificationServiceClient
+}
+
+// listingGRPCClients holds listing clients used by the web service.
+type listingGRPCClients struct {
+	conn          *grpc.ClientConn
+	listingClient listingv1.CampaignListingServiceClient
 }
 
 // localizer resolves the request locale, optionally persists a cookie,
@@ -203,7 +224,7 @@ func (h *handler) handleAppRoot(w http.ResponseWriter, r *http.Request) {
 
 	params := webtemplates.LandingParams{}
 	if strings.TrimSpace(h.config.OAuthClientID) != "" {
-		params.SignInURL = "/auth/login"
+		params.SignInURL = routepath.AuthLogin
 	}
 	if err := h.writePage(w, r, webtemplates.LandingPage(page, appName, params), composeHTMXTitleForPage(page, "title.landing")); err != nil {
 		log.Printf("web: failed to render landing page: %v", err)
@@ -236,12 +257,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 	if webSessionStore, ok := deps.cacheStore.(*websqlite.Store); ok && webSessionStore != nil {
 		sessionPersistence = webSessionStore
 	}
-	rootMux.Handle(
-		"/static/",
-		withStaticMime(
-			http.StripPrefix("/static/", http.FileServer(http.FS(staticFS))),
-		),
-	)
+	httpmux.MountStatic(rootMux, staticFS, withStaticMime)
 
 	h := &handler{
 		config:             config,
@@ -260,6 +276,7 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 		characterClient:    deps.characterClient,
 		inviteClient:       deps.inviteClient,
 		notificationClient: deps.notificationClient,
+		listingClient:      deps.listingClient,
 		campaignAccess:     deps.campaignAccess,
 	}
 
@@ -268,105 +285,25 @@ func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceCl
 
 	publicMux := http.NewServeMux()
 	h.registerPublicRoutes(publicMux, h.resolvedAppName())
-
-	rootMux.Handle("/dashboard", gameMux)
-	rootMux.Handle("/profile", gameMux)
-	rootMux.Handle("/settings", gameMux)
-	rootMux.Handle("/settings/", gameMux)
-	rootMux.Handle("/campaigns", gameMux)
-	rootMux.Handle("/campaigns/", gameMux)
-	rootMux.Handle("/invites", gameMux)
-	rootMux.Handle("/invites/", gameMux)
-	rootMux.Handle("/notifications", gameMux)
-	rootMux.Handle("/notifications/", gameMux)
-	rootMux.Handle("/", publicMux)
+	httpmux.MountAppAndPublicRoutes(rootMux, gameMux, publicMux)
 
 	return rootMux, nil
 }
 
 func (h *handler) registerGameRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/dashboard", h.handleAppHome)
-	mux.HandleFunc("/profile", h.handleAppProfile)
-	mux.HandleFunc("/settings", h.handleAppSettings)
-	mux.HandleFunc("/settings/", h.handleAppSettingsRoutes)
-	mux.HandleFunc("/campaigns", h.handleAppCampaigns)
-	mux.HandleFunc("/campaigns/create", h.handleAppCampaignCreate)
-	mux.HandleFunc("/campaigns/", h.handleAppCampaignDetail)
-	mux.HandleFunc("/invites", h.handleAppInvites)
-	mux.HandleFunc("/invites/claim", h.handleAppInviteClaim)
-	mux.HandleFunc("/notifications", h.handleAppNotifications)
-	mux.HandleFunc("/notifications/", h.handleAppNotificationsRoutes)
+	mux.HandleFunc(routepath.AppRoot, h.handleAppHome)
+	mux.HandleFunc(routepath.AppRootPrefix, h.handleAppHome)
+	profilemodule.RegisterRoutes(mux, newProfileModuleService(h))
+	settingsmodule.RegisterRoutes(mux, newSettingsModuleService(h))
+	campaignsmodule.RegisterRoutes(mux, newCampaignModuleService(h))
+	invitesmodule.RegisterRoutes(mux, newInvitesModuleService(h))
+	notificationsmodule.RegisterRoutes(mux, newNotificationsModuleService(h))
 }
 
 func (h *handler) registerPublicRoutes(mux *http.ServeMux, appName string) {
-	mux.HandleFunc("/", h.handleAppRoot)
-
-	// Register OAuth client routes when configured.
-	if strings.TrimSpace(h.config.OAuthClientID) != "" {
-		mux.HandleFunc("/auth/login", h.handleAuthLogin)
-		mux.HandleFunc("/auth/callback", h.handleAuthCallback)
-		mux.HandleFunc("/auth/logout", h.handleAuthLogout)
-	}
-
-	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodGet {
-			localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
-			return
-		}
-
-		printer, lang := localizer(w, r)
-
-		pendingID := strings.TrimSpace(r.URL.Query().Get("pending_id"))
-		if pendingID == "" {
-			if strings.TrimSpace(h.config.OAuthClientID) != "" {
-				http.Redirect(w, r, "/auth/login", http.StatusFound)
-				return
-			}
-			localizeHTTPError(w, r, http.StatusBadRequest, "error.http.pending_id_is_required")
-			return
-		}
-		clientID := strings.TrimSpace(r.URL.Query().Get("client_id"))
-		clientName := strings.TrimSpace(r.URL.Query().Get("client_name"))
-		errorMessage := strings.TrimSpace(r.URL.Query().Get("error"))
-		if clientName == "" {
-			if clientID != "" {
-				clientName = clientID
-			} else {
-				clientName = webtemplates.T(printer, "web.login.unknown_client")
-			}
-		}
-
-		params := webtemplates.LoginParams{
-			AppName:      appName,
-			PendingID:    pendingID,
-			ClientName:   clientName,
-			Error:        errorMessage,
-			Lang:         lang,
-			Loc:          printer,
-			CurrentPath:  r.URL.Path,
-			CurrentQuery: r.URL.RawQuery,
-		}
-		loginPage := webtemplates.PageContext{
-			Lang:    lang,
-			Loc:     printer,
-			AppName: appName,
-		}
-		if err := h.writePage(w, r, webtemplates.LoginPage(params), composeHTMXTitleForPage(loginPage, "title.login")); err != nil {
-			log.Printf("web: failed to render login page: %v", err)
-			localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
-			return
-		}
-	})
-
-	mux.HandleFunc("/magic", h.handleMagicLink)
-	mux.HandleFunc("/passkeys/register/start", h.handlePasskeyRegisterStart)
-	mux.HandleFunc("/passkeys/register/finish", h.handlePasskeyRegisterFinish)
-	mux.HandleFunc("/passkeys/login/start", h.handlePasskeyLoginStart)
-	mux.HandleFunc("/passkeys/login/finish", h.handlePasskeyLoginFinish)
-	mux.HandleFunc("/up", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("OK"))
-	})
+	authmodule.RegisterPublicRoutes(mux, newAuthPublicModuleService(h, appName))
+	publicprofilemodule.RegisterRoutes(mux, newPublicProfileModuleService(h))
+	discoverymodule.RegisterRoutes(mux, newDiscoveryModuleService(h))
 }
 
 // NewServer builds a configured web server.
@@ -390,6 +327,12 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	}
 	if strings.TrimSpace(config.AuthBaseURL) == "" {
 		return nil, errors.New("auth base url is required")
+	}
+	if strings.TrimSpace(config.OAuthClientID) == "" {
+		return nil, errors.New("oauth client id is required")
+	}
+	if strings.TrimSpace(config.CallbackURL) == "" {
+		return nil, errors.New("oauth callback url is required")
 	}
 	if config.GRPCDialTimeout <= 0 {
 		config.GRPCDialTimeout = timeouts.GRPCDial
@@ -439,6 +382,13 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 			log.Printf("ai gRPC dial failed, settings ai keys disabled: %v", err)
 		}
 	}
+	var listingClients listingGRPCClients
+	if strings.TrimSpace(config.ListingAddr) != "" {
+		listingClients, err = dialListingGRPC(ctx, config)
+		if err != nil {
+			log.Printf("listing gRPC dial failed, discovery routes in degraded mode: %v", err)
+		}
+	}
 	campaignAccess := newCampaignAccessChecker(config, gameClients.participantClient)
 	handler, err := NewHandlerWithCampaignAccess(config, authClients.authClient, handlerDependencies{
 		campaignAccess:     campaignAccess,
@@ -453,6 +403,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		characterClient:    gameClients.characterClient,
 		inviteClient:       gameClients.inviteClient,
 		notificationClient: notificationsClients.notificationClient,
+		listingClient:      listingClients.listingClient,
 	})
 	if err != nil {
 		if cacheStore != nil {
@@ -477,6 +428,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		gameConn:                       gameClients.conn,
 		notificationsConn:              notificationsClients.conn,
 		aiConn:                         aiClients.conn,
+		listingConn:                    listingClients.conn,
 		cacheStore:                     cacheStore,
 		cacheInvalidationDone:          invalidationDone,
 		cacheInvalidationStop:          invalidationStop,
@@ -560,6 +512,11 @@ func (s *Server) Close() {
 	if s.aiConn != nil {
 		if err := s.aiConn.Close(); err != nil {
 			log.Printf("close ai gRPC connection: %v", err)
+		}
+	}
+	if s.listingConn != nil {
+		if err := s.listingConn.Close(); err != nil {
+			log.Printf("close listing gRPC connection: %v", err)
 		}
 	}
 	if s.cacheStore != nil {

@@ -159,9 +159,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 templ.SafeURL
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID)
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 108, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 108, Col: 41}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -172,9 +172,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs("/campaigns/" + campaignID)
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs("/app/campaigns/" + campaignID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 109, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 109, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -224,9 +224,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var9 templ.SafeURL
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/sessions")
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/sessions")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 121, Col: 51}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 121, Col: 55}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -237,9 +237,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var10 string
-		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs("/campaigns/" + campaignID + "/sessions")
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs("/app/campaigns/" + campaignID + "/sessions")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 122, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 122, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -289,9 +289,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var14 templ.SafeURL
-		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/participants")
+		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/participants")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 134, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 134, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -302,9 +302,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var15 string
-		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs("/campaigns/" + campaignID + "/participants")
+		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs("/app/campaigns/" + campaignID + "/participants")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 135, Col: 57}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 135, Col: 61}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -354,9 +354,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var19 templ.SafeURL
-		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/characters")
+		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/characters")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 147, Col: 53}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 147, Col: 57}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -367,9 +367,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var20 string
-		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs("/campaigns/" + campaignID + "/characters")
+		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs("/app/campaigns/" + campaignID + "/characters")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 148, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 148, Col: 59}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {
@@ -419,9 +419,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var24 templ.SafeURL
-		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/invites")
+		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/invites")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 160, Col: 50}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 160, Col: 54}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 		if templ_7745c5c3_Err != nil {
@@ -432,9 +432,9 @@ func CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection st
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var25 string
-		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs("/campaigns/" + campaignID + "/invites")
+		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs("/app/campaigns/" + campaignID + "/invites")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 161, Col: 52}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 161, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -634,14 +634,14 @@ func CampaignsHeadingAction(page PageContext) templ.Component {
 			templ_7745c5c3_Var32 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<a class=\"btn btn-primary btn-sm\" href=\"/campaigns/create\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "<a class=\"btn btn-primary btn-sm\" href=\"/app/campaigns/create\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var33 string
 		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(T(page.Loc, "game.campaigns.start_new"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 240, Col: 101}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 240, Col: 105}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 		if templ_7745c5c3_Err != nil {
@@ -722,9 +722,9 @@ func CampaignsListPage(page PageContext, campaigns []CampaignListItem) templ.Com
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var37 templ.SafeURL
-					templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaign.ID)
+					templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaign.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 266, Col: 44}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 266, Col: 48}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 					if templ_7745c5c3_Err != nil {
@@ -802,9 +802,9 @@ func CampaignsListPage(page PageContext, campaigns []CampaignListItem) templ.Com
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var42 templ.SafeURL
-					templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaign.ID)
+					templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaign.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 284, Col: 46}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 284, Col: 50}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 					if templ_7745c5c3_Err != nil {
@@ -817,7 +817,7 @@ func CampaignsListPage(page PageContext, campaigns []CampaignListItem) templ.Com
 					var templ_7745c5c3_Var43 string
 					templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinStringErrs(campaign.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 284, Col: 64}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 284, Col: 68}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 					if templ_7745c5c3_Err != nil {
@@ -978,7 +978,7 @@ func CampaignCreatePage(page PageContext) templ.Component {
 				}()
 			}
 			ctx = templ.InitializeContext(ctx)
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<div class=\"card bg-base-200\"><div class=\"card-body\"><form method=\"post\" action=\"/campaigns/create\" class=\"space-y-4\"><div class=\"form-control\"><label class=\"label\"><span class=\"label-text\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 57, "<div class=\"card bg-base-200\"><div class=\"card-body\"><form method=\"post\" action=\"/app/campaigns/create\" class=\"space-y-4\"><div class=\"form-control\"><label class=\"label\"><span class=\"label-text\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -1200,9 +1200,9 @@ func SessionsListPage(page PageContext, campaignID string, canManage bool, sessi
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var67 templ.SafeURL
-				templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/sessions/start")
+				templ_7745c5c3_Var67, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/sessions/start")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 356, Col: 78}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 356, Col: 82}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var67))
 				if templ_7745c5c3_Err != nil {
@@ -1267,9 +1267,9 @@ func SessionsListPage(page PageContext, campaignID string, canManage bool, sessi
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var71 templ.SafeURL
-					templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/sessions/" + session.ID)
+					templ_7745c5c3_Var71, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/sessions/" + session.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 372, Col: 70}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 372, Col: 74}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var71))
 					if templ_7745c5c3_Err != nil {
@@ -1282,7 +1282,7 @@ func SessionsListPage(page PageContext, campaignID string, canManage bool, sessi
 					var templ_7745c5c3_Var72 string
 					templ_7745c5c3_Var72, templ_7745c5c3_Err = templ.JoinStringErrs(session.Name)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 372, Col: 87}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 372, Col: 91}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var72))
 					if templ_7745c5c3_Err != nil {
@@ -1313,9 +1313,9 @@ func SessionsListPage(page PageContext, campaignID string, canManage bool, sessi
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var74 templ.SafeURL
-					templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/sessions/end")
+					templ_7745c5c3_Var74, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/sessions/end")
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 377, Col: 79}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 377, Col: 83}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var74))
 					if templ_7745c5c3_Err != nil {
@@ -1484,9 +1484,9 @@ func SessionDetailPage(page PageContext, detail SessionDetail) templ.Component {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var84 templ.SafeURL
-			templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + detail.CampaignID + "/sessions")
+			templ_7745c5c3_Var84, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + detail.CampaignID + "/sessions")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 395, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 395, Col: 66}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var84))
 			if templ_7745c5c3_Err != nil {
@@ -1499,7 +1499,7 @@ func SessionDetailPage(page PageContext, detail SessionDetail) templ.Component {
 			var templ_7745c5c3_Var85 string
 			templ_7745c5c3_Var85, templ_7745c5c3_Err = templ.JoinStringErrs(T(page.Loc, "game.session_detail.back_to_sessions"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 395, Col: 118}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 395, Col: 122}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var85))
 			if templ_7745c5c3_Err != nil {
@@ -1580,9 +1580,9 @@ func CampaignParticipantsPage(page PageContext, campaignID string, canManage boo
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var89 templ.SafeURL
-					templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/participants/update")
+					templ_7745c5c3_Var89, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/participants/update")
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 405, Col: 86}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 405, Col: 90}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var89))
 					if templ_7745c5c3_Err != nil {
@@ -1987,9 +1987,9 @@ func CampaignCharactersPage(page PageContext, campaignID string, canManage bool,
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var111 templ.SafeURL
-				templ_7745c5c3_Var111, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/characters/create")
+				templ_7745c5c3_Var111, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/characters/create")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 477, Col: 81}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 477, Col: 85}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var111))
 				if templ_7745c5c3_Err != nil {
@@ -2093,9 +2093,9 @@ func CampaignCharactersPage(page PageContext, campaignID string, canManage bool,
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var118 templ.SafeURL
-					templ_7745c5c3_Var118, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/characters/" + character.ID)
+					templ_7745c5c3_Var118, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/characters/" + character.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 502, Col: 74}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 502, Col: 78}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var118))
 					if templ_7745c5c3_Err != nil {
@@ -2108,7 +2108,7 @@ func CampaignCharactersPage(page PageContext, campaignID string, canManage bool,
 					var templ_7745c5c3_Var119 string
 					templ_7745c5c3_Var119, templ_7745c5c3_Err = templ.JoinStringErrs(character.DisplayName)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 502, Col: 100}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 502, Col: 104}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var119))
 					if templ_7745c5c3_Err != nil {
@@ -2139,9 +2139,9 @@ func CampaignCharactersPage(page PageContext, campaignID string, canManage bool,
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var121 templ.SafeURL
-					templ_7745c5c3_Var121, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/characters/update")
+					templ_7745c5c3_Var121, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/characters/update")
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 507, Col: 84}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 507, Col: 88}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var121))
 					if templ_7745c5c3_Err != nil {
@@ -2297,9 +2297,9 @@ func CampaignCharactersPage(page PageContext, campaignID string, canManage bool,
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var130 templ.SafeURL
-					templ_7745c5c3_Var130, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/characters/control")
+					templ_7745c5c3_Var130, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/characters/control")
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 528, Col: 85}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 528, Col: 89}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var130))
 					if templ_7745c5c3_Err != nil {
@@ -2537,9 +2537,9 @@ func CharacterDetailPage(page PageContext, character CharacterDetail) templ.Comp
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var144 templ.SafeURL
-			templ_7745c5c3_Var144, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + character.CampaignID + "/characters")
+			templ_7745c5c3_Var144, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + character.CampaignID + "/characters")
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 555, Col: 67}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 555, Col: 71}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var144))
 			if templ_7745c5c3_Err != nil {
@@ -2552,7 +2552,7 @@ func CharacterDetailPage(page PageContext, character CharacterDetail) templ.Comp
 			var templ_7745c5c3_Var145 string
 			templ_7745c5c3_Var145, templ_7745c5c3_Err = templ.JoinStringErrs(T(page.Loc, "game.character_detail.back_to_characters"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 555, Col: 127}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 555, Col: 131}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var145))
 			if templ_7745c5c3_Err != nil {
@@ -2611,9 +2611,9 @@ func CampaignInvitesPage(page PageContext, campaignID string, canManage bool, in
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var148 templ.SafeURL
-				templ_7745c5c3_Var148, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/invites/create")
+				templ_7745c5c3_Var148, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/invites/create")
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 562, Col: 78}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 562, Col: 82}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var148))
 				if templ_7745c5c3_Err != nil {
@@ -2997,9 +2997,9 @@ func CampaignInvitesPage(page PageContext, campaignID string, canManage bool, in
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var173 templ.SafeURL
-					templ_7745c5c3_Var173, templ_7745c5c3_Err = templ.JoinURLErrs("/campaigns/" + campaignID + "/invites/revoke")
+					templ_7745c5c3_Var173, templ_7745c5c3_Err = templ.JoinURLErrs("/app/campaigns/" + campaignID + "/invites/revoke")
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 613, Col: 81}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/game_pages.templ`, Line: 613, Col: 85}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var173))
 					if templ_7745c5c3_Err != nil {
@@ -3111,7 +3111,7 @@ func UserInvitesPage(page PageContext, invites []UserInviteItem) templ.Component
 					return templ_7745c5c3_Err
 				}
 				if invite.CampaignID != "" && invite.InviteID != "" && invite.ParticipantID != "" {
-					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 240, "<form method=\"post\" action=\"/invites/claim\"><input type=\"hidden\" name=\"campaign_id\" value=\"")
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 240, "<form method=\"post\" action=\"/app/invites/claim\"><input type=\"hidden\" name=\"campaign_id\" value=\"")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}

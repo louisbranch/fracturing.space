@@ -183,8 +183,12 @@ The primary service boundaries are:
 - **Game service** (`internal/services/game/`): Canonical rules and campaign state; gRPC APIs under `internal/services/game/api/grpc/`; owns the game database.
 - **MCP service** (`internal/services/mcp/`): JSON-RPC adapter for the MCP protocol; forwards to the game service and does not own rules or state.
 - **Admin service** (`internal/services/admin/`): HTTP admin dashboard; renders UI and calls the game service for data.
-- **Auth service** (`internal/services/auth/`): AuthN/authZ domain logic and gRPC API surface (identity proof and access artifacts); owns the auth database.
-- **Connections service** (`internal/services/connections/`): Social/discovery domain logic and gRPC API surface (contacts, usernames, public profile metadata); owns the connections database.
+- **Web service** (`internal/services/web/`): Browser-facing BFF for end-user flows.
+  - Public/auth/discovery surface: `/`, `/login`, `/auth/*`, `/magic`, `/passkeys/*`, `/u/{username}`, `/discover`, `/discover/campaigns/{campaignID}`.
+  - Authenticated surface: canonical `/app/*` routes (`/app/campaigns`, `/app/campaigns/{id}/*`, `/app/invites`, `/app/notifications`, `/app/profile`, `/app/settings/*`) with OAuth-required startup contract.
+  - Internal boundaries: route modules under `internal/services/web/module/*` and composition seams under `internal/services/web/integration/*` and `internal/services/web/transport/httpmux`.
+- **Auth service** (`internal/services/auth/`): Authentication domain logic and gRPC API surface; owns the auth database.
+- **Connections service** (`internal/services/connections/`): Directed user contact APIs and connection metadata; owns the connections database.
 - **Listing service** (`internal/services/listing/`): Public campaign listing metadata APIs; owns the listing database.
 - **AI service** (`internal/services/ai/`): AI credential and agent domain logic + gRPC API surface; owns the AI database.
 
@@ -193,4 +197,5 @@ Non-service utilities live in shared layers:
 - **RNG/seed generation**: `internal/services/game/core/random/` (shared domain utility, not a service).
 - **Request-scoped identity context helpers**: `internal/platform/requestctx/` (transport-agnostic context primitives reused across services).
 - **Cross-service auth introspection client**: `internal/services/shared/authctx/` (shared contract client for auth HTTP token introspection).
+- **Shared HTTP i18n helpers**: `internal/services/shared/i18nhttp/` (language resolution/cookie behavior reused by web and admin).
 - **Seeding CLI**: `cmd/seed` (dev tooling that calls the game service APIs).

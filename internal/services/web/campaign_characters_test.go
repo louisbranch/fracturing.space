@@ -20,7 +20,7 @@ import (
 
 func TestAppCampaignCharactersPageRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -35,7 +35,7 @@ func TestAppCampaignCharactersPageRedirectsUnauthenticatedToLogin(t *testing.T) 
 
 func TestAppCampaignCharacterDetailRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters/char-1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters/char-1", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -50,7 +50,7 @@ func TestAppCampaignCharacterDetailRedirectsUnauthenticatedToLogin(t *testing.T)
 
 func TestAppCampaignCharacterCreateRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/characters/create", strings.NewReader("name=Kara&kind=pc"))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/characters/create", strings.NewReader("name=Kara&kind=pc"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
@@ -66,7 +66,7 @@ func TestAppCampaignCharacterCreateRedirectsUnauthenticatedToLogin(t *testing.T)
 
 func TestAppCampaignCharacterUpdateRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/characters/update", strings.NewReader("character_id=char-1&name=Kara"))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/characters/update", strings.NewReader("character_id=char-1&name=Kara"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
@@ -82,7 +82,7 @@ func TestAppCampaignCharacterUpdateRedirectsUnauthenticatedToLogin(t *testing.T)
 
 func TestAppCampaignCharacterControlRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/characters/control", strings.NewReader("character_id=char-1&participant_id=part-1"))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/characters/control", strings.NewReader("character_id=char-1&participant_id=part-1"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	w := httptest.NewRecorder()
 
@@ -207,7 +207,7 @@ func TestAppCampaignCharactersPageCachesCharactersAndControlParticipants(t *test
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 
-	req1 := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req1 := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters", nil)
 	req1.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w1 := httptest.NewRecorder()
 	h.handleAppCampaignDetail(w1, req1)
@@ -215,7 +215,7 @@ func TestAppCampaignCharactersPageCachesCharactersAndControlParticipants(t *test
 		t.Fatalf("first status = %d, want %d", w1.Code, http.StatusOK)
 	}
 
-	req2 := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req2 := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters", nil)
 	req2.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w2 := httptest.NewRecorder()
 	h.handleAppCampaignDetail(w2, req2)
@@ -306,7 +306,7 @@ func TestAppCampaignCharactersPageParticipantRendersCharacters(t *testing.T) {
 		characterClient: characterClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -328,7 +328,7 @@ func TestAppCampaignCharactersPageParticipantRendersCharacters(t *testing.T) {
 	if !strings.Contains(body, "Orin") {
 		t.Fatalf("expected Orin in response body")
 	}
-	if !strings.Contains(body, "/campaigns/camp-123/characters/char-1") {
+	if !strings.Contains(body, "/app/campaigns/camp-123/characters/char-1") {
 		t.Fatalf("expected character detail link for char-1")
 	}
 }
@@ -380,7 +380,7 @@ func TestAppCampaignCharactersPagePropagatesUserMetadataToCharacterRead(t *testi
 		characterClient: characterClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -445,7 +445,7 @@ func TestAppCampaignCharacterDetailParticipantRendersCharacter(t *testing.T) {
 		characterClient: characterClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters/char-1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters/char-1", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -519,7 +519,7 @@ func TestAppCampaignCharacterDetailPropagatesUserMetadataToCharacterRead(t *test
 		characterClient: characterClient,
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters/char-1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters/char-1", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -593,7 +593,7 @@ func TestAppCampaignCharacterCreateManagerCallsCreateCharacter(t *testing.T) {
 		"name": {"Kara"},
 		"kind": {"pc"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/characters/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/characters/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -603,8 +603,8 @@ func TestAppCampaignCharacterCreateManagerCallsCreateCharacter(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/campaigns/camp-123/characters" {
-		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-123/characters")
+	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-123/characters" {
+		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-123/characters")
 	}
 	if characterClient.createReq == nil {
 		t.Fatalf("expected CreateCharacter request to be captured")
@@ -684,7 +684,7 @@ func TestAppCampaignCharacterUpdateManagerCallsUpdateCharacter(t *testing.T) {
 		"name":         {"Kara Prime"},
 		"kind":         {"npc"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/characters/update", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/characters/update", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -694,8 +694,8 @@ func TestAppCampaignCharacterUpdateManagerCallsUpdateCharacter(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/campaigns/camp-123/characters" {
-		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-123/characters")
+	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-123/characters" {
+		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-123/characters")
 	}
 	if characterClient.updateReq == nil {
 		t.Fatalf("expected UpdateCharacter request to be captured")
@@ -773,7 +773,7 @@ func TestAppCampaignCharacterControlManagerCallsSetDefaultControl(t *testing.T) 
 		"character_id":   {"char-3"},
 		"participant_id": {"part-member"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/characters/control", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/characters/control", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -783,8 +783,8 @@ func TestAppCampaignCharacterControlManagerCallsSetDefaultControl(t *testing.T) 
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/campaigns/camp-123/characters" {
-		t.Fatalf("location = %q, want %q", location, "/campaigns/camp-123/characters")
+	if location := w.Header().Get("Location"); location != "/app/campaigns/camp-123/characters" {
+		t.Fatalf("location = %q, want %q", location, "/app/campaigns/camp-123/characters")
 	}
 	if characterClient.controlReq == nil {
 		t.Fatalf("expected SetDefaultControl request to be captured")
@@ -854,7 +854,7 @@ func TestAppCampaignCharacterCreateMemberForbidden(t *testing.T) {
 		"name": {"Kara"},
 		"kind": {"pc"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/characters/create", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/characters/create", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -920,7 +920,7 @@ func TestAppCampaignCharacterUpdateMemberForbidden(t *testing.T) {
 		"name":         {"Kara Prime"},
 		"kind":         {"npc"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/characters/update", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/characters/update", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -985,7 +985,7 @@ func TestAppCampaignCharacterControlMemberForbidden(t *testing.T) {
 		"character_id":   {"char-3"},
 		"participant_id": {"part-member"},
 	}
-	req := httptest.NewRequest(http.MethodPost, "/campaigns/camp-123/characters/control", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/camp-123/characters/control", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -1052,7 +1052,7 @@ func TestAppCampaignCharactersPageManagerShowsCreateControls(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -1125,7 +1125,7 @@ func TestAppCampaignCharactersPageMemberHidesCreateControls(t *testing.T) {
 		},
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-123/characters", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/characters", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 

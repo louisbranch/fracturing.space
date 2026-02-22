@@ -105,8 +105,8 @@ templ CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection s
 		<li>
 			<a
 				class={ campaignWorkspaceLinkClass(activeSection, "chat") }
-				href={ "/campaigns/" + campaignID }
-				hx-get={ "/campaigns/" + campaignID }
+				href={ "/app/campaigns/" + campaignID }
+				hx-get={ "/app/campaigns/" + campaignID }
 				hx-target="#main"
 				hx-swap="innerHTML"
 				hx-push-url="true"
@@ -118,8 +118,8 @@ templ CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection s
 		<li>
 			<a
 				class={ campaignWorkspaceLinkClass(activeSection, "sessions") }
-				href={ "/campaigns/" + campaignID + "/sessions" }
-				hx-get={ "/campaigns/" + campaignID + "/sessions" }
+				href={ "/app/campaigns/" + campaignID + "/sessions" }
+				hx-get={ "/app/campaigns/" + campaignID + "/sessions" }
 				hx-target="#main"
 				hx-swap="innerHTML"
 				hx-push-url="true"
@@ -131,8 +131,8 @@ templ CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection s
 		<li>
 			<a
 				class={ campaignWorkspaceLinkClass(activeSection, "participants") }
-				href={ "/campaigns/" + campaignID + "/participants" }
-				hx-get={ "/campaigns/" + campaignID + "/participants" }
+				href={ "/app/campaigns/" + campaignID + "/participants" }
+				hx-get={ "/app/campaigns/" + campaignID + "/participants" }
 				hx-target="#main"
 				hx-swap="innerHTML"
 				hx-push-url="true"
@@ -144,8 +144,8 @@ templ CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection s
 		<li>
 			<a
 				class={ campaignWorkspaceLinkClass(activeSection, "characters") }
-				href={ "/campaigns/" + campaignID + "/characters" }
-				hx-get={ "/campaigns/" + campaignID + "/characters" }
+				href={ "/app/campaigns/" + campaignID + "/characters" }
+				hx-get={ "/app/campaigns/" + campaignID + "/characters" }
 				hx-target="#main"
 				hx-swap="innerHTML"
 				hx-push-url="true"
@@ -157,8 +157,8 @@ templ CampaignWorkspaceMenu(page PageContext, campaignID string, activeSection s
 		<li>
 			<a
 				class={ campaignWorkspaceLinkClass(activeSection, "invites") }
-				href={ "/campaigns/" + campaignID + "/invites" }
-				hx-get={ "/campaigns/" + campaignID + "/invites" }
+				href={ "/app/campaigns/" + campaignID + "/invites" }
+				hx-get={ "/app/campaigns/" + campaignID + "/invites" }
 				hx-target="#main"
 				hx-swap="innerHTML"
 				hx-push-url="true"
@@ -237,7 +237,7 @@ func campaignMainClass(coverImageURL string) string {
 }
 
 templ CampaignsHeadingAction(page PageContext) {
-	<a class="btn btn-primary btn-sm" href="/campaigns/create">{ T(page.Loc, "game.campaigns.start_new") }</a>
+	<a class="btn btn-primary btn-sm" href="/app/campaigns/create">{ T(page.Loc, "game.campaigns.start_new") }</a>
 }
 
 templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
@@ -263,7 +263,7 @@ templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
 				<div class="card bg-base-100 border border-base-300 shadow-sm">
 					<figure>
 						if campaign.ID != "" {
-							<a href={ "/campaigns/" + campaign.ID } class="group block">
+							<a href={ "/app/campaigns/" + campaign.ID } class="group block">
 								<img
 									src={ campaign.CoverImageURL }
 									alt={ campaign.Name + " cover" }
@@ -281,7 +281,7 @@ templ CampaignsListPage(page PageContext, campaigns []CampaignListItem) {
 					<div class="card-body">
 						<h2 class="card-title">
 								if campaign.ID != "" {
-									<a href={ "/campaigns/" + campaign.ID }>{ campaign.Name }</a>
+									<a href={ "/app/campaigns/" + campaign.ID }>{ campaign.Name }</a>
 								} else {
 									{ campaign.Name }
 								}
@@ -304,7 +304,7 @@ templ CampaignCreatePage(page PageContext) {
 	@GamePageShell(page, T(page.Loc, "game.create.title")) {
 		<div class="card bg-base-200">
 			<div class="card-body">
-				<form method="post" action="/campaigns/create" class="space-y-4">
+				<form method="post" action="/app/campaigns/create" class="space-y-4">
 					<div class="form-control">
 						<label class="label">
 							<span class="label-text">{ T(page.Loc, "game.create.field_name") }</span>
@@ -353,7 +353,7 @@ templ CampaignCreatePage(page PageContext) {
 templ SessionsListPage(page PageContext, campaignID string, canManage bool, sessions []SessionListItem) {
 	@GamePageShell(page, T(page.Loc, "game.sessions.title")) {
 		if canManage {
-			<form method="post" action={ "/campaigns/" + campaignID + "/sessions/start" } class="space-y-4">
+			<form method="post" action={ "/app/campaigns/" + campaignID + "/sessions/start" } class="space-y-4">
 				<div class="form-control">
 					<label class="label">
 						<span class="label-text">{ T(page.Loc, "game.sessions.field_name") }</span>
@@ -369,12 +369,12 @@ templ SessionsListPage(page PageContext, campaignID string, canManage bool, sess
 			for _, session := range sessions {
 				<li>
 					if session.ID != "" {
-						<a href={ "/campaigns/" + campaignID + "/sessions/" + session.ID }>{ session.Name }</a>
+						<a href={ "/app/campaigns/" + campaignID + "/sessions/" + session.ID }>{ session.Name }</a>
 					} else {
 						{ session.Name }
 					}
 					if canManage && session.IsActive && session.ID != "" {
-						<form method="post" action={ "/campaigns/" + campaignID + "/sessions/end" }>
+						<form method="post" action={ "/app/campaigns/" + campaignID + "/sessions/end" }>
 							<input type="hidden" name="session_id" value={ session.ID }>
 							<button class="btn btn-outline btn-error btn-xs" type="submit">{ T(page.Loc, "game.sessions.end") }</button>
 						</form>
@@ -392,7 +392,7 @@ templ SessionDetailPage(page PageContext, detail SessionDetail) {
 			<p>{ T(page.Loc, "game.session_detail.label_id") }: { detail.ID }</p>
 		}
 		<p>{ T(page.Loc, "game.session_detail.label_status") }: { detail.Status }</p>
-		<p><a href={ "/campaigns/" + detail.CampaignID + "/sessions" }>{ T(page.Loc, "game.session_detail.back_to_sessions") }</a></p>
+		<p><a href={ "/app/campaigns/" + detail.CampaignID + "/sessions" }>{ T(page.Loc, "game.session_detail.back_to_sessions") }</a></p>
 	}
 }
 
@@ -402,7 +402,7 @@ templ CampaignParticipantsPage(page PageContext, campaignID string, canManage bo
 			for _, participant := range participants {
 				<li>{ participant.Name }
 					if canManage && participant.ID != "" {
-						<form method="post" action={ "/campaigns/" + campaignID + "/participants/update" } class="space-y-3 pt-3">
+						<form method="post" action={ "/app/campaigns/" + campaignID + "/participants/update" } class="space-y-3 pt-3">
 							<input type="hidden" name="participant_id" value={ participant.ID }>
 							<div class="form-control">
 								<label class="label">
@@ -474,7 +474,7 @@ templ CampaignParticipantsPage(page PageContext, campaignID string, canManage bo
 templ CampaignCharactersPage(page PageContext, campaignID string, canManage bool, characters []CharacterListItem) {
 	@GamePageShell(page, T(page.Loc, "game.characters.title")) {
 		if canManage {
-			<form method="post" action={ "/campaigns/" + campaignID + "/characters/create" } class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+			<form method="post" action={ "/app/campaigns/" + campaignID + "/characters/create" } class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
 				<div class="form-control">
 					<label class="label">
 						<span class="label-text">{ T(page.Loc, "game.characters.field_name") }</span>
@@ -499,12 +499,12 @@ templ CampaignCharactersPage(page PageContext, campaignID string, canManage bool
 			for _, character := range characters {
 				<li>
 					if character.ID != "" {
-						<a href={ "/campaigns/" + campaignID + "/characters/" + character.ID }>{ character.DisplayName }</a>
+						<a href={ "/app/campaigns/" + campaignID + "/characters/" + character.ID }>{ character.DisplayName }</a>
 					} else {
 						{ character.DisplayName }
 					}
 					if canManage && character.ID != "" {
-						<form method="post" action={ "/campaigns/" + campaignID + "/characters/update" }>
+						<form method="post" action={ "/app/campaigns/" + campaignID + "/characters/update" }>
 							<input type="hidden" name="character_id" value={ character.ID }>
 							if character.EditableName != "" {
 								<input type="text" name="name" value={ character.EditableName } class="input input-bordered w-full">
@@ -525,7 +525,7 @@ templ CampaignCharactersPage(page PageContext, campaignID string, canManage bool
 							</select>
 							<button class="btn btn-soft btn-sm" type="submit">{ T(page.Loc, "game.characters.submit_update") }</button>
 						</form>
-						<form method="post" action={ "/campaigns/" + campaignID + "/characters/control" }>
+						<form method="post" action={ "/app/campaigns/" + campaignID + "/characters/control" }>
 							<input type="hidden" name="character_id" value={ character.ID }>
 							<select name="participant_id" class="select select-bordered w-full">
 								for _, participant := range character.ControlOptions {
@@ -552,14 +552,14 @@ templ CharacterDetailPage(page PageContext, character CharacterDetail) {
 			<p>{ T(page.Loc, "game.character_detail.label_id") }: { character.ID }</p>
 		}
 		<p>{ T(page.Loc, "game.character_detail.label_kind") }: { character.Kind }</p>
-		<p><a href={ "/campaigns/" + character.CampaignID + "/characters" }>{ T(page.Loc, "game.character_detail.back_to_characters") }</a></p>
+		<p><a href={ "/app/campaigns/" + character.CampaignID + "/characters" }>{ T(page.Loc, "game.character_detail.back_to_characters") }</a></p>
 	}
 }
 
 templ CampaignInvitesPage(page PageContext, campaignID string, canManage bool, invites []CampaignInviteItem, contacts []CampaignInviteContactOption, verification CampaignInviteVerification) {
 	@GamePageShell(page, T(page.Loc, "game.campaign_invites.title")) {
 		if canManage {
-			<form method="post" action={ "/campaigns/" + campaignID + "/invites/create" } class="grid grid-cols-1 md:grid-cols-3 gap-4">
+			<form method="post" action={ "/app/campaigns/" + campaignID + "/invites/create" } class="grid grid-cols-1 md:grid-cols-3 gap-4">
 				<div class="form-control">
 					<label class="label">
 						<span class="label-text">{ T(page.Loc, "game.campaign_invites.field_participant_id") }</span>
@@ -610,7 +610,7 @@ templ CampaignInvitesPage(page PageContext, campaignID string, canManage bool, i
 			for _, invite := range invites {
 				<li>{ invite.Label }
 					if canManage && invite.ID != "" {
-						<form method="post" action={ "/campaigns/" + campaignID + "/invites/revoke" }>
+						<form method="post" action={ "/app/campaigns/" + campaignID + "/invites/revoke" }>
 							<input type="hidden" name="invite_id" value={ invite.ID }>
 							<button class="btn btn-soft btn-sm" type="submit">{ T(page.Loc, "game.campaign_invites.submit_revoke") }</button>
 						</form>
@@ -627,7 +627,7 @@ templ UserInvitesPage(page PageContext, invites []UserInviteItem) {
 			for _, invite := range invites {
 				<li>{ invite.Label }
 					if invite.CampaignID != "" && invite.InviteID != "" && invite.ParticipantID != "" {
-						<form method="post" action="/invites/claim">
+						<form method="post" action="/app/invites/claim">
 							<input type="hidden" name="campaign_id" value={ invite.CampaignID }>
 							<input type="hidden" name="invite_id" value={ invite.InviteID }>
 							<input type="hidden" name="participant_id" value={ invite.ParticipantID }>

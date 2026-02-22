@@ -12,6 +12,7 @@ import (
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	notificationsrender "github.com/louisbranch/fracturing.space/internal/services/notifications/render"
 	sharedroute "github.com/louisbranch/fracturing.space/internal/services/shared/route"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
@@ -72,7 +73,7 @@ func (h *handler) handleAppNotificationsRoutes(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	notificationID := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, "/notifications/"))
+	notificationID := strings.TrimSpace(strings.TrimPrefix(r.URL.Path, routepath.AppNotificationsPrefix))
 	if notificationID == "" || strings.Contains(notificationID, "/") {
 		http.NotFound(w, r)
 		return
@@ -299,12 +300,12 @@ func filterNotificationItems(items []webtemplates.NotificationListItem, filter s
 func notificationActionURL(notificationID string, filter string) string {
 	notificationID = normalizedNotificationPathID(notificationID)
 	if notificationID == "" {
-		return "/notifications"
+		return routepath.AppNotifications
 	}
 	values := url.Values{}
 	values.Set("filter", normalizeNotificationsFilter(filter))
 	values.Set("selected", notificationID)
-	return "/notifications?" + values.Encode()
+	return routepath.AppNotifications + "?" + values.Encode()
 }
 
 func notificationsListURL(query notificationPageQuery) string {
@@ -314,7 +315,7 @@ func notificationsListURL(query notificationPageQuery) string {
 	if selectedID != "" {
 		values.Set("selected", selectedID)
 	}
-	return "/notifications?" + values.Encode()
+	return routepath.AppNotifications + "?" + values.Encode()
 }
 
 func notificationDetailText(loc webtemplates.Localizer, bodyText string) string {

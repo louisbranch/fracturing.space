@@ -10,7 +10,7 @@ import (
 
 func TestAppHomeRouteRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -23,9 +23,32 @@ func TestAppHomeRouteRedirectsUnauthenticatedToLogin(t *testing.T) {
 	}
 }
 
+func TestAppHomeRouteRedirectTargetIsRegistered(t *testing.T) {
+	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
+
+	appReq := httptest.NewRequest(http.MethodGet, "/app", nil)
+	appResp := httptest.NewRecorder()
+	handler.ServeHTTP(appResp, appReq)
+
+	if appResp.Code != http.StatusFound {
+		t.Fatalf("/app status = %d, want %d", appResp.Code, http.StatusFound)
+	}
+	if location := appResp.Header().Get("Location"); location != "/auth/login" {
+		t.Fatalf("/app location = %q, want %q", location, "/auth/login")
+	}
+
+	loginReq := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
+	loginResp := httptest.NewRecorder()
+	handler.ServeHTTP(loginResp, loginReq)
+
+	if loginResp.Code != http.StatusInternalServerError {
+		t.Fatalf("/auth/login status = %d, want %d", loginResp.Code, http.StatusInternalServerError)
+	}
+}
+
 func TestAppHomeRouteRejectsNonGET(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/dashboard", nil)
+	req := httptest.NewRequest(http.MethodPost, "/app", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -45,7 +68,7 @@ func TestAppHomeHandlerRedirectsAuthenticatedToHomeShell(t *testing.T) {
 		pendingFlows: newPendingFlowStore(),
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -54,8 +77,8 @@ func TestAppHomeHandlerRedirectsAuthenticatedToHomeShell(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/" {
-		t.Fatalf("location = %q, want %q", location, "/")
+	if location := w.Header().Get("Location"); location != "/app/campaigns" {
+		t.Fatalf("location = %q, want %q", location, "/app/campaigns")
 	}
 }
 
@@ -67,7 +90,7 @@ func TestAppDashboardRouteRedirectsToHome(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 
-	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -76,8 +99,8 @@ func TestAppDashboardRouteRedirectsToHome(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/" {
-		t.Fatalf("location = %q, want %q", location, "/")
+	if location := w.Header().Get("Location"); location != "/app/campaigns" {
+		t.Fatalf("location = %q, want %q", location, "/app/campaigns")
 	}
 }
 

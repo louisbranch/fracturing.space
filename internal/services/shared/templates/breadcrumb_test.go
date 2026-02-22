@@ -99,12 +99,12 @@ func TestBuildPathBreadcrumbsForWeb(t *testing.T) {
 	}{
 		{
 			name:           "dashboard has no breadcrumbs",
-			path:           "/dashboard",
+			path:           "/app",
 			hasBreadcrumbs: false,
 		},
 		{
 			name:           "campaigns has breadcrumbs",
-			path:           "/campaigns",
+			path:           "/app/campaigns",
 			hasBreadcrumbs: true,
 		},
 	}
@@ -129,13 +129,13 @@ func TestBuildPathBreadcrumbsForWebCampaignLabels(t *testing.T) {
 	}{
 		{
 			name: "campaign sessions uses campaign name",
-			path: "/campaigns/camp-1/sessions",
+			path: "/app/campaigns/camp-1/sessions",
 			campaignNames: map[string]string{
 				"camp-1": "The Guildhouse",
 			},
 			expected: []BreadcrumbItem{
-				{Label: "Campaigns", URL: "/campaigns"},
-				{Label: "The Guildhouse", URL: "/campaigns/camp-1"},
+				{Label: "Campaigns", URL: "/app/campaigns"},
+				{Label: "The Guildhouse", URL: "/app/campaigns/camp-1"},
 				{Label: "Sessions"},
 			},
 		},
@@ -153,11 +153,11 @@ func TestBuildPathBreadcrumbsForWebCampaignLabels(t *testing.T) {
 }
 
 func TestBuildPathBreadcrumbsForWebOmitsDashboardRoot(t *testing.T) {
-	got := BuildPathBreadcrumbsForWeb("/campaigns/camp-1/sessions", breadcrumbLocalizer{})
+	got := BuildPathBreadcrumbsForWeb("/app/campaigns/camp-1/sessions", breadcrumbLocalizer{})
 	if len(got) == 0 {
-		t.Fatalf("BuildPathBreadcrumbsForWeb(%q) returned empty trail", "/campaigns/camp-1/sessions")
+		t.Fatalf("BuildPathBreadcrumbsForWeb(%q) returned empty trail", "/app/campaigns/camp-1/sessions")
 	}
 	if got[0].Label == "Dashboard" {
-		t.Fatalf("BuildPathBreadcrumbsForWeb(%q) should not start with Dashboard, got %#v", "/campaigns/camp-1/sessions", got)
+		t.Fatalf("BuildPathBreadcrumbsForWeb(%q) should not start with Dashboard, got %#v", "/app/campaigns/camp-1/sessions", got)
 	}
 }

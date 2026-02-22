@@ -23,7 +23,7 @@ import (
 
 func TestAppSettingsRouteRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/settings", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -44,7 +44,7 @@ func TestAppSettingsPageRendersForAuthenticatedUser(t *testing.T) {
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 
-	req := httptest.NewRequest(http.MethodGet, "/settings", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -83,7 +83,7 @@ func TestAppSettingsUsernamePageLoadsCurrentUsername(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/settings/username", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/username", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -120,7 +120,7 @@ func TestAppSettingsUsernamePageLocalizesCopy(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/settings/username?lang=pt-BR", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/username?lang=pt-BR", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -158,7 +158,7 @@ func TestAppSettingsUsernameUpdateSavesUsernameAndRedirects(t *testing.T) {
 
 	form := url.Values{}
 	form.Set("username", "Alice_Two")
-	req := httptest.NewRequest(http.MethodPost, "/settings/username", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/username", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -168,8 +168,8 @@ func TestAppSettingsUsernameUpdateSavesUsernameAndRedirects(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/settings/username" {
-		t.Fatalf("location = %q, want %q", location, "/settings/username")
+	if location := w.Header().Get("Location"); location != "/app/settings/username" {
+		t.Fatalf("location = %q, want %q", location, "/app/settings/username")
 	}
 	if connectionsClient.setUsernameReq == nil {
 		t.Fatal("expected SetUsername request")
@@ -200,7 +200,7 @@ func TestAppSettingsUsernameUpdateInvalidUsernameRendersValidationError(t *testi
 
 	form := url.Values{}
 	form.Set("username", "bad username")
-	req := httptest.NewRequest(http.MethodPost, "/settings/username", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/username", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -233,7 +233,7 @@ func TestAppSettingsUsernameUpdateRendersUnavailableStateWhenConnectionsMissing(
 
 	form := url.Values{}
 	form.Set("username", "Alice_One")
-	req := httptest.NewRequest(http.MethodPost, "/settings/username", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/username", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -260,7 +260,7 @@ func TestAppAIKeysPageRendersUnavailableStateWhenCredentialServiceMissing(t *tes
 	}
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
 
-	req := httptest.NewRequest(http.MethodGet, "/settings/ai-keys", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/ai-keys", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -301,7 +301,7 @@ func TestAppAIKeysPageListsCredentialsForAuthenticatedUser(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodGet, "/settings/ai-keys", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/ai-keys", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -320,7 +320,7 @@ func TestAppAIKeysPageListsCredentialsForAuthenticatedUser(t *testing.T) {
 	if !strings.Contains(body, "Primary") {
 		t.Fatalf("body should include credential label, got %q", body)
 	}
-	if !strings.Contains(body, `href="/settings">Settings</a>`) {
+	if !strings.Contains(body, `href="/app/settings">Settings</a>`) {
 		t.Fatalf("body should include settings breadcrumb link, got %q", body)
 	}
 	if !strings.Contains(body, "Are you sure you want to revoke this key?") {
@@ -357,7 +357,7 @@ func TestAppAIKeysPageLogsListErrorsAndRendersUnavailableState(t *testing.T) {
 		log.SetPrefix(originalLogPrefix)
 	}()
 
-	req := httptest.NewRequest(http.MethodGet, "/settings/ai-keys", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/ai-keys", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -410,7 +410,7 @@ func TestAppAIKeysCreateCreatesCredentialAndRedirects(t *testing.T) {
 	form := url.Values{}
 	form.Set("label", "Primary")
 	form.Set("secret", "sk-test-1")
-	req := httptest.NewRequest(http.MethodPost, "/settings/ai-keys", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/ai-keys", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -420,8 +420,8 @@ func TestAppAIKeysCreateCreatesCredentialAndRedirects(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/settings/ai-keys" {
-		t.Fatalf("location = %q, want %q", location, "/settings/ai-keys")
+	if location := w.Header().Get("Location"); location != "/app/settings/ai-keys" {
+		t.Fatalf("location = %q, want %q", location, "/app/settings/ai-keys")
 	}
 	if fakeClient.lastCreateReq == nil {
 		t.Fatal("expected CreateCredential call")
@@ -461,7 +461,7 @@ func TestAppAIKeysRevokeRevokesCredentialAndRedirects(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodPost, "/settings/ai-keys/cred-1/revoke", nil)
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/ai-keys/cred-1/revoke", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -470,8 +470,8 @@ func TestAppAIKeysRevokeRevokesCredentialAndRedirects(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/settings/ai-keys" {
-		t.Fatalf("location = %q, want %q", location, "/settings/ai-keys")
+	if location := w.Header().Get("Location"); location != "/app/settings/ai-keys" {
+		t.Fatalf("location = %q, want %q", location, "/app/settings/ai-keys")
 	}
 	if fakeClient.lastRevokeReq == nil {
 		t.Fatal("expected RevokeCredential call")
@@ -594,7 +594,7 @@ func TestAppAIKeysCreateRendersErrorOnInvalidInput(t *testing.T) {
 	form := url.Values{}
 	form.Set("label", "")
 	form.Set("secret", "")
-	req := httptest.NewRequest(http.MethodPost, "/settings/ai-keys", strings.NewReader(form.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/ai-keys", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()

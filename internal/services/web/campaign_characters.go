@@ -6,6 +6,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -34,7 +35,7 @@ func (h *handler) handleAppCampaignCharacters(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if actingParticipant != nil {
-		canManageCharacters = canManageCampaignCharacters(actingParticipant.GetCampaignAccess())
+		canManageCharacters = canManageCampaignAccess(actingParticipant.GetCampaignAccess())
 	}
 	controlParticipants := []*statev1.Participant(nil)
 	if canManageCharacters {
@@ -148,7 +149,7 @@ func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if !canManageCampaignCharacters(actingParticipant.GetCampaignAccess()) {
+	if !canManageCampaignAccess(actingParticipant.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for character action")
 		return
 	}
@@ -164,7 +165,7 @@ func (h *handler) handleAppCampaignCharacterCreate(w http.ResponseWriter, r *htt
 		return
 	}
 
-	http.Redirect(w, r, "/campaigns/"+campaignID+"/characters", http.StatusFound)
+	http.Redirect(w, r, routepath.CampaignCharacters(campaignID), http.StatusFound)
 }
 
 func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -215,7 +216,7 @@ func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if !canManageCampaignCharacters(actingParticipant.GetCampaignAccess()) {
+	if !canManageCampaignAccess(actingParticipant.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for character action")
 		return
 	}
@@ -227,7 +228,7 @@ func (h *handler) handleAppCampaignCharacterUpdate(w http.ResponseWriter, r *htt
 		return
 	}
 
-	http.Redirect(w, r, "/campaigns/"+campaignID+"/characters", http.StatusFound)
+	http.Redirect(w, r, routepath.CampaignCharacters(campaignID), http.StatusFound)
 }
 
 func (h *handler) handleAppCampaignCharacterControl(w http.ResponseWriter, r *http.Request, campaignID string) {
@@ -257,7 +258,7 @@ func (h *handler) handleAppCampaignCharacterControl(w http.ResponseWriter, r *ht
 	}
 	targetParticipantID := strings.TrimSpace(r.FormValue("participant_id"))
 
-	if !canManageCampaignCharacters(actingParticipant.GetCampaignAccess()) {
+	if !canManageCampaignAccess(actingParticipant.GetCampaignAccess()) {
 		h.renderErrorPage(w, r, http.StatusForbidden, "Access denied", "manager or owner access required for character action")
 		return
 	}
@@ -273,11 +274,7 @@ func (h *handler) handleAppCampaignCharacterControl(w http.ResponseWriter, r *ht
 		return
 	}
 
-	http.Redirect(w, r, "/campaigns/"+campaignID+"/characters", http.StatusFound)
-}
-
-func canManageCampaignCharacters(access statev1.CampaignAccess) bool {
-	return access == statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER || access == statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
+	http.Redirect(w, r, routepath.CampaignCharacters(campaignID), http.StatusFound)
 }
 
 func parseCharacterKindFormValue(raw string) (statev1.CharacterKind, bool) {

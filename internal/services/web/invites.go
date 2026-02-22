@@ -2,12 +2,12 @@ package web
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -22,7 +22,7 @@ func (h *handler) handleAppInvites(w http.ResponseWriter, r *http.Request) {
 
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	if h.inviteClient == nil {
@@ -63,7 +63,7 @@ func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
 
 	sess := sessionFromRequest(r, h.sessions)
 	if sess == nil {
-		http.Redirect(w, r, "/auth/login", http.StatusFound)
+		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
 		return
 	}
 	if h.authClient == nil || h.inviteClient == nil {
@@ -119,7 +119,7 @@ func (h *handler) handleAppInviteClaim(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/campaigns/"+url.PathEscape(campaignID), http.StatusFound)
+	http.Redirect(w, r, routepath.Campaign(campaignID), http.StatusFound)
 }
 
 func renderAppInvitesPage(w http.ResponseWriter, r *http.Request, invites []*statev1.PendingUserInvite) {

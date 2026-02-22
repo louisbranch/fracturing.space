@@ -19,7 +19,7 @@ import (
 
 func TestAppProfileRouteRedirectsUnauthenticatedToLogin(t *testing.T) {
 	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/profile", nil)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -44,7 +44,7 @@ func TestAppProfileRouteRejectsUnsupportedMethod(t *testing.T) {
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
 
-	req := httptest.NewRequest(http.MethodDelete, "/profile", nil)
+	req := httptest.NewRequest(http.MethodDelete, "/app/profile", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -77,7 +77,7 @@ func TestAppProfileRouteRendersFormForAuthenticatedUser(t *testing.T) {
 	sess := h.sessions.get(sessionID, "token-1")
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
-	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/profile", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -93,7 +93,7 @@ func TestAppProfileRouteRendersFormForAuthenticatedUser(t *testing.T) {
 	if !strings.Contains(body, `<option value="pt-BR" selected>`) {
 		t.Fatalf("body should include selected locale option, got %q", body)
 	}
-	if !strings.Contains(body, `action="/profile"`) {
+	if !strings.Contains(body, `action="/app/profile"`) {
 		t.Fatalf("body should include profile form action, got %q", body)
 	}
 	if !strings.Contains(body, `type="submit"`) {
@@ -114,7 +114,7 @@ func TestAppProfileRouteRendersFormWhenProfileDoesNotExist(t *testing.T) {
 	sess := h.sessions.get(sessionID, "token-1")
 	sess.cachedUserID = "user-1"
 	sess.cachedUserIDResolved = true
-	req := httptest.NewRequest(http.MethodGet, "/profile", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/profile", nil)
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
 
@@ -145,7 +145,7 @@ func TestAppProfileRouteUpdatesProfileOnPost(t *testing.T) {
 	body := url.Values{}
 	body.Set("name", "Nova Name")
 	body.Set("locale", "pt-BR")
-	req := httptest.NewRequest(http.MethodPost, "/profile", strings.NewReader(body.Encode()))
+	req := httptest.NewRequest(http.MethodPost, "/app/profile", strings.NewReader(body.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
 	w := httptest.NewRecorder()
@@ -155,7 +155,7 @@ func TestAppProfileRouteUpdatesProfileOnPost(t *testing.T) {
 	if w.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
 	}
-	if location := w.Header().Get("Location"); location != "/profile" {
+	if location := w.Header().Get("Location"); location != "/app/profile" {
 		t.Fatalf("Location = %q, want /profile", location)
 	}
 	if fakeAccount.lastUpdateReq == nil {

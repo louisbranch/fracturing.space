@@ -311,6 +311,10 @@ func (h *handler) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
 		return
 	}
+	if strings.TrimSpace(h.config.OAuthClientID) == "" || strings.TrimSpace(h.config.CallbackURL) == "" {
+		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.auth_client_not_configured")
+		return
+	}
 
 	verifier, err := generateCodeVerifier()
 	if err != nil {

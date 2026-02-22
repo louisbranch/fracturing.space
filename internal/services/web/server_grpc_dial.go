@@ -14,6 +14,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
@@ -216,5 +217,37 @@ func dialNotificationsGRPC(ctx context.Context, config Config) (notificationsGRP
 	return notificationsGRPCClients{
 		conn:               conn,
 		notificationClient: notificationsv1.NewNotificationServiceClient(conn),
+	}, nil
+}
+
+// dialListingGRPC returns clients for public discovery listing operations.
+func dialListingGRPC(ctx context.Context, config Config) (listingGRPCClients, error) {
+	listingAddr := strings.TrimSpace(config.ListingAddr)
+	if listingAddr == "" {
+		return listingGRPCClients{}, nil
+	}
+	if ctx == nil {
+		return listingGRPCClients{}, errors.New("context is required")
+	}
+	if config.GRPCDialTimeout <= 0 {
+		config.GRPCDialTimeout = timeouts.GRPCDial
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("listing %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := grpcdial.DialWithHealth(
+		ctx,
+		listingAddr,
+		config.GRPCDialTimeout,
+		"listing",
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		return listingGRPCClients{}, err
+	}
+	return listingGRPCClients{
+		conn:          conn,
+		listingClient: listingv1.NewCampaignListingServiceClient(conn),
 	}, nil
 }

@@ -10,7 +10,7 @@ nav_order: 12
 
 Define an initial path for evolving the web service into the primary user-facing site for campaign planning while preserving strict user scoping and reusing proven admin patterns.
 
-This spec is based on the current code surfaces as of 2026-02-15.
+This spec is based on the current code surfaces as of 2026-02-22.
 
 ## Current State Snapshot
 
@@ -32,13 +32,23 @@ Current web UI supports:
 - OAuth login/callback/logout.
 - Passkey registration/login.
 - Magic-link consume flow.
-- One participant-gated route: `/campaigns/{id}` rendering a phase-1 chat shell.
+- Public profile pages at `/u/{username}`.
+- Public discovery listing pages at `/discover` and `/discover/campaigns/{campaignID}`.
+- Authenticated app shell under `/app`.
+- User-scoped campaign list and campaign create flow.
+- Campaign workspace routes under `/app/campaigns/{id}`:
+  - overview/chat shell
+  - sessions list/detail + start/end
+  - participants list + role/control updates
+  - characters list/detail + create/update/control
+  - invites list/create/revoke (manager/owner gated)
+- User invite inbox + claim flow at `/app/invites`.
+- Notifications inbox at `/app/notifications`.
 
 Current web does not yet provide:
 
-- User-scoped campaign index.
-- Session/participant/character/invite management pages.
-- Role-aware management actions in UI.
+- Admin-only operational surfaces (systems/catalog/icons/scenarios/user-admin).
+- Full backend-enforced read scoping for every campaign read API (some reads still rely on route-level membership checks).
 
 ## Product Goals
 
@@ -89,7 +99,10 @@ Until read-side authorization is fully centralized in game service, web must kee
 ## Proposed Web Information Architecture
 
 - `/` public landing/login entry.
-- `/app` authenticated shell.
+- `/u/{username}` public profile page.
+- `/discover` public discovery listing index.
+- `/discover/campaigns/{campaignID}` public discovery listing detail page.
+- `/app` authenticated shell (OAuth-only contract).
 - `/app/campaigns` user-scoped campaign list.
 - `/app/campaigns/{campaignID}` campaign overview.
 - `/app/campaigns/{campaignID}/sessions` sessions list/detail links.
@@ -159,10 +172,13 @@ Start with a thin vertical slice that is user-visible, low-risk, and validates s
 
 Why this first: it exercises auth/session/context boundaries, establishes `/app` navigation, and avoids role-sensitive write actions until read parity is stable.
 
-## Route/API Mapping (Initial)
+## Route/API Mapping
 
 | Web capability | Primary API calls | Required metadata | Admin reference |
 |---|---|---|---|
+| `/u/{username}` | `ConnectionsService.LookupPublicProfile` | none | n/a |
+| `/discover` | `CampaignListingService.ListCampaignListings` | none | n/a |
+| `/discover/campaigns/{id}` | `CampaignListingService.GetCampaignListing` | none | n/a |
 | `/app/campaigns` list | `CampaignService.ListCampaigns` | `x-fracturing-space-user-id` | `handleCampaignsTable` |
 | `/app/campaigns/{id}` overview | `CampaignService.GetCampaign` | route-level membership guard | `handleCampaignDetail` |
 | `/app/campaigns/{id}/sessions` | `SessionService.ListSessions` | route-level membership guard | `handleSessionsTable` |
@@ -174,7 +190,7 @@ Why this first: it exercises auth/session/context boundaries, establishes `/app`
 
 ## Execution Plan (PR Order)
 
-1. PR1: normalize `/app/campaigns` and `/app/campaigns/{id}` as canonical routes; add redirects from legacy entry points where needed.
+1. PR1: normalize `/app/campaigns` and `/app/campaigns/{id}` as canonical routes and remove legacy top-level app routes.
 2. PR2: add read-only sessions/participants/characters pages under `/app/campaigns/{id}/*` with shared membership guard helper.
 3. PR3: add `/app/invites` pending-invites page and claim flow UI wiring (`IssueJoinGrant` + `ClaimInvite`).
 4. PR4: add manager/owner invite management page under campaign scope with participant-id metadata propagation.

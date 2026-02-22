@@ -20,7 +20,7 @@ func TestLayoutOptionsForPageBuildsCommonValues(t *testing.T) {
 		Lang:                   "en-US",
 		AppName:                "app-name",
 		Loc:                    localizedTitle{},
-		CurrentPath:            "/profile",
+		CurrentPath:            "/app/profile",
 		CampaignName:           "Campaign",
 		UserName:               "Alice",
 		UserAvatarURL:          "https://example.com/avatar.png",

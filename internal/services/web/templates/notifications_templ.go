@@ -128,7 +128,7 @@ func NotificationsPage(page PageContext, state NotificationsPageState) templ.Com
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" data-notification-filter=\"unread\" href=\"/notifications?filter=unread\" hx-get=\"/notifications?filter=unread\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\" data-notification-filter=\"unread\" href=\"/app/notifications?filter=unread\" hx-get=\"/app/notifications?filter=unread\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -163,7 +163,7 @@ func NotificationsPage(page PageContext, state NotificationsPageState) templ.Com
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" data-notification-filter=\"all\" href=\"/notifications?filter=all\" hx-get=\"/notifications?filter=all\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\" data-notification-filter=\"all\" href=\"/app/notifications?filter=all\" hx-get=\"/app/notifications?filter=all\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
