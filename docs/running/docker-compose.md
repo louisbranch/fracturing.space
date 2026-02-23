@@ -63,11 +63,12 @@ Compose exposes CLI tools under the `tools` profile:
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm hmac-key
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm join-grant-key
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed -- -generate -preset=variety -v
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/basic_flow.lua
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm maintenance -- -campaign-id <id> -validate
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm catalog-importer
 ```
+
+The `seed` tool in this repository is intentionally scoped to the local-dev manifest for local workflows. For any production-like environment, use a separate migration/administrative flow instead of `seed`.
 
 ## Volumes
 

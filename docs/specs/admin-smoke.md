@@ -14,7 +14,7 @@ and campaigns read-only visibility.
 - Services running (`make up` recommended). `make up` starts the devcontainer and watchers together (or just re-starts watchers when run inside the devcontainer). These flows initialize `.env` and generate dev join-grant keys when missing.
 - If starting services manually (not via `make up`), ensure join-grant configuration is exported, for example:
   `eval "$(go run ./cmd/join-grant-key)"; export FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY FRACTURING_SPACE_JOIN_GRANT_ISSUER FRACTURING_SPACE_JOIN_GRANT_AUDIENCE`
-- Demo data seeded (recommended): `make seed-variety`
+- Demo data seeded (recommended): `make seed`
 
 ## Automation
 

@@ -18,6 +18,10 @@ The game server must be running before seeding:
 # Terminal 1: Start devcontainer + watcher-managed local services
 make up
 
+# If you run make seed from the host side (outside the devcontainer terminal),
+# ensure 8090 and 8091 are forwarded in `.devcontainer/devcontainer.json`
+# for connections and listing.
+
 # Terminal 2: Run seeding commands
 make seed
 ```
@@ -25,8 +29,11 @@ make seed
 Using direct Go commands:
 
 ```bash
-# Terminal 1: Start the game server
+# Terminal 1: Start the required services
 go run ./cmd/game
+go run ./cmd/auth
+go run ./cmd/listing
+go run ./cmd/connections
 
 # Terminal 2: Run seeding commands
 make seed
@@ -37,8 +44,8 @@ Using Compose:
 ```bash
 COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
 
-# Terminal 1: Start the game + auth services
-$COMPOSE up -d game auth
+# Terminal 1: Start the required services
+$COMPOSE up -d game auth listing connections
 
 # Terminal 2: Run seeding commands
 $COMPOSE --profile tools run --rm seed
@@ -68,13 +75,12 @@ $COMPOSE --profile tools run --rm catalog-importer
 | `-base-locale` | Base locale used for catalog data | `en-US` |
 | `-dry-run` | Validate without writing to the database | false |
 
-## Static Fixtures (JSON-based)
+## Recommended local seeding flow (idempotent)
 
-Run predefined scenarios from JSON fixture files:
+Use the declarative local-dev manifest by default. This is the recommended path for most dev workflows:
 
 ```bash
-make seed        # Run all scenarios with verbose output
-make seed-fresh  # Reset DB and reseed
+make seed        # Seed local-dev dataset (idempotent)
 ```
 
 Compose:
@@ -82,108 +88,23 @@ Compose:
 ```bash
 COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
 $COMPOSE --profile tools run --rm seed
-$COMPOSE --profile tools run --rm seed -- -scenario example
 ```
 
 ### CLI Options
 
 | Flag | Description | Default |
 |------|-------------|---------|
+| `-manifest` | Path to declarative manifest JSON (local-dev only) | `internal/tools/seed/manifests/local-dev.json` |
+| `-seed-state` | Path to idempotent state file | `.tmp/seed-state/local-dev.state.json` |
 | `-grpc-addr` | game server address | `game:8082` |
 | `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `auth:8083` |
-| `-scenario` | Run specific scenario | all |
-| `-list` | List available scenarios | - |
+| `-connections-addr` | connections server address | `connections:8090` |
+| `-listing-addr` | listing server address | `listing:8091` |
 | `-v` | Verbose output | false |
 
-### Adding Scenarios
+For any non-local environments, avoid running `seed` against production services. The command is intentionally restricted to the local-dev manifest in this workflow.
 
-Create JSON files in `internal/test/integration/fixtures/seed/`.
-
-## Dynamic Generation
-
-Generate diverse, randomized test data with reproducible seeds:
-
-```bash
-make seed-generate         # Demo preset (rich single campaign)
-make seed-variety          # 8 campaigns with varied statuses/modes
-make seed-generate-fresh   # Reset DB and generate demo data
-```
-
-Compose:
-
-```bash
-COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
-$COMPOSE --profile tools run --rm seed -- -generate -preset=demo -v
-$COMPOSE --profile tools run --rm seed -- -generate -preset=variety -v
-```
-
-### CLI Options
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-generate` | Enable dynamic generation mode | false |
-| `-preset` | Generation preset | `demo` |
-| `-campaigns` | Override number of campaigns | preset default |
-| `-seed` | RNG seed for reproducibility (0 = random) | 0 |
-| `-grpc-addr` | game server address | `game:8082` |
-| `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `auth:8083` |
-| `-v` | Verbose output | false |
-
-### Presets
-
-| Preset | Campaigns | Description |
-|--------|-----------|-------------|
-| `demo` | 1 | Rich single campaign with 3 players, 5-6 characters, 1 active session, 10-20 events |
-| `variety` | 8 | Mixed statuses (DRAFT/ACTIVE/COMPLETED/ARCHIVED) and GM modes (HUMAN/AI/HYBRID) |
-| `session-heavy` | 2 | Full parties with 5 sessions each, 50+ events |
-| `stress-test` | 50 | Minimal campaigns for load testing |
-
-### Examples
-
-```bash
-# Generate 3 campaigns using variety preset settings
-go run ./cmd/seed -generate -preset=variety -campaigns=3 -v
-
-# Generate with a specific seed for reproducibility
-go run ./cmd/seed -generate -preset=demo -seed=12345 -v
-
-# Re-run the same seed to get identical data
-go run ./cmd/seed -generate -preset=demo -seed=12345 -v
-```
-
-### Reproducibility
-
-The generator uses a seeded random number generator. Running with the same `-seed` value produces identical data. If no seed is specified, a random seed is chosen and printed to stderr for later reproduction:
-
-```
-Using seed: 1707234567890123456
-```
-
-Emails are uniquified within a run to satisfy auth email uniqueness constraints. When duplicates occur, the generator appends a numeric suffix (for example, `alex@example.com` -> `alex-2@example.com`).
-
-## Declarative Local Seeding (Idempotent)
-
-Use declarative manifests to seed stable local datasets that can be re-applied safely.
-
-```bash
-make seed-local
-```
-
-The default local manifest is:
-
-- `internal/tools/seed/manifests/local-dev.json`
-
-The idempotent state map is stored at:
-
-- `.tmp/seed-state/local-dev.state.json`
-
-To reset from scratch:
-
-```bash
-make seed-local-fresh
-```
-
-### Manifest Entity Coverage
+## Manifest seeding entity coverage
 
 The declarative seeder supports:
 
@@ -200,29 +121,3 @@ The declarative seeder supports:
 | Listings | `listing.v1.CampaignListingService` |
 
 Account profiles are intentionally excluded from seed manifests and are not written during declarative seeding.
-
-### CLI Options
-
-| Flag | Description | Default |
-|------|-------------|---------|
-| `-manifest` | Path to declarative manifest JSON | empty |
-| `-seed-state` | Path to idempotent state file | derived from manifest path |
-| `-grpc-addr` | game server address | `game:8082` |
-| `-auth-addr` | auth server address | `auth:8083` |
-| `-connections-addr` | connections server address | `connections:8090` |
-| `-listing-addr` | listing server address | `listing:8091` |
-| `-v` | Verbose output | false |
-
-`-manifest` cannot be combined with `-generate`, `-scenario`, or `-seed-campaign-listings`.
-
-### Entity Variations
-
-The dynamic generator creates diverse test data:
-
-| Entity | Variations |
-|--------|------------|
-| Campaign | DRAFT, ACTIVE, COMPLETED, ARCHIVED statuses; HUMAN/AI/HYBRID GM modes |
-| Participant | GM + Players; HUMAN/AI controllers (20% AI chance) |
-| Character | PC/NPC kinds; PCs assigned to player participants |
-| Session | ACTIVE/ENDED statuses; named with sequence numbers |
-| Event | NOTE_ADDED events with random content |

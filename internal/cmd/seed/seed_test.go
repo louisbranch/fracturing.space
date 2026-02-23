@@ -15,6 +15,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
+	seedtool "github.com/louisbranch/fracturing.space/internal/tools/seed"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/generator"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -99,9 +100,19 @@ func TestParseConfigManifestModeDefaultsStatePath(t *testing.T) {
 	}
 }
 
+func TestParseConfigManifestModeRejectsNonLocalPath(t *testing.T) {
+	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
+	_, err := ParseConfig(fs, []string{"-manifest", "internal/tools/seed/manifests/other.json"})
+	if err == nil {
+		t.Fatal("expected parse error for non-local manifest")
+	}
+}
+
 func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 	original := runDeclarativeManifestFn
+	originalLookupHost := seedLookupHost
 	t.Cleanup(func() { runDeclarativeManifestFn = original })
+	t.Cleanup(func() { seedLookupHost = originalLookupHost })
 
 	called := false
 	runDeclarativeManifestFn = func(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
@@ -109,10 +120,28 @@ func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 		if cfg.ManifestPath != "internal/tools/seed/manifests/local-dev.json" {
 			t.Fatalf("manifest path = %q", cfg.ManifestPath)
 		}
+		if cfg.SeedConfig.GRPCAddr != "127.0.0.1:8082" {
+			t.Fatalf("expected normalized game addr, got %q", cfg.SeedConfig.GRPCAddr)
+		}
+		if cfg.SeedConfig.AuthAddr != "127.0.0.1:8083" {
+			t.Fatalf("expected normalized auth addr, got %q", cfg.SeedConfig.AuthAddr)
+		}
+		if cfg.ConnectionsAddr != "127.0.0.1:8090" {
+			t.Fatalf("expected normalized connections addr, got %q", cfg.ConnectionsAddr)
+		}
+		if cfg.ListingAddr != "127.0.0.1:8091" {
+			t.Fatalf("expected normalized listing addr, got %q", cfg.ListingAddr)
+		}
 		if cfg.ConnectionsAddr == "" {
 			t.Fatal("connections addr should be set")
 		}
 		return nil
+	}
+	seedLookupHost = func(_ context.Context, host string) ([]string, error) {
+		if host == "" {
+			return nil, fmt.Errorf("host required")
+		}
+		return nil, fmt.Errorf("dns disabled in test")
 	}
 
 	cfg := Config{
@@ -120,6 +149,11 @@ func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 		ManifestPath:    "internal/tools/seed/manifests/local-dev.json",
 		SeedStatePath:   filepath.Join(".tmp", "seed-state", "local-dev.state.json"),
 		ConnectionsAddr: "connections:8090",
+		ListingAddr:     "listing:8091",
+		SeedConfig: seedtool.Config{
+			GRPCAddr: "game:8082",
+			AuthAddr: "auth:8083",
+		},
 	}
 
 	if err := Run(context.Background(), cfg, io.Discard, io.Discard); err != nil {
@@ -127,6 +161,24 @@ func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 	}
 	if !called {
 		t.Fatal("expected manifest runner to be called")
+	}
+}
+
+func TestRun_RejectsNonLocalManifestPath(t *testing.T) {
+	cfg := Config{
+		ManifestPath: "internal/tools/seed/manifests/prod.json",
+	}
+	if err := Run(context.Background(), cfg, io.Discard, io.Discard); err == nil {
+		t.Fatal("expected error for non-local manifest path")
+	}
+}
+
+func TestRun_RejectsMutationWithoutManifest(t *testing.T) {
+	cfg := Config{
+		ManifestPath: "",
+	}
+	if err := Run(context.Background(), cfg, io.Discard, io.Discard); err == nil {
+		t.Fatal("expected error when running seed without a manifest")
 	}
 }
 

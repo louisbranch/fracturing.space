@@ -120,7 +120,7 @@ AES key (16/24/32 bytes) before startup.
 
 ## Demo data
 
-See [seeding](seeding.md) for `make seed` and generator options.
+See [seeding](seeding.md) for `make seed`.
 
 ## Configuration
 

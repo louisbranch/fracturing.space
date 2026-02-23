@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"maps"
+	"net"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -31,6 +32,8 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+const localManifestPath = "internal/tools/seed/manifests/local-dev.json"
 
 // Config holds seed command configuration.
 type Config struct {
@@ -56,6 +59,8 @@ type seedEnv struct {
 	ConnectionsAddr string        `env:"FRACTURING_SPACE_CONNECTIONS_ADDR"`
 	Timeout         time.Duration `env:"FRACTURING_SPACE_SEED_TIMEOUT" envDefault:"10m"`
 }
+
+var seedLookupHost = net.DefaultResolver.LookupHost
 
 // ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
@@ -117,6 +122,9 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if manifestPath != "" && seedCampaignListings {
 		return Config{}, fmt.Errorf("cannot use -manifest with -seed-campaign-listings")
 	}
+	if err := validateLocalManifestPath(manifestPath); err != nil {
+		return Config{}, err
+	}
 
 	return Config{
 		SeedConfig:           seedCfg,
@@ -134,9 +142,44 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	}, nil
 }
 
+func validateLocalManifestPath(manifestPath string) error {
+	manifestPath = strings.TrimSpace(manifestPath)
+	if manifestPath == "" {
+		return nil
+	}
+	if manifestPath != localManifestPath {
+		return fmt.Errorf("seed manifest mode is restricted to %q in this build", localManifestPath)
+	}
+	return nil
+}
+
+func validateSeedMode(cfg Config) error {
+	if cfg.List {
+		return nil
+	}
+	if strings.TrimSpace(cfg.ManifestPath) == "" {
+		return fmt.Errorf("seed command is restricted to local manifest mode; use -manifest=%q", localManifestPath)
+	}
+	return nil
+}
+
 // Run executes the seed command across dynamic generation or fixture replay.
 func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
-	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceSeed, func(runCtx context.Context) error {
+	if err := validateLocalManifestPath(cfg.ManifestPath); err != nil {
+		return err
+	}
+	if err := validateSeedMode(cfg); err != nil {
+		return err
+	}
+	runCtx := ctx
+	var cancel func()
+	if cfg.Timeout > 0 {
+		runCtx, cancel = context.WithTimeout(runCtx, cfg.Timeout)
+		defer cancel()
+	}
+
+	return entrypoint.RunWithTelemetry(runCtx, entrypoint.ServiceSeed, func(runCtx context.Context) error {
+		cfg = normalizeSeedAddrs(cfg)
 		if out == nil {
 			out = io.Discard
 		}
@@ -222,9 +265,38 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 
 var runDeclarativeManifestFn = runDeclarativeManifest
 
-func runDeclarativeManifest(ctx context.Context, cfg Config, out io.Writer, _ io.Writer) error {
+func runDeclarativeManifest(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
 	if strings.TrimSpace(cfg.ManifestPath) == "" {
 		return fmt.Errorf("manifest path is required")
+	}
+	if out == nil {
+		out = os.Stdout
+	}
+	if errOut == nil {
+		errOut = os.Stderr
+	}
+	gameAddr := cfg.SeedConfig.GRPCAddr
+	authAddr := cfg.SeedConfig.AuthAddr
+	connectionsAddr := cfg.ConnectionsAddr
+	listingAddr := cfg.ListingAddr
+	if cfg.SeedConfig.Verbose {
+		fmt.Fprintf(errOut, "seed: resolved gRPC endpoints\n")
+		fmt.Fprintf(errOut, "seed: game %q -> %q\n", cfg.SeedConfig.GRPCAddr, gameAddr)
+		fmt.Fprintf(errOut, "seed: auth %q -> %q\n", cfg.SeedConfig.AuthAddr, authAddr)
+		fmt.Fprintf(errOut, "seed: connections %q -> %q\n", cfg.ConnectionsAddr, connectionsAddr)
+		fmt.Fprintf(errOut, "seed: listing %q -> %q\n", cfg.ListingAddr, listingAddr)
+	}
+	if err := waitForTCP(ctx, "game", gameAddr, errOut, cfg.SeedConfig.Verbose); err != nil {
+		return err
+	}
+	if err := waitForTCP(ctx, "auth", authAddr, errOut, cfg.SeedConfig.Verbose); err != nil {
+		return err
+	}
+	if err := waitForTCP(ctx, "connections", connectionsAddr, errOut, cfg.SeedConfig.Verbose); err != nil {
+		return err
+	}
+	if err := waitForTCP(ctx, "listing", listingAddr, errOut, cfg.SeedConfig.Verbose); err != nil {
+		return err
 	}
 	runner, err := declarative.NewGRPCRunner(
 		declarative.Config{
@@ -233,10 +305,10 @@ func runDeclarativeManifest(ctx context.Context, cfg Config, out io.Writer, _ io
 			Verbose:      cfg.SeedConfig.Verbose,
 		},
 		declarative.DialConfig{
-			GameAddr:        cfg.SeedConfig.GRPCAddr,
-			AuthAddr:        cfg.SeedConfig.AuthAddr,
-			ConnectionsAddr: cfg.ConnectionsAddr,
-			ListingAddr:     cfg.ListingAddr,
+			GameAddr:        gameAddr,
+			AuthAddr:        authAddr,
+			ConnectionsAddr: connectionsAddr,
+			ListingAddr:     listingAddr,
 		},
 	)
 	if err != nil {
@@ -264,6 +336,67 @@ func defaultSeedStatePathForManifest(manifestPath string) string {
 		name = "manifest"
 	}
 	return filepath.Join(".tmp", "seed-state", name+".state.json")
+}
+
+func resolveLocalFallbackAddr(addr string) string {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return addr
+	}
+	host, port, err := net.SplitHostPort(addr)
+	if err != nil {
+		return addr
+	}
+	if host == "" || port == "" {
+		return addr
+	}
+	if _, err := seedLookupHost(context.Background(), host); err == nil {
+		return addr
+	}
+	if _, _, err := net.SplitHostPort("127.0.0.1:" + port); err != nil {
+		return addr
+	}
+	return "127.0.0.1:" + port
+}
+
+func normalizeSeedAddrs(cfg Config) Config {
+	cfg.SeedConfig.GRPCAddr = resolveLocalFallbackAddr(cfg.SeedConfig.GRPCAddr)
+	cfg.SeedConfig.AuthAddr = resolveLocalFallbackAddr(cfg.SeedConfig.AuthAddr)
+	cfg.ConnectionsAddr = resolveLocalFallbackAddr(cfg.ConnectionsAddr)
+	cfg.ListingAddr = resolveLocalFallbackAddr(cfg.ListingAddr)
+	return cfg
+}
+
+func waitForTCP(ctx context.Context, label, addr string, out io.Writer, verbose bool) error {
+	addr = strings.TrimSpace(addr)
+	if addr == "" {
+		return fmt.Errorf("%s address is required", label)
+	}
+	const attemptTimeout = 500 * time.Millisecond
+	attempt := 0
+	for {
+		if ctx.Err() != nil {
+			return fmt.Errorf("timeout waiting for %s at %s: %w", label, addr, ctx.Err())
+		}
+		attempt++
+		if verbose && out != nil {
+			fmt.Fprintf(out, "seed: checking %s at %s (attempt %d)\n", label, addr, attempt)
+		}
+		dialCtx, cancel := context.WithTimeout(ctx, attemptTimeout)
+		conn, err := (&net.Dialer{}).DialContext(dialCtx, "tcp", addr)
+		cancel()
+		if err == nil {
+			_ = conn.Close()
+			if verbose && out != nil {
+				fmt.Fprintf(out, "seed: connected to %s at %s\n", label, addr)
+			}
+			return nil
+		}
+		if verbose && out != nil {
+			fmt.Fprintf(out, "seed: %s not ready at %s: %v\n", label, addr, err)
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 }
 
 type campaignListingCreator interface {

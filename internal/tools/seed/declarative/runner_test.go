@@ -13,6 +13,8 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -145,6 +147,37 @@ func TestRunManifest_IdempotentSecondRun(t *testing.T) {
 	}
 	if deps.listing.createCalls != 1 {
 		t.Fatalf("create listing calls = %d, want 1", deps.listing.createCalls)
+	}
+}
+
+func TestRunnerApplyListings_ListingNotFoundCreatesNewListing(t *testing.T) {
+	t.Parallel()
+
+	listingClient := &fakeListingClient{
+		getCampaignListing: func(_ context.Context, in *listingv1.GetCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.GetCampaignListingResponse, error) {
+			if in.GetCampaignId() == "camp-1" {
+				return nil, status.Error(codes.NotFound, "missing campaign listing")
+			}
+			return &listingv1.GetCampaignListingResponse{}, nil
+		},
+	}
+
+	runner := newRunnerWithClients(Config{ManifestPath: "local"}, runnerDeps{listings: listingClient})
+
+	err := runner.applyListings(context.Background(), Manifest{
+		Name: "local",
+		Listings: []ManifestListing{{
+			CampaignKey:    "crimson",
+			Title:          "Campaign listing",
+			System:         commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
+			DifficultyTier: listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER.String(),
+		}},
+	}, map[string]string{"crimson": "camp-1"})
+	if err != nil {
+		t.Fatalf("apply listings: %v", err)
+	}
+	if listingClient.createCalls != 1 {
+		t.Fatalf("create listing calls = %d, want 1", listingClient.createCalls)
 	}
 }
 
@@ -342,8 +375,10 @@ func (f *fakeGameClient) ListCampaigns(_ context.Context, _ *gamev1.ListCampaign
 }
 
 type fakeListingClient struct {
-	createCalls int
-	listingByID map[string]*listingv1.CampaignListing
+	getCampaignListing    func(context.Context, *listingv1.GetCampaignListingRequest, ...grpc.CallOption) (*listingv1.GetCampaignListingResponse, error)
+	createCalls           int
+	createCampaignListing func(context.Context, *listingv1.CreateCampaignListingRequest, ...grpc.CallOption) (*listingv1.CreateCampaignListingResponse, error)
+	listingByID           map[string]*listingv1.CampaignListing
 }
 
 func (f *fakeListingClient) ensure() {
@@ -353,6 +388,9 @@ func (f *fakeListingClient) ensure() {
 }
 
 func (f *fakeListingClient) CreateCampaignListing(_ context.Context, in *listingv1.CreateCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.CreateCampaignListingResponse, error) {
+	if f.createCampaignListing != nil {
+		return f.createCampaignListing(context.Background(), in)
+	}
 	f.ensure()
 	if listing, ok := f.listingByID[in.GetCampaignId()]; ok {
 		return &listingv1.CreateCampaignListingResponse{Listing: listing}, nil
@@ -375,6 +413,9 @@ func (f *fakeListingClient) CreateCampaignListing(_ context.Context, in *listing
 }
 
 func (f *fakeListingClient) GetCampaignListing(_ context.Context, in *listingv1.GetCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.GetCampaignListingResponse, error) {
+	if f.getCampaignListing != nil {
+		return f.getCampaignListing(context.Background(), in)
+	}
 	f.ensure()
 	listing, ok := f.listingByID[in.GetCampaignId()]
 	if !ok {

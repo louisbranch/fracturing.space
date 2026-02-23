@@ -48,7 +48,7 @@ npx -y @playwright/cli@0.1.0 install
 make up
 
 # Terminal 2
-make seed-variety
+make seed
 scripts/playwright-admin-smoke.sh
 
 # Optional cleanup when finished
