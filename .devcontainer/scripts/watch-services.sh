@@ -148,11 +148,13 @@ trap cleanup EXIT INT TERM
 start_service game FRACTURING_SPACE_GAME_ADDR=
 start_service auth
 start_service connections
+start_service listing
 start_service ai
 start_service notifications
 wait_for_service_log_marker "game" "game server listening at"
 wait_for_service_log_marker "auth" "auth server listening at"
 wait_for_service_log_marker "connections" "connections server listening at"
+wait_for_service_log_marker "listing" "listing server listening at"
 wait_for_service_log_marker "ai" "ai server listening at"
 wait_for_service_log_marker "notifications" "notifications server listening at"
 start_service mcp

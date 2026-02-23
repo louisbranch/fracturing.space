@@ -29,6 +29,8 @@ services:
       # Dev-only join-grant key for local quickstart. Override for real deployments.
       FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY: ${FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY:-DMPt2bezEVpUVJOabrX7YIaRLOITnATcwKUY6ofEhlQ}
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    ports:
+      - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:8082:8082"
     volumes:
       - fracturing-space-data:/data
     networks:
@@ -64,6 +66,8 @@ services:
       FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID: fracturing-space
       FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}/auth/callback
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    ports:
+      - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:8083:8083"
     volumes:
       - fracturing-space-data:/data
     networks:
@@ -84,6 +88,8 @@ services:
       FRACTURING_SPACE_CONNECTIONS_PORT: 8090
       FRACTURING_SPACE_CONNECTIONS_DB_PATH: /data/connections.db
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    ports:
+      - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:8090:8090"
     volumes:
       - fracturing-space-data:/data
     networks:
@@ -104,6 +110,8 @@ services:
       FRACTURING_SPACE_LISTING_PORT: 8091
       FRACTURING_SPACE_LISTING_DB_PATH: /data/listing.db
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    ports:
+      - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:8091:8091"
     volumes:
       - fracturing-space-data:/data
     networks:
@@ -327,7 +335,9 @@ services:
     depends_on:
       - game
       - auth
-    entrypoint: ["go", "run", "./cmd/seed", "-grpc-addr", "game:8082"]
+      - listing
+      - connections
+    entrypoint: ["go", "run", "./cmd/seed", "-manifest=internal/tools/seed/manifests/local-dev.json", "-v"]
     networks:
       - internal
 

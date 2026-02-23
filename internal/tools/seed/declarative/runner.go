@@ -13,7 +13,9 @@ import (
 	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 const (
@@ -121,24 +123,29 @@ func (r *Runner) RunManifest(ctx context.Context, manifest Manifest) error {
 	if err := r.requireDeps(); err != nil {
 		return err
 	}
+	r.logf("seed manifest %q: loading state", manifest.Name)
 
 	state, err := loadState(r.cfg.StatePath)
 	if err != nil {
 		return err
 	}
+	r.logf("seed manifest %q: applying users", manifest.Name)
 
 	userIDs, err := r.applyUsers(ctx, manifest, &state)
 	if err != nil {
 		return err
 	}
+	r.logf("seed manifest %q: applying contacts", manifest.Name)
 	if err := r.applyContacts(ctx, manifest, userIDs); err != nil {
 		return err
 	}
+	r.logf("seed manifest %q: applying campaigns", manifest.Name)
 
 	campaignIDs, participantIDs, err := r.applyCampaigns(ctx, manifest, userIDs, &state)
 	if err != nil {
 		return err
 	}
+	r.logf("seed manifest %q: applying forks", manifest.Name)
 	forkCampaignIDs, err := r.applyForks(ctx, manifest, userIDs, campaignIDs, &state)
 	if err != nil {
 		return err
@@ -152,9 +159,11 @@ func (r *Runner) RunManifest(ctx context.Context, manifest Manifest) error {
 		combinedCampaignIDs[key] = campaignID
 	}
 	_ = participantIDs
+	r.logf("seed manifest %q: applying listings", manifest.Name)
 	if err := r.applyListings(ctx, manifest, combinedCampaignIDs); err != nil {
 		return err
 	}
+	r.logf("seed manifest %q: saving state", manifest.Name)
 
 	return saveState(r.cfg.StatePath, state)
 }
@@ -842,7 +851,10 @@ func (r *Runner) applyListings(ctx context.Context, manifest Manifest, campaignI
 			CampaignId: campaignID,
 		})
 		if err != nil {
-			return fmt.Errorf("get campaign listing for %s: %w", listing.CampaignKey, err)
+			if status.Code(err) != codes.NotFound {
+				return fmt.Errorf("get campaign listing for %s: %w", listing.CampaignKey, err)
+			}
+			existing = nil
 		}
 		if existing != nil && existing.GetListing() != nil && strings.TrimSpace(existing.GetListing().GetCampaignId()) != "" {
 			continue
@@ -861,6 +873,7 @@ func (r *Runner) applyListings(ctx context.Context, manifest Manifest, campaignI
 		if err != nil {
 			return fmt.Errorf("create campaign listing for %s: %w", listing.CampaignKey, err)
 		}
+		continue
 	}
 	return nil
 }

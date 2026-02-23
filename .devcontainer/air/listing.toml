@@ -1,0 +1,15 @@
+root = "."
+tmp_dir = ".tmp/dev/air/listing"
+
+[build]
+cmd = "go build -o .tmp/dev/bin/listing ./cmd/listing"
+bin = ".tmp/dev/bin/listing"
+delay = 300
+include_ext = ["go", "tpl", "tmpl", "html", "sql", "yaml", "yml", "json"]
+exclude_dir = [".git", ".tmp", "api/gen", "data"]
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true
