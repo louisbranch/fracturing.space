@@ -949,6 +949,17 @@ func TestValidateProjectionRegistries_PassesWithCurrentDomains(t *testing.T) {
 	}
 }
 
+func TestValidateProjectionRegistries_PassesWithoutAdapters(t *testing.T) {
+	registries, err := BuildRegistries(fakeModule{})
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	handledTypes := projectionHandledTypesFromRegistry(registries.Events)
+	if err := ValidateProjectionRegistries(registries.Events, registries.Systems, nil, handledTypes); err != nil {
+		t.Fatalf("expected no error without adapters, got: %v", err)
+	}
+}
+
 func TestValidateProjectionRegistries_FailsOnMissingProjectionHandler(t *testing.T) {
 	eventRegistry := event.NewRegistry()
 	if err := eventRegistry.Register(event.Definition{
