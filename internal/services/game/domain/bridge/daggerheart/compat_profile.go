@@ -17,6 +17,10 @@ const (
 	PCArmorScore      = 0
 	PCArmorMax        = 0
 
+	AdversaryDefaultEvasion = PCEvasion
+	AdversaryDefaultMajor   = PCMajorThreshold
+	AdversaryDefaultSevere  = PCSevereThreshold
+
 	NPCLevelDefault    = 1
 	NPCHpMax           = 3
 	NPCStressMax       = 3
