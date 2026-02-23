@@ -51,7 +51,7 @@ jobs:
           FRACTURING_SPACE_ADMIN_ADDR=127.0.0.1:8082 FRACTURING_SPACE_GAME_ADDR=127.0.0.1:8080 FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 ./bin/admin 2>&1 &
           timeout 60 bash -c 'until curl -fsS http://127.0.0.1:8082/ >/dev/null; do sleep 0.5; done'
       - name: Seed demo data
-        run: go run ./cmd/seed -generate -preset=demo -v
+        run: go run ./cmd/seed -manifest=internal/tools/seed/manifests/local-dev.json -v
       - name: Run admin smoke flow
         env:
           BASE_URL: "http://127.0.0.1:8082"

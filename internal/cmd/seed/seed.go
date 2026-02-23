@@ -60,8 +60,6 @@ type seedEnv struct {
 	Timeout         time.Duration `env:"FRACTURING_SPACE_SEED_TIMEOUT" envDefault:"10m"`
 }
 
-var seedLookupHost = net.DefaultResolver.LookupHost
-
 // ParseConfig parses environment and flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var se seedEnv
@@ -122,9 +120,6 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if manifestPath != "" && seedCampaignListings {
 		return Config{}, fmt.Errorf("cannot use -manifest with -seed-campaign-listings")
 	}
-	if err := validateLocalManifestPath(manifestPath); err != nil {
-		return Config{}, err
-	}
 
 	return Config{
 		SeedConfig:           seedCfg,
@@ -142,17 +137,6 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	}, nil
 }
 
-func validateLocalManifestPath(manifestPath string) error {
-	manifestPath = strings.TrimSpace(manifestPath)
-	if manifestPath == "" {
-		return nil
-	}
-	if manifestPath != localManifestPath {
-		return fmt.Errorf("seed manifest mode is restricted to %q in this build", localManifestPath)
-	}
-	return nil
-}
-
 func validateSeedMode(cfg Config) error {
 	if cfg.List {
 		return nil
@@ -160,14 +144,14 @@ func validateSeedMode(cfg Config) error {
 	if strings.TrimSpace(cfg.ManifestPath) == "" {
 		return fmt.Errorf("seed command is restricted to local manifest mode; use -manifest=%q", localManifestPath)
 	}
+	if strings.TrimSpace(cfg.ManifestPath) != localManifestPath {
+		return fmt.Errorf("seed manifest path is restricted to %q in this build", localManifestPath)
+	}
 	return nil
 }
 
 // Run executes the seed command across dynamic generation or fixture replay.
 func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
-	if err := validateLocalManifestPath(cfg.ManifestPath); err != nil {
-		return err
-	}
 	if err := validateSeedMode(cfg); err != nil {
 		return err
 	}
@@ -338,32 +322,11 @@ func defaultSeedStatePathForManifest(manifestPath string) string {
 	return filepath.Join(".tmp", "seed-state", name+".state.json")
 }
 
-func resolveLocalFallbackAddr(addr string) string {
-	addr = strings.TrimSpace(addr)
-	if addr == "" {
-		return addr
-	}
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return addr
-	}
-	if host == "" || port == "" {
-		return addr
-	}
-	if _, err := seedLookupHost(context.Background(), host); err == nil {
-		return addr
-	}
-	if _, _, err := net.SplitHostPort("127.0.0.1:" + port); err != nil {
-		return addr
-	}
-	return "127.0.0.1:" + port
-}
-
 func normalizeSeedAddrs(cfg Config) Config {
-	cfg.SeedConfig.GRPCAddr = resolveLocalFallbackAddr(cfg.SeedConfig.GRPCAddr)
-	cfg.SeedConfig.AuthAddr = resolveLocalFallbackAddr(cfg.SeedConfig.AuthAddr)
-	cfg.ConnectionsAddr = resolveLocalFallbackAddr(cfg.ConnectionsAddr)
-	cfg.ListingAddr = resolveLocalFallbackAddr(cfg.ListingAddr)
+	cfg.SeedConfig.GRPCAddr = seed.ResolveLocalFallbackAddr(cfg.SeedConfig.GRPCAddr)
+	cfg.SeedConfig.AuthAddr = seed.ResolveLocalFallbackAddr(cfg.SeedConfig.AuthAddr)
+	cfg.ConnectionsAddr = seed.ResolveLocalFallbackAddr(cfg.ConnectionsAddr)
+	cfg.ListingAddr = seed.ResolveLocalFallbackAddr(cfg.ListingAddr)
 	return cfg
 }
 

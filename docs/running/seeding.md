@@ -81,6 +81,7 @@ Use the declarative local-dev manifest by default. This is the recommended path 
 
 ```bash
 make seed        # Seed local-dev dataset (idempotent)
+make seed-fresh  # Reset DB + reseed local-dev dataset
 ```
 
 Compose:
@@ -103,7 +104,6 @@ $COMPOSE --profile tools run --rm seed
 | `-v` | Verbose output | false |
 
 For any non-local environments, avoid running `seed` against production services. The command is intentionally restricted to the local-dev manifest in this workflow.
-
 ## Manifest seeding entity coverage
 
 The declarative seeder supports:

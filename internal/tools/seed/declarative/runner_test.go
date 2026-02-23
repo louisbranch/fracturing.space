@@ -387,9 +387,9 @@ func (f *fakeListingClient) ensure() {
 	}
 }
 
-func (f *fakeListingClient) CreateCampaignListing(_ context.Context, in *listingv1.CreateCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.CreateCampaignListingResponse, error) {
+func (f *fakeListingClient) CreateCampaignListing(ctx context.Context, in *listingv1.CreateCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.CreateCampaignListingResponse, error) {
 	if f.createCampaignListing != nil {
-		return f.createCampaignListing(context.Background(), in)
+		return f.createCampaignListing(ctx, in)
 	}
 	f.ensure()
 	if listing, ok := f.listingByID[in.GetCampaignId()]; ok {
@@ -412,9 +412,9 @@ func (f *fakeListingClient) CreateCampaignListing(_ context.Context, in *listing
 	return &listingv1.CreateCampaignListingResponse{Listing: listing}, nil
 }
 
-func (f *fakeListingClient) GetCampaignListing(_ context.Context, in *listingv1.GetCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.GetCampaignListingResponse, error) {
+func (f *fakeListingClient) GetCampaignListing(ctx context.Context, in *listingv1.GetCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.GetCampaignListingResponse, error) {
 	if f.getCampaignListing != nil {
-		return f.getCampaignListing(context.Background(), in)
+		return f.getCampaignListing(ctx, in)
 	}
 	f.ensure()
 	listing, ok := f.listingByID[in.GetCampaignId()]
