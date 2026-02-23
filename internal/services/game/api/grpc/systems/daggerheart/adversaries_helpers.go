@@ -33,9 +33,9 @@ type adversaryStats struct {
 }
 
 const (
-	defaultAdversaryEvasion = 10
-	defaultAdversaryMajor   = 8
-	defaultAdversarySevere  = 12
+	defaultAdversaryEvasion = bridgeDaggerheart.AdversaryDefaultEvasion
+	defaultAdversaryMajor   = bridgeDaggerheart.AdversaryDefaultMajor
+	defaultAdversarySevere  = bridgeDaggerheart.AdversaryDefaultSevere
 )
 
 func normalizeAdversaryStats(input adversaryStatsInput) (adversaryStats, error) {
