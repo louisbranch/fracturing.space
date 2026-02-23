@@ -100,19 +100,22 @@ func TestParseConfigManifestModeDefaultsStatePath(t *testing.T) {
 	}
 }
 
-func TestParseConfigManifestModeRejectsNonLocalPath(t *testing.T) {
+func TestParseConfigManifestModeAcceptsNonLocalPathForRuntimeValidation(t *testing.T) {
 	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
-	_, err := ParseConfig(fs, []string{"-manifest", "internal/tools/seed/manifests/other.json"})
-	if err == nil {
-		t.Fatal("expected parse error for non-local manifest")
+	cfg, err := ParseConfig(fs, []string{"-manifest", "internal/tools/seed/manifests/other.json"})
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if cfg.ManifestPath != "internal/tools/seed/manifests/other.json" {
+		t.Fatalf("manifest path = %q", cfg.ManifestPath)
 	}
 }
 
 func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 	original := runDeclarativeManifestFn
-	originalLookupHost := seedLookupHost
+	originalLookupHost := seedtool.LookupHost
 	t.Cleanup(func() { runDeclarativeManifestFn = original })
-	t.Cleanup(func() { seedLookupHost = originalLookupHost })
+	t.Cleanup(func() { seedtool.LookupHost = originalLookupHost })
 
 	called := false
 	runDeclarativeManifestFn = func(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
@@ -137,7 +140,7 @@ func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 		}
 		return nil
 	}
-	seedLookupHost = func(_ context.Context, host string) ([]string, error) {
+	seedtool.LookupHost = func(_ context.Context, host string) ([]string, error) {
 		if host == "" {
 			return nil, fmt.Errorf("host required")
 		}

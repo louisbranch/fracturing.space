@@ -4,38 +4,40 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	seed "github.com/louisbranch/fracturing.space/internal/tools/seed"
 )
 
 func TestResolveLocalFallbackAddr_PreservesResolvedHost(t *testing.T) {
 	t.Parallel()
 
-	originalLookup := seedLookupHost
+	originalLookup := seed.LookupHost
 	t.Cleanup(func() {
-		seedLookupHost = originalLookup
+		seed.LookupHost = originalLookup
 	})
-	seedLookupHost = func(context.Context, string) ([]string, error) {
+	seed.LookupHost = func(context.Context, string) ([]string, error) {
 		return []string{"10.0.0.1"}, nil
 	}
 
-	got := resolveLocalFallbackAddr("game:8082")
+	got := seed.ResolveLocalFallbackAddr("game:8082")
 	if got != "game:8082" {
-		t.Fatalf("resolveLocalFallbackAddr() = %q, want %q", got, "game:8082")
+		t.Fatalf("seed.ResolveLocalFallbackAddr() = %q, want %q", got, "game:8082")
 	}
 }
 
 func TestResolveLocalFallbackAddr_FallsBackToLoopback(t *testing.T) {
 	t.Parallel()
 
-	originalLookup := seedLookupHost
+	originalLookup := seed.LookupHost
 	t.Cleanup(func() {
-		seedLookupHost = originalLookup
+		seed.LookupHost = originalLookup
 	})
-	seedLookupHost = func(context.Context, string) ([]string, error) {
+	seed.LookupHost = func(context.Context, string) ([]string, error) {
 		return nil, errors.New("lookup failed")
 	}
 
-	got := resolveLocalFallbackAddr("game:8082")
+	got := seed.ResolveLocalFallbackAddr("game:8082")
 	if got != "127.0.0.1:8082" {
-		t.Fatalf("resolveLocalFallbackAddr() = %q, want %q", got, "127.0.0.1:8082")
+		t.Fatalf("seed.ResolveLocalFallbackAddr() = %q, want %q", got, "127.0.0.1:8082")
 	}
 }

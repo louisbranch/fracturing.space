@@ -3,13 +3,13 @@ package declarative
 import (
 	"context"
 	"fmt"
-	"net"
 	"strings"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
+	seed "github.com/louisbranch/fracturing.space/internal/tools/seed"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -28,30 +28,28 @@ type GRPCRunner struct {
 	conns  []*grpc.ClientConn
 }
 
-var seedLookupHost = net.DefaultResolver.LookupHost
-
 // NewGRPCRunner constructs a declarative runner backed by gRPC clients.
 func NewGRPCRunner(cfg Config, dial DialConfig) (*GRPCRunner, error) {
 	gameAddr := strings.TrimSpace(dial.GameAddr)
 	if gameAddr == "" {
 		return nil, fmt.Errorf("game address is required")
 	}
-	gameAddr = resolveLocalFallbackAddr(gameAddr)
+	gameAddr = seed.ResolveLocalFallbackAddr(gameAddr)
 	authAddr := strings.TrimSpace(dial.AuthAddr)
 	if authAddr == "" {
 		return nil, fmt.Errorf("auth address is required")
 	}
-	authAddr = resolveLocalFallbackAddr(authAddr)
+	authAddr = seed.ResolveLocalFallbackAddr(authAddr)
 	connectionsAddr := strings.TrimSpace(dial.ConnectionsAddr)
 	if connectionsAddr == "" {
 		return nil, fmt.Errorf("connections address is required")
 	}
-	connectionsAddr = resolveLocalFallbackAddr(connectionsAddr)
+	connectionsAddr = seed.ResolveLocalFallbackAddr(connectionsAddr)
 	listingAddr := strings.TrimSpace(dial.ListingAddr)
 	if listingAddr == "" {
 		return nil, fmt.Errorf("listing address is required")
 	}
-	listingAddr = resolveLocalFallbackAddr(listingAddr)
+	listingAddr = seed.ResolveLocalFallbackAddr(listingAddr)
 
 	gameConn, err := grpc.NewClient(
 		gameAddr,
@@ -130,27 +128,4 @@ func (r *GRPCRunner) Close() error {
 		}
 	}
 	return firstErr
-}
-
-func resolveLocalFallbackAddr(addr string) string {
-	addr = strings.TrimSpace(addr)
-	if addr == "" {
-		return addr
-	}
-	// If DNS for the gRPC host fails, fall back to localhost in local
-	// developer environments where service names are not resolvable.
-	host, port, err := net.SplitHostPort(addr)
-	if err != nil {
-		return addr
-	}
-	if host == "" || port == "" {
-		return addr
-	}
-	if _, err := seedLookupHost(context.Background(), host); err == nil {
-		return addr
-	}
-	if _, _, err := net.SplitHostPort("127.0.0.1:" + port); err != nil {
-		return addr
-	}
-	return "127.0.0.1:" + port
 }

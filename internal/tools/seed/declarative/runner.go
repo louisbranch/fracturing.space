@@ -873,7 +873,6 @@ func (r *Runner) applyListings(ctx context.Context, manifest Manifest, campaignI
 		if err != nil {
 			return fmt.Errorf("create campaign listing for %s: %w", listing.CampaignKey, err)
 		}
-		continue
 	}
 	return nil
 }
