@@ -27,8 +27,10 @@ func ValidateProjectionRegistries(
 	if err := ValidateNoStaleProjectionHandlers(events, projectionHandledTypes); err != nil {
 		return fmt.Errorf("validate stale projection handlers: %w", err)
 	}
-	if err := ValidateAdapterEventCoverage(modules, adapters, events); err != nil {
-		return fmt.Errorf("validate adapter event coverage: %w", err)
+	if adapters != nil {
+		if err := ValidateAdapterEventCoverage(modules, adapters, events); err != nil {
+			return fmt.Errorf("validate adapter event coverage: %w", err)
+		}
 	}
 	// Collect core domain projection declarations for alignment check.
 	var coreProjectionDeclared []event.Type

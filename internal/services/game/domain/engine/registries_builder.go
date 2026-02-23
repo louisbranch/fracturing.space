@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -109,7 +108,7 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 	if err := ValidateProjectionRegistries(
 		eventRegistry,
 		systemRegistry,
-		bridge.NewAdapterRegistry(),
+		nil,
 		projectionHandled,
 	); err != nil {
 		return Registries{}, err
