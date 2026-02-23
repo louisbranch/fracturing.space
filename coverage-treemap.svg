@@ -199,7 +199,7 @@
 	text-anchor="start"
 	transform="translate(44.000000,78.800000) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">game 81.4%</text>
+	data-math="N">game 81.5%</text>
 		
 </g>
 
@@ -257,7 +257,7 @@
 	text-anchor="start"
 	transform="translate(455.462929,78.800000) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">web 75.6%</text>
+	data-math="N">web 75.5%</text>
 		
 </g>
 
@@ -801,7 +801,7 @@
 
 
 <g>
-	<rect x="256.227906" y="328.522609" width="175.235023" height="175.070418" style="fill: rgb(68, 170, 89);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="256.227906" y="328.522609" width="175.235023" height="175.070418" style="fill: rgb(67, 170, 89);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
@@ -1217,14 +1217,14 @@
 
 
 <g>
-	<rect x="519.213643" y="84.800000" width="39.073249" height="44.314832" style="fill: rgb(52, 162, 85);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="519.213643" y="84.800000" width="39.073249" height="44.314832" style="fill: rgb(62, 167, 87);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(527.213643,100.400000) scale(0.150216)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">session.go 87.3%</text>
+	data-math="N">session.go 86.0%</text>
 		
 </g>
 
@@ -1993,7 +1993,7 @@
 	text-anchor="start"
 	transform="translate(272.227906,365.722609) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">sqlite 84.7%</text>
+	data-math="N">sqlite 84.8%</text>
 		
 </g>
 
@@ -3021,14 +3021,14 @@
 
 
 <g>
-	<rect x="272.227906" y="420.180835" width="38.352737" height="35.450384" style="fill: rgb(124, 199, 101);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="272.227906" y="420.180835" width="38.352737" height="35.450384" style="fill: rgb(122, 198, 101);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(280.227906,435.780835) scale(0.072763)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">store_projection_outbox.go 76.6%</text>
+	data-math="N">store_projection_outbox.go 76.9%</text>
 		
 </g>
 
