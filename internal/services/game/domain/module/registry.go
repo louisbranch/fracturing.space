@@ -45,10 +45,10 @@ type Folder interface {
 	FoldHandledTypes() []event.Type
 }
 
-// CommandTyper is an optional interface for deciders that declare which command
-// types their Decide method handles. When a decider implements CommandTyper,
-// ValidateDeciderCommandCoverage can verify that every registered system command
-// has a corresponding decider case at startup.
+// CommandTyper must be implemented by deciders whose modules register system
+// commands. ValidateDeciderCommandCoverage verifies at startup that every
+// registered system command has a corresponding decider case, failing loudly
+// when coverage is incomplete.
 type CommandTyper interface {
 	DeciderHandledCommands() []command.Type
 }

@@ -105,7 +105,10 @@ func (r *AdapterRegistry) Adapters() []Adapter {
 }
 
 // Get returns the adapter for the system + version, or nil when not found.
-// Use GetRequired when the caller cannot proceed without an adapter.
+//
+// Deprecated: prefer GetRequired on projection/apply paths where a missing
+// adapter indicates a configuration bug. Get returns nil silently, which can
+// lead to nil-pointer panics if callers forget to check.
 func (r *AdapterRegistry) Get(id string, version string) Adapter {
 	if r == nil {
 		return nil

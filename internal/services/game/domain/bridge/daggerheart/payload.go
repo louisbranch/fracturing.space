@@ -14,8 +14,12 @@ type GMFearChangedPayload struct {
 }
 
 // CharacterStatePatchPayload captures the payload for sys.daggerheart.character_state.patch commands.
+// Source is an optional discriminator indicating what triggered the patch
+// (e.g. "hope.spend", "stress.spend"), enabling journal queries to distinguish
+// spend events from generic GM adjustments without introducing separate event types.
 type CharacterStatePatchPayload struct {
 	CharacterID     string  `json:"character_id"`
+	Source          string  `json:"source,omitempty"`
 	HPBefore        *int    `json:"hp_before,omitempty"`
 	HPAfter         *int    `json:"hp_after,omitempty"`
 	HopeBefore      *int    `json:"hope_before,omitempty"`

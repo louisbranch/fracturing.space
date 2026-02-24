@@ -105,6 +105,7 @@ func decideHopeSpend(snapshotState SnapshotState, hasSnapshot bool, cmd command.
 		func(_ SnapshotState, _ bool, p HopeSpendPayload) CharacterStatePatchedPayload {
 			return CharacterStatePatchedPayload{
 				CharacterID: p.CharacterID,
+				Source:      "hope.spend",
 				HopeBefore:  &p.Before,
 				HopeAfter:   &p.After,
 			}
@@ -123,6 +124,7 @@ func decideStressSpend(snapshotState SnapshotState, hasSnapshot bool, cmd comman
 		func(_ SnapshotState, _ bool, p StressSpendPayload) CharacterStatePatchedPayload {
 			return CharacterStatePatchedPayload{
 				CharacterID:  p.CharacterID,
+				Source:       "stress.spend",
 				StressBefore: &p.Before,
 				StressAfter:  &p.After,
 			}

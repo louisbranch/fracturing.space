@@ -504,6 +504,64 @@ func TestDecideHopeSpend_EmitsCharacterStatePatched(t *testing.T) {
 	}
 }
 
+func TestDecideHopeSpend_PropagatesSourceToEvent(t *testing.T) {
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.hope.spend"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		PayloadJSON:   []byte(`{"character_id":"char-1","amount":1,"before":2,"after":1,"source":"experience"}`),
+	}
+
+	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload struct {
+		Source string `json:"source"`
+	}
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.Source != "hope.spend" {
+		t.Fatalf("source = %q, want %q", payload.Source, "hope.spend")
+	}
+}
+
+func TestDecideStressSpend_PropagatesSourceToEvent(t *testing.T) {
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.stress.spend"),
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		PayloadJSON:   []byte(`{"character_id":"char-1","amount":1,"before":3,"after":2,"source":"loadout_swap"}`),
+	}
+
+	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload struct {
+		Source string `json:"source"`
+	}
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.Source != "stress.spend" {
+		t.Fatalf("source = %q, want %q", payload.Source, "stress.spend")
+	}
+}
+
 func TestDecideStressSpend_EmitsCharacterStatePatched(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
