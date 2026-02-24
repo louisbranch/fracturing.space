@@ -214,12 +214,12 @@ func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1
 		return nil, handleDomainError(err)
 	}
 
-	dhProfile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	dhProfile, err := s.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return nil, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
 	}
 
-	dhState, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	dhState, err := s.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return nil, status.Errorf(codes.Internal, "get daggerheart state: %v", err)
 	}

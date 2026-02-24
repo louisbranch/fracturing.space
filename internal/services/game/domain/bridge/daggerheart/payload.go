@@ -195,6 +195,13 @@ type DamageApplyPayload struct {
 // DamageAppliedPayload captures the payload for sys.daggerheart.damage_applied events.
 type DamageAppliedPayload = DamageApplyPayload
 
+// MultiTargetDamageApplyPayload captures the payload for
+// sys.daggerheart.multi_target_damage.apply commands. Each target entry
+// produces one damage_applied event, all batch-appended atomically.
+type MultiTargetDamageApplyPayload struct {
+	Targets []DamageApplyPayload `json:"targets"`
+}
+
 // AdversaryDamageApplyPayload captures the payload for sys.daggerheart.adversary_damage.apply commands.
 type AdversaryDamageApplyPayload struct {
 	AdversaryID        string   `json:"adversary_id"`

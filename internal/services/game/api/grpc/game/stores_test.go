@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -24,7 +25,7 @@ func TestStoresValidate(t *testing.T) {
 		msg := err.Error()
 		for _, name := range []string{
 			"Campaign", "Participant", "ClaimIndex", "Invite",
-			"Character", "Daggerheart", "Session", "SessionGate",
+			"Character", "SystemStores.Daggerheart", "Session", "SessionGate",
 			"SessionSpotlight", "Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
 		} {
@@ -55,7 +56,7 @@ func validStores() Stores {
 		ClaimIndex:         stubClaimIndex{},
 		Invite:             newFakeInviteStore(),
 		Character:          newFakeCharacterStore(),
-		Daggerheart:        &fakeDaggerheartStore{},
+		SystemStores:       systemmanifest.ProjectionStores{Daggerheart: &fakeDaggerheartStore{}},
 		Session:            newFakeSessionStore(),
 		SessionGate:        &fakeSessionGateStore{},
 		SessionSpotlight:   &fakeSessionSpotlightStore{},

@@ -56,4 +56,5 @@ const (
 	DaggerheartAdversaryCreate              command.Type = "sys.daggerheart.adversary.create"
 	DaggerheartAdversaryUpdate              command.Type = "sys.daggerheart.adversary.update"
 	DaggerheartAdversaryDelete              command.Type = "sys.daggerheart.adversary.delete"
+	DaggerheartMultiTargetDamageApply       command.Type = "sys.daggerheart.multi_target_damage.apply"
 )

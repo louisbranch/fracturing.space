@@ -117,6 +117,73 @@ func DecideFuncTransform[S, PIn, POut any](
 	return command.Accept(evt)
 }
 
+// EventSpec describes a single event to emit from a DecideFuncMulti expand
+// callback. Each spec produces one event in the returned Decision.
+type EventSpec struct {
+	Type       event.Type
+	EntityType string
+	EntityID   string
+	Payload    any
+}
+
+// DecideFuncMulti extends DecideFuncWithState for commands that emit multiple
+// events in a single decision. The expand callback receives the validated
+// payload and returns a slice of EventSpec, each of which is marshaled and
+// emitted as a separate event. All events share the command's envelope fields.
+//
+// Use this for batch operations (e.g. multi-target damage) where the decider
+// produces N events atomically from a single command.
+func DecideFuncMulti[S, P any](
+	cmd command.Command,
+	state S,
+	hasState bool,
+	validate func(S, bool, *P, func() time.Time) *command.Rejection,
+	expand func(S, bool, P, func() time.Time) ([]EventSpec, error),
+	now func() time.Time,
+) command.Decision {
+	var payload P
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	if now == nil {
+		now = time.Now
+	}
+	if validate != nil {
+		if rejection := validate(state, hasState, &payload, now); rejection != nil {
+			return command.Reject(*rejection)
+		}
+	}
+	specs, err := expand(state, hasState, payload, now)
+	if err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "EXPAND_FAILED",
+			Message: fmt.Sprintf("expand %s: %v", cmd.Type, err),
+		})
+	}
+	if len(specs) == 0 {
+		return command.Reject(command.Rejection{
+			Code:    "NO_EVENTS",
+			Message: fmt.Sprintf("expand %s produced no events", cmd.Type),
+		})
+	}
+	ts := now().UTC()
+	events := make([]event.Event, 0, len(specs))
+	for _, spec := range specs {
+		payloadJSON, err := json.Marshal(spec.Payload)
+		if err != nil {
+			return command.Reject(command.Rejection{
+				Code:    "PAYLOAD_ENCODE_FAILED",
+				Message: fmt.Sprintf("encode %s event payload: %v", spec.Type, err),
+			})
+		}
+		events = append(events, command.NewEvent(cmd, spec.Type, spec.EntityType, spec.EntityID, payloadJSON, ts))
+	}
+	return command.Accept(events...)
+}
+
 // DecideFuncWithState extends DecideFunc with typed snapshot state for
 // pre-validation. The caller provides the already-extracted state and whether
 // the extraction succeeded (hasState). The validate callback can use the state

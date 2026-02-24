@@ -191,6 +191,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 			sessionID:       sessionID,
 			requestID:       rollRequestID,
 			invocationID:    invocationID,
+			correlationID:   rollRequestID,
 			entityType:      "campaign",
 			entityID:        campaignID,
 			payloadJSON:     payloadJSON,
@@ -259,6 +260,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 					sessionID:       sessionID,
 					requestID:       rollRequestID,
 					invocationID:    invocationID,
+					correlationID:   rollRequestID,
 					entityType:      "character",
 					entityID:        target,
 					payloadJSON:     payloadJSON,
@@ -269,18 +271,18 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 				}
 			}
 			rollSeq := in.GetRollSeq()
-			err = a.service.applyStressVulnerableCondition(
-				ctx,
-				campaignID,
-				sessionID,
-				target,
-				state.Conditions,
-				stressBefore,
-				stressAfter,
-				profile.StressMax,
-				&rollSeq,
-				rollRequestID,
-			)
+			err = a.service.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
+				campaignID:    campaignID,
+				sessionID:     sessionID,
+				characterID:   target,
+				conditions:    state.Conditions,
+				stressBefore:  stressBefore,
+				stressAfter:   stressAfter,
+				stressMax:     profile.StressMax,
+				rollSeq:       &rollSeq,
+				requestID:     rollRequestID,
+				correlationID: rollRequestID,
+			})
 			if err != nil {
 				return nil, err
 			}
@@ -321,14 +323,15 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 	}
 
 	cmd := commandbuild.CoreSystem(commandbuild.CoreSystemInput{
-		CampaignID:   campaignID,
-		Type:         commandTypeActionOutcomeApply,
-		SessionID:    sessionID,
-		RequestID:    rollRequestID,
-		InvocationID: invocationID,
-		EntityType:   "outcome",
-		EntityID:     rollRequestID,
-		PayloadJSON:  payloadJSON,
+		CampaignID:    campaignID,
+		Type:          commandTypeActionOutcomeApply,
+		SessionID:     sessionID,
+		RequestID:     rollRequestID,
+		InvocationID:  invocationID,
+		CorrelationID: rollRequestID,
+		EntityType:    "outcome",
+		EntityID:      rollRequestID,
+		PayloadJSON:   payloadJSON,
 	})
 	_, err = a.service.executeAndApplyDomainCommand(ctx, cmd, a.service.stores.Applier(), domainCommandApplyOptions{
 		requireEvents:   true,

@@ -8,6 +8,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -88,12 +89,12 @@ func TestCreateCharacter_InheritsActorParticipantAvatarWhenAvatarNotProvided(t *
 
 	svc := &CharacterService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Character:   characterStore,
-			Daggerheart: dhStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+			Event:        eventStore,
+			Domain:       domain,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),

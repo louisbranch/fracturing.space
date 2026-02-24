@@ -104,14 +104,20 @@ func (r *AdapterRegistry) Adapters() []Adapter {
 	return adapters
 }
 
-// Get returns the adapter for the system + version, or nil when not found.
-//
-// Deprecated: prefer GetRequired on projection/apply paths where a missing
-// adapter indicates a configuration bug. Get returns nil silently, which can
-// lead to nil-pointer panics if callers forget to check.
-func (r *AdapterRegistry) Get(id string, version string) Adapter {
+// Has reports whether an adapter is registered for the system + version.
+// An empty version resolves to the system's default version.
+func (r *AdapterRegistry) Has(id string, version string) bool {
+	_, ok := r.GetOptional(id, version)
+	return ok
+}
+
+// GetOptional returns the adapter for the system + version and a boolean
+// indicating whether the adapter was found. An empty version resolves to the
+// system's default version. Use this on paths where a missing adapter is
+// expected and handled gracefully (e.g., profile delegation for unknown systems).
+func (r *AdapterRegistry) GetOptional(id string, version string) (Adapter, bool) {
 	if r == nil {
-		return nil
+		return nil, false
 	}
 	resolved := strings.TrimSpace(version)
 	r.mu.RLock()
@@ -120,9 +126,10 @@ func (r *AdapterRegistry) Get(id string, version string) Adapter {
 		resolved = r.defaults[id]
 	}
 	if resolved == "" {
-		return nil
+		return nil, false
 	}
-	return r.adapters[systemKey{ID: id, Version: resolved}]
+	adapter, ok := r.adapters[systemKey{ID: id, Version: resolved}]
+	return adapter, ok
 }
 
 // GetRequired returns the adapter for the system + version, or a typed error
@@ -132,8 +139,8 @@ func (r *AdapterRegistry) GetRequired(id string, version string) (Adapter, error
 	if r == nil {
 		return nil, ErrAdapterRegistryNil
 	}
-	adapter := r.Get(id, version)
-	if adapter == nil {
+	adapter, ok := r.GetOptional(id, version)
+	if !ok {
 		return nil, fmt.Errorf("%w: system %s version %q", ErrAdapterNotFound, id, version)
 	}
 	return adapter, nil

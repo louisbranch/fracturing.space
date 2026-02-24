@@ -7,6 +7,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -1130,7 +1131,7 @@ func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 func TestStoresApplier_ApplyCharacterProfileUpdated(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Daggerheart: newFakeDaggerheartStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
 	}
 	applier := stores.Applier()
 
@@ -1175,7 +1176,7 @@ func TestStoresApplier_ApplyCharacterProfileUpdated(t *testing.T) {
 		t.Fatalf("apply character.profile_updated: %v", err)
 	}
 
-	stored, err := stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, "camp-1", "char-1")
+	stored, err := stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, "camp-1", "char-1")
 	if err != nil {
 		t.Fatalf("get daggerheart profile: %v", err)
 	}

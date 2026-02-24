@@ -16,7 +16,5 @@ func adapterRegistryForStores(stores Stores) *bridge.AdapterRegistry {
 // TryAdapterRegistryForStores builds the adapter registry without panicking.
 // Use this at startup or tests that validate registration health.
 func TryAdapterRegistryForStores(stores Stores) (*bridge.AdapterRegistry, error) {
-	return systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{
-		Daggerheart: stores.Daggerheart,
-	})
+	return systemmanifest.AdapterRegistry(stores.SystemStores)
 }

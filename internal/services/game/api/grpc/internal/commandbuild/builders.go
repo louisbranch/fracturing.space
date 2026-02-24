@@ -7,58 +7,62 @@ import (
 
 // CoreInput describes a command envelope for core domain commands.
 type CoreInput struct {
-	CampaignID   string
-	Type         command.Type
-	ActorType    command.ActorType
-	ActorID      string
-	SessionID    string
-	RequestID    string
-	InvocationID string
-	EntityType   string
-	EntityID     string
-	PayloadJSON  []byte
+	CampaignID    string
+	Type          command.Type
+	ActorType     command.ActorType
+	ActorID       string
+	SessionID     string
+	RequestID     string
+	InvocationID  string
+	CorrelationID string
+	EntityType    string
+	EntityID      string
+	PayloadJSON   []byte
 }
 
 // Core builds a core-domain command envelope.
 func Core(in CoreInput) command.Command {
 	return command.Command{
-		CampaignID:   in.CampaignID,
-		Type:         in.Type,
-		ActorType:    in.ActorType,
-		ActorID:      in.ActorID,
-		SessionID:    in.SessionID,
-		RequestID:    in.RequestID,
-		InvocationID: in.InvocationID,
-		EntityType:   in.EntityType,
-		EntityID:     in.EntityID,
-		PayloadJSON:  in.PayloadJSON,
+		CampaignID:    in.CampaignID,
+		Type:          in.Type,
+		ActorType:     in.ActorType,
+		ActorID:       in.ActorID,
+		SessionID:     in.SessionID,
+		RequestID:     in.RequestID,
+		InvocationID:  in.InvocationID,
+		CorrelationID: in.CorrelationID,
+		EntityType:    in.EntityType,
+		EntityID:      in.EntityID,
+		PayloadJSON:   in.PayloadJSON,
 	}
 }
 
 // CoreSystemInput describes a system-actor command envelope for core domains.
 type CoreSystemInput struct {
-	CampaignID   string
-	Type         command.Type
-	SessionID    string
-	RequestID    string
-	InvocationID string
-	EntityType   string
-	EntityID     string
-	PayloadJSON  []byte
+	CampaignID    string
+	Type          command.Type
+	SessionID     string
+	RequestID     string
+	InvocationID  string
+	CorrelationID string
+	EntityType    string
+	EntityID      string
+	PayloadJSON   []byte
 }
 
 // CoreSystem builds a system-actor core-domain command envelope.
 func CoreSystem(in CoreSystemInput) command.Command {
 	return Core(CoreInput{
-		CampaignID:   in.CampaignID,
-		Type:         in.Type,
-		ActorType:    command.ActorTypeSystem,
-		SessionID:    in.SessionID,
-		RequestID:    in.RequestID,
-		InvocationID: in.InvocationID,
-		EntityType:   in.EntityType,
-		EntityID:     in.EntityID,
-		PayloadJSON:  in.PayloadJSON,
+		CampaignID:    in.CampaignID,
+		Type:          in.Type,
+		ActorType:     command.ActorTypeSystem,
+		SessionID:     in.SessionID,
+		RequestID:     in.RequestID,
+		InvocationID:  in.InvocationID,
+		CorrelationID: in.CorrelationID,
+		EntityType:    in.EntityType,
+		EntityID:      in.EntityID,
+		PayloadJSON:   in.PayloadJSON,
 	})
 }
 
@@ -78,14 +82,15 @@ func DaggerheartSystem(in DaggerheartSystemInput) command.Command {
 // DaggerheartSystemCommandInput describes a Daggerheart command emitted by the
 // system actor.
 type DaggerheartSystemCommandInput struct {
-	CampaignID   string
-	Type         command.Type
-	SessionID    string
-	RequestID    string
-	InvocationID string
-	EntityType   string
-	EntityID     string
-	PayloadJSON  []byte
+	CampaignID    string
+	Type          command.Type
+	SessionID     string
+	RequestID     string
+	InvocationID  string
+	CorrelationID string
+	EntityType    string
+	EntityID      string
+	PayloadJSON   []byte
 }
 
 // DaggerheartSystemCommand builds a Daggerheart system-domain command envelope
@@ -93,15 +98,16 @@ type DaggerheartSystemCommandInput struct {
 func DaggerheartSystemCommand(in DaggerheartSystemCommandInput) command.Command {
 	return DaggerheartSystem(DaggerheartSystemInput{
 		CoreInput: CoreInput{
-			CampaignID:   in.CampaignID,
-			Type:         in.Type,
-			ActorType:    command.ActorTypeSystem,
-			SessionID:    in.SessionID,
-			RequestID:    in.RequestID,
-			InvocationID: in.InvocationID,
-			EntityType:   in.EntityType,
-			EntityID:     in.EntityID,
-			PayloadJSON:  in.PayloadJSON,
+			CampaignID:    in.CampaignID,
+			Type:          in.Type,
+			ActorType:     command.ActorTypeSystem,
+			SessionID:     in.SessionID,
+			RequestID:     in.RequestID,
+			InvocationID:  in.InvocationID,
+			CorrelationID: in.CorrelationID,
+			EntityType:    in.EntityType,
+			EntityID:      in.EntityID,
+			PayloadJSON:   in.PayloadJSON,
 		},
 	})
 }

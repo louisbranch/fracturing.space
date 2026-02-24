@@ -1654,3 +1654,107 @@ func TestDecideAdversaryDelete_EmitsAdversaryDeleted(t *testing.T) {
 		t.Fatalf("reason = %s, want %s", payload.Reason, "removed")
 	}
 }
+
+func TestDecideMultiTargetDamageApply_EmitsMultipleDamageApplied(t *testing.T) {
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          commandTypeMultiTargetDamageApply,
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON: []byte(`{"targets":[
+			{"character_id":"char-1","hp_before":10,"hp_after":7,"damage_type":"physical","marks":1},
+			{"character_id":"char-2","hp_before":8,"hp_after":5,"damage_type":"physical","marks":1},
+			{"character_id":"char-3","hp_before":6,"hp_after":3,"damage_type":"physical","marks":1}
+		]}`),
+	}
+
+	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d: %v", len(decision.Rejections), decision.Rejections)
+	}
+	if len(decision.Events) != 3 {
+		t.Fatalf("expected 3 events, got %d", len(decision.Events))
+	}
+
+	targets := []string{"char-1", "char-2", "char-3"}
+	for i, target := range targets {
+		evt := decision.Events[i]
+		if evt.Type != EventTypeDamageApplied {
+			t.Errorf("event[%d].Type = %s, want %s", i, evt.Type, EventTypeDamageApplied)
+		}
+		if evt.EntityType != "character" {
+			t.Errorf("event[%d].EntityType = %s, want character", i, evt.EntityType)
+		}
+		if evt.EntityID != target {
+			t.Errorf("event[%d].EntityID = %s, want %s", i, evt.EntityID, target)
+		}
+
+		var payload struct {
+			CharacterID string `json:"character_id"`
+			DamageType  string `json:"damage_type"`
+		}
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			t.Fatalf("event[%d] unmarshal: %v", i, err)
+		}
+		if payload.CharacterID != target {
+			t.Errorf("event[%d].CharacterID = %s, want %s", i, payload.CharacterID, target)
+		}
+	}
+}
+
+func TestDecideMultiTargetDamageApply_RejectsEmptyTargets(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          commandTypeMultiTargetDamageApply,
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   []byte(`{"targets":[]}`),
+	}
+
+	decision := Decider{}.Decide(nil, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "MULTI_TARGET_NO_TARGETS" {
+		t.Fatalf("rejection code = %s, want MULTI_TARGET_NO_TARGETS", decision.Rejections[0].Code)
+	}
+}
+
+func TestDecideMultiTargetDamageApply_BeforeMismatchRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:    "camp-1",
+		Type:          commandTypeMultiTargetDamageApply,
+		ActorType:     command.ActorTypeSystem,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON: []byte(`{"targets":[
+			{"character_id":"char-1","hp_before":10,"hp_after":7,"damage_type":"physical","marks":1},
+			{"character_id":"char-2","hp_before":8,"hp_after":5,"damage_type":"physical","marks":1}
+		]}`),
+	}
+
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		CharacterStates: map[string]CharacterState{
+			"char-1": {CharacterID: "char-1", HP: 10, Armor: 0},
+			"char-2": {CharacterID: "char-2", HP: 999, Armor: 0}, // mismatch
+		},
+	}
+
+	decision := Decider{}.Decide(state, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeDamageBeforeMismatch {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeDamageBeforeMismatch)
+	}
+}

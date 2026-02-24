@@ -74,6 +74,7 @@ type daggerheartSystemCommandInput struct {
 	sessionID       string
 	requestID       string
 	invocationID    string
+	correlationID   string
 	entityType      string
 	entityID        string
 	payloadJSON     []byte
@@ -84,14 +85,15 @@ type daggerheartSystemCommandInput struct {
 func (s *DaggerheartService) executeAndApplyDaggerheartSystemCommand(ctx context.Context, in daggerheartSystemCommandInput) error {
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	cmd := commandbuild.DaggerheartSystemCommand(commandbuild.DaggerheartSystemCommandInput{
-		CampaignID:   in.campaignID,
-		Type:         in.commandType,
-		SessionID:    in.sessionID,
-		RequestID:    in.requestID,
-		InvocationID: in.invocationID,
-		EntityType:   in.entityType,
-		EntityID:     in.entityID,
-		PayloadJSON:  in.payloadJSON,
+		CampaignID:    in.campaignID,
+		Type:          in.commandType,
+		SessionID:     in.sessionID,
+		RequestID:     in.requestID,
+		InvocationID:  in.invocationID,
+		CorrelationID: in.correlationID,
+		EntityType:    in.entityType,
+		EntityID:      in.entityID,
+		PayloadJSON:   in.payloadJSON,
 	})
 	_, err := s.executeAndApplyDomainCommand(ctx, cmd, adapter, domainCommandApplyOptions{
 		requireEvents:   true,

@@ -26,6 +26,7 @@ const (
 	commandTypeAdversaryCreate              command.Type = commandids.DaggerheartAdversaryCreate
 	commandTypeAdversaryUpdate              command.Type = commandids.DaggerheartAdversaryUpdate
 	commandTypeAdversaryDelete              command.Type = commandids.DaggerheartAdversaryDelete
+	commandTypeMultiTargetDamageApply       command.Type = commandids.DaggerheartMultiTargetDamageApply
 
 	rejectionCodeGMFearAfterRequired             = "GM_FEAR_AFTER_REQUIRED"
 	rejectionCodeGMFearOutOfRange                = "GM_FEAR_AFTER_OUT_OF_RANGE"
@@ -69,6 +70,7 @@ var daggerheartDecisionHandlers = map[command.Type]daggerheartDecisionHandler{
 	commandTypeAdversaryCreate:              decideAdversaryCreate,
 	commandTypeAdversaryUpdate:              wrapDaggerheartDecisionWithoutState(decideAdversaryUpdate),
 	commandTypeAdversaryDelete:              wrapDaggerheartDecisionWithoutState(decideAdversaryDelete),
+	commandTypeMultiTargetDamageApply:       decideMultiTargetDamageApply,
 }
 
 // DeciderHandledCommands returns the command types this decider handles.

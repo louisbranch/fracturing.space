@@ -163,6 +163,133 @@ func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
 	}
 }
 
+func TestApplyRollOutcome_CorrelationIDOnIntermediateCommands(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+
+	rollPayload := action.RollResolvePayload{
+		RequestID: "req-roll-corr",
+		RollSeq:   1,
+		Results:   map[string]any{"d20": 1},
+		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
+		SystemData: map[string]any{
+			"character_id": "char-1",
+		},
+	}
+	rollJSON, err := json.Marshal(rollPayload)
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
+		CampaignID:  "camp-1",
+		Timestamp:   now,
+		Type:        event.Type("action.roll_resolved"),
+		SessionID:   "sess-1",
+		RequestID:   "req-roll-corr",
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "roll",
+		EntityID:    "req-roll-corr",
+		PayloadJSON: rollJSON,
+	})
+	if err != nil {
+		t.Fatalf("append roll event: %v", err)
+	}
+
+	gatePayload := session.GateOpenedPayload{
+		GateID:   "gate-1",
+		GateType: "gm_consequence",
+		Reason:   "gm_consequence",
+		Metadata: map[string]any{"roll_seq": uint64(rollEvent.Seq), "request_id": "req-roll-corr"},
+	}
+	gateJSON, err := json.Marshal(gatePayload)
+	if err != nil {
+		t.Fatalf("encode gate payload: %v", err)
+	}
+
+	spotlightPayload := session.SpotlightSetPayload{SpotlightType: string(session.SpotlightTypeGM)}
+	spotlightJSON, err := json.Marshal(spotlightPayload)
+	if err != nil {
+		t.Fatalf("encode spotlight payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("sys.daggerheart.gm_fear.set"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.daggerheart.gm_fear_changed"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-corr",
+				EntityType:    "campaign",
+				EntityID:      "camp-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   []byte(`{"before":0,"after":1}`),
+			}),
+		},
+		command.Type("action.outcome.apply"): {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("action.outcome_applied"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-corr",
+					EntityType:  "outcome",
+					EntityID:    "req-roll-corr",
+					PayloadJSON: []byte(`{"request_id":"req-roll-corr","roll_seq":1}`),
+				},
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("session.gate_opened"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-corr",
+					EntityType:  "session_gate",
+					EntityID:    "gate-1",
+					PayloadJSON: gateJSON,
+				},
+				event.Event{
+					CampaignID:  "camp-1",
+					Type:        event.Type("session.spotlight_set"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "sess-1",
+					RequestID:   "req-roll-corr",
+					EntityType:  "session_spotlight",
+					EntityID:    "sess-1",
+					PayloadJSON: spotlightJSON,
+				},
+			),
+		},
+	}}
+	svc.stores.Domain = domain
+
+	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-corr")
+	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+		SessionId: "sess-1",
+		RollSeq:   rollEvent.Seq,
+	})
+	if err != nil {
+		t.Fatalf("ApplyRollOutcome returned error: %v", err)
+	}
+	if len(domain.commands) < 2 {
+		t.Fatalf("expected at least 2 domain commands, got %d", len(domain.commands))
+	}
+	// All intermediate commands (before the final outcome.apply) must carry the
+	// roll's request_id as correlation_id so consequence events form a queryable set.
+	for i, cmd := range domain.commands {
+		if cmd.CorrelationID != "req-roll-corr" {
+			t.Errorf("command[%d] (%s) CorrelationID = %q, want %q",
+				i, cmd.Type, cmd.CorrelationID, "req-roll-corr")
+		}
+	}
+}
+
 func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
