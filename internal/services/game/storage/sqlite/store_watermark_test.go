@@ -29,18 +29,17 @@ func TestSaveAndGetProjectionWatermark(t *testing.T) {
 	store := openTestProjectionsStore(t)
 	ctx := context.Background()
 
-	// Save a watermark.
 	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	wm := storage.ProjectionWatermark{
-		CampaignID: "camp-1",
-		AppliedSeq: 42,
-		UpdatedAt:  now,
+		CampaignID:      "camp-1",
+		AppliedSeq:      42,
+		ExpectedNextSeq: 43,
+		UpdatedAt:       now,
 	}
 	if err := store.SaveProjectionWatermark(ctx, wm); err != nil {
 		t.Fatalf("save watermark: %v", err)
 	}
 
-	// Get it back.
 	got, err := store.GetProjectionWatermark(ctx, "camp-1")
 	if err != nil {
 		t.Fatalf("get watermark: %v", err)
@@ -50,6 +49,9 @@ func TestSaveAndGetProjectionWatermark(t *testing.T) {
 	}
 	if got.AppliedSeq != 42 {
 		t.Fatalf("applied_seq = %d, want 42", got.AppliedSeq)
+	}
+	if got.ExpectedNextSeq != 43 {
+		t.Fatalf("expected_next_seq = %d, want 43", got.ExpectedNextSeq)
 	}
 	if !got.UpdatedAt.Equal(now) {
 		t.Fatalf("updated_at = %v, want %v", got.UpdatedAt, now)
@@ -76,20 +78,20 @@ func TestSaveProjectionWatermark_Upsert(t *testing.T) {
 	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	later := now.Add(time.Hour)
 
-	// First save.
 	if err := store.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{
-		CampaignID: "camp-1",
-		AppliedSeq: 10,
-		UpdatedAt:  now,
+		CampaignID:      "camp-1",
+		AppliedSeq:      10,
+		ExpectedNextSeq: 11,
+		UpdatedAt:       now,
 	}); err != nil {
 		t.Fatalf("save watermark: %v", err)
 	}
 
-	// Update to higher seq.
 	if err := store.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{
-		CampaignID: "camp-1",
-		AppliedSeq: 20,
-		UpdatedAt:  later,
+		CampaignID:      "camp-1",
+		AppliedSeq:      20,
+		ExpectedNextSeq: 21,
+		UpdatedAt:       later,
 	}); err != nil {
 		t.Fatalf("upsert watermark: %v", err)
 	}
@@ -101,6 +103,9 @@ func TestSaveProjectionWatermark_Upsert(t *testing.T) {
 	if got.AppliedSeq != 20 {
 		t.Fatalf("applied_seq = %d, want 20", got.AppliedSeq)
 	}
+	if got.ExpectedNextSeq != 21 {
+		t.Fatalf("expected_next_seq = %d, want 21", got.ExpectedNextSeq)
+	}
 	if !got.UpdatedAt.Equal(later) {
 		t.Fatalf("updated_at = %v, want %v", got.UpdatedAt, later)
 	}
@@ -111,7 +116,6 @@ func TestListProjectionWatermarks(t *testing.T) {
 	ctx := context.Background()
 	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	// Empty list.
 	wms, err := store.ListProjectionWatermarks(ctx)
 	if err != nil {
 		t.Fatalf("list watermarks: %v", err)
@@ -120,12 +124,12 @@ func TestListProjectionWatermarks(t *testing.T) {
 		t.Fatalf("expected empty list, got %d", len(wms))
 	}
 
-	// Add two watermarks.
 	for _, camp := range []string{"camp-1", "camp-2"} {
 		if err := store.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{
-			CampaignID: camp,
-			AppliedSeq: 10,
-			UpdatedAt:  now,
+			CampaignID:      camp,
+			AppliedSeq:      10,
+			ExpectedNextSeq: 11,
+			UpdatedAt:       now,
 		}); err != nil {
 			t.Fatalf("save watermark %s: %v", camp, err)
 		}

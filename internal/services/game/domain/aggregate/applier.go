@@ -1,7 +1,7 @@
 package aggregate
 
 import (
-	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -65,6 +65,12 @@ func (a *Folder) FoldDispatchedTypes() []event.Type {
 // transitions remain visible in one place per subdomain and replay behavior matches
 // request-time behavior.
 func (a *Folder) Fold(state any, evt event.Event) (any, error) {
+	// Resolve legacy type aliases before any routing or filtering so fold
+	// handlers only need to match canonical types.
+	if a.Events != nil {
+		evt.Type = a.Events.Resolve(evt.Type)
+	}
+
 	// Skip events that should not be folded into aggregate state (e.g.
 	// audit-only events). ShouldFold centralizes the intent contract.
 	if a.Events != nil && !a.Events.ShouldFold(evt.Type) {
@@ -88,27 +94,34 @@ func (a *Folder) Fold(state any, evt event.Event) (any, error) {
 		}
 	}
 
-	if evt.SystemID != "" || evt.SystemVersion != "" {
+	hasSystemID := evt.SystemID != ""
+	hasSystemVersion := evt.SystemVersion != ""
+	if hasSystemID != hasSystemVersion {
+		return current, fmt.Errorf("system id and version are both required but only got id=%q version=%q", evt.SystemID, evt.SystemVersion)
+	}
+	if hasSystemID && hasSystemVersion {
 		if current.Systems == nil {
 			current.Systems = make(map[module.Key]any)
 		}
-		if evt.SystemID == "" || evt.SystemVersion == "" {
-			return current, errors.New("system id and version are required")
-		}
 		registry := a.SystemRegistry
 		if registry == nil {
-			return current, errors.New("system registry is required")
+			return current, fmt.Errorf("system registry is required")
 		}
 		key := module.Key{ID: evt.SystemID, Version: evt.SystemVersion}
 		systemState := current.Systems[key]
 		mod := registry.Get(evt.SystemID, evt.SystemVersion)
+
+		if mod == nil {
+			return current, fmt.Errorf("no system module registered for %s@%s; event type %s cannot be folded",
+				evt.SystemID, evt.SystemVersion, evt.Type)
+		}
 
 		// Lazy initialization: the first event for a (SystemID, SystemVersion)
 		// pair triggers NewSnapshotState to seed the initial system state.
 		// All subsequent events for the same key fold into this state. System
 		// authors implement StateFactory.NewSnapshotState to provide their
 		// zero-value state (see module.StateFactory for the lifecycle contract).
-		if mod != nil && systemState == nil {
+		if systemState == nil {
 			if factory := mod.StateFactory(); factory != nil {
 				seed, err := factory.NewSnapshotState(evt.CampaignID)
 				if err != nil {

@@ -73,6 +73,10 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 		return Registries{}, err
 	}
 
+	if err := ValidateAliasFoldCoverage(eventRegistry); err != nil {
+		return Registries{}, err
+	}
+
 	if err := ValidateAggregateFoldDispatch(eventRegistry); err != nil {
 		return Registries{}, err
 	}
@@ -96,6 +100,10 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 	}
 
 	if err := ValidateStateFactoryDeterminism(systemRegistry); err != nil {
+		return Registries{}, err
+	}
+
+	if err := ValidateSystemMetadataConsistency(eventRegistry, systemRegistry); err != nil {
 		return Registries{}, err
 	}
 

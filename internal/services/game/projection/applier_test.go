@@ -733,7 +733,7 @@ func TestApplySystemEvent_UsesAdapter(t *testing.T) {
 	evt := testevent.Event{
 		Type:          testevent.Type("system.custom"),
 		SystemID:      "daggerheart",
-		SystemVersion: "",
+		SystemVersion: "v1",
 		PayloadJSON:   []byte("{}"),
 	}
 
@@ -2859,6 +2859,38 @@ func TestApply_UnhandledCoreEventReturnsError(t *testing.T) {
 	}
 }
 
+// --- system routing guard tests ---
+
+func TestRouteEvent_RejectsPartialSystemMetadata(t *testing.T) {
+	applier := Applier{}
+	tests := []struct {
+		name          string
+		systemID      string
+		systemVersion string
+	}{
+		{"system_id_only", "system-1", ""},
+		{"system_version_only", "", "v1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			evt := event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.test.action.fired"),
+				SystemID:      tt.systemID,
+				SystemVersion: tt.systemVersion,
+				PayloadJSON:   []byte("{}"),
+			}
+			err := applier.routeEvent(context.Background(), evt)
+			if err == nil {
+				t.Fatal("expected error for partial system metadata")
+			}
+			if !strings.Contains(err.Error(), "system id and version are both required") {
+				t.Fatalf("expected partial metadata error, got: %v", err)
+			}
+		})
+	}
+}
+
 // --- applySystemEvent missing branches ---
 
 func TestApplySystemEvent_MissingSystemID(t *testing.T) {
@@ -3487,6 +3519,68 @@ func TestApply_SkipsWatermarkForZeroSeq(t *testing.T) {
 	_, err := watermarks.GetProjectionWatermark(ctx, "camp-1")
 	if !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound for zero-seq, got %v", err)
+	}
+}
+
+func TestApply_TracksExpectedNextSeqForGapDetection(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	watermarks := newFakeWatermarkStore()
+
+	applier := Applier{
+		Campaign:   campaignStore,
+		Watermarks: watermarks,
+	}
+
+	payload := testevent.CampaignCreatedPayload{
+		Name:       "Test",
+		GameSystem: "DAGGERHEART",
+		GmMode:     "HUMAN",
+	}
+	data, _ := json.Marshal(payload)
+
+	// Apply seq 1 — no gap, expectedNextSeq should be 2.
+	evt1 := testevent.Event{
+		CampaignID:  "camp-1",
+		EntityID:    "camp-1",
+		Type:        testevent.TypeCampaignCreated,
+		PayloadJSON: data,
+		Timestamp:   time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC),
+		Seq:         1,
+	}
+	if err := applier.Apply(ctx, eventToEvent(evt1)); err != nil {
+		t.Fatalf("apply seq 1: %v", err)
+	}
+	wm, err := watermarks.GetProjectionWatermark(ctx, "camp-1")
+	if err != nil {
+		t.Fatalf("get watermark: %v", err)
+	}
+	if wm.ExpectedNextSeq != 2 {
+		t.Fatalf("expected_next_seq = %d, want 2", wm.ExpectedNextSeq)
+	}
+
+	// Apply seq 3 (skipping seq 2) — gap detected, but watermark still advances.
+	updatePayload, _ := json.Marshal(map[string]any{"name": "Updated"})
+	evt3 := testevent.Event{
+		CampaignID:  "camp-1",
+		Type:        testevent.TypeCampaignUpdated,
+		PayloadJSON: updatePayload,
+		Timestamp:   time.Date(2026, 2, 10, 13, 0, 0, 0, time.UTC),
+		Seq:         3,
+	}
+	if err := applier.Apply(ctx, eventToEvent(evt3)); err != nil {
+		t.Fatalf("apply seq 3: %v", err)
+	}
+	wm, err = watermarks.GetProjectionWatermark(ctx, "camp-1")
+	if err != nil {
+		t.Fatalf("get watermark after gap: %v", err)
+	}
+	if wm.AppliedSeq != 3 {
+		t.Fatalf("applied_seq = %d, want 3", wm.AppliedSeq)
+	}
+	// ExpectedNextSeq should still advance past the applied event.
+	if wm.ExpectedNextSeq != 4 {
+		t.Fatalf("expected_next_seq = %d, want 4", wm.ExpectedNextSeq)
 	}
 }
 

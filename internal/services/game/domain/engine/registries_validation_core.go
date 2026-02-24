@@ -135,6 +135,48 @@ func ValidateEntityKeyedAddressing(events *event.Registry) error {
 	return nil
 }
 
+// ValidateAliasFoldCoverage verifies that every alias target type has a fold
+// handler in the core domain dispatch table. An alias that resolves to a type
+// with no fold handler would silently ignore legacy events after alias
+// resolution (A1), creating silent state divergence.
+func ValidateAliasFoldCoverage(events *event.Registry) error {
+	if events == nil {
+		return fmt.Errorf("event registry is required for alias fold coverage validation")
+	}
+
+	aliases := events.ListAliases()
+	if len(aliases) == 0 {
+		return nil
+	}
+
+	// Build set of all fold-handled types from core domains.
+	handled := make(map[event.Type]struct{})
+	for _, domain := range CoreDomains() {
+		for _, t := range domain.FoldHandledTypes() {
+			handled[t] = struct{}{}
+		}
+	}
+
+	var missing []string
+	for _, canonical := range aliases {
+		def, ok := events.Definition(canonical)
+		if !ok {
+			continue
+		}
+		// Only check types that should be folded (skip audit-only).
+		if def.Intent == event.IntentAuditOnly {
+			continue
+		}
+		if _, ok := handled[canonical]; !ok {
+			missing = append(missing, string(canonical))
+		}
+	}
+	if len(missing) > 0 {
+		return fmt.Errorf("alias target types missing fold handlers: %s", strings.Join(missing, ", "))
+	}
+	return nil
+}
+
 // ValidateCoreDeciderCommandCoverage verifies that every core-owned command
 // type in the command registry is claimed by some CoreDomain's
 // DeciderHandledCommands, and conversely that every declared handler has a

@@ -168,6 +168,47 @@ func ValidateAdapterEventCoverage(modules *module.Registry, adapters *bridge.Ada
 	return nil
 }
 
+// ValidateSystemMetadataConsistency verifies that every OwnerSystem event
+// has a corresponding registered system module whose namespace matches the
+// event type prefix. This is defense-in-depth for the system routing fix
+// (A5): if a system event slips through without a matching module, it would
+// hit the "no system module registered" error at fold time.
+func ValidateSystemMetadataConsistency(events *event.Registry, modules *module.Registry) error {
+	if events == nil || modules == nil {
+		return fmt.Errorf("event and module registries are required")
+	}
+
+	var orphaned []string
+	for _, def := range events.ListDefinitions() {
+		if def.Owner != event.OwnerSystem {
+			continue
+		}
+		// Extract namespace from the event type (sys.<namespace>.<rest>).
+		typeName := string(def.Type)
+		namespace, ok := naming.NamespaceFromType(typeName)
+		if !ok || namespace == "" {
+			orphaned = append(orphaned, typeName+" (no sys. prefix)")
+			continue
+		}
+		// Check if any registered module matches this namespace.
+		found := false
+		for _, mod := range modules.List() {
+			if naming.NormalizeSystemNamespace(mod.ID()) == namespace {
+				found = true
+				break
+			}
+		}
+		if !found {
+			orphaned = append(orphaned, typeName)
+		}
+	}
+	if len(orphaned) > 0 {
+		return fmt.Errorf("system event types without matching module: %s",
+			strings.Join(orphaned, ", "))
+	}
+	return nil
+}
+
 // ValidateStateFactoryDeterminism verifies that each module's StateFactory
 // produces identical output across repeated calls with the same input for
 // both NewSnapshotState and NewCharacterState.

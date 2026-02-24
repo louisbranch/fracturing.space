@@ -18,12 +18,12 @@ func (s *Store) GetProjectionWatermark(ctx context.Context, campaignID string) (
 		return storage.ProjectionWatermark{}, fmt.Errorf("campaign id is required")
 	}
 	row := s.sqlDB.QueryRowContext(ctx,
-		`SELECT campaign_id, applied_seq, updated_at FROM projection_watermarks WHERE campaign_id = ?`,
+		`SELECT campaign_id, applied_seq, expected_next_seq, updated_at FROM projection_watermarks WHERE campaign_id = ?`,
 		campaignID,
 	)
 	var wm storage.ProjectionWatermark
 	var updatedAtMillis int64
-	err := row.Scan(&wm.CampaignID, &wm.AppliedSeq, &updatedAtMillis)
+	err := row.Scan(&wm.CampaignID, &wm.AppliedSeq, &wm.ExpectedNextSeq, &updatedAtMillis)
 	if errors.Is(err, sql.ErrNoRows) {
 		return storage.ProjectionWatermark{}, storage.ErrNotFound
 	}
@@ -41,13 +41,15 @@ func (s *Store) SaveProjectionWatermark(ctx context.Context, wm storage.Projecti
 		return fmt.Errorf("campaign id is required")
 	}
 	_, err := s.sqlDB.ExecContext(ctx,
-		`INSERT INTO projection_watermarks (campaign_id, applied_seq, updated_at)
-		 VALUES (?, ?, ?)
+		`INSERT INTO projection_watermarks (campaign_id, applied_seq, expected_next_seq, updated_at)
+		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT (campaign_id) DO UPDATE SET
 		     applied_seq = excluded.applied_seq,
+		     expected_next_seq = excluded.expected_next_seq,
 		     updated_at = excluded.updated_at`,
 		wm.CampaignID,
 		int64(wm.AppliedSeq),
+		int64(wm.ExpectedNextSeq),
 		toMillis(wm.UpdatedAt),
 	)
 	if err != nil {
@@ -59,7 +61,7 @@ func (s *Store) SaveProjectionWatermark(ctx context.Context, wm storage.Projecti
 // ListProjectionWatermarks returns all watermarks ordered by campaign id.
 func (s *Store) ListProjectionWatermarks(ctx context.Context) ([]storage.ProjectionWatermark, error) {
 	rows, err := s.sqlDB.QueryContext(ctx,
-		`SELECT campaign_id, applied_seq, updated_at FROM projection_watermarks ORDER BY campaign_id`,
+		`SELECT campaign_id, applied_seq, expected_next_seq, updated_at FROM projection_watermarks ORDER BY campaign_id`,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("list projection watermarks: %w", err)
@@ -69,7 +71,7 @@ func (s *Store) ListProjectionWatermarks(ctx context.Context) ([]storage.Project
 	for rows.Next() {
 		var wm storage.ProjectionWatermark
 		var updatedAtMillis int64
-		if err := rows.Scan(&wm.CampaignID, &wm.AppliedSeq, &updatedAtMillis); err != nil {
+		if err := rows.Scan(&wm.CampaignID, &wm.AppliedSeq, &wm.ExpectedNextSeq, &updatedAtMillis); err != nil {
 			return nil, fmt.Errorf("scan projection watermark: %w", err)
 		}
 		wm.UpdatedAt = fromMillis(updatedAtMillis)

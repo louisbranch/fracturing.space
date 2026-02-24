@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -61,10 +62,22 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 		return err
 	}
 	if a.Watermarks != nil && evt.Seq > 0 && strings.TrimSpace(evt.CampaignID) != "" {
+		// Gap detection: load current watermark to check if events were skipped.
+		// A gap means replay or re-projection is needed to fill missing events.
+		existing, err := a.Watermarks.GetProjectionWatermark(ctx, evt.CampaignID)
+		expectedNext := evt.Seq + 1
+		if err == nil && existing.ExpectedNextSeq > 0 && evt.Seq > existing.ExpectedNextSeq {
+			// Log gap detection — callers can monitor this for repair triggers.
+			// The watermark still advances to avoid blocking forward progress.
+			log.Printf("projection gap detected for campaign %s: expected seq %d but got %d",
+				evt.CampaignID, existing.ExpectedNextSeq, evt.Seq)
+		}
+
 		if err := a.Watermarks.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{
-			CampaignID: evt.CampaignID,
-			AppliedSeq: evt.Seq,
-			UpdatedAt:  time.Now().UTC(),
+			CampaignID:      evt.CampaignID,
+			AppliedSeq:      evt.Seq,
+			ExpectedNextSeq: expectedNext,
+			UpdatedAt:       time.Now().UTC(),
 		}); err != nil {
 			return fmt.Errorf("save projection watermark: %w", err)
 		}
@@ -80,10 +93,13 @@ func (a Applier) routeEvent(ctx context.Context, evt event.Event) error {
 	if _, ok := coreRouter.handlers[evt.Type]; ok {
 		return coreRouter.Route(a, ctx, evt)
 	}
-	// ValidateForAppend guarantees SystemID and SystemVersion are trimmed,
-	// so a simple non-empty check matches the aggregate folder's routing
-	// condition (which checks either field non-empty).
-	if evt.SystemID != "" || evt.SystemVersion != "" {
+	hasSystemID := evt.SystemID != ""
+	hasSystemVersion := evt.SystemVersion != ""
+	if hasSystemID != hasSystemVersion {
+		return fmt.Errorf("system id and version are both required but only got id=%q version=%q for event type %s",
+			evt.SystemID, evt.SystemVersion, evt.Type)
+	}
+	if hasSystemID && hasSystemVersion {
 		return a.applySystemEvent(ctx, evt)
 	}
 	return fmt.Errorf("unhandled projection event type: %s", evt.Type)

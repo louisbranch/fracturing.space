@@ -52,6 +52,36 @@ Invariants:
   `sys.<system_id>.*`.
 - Core treats system payloads as opaque and routes them to system handlers.
 
+## Event intent selection
+
+Every event definition must declare an `Intent` that controls how the system
+processes it after append. Use this decision tree when registering a new event:
+
+```
+Does this event need to update a projection (read-model) table?
+  YES ─→ Does the aggregate folder also need this event for state replay?
+           YES → IntentProjectionAndReplay   (most system events)
+           NO  → (not currently supported — projection-only events
+                  must also be foldable)
+  NO  ─→ Does the aggregate folder need this event for state replay?
+           YES → IntentReplayOnly            (fold-only, no projection writes)
+           NO  → IntentAuditOnly             (journal record only)
+```
+
+| Intent | Fold? | Project? | Typical use |
+|---|---|---|---|
+| `IntentProjectionAndReplay` | yes | yes | Damage applied, condition changed, adversary created |
+| `IntentReplayOnly` | yes | no | State transitions only relevant to aggregate decisions |
+| `IntentAuditOnly` | no | no | Roll resolved, outcome applied (journal observability) |
+
+Startup validators enforce consistency:
+- `ValidateSystemFoldCoverage`: every `ProjectionAndReplay`/`ReplayOnly` event
+  has a fold handler.
+- `ValidateAdapterEventCoverage`: every `ProjectionAndReplay` event has an
+  adapter handler.
+- `ValidateNoFoldHandlersForAuditOnlyEvents`: no fold handler exists for
+  `AuditOnly` events (dead code guard).
+
 ## Runtime extension surfaces
 
 There are two extension surfaces with different responsibilities.
@@ -291,10 +321,22 @@ Implement this when your system needs to:
 - denormalize character profile fields into system-specific projection tables
 - keep system state in sync with profile updates (e.g. class, level, traits)
 
-The projection applier iterates all system entries in the profile's
-`system_profile` map and delegates each to the corresponding adapter via
-`bridge.ProfileAdapter`. See `projection/apply_character.go` for the dispatch
-logic.
+The full dispatch path for profile updates:
+
+```
+character.profile_updated event
+  → projection/applier.go: Apply()
+    → projection/apply_character.go: applyCharacterProfileUpdated()
+      → iterates SystemProfile map entries
+        → for each (system_id, profile_data):
+          → bridge.AdapterRegistry.Get(system_id, version)
+            → casts adapter to bridge.ProfileAdapter
+              → adapter.ApplyProfile(ctx, campaignID, characterID, profileData)
+```
+
+This means your adapter receives only its own system's profile data — the
+projection applier handles routing. You never need to filter by system ID
+inside `ApplyProfile`.
 
 ### 7. Add storage schema and queries
 
@@ -374,6 +416,36 @@ Use Daggerheart as the baseline for structure and naming.
 2. System events must be replay-safe and self-describing through payload + metadata.
 3. Projection adapter behavior must be idempotent under replay.
 4. Domain writes must happen through commands/events only, never direct projection mutation.
+5. **Event payloads must record absolute values, not deltas** (see below).
+
+### Invariant: absolute values in event payloads
+
+Event payloads must record the resulting state (`hp_after: 8`), not the change
+(`hp_delta: -3`). This is a top-level system invariant, not a suggestion.
+
+**Why**: Replay applies every event in the journal to rebuild projection state.
+A delta-based payload (`+3 HP`) applied twice during replay produces the wrong
+result (`+6 HP`). An absolute-value payload (`HP is now 8`) is inherently
+idempotent — applying it any number of times converges to the same state.
+
+**Where it applies**: every `Apply()` adapter method and every `Fold()` handler
+that writes to state.
+
+**Pattern**:
+```go
+// WRONG — delta-based, breaks on replay
+payload := DamagePayload{HPDelta: -3}
+
+// RIGHT — absolute values, replay-safe
+payload := DamagePayload{HPBefore: 8, HPAfter: 5}
+```
+
+**Enforcement**:
+- `testkit.ValidateSystemConformance` includes a fold idempotency check (G3)
+  that folds each event type twice into fresh state and asserts identical
+  results.
+- Adapter idempotency tests (see "Idempotency testing" section) catch delta
+  patterns in projection writes.
 
 ## Event timeline contract requirement (for every new mechanic)
 
@@ -509,17 +581,11 @@ mismatch).
 
 ### 3. Delta-based payloads instead of absolute values
 
-**Symptom**: Replaying the journal produces different projection state than the
-original run. Values drift with each replay.
+See the top-level invariant in "Consistency expectations" →
+"Invariant: absolute values in event payloads" for the full rationale, pattern,
+and enforcement mechanisms.
 
-**Root cause**: An event payload says "add 3 HP" instead of "HP is now 8".
-Replaying the event a second time adds 3 again.
-
-**Fix**: Store absolute `before`/`after` values in payloads (e.g.
-`hp_before: 5, hp_after: 8`). Compute deltas at decision time, record
-absolutes in events.
-
-**Caught by**: Idempotency tests (see "Idempotency testing" section above).
+**Caught by**: Fold idempotency (G3) and adapter idempotency tests.
 
 ### 4. Direct projection mutation from request handlers
 

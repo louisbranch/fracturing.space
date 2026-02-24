@@ -177,6 +177,52 @@ Use these tests as baseline architecture guardrails:
 
 When adding a new mutating mechanic, update/add tests so bypass patterns fail fast.
 
+## Mechanics Implementation Priority Tiers
+
+Each priority mechanic (P1-P44) is classified by how much new infrastructure it
+requires. Start with Tier 1 (reuse existing types) before tackling higher tiers.
+
+### Tier 1 — Reuse existing types, handler orchestration only
+
+These mechanics compose existing command/event types with no new registrations:
+
+P1, P2, P3, P5, P6, P10, P11, P14, P16, P17, P20, P21, P41
+
+All use existing commands: `action.roll.resolve`, `sys.daggerheart.damage.apply`,
+`sys.daggerheart.condition.change`, `sys.daggerheart.gm_fear.set`,
+`sys.daggerheart.character_state.patch`.
+
+### Tier 2 — Existing types with new multi-event orchestration
+
+Require new handler choreography (multi-target fanout, countdown-triggered
+chains, environment sequences) but no new event types:
+
+P4, P8, P12, P13, P15, P18, P19, P22, P24, P25, P26, P27, P28, P29, P30,
+P32-P40, P42, P43
+
+### Tier 3 — May require new command/event types
+
+- **P7** (minion overflow) — batch adversary delete semantics
+- **P9** (reaction cooldown) — adversary feature state tracking
+- **P23** (difficulty escalation) — adversary stat modification trigger
+- **P34** (narrative outcomes) — `story.note.add` / `story.note_added` core type
+- **P44** (spellcast rejection) — `action.outcome.reject` / `action.outcome_rejected` core type
+
+### Tier 4 — Blocked on design clarification
+
+**P31** (all sub-scenarios) — see P31 Clarification Gate below.
+
+### Recommended build order
+
+1. **Damage pipeline** (P1-P3): highest-frequency combat mechanics, pure Tier 1
+2. **Multi-target and group** (P4-P6): extends damage pipeline to multiple targets
+3. **Adversary lifecycle** (P7-P9): surfaces need for new types early
+4. **Condition and reaction** (P10-P14, P18-P20, P22): compose existing types
+5. **Resource and countdown** (P12, P16, P17, P25, P28, P29): compose existing types
+6. **Complex orchestration** (P30, P32-P42): environment and GM move patterns
+7. **New types** (P34, P44): add core types, then implement
+8. **Deferred** (P31): after clarification gate resolves
+
 ## How To Add A New Daggerheart Mechanic
 
 1. Add command and event registrations in the Daggerheart decider/registry.
