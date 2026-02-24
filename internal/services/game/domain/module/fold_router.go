@@ -14,6 +14,15 @@ import (
 // S must be a pointer type so handlers can mutate state in place. The assert
 // callback converts the untyped state (any) to *S, handling nil initialization
 // when the state is first created.
+//
+// Design note: system projectors (e.g. Daggerheart's Folder) typically wrap
+// FoldRouter.Fold with their own Fold method that calls assertSnapshotState
+// before delegating. This means the type assertion runs twice — once in the
+// wrapper (to seed system-specific defaults like CampaignID) and once inside
+// FoldRouter.Fold. The duplication is intentional: the outer assertion handles
+// domain-specific initialization that FoldRouter cannot know about, while the
+// inner assertion is the generic safety net. Go type switches on an already-
+// correct type are effectively free, so the cost is negligible.
 type FoldRouter[S any] struct {
 	assert   func(any) (S, error)
 	handlers map[event.Type]func(S, event.Event) error

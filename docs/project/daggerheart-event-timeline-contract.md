@@ -60,11 +60,19 @@ Invariants:
 
 ### Known Gap: Consequence Atomicity
 
-- `ApplyRollOutcome` currently applies consequence commands in sequence.
-- If a later consequence command fails, earlier applied consequences remain.
-- The behavior is replay-safe, but not atomic across the full consequence set.
-- Follow-up design should define transactionality or compensation semantics,
-  including checkpoint finalization guarantees after partial failures.
+`ApplyRollOutcome` applies consequence commands sequentially. If command 3 of
+5 fails, commands 1-2 are already persisted. This is acceptable because:
+
+1. Each consequence command independently produces valid state — there is no
+   intermediate "half-applied" state that violates domain invariants.
+2. Idempotency guards prevent double-application on retry.
+3. `action.outcome.apply` at the end serves as a completion marker — its
+   absence signals that the consequence set is incomplete, enabling retry.
+4. Replay recovers intermediate state deterministically from the event journal.
+
+If true multi-command atomicity is needed in the future, follow the
+`rest.take` precedent: a single command whose decider emits multiple events
+from one decision, all batch-appended atomically.
 
 ## Priority Missing-Mechanic Timeline Mappings
 
@@ -133,6 +141,22 @@ resolved.
 
 Before implementing `P31`, capture decisions in docs and then add a concrete
 timeline row update with command/event types, projection targets, and invariants.
+
+## Source Field Convention
+
+`CharacterStatePatchedPayload.Source` is an optional discriminator set by
+transform commands that emit `character_state_patched` events. It enables
+journal queries to distinguish the origin of a patch without inspecting field
+patterns or introducing separate event types.
+
+| Transform command | Source value |
+| --- | --- |
+| `sys.daggerheart.hope.spend` | `hope.spend` |
+| `sys.daggerheart.stress.spend` | `stress.spend` |
+| `sys.daggerheart.character_state.patch` (direct) | _(empty — generic GM/system adjustment)_ |
+
+When adding new transforms that emit `character_state_patched`, set `Source`
+to the originating command's short name (the suffix after `sys.daggerheart.`).
 
 ## Non-Negotiable Handler Rules
 

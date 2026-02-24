@@ -201,6 +201,31 @@ instead of writing raw switch/unmarshal code:
   them. See `daggerheart/decider.go` for GM fear, hope spend, and stress spend
   cases.
 
+#### DecideFunc decision tree
+
+Use this tree to pick the right helper for a new command handler:
+
+```
+Does your command need aggregate snapshot state?
+  NO  ─→ Does command payload == event payload?
+           YES → DecideFunc[P]                    (e.g. decideLoadoutSwap)
+           NO  → Raw Decide switch                (e.g. decideRestTake, multi-event)
+  YES ─→ Does event payload differ from command payload?
+           YES → DecideFuncTransform[S, PIn, POut] (e.g. decideHopeSpend)
+           NO  → DecideFuncWithState[S, P]          (e.g. decideCharacterStatePatch)
+```
+
+- **`DecideFunc[P]`**: simplest path — one command type, one event type, same
+  payload, no state needed. Just unmarshal, validate, emit.
+- **`DecideFuncWithState[S, P]`**: same as above but receives snapshot state
+  for idempotency/validation checks (e.g. rejecting no-op mutations).
+- **`DecideFuncTransform[S, PIn, POut]`**: command payload and event payload
+  are different types. Adds a `transform` function to convert between them
+  (e.g. `HopeSpendPayload` → `CharacterStatePatchedPayload`).
+- **Raw `Decide` switch**: when one command emits multiple events or needs
+  custom routing logic that helpers can't express (e.g. `rest.take` emits both
+  `rest_taken` and optionally `countdown_updated`).
+
 #### System state lifecycle
 
 When the aggregate folder encounters the first event for a given
@@ -223,18 +248,45 @@ must return the same initial state, because replay depends on this guarantee.
 Pass your module to `engine.BuildRegistries(...)` in
 `internal/services/game/app/domain.go`.
 
-### 5. Register system entry metadata centrally
+### 5. Register system entry metadata centrally (start here)
 
-In addition to engine registration, add or verify your system metadata and adapter
-construction entry in `internal/services/game/domain/bridge/manifest/manifest.go` so
-`Modules()`, `MetadataSystems()`, and `AdapterRegistry(...)` stay aligned.
-Prefer this file as your first newcomer onboarding step when adding a system.
+> **Start here.** `manifest.go` is the single source of truth for system
+> registration. Open it first when onboarding — it shows all three registry
+> surfaces (`BuildModule`, `BuildMetadataSystem`, `BuildAdapter`) wired from
+> one `SystemDescriptor`, and serves as a map of what exists.
+
+Add or verify your system's `SystemDescriptor` entry in
+`internal/services/game/domain/bridge/manifest/manifest.go` so `Modules()`,
+`MetadataSystems()`, and `AdapterRegistry(...)` stay aligned.
 
 ### 6. Implement system projection adapter
 
 Create `internal/services/game/domain/bridge/{system}/adapter.go` implementing
 `systems.Adapter`, then register it in
 `internal/services/game/api/grpc/game/system_adapters.go`.
+
+#### When to implement ProfileAdapter
+
+If your system stores per-character data inside `system_profile` (the
+system-specific section of a character profile), implement `bridge.ProfileAdapter`
+on your projection adapter. The projection applier calls `ApplyProfile` when a
+`character.profile_updated` event arrives, passing the system-specific profile
+data for your system ID.
+
+```go
+type ProfileAdapter interface {
+    ApplyProfile(ctx context.Context, campaignID, characterID string, profileData json.RawMessage) error
+}
+```
+
+Implement this when your system needs to:
+- denormalize character profile fields into system-specific projection tables
+- keep system state in sync with profile updates (e.g. class, level, traits)
+
+The projection applier iterates all system entries in the profile's
+`system_profile` map and delegates each to the corresponding adapter via
+`bridge.ProfileAdapter`. See `projection/apply_character.go` for the dispatch
+logic.
 
 ### 7. Add storage schema and queries
 
