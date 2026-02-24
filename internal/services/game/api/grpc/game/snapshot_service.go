@@ -47,7 +47,7 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 	}
 
 	// Get Daggerheart snapshot projection (GM Fear)
-	dhSnapshot, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+	dhSnapshot, err := s.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return nil, status.Errorf(codes.Internal, "get daggerheart snapshot: %v", err)
 	}
@@ -61,7 +61,7 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 	characterStates := make([]*campaignv1.CharacterState, 0, len(charPage.Characters))
 	for _, ch := range charPage.Characters {
 		// Get Daggerheart-specific state (includes HP)
-		dhState, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
+		dhState, err := s.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				continue

@@ -10,6 +10,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -185,7 +186,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 			Campaign:     campaignStore,
 			Participant:  participantStore,
 			Character:    characterStore,
-			Daggerheart:  dhStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
 			Domain:       domain,
@@ -359,7 +360,7 @@ func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *test
 			Campaign:     campaignStore,
 			Participant:  participantStore,
 			Character:    characterStore,
-			Daggerheart:  dhStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
 			Domain:       domain,
@@ -424,7 +425,7 @@ func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
 			Campaign:     campaignStore,
 			Participant:  participantStore,
 			Character:    characterStore,
-			Daggerheart:  dhStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
 		},
@@ -640,7 +641,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 			Campaign:     campaignStore,
 			Participant:  participantStore,
 			Character:    characterStore,
-			Daggerheart:  dhStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
 			Domain:       domain,
@@ -753,7 +754,7 @@ func TestForkCampaign_UsesDomainEngine(t *testing.T) {
 			Campaign:     campaignStore,
 			Participant:  participantStore,
 			Character:    characterStore,
-			Daggerheart:  dhStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
 			Domain:       domain,
@@ -932,7 +933,7 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 			Campaign:     campaignStore,
 			Participant:  participantStore,
 			Character:    characterStore,
-			Daggerheart:  dhStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
 			Session:      sessionStore,

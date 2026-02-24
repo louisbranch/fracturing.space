@@ -8,6 +8,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -46,10 +47,10 @@ func TestCreateCharacter_NilRequest(t *testing.T) {
 
 func TestCreateCharacter_MissingCampaignId(t *testing.T) {
 	svc := NewCharacterService(Stores{
-		Campaign:    newFakeCampaignStore(),
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-		Event:       newFakeEventStore(),
+		Campaign:     newFakeCampaignStore(),
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Event:        newFakeEventStore(),
 	})
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		Name: "Hero",
@@ -60,10 +61,10 @@ func TestCreateCharacter_MissingCampaignId(t *testing.T) {
 
 func TestCreateCharacter_CampaignNotFound(t *testing.T) {
 	svc := NewCharacterService(Stores{
-		Campaign:    newFakeCampaignStore(),
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-		Event:       newFakeEventStore(),
+		Campaign:     newFakeCampaignStore(),
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Event:        newFakeEventStore(),
 	})
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		CampaignId: "nonexistent",
@@ -82,11 +83,11 @@ func TestCreateCharacter_CompletedCampaignDisallowed(t *testing.T) {
 	participantStore := characterManagerParticipantStore("c1")
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: participantStore,
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-		Event:       newFakeEventStore(),
+		Campaign:     campaignStore,
+		Participant:  participantStore,
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Event:        newFakeEventStore(),
 	})
 	ctx := contextWithParticipantID("manager-1")
 	_, err := svc.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
@@ -105,10 +106,10 @@ func TestCreateCharacter_EmptyName(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-		Event:       newFakeEventStore(),
+		Campaign:     campaignStore,
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Event:        newFakeEventStore(),
 	})
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -125,10 +126,10 @@ func TestCreateCharacter_InvalidKind(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-		Event:       newFakeEventStore(),
+		Campaign:     campaignStore,
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Event:        newFakeEventStore(),
 	})
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -142,11 +143,11 @@ func TestCreateCharacter_DeniesMissingIdentity(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: characterManagerParticipantStore("c1"),
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-		Event:       newFakeEventStore(),
+		Campaign:     campaignStore,
+		Participant:  characterManagerParticipantStore("c1"),
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Event:        newFakeEventStore(),
 	})
 
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
@@ -162,10 +163,10 @@ func TestCreateCharacter_RequiresDomainEngine(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-		Event:       newFakeEventStore(),
+		Campaign:     campaignStore,
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Event:        newFakeEventStore(),
 	})
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -227,12 +228,12 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 
 	svc := &CharacterService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Character:   characterStore,
-			Daggerheart: dhStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+			Event:        eventStore,
+			Domain:       domain,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),
@@ -344,12 +345,12 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 
 	svc := &CharacterService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Character:   characterStore,
-			Daggerheart: dhStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+			Event:        eventStore,
+			Domain:       domain,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("npc-456"),
@@ -424,12 +425,12 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 
 	svc := &CharacterService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Character:   characterStore,
-			Daggerheart: dhStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+			Event:        eventStore,
+			Domain:       domain,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),
@@ -540,12 +541,12 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 
 	svc := &CharacterService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Character:   characterStore,
-			Daggerheart: dhStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+			Event:        eventStore,
+			Domain:       domain,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),
@@ -1830,9 +1831,9 @@ func TestGetCharacterSheet_NilRequest(t *testing.T) {
 
 func TestGetCharacterSheet_MissingCampaignId(t *testing.T) {
 	svc := NewCharacterService(Stores{
-		Campaign:    newFakeCampaignStore(),
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
+		Campaign:     newFakeCampaignStore(),
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
 	})
 	_, err := svc.GetCharacterSheet(context.Background(), &statev1.GetCharacterSheetRequest{CharacterId: "ch1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -1843,9 +1844,9 @@ func TestGetCharacterSheet_MissingCharacterId(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
+		Campaign:     campaignStore,
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
 	})
 	_, err := svc.GetCharacterSheet(context.Background(), &statev1.GetCharacterSheetRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -1853,9 +1854,9 @@ func TestGetCharacterSheet_MissingCharacterId(t *testing.T) {
 
 func TestGetCharacterSheet_CampaignNotFound(t *testing.T) {
 	svc := NewCharacterService(Stores{
-		Campaign:    newFakeCampaignStore(),
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
+		Campaign:     newFakeCampaignStore(),
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
 	})
 	_, err := svc.GetCharacterSheet(context.Background(), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "nonexistent",
@@ -1873,10 +1874,10 @@ func TestGetCharacterSheet_DeniesMissingIdentity(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-		Participant: participantStore,
+		Campaign:     campaignStore,
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Participant:  participantStore,
 	})
 	_, err := svc.GetCharacterSheet(context.Background(), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "c1",
@@ -1894,10 +1895,10 @@ func TestGetCharacterSheet_CharacterNotFound(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Character:   newFakeCharacterStore(),
-		Daggerheart: newFakeDaggerheartStore(),
-		Participant: participantStore,
+		Campaign:     campaignStore,
+		Character:    newFakeCharacterStore(),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Participant:  participantStore,
 	})
 	_, err := svc.GetCharacterSheet(contextWithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "c1",
@@ -1928,10 +1929,10 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Character:   characterStore,
-		Daggerheart: dhStore,
-		Participant: participantStore,
+		Campaign:     campaignStore,
+		Character:    characterStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		Participant:  participantStore,
 	})
 
 	resp, err := svc.GetCharacterSheet(contextWithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
@@ -1968,7 +1969,7 @@ func TestPatchCharacterProfile_NilRequest(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_MissingCampaignId(t *testing.T) {
-	svc := NewCharacterService(Stores{Daggerheart: newFakeDaggerheartStore(), Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CharacterId: "ch1",
 	})
@@ -1976,7 +1977,7 @@ func TestPatchCharacterProfile_MissingCampaignId(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_MissingCharacterId(t *testing.T) {
-	svc := NewCharacterService(Stores{Daggerheart: newFakeDaggerheartStore(), Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId: "c1",
 	})
@@ -1984,7 +1985,7 @@ func TestPatchCharacterProfile_MissingCharacterId(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_CampaignNotFound(t *testing.T) {
-	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore(), Daggerheart: newFakeDaggerheartStore(), Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore(), SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -1995,7 +1996,7 @@ func TestPatchCharacterProfile_CampaignNotFound(t *testing.T) {
 func TestPatchCharacterProfile_ProfileNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Daggerheart: newFakeDaggerheartStore(), Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: campaignStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -2015,10 +2016,10 @@ func TestPatchCharacterProfile_CompletedCampaignDisallowed(t *testing.T) {
 	}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: characterManagerParticipantStore("c1"),
-		Daggerheart: dhStore,
-		Event:       newFakeEventStore(),
+		Campaign:     campaignStore,
+		Participant:  characterManagerParticipantStore("c1"),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		Event:        newFakeEventStore(),
 	})
 	ctx := contextWithParticipantID("manager-1")
 	_, err := svc.PatchCharacterProfile(ctx, &statev1.PatchCharacterProfileRequest{
@@ -2051,11 +2052,11 @@ func TestPatchCharacterProfile_DeniesMissingIdentity(t *testing.T) {
 	}}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    activeCampaignStore("c1"),
-		Participant: characterManagerParticipantStore("c1"),
-		Daggerheart: dhStore,
-		Event:       eventStore,
-		Domain:      domain,
+		Campaign:     activeCampaignStore("c1"),
+		Participant:  characterManagerParticipantStore("c1"),
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		Event:        eventStore,
+		Domain:       domain,
 	})
 
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
@@ -2118,11 +2119,11 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 	}}
 
 	svc := NewCharacterService(Stores{
-		Campaign:    activeCampaignStore("c1"),
-		Participant: participantStore,
-		Daggerheart: dhStore,
-		Event:       eventStore,
-		Domain:      domain,
+		Campaign:     activeCampaignStore("c1"),
+		Participant:  participantStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		Event:        eventStore,
+		Domain:       domain,
 	})
 	_, err := svc.PatchCharacterProfile(contextWithParticipantID("member-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
@@ -2143,7 +2144,7 @@ func TestPatchCharacterProfile_NegativeHpMax(t *testing.T) {
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2188,7 +2189,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, Daggerheart: dhStore, Event: eventStore, Domain: domain})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: eventStore, Domain: domain})
 	resp, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2231,7 +2232,7 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, Daggerheart: dhStore, Event: eventStore, Domain: domain})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: eventStore, Domain: domain})
 	resp, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2285,7 +2286,7 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, Daggerheart: dhStore, Event: eventStore, Domain: domain})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: eventStore, Domain: domain})
 	resp, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2364,7 +2365,7 @@ func TestPatchCharacterProfile_UpdateTraits(t *testing.T) {
 			}),
 		},
 	}}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, Daggerheart: dhStore, Event: eventStore, Domain: domain})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: eventStore, Domain: domain})
 	// Patch only Agility and Strength, leaving other 4 traits unchanged
 	resp, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
@@ -2487,7 +2488,7 @@ func TestPatchCharacterProfile_HpMaxTooHigh(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2501,7 +2502,7 @@ func TestPatchCharacterProfile_StressMaxTooHigh(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2515,7 +2516,7 @@ func TestPatchCharacterProfile_NegativeEvasion(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2529,7 +2530,7 @@ func TestPatchCharacterProfile_NegativeMajorThreshold(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2543,7 +2544,7 @@ func TestPatchCharacterProfile_NegativeSevereThreshold(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2557,7 +2558,7 @@ func TestPatchCharacterProfile_NegativeProficiency(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2573,7 +2574,7 @@ func TestPatchCharacterProfile_RequiresDomainEngine(t *testing.T) {
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2587,7 +2588,7 @@ func TestPatchCharacterProfile_NegativeArmorScore(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2601,7 +2602,7 @@ func TestPatchCharacterProfile_ArmorMaxTooHigh(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2615,7 +2616,7 @@ func TestPatchCharacterProfile_NegativeArmorMax(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2629,7 +2630,7 @@ func TestPatchCharacterProfile_EmptyExperienceName(t *testing.T) {
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -2646,7 +2647,7 @@ func TestPatchCharacterProfile_NegativeStressMax(t *testing.T) {
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Daggerheart: dhStore, Event: newFakeEventStore()})
+	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",

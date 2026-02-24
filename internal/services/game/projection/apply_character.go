@@ -162,8 +162,8 @@ func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Eve
 	}
 
 	for systemName, profileData := range payload.SystemProfile {
-		adapter := a.Adapters.Get(systemName, "")
-		if adapter == nil {
+		adapter, ok := a.Adapters.GetOptional(systemName, "")
+		if !ok {
 			// Skip systems without a registered adapter; a future replay
 			// will pick them up once the adapter is configured.
 			continue

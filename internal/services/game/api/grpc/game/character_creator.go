@@ -555,7 +555,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		return "", storage.DaggerheartCharacterProfile{}, err
 	}
 
-	dhProfile, err := c.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	dhProfile, err := c.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
 		return "", storage.DaggerheartCharacterProfile{}, err
 	}

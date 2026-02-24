@@ -6,6 +6,14 @@ nav_order: 5
 
 # Game Systems Architecture
 
+```
+quick-start-system-developer.md  (first 30 minutes)
+  -> event-driven-system.md      (write-path invariants)
+  -> game-systems.md             (you are here — implementation checklist)
+     -> daggerheart-event-timeline-contract.md  (mechanic mappings)
+        -> scenario-missing-mechanics.md        (gap inventory)
+```
+
 This document explains how a game system extends the shared event-driven core.
 For the command-to-event-to-projection lifecycle, read
 [Event-driven system](event-driven-system.md) first.
@@ -469,16 +477,82 @@ Key points:
   make idempotency natural.
 - See the Daggerheart adapter tests for working examples.
 
-## Common failure modes
+## Common pitfalls
 
-1. Missing `system_id/system_version` on system-owned envelopes:
-   - command/event registry validation rejects writes.
-2. Registering command types without event types (or vice versa):
-   - runtime route failures or replay failures.
-3. Forgetting projection adapter registration:
-   - events append, but system projection state does not update.
-4. Non-deterministic decider/folder code:
-   - replay divergence and integrity incidents.
+### 1. Forgetting RegisterEvents after adding to EmittableEventTypes
+
+**Symptom**: Startup panic or "unknown event type" error from the event
+registry validator.
+
+**Root cause**: `EmittableEventTypes()` declares the type for validation, but
+the event registry never learns the type's metadata (payload schema, intent).
+
+**Fix**: Add a corresponding `registry.Register(...)` call inside
+`RegisterEvents()` for every type returned by `EmittableEventTypes()`.
+
+**Caught by**: `engine.ValidateSystemFoldCoverage` / startup registry check.
+
+### 2. Using IntentReplayOnly for an event that needs projection writes
+
+**Symptom**: Event appends successfully and fold state updates, but the
+projection table is never written. No error is raised.
+
+**Root cause**: `IntentReplayOnly` tells the projection applier to skip adapter
+dispatch for this event type. The event only folds into aggregate state.
+
+**Fix**: Change the event intent to `IntentProjectionAndReplay` so the
+projection applier dispatches to your adapter.
+
+**Caught by**: Manual inspection or `ValidateAdapterEventCoverage` (if the
+adapter declares a handler for a replay-only type, the validator flags the
+mismatch).
+
+### 3. Delta-based payloads instead of absolute values
+
+**Symptom**: Replaying the journal produces different projection state than the
+original run. Values drift with each replay.
+
+**Root cause**: An event payload says "add 3 HP" instead of "HP is now 8".
+Replaying the event a second time adds 3 again.
+
+**Fix**: Store absolute `before`/`after` values in payloads (e.g.
+`hp_before: 5, hp_after: 8`). Compute deltas at decision time, record
+absolutes in events.
+
+**Caught by**: Idempotency tests (see "Idempotency testing" section above).
+
+### 4. Direct projection mutation from request handlers
+
+**Symptom**: Projection state updates immediately but is lost on replay.
+Journal does not contain any record of the change.
+
+**Root cause**: Handler code writes directly to a projection store (e.g.
+`store.PutCharacterState(...)`) instead of emitting a command that produces
+an event that the adapter applies.
+
+**Fix**: Emit a command, let the decider produce an event, and let the
+projection adapter write the store.
+
+**Caught by**: Code review. No automated validator catches this because the
+write succeeds at runtime. The only signal is that replay produces different
+state than the live system.
+
+### 5. Missing ProjectionStores field when adding a system store
+
+**Symptom**: `AdapterRegistry(...)` in `manifest.go` compiles, but
+`BuildAdapter` receives a nil store and returns a nil adapter. The adapter
+is silently skipped during registration.
+
+**Root cause**: `manifest.ProjectionStores` lacks a field for the new system's
+store. The `BuildAdapter` closure guard returns nil for nil stores by
+convention, so no error is raised.
+
+**Fix**: Add the new store field to `ProjectionStores` in `manifest.go` and
+pass it through `BuildAdapter`. Update `Stores.Validate()` if the store is
+required.
+
+**Caught by**: `validateSystemRegistrationParity` at startup (adapter missing
+for a registered module).
 
 ## Related docs
 

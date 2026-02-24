@@ -6,6 +6,13 @@ nav_order: 4
 
 # Event-Driven System
 
+```
+quick-start-system-developer.md  (first 30 minutes)
+  -> event-driven-system.md      (you are here — write-path invariants)
+  -> game-systems.md             (implementation checklist)
+     -> event-replay.md          (journal, replay, snapshots)
+```
+
 This document is the canonical guide to how game-domain writes work.
 If you are new to the codebase, read this before changing command handlers,
 event payloads, or projection code.

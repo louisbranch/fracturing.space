@@ -42,13 +42,13 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 	}
 
 	// Get existing Daggerheart state
-	dhState, err := a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	dhState, err := a.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return "", storage.DaggerheartCharacterState{}, err
 	}
 
 	// Get Daggerheart profile for validation
-	dhProfile, err := a.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	dhProfile, err := a.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return "", storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
 	}
@@ -226,7 +226,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 			}
 		}
 
-		dhState, err = a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+		dhState, err = a.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 		if err != nil {
 			return "", storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "load daggerheart character state: %v", err)
 		}
@@ -288,7 +288,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 					return "", storage.DaggerheartCharacterState{}, err
 				}
 
-				dhState, err = a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+				dhState, err = a.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 				if err != nil {
 					return "", storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "load daggerheart character state: %v", err)
 				}
@@ -314,7 +314,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		if gmFear < daggerheart.GMFearMin || gmFear > daggerheart.GMFearMax {
 			return storage.DaggerheartSnapshot{}, status.Errorf(codes.InvalidArgument, "gm_fear %d exceeds range %d..%d", gmFear, daggerheart.GMFearMin, daggerheart.GMFearMax)
 		}
-		existingSnap, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+		existingSnap, err := a.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
 			return storage.DaggerheartSnapshot{}, status.Errorf(codes.Internal, "load existing daggerheart snapshot: %v", err)
 		}
@@ -374,7 +374,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 			return storage.DaggerheartSnapshot{}, err
 		}
 
-		dhSnapshot, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+		dhSnapshot, err := a.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil {
 			return storage.DaggerheartSnapshot{}, status.Errorf(codes.Internal, "load daggerheart snapshot: %v", err)
 		}
@@ -398,7 +398,7 @@ func applyStressVulnerableCondition(
 	actorType event.ActorType,
 	actorID string,
 ) error {
-	if stores.Domain == nil || stores.Daggerheart == nil {
+	if stores.Domain == nil || stores.SystemStores.Daggerheart == nil {
 		return status.Error(codes.Internal, "domain engine or daggerheart store is not configured")
 	}
 	if stressMax <= 0 {

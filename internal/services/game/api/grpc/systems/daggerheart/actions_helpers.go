@@ -19,29 +19,35 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// applyStressVulnerableConditionInput groups arguments for applyStressVulnerableCondition.
+type applyStressVulnerableConditionInput struct {
+	campaignID    string
+	sessionID     string
+	characterID   string
+	conditions    []string
+	stressBefore  int
+	stressAfter   int
+	stressMax     int
+	rollSeq       *uint64
+	requestID     string
+	correlationID string
+}
+
 func (s *DaggerheartService) applyStressVulnerableCondition(
 	ctx context.Context,
-	campaignID string,
-	sessionID string,
-	characterID string,
-	conditions []string,
-	stressBefore int,
-	stressAfter int,
-	stressMax int,
-	rollSeq *uint64,
-	requestID string,
+	in applyStressVulnerableConditionInput,
 ) error {
 	effect, err := s.buildStressVulnerableConditionEffect(
 		ctx,
-		campaignID,
-		sessionID,
-		characterID,
-		conditions,
-		stressBefore,
-		stressAfter,
-		stressMax,
-		rollSeq,
-		requestID,
+		in.campaignID,
+		in.sessionID,
+		in.characterID,
+		in.conditions,
+		in.stressBefore,
+		in.stressAfter,
+		in.stressMax,
+		in.rollSeq,
+		in.requestID,
 	)
 	if err != nil {
 		return err
@@ -52,13 +58,14 @@ func (s *DaggerheartService) applyStressVulnerableCondition(
 
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	if err := s.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
-		campaignID:      campaignID,
+		campaignID:      in.campaignID,
 		commandType:     commandTypeDaggerheartConditionChange,
-		sessionID:       sessionID,
-		requestID:       requestID,
+		sessionID:       in.sessionID,
+		requestID:       in.requestID,
 		invocationID:    invocationID,
+		correlationID:   in.correlationID,
 		entityType:      "character",
-		entityID:        characterID,
+		entityID:        in.characterID,
 		payloadJSON:     effect.PayloadJSON,
 		missingEventMsg: "condition change did not emit an event",
 		applyErrMessage: "apply condition event",

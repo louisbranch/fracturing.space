@@ -56,6 +56,7 @@ var daggerheartCommandDefinitions = []command.Definition{
 	{Type: commandTypeAdversaryCreate, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryCreatePayload},
 	{Type: commandTypeAdversaryUpdate, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryUpdatePayload},
 	{Type: commandTypeAdversaryDelete, Owner: command.OwnerSystem, ValidatePayload: validateAdversaryDeletePayload},
+	{Type: commandTypeMultiTargetDamageApply, Owner: command.OwnerSystem, ValidatePayload: validateMultiTargetDamageApplyPayload},
 }
 
 var daggerheartEventDefinitions = []event.Definition{
@@ -367,6 +368,28 @@ func validateDamageApplyPayload(raw json.RawMessage) error {
 
 func validateDamageAppliedPayload(raw json.RawMessage) error {
 	return validateDamageApplyPayload(raw)
+}
+
+func validateMultiTargetDamageApplyPayload(raw json.RawMessage) error {
+	var payload MultiTargetDamageApplyPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if len(payload.Targets) == 0 {
+		return errors.New("targets is required and must not be empty")
+	}
+	for i, t := range payload.Targets {
+		if strings.TrimSpace(t.CharacterID) == "" {
+			return fmt.Errorf("targets[%d]: character_id is required", i)
+		}
+		if !hasDamagePatchMutation(t.HpBefore, t.HpAfter, t.ArmorBefore, t.ArmorAfter) {
+			return fmt.Errorf("targets[%d]: damage apply must change hp or armor", i)
+		}
+		if err := validateDamageAdapterInvariants(t); err != nil {
+			return fmt.Errorf("targets[%d]: %w", i, err)
+		}
+	}
+	return nil
 }
 
 func validateAdversaryDamageApplyPayload(raw json.RawMessage) error {

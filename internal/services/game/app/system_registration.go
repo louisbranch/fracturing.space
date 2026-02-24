@@ -70,7 +70,7 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 		if metadata.GetVersion(gameSystem, moduleVersion) == nil {
 			return fmt.Errorf("%w: metadata missing for module %s@%s", errSystemModuleRegistryMismatch, moduleID, moduleVersion)
 		}
-		if adapters.Get(moduleID, moduleVersion) == nil {
+		if !adapters.Has(moduleID, moduleVersion) {
 			return fmt.Errorf("%w: adapter missing for module %s@%s", errSystemModuleRegistryMismatch, moduleID, moduleVersion)
 		}
 	}
@@ -88,7 +88,7 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 		if _, ok := moduleKeys[key]; !ok {
 			return fmt.Errorf("%w: metadata registered without module %s@%s", errSystemModuleRegistryMismatch, gameSystem.ID(), version)
 		}
-		if adapters.Get(moduleID, version) == nil {
+		if !adapters.Has(moduleID, version) {
 			return fmt.Errorf("%w: adapter missing for metadata %s@%s", errSystemModuleRegistryMismatch, gameSystem.ID(), version)
 		}
 	}

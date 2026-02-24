@@ -347,7 +347,16 @@ func (a recoveryApplication) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 	if err != nil {
 		return nil, err
 	}
-	if err := a.service.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, current.Conditions, stressBefore, stressAfter, profile.StressMax, nil, grpcmeta.RequestIDFromContext(ctx)); err != nil {
+	if err := a.service.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
+		campaignID:   campaignID,
+		sessionID:    grpcmeta.SessionIDFromContext(ctx),
+		characterID:  characterID,
+		conditions:   current.Conditions,
+		stressBefore: stressBefore,
+		stressAfter:  stressAfter,
+		stressMax:    profile.StressMax,
+		requestID:    grpcmeta.RequestIDFromContext(ctx),
+	}); err != nil {
 		return nil, err
 	}
 
@@ -581,7 +590,16 @@ func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	if err != nil {
 		return nil, err
 	}
-	if err := a.service.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, current.Conditions, stressBefore, stressAfter, profile.StressMax, nil, grpcmeta.RequestIDFromContext(ctx)); err != nil {
+	if err := a.service.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
+		campaignID:   campaignID,
+		sessionID:    grpcmeta.SessionIDFromContext(ctx),
+		characterID:  characterID,
+		conditions:   current.Conditions,
+		stressBefore: stressBefore,
+		stressAfter:  stressAfter,
+		stressMax:    profile.StressMax,
+		requestID:    grpcmeta.RequestIDFromContext(ctx),
+	}); err != nil {
 		return nil, err
 	}
 	if !in.Swap.InRest && in.Swap.RecallCost > 0 {
@@ -838,7 +856,16 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 			return nil, err
 		}
 	}
-	if err := a.service.applyStressVulnerableCondition(ctx, campaignID, grpcmeta.SessionIDFromContext(ctx), characterID, state.Conditions, stressBefore, stressAfter, stressMax, nil, grpcmeta.RequestIDFromContext(ctx)); err != nil {
+	if err := a.service.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
+		campaignID:   campaignID,
+		sessionID:    grpcmeta.SessionIDFromContext(ctx),
+		characterID:  characterID,
+		conditions:   state.Conditions,
+		stressBefore: stressBefore,
+		stressAfter:  stressAfter,
+		stressMax:    stressMax,
+		requestID:    grpcmeta.RequestIDFromContext(ctx),
+	}); err != nil {
 		return nil, err
 	}
 

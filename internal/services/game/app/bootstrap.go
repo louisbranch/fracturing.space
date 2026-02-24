@@ -15,6 +15,7 @@ import (
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -162,7 +163,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		ClaimIndex:         bundle.projections,
 		Invite:             bundle.projections,
 		Character:          bundle.projections,
-		Daggerheart:        bundle.projections,
+		SystemStores:       systemmanifest.ProjectionStores{Daggerheart: bundle.projections},
 		Session:            bundle.projections,
 		SessionGate:        bundle.projections,
 		SessionSpotlight:   bundle.projections,

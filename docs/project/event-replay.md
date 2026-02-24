@@ -6,6 +6,13 @@ nav_order: 4
 
 # Event Replay and Snapshots
 
+```
+quick-start-system-developer.md  (first 30 minutes)
+  -> event-driven-system.md      (write-path invariants)
+  -> game-systems.md             (implementation checklist)
+     -> event-replay.md          (you are here — journal, replay, snapshots)
+```
+
 This guide explains how the event journal, projections, and snapshots work
 together, and how to replay events to rebuild derived state.
 

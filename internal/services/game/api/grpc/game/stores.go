@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -23,10 +24,10 @@ type Stores struct {
 	SessionSpotlight storage.SessionSpotlightStore
 	CampaignFork     storage.CampaignForkStore
 
-	// System adapter stores — used for system event projection via AdapterRegistry.
-	// Daggerheart is wired through manifest.AdapterRegistry, not the core
-	// projection.Applier directly.
-	Daggerheart storage.DaggerheartStore
+	// SystemStores groups system-specific projection stores used by
+	// AdapterRegistry. When adding a new game system, add its store here
+	// and in manifest.ProjectionStores — no other Stores fields need changing.
+	SystemStores systemmanifest.ProjectionStores
 
 	// Infrastructure stores — event journal, snapshots, audit.
 	Event      storage.EventStore
@@ -107,8 +108,8 @@ func (s *Stores) Validate() error {
 	if s.Character == nil {
 		missing = append(missing, "Character")
 	}
-	if s.Daggerheart == nil {
-		missing = append(missing, "Daggerheart")
+	if s.SystemStores.Daggerheart == nil {
+		missing = append(missing, "SystemStores.Daggerheart")
 	}
 	if s.Session == nil {
 		missing = append(missing, "Session")

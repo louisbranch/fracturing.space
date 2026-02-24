@@ -384,6 +384,128 @@ func TestDecideFuncTransform_ValidateCanMutatePayloadBeforeTransform(t *testing.
 	}
 }
 
+type multiPayload struct {
+	Targets []string `json:"targets"`
+}
+
+func TestDecideFuncMulti_EmitsMultipleEvents(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("sys.test.multi"),
+		PayloadJSON: []byte(`{"targets":["t1","t2","t3"]}`),
+	}
+	now := func() time.Time { return time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC) }
+
+	decision := DecideFuncMulti(cmd, decideTestState{Counter: 1}, true,
+		func(s decideTestState, hasState bool, p *multiPayload, nowFn func() time.Time) *command.Rejection {
+			if !hasState {
+				t.Fatal("expected hasState to be true")
+			}
+			return nil
+		},
+		func(s decideTestState, hasState bool, p multiPayload, nowFn func() time.Time) ([]EventSpec, error) {
+			specs := make([]EventSpec, 0, len(p.Targets))
+			for _, target := range p.Targets {
+				specs = append(specs, EventSpec{
+					Type:       event.Type("sys.test.target_hit"),
+					EntityType: "character",
+					EntityID:   target,
+					Payload:    testPayload{Name: "hit", ID: target},
+				})
+			}
+			return specs, nil
+		},
+		now)
+
+	if len(decision.Rejections) > 0 {
+		t.Fatalf("expected accept, got rejection: %v", decision.Rejections[0].Message)
+	}
+	if len(decision.Events) != 3 {
+		t.Fatalf("expected 3 events, got %d", len(decision.Events))
+	}
+	for i, target := range []string{"t1", "t2", "t3"} {
+		if decision.Events[i].EntityID != target {
+			t.Errorf("event[%d].EntityID = %s, want %s", i, decision.Events[i].EntityID, target)
+		}
+		if decision.Events[i].Type != event.Type("sys.test.target_hit") {
+			t.Errorf("event[%d].Type = %s, want sys.test.target_hit", i, decision.Events[i].Type)
+		}
+	}
+}
+
+func TestDecideFuncMulti_RejectsOnUnmarshalError(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("sys.test.multi"),
+		PayloadJSON: []byte(`{bad json`),
+	}
+	now := func() time.Time { return time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC) }
+
+	decision := DecideFuncMulti(cmd, decideTestState{}, false,
+		nil,
+		func(_ decideTestState, _ bool, _ multiPayload, _ func() time.Time) ([]EventSpec, error) {
+			t.Fatal("expand should not be called on unmarshal error")
+			return nil, nil
+		},
+		now)
+
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "PAYLOAD_DECODE_FAILED" {
+		t.Fatalf("rejection code = %s, want PAYLOAD_DECODE_FAILED", decision.Rejections[0].Code)
+	}
+}
+
+func TestDecideFuncMulti_RejectsOnValidation(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("sys.test.multi"),
+		PayloadJSON: []byte(`{"targets":["t1"]}`),
+	}
+	now := func() time.Time { return time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC) }
+
+	decision := DecideFuncMulti(cmd, decideTestState{}, false,
+		func(_ decideTestState, _ bool, _ *multiPayload, _ func() time.Time) *command.Rejection {
+			return &command.Rejection{Code: "MULTI_REJECT", Message: "nope"}
+		},
+		func(_ decideTestState, _ bool, _ multiPayload, _ func() time.Time) ([]EventSpec, error) {
+			t.Fatal("expand should not be called after rejection")
+			return nil, nil
+		},
+		now)
+
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "MULTI_REJECT" {
+		t.Fatalf("rejection code = %s, want MULTI_REJECT", decision.Rejections[0].Code)
+	}
+}
+
+func TestDecideFuncMulti_RejectsOnEmptySpecs(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("sys.test.multi"),
+		PayloadJSON: []byte(`{"targets":[]}`),
+	}
+	now := func() time.Time { return time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC) }
+
+	decision := DecideFuncMulti(cmd, decideTestState{}, false,
+		nil,
+		func(_ decideTestState, _ bool, _ multiPayload, _ func() time.Time) ([]EventSpec, error) {
+			return nil, nil
+		},
+		now)
+
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "NO_EVENTS" {
+		t.Fatalf("rejection code = %s, want NO_EVENTS", decision.Rejections[0].Code)
+	}
+}
+
 func TestDecideFunc_ValidateCanMutatePayload(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",
