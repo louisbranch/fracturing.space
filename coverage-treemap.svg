@@ -20,14 +20,14 @@
 
 
 <g>
-	<rect x="838.189937" y="532.726627" width="97.715088" height="79.273373" style="fill: rgb(82, 178, 93);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="838.189937" y="532.726627" width="97.715088" height="79.273373" style="fill: rgb(81, 177, 92);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(846.189937,548.326627) scale(0.607999)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">platform 83.1%</text>
+	data-math="N">platform 83.3%</text>
 		
 </g>
 
@@ -97,7 +97,7 @@
 
 
 <g>
-	<rect x="884.619077" y="554.326627" width="25.554104" height="21.869405" style="fill: rgb(6, 119, 63);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="884.619077" y="554.326627" width="25.554104" height="21.869405" style="fill: rgb(4, 115, 61);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 </g>
 
@@ -199,7 +199,7 @@
 	text-anchor="start"
 	transform="translate(44.000000,78.800000) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">game 81.5%</text>
+	data-math="N">game 81.4%</text>
 		
 </g>
 
@@ -801,7 +801,7 @@
 
 
 <g>
-	<rect x="256.227906" y="328.522609" width="175.235023" height="175.070418" style="fill: rgb(67, 170, 89);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="256.227906" y="328.522609" width="175.235023" height="175.070418" style="fill: rgb(68, 170, 89);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
@@ -1993,7 +1993,7 @@
 	text-anchor="start"
 	transform="translate(272.227906,365.722609) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">sqlite 84.8%</text>
+	data-math="N">sqlite 84.7%</text>
 		
 </g>
 
@@ -3021,14 +3021,14 @@
 
 
 <g>
-	<rect x="272.227906" y="420.180835" width="38.352737" height="35.450384" style="fill: rgb(122, 198, 101);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="272.227906" y="420.180835" width="38.352737" height="35.450384" style="fill: rgb(124, 199, 101);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(280.227906,435.780835) scale(0.072763)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">store_projection_outbox.go 76.9%</text>
+	data-math="N">store_projection_outbox.go 76.6%</text>
 		
 </g>
 
