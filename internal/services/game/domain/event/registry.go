@@ -318,26 +318,26 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 }
 
 // ShouldFold returns true when the event type should be folded into aggregate
-// state. Events with IntentAuditOnly are skipped; all others (including
-// unknown types) are folded. This centralizes the intent contract that
-// the aggregate folder and domain replay depend on.
+// state. Events with IntentAuditOnly are skipped. Unknown types return false
+// (fail-closed) because ValidateForAppend already rejects unknown types at
+// write time — any unknown type reaching fold is a bug, not a valid event.
 func (r *Registry) ShouldFold(eventType Type) bool {
 	def, ok := r.Definition(eventType)
 	if !ok {
-		return true
+		return false
 	}
 	return def.Intent != IntentAuditOnly
 }
 
 // ShouldProject returns true when the event type should be applied to
 // projection stores. Only IntentProjectionAndReplay events are projected;
-// IntentReplayOnly and IntentAuditOnly are skipped. Unknown types default
-// to projectable so unregistered events surface as routing errors rather
-// than silent drops.
+// IntentReplayOnly and IntentAuditOnly are skipped. Unknown types return
+// false (fail-closed) because ValidateForAppend already rejects unknown
+// types at write time — any unknown type reaching projection is a bug.
 func (r *Registry) ShouldProject(eventType Type) bool {
 	def, ok := r.Definition(eventType)
 	if !ok {
-		return true
+		return false
 	}
 	return def.Intent == IntentProjectionAndReplay
 }
@@ -391,6 +391,18 @@ func (r *Registry) Resolve(t Type) Type {
 		return canonical
 	}
 	return t
+}
+
+// ListAliases returns a copy of all registered aliases (deprecated -> canonical).
+func (r *Registry) ListAliases() map[Type]Type {
+	if r == nil || len(r.aliases) == 0 {
+		return nil
+	}
+	result := make(map[Type]Type, len(r.aliases))
+	for deprecated, canonical := range r.aliases {
+		result[deprecated] = canonical
+	}
+	return result
 }
 
 // MissingPayloadValidators returns event types that have IntentProjectionAndReplay

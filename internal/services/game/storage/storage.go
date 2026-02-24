@@ -440,9 +440,10 @@ type CampaignForkStore interface {
 // to projections for a given campaign. Comparing watermarks against the event
 // journal high-water mark reveals projection gaps that need repair.
 type ProjectionWatermark struct {
-	CampaignID string
-	AppliedSeq uint64
-	UpdatedAt  time.Time
+	CampaignID      string
+	AppliedSeq      uint64
+	ExpectedNextSeq uint64
+	UpdatedAt       time.Time
 }
 
 // ProjectionWatermarkStore tracks per-campaign projection application progress

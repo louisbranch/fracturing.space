@@ -538,7 +538,7 @@ func TestRegistryShouldFold(t *testing.T) {
 		{"ev.projected", true},
 		{"ev.replay", true},
 		{"ev.audit", false},
-		{"ev.unknown", true}, // unknown types default to foldable
+		{"ev.unknown", false}, // unknown types fail-closed: reject at fold boundary
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.eventType), func(t *testing.T) {
@@ -568,7 +568,7 @@ func TestRegistryShouldProject(t *testing.T) {
 		{"ev.projected", true},
 		{"ev.replay", false},
 		{"ev.audit", false},
-		{"ev.unknown", true}, // unknown types default to projectable
+		{"ev.unknown", false}, // unknown types fail-closed: reject at projection boundary
 	}
 	for _, tt := range tests {
 		t.Run(string(tt.eventType), func(t *testing.T) {

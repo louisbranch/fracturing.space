@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -101,6 +102,52 @@ func TestFolderApply_RoutesSystemEvents(t *testing.T) {
 	}
 }
 
+func TestFolderFold_RejectsPartialSystemMetadata(t *testing.T) {
+	applier := Folder{SystemRegistry: module.NewRegistry()}
+
+	tests := []struct {
+		name          string
+		systemID      string
+		systemVersion string
+	}{
+		{"system_id_only", "system-1", ""},
+		{"system_version_only", "", "v1"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := applier.Fold(State{}, event.Event{
+				Type:          event.Type("action.tested"),
+				SystemID:      tt.systemID,
+				SystemVersion: tt.systemVersion,
+			})
+			if err == nil {
+				t.Fatal("expected error for partial system metadata")
+			}
+			if !strings.Contains(err.Error(), "system id and version are both required") {
+				t.Fatalf("expected partial metadata error, got: %v", err)
+			}
+		})
+	}
+}
+
+func TestFolderFold_SkipsSystemPathWhenBothEmpty(t *testing.T) {
+	// Core events with no system metadata should not enter system path at all.
+	applier := Folder{}
+	state := State{}
+
+	result, err := applier.Fold(state, event.Event{
+		Type:        event.Type("campaign.created"),
+		PayloadJSON: []byte(`{"name":"Test"}`),
+	})
+	if err != nil {
+		t.Fatalf("fold core event: %v", err)
+	}
+	updated := result.(State)
+	if updated.Campaign.Name != "Test" {
+		t.Fatalf("campaign name = %s, want Test", updated.Campaign.Name)
+	}
+}
+
 func TestFolderApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
 	applier := Folder{SystemRegistry: module.NewRegistry()}
 	state := State{}
@@ -112,6 +159,14 @@ func TestFolderApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
 	})
 	if err == nil {
 		t.Fatal("expected error for unregistered system event")
+	}
+	// A8: error must mention both the system key and the event type for
+	// debuggability, not just "module not found".
+	if !strings.Contains(err.Error(), "unregistered-system@v1") {
+		t.Fatalf("error should mention system key, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "action.unregistered_system") {
+		t.Fatalf("error should mention event type, got: %v", err)
 	}
 }
 
@@ -154,6 +209,40 @@ func TestFolderApply_SkipsAuditOnlyEvents(t *testing.T) {
 	// Audit-only event should not modify state.
 	if updated.Campaign.Name != "unchanged" {
 		t.Fatalf("campaign name = %s, want unchanged", updated.Campaign.Name)
+	}
+}
+
+func TestFolderFold_ResolvesAliasBeforeRouting(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := registry.Register(event.Definition{
+		Type:   event.Type("campaign.created"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register type: %v", err)
+	}
+	if err := registry.RegisterAlias(event.Type("old.campaign.created"), event.Type("campaign.created")); err != nil {
+		t.Fatalf("register alias: %v", err)
+	}
+
+	applier := Folder{Events: registry}
+	state := State{}
+
+	// Fold using the legacy alias type — should resolve to campaign.created and
+	// apply the campaign fold handler.
+	result, err := applier.Fold(state, event.Event{
+		Type:        event.Type("old.campaign.created"),
+		PayloadJSON: []byte(`{"name":"Test Campaign"}`),
+	})
+	if err != nil {
+		t.Fatalf("fold alias event: %v", err)
+	}
+	updated, ok := result.(State)
+	if !ok {
+		t.Fatal("expected State result")
+	}
+	if updated.Campaign.Name != "Test Campaign" {
+		t.Fatalf("campaign name = %s, want Test Campaign", updated.Campaign.Name)
 	}
 }
 

@@ -5,6 +5,7 @@
 package testkit
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
@@ -60,5 +61,67 @@ func ValidateSystemConformance(t *testing.T, mod module.Module, adapter bridge.A
 	}
 	if err := engine.ValidateStateFactoryDeterminism(modules); err != nil {
 		t.Errorf("state factory determinism: %v", err)
+	}
+
+	// G3: Fold idempotency — folding the same event into fresh state twice
+	// must produce identical results. This catches fold functions that use
+	// deltas instead of absolute values.
+	validateFoldIdempotency(t, mod)
+}
+
+// validateFoldIdempotency folds each handled event type twice into fresh
+// state and asserts the results are identical.
+func validateFoldIdempotency(t *testing.T, mod module.Module) {
+	t.Helper()
+	folder := mod.Folder()
+	if folder == nil {
+		return
+	}
+	factory := mod.StateFactory()
+	if factory == nil {
+		return
+	}
+
+	const testCampaignID = "idempotency-check"
+
+	for _, evtType := range folder.FoldHandledTypes() {
+		evt := event.Event{
+			CampaignID:    testCampaignID,
+			Type:          evtType,
+			SystemID:      mod.ID(),
+			SystemVersion: mod.Version(),
+			EntityType:    "character",
+			EntityID:      "char-1",
+			PayloadJSON:   []byte("{}"),
+		}
+
+		// First fold into fresh state.
+		state1, err := factory.NewSnapshotState(testCampaignID)
+		if err != nil {
+			t.Errorf("fold idempotency: NewSnapshotState for %s: %v", evtType, err)
+			continue
+		}
+		result1, err := folder.Fold(state1, evt)
+		if err != nil {
+			// Some fold functions may fail with empty payload — that's
+			// acceptable; we only check idempotency when fold succeeds.
+			continue
+		}
+
+		// Second fold into fresh state with the same event.
+		state2, err := factory.NewSnapshotState(testCampaignID)
+		if err != nil {
+			t.Errorf("fold idempotency: NewSnapshotState for %s: %v", evtType, err)
+			continue
+		}
+		result2, err := folder.Fold(state2, evt)
+		if err != nil {
+			t.Errorf("fold idempotency: second fold failed for %s: %v", evtType, err)
+			continue
+		}
+
+		if !reflect.DeepEqual(result1, result2) {
+			t.Errorf("fold idempotency: %s produced different state on second fold into fresh state", evtType)
+		}
 	}
 }

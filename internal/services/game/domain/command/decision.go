@@ -1,6 +1,13 @@
 package command
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+import (
+	"errors"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+)
+
+// ErrDecisionEmpty indicates a decision has neither events nor rejections.
+var ErrDecisionEmpty = errors.New("decision must emit at least one event or rejection")
 
 // Decision represents the pure outcome of handling a command.
 //
@@ -19,6 +26,15 @@ type Decision struct {
 type Rejection struct {
 	Code    string
 	Message string
+}
+
+// Validate returns an error if the decision carries neither events nor
+// rejections. A valid decision must express at least one outcome.
+func (d Decision) Validate() error {
+	if len(d.Events) == 0 && len(d.Rejections) == 0 {
+		return ErrDecisionEmpty
+	}
+	return nil
 }
 
 // Accept returns a decision that emits the provided events.

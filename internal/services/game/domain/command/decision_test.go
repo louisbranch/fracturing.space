@@ -21,6 +21,27 @@ func TestAcceptDecision_ReturnsEventsOnly(t *testing.T) {
 	}
 }
 
+func TestDecisionValidate_ReturnsErrorForEmptyDecision(t *testing.T) {
+	d := Decision{}
+	if err := d.Validate(); err == nil {
+		t.Fatal("expected error for empty decision")
+	}
+}
+
+func TestDecisionValidate_AcceptsEventsOnly(t *testing.T) {
+	d := Accept(event.Event{CampaignID: "camp-1"})
+	if err := d.Validate(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestDecisionValidate_AcceptsRejectionsOnly(t *testing.T) {
+	d := Reject(Rejection{Code: "NOPE"})
+	if err := d.Validate(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
 func TestRejectDecision_ReturnsRejectionsOnly(t *testing.T) {
 	rejection := Rejection{Code: "INVALID"}
 	decision := Reject(rejection)

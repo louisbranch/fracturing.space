@@ -238,7 +238,7 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		now = time.Now
 	}
 	decision := h.Decider.Decide(state, cmd, now)
-	if len(decision.Rejections) == 0 && len(decision.Events) == 0 {
+	if err := decision.Validate(); err != nil {
 		// FIXME(telemetry): emit metric for command decider no-op outcomes (no events, no rejections)
 		// once domain/write model counters are wired.
 		return command.Command{}, nil, command.Decision{}, ErrCommandMustMutate
@@ -270,7 +270,7 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 			stateAfter, err := h.Folder.Fold(state, evt)
 			if err != nil {
 				if journalPersisted {
-					return command.Command{}, nil, command.Decision{}, fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err)
+					return command.Command{}, nil, command.Decision{}, wrapNonRetryable(fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err))
 				}
 				return command.Command{}, nil, command.Decision{}, err
 			}

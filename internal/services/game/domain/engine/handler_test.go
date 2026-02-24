@@ -592,6 +592,19 @@ func TestExecute_WrapsPostPersistApplyFailure(t *testing.T) {
 	if journal.last.Seq != 1 {
 		t.Fatalf("journal seq = %d, want 1 (event should be persisted)", journal.last.Seq)
 	}
+	// A3: post-persist errors must be non-retryable to prevent duplicate events.
+	if !IsNonRetryable(err) {
+		t.Fatal("expected post-persist error to be non-retryable")
+	}
+}
+
+func TestIsNonRetryable_FalseForOrdinaryErrors(t *testing.T) {
+	if IsNonRetryable(errors.New("ordinary error")) {
+		t.Fatal("ordinary errors should not be non-retryable")
+	}
+	if IsNonRetryable(nil) {
+		t.Fatal("nil should not be non-retryable")
+	}
 }
 
 type batchTrackingJournal struct {
