@@ -10,9 +10,9 @@ Use this sequence for first-time contributions to avoid routing or registry regr
 
 ## Add or change a command/event definition
 
-1. Update the owning domain module registry:
-   - command: `RegisterCommands` in `internal/services/game/domain/<system>/registry.go`
-   - event: `RegisterEvents` in `internal/services/game/domain/<system>/registry.go`
+1. Update the owning domain module registration surface:
+   - system modules: `RegisterCommands` and `RegisterEvents` in `internal/services/game/domain/bridge/<system>/module.go`
+   - core modules: command/event registration in the owning `internal/services/game/domain/<area>/registry.go`
 2. Update any command/event payload structs in the same module package.
 3. Update generated catalog expectations by running the repo checks.
 4. Add a focused registry test in the owning module package.
@@ -29,8 +29,8 @@ Use this sequence for first-time contributions to avoid routing or registry regr
 
 1. Implement the system module wiring in `internal/services/game/domain/bridge/<system>/`.
 2. Register the module in:
-   - `internal/services/game/app/system_registration.go`
-   - `internal/services/game/domain/system/registry.go` integration points
+   - `internal/services/game/domain/bridge/manifest/manifest.go`
+   - `internal/services/game/domain/engine/registries.go` integration points
 3. Add module integration tests in `internal/services/game/domain` for command/event registrations.
 4. Re-run startup wiring tests:
    - `go test ./internal/services/game/app -run Test.*System`
@@ -52,6 +52,6 @@ Use this sequence for first-time contributions to avoid routing or registry regr
 
 ## Next docs
 
-- Conceptual write-path rules: [../project/event-driven-system.md](../project/event-driven-system.md)
-- System extension architecture: [../project/game-systems.md](../project/game-systems.md)
+- Conceptual write-path rules: [../architecture/event-driven-system.md](../architecture/event-driven-system.md)
+- System extension architecture: [../architecture/game-systems.md](../architecture/game-systems.md)
 - Generated command/event contracts: [../events/index.md](../events/index.md)

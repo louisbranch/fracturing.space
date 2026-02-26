@@ -10,44 +10,11 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 )
 
-func TestScenarioMissingMechanicTimelineCoverage(t *testing.T) {
-	repoRoot := integrationRepoRoot(t)
-	scenarioDir := filepath.Join(repoRoot, "internal", "test", "game", "scenarios")
-	missingMechanicsDoc := filepath.Join(repoRoot, "docs", "project", "scenario-missing-mechanics.md")
-	backlogDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-mechanic-backlog.md")
-
-	markerScenarios, err := loadMarkedScenarioFiles(scenarioDir, "-- Missing DSL:")
-	if err != nil {
-		t.Fatalf("load marker scenarios: %v", err)
-	}
-
-	indexRows, err := loadScenarioTimelineIndex(missingMechanicsDoc)
-	if err != nil {
-		t.Fatalf("load scenario timeline index: %v", err)
-	}
-	if len(indexRows) == 0 {
-		t.Fatal("expected at least one scenario timeline mapping")
-	}
-
-	timelineRowIDs, err := loadTimelineRowIDs(backlogDoc)
-	if err != nil {
-		t.Fatalf("load timeline row ids: %v", err)
-	}
-	if len(timelineRowIDs) == 0 {
-		t.Fatal("expected at least one timeline row id")
-	}
-
-	if err := validateTimelineCoverageForMarkers(markerScenarios, indexRows, timelineRowIDs); err != nil {
-		t.Fatal(err)
-	}
-}
-
 func TestDaggerheartTimelineTypesAreRegistered(t *testing.T) {
 	repoRoot := integrationRepoRoot(t)
-	timelineDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-event-timeline-contract.md")
-	backlogDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-mechanic-backlog.md")
+	timelineDoc := filepath.Join(repoRoot, "docs", "architecture", "daggerheart-event-timeline-contract.md")
 
-	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypesFromDocs(timelineDoc, backlogDoc)
+	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypesFromDocs(timelineDoc)
 	if err != nil {
 		t.Fatalf("load timeline command/event types: %v", err)
 	}
@@ -88,10 +55,9 @@ func TestDaggerheartTimelineTypesAreRegistered(t *testing.T) {
 
 func TestRegisteredDaggerheartTimelineTypesAreDocumented(t *testing.T) {
 	repoRoot := integrationRepoRoot(t)
-	timelineDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-event-timeline-contract.md")
-	backlogDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-mechanic-backlog.md")
+	timelineDoc := filepath.Join(repoRoot, "docs", "architecture", "daggerheart-event-timeline-contract.md")
 
-	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypesFromDocs(timelineDoc, backlogDoc)
+	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypesFromDocs(timelineDoc)
 	if err != nil {
 		t.Fatalf("load timeline command/event types: %v", err)
 	}

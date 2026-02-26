@@ -9,6 +9,8 @@ has_children: true
 Pick the track that matches what you need right now.
 
 - [Contributors](contributors.md): first code/docs change, tests, and PR workflow.
+- [Contributor map](contributor-map.md): first-edit path by task type.
+- [Adding a command/event/system](adding-command-event-system.md): focused extension workflow.
 - [Operators](operators.md): local/prod runtime operations and configuration.
 - [Clients and tooling](clients.md): MCP and client integration surfaces.
 - [System designers](system-designers.md): system extension and mechanics design.

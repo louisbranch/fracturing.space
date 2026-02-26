@@ -1,3 +1,9 @@
+---
+title: "Web Smoke Spec"
+parent: "Specs"
+nav_order: 2
+---
+
 # Web Smoke Spec (Playwright CLI)
 
 ## Purpose

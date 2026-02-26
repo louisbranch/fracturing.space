@@ -1,7 +1,7 @@
 ---
 title: "Playwright CLI QA Workflows"
 parent: "Specs"
-nav_order: 2
+nav_order: 3
 ---
 
 # Playwright CLI QA Workflows

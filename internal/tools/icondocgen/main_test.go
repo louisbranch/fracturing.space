@@ -55,7 +55,7 @@ func TestRunResolvesRootFromWorkingDirectory(t *testing.T) {
 	if stderr.Len() != 0 {
 		t.Fatalf("unexpected stderr output: %q", stderr.String())
 	}
-	outPath := filepath.Join(root, "docs", "project", "icon-catalog.md")
+	outPath := filepath.Join(root, "docs", "reference", "icon-catalog.md")
 	data, err := os.ReadFile(outPath)
 	if err != nil {
 		t.Fatalf("read generated catalog: %v", err)

@@ -37,18 +37,18 @@ Recommended first path:
 3. Pick a first edit target from [docs/audience/contributor-map.md](docs/audience/contributor-map.md).
 4. Apply contribution workflow checks in [CONTRIBUTING.md](CONTRIBUTING.md).
 
-If you are evaluating architecture before coding, start with [docs/project/overview.md](docs/project/overview.md) and then return to the contributor path above.
+If you are evaluating architecture before coding, start with [docs/architecture/overview.md](docs/architecture/overview.md) and then return to the contributor path above.
 
 ## Docs map
 
 - Docs home: [docs/index.md](docs/index.md)
 - Audience routing: [docs/audience/index.md](docs/audience/index.md)
 - Running and setup: [docs/running/index.md](docs/running/index.md)
-- Project architecture and domain docs: [docs/project/index.md](docs/project/index.md)
+- Project architecture and domain docs: [docs/architecture/index.md](docs/architecture/index.md)
 
 ## Documentation lifecycle
 
-Contributor entrypoints prioritize canonical docs. Roadmap and phase-specific design docs are still available from subsystem indexes and are intended for active scoped work.
+Contributor entrypoints prioritize canonical docs. Temporary implementation plans and phase trackers are intentionally kept out of `docs/`.
 
 ## Project status
 

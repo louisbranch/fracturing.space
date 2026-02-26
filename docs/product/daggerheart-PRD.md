@@ -210,24 +210,21 @@ Define the core, setting-agnostic mechanics of the Daggerheart system for digita
 - Difficulty selection, narrative consequences, and some feature triggers are GM judgment and must be explicitly modeled as inputs or GM-side actions.
 - Content data must not hardcode setting-specific names, only structural roles and effects.
 
-## Phase 2 Planning (Implementation Focus)
-Phase 2 focuses on wiring the Phase 1 mechanics into event-driven gameplay flows, keeping internal mechanics authoritative and MCP deferred.
+## Implementation Priorities
 
-### Phase 2 Goals
-- Convert mechanical helpers into event-driven state changes (damage, rest, downtime, loadout swaps).
-- Define combat event payloads and projection handling for HP/Stress/Hope/Armor changes.
-- Establish cadence events (rests, downtime moves) with GM Fear adjustments.
-- Add outcome application flows for attacks, damage, and reactions.
+Priority implementation outcomes should preserve these product boundaries:
 
-### Phase 2 Deliverables
-- Event payloads for damage application and mitigation (HP before/after, severity, armor spend).
-- Rest/downtime events with refresh semantics and GM Fear changes.
-- Ability usage events for stress/hope spend and recall swaps.
-- Projection validation for new event types.
+- Mechanics resolve through event-driven state transitions (damage, rest,
+  downtime, loadout swaps).
+- Combat and recovery behavior use explicit event payloads and projection
+  updates for HP/Stress/Hope/Armor changes.
+- Outcome application flows cover attacks, damage, reactions, and GM Fear
+  adjustments.
 
-### Phase 2 Out of Scope
+Implementation is out of scope for this PRD when work requires:
+
 - Full content catalogs (items, adversaries, spells).
-- MCP exposure and UI/UX.
+- MCP exposure and UI/UX workflows.
 - Campaign frames or setting-specific features.
 
 ## Example Behavior Snippets (Clarifying Only)

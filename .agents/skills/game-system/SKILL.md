@@ -6,7 +6,7 @@ user-invocable: true
 
 # Adding a New Game System
 
-Use `docs/project/game-systems.md` for the comprehensive guide, checklist, and
+Use `docs/architecture/game-systems.md` for the comprehensive guide, checklist, and
 Daggerheart reference implementation.
 
 ## Quick-start workflow
@@ -18,13 +18,13 @@ Daggerheart reference implementation.
    (Daggerheart) to understand the shape, then add yours.
 
 2. **Pick the right DecideFunc helper** — see the decision tree in
-   `docs/project/game-systems.md` under "DecideFunc decision tree":
+   `docs/architecture/game-systems.md` under "DecideFunc decision tree":
    - `DecideFunc[P]` — no state needed, same payload for command/event
    - `DecideFuncWithState[S, P]` — needs state for validation
    - `DecideFuncTransform[S, PIn, POut]` — event payload differs from command
    - Raw `Decide` switch — multi-event or custom routing
 
-3. **Follow the numbered steps** in `docs/project/game-systems.md` § "Adding a
+3. **Follow the numbered steps** in `docs/architecture/game-systems.md` § "Adding a
    new system (current flow)" (steps 1–10).
 
 4. **Run conformance tests** after wiring:

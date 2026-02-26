@@ -3,11 +3,8 @@ exclude:
   - guides
   - specs
   - product
-  - notes
-  - project/identity.md
-  - project/oauth.md
-  - project/participant-invitation.md
-  - project/testing-scenarios.md
-  - project/scenario-dsl-dependencies.md
-  - project/scenario-missing-mechanics.md
-  - project/icon-catalog.md
+  - architecture/campaign-authorization-audit.md
+  - architecture/campaign-authorization-model.md
+  - architecture/identity.md
+  - architecture/oauth.md
+  - reference/icon-catalog.md

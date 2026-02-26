@@ -2,6 +2,9 @@
 title: "Scenario scripts"
 parent: "Running"
 nav_order: 8
+status: canonical
+owner: engineering
+last_reviewed: "2026-02-26"
 ---
 
 # Running Lua Scenario Scripts

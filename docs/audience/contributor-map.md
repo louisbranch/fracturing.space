@@ -28,7 +28,7 @@ Use this map to find the best first edit point for common contribution types.
 
 ## Fast orientation flow
 
-1. Read `docs/project/architecture.md` and `docs/project/domain-language.md`.
+1. Read `docs/architecture/architecture.md` and `docs/architecture/domain-language.md`.
 2. Find your change row in the table above.
 3. Run targeted tests for that area first, then full validation:
    - `go test ./internal/services/game/api/grpc/internal/domainwrite -run TestShouldApplyProjectionInline`
@@ -41,5 +41,5 @@ Use this map to find the best first edit point for common contribution types.
 ## Next docs
 
 - For command/event/system additions, use [adding-command-event-system.md](adding-command-event-system.md).
-- For write-path semantics, read [../project/event-driven-system.md](../project/event-driven-system.md).
+- For write-path semantics, read [../architecture/event-driven-system.md](../architecture/event-driven-system.md).
 - For final pre-PR checks, use [../guides/docs-quality-checks.md](../guides/docs-quality-checks.md).

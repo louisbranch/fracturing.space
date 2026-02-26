@@ -28,5 +28,5 @@ Transport-layer guidance for the Web UI and related services.
 
 ## Architecture Notes
 
-Refer to `docs/project/architecture.md` for system layout and service boundaries.
-Refer to `docs/project/domain-language.md` for canonical naming.
+Refer to `docs/architecture/architecture.md` for system layout and service boundaries.
+Refer to `docs/architecture/domain-language.md` for canonical naming.

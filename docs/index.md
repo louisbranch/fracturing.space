@@ -24,18 +24,19 @@ Choose the path that matches your immediate goal:
 3. Pick a first target from [contributor map](audience/contributor-map.md).
 4. Run checks from [CONTRIBUTING.md](../CONTRIBUTING.md).
 
-## Documentation classes
+## Documentation map
 
-- Canonical: required for current contributor workflows and runtime behavior.
-- Roadmap: active future-facing design/specification work.
-
-Gateway pages prioritize Canonical docs. For Roadmap pages, start from the subsystem entrypoint in [project index](project/index.md).
+- Audience entrypoints: [audience/index.md](audience/index.md)
+- Runtime setup and operations: [running/index.md](running/index.md)
+- Canonical architecture and domain docs: [architecture/index.md](architecture/index.md)
+- Protocol and generated references: [reference/index.md](reference/index.md), [events/index.md](events/index.md)
+- Executable smoke and QA specs: [specs/index.md](specs/index.md)
 
 ## Canonical deep dives (open only when needed)
 
-- [Project overview](project/overview.md)
-- [Architecture](project/architecture.md)
-- [Domain language](project/domain-language.md)
-- [Event-driven system](project/event-driven-system.md)
-- [Game systems architecture](project/game-systems.md)
-- [Testing policy](project/testing-coverage.md)
+- [Project overview](architecture/overview.md)
+- [Architecture](architecture/architecture.md)
+- [Domain language](architecture/domain-language.md)
+- [Event-driven system](architecture/event-driven-system.md)
+- [Game systems architecture](architecture/game-systems.md)
+- [Testing policy](architecture/testing-coverage.md)

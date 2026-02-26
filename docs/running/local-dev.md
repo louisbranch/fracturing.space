@@ -2,6 +2,9 @@
 title: "Local development"
 parent: "Running"
 nav_order: 2
+status: canonical
+owner: engineering
+last_reviewed: "2026-02-26"
 ---
 
 # Local development (Go)

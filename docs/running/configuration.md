@@ -2,6 +2,9 @@
 title: "Configuration"
 parent: "Running"
 nav_order: 5
+status: canonical
+owner: engineering
+last_reviewed: "2026-02-26"
 ---
 
 # Configuration

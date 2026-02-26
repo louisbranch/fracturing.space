@@ -53,4 +53,4 @@ Example:
 
 ## Testability
 
-See [Testability Practices](../../../docs/project/testability.md) for constructor, dependency injection, and fake patterns.
+See [Testability Practices](../../../docs/architecture/testability.md) for constructor, dependency injection, and fake patterns.
