@@ -58,6 +58,13 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 		t.Fatalf("protected status = %d, want %d", protectedRR.Code, http.StatusFound)
 	}
 
+	dashboardReq := httptest.NewRequest(http.MethodGet, "/app/dashboard/", nil)
+	dashboardRR := httptest.NewRecorder()
+	h.ServeHTTP(dashboardRR, dashboardReq)
+	if dashboardRR.Code != http.StatusFound {
+		t.Fatalf("dashboard status = %d, want %d", dashboardRR.Code, http.StatusFound)
+	}
+
 	campaignsReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/123", nil)
 	campaignsRR := httptest.NewRecorder()
 	h.ServeHTTP(campaignsRR, campaignsReq)
@@ -66,6 +73,9 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	}
 	if got := campaignsRR.Header().Get("Location"); got != "/login" {
 		t.Fatalf("campaigns redirect = %q, want %q", got, "/login")
+	}
+	if got := dashboardRR.Header().Get("Location"); got != "/login" {
+		t.Fatalf("dashboard redirect = %q, want %q", got, "/login")
 	}
 
 	experimentalProtectedReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
@@ -262,6 +272,30 @@ func TestAppCampaignsPageRendersPrimaryNavigation(t *testing.T) {
 	assertPrimaryNavLinks(t, rr.Body.String())
 }
 
+func TestAppDashboardPageRendersPrimaryNavigation(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/dashboard/", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{"dashboard-root"} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing dashboard marker %q", marker)
+		}
+	}
+	assertPrimaryNavLinks(t, body)
+}
+
 func TestAppSettingsPageRendersPrimaryNavigation(t *testing.T) {
 	t.Parallel()
 
@@ -418,7 +452,7 @@ func TestPrimaryNavigationOmitsExperimentalLinksByDefault(t *testing.T) {
 	}
 }
 
-func TestPrimaryNavigationUsesCampaignCatalogIcon(t *testing.T) {
+func TestPrimaryNavigationUsesDashboardAndCampaignIcons(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
@@ -434,6 +468,17 @@ func TestPrimaryNavigationUsesCampaignCatalogIcon(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
+	if !strings.Contains(body, `href="/app/dashboard"`) {
+		t.Fatalf("body missing dashboard nav link")
+	}
+	dashboardIconHref := `href="#` + icons.LucideSymbolID("layout-dashboard") + `"`
+	if !strings.Contains(body, dashboardIconHref) {
+		t.Fatalf("body missing dashboard icon %q", dashboardIconHref)
+	}
+	dashboardIconSymbol := `id="` + icons.LucideSymbolID("layout-dashboard") + `"`
+	if !strings.Contains(body, dashboardIconSymbol) {
+		t.Fatalf("body missing dashboard icon symbol %q", dashboardIconSymbol)
+	}
 	if !strings.Contains(body, `href="/app/campaigns"`) {
 		t.Fatalf("body missing campaigns nav link")
 	}
@@ -922,7 +967,7 @@ func TestCloseHandlesNilServerAndNilHTTPServer(t *testing.T) {
 
 func assertPrimaryNavLinks(t *testing.T, body string) {
 	t.Helper()
-	for _, href := range []string{"/app/campaigns", "/app/settings"} {
+	for _, href := range []string{"/app/dashboard", "/app/campaigns", "/app/settings"} {
 		if !strings.Contains(body, "href=\""+href+"\"") {
 			t.Fatalf("body missing nav href %q", href)
 		}

@@ -3,6 +3,7 @@ package modules
 import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
@@ -28,6 +29,7 @@ func ExperimentalPublicModules() []Module {
 // DefaultProtectedModules returns stable authenticated web modules.
 func DefaultProtectedModules(deps module.Dependencies) []Module {
 	return []Module{
+		dashboard.New(),
 		settings.NewWithGateway(settings.NewGRPCGateway(deps)),
 		campaigns.NewStableWithGateway(campaigns.NewGRPCGateway(deps)),
 	}
@@ -36,6 +38,7 @@ func DefaultProtectedModules(deps module.Dependencies) []Module {
 // DefaultProtectedModulesWithExperimentalCampaignRoutes returns protected modules with experimental campaign route exposure.
 func DefaultProtectedModulesWithExperimentalCampaignRoutes(deps module.Dependencies) []Module {
 	return []Module{
+		dashboard.New(),
 		settings.NewWithGateway(settings.NewGRPCGateway(deps)),
 		campaigns.NewWithGateway(campaigns.NewGRPCGateway(deps)),
 	}

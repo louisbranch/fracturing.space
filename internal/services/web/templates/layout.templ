@@ -343,9 +343,13 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 			@sharedtemplates.LucideSprite()
 			<header class="navbar bg-base-200 fixed top-0 w-full z-50">
 				<div class="navbar-start w-auto">
-					<a href={ routepath.AppCampaigns } class="text-lg font-bold">Fracturing.Space</a>
+					<a href={ routepath.AppDashboard } class="text-lg font-bold">Fracturing.Space</a>
 				</div>
 				<nav aria-label={ T(loc, "layout.primary_nav_aria_label") } class="navbar-end w-full justify-end gap-3">
+					<a href={ routepath.AppDashboard } hx-get={ routepath.AppDashboard } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" data-nav-item="true" class="btn btn-ghost btn-sm">
+						@sharedtemplates.LucideIcon("layout-dashboard", "size-4 me-1")
+						{ T(loc, "layout.dashboard") }
+					</a>
 					<a href={ routepath.AppCampaigns } hx-get={ routepath.AppCampaigns } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" data-nav-item="true" class="btn btn-ghost btn-sm">
 						@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CAMPAIGN, "size-4 me-1")
 						{ T(loc, "game.campaigns.title") }

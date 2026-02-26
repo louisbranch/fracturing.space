@@ -10,8 +10,8 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	if len(public) != 3 {
 		t.Fatalf("public module count = %d, want %d", len(public), 3)
 	}
-	if len(protected) != 2 {
-		t.Fatalf("protected module count = %d, want %d", len(protected), 2)
+	if len(protected) != 3 {
+		t.Fatalf("protected module count = %d, want %d", len(protected), 3)
 	}
 
 	if got := public[0].ID(); got != "public" {
@@ -23,11 +23,14 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	if got := public[2].ID(); got != "publicprofile" {
 		t.Fatalf("default public module[2] id = %q, want %q", got, "publicprofile")
 	}
-	if got := protected[0].ID(); got != "settings" {
-		t.Fatalf("default protected module[0] id = %q, want %q", got, "settings")
+	if got := protected[0].ID(); got != "dashboard" {
+		t.Fatalf("default protected module[0] id = %q, want %q", got, "dashboard")
 	}
-	if got := protected[1].ID(); got != "campaigns" {
-		t.Fatalf("default protected module[1] id = %q, want %q", got, "campaigns")
+	if got := protected[1].ID(); got != "settings" {
+		t.Fatalf("default protected module[1] id = %q, want %q", got, "settings")
+	}
+	if got := protected[2].ID(); got != "campaigns" {
+		t.Fatalf("default protected module[2] id = %q, want %q", got, "campaigns")
 	}
 }
 

@@ -95,7 +95,7 @@ func AppErrorState(statusCode int, loc Localizer) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 templ.SafeURL
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaigns)
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppDashboard)
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/error.templ`, Line: 21, Col: 33}
 		}
@@ -108,7 +108,7 @@ func AppErrorState(statusCode int, loc Localizer) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppCampaigns)
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppDashboard)
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/error.templ`, Line: 22, Col: 35}
 		}
@@ -121,7 +121,7 @@ func AppErrorState(statusCode int, loc Localizer) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, appErrorBackToCampaignsTextKey))
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, appErrorBackToDashboardTextKey))
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/error.templ`, Line: 27, Col: 44}
 		}
