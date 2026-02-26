@@ -228,6 +228,7 @@ func init() {
 
 	// Shared layout copy
 	message.SetString(lang, "layout.meta_description", "Motor de código aberto, autoritativo no servidor, para campanhas de RPG de mesa determinísticas e mestres de jogo com IA.")
+	message.SetString(lang, "layout.dashboard", "Painel")
 	message.SetString(lang, "layout.settings", "Configurações")
 	message.SetString(lang, "layout.profile", "Perfil")
 	message.SetString(lang, "layout.sign_out", "Sair")
@@ -294,7 +295,7 @@ func init() {
 	message.SetString(lang, "web.error.title_server_error", "Algo deu errado.")
 	message.SetString(lang, "web.error.message_not_found", "A página ou recurso solicitado não está disponível.")
 	message.SetString(lang, "web.error.message_server_error", "Ocorreu um erro inesperado. Tente novamente.")
-	message.SetString(lang, "web.error.action_back_to_campaigns", "Voltar para campanhas")
+	message.SetString(lang, "web.error.action_back_to_dashboard", "Voltar para painel")
 	message.SetString(lang, "error.back_to_home", "Voltar para início")
 	message.SetString(lang, "dashboard.title", "Painel")
 	message.SetString(lang, "game.aria_label", "Jogo")

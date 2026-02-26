@@ -21,6 +21,8 @@ const (
 	DiscoverPrefix                      = "/discover/"
 	UserProfilePrefix                   = "/u/"
 	AppPrefix                           = "/app/"
+	AppDashboard                        = "/app/dashboard"
+	DashboardPrefix                     = "/app/dashboard/"
 	AppCampaigns                        = "/app/campaigns"
 	AppCampaignsCreate                  = "/app/campaigns/create"
 	CampaignsPrefix                     = "/app/campaigns/"

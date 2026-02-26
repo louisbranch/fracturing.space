@@ -226,7 +226,7 @@ func TestMountAuthLoginRedirectsToLogin(t *testing.T) {
 	}
 }
 
-func TestMountAuthPagesRedirectAuthenticatedUsersToCampaigns(t *testing.T) {
+func TestMountAuthPagesRedirectAuthenticatedUsersToDashboard(t *testing.T) {
 	t.Parallel()
 
 	m := New()
@@ -240,8 +240,8 @@ func TestMountAuthPagesRedirectAuthenticatedUsersToCampaigns(t *testing.T) {
 		if rr.Code != http.StatusFound {
 			t.Fatalf("path %q status = %d, want %d", path, rr.Code, http.StatusFound)
 		}
-		if got := rr.Header().Get("Location"); got != routepath.AppCampaigns {
-			t.Fatalf("path %q Location = %q, want %q", path, got, routepath.AppCampaigns)
+		if got := rr.Header().Get("Location"); got != routepath.AppDashboard {
+			t.Fatalf("path %q Location = %q, want %q", path, got, routepath.AppDashboard)
 		}
 	}
 }
@@ -339,8 +339,8 @@ func TestMountPasskeyLoginFinishSetsCookieAndRedirect(t *testing.T) {
 		t.Fatalf("cookie SameSite = %v, want %v", cookie.SameSite, http.SameSiteLaxMode)
 	}
 	payloadBody := decodeJSONBody(t, rr.Body.Bytes())
-	if got := asString(payloadBody["redirect_url"]); got != routepath.AppCampaigns {
-		t.Fatalf("redirect_url = %q, want %q", got, routepath.AppCampaigns)
+	if got := asString(payloadBody["redirect_url"]); got != routepath.AppDashboard {
+		t.Fatalf("redirect_url = %q, want %q", got, routepath.AppDashboard)
 	}
 }
 
@@ -478,11 +478,11 @@ func TestResolveAppRedirectPathValidation(t *testing.T) {
 		raw  string
 		want string
 	}{
-		{name: "empty falls back", raw: "", want: routepath.AppCampaigns},
-		{name: "whitespace falls back", raw: "   ", want: routepath.AppCampaigns},
-		{name: "non app path falls back", raw: "/login", want: routepath.AppCampaigns},
-		{name: "absolute url falls back", raw: "https://example.com/app/settings", want: routepath.AppCampaigns},
-		{name: "invalid url falls back", raw: "http://[::1", want: routepath.AppCampaigns},
+		{name: "empty falls back", raw: "", want: routepath.AppDashboard},
+		{name: "whitespace falls back", raw: "   ", want: routepath.AppDashboard},
+		{name: "non app path falls back", raw: "/login", want: routepath.AppDashboard},
+		{name: "absolute url falls back", raw: "https://example.com/app/settings", want: routepath.AppDashboard},
+		{name: "invalid url falls back", raw: "http://[::1", want: routepath.AppDashboard},
 		{name: "keeps app route", raw: "/app/settings", want: "/app/settings"},
 		{name: "keeps app route query", raw: "/app/settings?tab=profile", want: "/app/settings?tab=profile"},
 	}

@@ -41,6 +41,7 @@ func TestRoutePrefixesRemainUniqueConstants(t *testing.T) {
 		routepath.AuthPrefix,
 		routepath.DiscoverPrefix,
 		routepath.UserProfilePrefix,
+		routepath.DashboardPrefix,
 		routepath.CampaignsPrefix,
 		routepath.Notifications,
 		routepath.ProfilePrefix,
@@ -60,6 +61,7 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 
 	areas := []string{
 		"public",
+		"dashboard",
 		"campaigns",
 		"discovery",
 		"publicprofile",

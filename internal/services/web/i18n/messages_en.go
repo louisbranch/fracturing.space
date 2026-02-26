@@ -228,6 +228,7 @@ func init() {
 
 	// Shared layout copy
 	message.SetString(lang, "layout.meta_description", "Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters.")
+	message.SetString(lang, "layout.dashboard", "Dashboard")
 	message.SetString(lang, "layout.settings", "Settings")
 	message.SetString(lang, "layout.profile", "Profile")
 	message.SetString(lang, "layout.sign_out", "Sign out")
@@ -294,7 +295,7 @@ func init() {
 	message.SetString(lang, "web.error.title_server_error", "Something went wrong.")
 	message.SetString(lang, "web.error.message_not_found", "The page or resource you requested is unavailable.")
 	message.SetString(lang, "web.error.message_server_error", "An unexpected error occurred. Please try again.")
-	message.SetString(lang, "web.error.action_back_to_campaigns", "Back to campaigns")
+	message.SetString(lang, "web.error.action_back_to_dashboard", "Back to dashboard")
 	message.SetString(lang, "error.back_to_home", "Back to home")
 	message.SetString(lang, "dashboard.title", "Dashboard")
 	message.SetString(lang, "game.aria_label", "Game")

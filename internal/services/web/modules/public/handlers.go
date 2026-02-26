@@ -90,7 +90,7 @@ func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	h.writeSessionCookie(w, r, finished.sessionID)
-	h.writeJSON(w, http.StatusOK, map[string]any{"redirect_url": routepath.AppCampaigns})
+	h.writeJSON(w, http.StatusOK, map[string]any{"redirect_url": routepath.AppDashboard})
 }
 
 func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Request) {
@@ -211,17 +211,17 @@ func (handlers) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
 func resolveAppRedirectPath(raw string) string {
 	next := strings.TrimSpace(raw)
 	if next == "" {
-		return routepath.AppCampaigns
+		return routepath.AppDashboard
 	}
 	parsed, err := url.Parse(next)
 	if err != nil || parsed.Scheme != "" || parsed.Host != "" {
-		return routepath.AppCampaigns
+		return routepath.AppDashboard
 	}
 	if !strings.HasPrefix(parsed.Path, routepath.AppPrefix) {
-		return routepath.AppCampaigns
+		return routepath.AppDashboard
 	}
 	if parsed.Path == "" {
-		return routepath.AppCampaigns
+		return routepath.AppDashboard
 	}
 	if parsed.RawQuery != "" {
 		return parsed.Path + "?" + parsed.RawQuery

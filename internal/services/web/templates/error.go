@@ -9,7 +9,7 @@ const (
 	appErrorHeadingServerErrKey    = "web.error.title_server_error"
 	appErrorMessageNotFoundKey     = "web.error.message_not_found"
 	appErrorMessageServerErrKey    = "web.error.message_server_error"
-	appErrorBackToCampaignsTextKey = "web.error.action_back_to_campaigns"
+	appErrorBackToDashboardTextKey = "web.error.action_back_to_dashboard"
 )
 
 // AppErrorPageTitle returns the browser page title for app error pages.
