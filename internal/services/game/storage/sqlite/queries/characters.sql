@@ -3,8 +3,8 @@ SELECT * FROM characters WHERE campaign_id = ? AND id = ?;
 
 -- name: PutCharacter :exec
 INSERT INTO characters (
-    campaign_id, id, owner_participant_id, controller_participant_id, name, kind, notes, avatar_set_id, avatar_asset_id, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, id, owner_participant_id, controller_participant_id, name, kind, notes, avatar_set_id, avatar_asset_id, pronouns, aliases_json, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, id) DO UPDATE SET
     owner_participant_id = excluded.owner_participant_id,
     controller_participant_id = excluded.controller_participant_id,
@@ -13,6 +13,8 @@ ON CONFLICT(campaign_id, id) DO UPDATE SET
     notes = excluded.notes,
     avatar_set_id = excluded.avatar_set_id,
     avatar_asset_id = excluded.avatar_asset_id,
+    pronouns = excluded.pronouns,
+    aliases_json = excluded.aliases_json,
     updated_at = excluded.updated_at;
 
 -- name: DeleteCharacter :exec

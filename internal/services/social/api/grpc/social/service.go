@@ -159,7 +159,7 @@ func (s *Service) SetUserProfile(ctx context.Context, in *socialv1.SetUserProfil
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "username is invalid: %v", err)
 	}
-	normalized, err := profileutil.Normalize(userID, in.GetName(), in.GetAvatarSetId(), in.GetAvatarAssetId(), in.GetBio())
+	normalized, err := profileutil.Normalize(userID, in.GetName(), in.GetAvatarSetId(), in.GetAvatarAssetId(), in.GetBio(), in.GetPronouns())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "user profile is invalid: %v", err)
 	}
@@ -175,6 +175,7 @@ func (s *Service) SetUserProfile(ctx context.Context, in *socialv1.SetUserProfil
 		AvatarSetID:   normalized.AvatarSetID,
 		AvatarAssetID: normalized.AvatarAssetID,
 		Bio:           normalized.Bio,
+		Pronouns:      normalized.Pronouns,
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}); err != nil {
@@ -260,6 +261,7 @@ func userProfileToProto(profile storage.UserProfile) *socialv1.UserProfile {
 		AvatarSetId:   profile.AvatarSetID,
 		AvatarAssetId: profile.AvatarAssetID,
 		Bio:           profile.Bio,
+		Pronouns:      profile.Pronouns,
 		CreatedAt:     timestamppb.New(profile.CreatedAt),
 		UpdatedAt:     timestamppb.New(profile.UpdatedAt),
 	}

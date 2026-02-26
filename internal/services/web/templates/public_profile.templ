@@ -9,6 +9,7 @@ import (
 type PublicProfileView struct {
 	Username       string
 	Name           string
+	Pronouns       string
 	Bio            string
 	AvatarURL      string
 	ViewerSignedIn bool
@@ -51,6 +52,12 @@ templ PublicProfilePage(view PublicProfileView, loc Localizer) {
 							<div>
 								<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_name") }</dt>
 								<dd data-public-profile-field="name">{ publicProfileValue(view.Name) }</dd>
+							</div>
+						}
+						if publicProfileValue(view.Pronouns) != "" {
+							<div>
+								<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_pronouns") }</dt>
+								<dd data-public-profile-field="pronouns">{ publicProfileValue(view.Pronouns) }</dd>
 							</div>
 						}
 						if publicProfileValue(view.Bio) != "" {

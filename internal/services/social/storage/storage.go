@@ -35,6 +35,7 @@ type UserProfile struct {
 	AvatarSetID   string
 	AvatarAssetID string
 	Bio           string
+	Pronouns      string
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }

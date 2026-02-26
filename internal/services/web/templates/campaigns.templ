@@ -44,6 +44,7 @@ type CampaignParticipantView struct {
 	Role           string
 	CampaignAccess string
 	Controller     string
+	Pronouns       string
 	AvatarURL      string
 }
 
@@ -52,9 +53,18 @@ type CampaignCharacterView struct {
 	Name           string
 	Kind           string
 	Controller     string
+	Pronouns       string
+	Aliases        []string
 	AvatarURL      string
 	CanEdit        bool
 	EditReasonCode string
+}
+
+func campaignCharacterAliases(value []string) string {
+	if len(value) == 0 {
+		return ""
+	}
+	return strings.Join(value, ", ")
 }
 
 func campaignCharacterCanEditAttr(character CampaignCharacterView) string {
@@ -372,6 +382,10 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 									<dt class="opacity-70">{ T(loc, "game.participants.field_controller") }:</dt>
 									<dd data-campaign-participant-controller={ campaignParticipantControllerLabel(loc, participant.Controller) }>{ campaignParticipantControllerLabel(loc, participant.Controller) }</dd>
 								</div>
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_pronouns") }:</dt>
+									<dd>{ participant.Pronouns }</dd>
+								</div>
 							</dl>
 						</div>
 					</div>
@@ -398,6 +412,16 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 									<dt class="opacity-70">{ T(loc, "game.participants.field_controller") }:</dt>
 									<dd data-campaign-character-controller={ campaignParticipantControllerLabel(loc, character.Controller) }>{ campaignParticipantControllerLabel(loc, character.Controller) }</dd>
 								</div>
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_pronouns") }:</dt>
+									<dd>{ character.Pronouns }</dd>
+								</div>
+								if campaignCharacterAliases(character.Aliases) != "" {
+									<div class="flex gap-2">
+										<dt class="opacity-70">Aliases:</dt>
+										<dd>{ campaignCharacterAliases(character.Aliases) }</dd>
+									</div>
+								}
 								<div class="flex gap-2 items-center">
 									<dt class="opacity-70">{ T(loc, "game.characters.field_editability") }:</dt>
 									<dd data-campaign-character-can-edit={ campaignCharacterCanEditAttr(character) } data-campaign-character-edit-reason={ character.EditReasonCode }>

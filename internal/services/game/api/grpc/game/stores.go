@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -37,6 +38,7 @@ type Stores struct {
 
 	// System content stores — read-only content used by gRPC handlers.
 	DaggerheartContent storage.DaggerheartContentReadStore
+	Social             socialv1.SocialServiceClient
 
 	Domain Domain
 

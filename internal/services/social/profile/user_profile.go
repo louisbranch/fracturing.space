@@ -22,12 +22,13 @@ type Normalized struct {
 	AvatarSetID   string
 	AvatarAssetID string
 	Bio           string
+	Pronouns      string
 }
 
 var userProfileAvatarManifest = assetcatalog.AvatarManifest()
 
 // Normalize validates and trims user-supplied user profile values.
-func Normalize(userID string, name string, avatarSetID string, avatarAssetID string, bio string) (Normalized, error) {
+func Normalize(userID string, name string, avatarSetID string, avatarAssetID string, bio string, pronouns string) (Normalized, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
 		return Normalized{}, fmt.Errorf("user id is required")
@@ -68,11 +69,13 @@ func Normalize(userID string, name string, avatarSetID string, avatarAssetID str
 	if utf8.RuneCountInString(bio) > maxBioLength {
 		return Normalized{}, fmt.Errorf("bio must be at most %d characters", maxBioLength)
 	}
+	pronouns = strings.TrimSpace(pronouns)
 
 	return Normalized{
 		Name:          name,
 		AvatarSetID:   avatarSetID,
 		AvatarAssetID: avatarAssetID,
 		Bio:           bio,
+		Pronouns:      pronouns,
 	}, nil
 }

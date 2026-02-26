@@ -45,6 +45,7 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event, pa
 		CampaignAccess: access,
 		AvatarSetID:    strings.TrimSpace(payload.AvatarSetID),
 		AvatarAssetID:  strings.TrimSpace(payload.AvatarAssetID),
+		Pronouns:       strings.TrimSpace(payload.Pronouns),
 		CreatedAt:      createdAt,
 		UpdatedAt:      createdAt,
 	}); err != nil {
@@ -110,6 +111,8 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event, p
 			updated.AvatarSetID = strings.TrimSpace(value)
 		case "avatar_asset_id":
 			updated.AvatarAssetID = strings.TrimSpace(value)
+		case "pronouns":
+			updated.Pronouns = strings.TrimSpace(value)
 		}
 	}
 

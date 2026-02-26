@@ -13,13 +13,14 @@ message Participant {
   string campaign_id = 2;
   string user_id = 3;
   string name = 4;
-  ParticipantRole role = 5;
-  CampaignAccess campaign_access = 6;
-  Controller controller = 7;
-  google.protobuf.Timestamp created_at = 8;
-  google.protobuf.Timestamp updated_at = 9;
-  string avatar_set_id = 10;
-  string avatar_asset_id = 11;
+  string pronouns = 5;
+  ParticipantRole role = 6;
+  CampaignAccess campaign_access = 7;
+  Controller controller = 8;
+  string avatar_set_id = 9;
+  string avatar_asset_id = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
 }
 
 enum ParticipantRole {
@@ -69,17 +70,20 @@ message CreateParticipantRequest {
   // Display name for the participant.
   string name = 3;
 
+  // Optional free-form participant pronouns snapshot.
+  string pronouns = 4;
+
   // The role of the participant.
-  ParticipantRole role = 4;
+  ParticipantRole role = 5;
 
   // The controller type (defaults to HUMAN if unspecified).
-  Controller controller = 5;
+  Controller controller = 6;
 
   // Optional avatar set identifier.
-  string avatar_set_id = 6;
+  string avatar_set_id = 7;
 
   // Optional avatar asset identifier.
-  string avatar_asset_id = 7;
+  string avatar_asset_id = 8;
 }
 
 message CreateParticipantResponse {
@@ -99,20 +103,23 @@ message UpdateParticipantRequest {
   // Optional updated display name.
   google.protobuf.StringValue name = 4;
 
+  // Optional updated participant pronouns.
+  google.protobuf.StringValue pronouns = 5;
+
   // Optional updated role.
-  ParticipantRole role = 5;
+  ParticipantRole role = 6;
 
   // Optional updated campaign access.
-  CampaignAccess campaign_access = 6;
+  CampaignAccess campaign_access = 7;
 
   // Optional updated controller.
-  Controller controller = 7;
+  Controller controller = 8;
 
   // Optional updated avatar set identifier.
-  google.protobuf.StringValue avatar_set_id = 8;
+  google.protobuf.StringValue avatar_set_id = 9;
 
   // Optional updated avatar asset identifier.
-  google.protobuf.StringValue avatar_asset_id = 9;
+  google.protobuf.StringValue avatar_asset_id = 10;
 }
 
 message UpdateParticipantResponse {

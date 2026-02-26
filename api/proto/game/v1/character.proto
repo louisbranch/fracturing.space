@@ -14,12 +14,14 @@ message Character {
   string campaign_id = 2;
   google.protobuf.StringValue participant_id = 3;
   string name = 4;
-  CharacterKind kind = 5;
-  string notes = 6;
-  google.protobuf.Timestamp created_at = 7;
-  google.protobuf.Timestamp updated_at = 8;
+  repeated string aliases = 5;
+  string pronouns = 6;
+  CharacterKind kind = 7;
+  string notes = 8;
   string avatar_set_id = 9;
   string avatar_asset_id = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
 }
 
 enum CharacterKind {
@@ -73,17 +75,23 @@ message CreateCharacterRequest {
   // Display name for the character.
   string name = 2;
 
+  // Optional character aliases.
+  repeated string aliases = 3;
+
+  // Optional free-form character pronouns.
+  string pronouns = 4;
+
   // The kind of character (PC or NPC).
-  CharacterKind kind = 3;
+  CharacterKind kind = 5;
 
   // Optional free-form notes about the character.
-  string notes = 4;
+  string notes = 6;
 
   // Optional avatar set identifier.
-  string avatar_set_id = 5;
+  string avatar_set_id = 7;
 
   // Optional avatar asset identifier.
-  string avatar_asset_id = 6;
+  string avatar_asset_id = 8;
 }
 
 message CreateCharacterResponse {
@@ -100,20 +108,26 @@ message UpdateCharacterRequest {
   // Optional updated display name.
   google.protobuf.StringValue name = 3;
 
+  // Optional updated character aliases.
+  repeated string aliases = 4;
+
+  // Optional updated character pronouns.
+  google.protobuf.StringValue pronouns = 5;
+
   // Optional updated kind.
-  CharacterKind kind = 4;
+  CharacterKind kind = 6;
 
   // Optional updated notes.
-  google.protobuf.StringValue notes = 5;
-
-  // Optional updated avatar set identifier.
-  google.protobuf.StringValue avatar_set_id = 6;
-
-  // Optional updated avatar asset identifier.
-  google.protobuf.StringValue avatar_asset_id = 7;
+  google.protobuf.StringValue notes = 7;
 
   // Optional updated owner participant identifier (ownership transfer).
   google.protobuf.StringValue owner_participant_id = 8;
+
+  // Optional updated avatar set identifier.
+  google.protobuf.StringValue avatar_set_id = 9;
+
+  // Optional updated avatar asset identifier.
+  google.protobuf.StringValue avatar_asset_id = 10;
 }
 
 message UpdateCharacterResponse {

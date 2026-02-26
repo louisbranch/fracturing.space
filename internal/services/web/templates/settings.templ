@@ -10,6 +10,7 @@ type SettingsProfileForm struct {
 	Name          string
 	AvatarSetID   string
 	AvatarAssetID string
+	Pronouns      string
 	Bio           string
 	NoticeMessage string
 	ErrorMessage  string
@@ -74,6 +75,17 @@ templ SettingsProfileFragment(form SettingsProfileForm, loc Localizer) {
 						<span class="label-text">{ T(loc, "web.settings.user_profile.field_name") }</span>
 					</label>
 					<input class="input input-bordered w-full" type="text" name="name" value={ form.Name }/>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "web.settings.user_profile.field_pronouns") }</span>
+					</label>
+					<input class="input input-bordered w-full" type="text" name="pronouns" value={ form.Pronouns } list="settings-pronouns-presets"/>
+					<datalist id="settings-pronouns-presets">
+						<option value="she/her"></option>
+						<option value="he/him"></option>
+						<option value="they/them"></option>
+					</datalist>
 				</div>
 				<div class="form-control">
 					<label class="label">

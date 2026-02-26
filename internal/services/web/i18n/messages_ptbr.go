@@ -252,6 +252,7 @@ func init() {
 	message.SetString(lang, "web.settings.user_profile.field_avatar_set_id", "ID do conjunto de avatar")
 	message.SetString(lang, "web.settings.user_profile.field_avatar_asset_id", "ID do avatar")
 	message.SetString(lang, "web.settings.user_profile.field_bio", "Bio")
+	message.SetString(lang, "web.settings.user_profile.field_pronouns", "Pronomes")
 	message.SetString(lang, "web.settings.user_profile.submit_save", "Salvar perfil")
 	message.SetString(lang, "web.settings.user_profile.error_social_unavailable", "Serviço social indisponível.")
 	message.SetString(lang, "web.settings.user_profile.error_username_required", "Nome de usuário é obrigatório.")

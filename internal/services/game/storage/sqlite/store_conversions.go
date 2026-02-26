@@ -422,6 +422,7 @@ type participantRowData struct {
 	CampaignAccess string
 	AvatarSetID    string
 	AvatarAssetID  string
+	Pronouns       string
 	CreatedAt      int64
 	UpdatedAt      int64
 }
@@ -437,6 +438,7 @@ func participantRowDataToDomain(row participantRowData) (storage.ParticipantReco
 		CampaignAccess: stringToParticipantAccess(row.CampaignAccess),
 		AvatarSetID:    row.AvatarSetID,
 		AvatarAssetID:  row.AvatarAssetID,
+		Pronouns:       row.Pronouns,
 		CreatedAt:      fromMillis(row.CreatedAt),
 		UpdatedAt:      fromMillis(row.UpdatedAt),
 	}, nil
@@ -453,6 +455,7 @@ func dbParticipantToDomain(row db.Participant) (storage.ParticipantRecord, error
 		CampaignAccess: row.CampaignAccess,
 		AvatarSetID:    row.AvatarSetID,
 		AvatarAssetID:  row.AvatarAssetID,
+		Pronouns:       row.Pronouns,
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
 	})
@@ -469,6 +472,7 @@ func dbGetParticipantRowToDomain(row db.GetParticipantRow) (storage.ParticipantR
 		CampaignAccess: row.CampaignAccess,
 		AvatarSetID:    row.AvatarSetID,
 		AvatarAssetID:  row.AvatarAssetID,
+		Pronouns:       row.Pronouns,
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
 	})
@@ -485,6 +489,7 @@ func dbListParticipantsByCampaignRowToDomain(row db.ListParticipantsByCampaignRo
 		CampaignAccess: row.CampaignAccess,
 		AvatarSetID:    row.AvatarSetID,
 		AvatarAssetID:  row.AvatarAssetID,
+		Pronouns:       row.Pronouns,
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
 	})
@@ -501,6 +506,7 @@ func dbListParticipantsByCampaignPagedFirstRowToDomain(row db.ListParticipantsBy
 		CampaignAccess: row.CampaignAccess,
 		AvatarSetID:    row.AvatarSetID,
 		AvatarAssetID:  row.AvatarAssetID,
+		Pronouns:       row.Pronouns,
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
 	})
@@ -517,6 +523,7 @@ func dbListParticipantsByCampaignPagedRowToDomain(row db.ListParticipantsByCampa
 		CampaignAccess: row.CampaignAccess,
 		AvatarSetID:    row.AvatarSetID,
 		AvatarAssetID:  row.AvatarAssetID,
+		Pronouns:       row.Pronouns,
 		CreatedAt:      row.CreatedAt,
 		UpdatedAt:      row.UpdatedAt,
 	})
@@ -540,6 +547,12 @@ func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
 	if row.ControllerParticipantID.Valid {
 		participantID = row.ControllerParticipantID.String
 	}
+	aliases := make([]string, 0)
+	if strings.TrimSpace(row.AliasesJson) != "" {
+		if err := json.Unmarshal([]byte(row.AliasesJson), &aliases); err != nil {
+			return storage.CharacterRecord{}, fmt.Errorf("decode character aliases: %w", err)
+		}
+	}
 	return storage.CharacterRecord{
 		ID:                 row.ID,
 		CampaignID:         row.CampaignID,
@@ -550,6 +563,8 @@ func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
 		Notes:              row.Notes,
 		AvatarSetID:        row.AvatarSetID,
 		AvatarAssetID:      row.AvatarAssetID,
+		Pronouns:           row.Pronouns,
+		Aliases:            aliases,
 		CreatedAt:          fromMillis(row.CreatedAt),
 		UpdatedAt:          fromMillis(row.UpdatedAt),
 	}, nil

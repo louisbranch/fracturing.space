@@ -135,6 +135,8 @@ func decideJoin(state State, cmd command.Command, now func() time.Time) command.
 	if err != nil {
 		return command.Reject(participantAvatarRejection(err))
 	}
+	pronouns := strings.TrimSpace(payload.Pronouns)
+
 	if now == nil {
 		now = time.Now
 	}
@@ -148,6 +150,7 @@ func decideJoin(state State, cmd command.Command, now func() time.Time) command.
 		CampaignAccess: access,
 		AvatarSetID:    avatarSetID,
 		AvatarAssetID:  avatarAssetID,
+		Pronouns:       pronouns,
 	}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
 
@@ -229,6 +232,8 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 			normalizedFields[key] = normalizedAccess
 		case "avatar_set_id":
 		case "avatar_asset_id":
+		case "pronouns":
+			normalizedFields[key] = strings.TrimSpace(value)
 		default:
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeParticipantUpdateFieldInvalid,

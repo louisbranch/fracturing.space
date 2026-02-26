@@ -20,6 +20,8 @@ func characterToProto(ch storage.CharacterRecord) *campaignv1.Character {
 		Notes:         ch.Notes,
 		AvatarSetId:   ch.AvatarSetID,
 		AvatarAssetId: ch.AvatarAssetID,
+		Pronouns:      ch.Pronouns,
+		Aliases:       append([]string(nil), ch.Aliases...),
 		CreatedAt:     timestamppb.New(ch.CreatedAt),
 		UpdatedAt:     timestamppb.New(ch.UpdatedAt),
 	}

@@ -66,6 +66,7 @@ func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, prof
 		webtemplates.PublicProfilePage(webtemplates.PublicProfileView{
 			Username:       profile.Username,
 			Name:           profile.Name,
+			Pronouns:       profile.Pronouns,
 			Bio:            profile.Bio,
 			AvatarURL:      profile.AvatarURL,
 			ViewerSignedIn: h.deps.isViewerSignedIn(r),

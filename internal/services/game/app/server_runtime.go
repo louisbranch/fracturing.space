@@ -258,4 +258,9 @@ func (s *Server) closeResources() {
 			log.Printf("close auth conn: %v", err)
 		}
 	}
+	if s.socialConn != nil {
+		if err := s.socialConn.Close(); err != nil {
+			log.Printf("close social conn: %v", err)
+		}
+	}
 }

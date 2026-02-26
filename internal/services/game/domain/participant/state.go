@@ -25,4 +25,6 @@ type State struct {
 	AvatarSetID string
 	// AvatarAssetID identifies the avatar image within AvatarSetID.
 	AvatarAssetID string
+	// Pronouns stores participant pronouns independent from social profile.
+	Pronouns string
 }

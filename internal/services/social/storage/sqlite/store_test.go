@@ -101,6 +101,7 @@ func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "001",
 		Bio:           "Campaign manager",
+		Pronouns:      "she/her",
 		CreatedAt:     createdAt,
 		UpdatedAt:     createdAt,
 	}); err != nil {
@@ -120,6 +121,9 @@ func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
 	if gotByUser.Name != "Alice" {
 		t.Fatalf("name = %q, want Alice", gotByUser.Name)
 	}
+	if gotByUser.Pronouns != "she/her" {
+		t.Fatalf("pronouns = %q, want she/her", gotByUser.Pronouns)
+	}
 	if !gotByUser.CreatedAt.Equal(createdAt) {
 		t.Fatalf("created_at = %v, want %v", gotByUser.CreatedAt, createdAt)
 	}
@@ -131,6 +135,7 @@ func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "002",
 		Bio:           "Updated",
+		Pronouns:      "they/them",
 		CreatedAt:     updatedAt,
 		UpdatedAt:     updatedAt,
 	}); err != nil {
@@ -153,6 +158,9 @@ func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
 	if gotByLookup.Bio != "Updated" {
 		t.Fatalf("lookup bio = %q, want Updated", gotByLookup.Bio)
 	}
+	if gotByLookup.Pronouns != "they/them" {
+		t.Fatalf("lookup pronouns = %q, want they/them", gotByLookup.Pronouns)
+	}
 
 	if _, err := store.GetUserProfileByUsername(context.Background(), "alice_one"); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("old username lookup err = %v, want %v", err, storage.ErrNotFound)
@@ -174,6 +182,7 @@ func TestUserProfileSameValueUpdateIsNoOp(t *testing.T) {
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "001",
 		Bio:           "Campaign manager",
+		Pronouns:      "she/her",
 		CreatedAt:     initial,
 		UpdatedAt:     initial,
 	}); err != nil {
@@ -188,6 +197,7 @@ func TestUserProfileSameValueUpdateIsNoOp(t *testing.T) {
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "001",
 		Bio:           "Campaign manager",
+		Pronouns:      "she/her",
 		CreatedAt:     retryAt,
 		UpdatedAt:     retryAt,
 	}); err != nil {

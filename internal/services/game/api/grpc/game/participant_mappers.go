@@ -19,6 +19,7 @@ func participantToProto(p storage.ParticipantRecord) *campaignv1.Participant {
 		Controller:     controllerToProto(p.Controller),
 		AvatarSetId:    p.AvatarSetID,
 		AvatarAssetId:  p.AvatarAssetID,
+		Pronouns:       p.Pronouns,
 		CreatedAt:      timestamppb.New(p.CreatedAt),
 		UpdatedAt:      timestamppb.New(p.UpdatedAt),
 	}

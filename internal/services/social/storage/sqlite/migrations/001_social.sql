@@ -19,6 +19,7 @@ CREATE TABLE user_profiles (
     avatar_set_id TEXT NOT NULL DEFAULT '',
     avatar_asset_id TEXT NOT NULL DEFAULT '',
     bio TEXT NOT NULL DEFAULT '',
+    pronouns TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );

@@ -39,18 +39,21 @@ type CampaignParticipant struct {
 	Role           string `json:"role"`
 	CampaignAccess string `json:"campaignAccess"`
 	Controller     string `json:"controller"`
+	Pronouns       string `json:"pronouns"`
 	AvatarURL      string `json:"avatarUrl"`
 }
 
 // CampaignCharacter stores character details used by campaign characters pages.
 type CampaignCharacter struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Kind           string `json:"kind"`
-	Controller     string `json:"controller"`
-	AvatarURL      string `json:"avatarUrl"`
-	CanEdit        bool   `json:"canEdit"`
-	EditReasonCode string `json:"editReasonCode"`
+	ID             string   `json:"id"`
+	Name           string   `json:"name"`
+	Kind           string   `json:"kind"`
+	Controller     string   `json:"controller"`
+	Pronouns       string   `json:"pronouns"`
+	Aliases        []string `json:"aliases"`
+	AvatarURL      string   `json:"avatarUrl"`
+	CanEdit        bool     `json:"canEdit"`
+	EditReasonCode string   `json:"editReasonCode"`
 }
 
 // CampaignSession stores session details used by campaign sessions pages.
@@ -334,6 +337,7 @@ func (s service) campaignParticipants(ctx context.Context, campaignID string) ([
 			Role:           role,
 			CampaignAccess: campaignAccess,
 			Controller:     controller,
+			Pronouns:       strings.TrimSpace(participant.Pronouns),
 			AvatarURL:      strings.TrimSpace(participant.AvatarURL),
 		})
 	}
@@ -388,6 +392,8 @@ func (s service) campaignCharacters(ctx context.Context, campaignID string) ([]C
 			Name:       characterName,
 			Kind:       kind,
 			Controller: controller,
+			Pronouns:   strings.TrimSpace(character.Pronouns),
+			Aliases:    append([]string(nil), character.Aliases...),
 			AvatarURL:  strings.TrimSpace(character.AvatarURL),
 		})
 	}

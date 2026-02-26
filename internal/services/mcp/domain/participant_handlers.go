@@ -29,8 +29,10 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContex
 
 		req := &statev1.CreateParticipantRequest{
 			CampaignId: input.CampaignID,
+			UserId:     input.UserID,
 			Name:       input.Name,
 			Role:       participantRoleFromString(input.Role),
+			Pronouns:   input.Pronouns,
 		}
 
 		// Controller is optional; only set if provided
@@ -52,6 +54,7 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContex
 			Name:       response.Participant.GetName(),
 			Role:       participantRoleToString(response.Participant.GetRole()),
 			Controller: controllerToString(response.Participant.GetController()),
+			Pronouns:   response.Participant.GetPronouns(),
 			CreatedAt:  formatTimestamp(response.Participant.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
@@ -110,7 +113,10 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContex
 			}
 			req.Controller = controller
 		}
-		if req.Name == nil && req.Role == statev1.ParticipantRole_ROLE_UNSPECIFIED && req.Controller == statev1.Controller_CONTROLLER_UNSPECIFIED {
+		if input.Pronouns != nil {
+			req.Pronouns = wrapperspb.String(*input.Pronouns)
+		}
+		if req.Name == nil && req.Role == statev1.ParticipantRole_ROLE_UNSPECIFIED && req.Controller == statev1.Controller_CONTROLLER_UNSPECIFIED && req.Pronouns == nil {
 			return nil, ParticipantUpdateResult{}, fmt.Errorf("at least one field must be provided")
 		}
 
@@ -129,6 +135,7 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContex
 			Name:       response.Participant.GetName(),
 			Role:       participantRoleToString(response.Participant.GetRole()),
 			Controller: controllerToString(response.Participant.GetController()),
+			Pronouns:   response.Participant.GetPronouns(),
 			CreatedAt:  formatTimestamp(response.Participant.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
@@ -185,6 +192,7 @@ func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, getContex
 			Name:       response.Participant.GetName(),
 			Role:       participantRoleToString(response.Participant.GetRole()),
 			Controller: controllerToString(response.Participant.GetController()),
+			Pronouns:   response.Participant.GetPronouns(),
 			CreatedAt:  formatTimestamp(response.Participant.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}

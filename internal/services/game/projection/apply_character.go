@@ -46,6 +46,8 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event, pay
 		Notes:              strings.TrimSpace(payload.Notes),
 		AvatarSetID:        strings.TrimSpace(payload.AvatarSetID),
 		AvatarAssetID:      strings.TrimSpace(payload.AvatarAssetID),
+		Pronouns:           strings.TrimSpace(payload.Pronouns),
+		Aliases:            normalizeProjectionAliases(payload.Aliases),
 		CreatedAt:          createdAt,
 		UpdatedAt:          createdAt,
 	}
@@ -107,6 +109,14 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event, pay
 			updated.AvatarSetID = strings.TrimSpace(value)
 		case "avatar_asset_id":
 			updated.AvatarAssetID = strings.TrimSpace(value)
+		case "pronouns":
+			updated.Pronouns = strings.TrimSpace(value)
+		case "aliases":
+			aliases, err := parseProjectionAliases(value)
+			if err != nil {
+				return err
+			}
+			updated.Aliases = aliases
 		}
 	}
 
@@ -188,4 +198,39 @@ func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Eve
 		}
 	}
 	return nil
+}
+
+func normalizeProjectionAliases(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(values))
+	normalized := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		normalized = append(normalized, trimmed)
+	}
+	if len(normalized) == 0 {
+		return nil
+	}
+	return normalized
+}
+
+func parseProjectionAliases(value string) ([]string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return nil, nil
+	}
+	var raw []string
+	if err := json.Unmarshal([]byte(value), &raw); err != nil {
+		return nil, fmt.Errorf("character aliases are invalid")
+	}
+	return normalizeProjectionAliases(raw), nil
 }
