@@ -65,6 +65,13 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 		t.Fatalf("dashboard status = %d, want %d", dashboardRR.Code, http.StatusFound)
 	}
 
+	dashboardNoSlashReq := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
+	dashboardNoSlashRR := httptest.NewRecorder()
+	h.ServeHTTP(dashboardNoSlashRR, dashboardNoSlashReq)
+	if dashboardNoSlashRR.Code != http.StatusFound {
+		t.Fatalf("dashboard (no slash) status = %d, want %d", dashboardNoSlashRR.Code, http.StatusFound)
+	}
+
 	campaignsReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/123", nil)
 	campaignsRR := httptest.NewRecorder()
 	h.ServeHTTP(campaignsRR, campaignsReq)
@@ -76,6 +83,9 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	}
 	if got := dashboardRR.Header().Get("Location"); got != "/login" {
 		t.Fatalf("dashboard redirect = %q, want %q", got, "/login")
+	}
+	if got := dashboardNoSlashRR.Header().Get("Location"); got != "/login" {
+		t.Fatalf("dashboard (no slash) redirect = %q, want %q", got, "/login")
 	}
 
 	experimentalProtectedReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
