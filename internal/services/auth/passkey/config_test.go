@@ -50,6 +50,19 @@ func TestLoadConfigFromEnvCustomOrigins(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFromEnvLegacyLocalhostOriginAddsWeb2Origin(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS", "http://localhost:8080")
+
+	cfg := LoadConfigFromEnv()
+
+	if len(cfg.RPOrigins) != 2 {
+		t.Fatalf("RPOrigins len = %d, want 2", len(cfg.RPOrigins))
+	}
+	if cfg.RPOrigins[0] != "http://localhost:8080" || cfg.RPOrigins[1] != "http://localhost:8092" {
+		t.Fatalf("RPOrigins = %v, want [%q %q]", cfg.RPOrigins, "http://localhost:8080", "http://localhost:8092")
+	}
+}
+
 func TestLoadConfigFromEnvValidSessionTTL(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_WEBAUTHN_SESSION_TTL", "10m")
 	cfg := LoadConfigFromEnv()

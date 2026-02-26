@@ -1,6 +1,7 @@
 package passkey
 
 import (
+	"strings"
 	"time"
 
 	"github.com/caarlos0/env/v11"
@@ -33,11 +34,41 @@ func LoadConfigFromEnv() Config {
 	if cfg.RPID == "" {
 		cfg.RPID = "localhost"
 	}
+	cfg.RPOrigins = normalizeOrigins(cfg.RPOrigins)
 	if len(cfg.RPOrigins) == 0 {
 		cfg.RPOrigins = []string{"http://localhost:8086"}
 	}
+	cfg.RPOrigins = ensureLegacyLocalhostWeb2Origin(cfg.RPID, cfg.RPOrigins)
 	if cfg.SessionTTL == 0 {
 		cfg.SessionTTL = 5 * time.Minute
 	}
 	return cfg
+}
+
+func normalizeOrigins(origins []string) []string {
+	if len(origins) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(origins))
+	for _, origin := range origins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed == "" {
+			continue
+		}
+		result = append(result, trimmed)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
+}
+
+func ensureLegacyLocalhostWeb2Origin(rpID string, origins []string) []string {
+	if strings.TrimSpace(rpID) != "localhost" {
+		return origins
+	}
+	if len(origins) != 1 || origins[0] != "http://localhost:8080" {
+		return origins
+	}
+	return append(origins, "http://localhost:8092")
 }

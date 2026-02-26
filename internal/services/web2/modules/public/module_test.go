@@ -15,6 +15,8 @@ import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web2/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web2/routepath"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestModuleIDReturnsPublic(t *testing.T) {
@@ -630,6 +632,25 @@ func TestMountPasskeyRegisterStartAndFinish(t *testing.T) {
 	}
 }
 
+func TestMountPasskeyRegisterStartCreateUserFailureReturnsLegacyErrorMessage(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+	mount, _ := m.Mount(module.Dependencies{AuthClient: failingCreateUserAuthClient{}})
+	req := httptest.NewRequest(http.MethodPost, routepath.PasskeyRegisterStart, strings.NewReader(`{"email":"existing@example.com"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	}
+	payload := decodeJSONBody(t, rr.Body.Bytes())
+	if got := asString(payload["error"]); got != "failed to create user" {
+		t.Fatalf("error = %q, want %q", got, "failed to create user")
+	}
+}
+
 func decodeJSONBody(t *testing.T, body []byte) map[string]any {
 	t.Helper()
 	var payload map[string]any
@@ -659,6 +680,10 @@ func (c failingTemplComponent) Render(context.Context, io.Writer) error {
 
 type fakeAuthClient struct{}
 
+type failingCreateUserAuthClient struct {
+	fakeAuthClient
+}
+
 type validatingAuthClient struct {
 	fakeAuthClient
 	validSessionID string
@@ -673,6 +698,10 @@ func (f validatingAuthClient) GetWebSession(_ context.Context, req *authv1.GetWe
 
 func (fakeAuthClient) CreateUser(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
 	return &authv1.CreateUserResponse{User: &authv1.User{Id: "user-1"}}, nil
+}
+
+func (failingCreateUserAuthClient) CreateUser(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
+	return nil, status.Error(codes.AlreadyExists, "email already in use")
 }
 
 func (fakeAuthClient) BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
