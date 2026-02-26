@@ -239,6 +239,52 @@ func TestUserProfileConflictAcrossUsers(t *testing.T) {
 	}
 }
 
+func TestUserProfile_AllowsEmptyUsernameAcrossUsers(t *testing.T) {
+	store, err := Open(t.TempDir() + "/social.db")
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	defer store.Close()
+
+	now := time.Date(2026, time.February, 22, 16, 30, 0, 0, time.UTC)
+	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
+		UserID:        "user-1",
+		Username:      "",
+		Name:          "",
+		AvatarSetID:   "avatar_set_v1",
+		AvatarAssetID: "001",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}); err != nil {
+		t.Fatalf("put user profile user-1: %v", err)
+	}
+
+	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
+		UserID:        "user-2",
+		Username:      "",
+		Name:          "",
+		AvatarSetID:   "avatar_set_v1",
+		AvatarAssetID: "002",
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}); err != nil {
+		t.Fatalf("put user profile user-2: %v", err)
+	}
+
+	for _, userID := range []string{"user-1", "user-2"} {
+		record, err := store.GetUserProfileByUserID(context.Background(), userID)
+		if err != nil {
+			t.Fatalf("get user profile by user id %s: %v", userID, err)
+		}
+		if record.Username != "" {
+			t.Fatalf("username(%s) = %q, want empty", userID, record.Username)
+		}
+		if record.Name != "" {
+			t.Fatalf("name(%s) = %q, want empty", userID, record.Name)
+		}
+	}
+}
+
 func TestIsUserProfileUsernameUniqueViolationUsesSQLiteErrorCode(t *testing.T) {
 	store, err := Open(t.TempDir() + "/social.db")
 	if err != nil {

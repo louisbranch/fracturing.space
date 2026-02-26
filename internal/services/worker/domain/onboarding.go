@@ -42,28 +42,16 @@ func NewOnboardingWelcomeHandler(notifications notificationIntentClient, clock f
 	}
 }
 
-type signupCompletedPayload struct {
-	UserID       string `json:"user_id"`
-	SignupMethod string `json:"signup_method"`
-}
-
 // Handle converts signup completed events into notification intents.
 func (h *OnboardingWelcomeHandler) Handle(ctx context.Context, event *authv1.IntegrationOutboxEvent) error {
 	if h == nil || h.notifications == nil {
 		return Permanent(fmt.Errorf("notifications client is not configured"))
 	}
-	if event == nil {
-		return Permanent(fmt.Errorf("event is required"))
+	payload, err := decodeSignupCompletedPayload(event)
+	if err != nil {
+		return Permanent(err)
 	}
-
-	var payload signupCompletedPayload
-	if err := json.Unmarshal([]byte(event.GetPayloadJson()), &payload); err != nil {
-		return Permanent(fmt.Errorf("decode signup payload: %w", err))
-	}
-	userID := strings.TrimSpace(payload.UserID)
-	if userID == "" {
-		return Permanent(fmt.Errorf("user_id is required in signup payload"))
-	}
+	userID := payload.UserID
 
 	now := h.clock().UTC()
 	notificationPayload, err := json.Marshal(map[string]string{

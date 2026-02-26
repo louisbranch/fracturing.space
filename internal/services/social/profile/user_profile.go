@@ -11,8 +11,9 @@ import (
 )
 
 const (
-	maxNameLength = 64
-	maxBioLength  = 280
+	maxNameLength          = 64
+	maxBioLength           = 280
+	defaultUserAvatarSetID = assetcatalog.AvatarSetPeopleV1
 )
 
 // Normalized stores validated profile field values.
@@ -27,37 +28,40 @@ var userProfileAvatarManifest = assetcatalog.AvatarManifest()
 
 // Normalize validates and trims user-supplied user profile values.
 func Normalize(userID string, name string, avatarSetID string, avatarAssetID string, bio string) (Normalized, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return Normalized{}, fmt.Errorf("name is required")
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return Normalized{}, fmt.Errorf("user id is required")
 	}
+
+	name = strings.TrimSpace(name)
 	if utf8.RuneCountInString(name) > maxNameLength {
 		return Normalized{}, fmt.Errorf("name must be at most %d characters", maxNameLength)
 	}
 
 	avatarSetID = strings.TrimSpace(avatarSetID)
 	avatarAssetID = strings.TrimSpace(avatarAssetID)
-	if (avatarSetID == "") != (avatarAssetID == "") {
-		return Normalized{}, fmt.Errorf("avatar set and avatar asset must be provided together")
+	if avatarSetID == "" && avatarAssetID != "" {
+		return Normalized{}, fmt.Errorf("avatar set is required when avatar asset is provided")
 	}
-	if avatarSetID != "" {
-		resolvedSetID, resolvedAssetID, err := userProfileAvatarManifest.ResolveSelection(assetcatalog.SelectionInput{
-			EntityType: "user",
-			EntityID:   strings.TrimSpace(userID),
-			SetID:      avatarSetID,
-			AssetID:    avatarAssetID,
-		})
-		switch {
-		case err == nil:
-			avatarSetID = resolvedSetID
-			avatarAssetID = resolvedAssetID
-		case errors.Is(err, assetcatalog.ErrSetNotFound):
-			return Normalized{}, fmt.Errorf("avatar set is invalid")
-		case errors.Is(err, assetcatalog.ErrAssetInvalid):
-			return Normalized{}, fmt.Errorf("avatar asset is invalid")
-		default:
-			return Normalized{}, err
-		}
+	if avatarSetID == "" {
+		avatarSetID = defaultUserAvatarSetID
+	}
+	resolvedSetID, resolvedAssetID, err := userProfileAvatarManifest.ResolveSelection(assetcatalog.SelectionInput{
+		EntityType: assetcatalog.AvatarRoleUser,
+		EntityID:   userID,
+		SetID:      avatarSetID,
+		AssetID:    avatarAssetID,
+	})
+	switch {
+	case err == nil:
+		avatarSetID = resolvedSetID
+		avatarAssetID = resolvedAssetID
+	case errors.Is(err, assetcatalog.ErrSetNotFound):
+		return Normalized{}, fmt.Errorf("avatar set is invalid")
+	case errors.Is(err, assetcatalog.ErrAssetInvalid):
+		return Normalized{}, fmt.Errorf("avatar asset is invalid")
+	default:
+		return Normalized{}, err
 	}
 
 	bio = strings.TrimSpace(bio)

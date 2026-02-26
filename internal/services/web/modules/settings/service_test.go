@@ -45,30 +45,13 @@ func TestNewServiceFailsClosedWhenGatewayMissing(t *testing.T) {
 	}
 }
 
-func TestSaveProfileValidatesRequiredFields(t *testing.T) {
+func TestSaveProfileAllowsOptionalUsernameAndName(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(settingsGatewayStub{})
-	err := svc.saveProfile(context.Background(), "user-1", SettingsProfile{Name: "Rhea"})
-	if err == nil {
-		t.Fatalf("expected validation error")
-	}
-	if got := apperrors.HTTPStatus(err); got != http.StatusBadRequest {
-		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusBadRequest)
-	}
-	if !strings.Contains(err.Error(), "username") {
-		t.Fatalf("err = %q, want username validation message", err.Error())
-	}
-
-	err = svc.saveProfile(context.Background(), "user-1", SettingsProfile{Username: "rhea"})
-	if err == nil {
-		t.Fatalf("expected validation error")
-	}
-	if got := apperrors.HTTPStatus(err); got != http.StatusBadRequest {
-		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusBadRequest)
-	}
-	if !strings.Contains(err.Error(), "name") {
-		t.Fatalf("err = %q, want name validation message", err.Error())
+	err := svc.saveProfile(context.Background(), "user-1", SettingsProfile{})
+	if err != nil {
+		t.Fatalf("saveProfile() error = %v", err)
 	}
 }
 

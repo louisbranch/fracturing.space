@@ -10,6 +10,8 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -41,6 +43,9 @@ func (g grpcGateway) LoadProfile(ctx context.Context, userID string) (SettingsPr
 	}
 	resp, err := g.socialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: resolvedUserID})
 	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return SettingsProfile{}, nil
+		}
 		return SettingsProfile{}, err
 	}
 	if resp == nil || resp.GetUserProfile() == nil {

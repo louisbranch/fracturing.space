@@ -384,12 +384,12 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 				data-default-style={ appMainLayoutMainStyle(layout) }
 				data-default-class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }
 				data-fallback-class={ appMainContainerClass("", "") }
-				aria-label={ T(loc, "layout.main_content_aria_label") }
-			>
-				@AppMainContentWithLayout(header, layout) {
-					{ children... }
-				}
-			</main>
+		aria-label={ T(loc, "layout.main_content_aria_label") }
+	>
+			@AppMainContentWithLayout(header, layout) {
+				{ children... }
+			}
+		</main>
 			<script src="/static/app-shell.js"></script>
 		</body>
 	</html>

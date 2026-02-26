@@ -107,8 +107,11 @@ func (r principalResolver) resolveViewerUncached(request *http.Request) module.V
 		return viewer
 	}
 	record := resp.GetUserProfile()
+	username := strings.TrimSpace(record.GetUsername())
 	if name := strings.TrimSpace(record.GetName()); name != "" {
 		viewer.DisplayName = name
+	} else if username != "" {
+		viewer.DisplayName = username
 	}
 	avatarSetID := strings.TrimSpace(record.GetAvatarSetId())
 	avatarAssetID := strings.TrimSpace(record.GetAvatarAssetId())

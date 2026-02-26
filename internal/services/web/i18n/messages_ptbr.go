@@ -262,7 +262,7 @@ func init() {
 	message.SetString(lang, "web.settings.locale.option_pt_br", "Português (Brasil)")
 	message.SetString(lang, "web.settings.locale.submit_save", "Salvar idioma")
 	message.SetString(lang, "web.settings.ai_keys.title", "Chaves de API de IA")
-	message.SetString(lang, "web.settings.page_profile_title", "Configurações de perfil")
+	message.SetString(lang, "web.settings.page_profile_title", "Perfil público")
 	message.SetString(lang, "web.settings.page_locale_title", "Configurações de idioma")
 	message.SetString(lang, "web.settings.page_ai_keys_title", "Chaves de API de IA")
 	message.SetString(lang, "web.settings.ai_keys.link", "Chaves de IA")

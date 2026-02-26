@@ -12,6 +12,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	workerdomain "github.com/louisbranch/fracturing.space/internal/services/worker/domain"
@@ -27,6 +28,7 @@ import (
 type RuntimeConfig struct {
 	Port              int
 	AuthAddr          string
+	SocialAddr        string
 	NotificationsAddr string
 	DBPath            string
 	Consumer          string
@@ -53,6 +55,9 @@ func Run(ctx context.Context, cfg RuntimeConfig) error {
 	}
 	if strings.TrimSpace(cfg.NotificationsAddr) == "" {
 		return fmt.Errorf("notifications address is required")
+	}
+	if strings.TrimSpace(cfg.SocialAddr) == "" {
+		return fmt.Errorf("social address is required")
 	}
 	if cfg.Port <= 0 {
 		cfg.Port = defaultWorkerPort
@@ -114,9 +119,29 @@ func Run(ctx context.Context, cfg RuntimeConfig) error {
 		}
 	}()
 
+	socialConn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		cfg.SocialAddr,
+		cfg.GRPCDialTimeout,
+		log.Printf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		return fmt.Errorf("dial social service: %w", err)
+	}
+	defer func() {
+		if closeErr := socialConn.Close(); closeErr != nil {
+			log.Printf("close social connection: %v", closeErr)
+		}
+	}()
+
 	authClient := authv1.NewAuthServiceClient(authConn)
 	notificationsClient := notificationsv1.NewNotificationServiceClient(notificationsConn)
-	handler := workerdomain.NewOnboardingWelcomeHandler(notificationsClient, nil)
+	socialClient := socialv1.NewSocialServiceClient(socialConn)
+	profileHandler := workerdomain.NewSignupSocialProfileHandler(socialClient)
+	welcomeHandler := workerdomain.NewOnboardingWelcomeHandler(notificationsClient, nil)
+	handler := fanoutEventHandlers(profileHandler, welcomeHandler)
 	loopConfig := Config{
 		Consumer:      cfg.Consumer,
 		PollInterval:  cfg.PollInterval,
@@ -161,6 +186,30 @@ func Run(ctx context.Context, cfg RuntimeConfig) error {
 
 	log.Printf("worker server listening at %v", listener.Addr())
 	return workerLoop.Run(ctx)
+}
+
+func fanoutEventHandlers(handlers ...EventHandler) EventHandler {
+	filtered := make([]EventHandler, 0, len(handlers))
+	for _, handler := range handlers {
+		if handler == nil {
+			continue
+		}
+		filtered = append(filtered, handler)
+	}
+	if len(filtered) == 0 {
+		return nil
+	}
+	if len(filtered) == 1 {
+		return filtered[0]
+	}
+	return EventHandlerFunc(func(ctx context.Context, event *authv1.IntegrationOutboxEvent) error {
+		for _, handler := range filtered {
+			if err := handler.Handle(ctx, event); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 type attemptStoreRecorder struct {

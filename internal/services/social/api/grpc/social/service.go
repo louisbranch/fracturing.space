@@ -154,7 +154,8 @@ func (s *Service) SetUserProfile(ctx context.Context, in *socialv1.SetUserProfil
 	if userID == "" {
 		return nil, status.Error(codes.InvalidArgument, "user id is required")
 	}
-	canonicalUsername, err := usernameutil.Canonicalize(in.GetUsername())
+
+	canonicalUsername, err := canonicalizeOptionalUsername(in.GetUsername())
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "username is invalid: %v", err)
 	}
@@ -262,4 +263,12 @@ func userProfileToProto(profile storage.UserProfile) *socialv1.UserProfile {
 		CreatedAt:     timestamppb.New(profile.CreatedAt),
 		UpdatedAt:     timestamppb.New(profile.UpdatedAt),
 	}
+}
+
+func canonicalizeOptionalUsername(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", nil
+	}
+	return usernameutil.Canonicalize(value)
 }

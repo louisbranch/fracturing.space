@@ -171,10 +171,13 @@ services:
         condition: service_completed_successfully
       auth:
         condition: service_started
+      social:
+        condition: service_started
       notifications:
         condition: service_started
     environment:
       FRACTURING_SPACE_WORKER_PORT: 8089
+      FRACTURING_SPACE_WORKER_SOCIAL_ADDR: social:8090
       FRACTURING_SPACE_WORKER_DB_PATH: /data/worker.db
       FRACTURING_SPACE_WORKER_CONSUMER: ${FRACTURING_SPACE_WORKER_CONSUMER:-worker-onboarding}
       FRACTURING_SPACE_WORKER_POLL_INTERVAL: ${FRACTURING_SPACE_WORKER_POLL_INTERVAL:-2s}

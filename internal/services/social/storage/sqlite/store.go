@@ -268,14 +268,11 @@ func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfile)
 	if userID == "" {
 		return fmt.Errorf("user id is required")
 	}
-	canonicalUsername, err := usernameutil.Canonicalize(profile.Username)
+	canonicalUsername, err := canonicalizeOptionalUsername(profile.Username)
 	if err != nil {
 		return fmt.Errorf("normalize username: %w", err)
 	}
 	name := strings.TrimSpace(profile.Name)
-	if name == "" {
-		return fmt.Errorf("name is required")
-	}
 	avatarSetID := strings.TrimSpace(profile.AvatarSetID)
 	avatarAssetID := strings.TrimSpace(profile.AvatarAssetID)
 	bio := strings.TrimSpace(profile.Bio)
@@ -430,6 +427,14 @@ func isUserProfileUsernameUniqueViolation(err error) bool {
 	message := strings.ToLower(err.Error())
 	return strings.Contains(message, "unique constraint failed") &&
 		strings.Contains(message, "user_profiles.username")
+}
+
+func canonicalizeOptionalUsername(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return "", nil
+	}
+	return usernameutil.Canonicalize(value)
 }
 
 var _ storage.ContactStore = (*Store)(nil)

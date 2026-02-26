@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -114,4 +115,49 @@ func openTempWorkerStore(t *testing.T) *workersqlite.Store {
 		}
 	})
 	return store
+}
+
+func TestFanoutEventHandlers_RunsHandlersInOrder(t *testing.T) {
+	called := make([]string, 0, 2)
+	handler := fanoutEventHandlers(
+		EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+			called = append(called, "first")
+			return nil
+		}),
+		EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+			called = append(called, "second")
+			return nil
+		}),
+	)
+	if handler == nil {
+		t.Fatal("expected non-nil fanout handler")
+	}
+	err := handler.Handle(context.Background(), &authv1.IntegrationOutboxEvent{Id: "evt-1"})
+	if err != nil {
+		t.Fatalf("handle fanout: %v", err)
+	}
+	if len(called) != 2 || called[0] != "first" || called[1] != "second" {
+		t.Fatalf("called order = %v, want [first second]", called)
+	}
+}
+
+func TestFanoutEventHandlers_StopsAtFirstError(t *testing.T) {
+	called := make([]string, 0, 2)
+	handler := fanoutEventHandlers(
+		EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+			called = append(called, "first")
+			return errors.New("boom")
+		}),
+		EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+			called = append(called, "second")
+			return nil
+		}),
+	)
+	err := handler.Handle(context.Background(), &authv1.IntegrationOutboxEvent{Id: "evt-1"})
+	if err == nil {
+		t.Fatal("expected fanout error")
+	}
+	if len(called) != 1 || called[0] != "first" {
+		t.Fatalf("called order = %v, want [first]", called)
+	}
 }

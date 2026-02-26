@@ -324,6 +324,7 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 		t.Fatalf("NewHandler() error = %v", err)
 	}
 	form := url.Values{"name": {"Rhea"}}
+	form.Set("name", strings.Repeat("x", 65))
 	req := httptest.NewRequest(http.MethodPost, "/app/settings/profile", strings.NewReader(form.Encode()))
 	attachSessionCookie(t, req, auth, "user-1")
 	req.Header.Set("Origin", "http://example.com")
@@ -336,7 +337,7 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`<html lang="pt-BR"`,
-		"Nome de usuário é obrigatório.",
+		"Nome deve ter no máximo 64 caracteres.",
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing pt-BR validation marker %q: %q", marker, body)
@@ -458,7 +459,7 @@ func TestAppPageTitleUsesWebComposition(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, `<title>Profile Settings | Fracturing.Space</title>`) {
+	if !strings.Contains(body, `<title>Public Profile | Fracturing.Space</title>`) {
 		t.Fatalf("body missing composed page title: %q", body)
 	}
 }

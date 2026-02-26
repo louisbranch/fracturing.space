@@ -12,6 +12,8 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -55,6 +57,21 @@ func TestGRPCGatewayLoadAndSaveProfile(t *testing.T) {
 	}
 	if social.lastSetReq.GetUsername() != "rhea" {
 		t.Fatalf("SetUserProfile username = %q, want %q", social.lastSetReq.GetUsername(), "rhea")
+	}
+}
+
+func TestGRPCGatewayLoadProfileReturnsEmptyWhenSocialProfileMissing(t *testing.T) {
+	t.Parallel()
+
+	social := &socialClientStub{getErr: status.Error(codes.NotFound, "user profile not found")}
+	gateway := grpcGateway{socialClient: social}
+
+	profile, err := gateway.LoadProfile(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("LoadProfile() error = %v", err)
+	}
+	if profile != (SettingsProfile{}) {
+		t.Fatalf("profile = %#v, want empty profile", profile)
 	}
 }
 

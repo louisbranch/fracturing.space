@@ -6,6 +6,7 @@ import (
 	"time"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -94,6 +95,32 @@ func TestServer_UserProfileRoundTrip(t *testing.T) {
 	}
 	if got := lookupResp.GetUserProfile().GetBio(); got != "Campaign manager" {
 		t.Fatalf("lookup bio = %q, want Campaign manager", got)
+	}
+}
+
+func TestServer_UserProfileAllowsMissingUsernameAndName(t *testing.T) {
+	client := newSocialClientForTest(t)
+
+	setResp, err := client.SetUserProfile(context.Background(), &socialv1.SetUserProfileRequest{
+		UserId: "user-2",
+	})
+	if err != nil {
+		t.Fatalf("set user profile: %v", err)
+	}
+	if setResp.GetUserProfile() == nil {
+		t.Fatal("expected user profile record from set user profile")
+	}
+	if got := setResp.GetUserProfile().GetUsername(); got != "" {
+		t.Fatalf("set username = %q, want empty", got)
+	}
+	if got := setResp.GetUserProfile().GetName(); got != "" {
+		t.Fatalf("set name = %q, want empty", got)
+	}
+	if got := setResp.GetUserProfile().GetAvatarSetId(); got != assetcatalog.AvatarSetPeopleV1 {
+		t.Fatalf("set avatar set id = %q, want %q", got, assetcatalog.AvatarSetPeopleV1)
+	}
+	if got := setResp.GetUserProfile().GetAvatarAssetId(); got == "" {
+		t.Fatal("set avatar asset id = empty, want deterministic people-set avatar")
 	}
 }
 
