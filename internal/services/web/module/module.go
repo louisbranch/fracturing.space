@@ -7,8 +7,8 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"google.golang.org/grpc"
 )
 
@@ -78,10 +78,10 @@ type AccountClient interface {
 	UpdateProfile(context.Context, *authv1.UpdateProfileRequest, ...grpc.CallOption) (*authv1.UpdateProfileResponse, error)
 }
 
-// ConnectionsClient exposes profile lookup and mutation operations.
-type ConnectionsClient interface {
-	GetUserProfile(context.Context, *connectionsv1.GetUserProfileRequest, ...grpc.CallOption) (*connectionsv1.GetUserProfileResponse, error)
-	SetUserProfile(context.Context, *connectionsv1.SetUserProfileRequest, ...grpc.CallOption) (*connectionsv1.SetUserProfileResponse, error)
+// SocialClient exposes profile lookup and mutation operations.
+type SocialClient interface {
+	GetUserProfile(context.Context, *socialv1.GetUserProfileRequest, ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error)
+	SetUserProfile(context.Context, *socialv1.SetUserProfileRequest, ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error)
 }
 
 // CredentialClient exposes AI credential listing and mutation operations.
@@ -106,7 +106,7 @@ type Dependencies struct {
 	AuthorizationClient AuthorizationClient
 	AuthClient          AuthClient
 	AccountClient       AccountClient
-	ConnectionsClient   ConnectionsClient
+	SocialClient        SocialClient
 	CredentialClient    CredentialClient
 }
 

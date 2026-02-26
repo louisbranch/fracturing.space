@@ -27,7 +27,7 @@
       ]
     },
     {
-      "name": "connections",
+      "name": "social",
       "grpc_port": 8090
     },
     {

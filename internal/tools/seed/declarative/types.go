@@ -23,7 +23,7 @@ type ManifestUser struct {
 	Contacts      []string              `json:"contacts,omitempty"`
 }
 
-// ManifestPublicProfile defines one connections profile record.
+// ManifestPublicProfile defines one social profile record.
 type ManifestPublicProfile struct {
 	Username      string `json:"username"`
 	Name          string `json:"name"`

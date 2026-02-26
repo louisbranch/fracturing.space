@@ -8,7 +8,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
@@ -30,18 +30,18 @@ type requestPrincipalState struct {
 type requestPrincipalStateKey struct{}
 
 type principalResolver struct {
-	authClient        module.AuthClient
-	accountClient     module.AccountClient
-	connectionsClient connectionsv1.ConnectionsServiceClient
-	assetBaseURL      string
+	authClient    module.AuthClient
+	accountClient module.AccountClient
+	socialClient  socialv1.SocialServiceClient
+	assetBaseURL  string
 }
 
 func newPrincipalResolver(cfg Config) principalResolver {
 	return principalResolver{
-		authClient:        cfg.AuthClient,
-		accountClient:     cfg.AccountClient,
-		connectionsClient: cfg.ConnectionsClient,
-		assetBaseURL:      cfg.AssetBaseURL,
+		authClient:    cfg.AuthClient,
+		accountClient: cfg.AccountClient,
+		socialClient:  cfg.SocialClient,
+		assetBaseURL:  cfg.AssetBaseURL,
 	}
 }
 
@@ -98,11 +98,11 @@ func (r principalResolver) resolveViewerUncached(request *http.Request) module.V
 		DisplayName: "Adventurer",
 		AvatarURL:   websupport.AvatarImageURL(r.assetBaseURL, "user", userID, "", ""),
 	}
-	if r.connectionsClient == nil {
+	if r.socialClient == nil {
 		return viewer
 	}
 	ctx := grpcauthctx.WithUserID(request.Context(), userID)
-	resp, err := r.connectionsClient.GetUserProfile(ctx, &connectionsv1.GetUserProfileRequest{UserId: userID})
+	resp, err := r.socialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: userID})
 	if err != nil || resp == nil || resp.GetUserProfile() == nil {
 		return viewer
 	}

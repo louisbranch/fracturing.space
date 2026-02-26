@@ -183,10 +183,10 @@ func TestRun_VarietyPreset(t *testing.T) {
 	}
 }
 
-func TestClose_NilConnections(t *testing.T) {
+func TestClose_NilSocialClient(t *testing.T) {
 	g := &Generator{}
 	if err := g.Close(); err != nil {
-		t.Fatalf("expected nil error for nil connections, got %v", err)
+		t.Fatalf("expected nil error for nil social client, got %v", err)
 	}
 }
 

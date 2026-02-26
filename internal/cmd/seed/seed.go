@@ -43,7 +43,7 @@ type Config struct {
 	Generate             bool
 	SeedCampaignListings bool
 	ListingAddr          string
-	ConnectionsAddr      string
+	SocialAddr           string
 	ManifestPath         string
 	SeedStatePath        string
 	Preset               generator.Preset
@@ -53,11 +53,11 @@ type Config struct {
 
 // seedEnv holds env-tagged fields for the seed command.
 type seedEnv struct {
-	GameAddr        string        `env:"FRACTURING_SPACE_GAME_ADDR"`
-	AuthAddr        string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
-	ListingAddr     string        `env:"FRACTURING_SPACE_LISTING_ADDR"`
-	ConnectionsAddr string        `env:"FRACTURING_SPACE_CONNECTIONS_ADDR"`
-	Timeout         time.Duration `env:"FRACTURING_SPACE_SEED_TIMEOUT" envDefault:"10m"`
+	GameAddr    string        `env:"FRACTURING_SPACE_GAME_ADDR"`
+	AuthAddr    string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
+	ListingAddr string        `env:"FRACTURING_SPACE_LISTING_ADDR"`
+	SocialAddr  string        `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
+	Timeout     time.Duration `env:"FRACTURING_SPACE_SEED_TIMEOUT" envDefault:"10m"`
 }
 
 // ParseConfig parses environment and flags into a Config.
@@ -71,7 +71,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	seedCfg.GRPCAddr = discovery.OrDefaultGRPCAddr(se.GameAddr, discovery.ServiceGame)
 	seedCfg.AuthAddr = discovery.OrDefaultGRPCAddr(se.AuthAddr, discovery.ServiceAuth)
 	listingAddr := discovery.OrDefaultGRPCAddr(se.ListingAddr, discovery.ServiceListing)
-	connectionsAddr := discovery.OrDefaultGRPCAddr(se.ConnectionsAddr, discovery.ServiceConnections)
+	socialAddr := discovery.OrDefaultGRPCAddr(se.SocialAddr, discovery.ServiceSocial)
 	timeout := se.Timeout
 	var list bool
 	var generate bool
@@ -85,7 +85,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&seedCfg.GRPCAddr, "grpc-addr", seedCfg.GRPCAddr, "game server address")
 	fs.StringVar(&seedCfg.AuthAddr, "auth-addr", seedCfg.AuthAddr, "auth server address")
 	fs.StringVar(&listingAddr, "listing-addr", listingAddr, "listing server address")
-	fs.StringVar(&connectionsAddr, "connections-addr", connectionsAddr, "connections server address")
+	fs.StringVar(&socialAddr, "social-addr", socialAddr, "social server address")
 	fs.DurationVar(&timeout, "timeout", timeout, "overall timeout")
 	fs.StringVar(&seedCfg.Scenario, "scenario", "", "run specific scenario (default: all)")
 	fs.BoolVar(&seedCfg.Verbose, "v", false, "verbose output")
@@ -128,7 +128,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 		Generate:             generate,
 		SeedCampaignListings: seedCampaignListings,
 		ListingAddr:          listingAddr,
-		ConnectionsAddr:      connectionsAddr,
+		SocialAddr:           socialAddr,
 		ManifestPath:         manifestPath,
 		SeedStatePath:        seedStatePath,
 		Preset:               generator.Preset(preset),
@@ -261,13 +261,13 @@ func runDeclarativeManifest(ctx context.Context, cfg Config, out io.Writer, errO
 	}
 	gameAddr := cfg.SeedConfig.GRPCAddr
 	authAddr := cfg.SeedConfig.AuthAddr
-	connectionsAddr := cfg.ConnectionsAddr
+	socialAddr := cfg.SocialAddr
 	listingAddr := cfg.ListingAddr
 	if cfg.SeedConfig.Verbose {
 		fmt.Fprintf(errOut, "seed: resolved gRPC endpoints\n")
 		fmt.Fprintf(errOut, "seed: game %q -> %q\n", cfg.SeedConfig.GRPCAddr, gameAddr)
 		fmt.Fprintf(errOut, "seed: auth %q -> %q\n", cfg.SeedConfig.AuthAddr, authAddr)
-		fmt.Fprintf(errOut, "seed: connections %q -> %q\n", cfg.ConnectionsAddr, connectionsAddr)
+		fmt.Fprintf(errOut, "seed: social %q -> %q\n", cfg.SocialAddr, socialAddr)
 		fmt.Fprintf(errOut, "seed: listing %q -> %q\n", cfg.ListingAddr, listingAddr)
 	}
 	if err := waitForTCP(ctx, "game", gameAddr, errOut, cfg.SeedConfig.Verbose); err != nil {
@@ -276,7 +276,7 @@ func runDeclarativeManifest(ctx context.Context, cfg Config, out io.Writer, errO
 	if err := waitForTCP(ctx, "auth", authAddr, errOut, cfg.SeedConfig.Verbose); err != nil {
 		return err
 	}
-	if err := waitForTCP(ctx, "connections", connectionsAddr, errOut, cfg.SeedConfig.Verbose); err != nil {
+	if err := waitForTCP(ctx, "social", socialAddr, errOut, cfg.SeedConfig.Verbose); err != nil {
 		return err
 	}
 	if err := waitForTCP(ctx, "listing", listingAddr, errOut, cfg.SeedConfig.Verbose); err != nil {
@@ -289,10 +289,10 @@ func runDeclarativeManifest(ctx context.Context, cfg Config, out io.Writer, errO
 			Verbose:      cfg.SeedConfig.Verbose,
 		},
 		declarative.DialConfig{
-			GameAddr:        gameAddr,
-			AuthAddr:        authAddr,
-			ConnectionsAddr: connectionsAddr,
-			ListingAddr:     listingAddr,
+			GameAddr:    gameAddr,
+			AuthAddr:    authAddr,
+			SocialAddr:  socialAddr,
+			ListingAddr: listingAddr,
 		},
 	)
 	if err != nil {
@@ -325,7 +325,7 @@ func defaultSeedStatePathForManifest(manifestPath string) string {
 func normalizeSeedAddrs(cfg Config) Config {
 	cfg.SeedConfig.GRPCAddr = seed.ResolveLocalFallbackAddr(cfg.SeedConfig.GRPCAddr)
 	cfg.SeedConfig.AuthAddr = seed.ResolveLocalFallbackAddr(cfg.SeedConfig.AuthAddr)
-	cfg.ConnectionsAddr = seed.ResolveLocalFallbackAddr(cfg.ConnectionsAddr)
+	cfg.SocialAddr = seed.ResolveLocalFallbackAddr(cfg.SocialAddr)
 	cfg.ListingAddr = seed.ResolveLocalFallbackAddr(cfg.ListingAddr)
 	return cfg
 }

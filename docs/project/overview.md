@@ -20,7 +20,7 @@ Canonical orientation page for the current system model.
 - Game-system extension mechanics: [Game systems](game-systems.md)
 - Worker orchestration behavior: [Worker Service Topology](worker-service-topology.md)
 - Authorization semantics: [Campaign Authorization Model](campaign-authorization-model.md)
-- Connections roadmap work: [User Connections Roadmap](connections-roadmap.md)
+- Social roadmap work: [User Social Roadmap](social-roadmap.md)
 
 ## What it is
 

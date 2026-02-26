@@ -10,10 +10,10 @@ nav_order: 2
 
 Fracturing.Space is split into four layers:
 
-- **Transport layer**: Game server (`cmd/game`) + Auth server (`cmd/auth`) + Connections server (`cmd/connections`) + AI server (`cmd/ai`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
+- **Transport layer**: Game server (`cmd/game`) + Auth server (`cmd/auth`) + Social server (`cmd/social`) + AI server (`cmd/ai`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
 - **Platform layer**: Shared infrastructure (`internal/platform/`)
 - **Domain layer**: Core domain packages (`internal/services/game/domain/{campaign,participant,character,invite,session,action,...}`) + game systems (`internal/services/game/domain/bridge/`)
-- **Storage layer**: SQLite persistence (`data/game-events.db`, `data/game-projections.db`, `data/game-content.db`, `data/auth.db`, `data/connections.db`, `data/listing.db`, `data/admin.db`, `data/ai.db`)
+- **Storage layer**: SQLite persistence (`data/game-events.db`, `data/game-projections.db`, `data/game-content.db`, `data/auth.db`, `data/social.db`, `data/listing.db`, `data/admin.db`, `data/ai.db`)
 
 The MCP server is a thin adapter that forwards requests to the game services.
 All rule evaluation and state changes live in the game server and domain
@@ -121,12 +121,12 @@ It owns provider secret lifecycle and AI agent configuration storage.
 
 Entry point: `cmd/ai`
 
-### Connections server
+### Social server
 
-The connections server hosts social/discovery APIs (contacts and unified user
+The social server hosts social/discovery APIs (contacts and unified user
 profile metadata) used for discovery and invite targeting workflows.
 
-Entry point: `cmd/connections`
+Entry point: `cmd/social`
 
 ### MCP bridge
 
@@ -158,7 +158,7 @@ databases per service boundary:
 - Game service projections: `data/game-projections.db` (`FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH`)
 - Game service content catalog: `data/game-content.db` (`FRACTURING_SPACE_GAME_CONTENT_DB_PATH`)
 - Auth service: `data/auth.db` (`FRACTURING_SPACE_AUTH_DB_PATH`)
-- Connections service: `data/connections.db` (`FRACTURING_SPACE_CONNECTIONS_DB_PATH`)
+- Social service: `data/social.db` (`FRACTURING_SPACE_SOCIAL_DB_PATH`)
 - Listing service: `data/listing.db` (`FRACTURING_SPACE_LISTING_DB_PATH`)
 - Admin service: `data/admin.db` (`FRACTURING_SPACE_ADMIN_DB_PATH`)
 - AI service: `data/ai.db` (`FRACTURING_SPACE_AI_DB_PATH`)
@@ -190,7 +190,7 @@ The primary service boundaries are:
   - Internal boundaries: composition root in `internal/services/web/app`, cross-cutting primitives in `internal/services/web/platform`, feature modules in `internal/services/web/modules`, and canonical paths in `internal/services/web/routepath`.
   - Route ownership is module-scoped with stdlib `ServeMux`; composition stays thin and feature logic remains inside module/service packages.
 - **Auth service** (`internal/services/auth/`): AuthN/authZ domain logic and gRPC API surface (identity proof and access artifacts); owns the auth database.
-- **Connections service** (`internal/services/connections/`): Social/discovery domain logic and gRPC API surface (contacts and unified user profile metadata); owns the connections database.
+- **Social service** (`internal/services/social/`): Social/discovery domain logic and gRPC API surface (contacts and unified user profile metadata); owns the social database.
 - **Listing service** (`internal/services/listing/`): Public campaign listing metadata APIs; owns the listing database.
 - **AI service** (`internal/services/ai/`): AI credential and agent domain logic + gRPC API surface; owns the AI database.
 

@@ -9,7 +9,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -18,8 +18,8 @@ import (
 func TestGRPCGatewayLoadAndSaveProfile(t *testing.T) {
 	t.Parallel()
 
-	connections := &connectionsClientStub{
-		getResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{
+	social := &socialClientStub{
+		getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{
 			Username:      "  rhea  ",
 			Name:          "  Rhea Vale  ",
 			AvatarSetId:   "  set-a  ",
@@ -27,7 +27,7 @@ func TestGRPCGatewayLoadAndSaveProfile(t *testing.T) {
 			Bio:           "  Traveler  ",
 		}},
 	}
-	gateway := grpcGateway{connectionsClient: connections}
+	gateway := grpcGateway{socialClient: social}
 
 	profile, err := gateway.LoadProfile(context.Background(), "user-1")
 	if err != nil {
@@ -50,11 +50,11 @@ func TestGRPCGatewayLoadAndSaveProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("SaveProfile() error = %v", err)
 	}
-	if connections.lastSetReq.GetUserId() != "user-1" {
-		t.Fatalf("SetUserProfile user id = %q, want %q", connections.lastSetReq.GetUserId(), "user-1")
+	if social.lastSetReq.GetUserId() != "user-1" {
+		t.Fatalf("SetUserProfile user id = %q, want %q", social.lastSetReq.GetUserId(), "user-1")
 	}
-	if connections.lastSetReq.GetUsername() != "rhea" {
-		t.Fatalf("SetUserProfile username = %q, want %q", connections.lastSetReq.GetUsername(), "rhea")
+	if social.lastSetReq.GetUsername() != "rhea" {
+		t.Fatalf("SetUserProfile username = %q, want %q", social.lastSetReq.GetUsername(), "rhea")
 	}
 }
 
@@ -166,7 +166,7 @@ func TestGRPCGatewayListCreateAndRevokeAIKeys(t *testing.T) {
 func TestGRPCGatewayRequiresExplicitUserID(t *testing.T) {
 	t.Parallel()
 
-	gateway := grpcGateway{connectionsClient: &connectionsClientStub{}}
+	gateway := grpcGateway{socialClient: &socialClientStub{}}
 
 	_, err := gateway.LoadProfile(context.Background(), "   ")
 	if err == nil {
@@ -210,29 +210,29 @@ func TestGRPCGatewayMissingClientBehavior(t *testing.T) {
 	}
 }
 
-type connectionsClientStub struct {
-	getResp    *connectionsv1.GetUserProfileResponse
+type socialClientStub struct {
+	getResp    *socialv1.GetUserProfileResponse
 	getErr     error
 	setErr     error
-	lastSetReq *connectionsv1.SetUserProfileRequest
+	lastSetReq *socialv1.SetUserProfileRequest
 }
 
-func (f *connectionsClientStub) GetUserProfile(context.Context, *connectionsv1.GetUserProfileRequest, ...grpc.CallOption) (*connectionsv1.GetUserProfileResponse, error) {
+func (f *socialClientStub) GetUserProfile(context.Context, *socialv1.GetUserProfileRequest, ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error) {
 	if f.getErr != nil {
 		return nil, f.getErr
 	}
 	if f.getResp != nil {
 		return f.getResp, nil
 	}
-	return &connectionsv1.GetUserProfileResponse{}, nil
+	return &socialv1.GetUserProfileResponse{}, nil
 }
 
-func (f *connectionsClientStub) SetUserProfile(_ context.Context, req *connectionsv1.SetUserProfileRequest, _ ...grpc.CallOption) (*connectionsv1.SetUserProfileResponse, error) {
+func (f *socialClientStub) SetUserProfile(_ context.Context, req *socialv1.SetUserProfileRequest, _ ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error) {
 	f.lastSetReq = req
 	if f.setErr != nil {
 		return nil, f.setErr
 	}
-	return &connectionsv1.SetUserProfileResponse{}, nil
+	return &socialv1.SetUserProfileResponse{}, nil
 }
 
 type accountClientStub struct {

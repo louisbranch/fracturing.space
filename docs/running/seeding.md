@@ -20,7 +20,7 @@ make up
 
 # If you run make seed from the host side (outside the devcontainer terminal),
 # ensure 8090 and 8091 are forwarded in `.devcontainer/devcontainer.json`
-# for connections and listing.
+# for social and listing.
 
 # Terminal 2: Run seeding commands
 make seed
@@ -33,7 +33,7 @@ Using direct Go commands:
 go run ./cmd/game
 go run ./cmd/auth
 go run ./cmd/listing
-go run ./cmd/connections
+go run ./cmd/social
 
 # Terminal 2: Run seeding commands
 make seed
@@ -45,7 +45,7 @@ Using Compose:
 COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
 
 # Terminal 1: Start the required services
-$COMPOSE up -d game auth listing connections
+$COMPOSE up -d game auth listing social
 
 # Terminal 2: Run seeding commands
 $COMPOSE --profile tools run --rm seed
@@ -99,7 +99,7 @@ $COMPOSE --profile tools run --rm seed
 | `-seed-state` | Path to idempotent state file | `.tmp/seed-state/local-dev.state.json` |
 | `-grpc-addr` | game server address | `game:8082` |
 | `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `auth:8083` |
-| `-connections-addr` | connections server address | `connections:8090` |
+| `-social-addr` | social server address | `social:8090` |
 | `-listing-addr` | listing server address | `listing:8091` |
 | `-v` | Verbose output | false |
 
@@ -111,8 +111,8 @@ The declarative seeder supports:
 | Entity | Service |
 |--------|---------|
 | User identities | `auth.v1.AuthService` |
-| Public profiles | `connections.v1.ConnectionsService` |
-| Contacts | `connections.v1.ConnectionsService` |
+| Public profiles | `social.v1.SocialService` |
+| Contacts | `social.v1.SocialService` |
 | Campaigns | `game.v1.CampaignService` |
 | Participants | `game.v1.ParticipantService` |
 | Characters + controls | `game.v1.CharacterService` |
