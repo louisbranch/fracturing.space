@@ -486,11 +486,13 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, route det
 		characters = make([]webtemplates.CampaignCharacterView, 0, len(characterItems))
 		for _, character := range characterItems {
 			characters = append(characters, webtemplates.CampaignCharacterView{
-				ID:         character.ID,
-				Name:       character.Name,
-				Kind:       character.Kind,
-				Controller: character.Controller,
-				AvatarURL:  character.AvatarURL,
+				ID:             character.ID,
+				Name:           character.Name,
+				Kind:           character.Kind,
+				Controller:     character.Controller,
+				AvatarURL:      character.AvatarURL,
+				CanEdit:        character.CanEdit,
+				EditReasonCode: character.EditReasonCode,
 			})
 		}
 	}

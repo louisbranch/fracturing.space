@@ -137,6 +137,27 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, err
 	}
 	targetAccessBefore := current.CampaignAccess
+	if in.GetCampaignAccess() == campaignv1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
+		decision := domainauthz.CanParticipantMutation(policyActor.CampaignAccess, targetAccessBefore)
+		if !decision.Allowed {
+			authErr := participantPolicyDecisionError(decision.ReasonCode)
+			emitAuthzDecisionTelemetry(
+				ctx,
+				c.stores.Audit,
+				campaignID,
+				domainauthz.CapabilityManageParticipants,
+				authzDecisionDeny,
+				decision.ReasonCode,
+				policyActor,
+				authErr,
+				map[string]any{
+					"target_participant_id":  participantID,
+					"target_campaign_access": strings.TrimSpace(string(targetAccessBefore)),
+				},
+			)
+			return storage.ParticipantRecord{}, authErr
+		}
+	}
 
 	fields := make(map[string]any)
 	if name := in.GetName(); name != nil {
@@ -293,7 +314,16 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	decision := domainauthz.CanParticipantRemoval(policyActor.CampaignAccess, current.CampaignAccess, ownerCount)
+	targetOwnsActiveCharacters, err := participantOwnsActiveCharacters(ctx, c.stores.Character, campaignID, participantID)
+	if err != nil {
+		return storage.ParticipantRecord{}, err
+	}
+	decision := domainauthz.CanParticipantRemovalWithOwnedResources(
+		policyActor.CampaignAccess,
+		current.CampaignAccess,
+		ownerCount,
+		targetOwnsActiveCharacters,
+	)
 	if !decision.Allowed {
 		authErr := participantPolicyDecisionError(decision.ReasonCode)
 		emitAuthzDecisionTelemetry(
@@ -306,14 +336,12 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 			policyActor,
 			authErr,
 			map[string]any{
-				"target_participant_id":  participantID,
-				"target_campaign_access": strings.TrimSpace(string(current.CampaignAccess)),
+				"target_participant_id":         participantID,
+				"target_campaign_access":        strings.TrimSpace(string(current.CampaignAccess)),
+				"target_owns_active_characters": targetOwnsActiveCharacters,
 			},
 		)
 		return storage.ParticipantRecord{}, authErr
-	}
-	if err := ensureParticipantHasNoOwnedCharacters(ctx, c.stores.Event, campaignID, participantID); err != nil {
-		return storage.ParticipantRecord{}, err
 	}
 
 	reason := strings.TrimSpace(in.GetReason())
@@ -357,26 +385,15 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	return current, nil
 }
 
-// ensureParticipantHasNoOwnedCharacters replays the event journal and returns
-// an error if any non-deleted character is currently owned by participantID.
-func ensureParticipantHasNoOwnedCharacters(ctx context.Context, events storage.EventStore, campaignID, participantID string) error {
-	participantID = strings.TrimSpace(participantID)
-	if participantID == "" {
-		return status.Error(codes.InvalidArgument, "participant id is required")
-	}
-
-	ownership, err := replayCharacterOwnership(ctx, events, campaignID)
+// ensureParticipantHasNoOwnedCharacters scans projection-backed character state
+// and returns an error if any active character is currently owned by participantID.
+func ensureParticipantHasNoOwnedCharacters(ctx context.Context, characters storage.CharacterStore, campaignID, participantID string) error {
+	ownsActiveCharacters, err := participantOwnsActiveCharacters(ctx, characters, campaignID, participantID)
 	if err != nil {
 		return err
 	}
-
-	for _, state := range ownership {
-		if state.deleted {
-			continue
-		}
-		if state.ownerParticipantID == participantID {
-			return status.Error(codes.FailedPrecondition, "participant owns active characters; transfer ownership first")
-		}
+	if ownsActiveCharacters {
+		return status.Error(codes.FailedPrecondition, "participant owns active characters; transfer ownership first")
 	}
 	return nil
 }
@@ -408,6 +425,8 @@ func participantPolicyDecisionError(reasonCode string) error {
 		return status.Error(codes.PermissionDenied, "manager cannot mutate owner participant")
 	case domainauthz.ReasonDenyLastOwnerGuard:
 		return status.Error(codes.PermissionDenied, "cannot remove or demote final owner")
+	case domainauthz.ReasonDenyTargetOwnsActiveCharacters:
+		return status.Error(codes.FailedPrecondition, "participant owns active characters; transfer ownership first")
 	default:
 		return status.Error(codes.PermissionDenied, "participant lacks permission")
 	}

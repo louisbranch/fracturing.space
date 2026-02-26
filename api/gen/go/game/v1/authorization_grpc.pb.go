@@ -20,7 +20,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthorizationService_Can_FullMethodName = "/game.v1.AuthorizationService/Can"
+	AuthorizationService_Can_FullMethodName      = "/game.v1.AuthorizationService/Can"
+	AuthorizationService_BatchCan_FullMethodName = "/game.v1.AuthorizationService/BatchCan"
 )
 
 // AuthorizationServiceClient is the client API for AuthorizationService service.
@@ -31,6 +32,8 @@ const (
 type AuthorizationServiceClient interface {
 	// Can evaluates whether the caller may perform action/resource in campaign.
 	Can(ctx context.Context, in *CanRequest, opts ...grpc.CallOption) (*CanResponse, error)
+	// BatchCan evaluates authorization for multiple checks in one request.
+	BatchCan(ctx context.Context, in *BatchCanRequest, opts ...grpc.CallOption) (*BatchCanResponse, error)
 }
 
 type authorizationServiceClient struct {
@@ -51,6 +54,16 @@ func (c *authorizationServiceClient) Can(ctx context.Context, in *CanRequest, op
 	return out, nil
 }
 
+func (c *authorizationServiceClient) BatchCan(ctx context.Context, in *BatchCanRequest, opts ...grpc.CallOption) (*BatchCanResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BatchCanResponse)
+	err := c.cc.Invoke(ctx, AuthorizationService_BatchCan_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // AuthorizationServiceServer is the server API for AuthorizationService service.
 // All implementations must embed UnimplementedAuthorizationServiceServer
 // for forward compatibility.
@@ -59,6 +72,8 @@ func (c *authorizationServiceClient) Can(ctx context.Context, in *CanRequest, op
 type AuthorizationServiceServer interface {
 	// Can evaluates whether the caller may perform action/resource in campaign.
 	Can(context.Context, *CanRequest) (*CanResponse, error)
+	// BatchCan evaluates authorization for multiple checks in one request.
+	BatchCan(context.Context, *BatchCanRequest) (*BatchCanResponse, error)
 	mustEmbedUnimplementedAuthorizationServiceServer()
 }
 
@@ -71,6 +86,9 @@ type UnimplementedAuthorizationServiceServer struct{}
 
 func (UnimplementedAuthorizationServiceServer) Can(context.Context, *CanRequest) (*CanResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Can not implemented")
+}
+func (UnimplementedAuthorizationServiceServer) BatchCan(context.Context, *BatchCanRequest) (*BatchCanResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BatchCan not implemented")
 }
 func (UnimplementedAuthorizationServiceServer) mustEmbedUnimplementedAuthorizationServiceServer() {}
 func (UnimplementedAuthorizationServiceServer) testEmbeddedByValue()                              {}
@@ -111,6 +129,24 @@ func _AuthorizationService_Can_Handler(srv interface{}, ctx context.Context, dec
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthorizationService_BatchCan_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BatchCanRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthorizationServiceServer).BatchCan(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthorizationService_BatchCan_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthorizationServiceServer).BatchCan(ctx, req.(*BatchCanRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // AuthorizationService_ServiceDesc is the grpc.ServiceDesc for AuthorizationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -121,6 +157,10 @@ var AuthorizationService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Can",
 			Handler:    _AuthorizationService_Can_Handler,
+		},
+		{
+			MethodName: "BatchCan",
+			Handler:    _AuthorizationService_BatchCan_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

@@ -10,6 +10,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -39,6 +40,9 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 	characterID := strings.TrimSpace(in.GetCharacterId())
 	if characterID == "" {
 		return "", storage.DaggerheartCharacterState{}, status.Error(codes.InvalidArgument, "character id is required")
+	}
+	if _, err := requireCharacterMutationPolicy(ctx, a.stores, c, characterID); err != nil {
+		return "", storage.DaggerheartCharacterState{}, err
 	}
 
 	// Get existing Daggerheart state
@@ -305,6 +309,9 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		return storage.DaggerheartSnapshot{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
+		return storage.DaggerheartSnapshot{}, err
+	}
+	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.DaggerheartSnapshot{}, err
 	}
 

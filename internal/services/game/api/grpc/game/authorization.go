@@ -2,13 +2,11 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"log"
 	"strings"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit/events"
@@ -200,93 +198,43 @@ func resolvePolicyActor(ctx context.Context, participants storage.ParticipantSto
 	return storage.ParticipantRecord{}, authzReasonDenyActorNotFound, status.Error(codes.PermissionDenied, "participant lacks permission")
 }
 
-// characterOwnershipState tracks the current owner and deletion state of a character
-// as resolved from the event journal.
-type characterOwnershipState struct {
-	ownerParticipantID string
-	deleted            bool
-}
-
-// replayCharacterOwnership replays the event journal for a campaign and returns
-// a map from character ID to its ownership state. Participant-deletion guards
-// consume this map to avoid duplicating pagination and event-matching logic.
-func replayCharacterOwnership(ctx context.Context, events storage.EventStore, campaignID string) (map[string]characterOwnershipState, error) {
-	if events == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+// participantOwnsActiveCharacters reports whether participantID currently owns
+// at least one active character in projection-backed read state.
+func participantOwnsActiveCharacters(ctx context.Context, characters storage.CharacterStore, campaignID, participantID string) (bool, error) {
+	if characters == nil {
+		return false, status.Error(codes.Internal, "character store is not configured")
 	}
-
-	ownership := make(map[string]characterOwnershipState)
+	participantID = strings.TrimSpace(participantID)
+	if participantID == "" {
+		return false, status.Error(codes.InvalidArgument, "participant id is required")
+	}
 
 	const pageSize = 200
-	afterSeq := uint64(0)
+	pageToken := ""
 	for {
-		page, err := events.ListEvents(ctx, campaignID, afterSeq, pageSize)
+		page, err := characters.ListCharacters(ctx, campaignID, pageSize, pageToken)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "load events: %v", err)
+			return false, status.Errorf(codes.Internal, "list characters: %v", err)
 		}
-		if len(page) == 0 {
+		for _, characterRecord := range page.Characters {
+			if strings.TrimSpace(characterRecord.OwnerParticipantID) == participantID {
+				return true, nil
+			}
+		}
+		nextPageToken := strings.TrimSpace(page.NextPageToken)
+		if nextPageToken == "" {
 			break
 		}
-
-		for _, evt := range page {
-			if evt.Seq > afterSeq {
-				afterSeq = evt.Seq
-			}
-			characterID := strings.TrimSpace(evt.EntityID)
-			if characterID == "" {
-				continue
-			}
-
-			switch evt.Type {
-			case eventTypeCharacterCreated:
-				ownerParticipantID := ""
-				if len(evt.PayloadJSON) > 0 {
-					var payload character.CreatePayload
-					if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-						return nil, status.Errorf(codes.Internal, "decode character.created payload: %v", err)
-					}
-					ownerParticipantID = strings.TrimSpace(payload.OwnerParticipantID)
-				}
-				if ownerParticipantID == "" {
-					ownerParticipantID = strings.TrimSpace(evt.ActorID)
-				}
-				ownership[characterID] = characterOwnershipState{
-					ownerParticipantID: ownerParticipantID,
-				}
-			case eventTypeCharacterUpdated:
-				if len(evt.PayloadJSON) == 0 {
-					continue
-				}
-				var payload character.UpdatePayload
-				if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-					return nil, status.Errorf(codes.Internal, "decode character.updated payload: %v", err)
-				}
-				if updatedOwnerParticipantID, ok := payload.Fields["owner_participant_id"]; ok {
-					state := ownership[characterID]
-					state.ownerParticipantID = strings.TrimSpace(updatedOwnerParticipantID)
-					ownership[characterID] = state
-				}
-			case eventTypeCharacterDeleted:
-				state := ownership[characterID]
-				state.deleted = true
-				ownership[characterID] = state
-			}
-		}
-
-		if len(page) < pageSize {
-			break
-		}
+		pageToken = nextPageToken
 	}
 
-	return ownership, nil
+	return false, nil
 }
 
 // resolveCharacterMutationOwnerParticipantID resolves the owner participant for
 // member-only character mutation checks.
 //
-// The lookup prefers event-backed ownership when an event store is available,
-// because ownership and controller can diverge. When event replay is not
-// configured, it falls back to the character projection participant id.
+// The lookup reads owner directly from character projection state.
 func resolveCharacterMutationOwnerParticipantID(
 	ctx context.Context,
 	stores Stores,
@@ -296,18 +244,6 @@ func resolveCharacterMutationOwnerParticipantID(
 	characterID = strings.TrimSpace(characterID)
 	if characterID == "" {
 		return "", nil
-	}
-
-	if stores.Event != nil {
-		ownership, err := replayCharacterOwnership(ctx, stores.Event, campaignID)
-		if err != nil {
-			return "", err
-		}
-		state, ok := ownership[characterID]
-		if !ok {
-			return "", nil
-		}
-		return strings.TrimSpace(state.ownerParticipantID), nil
 	}
 
 	if stores.Character == nil {
@@ -320,7 +256,7 @@ func resolveCharacterMutationOwnerParticipantID(
 		}
 		return "", status.Errorf(codes.Internal, "load character owner: %v", err)
 	}
-	return strings.TrimSpace(characterRecord.ParticipantID), nil
+	return strings.TrimSpace(characterRecord.OwnerParticipantID), nil
 }
 
 func adminOverrideFromContext(ctx context.Context) (string, bool) {

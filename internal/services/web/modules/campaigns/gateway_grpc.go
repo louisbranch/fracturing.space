@@ -395,6 +395,7 @@ func (g grpcGateway) CanCampaignAction(
 	campaignID string,
 	action statev1.AuthorizationAction,
 	resource statev1.AuthorizationResource,
+	target *statev1.AuthorizationTarget,
 ) (campaignAuthorizationDecision, error) {
 	if g.authorizationClient == nil {
 		return campaignAuthorizationDecision{}, nil
@@ -407,6 +408,7 @@ func (g grpcGateway) CanCampaignAction(
 		CampaignId: campaignID,
 		Action:     action,
 		Resource:   resource,
+		Target:     target,
 	})
 	if err != nil {
 		return campaignAuthorizationDecision{}, err
@@ -415,10 +417,69 @@ func (g grpcGateway) CanCampaignAction(
 		return campaignAuthorizationDecision{}, nil
 	}
 	return campaignAuthorizationDecision{
+		CheckID:    "",
 		Evaluated:  true,
 		Allowed:    resp.GetAllowed(),
 		ReasonCode: strings.TrimSpace(resp.GetReasonCode()),
 	}, nil
+}
+
+func (g grpcGateway) BatchCanCampaignAction(
+	ctx context.Context,
+	campaignID string,
+	checks []campaignAuthorizationCheck,
+) ([]campaignAuthorizationDecision, error) {
+	if g.authorizationClient == nil {
+		return nil, nil
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" || len(checks) == 0 {
+		return nil, nil
+	}
+
+	protoChecks := make([]*statev1.BatchCanCheck, 0, len(checks))
+	for _, check := range checks {
+		protoChecks = append(protoChecks, &statev1.BatchCanCheck{
+			CheckId:    strings.TrimSpace(check.CheckID),
+			CampaignId: campaignID,
+			Action:     check.Action,
+			Resource:   check.Resource,
+			Target:     check.Target,
+		})
+	}
+
+	resp, err := g.authorizationClient.BatchCan(ctx, &statev1.BatchCanRequest{Checks: protoChecks})
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil {
+		return nil, nil
+	}
+
+	results := resp.GetResults()
+	decisions := make([]campaignAuthorizationDecision, 0, len(results))
+	for idx, result := range results {
+		if result == nil {
+			fallbackCheckID := ""
+			if idx < len(checks) {
+				fallbackCheckID = strings.TrimSpace(checks[idx].CheckID)
+			}
+			decisions = append(decisions, campaignAuthorizationDecision{CheckID: fallbackCheckID})
+			continue
+		}
+		checkID := strings.TrimSpace(result.GetCheckId())
+		if checkID == "" && idx < len(checks) {
+			checkID = strings.TrimSpace(checks[idx].CheckID)
+		}
+		decisions = append(decisions, campaignAuthorizationDecision{
+			CheckID:    checkID,
+			Evaluated:  true,
+			Allowed:    result.GetAllowed(),
+			ReasonCode: strings.TrimSpace(result.GetReasonCode()),
+		})
+	}
+
+	return decisions, nil
 }
 
 // FIXME(web-cutover): session/participant/character/invite mutations remain scaffolded while campaigns can be mounted as stable defaults.

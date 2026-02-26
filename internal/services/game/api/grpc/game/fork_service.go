@@ -126,12 +126,15 @@ func (s *ForkService) GetLineage(ctx context.Context, in *campaignv1.GetLineageR
 	}
 
 	// Verify campaign exists
-	_, err := s.stores.Campaign.Get(ctx, campaignID)
+	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		if isNotFound(err) {
 			return nil, status.Error(codes.NotFound, "campaign not found")
 		}
 		return nil, status.Errorf(codes.Internal, "get campaign: %v", err)
+	}
+	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
+		return nil, err
 	}
 
 	metadata, err := s.stores.CampaignFork.GetCampaignForkMetadata(ctx, campaignID)

@@ -55,11 +55,11 @@ func TestCanCampaignAccess(t *testing.T) {
 			reasonCode: ReasonAllowAccessLevel,
 		},
 		{
-			name:       "manager cannot manage campaign",
+			name:       "manager can manage campaign",
 			access:     participant.CampaignAccessManager,
 			capability: CapabilityManageCampaign,
-			allowed:    false,
-			reasonCode: ReasonDenyAccessLevelRequired,
+			allowed:    true,
+			reasonCode: ReasonAllowAccessLevel,
 		},
 		{
 			name:       "member can mutate characters",
@@ -116,6 +116,50 @@ func TestCanCharacterMutation(t *testing.T) {
 	}
 }
 
+func TestCanParticipantMutation(t *testing.T) {
+	tests := []struct {
+		name         string
+		actorAccess  participant.CampaignAccess
+		targetAccess participant.CampaignAccess
+		allowed      bool
+		reasonCode   string
+	}{
+		{
+			name:         "manager cannot mutate owner target",
+			actorAccess:  participant.CampaignAccessManager,
+			targetAccess: participant.CampaignAccessOwner,
+			allowed:      false,
+			reasonCode:   ReasonDenyTargetIsOwner,
+		},
+		{
+			name:         "manager can mutate member target",
+			actorAccess:  participant.CampaignAccessManager,
+			targetAccess: participant.CampaignAccessMember,
+			allowed:      true,
+			reasonCode:   ReasonAllowAccessLevel,
+		},
+		{
+			name:         "member cannot manage participants",
+			actorAccess:  participant.CampaignAccessMember,
+			targetAccess: participant.CampaignAccessMember,
+			allowed:      false,
+			reasonCode:   ReasonDenyAccessLevelRequired,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decision := CanParticipantMutation(tt.actorAccess, tt.targetAccess)
+			if decision.Allowed != tt.allowed {
+				t.Fatalf("allowed = %v, want %v", decision.Allowed, tt.allowed)
+			}
+			if decision.ReasonCode != tt.reasonCode {
+				t.Fatalf("reason = %q, want %q", decision.ReasonCode, tt.reasonCode)
+			}
+		})
+	}
+}
+
 func TestCanParticipantAccessChange(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -126,6 +170,15 @@ func TestCanParticipantAccessChange(t *testing.T) {
 		allowed         bool
 		reasonCode      string
 	}{
+		{
+			name:            "manager cannot mutate owner target without access change",
+			actorAccess:     participant.CampaignAccessManager,
+			targetAccess:    participant.CampaignAccessOwner,
+			requestedAccess: participant.CampaignAccessUnspecified,
+			ownerCount:      2,
+			allowed:         false,
+			reasonCode:      ReasonDenyTargetIsOwner,
+		},
 		{
 			name:            "manager cannot promote to owner",
 			actorAccess:     participant.CampaignAccessManager,
@@ -200,5 +253,71 @@ func TestCanParticipantRemoval(t *testing.T) {
 	}
 	if ownerNonOwner.ReasonCode != ReasonAllowAccessLevel {
 		t.Fatalf("reason = %q, want %q", ownerNonOwner.ReasonCode, ReasonAllowAccessLevel)
+	}
+}
+
+func TestCanParticipantRemovalWithOwnedResources(t *testing.T) {
+	tests := []struct {
+		name                   string
+		actorAccess            participant.CampaignAccess
+		targetAccess           participant.CampaignAccess
+		ownerCount             int
+		targetOwnsActiveAssets bool
+		allowed                bool
+		reasonCode             string
+	}{
+		{
+			name:                   "owner removal denied when target owns active characters",
+			actorAccess:            participant.CampaignAccessOwner,
+			targetAccess:           participant.CampaignAccessMember,
+			ownerCount:             1,
+			targetOwnsActiveAssets: true,
+			allowed:                false,
+			reasonCode:             ReasonDenyTargetOwnsActiveCharacters,
+		},
+		{
+			name:                   "manager owner-target denied before owned-resource guard",
+			actorAccess:            participant.CampaignAccessManager,
+			targetAccess:           participant.CampaignAccessOwner,
+			ownerCount:             2,
+			targetOwnsActiveAssets: true,
+			allowed:                false,
+			reasonCode:             ReasonDenyTargetIsOwner,
+		},
+		{
+			name:                   "owner final owner guard still applies",
+			actorAccess:            participant.CampaignAccessOwner,
+			targetAccess:           participant.CampaignAccessOwner,
+			ownerCount:             1,
+			targetOwnsActiveAssets: false,
+			allowed:                false,
+			reasonCode:             ReasonDenyLastOwnerGuard,
+		},
+		{
+			name:                   "owner non-owner allowed when no active owned characters",
+			actorAccess:            participant.CampaignAccessOwner,
+			targetAccess:           participant.CampaignAccessMember,
+			ownerCount:             1,
+			targetOwnsActiveAssets: false,
+			allowed:                true,
+			reasonCode:             ReasonAllowAccessLevel,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decision := CanParticipantRemovalWithOwnedResources(
+				tt.actorAccess,
+				tt.targetAccess,
+				tt.ownerCount,
+				tt.targetOwnsActiveAssets,
+			)
+			if decision.Allowed != tt.allowed {
+				t.Fatalf("allowed = %v, want %v", decision.Allowed, tt.allowed)
+			}
+			if decision.ReasonCode != tt.reasonCode {
+				t.Fatalf("reason = %q, want %q", decision.ReasonCode, tt.reasonCode)
+			}
+		})
 	}
 }

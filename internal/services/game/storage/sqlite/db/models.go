@@ -8,6 +8,22 @@ import (
 	"database/sql"
 )
 
+type AuditEvent struct {
+	ID             int64          `json:"id"`
+	Timestamp      int64          `json:"timestamp"`
+	EventName      string         `json:"event_name"`
+	Severity       string         `json:"severity"`
+	CampaignID     sql.NullString `json:"campaign_id"`
+	SessionID      sql.NullString `json:"session_id"`
+	ActorType      sql.NullString `json:"actor_type"`
+	ActorID        sql.NullString `json:"actor_id"`
+	RequestID      sql.NullString `json:"request_id"`
+	InvocationID   sql.NullString `json:"invocation_id"`
+	TraceID        sql.NullString `json:"trace_id"`
+	SpanID         sql.NullString `json:"span_id"`
+	AttributesJson []byte         `json:"attributes_json"`
+}
+
 type Campaign struct {
 	ID               string         `json:"id"`
 	Name             string         `json:"name"`
@@ -47,6 +63,7 @@ type Character struct {
 	UpdatedAt               int64          `json:"updated_at"`
 	AvatarSetID             string         `json:"avatar_set_id"`
 	AvatarAssetID           string         `json:"avatar_asset_id"`
+	OwnerParticipantID      string         `json:"owner_participant_id"`
 }
 
 type DaggerheartAdversary struct {
@@ -391,6 +408,13 @@ type ProjectionApplyOutbox struct {
 	UpdatedAt     int64  `json:"updated_at"`
 }
 
+type ProjectionWatermark struct {
+	CampaignID      string `json:"campaign_id"`
+	AppliedSeq      int64  `json:"applied_seq"`
+	ExpectedNextSeq int64  `json:"expected_next_seq"`
+	UpdatedAt       int64  `json:"updated_at"`
+}
+
 type Session struct {
 	CampaignID string        `json:"campaign_id"`
 	ID         string        `json:"id"`
@@ -436,20 +460,4 @@ type Snapshot struct {
 	GmStateJson         []byte `json:"gm_state_json"`
 	SystemStateJson     []byte `json:"system_state_json"`
 	CreatedAt           int64  `json:"created_at"`
-}
-
-type AuditEvent struct {
-	ID             int64          `json:"id"`
-	Timestamp      int64          `json:"timestamp"`
-	EventName      string         `json:"event_name"`
-	Severity       string         `json:"severity"`
-	CampaignID     sql.NullString `json:"campaign_id"`
-	SessionID      sql.NullString `json:"session_id"`
-	ActorType      sql.NullString `json:"actor_type"`
-	ActorID        sql.NullString `json:"actor_id"`
-	RequestID      sql.NullString `json:"request_id"`
-	InvocationID   sql.NullString `json:"invocation_id"`
-	TraceID        sql.NullString `json:"trace_id"`
-	SpanID         sql.NullString `json:"span_id"`
-	AttributesJson []byte         `json:"attributes_json"`
 }

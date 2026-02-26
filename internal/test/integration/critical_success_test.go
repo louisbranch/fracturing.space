@@ -60,7 +60,7 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Critical Hero")
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, characterID)
 
-	_, err = snapshotClient.PatchCharacterState(ctx, &gamev1.PatchCharacterStateRequest{
+	_, err = snapshotClient.PatchCharacterState(ctxWithUser, &gamev1.PatchCharacterStateRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 		SystemStatePatch: &gamev1.PatchCharacterStateRequest_Daggerheart{
@@ -90,7 +90,7 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 	difficulty := 8
 	seed := findReplaySeedForCritical(t, difficulty)
 
-	rollResp, err := daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
+	rollResp, err := daggerheartClient.SessionActionRoll(ctxWithUser, &daggerheartv1.SessionActionRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		CharacterId: characterID,
@@ -109,7 +109,7 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 		t.Fatal("expected critical action roll")
 	}
 
-	outcomeCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(
+	outcomeCtx := metadata.NewOutgoingContext(ctxWithUser, metadata.Pairs(
 		grpcmeta.CampaignIDHeader, campaignID,
 		grpcmeta.SessionIDHeader, sessionID,
 	))
@@ -121,7 +121,7 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 		t.Fatalf("apply roll outcome: %v", err)
 	}
 
-	state := fetchCharacterState(t, ctx, snapshotClient, campaignID, characterID)
+	state := fetchCharacterState(t, ctxWithUser, snapshotClient, campaignID, characterID)
 	if state.GetHope() != 3 {
 		t.Fatalf("expected hope 3 after crit, got %d", state.GetHope())
 	}
@@ -192,7 +192,7 @@ func TestDaggerheartAttackFlowCriticalDamageBonus(t *testing.T) {
 	seed := findReplaySeedForCritical(t, difficulty)
 	damageSeed := uint64(99)
 
-	result, err := daggerheartClient.SessionAttackFlow(ctx, &daggerheartv1.SessionAttackFlowRequest{
+	result, err := daggerheartClient.SessionAttackFlow(ctxWithUser, &daggerheartv1.SessionAttackFlowRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		CharacterId: attacker,

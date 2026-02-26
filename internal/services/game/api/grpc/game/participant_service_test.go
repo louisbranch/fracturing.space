@@ -7,6 +7,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -588,6 +589,27 @@ func TestUpdateParticipant_DeniesManagerAssigningOwnerAccess(t *testing.T) {
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
+func TestUpdateParticipant_DeniesManagerMutatingOwnerWithoutAccessChange(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":   {ID: "owner-1", CampaignID: "c1", Name: "Owner", CampaignAccess: participant.CampaignAccessOwner},
+		"manager-1": {ID: "manager-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessManager},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	ctx := contextWithParticipantID("manager-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "owner-1",
+		Name:          wrapperspb.String("Updated Owner"),
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestUpdateParticipant_DeniesDemotingFinalOwner(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -612,6 +634,7 @@ func TestUpdateParticipant_DeniesDemotingFinalOwner(t *testing.T) {
 func TestDeleteParticipant_DeniesManagerRemovingOwner(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
@@ -620,7 +643,7 @@ func TestDeleteParticipant_DeniesManagerRemovingOwner(t *testing.T) {
 		"manager-1": {ID: "manager-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessManager},
 	}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore})
 	ctx := contextWithParticipantID("manager-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -632,6 +655,7 @@ func TestDeleteParticipant_DeniesManagerRemovingOwner(t *testing.T) {
 func TestDeleteParticipant_DeniesRemovingFinalOwner(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
@@ -640,7 +664,7 @@ func TestDeleteParticipant_DeniesRemovingFinalOwner(t *testing.T) {
 		"member-1": {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
 	}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -672,6 +696,7 @@ func TestDeleteParticipant_DeniesMemberWithoutManageAccess(t *testing.T) {
 func TestDeleteParticipant_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
@@ -695,7 +720,7 @@ func TestDeleteParticipant_Success(t *testing.T) {
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -730,6 +755,7 @@ func TestDeleteParticipant_Success(t *testing.T) {
 func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 20, 19, 0, 0, 0, time.UTC)
 
@@ -752,6 +778,9 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
 		},
 	}
 	eventStore.nextSeq["c1"] = 2
+	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch-1": {ID: "ch-1", CampaignID: "c1", OwnerParticipantID: "p1", Name: "Hero", Kind: character.KindPC},
+	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("participant.leave"): {
@@ -768,7 +797,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -784,6 +813,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
 func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 20, 19, 5, 0, 0, time.UTC)
 
@@ -806,6 +836,9 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t
 		},
 	}
 	eventStore.nextSeq["c1"] = 2
+	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch-1": {ID: "ch-1", CampaignID: "c1", OwnerParticipantID: "p1", Name: "Hero", Kind: character.KindPC},
+	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("participant.leave"): {
@@ -822,7 +855,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -838,6 +871,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t
 func TestDeleteParticipant_AllowsWhenOwnedCharacterAlreadyDeleted(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 20, 19, 10, 0, 0, time.UTC)
 
@@ -887,7 +921,7 @@ func TestDeleteParticipant_AllowsWhenOwnedCharacterAlreadyDeleted(t *testing.T) 
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -908,6 +942,7 @@ func TestDeleteParticipant_AllowsWhenOwnedCharacterAlreadyDeleted(t *testing.T) 
 func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 20, 19, 25, 0, 0, time.UTC)
 
@@ -942,6 +977,9 @@ func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testin
 		},
 	}
 	eventStore.nextSeq["c1"] = 3
+	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch-1": {ID: "ch-1", CampaignID: "c1", OwnerParticipantID: "p2", Name: "Hero", Kind: character.KindPC},
+	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("participant.leave"): {
@@ -958,7 +996,7 @@ func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testin
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -979,13 +1017,14 @@ func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testin
 func TestDeleteParticipant_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
 	}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: newFakeEventStore()})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: newFakeEventStore()})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -997,6 +1036,7 @@ func TestDeleteParticipant_RequiresDomainEngine(t *testing.T) {
 func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
@@ -1025,6 +1065,7 @@ func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
 		stores: Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
+			Character:   characterStore,
 			Event:       eventStore,
 			Domain:      domain,
 		},

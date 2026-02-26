@@ -1998,6 +1998,9 @@ func (fakeGateway) UpdateCharacter(context.Context, string) error    { return ni
 func (fakeGateway) ControlCharacter(context.Context, string) error   { return nil }
 func (fakeGateway) CreateInvite(context.Context, string) error       { return nil }
 func (fakeGateway) RevokeInvite(context.Context, string) error       { return nil }
+func (fakeGateway) CanCampaignAction(context.Context, string, statev1.AuthorizationAction, statev1.AuthorizationResource, *statev1.AuthorizationTarget) (campaignAuthorizationDecision, error) {
+	return campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil
+}
 
 type fakeCampaignClient struct {
 	response   *statev1.ListCampaignsResponse

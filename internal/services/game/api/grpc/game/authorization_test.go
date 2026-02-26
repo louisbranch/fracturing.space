@@ -127,15 +127,15 @@ func TestRequirePolicyAllowed(t *testing.T) {
 	}
 }
 
-func TestRequirePolicyCampaignManageDeniedForManager(t *testing.T) {
+func TestRequirePolicyCampaignManageAllowedForManager(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 		return storage.ParticipantRecord{CampaignAccess: participant.CampaignAccessManager}, nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
 	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"})
-	if status.Code(err) != codes.PermissionDenied {
-		t.Fatalf("expected permission denied, got %v", err)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
 	}
 }
 

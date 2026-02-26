@@ -90,6 +90,10 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 		return nil, err
 	}
 
+	if err := requireReadPolicy(ctx, s.stores, storage.CampaignRecord{ID: normalized.campaignID}); err != nil {
+		return nil, err
+	}
+
 	// Build request
 	storeReq := storage.ListEventsPageRequest{
 		CampaignID:    normalized.campaignID,
@@ -167,6 +171,9 @@ func (s *EventService) SubscribeCampaignUpdates(in *campaignv1.SubscribeCampaign
 	ctx := stream.Context()
 	if ctx == nil {
 		ctx = context.Background()
+	}
+	if err := requireReadPolicy(ctx, s.stores, storage.CampaignRecord{ID: normalized.campaignID}); err != nil {
+		return err
 	}
 	lastSeq := normalized.afterSeq
 

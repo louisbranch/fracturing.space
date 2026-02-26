@@ -33,16 +33,21 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event, pay
 	if err != nil {
 		return err
 	}
+	ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID)
+	if ownerParticipantID == "" {
+		ownerParticipantID = strings.TrimSpace(evt.ActorID)
+	}
 	ch := storage.CharacterRecord{
-		ID:            characterID,
-		CampaignID:    strings.TrimSpace(evt.CampaignID),
-		Name:          name,
-		Kind:          kind,
-		Notes:         strings.TrimSpace(payload.Notes),
-		AvatarSetID:   strings.TrimSpace(payload.AvatarSetID),
-		AvatarAssetID: strings.TrimSpace(payload.AvatarAssetID),
-		CreatedAt:     createdAt,
-		UpdatedAt:     createdAt,
+		ID:                 characterID,
+		CampaignID:         strings.TrimSpace(evt.CampaignID),
+		OwnerParticipantID: ownerParticipantID,
+		Name:               name,
+		Kind:               kind,
+		Notes:              strings.TrimSpace(payload.Notes),
+		AvatarSetID:        strings.TrimSpace(payload.AvatarSetID),
+		AvatarAssetID:      strings.TrimSpace(payload.AvatarAssetID),
+		CreatedAt:          createdAt,
+		UpdatedAt:          createdAt,
 	}
 	if err := a.Character.PutCharacter(ctx, ch); err != nil {
 		return err
@@ -96,6 +101,8 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event, pay
 			updated.Notes = strings.TrimSpace(value)
 		case "participant_id":
 			updated.ParticipantID = strings.TrimSpace(value)
+		case "owner_participant_id":
+			updated.OwnerParticipantID = strings.TrimSpace(value)
 		case "avatar_set_id":
 			updated.AvatarSetID = strings.TrimSpace(value)
 		case "avatar_asset_id":

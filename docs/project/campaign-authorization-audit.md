@@ -61,6 +61,9 @@ Recommended attributes:
 - `actor_user_id`: resolved user identifier when available
 - `character_id`, `participant_id`, `target_*`: target resource identifiers when
   applicable
+- `participant_operation`: participant-governance operation label when supplied
+- `target_owns_active_characters`: boolean invariant signal for participant
+  removal checks
 
 Envelope fields should always include:
 
@@ -81,20 +84,19 @@ rules.
 Current baseline set:
 
 - `AUTHZ_ALLOW_ACCESS_LEVEL`
+- `AUTHZ_ALLOW_ADMIN_OVERRIDE`
 - `AUTHZ_ALLOW_RESOURCE_OWNER`
 - `AUTHZ_DENY_ACCESS_LEVEL_REQUIRED`
 - `AUTHZ_DENY_MISSING_IDENTITY`
 - `AUTHZ_DENY_ACTOR_NOT_FOUND`
 - `AUTHZ_DENY_NOT_RESOURCE_OWNER`
+- `AUTHZ_DENY_TARGET_IS_OWNER`
+- `AUTHZ_DENY_LAST_OWNER_GUARD`
+- `AUTHZ_DENY_MANAGER_OWNER_MUTATION_FORBIDDEN`
+- `AUTHZ_DENY_TARGET_OWNS_ACTIVE_CHARACTERS`
 - `AUTHZ_ERROR_DEPENDENCY_UNAVAILABLE`
 - `AUTHZ_ERROR_ACTOR_LOAD`
 - `AUTHZ_ERROR_OWNER_RESOLUTION`
-
-Reserved examples for future rollout:
-
-- `AUTHZ_ALLOW_ADMIN_OVERRIDE`
-- `AUTHZ_DENY_LAST_OWNER_GUARD`
-- `AUTHZ_DENY_TARGET_IS_OWNER`
 
 Runtime override signaling (game gRPC write auth boundary):
 

@@ -11,6 +11,7 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fork"
@@ -47,6 +48,9 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 			return storage.CampaignRecord{}, nil, 0, status.Error(codes.NotFound, "source campaign not found")
 		}
 		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "get source campaign: %v", err)
+	}
+	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageCampaign, sourceCampaign); err != nil {
+		return storage.CampaignRecord{}, nil, 0, err
 	}
 
 	// Determine fork point
