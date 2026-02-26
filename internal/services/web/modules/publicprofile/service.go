@@ -16,6 +16,7 @@ import (
 type PublicProfile struct {
 	Username  string
 	Name      string
+	Pronouns  string
 	Bio       string
 	AvatarURL string
 }
@@ -81,6 +82,7 @@ func (s service) loadProfile(ctx context.Context, username string) (PublicProfil
 	return PublicProfile{
 		Username: resolvedUsername,
 		Name:     strings.TrimSpace(profile.GetName()),
+		Pronouns: strings.TrimSpace(profile.GetPronouns()),
 		Bio:      strings.TrimSpace(profile.GetBio()),
 		AvatarURL: websupport.AvatarImageURL(
 			s.assetBaseURL,

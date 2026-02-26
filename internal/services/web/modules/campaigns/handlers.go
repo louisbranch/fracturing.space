@@ -473,6 +473,7 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, route det
 				Role:           participant.Role,
 				CampaignAccess: participant.CampaignAccess,
 				Controller:     participant.Controller,
+				Pronouns:       participant.Pronouns,
 				AvatarURL:      participant.AvatarURL,
 			})
 		}
@@ -490,6 +491,8 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, route det
 				Name:           character.Name,
 				Kind:           character.Kind,
 				Controller:     character.Controller,
+				Pronouns:       character.Pronouns,
+				Aliases:        append([]string(nil), character.Aliases...),
 				AvatarURL:      character.AvatarURL,
 				CanEdit:        character.CanEdit,
 				EditReasonCode: character.EditReasonCode,

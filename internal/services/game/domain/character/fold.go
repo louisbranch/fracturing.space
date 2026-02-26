@@ -35,6 +35,8 @@ func Fold(state State, evt event.Event) (State, error) {
 		state.Notes = payload.Notes
 		state.AvatarSetID = payload.AvatarSetID
 		state.AvatarAssetID = payload.AvatarAssetID
+		state.Pronouns = payload.Pronouns
+		state.Aliases = normalizeAliases(payload.Aliases)
 	case EventTypeUpdated:
 		var payload UpdatePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
@@ -59,6 +61,14 @@ func Fold(state State, evt event.Event) (State, error) {
 				state.AvatarSetID = value
 			case "avatar_asset_id":
 				state.AvatarAssetID = value
+			case "pronouns":
+				state.Pronouns = value
+			case "aliases":
+				aliases, err := normalizeAliasesField(value)
+				if err != nil {
+					return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
+				}
+				state.Aliases = aliases
 			}
 		}
 	case EventTypeDeleted:

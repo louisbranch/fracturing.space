@@ -19,11 +19,12 @@ message UserProfile {
   string user_id = 1;
   string username = 2;
   string name = 3;
-  string avatar_set_id = 4;
-  string avatar_asset_id = 5;
-  string bio = 6;
-  google.protobuf.Timestamp created_at = 7;
-  google.protobuf.Timestamp updated_at = 8;
+  string pronouns = 4;
+  string bio = 5;
+  string avatar_set_id = 6;
+  string avatar_asset_id = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
 }
 
 message AddContactRequest {
@@ -62,9 +63,10 @@ message SetUserProfileRequest {
   string user_id = 1;
   string username = 2;
   string name = 3;
-  string avatar_set_id = 4;
-  string avatar_asset_id = 5;
-  string bio = 6;
+  string pronouns = 4;
+  string bio = 5;
+  string avatar_set_id = 6;
+  string avatar_asset_id = 7;
 }
 
 message SetUserProfileResponse {

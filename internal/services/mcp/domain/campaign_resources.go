@@ -56,6 +56,7 @@ func ParticipantListResourceHandler(client statev1.ParticipantServiceClient) mcp
 				Name:       participant.GetName(),
 				Role:       participantRoleToString(participant.GetRole()),
 				Controller: controllerToString(participant.GetController()),
+				Pronouns:   participant.GetPronouns(),
 				CreatedAt:  formatTimestamp(participant.GetCreatedAt()),
 				UpdatedAt:  formatTimestamp(participant.GetUpdatedAt()),
 			})
@@ -129,6 +130,8 @@ func CharacterListResourceHandler(client statev1.CharacterServiceClient) mcp.Res
 				Name:       character.GetName(),
 				Kind:       characterKindToString(character.GetKind()),
 				Notes:      character.GetNotes(),
+				Pronouns:   character.GetPronouns(),
+				Aliases:    mcpAliases(character.GetAliases()),
 				CreatedAt:  formatTimestamp(character.GetCreatedAt()),
 				UpdatedAt:  formatTimestamp(character.GetUpdatedAt()),
 			})

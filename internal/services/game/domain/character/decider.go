@@ -29,6 +29,7 @@ const (
 	rejectionCodeCharacterNotCreated         = "CHARACTER_NOT_CREATED"
 	rejectionCodeCharacterUpdateEmpty        = "CHARACTER_UPDATE_EMPTY"
 	rejectionCodeCharacterUpdateFieldInvalid = "CHARACTER_UPDATE_FIELD_INVALID"
+	rejectionCodeCharacterAliasesInvalid     = "CHARACTER_ALIASES_INVALID"
 	rejectionCodeCharacterOwnerParticipantID = "CHARACTER_OWNER_PARTICIPANT_ID_REQUIRED"
 )
 
@@ -74,7 +75,9 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		notes := strings.TrimSpace(payload.Notes)
+		pronouns := strings.TrimSpace(payload.Pronouns)
 		ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID)
+		aliases := normalizeAliases(payload.Aliases)
 		avatarSetID, avatarAssetID, err := resolveCharacterAvatarSelection(
 			characterID,
 			payload.AvatarSetID,
@@ -95,6 +98,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			Notes:              notes,
 			AvatarSetID:        avatarSetID,
 			AvatarAssetID:      avatarAssetID,
+			Pronouns:           pronouns,
+			Aliases:            aliases,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := command.NewEvent(cmd, EventTypeCreated, "character", characterID, payloadJSON, now().UTC())
@@ -166,6 +171,18 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				normalizedFields[key] = trimmed
 			case "avatar_set_id":
 			case "avatar_asset_id":
+			case "pronouns":
+				normalizedFields[key] = strings.TrimSpace(value)
+			case "aliases":
+				normalizedAliases, err := normalizeAliasesField(value)
+				if err != nil {
+					return command.Reject(command.Rejection{
+						Code:    rejectionCodeCharacterAliasesInvalid,
+						Message: "character aliases are invalid",
+					})
+				}
+				aliasesJSON, _ := json.Marshal(normalizedAliases)
+				normalizedFields[key] = string(aliasesJSON)
 			default:
 				return command.Reject(command.Rejection{
 					Code:    rejectionCodeCharacterUpdateFieldInvalid,

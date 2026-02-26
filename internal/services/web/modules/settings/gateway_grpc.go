@@ -55,9 +55,10 @@ func (g grpcGateway) LoadProfile(ctx context.Context, userID string) (SettingsPr
 	return SettingsProfile{
 		Username:      strings.TrimSpace(profile.GetUsername()),
 		Name:          strings.TrimSpace(profile.GetName()),
+		Pronouns:      strings.TrimSpace(profile.GetPronouns()),
+		Bio:           strings.TrimSpace(profile.GetBio()),
 		AvatarSetID:   strings.TrimSpace(profile.GetAvatarSetId()),
 		AvatarAssetID: strings.TrimSpace(profile.GetAvatarAssetId()),
-		Bio:           strings.TrimSpace(profile.GetBio()),
 	}, nil
 }
 
@@ -73,9 +74,10 @@ func (g grpcGateway) SaveProfile(ctx context.Context, userID string, profile Set
 		UserId:        resolvedUserID,
 		Username:      profile.Username,
 		Name:          profile.Name,
+		Pronouns:      profile.Pronouns,
+		Bio:           profile.Bio,
 		AvatarSetId:   profile.AvatarSetID,
 		AvatarAssetId: profile.AvatarAssetID,
-		Bio:           profile.Bio,
 	})
 	return err
 }

@@ -84,9 +84,11 @@ type CampaignPayload struct {
 // ParticipantCreateInput represents the MCP tool input for participant creation.
 type ParticipantCreateInput struct {
 	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
+	UserID     string `json:"user_id,omitempty" jsonschema:"optional user id bound to participant"`
 	Name       string `json:"name" jsonschema:"display name for the participant"`
 	Role       string `json:"role" jsonschema:"participant role (GM, PLAYER)"`
 	Controller string `json:"controller,omitempty" jsonschema:"controller type (HUMAN, AI); optional, defaults to HUMAN if unspecified"`
+	Pronouns   string `json:"pronouns,omitempty" jsonschema:"optional participant pronouns"`
 }
 
 // ParticipantUpdateInput represents the MCP tool input for participant updates.
@@ -96,6 +98,7 @@ type ParticipantUpdateInput struct {
 	Name          *string `json:"name,omitempty" jsonschema:"optional display name"`
 	Role          *string `json:"role,omitempty" jsonschema:"optional participant role (GM, PLAYER)"`
 	Controller    *string `json:"controller,omitempty" jsonschema:"optional controller (HUMAN, AI)"`
+	Pronouns      *string `json:"pronouns,omitempty" jsonschema:"optional participant pronouns"`
 }
 
 // ParticipantDeleteInput represents the MCP tool input for participant deletion.
@@ -112,6 +115,7 @@ type ParticipantCreateResult struct {
 	Name       string `json:"name" jsonschema:"display name for the participant"`
 	Role       string `json:"role" jsonschema:"participant role"`
 	Controller string `json:"controller" jsonschema:"controller type"`
+	Pronouns   string `json:"pronouns" jsonschema:"participant pronouns"`
 	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
 	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
 }
@@ -123,6 +127,7 @@ type ParticipantUpdateResult struct {
 	Name       string `json:"name" jsonschema:"display name for the participant"`
 	Role       string `json:"role" jsonschema:"participant role"`
 	Controller string `json:"controller" jsonschema:"controller type"`
+	Pronouns   string `json:"pronouns" jsonschema:"participant pronouns"`
 	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
 	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
 }
@@ -134,6 +139,7 @@ type ParticipantDeleteResult struct {
 	Name       string `json:"name" jsonschema:"display name for the participant"`
 	Role       string `json:"role" jsonschema:"participant role"`
 	Controller string `json:"controller" jsonschema:"controller type"`
+	Pronouns   string `json:"pronouns" jsonschema:"participant pronouns"`
 	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when participant was created"`
 	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when participant was last updated"`
 }
@@ -145,6 +151,7 @@ type ParticipantListEntry struct {
 	Name       string `json:"name"`
 	Role       string `json:"role"`
 	Controller string `json:"controller"`
+	Pronouns   string `json:"pronouns"`
 	CreatedAt  string `json:"created_at"`
 	UpdatedAt  string `json:"updated_at"`
 }
@@ -156,13 +163,15 @@ type ParticipantListPayload struct {
 
 // CharacterListEntry represents a readable character entry.
 type CharacterListEntry struct {
-	ID         string `json:"id"`
-	CampaignID string `json:"campaign_id"`
-	Name       string `json:"name"`
-	Kind       string `json:"kind"`
-	Notes      string `json:"notes"`
-	CreatedAt  string `json:"created_at"`
-	UpdatedAt  string `json:"updated_at"`
+	ID         string   `json:"id"`
+	CampaignID string   `json:"campaign_id"`
+	Name       string   `json:"name"`
+	Kind       string   `json:"kind"`
+	Notes      string   `json:"notes"`
+	Pronouns   string   `json:"pronouns"`
+	Aliases    []string `json:"aliases"`
+	CreatedAt  string   `json:"created_at"`
+	UpdatedAt  string   `json:"updated_at"`
 }
 
 // CharacterListPayload represents the MCP resource payload for character listings.
@@ -172,41 +181,49 @@ type CharacterListPayload struct {
 
 // CharacterCreateInput represents the MCP tool input for character creation.
 type CharacterCreateInput struct {
-	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
-	Name       string `json:"name" jsonschema:"display name for the character"`
-	Kind       string `json:"kind" jsonschema:"character kind (PC, NPC)"`
-	Notes      string `json:"notes,omitempty" jsonschema:"optional free-form notes about the character"`
+	CampaignID string   `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string   `json:"name" jsonschema:"display name for the character"`
+	Kind       string   `json:"kind" jsonschema:"character kind (PC, NPC)"`
+	Notes      string   `json:"notes,omitempty" jsonschema:"optional free-form notes about the character"`
+	Pronouns   string   `json:"pronouns,omitempty" jsonschema:"optional character pronouns"`
+	Aliases    []string `json:"aliases,omitempty" jsonschema:"optional character aliases"`
 }
 
 // CharacterCreateResult represents the MCP tool output for character creation.
 type CharacterCreateResult struct {
-	ID         string `json:"id" jsonschema:"character identifier"`
-	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
-	Name       string `json:"name" jsonschema:"display name for the character"`
-	Kind       string `json:"kind" jsonschema:"character kind"`
-	Notes      string `json:"notes" jsonschema:"free-form notes about the character"`
-	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when character was created"`
-	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
+	ID         string   `json:"id" jsonschema:"character identifier"`
+	CampaignID string   `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string   `json:"name" jsonschema:"display name for the character"`
+	Kind       string   `json:"kind" jsonschema:"character kind"`
+	Notes      string   `json:"notes" jsonschema:"free-form notes about the character"`
+	Pronouns   string   `json:"pronouns" jsonschema:"character pronouns"`
+	Aliases    []string `json:"aliases" jsonschema:"character aliases"`
+	CreatedAt  string   `json:"created_at" jsonschema:"RFC3339 timestamp when character was created"`
+	UpdatedAt  string   `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
 }
 
 // CharacterUpdateInput represents the MCP tool input for character updates.
 type CharacterUpdateInput struct {
-	CampaignID  string  `json:"campaign_id" jsonschema:"campaign identifier"`
-	CharacterID string  `json:"character_id" jsonschema:"character identifier"`
-	Name        *string `json:"name,omitempty" jsonschema:"optional display name for the character"`
-	Kind        *string `json:"kind,omitempty" jsonschema:"optional character kind (PC, NPC)"`
-	Notes       *string `json:"notes,omitempty" jsonschema:"optional free-form notes about the character"`
+	CampaignID  string    `json:"campaign_id" jsonschema:"campaign identifier"`
+	CharacterID string    `json:"character_id" jsonschema:"character identifier"`
+	Name        *string   `json:"name,omitempty" jsonschema:"optional display name for the character"`
+	Kind        *string   `json:"kind,omitempty" jsonschema:"optional character kind (PC, NPC)"`
+	Notes       *string   `json:"notes,omitempty" jsonschema:"optional free-form notes about the character"`
+	Pronouns    *string   `json:"pronouns,omitempty" jsonschema:"optional character pronouns"`
+	Aliases     *[]string `json:"aliases,omitempty" jsonschema:"optional character aliases"`
 }
 
 // CharacterUpdateResult represents the MCP tool output for character updates.
 type CharacterUpdateResult struct {
-	ID         string `json:"id" jsonschema:"character identifier"`
-	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
-	Name       string `json:"name" jsonschema:"display name for the character"`
-	Kind       string `json:"kind" jsonschema:"character kind"`
-	Notes      string `json:"notes" jsonschema:"free-form notes about the character"`
-	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when character was created"`
-	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
+	ID         string   `json:"id" jsonschema:"character identifier"`
+	CampaignID string   `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string   `json:"name" jsonschema:"display name for the character"`
+	Kind       string   `json:"kind" jsonschema:"character kind"`
+	Notes      string   `json:"notes" jsonschema:"free-form notes about the character"`
+	Pronouns   string   `json:"pronouns" jsonschema:"character pronouns"`
+	Aliases    []string `json:"aliases" jsonschema:"character aliases"`
+	CreatedAt  string   `json:"created_at" jsonschema:"RFC3339 timestamp when character was created"`
+	UpdatedAt  string   `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
 }
 
 // CharacterDeleteInput represents the MCP tool input for character deletion.
@@ -218,13 +235,15 @@ type CharacterDeleteInput struct {
 
 // CharacterDeleteResult represents the MCP tool output for character deletion.
 type CharacterDeleteResult struct {
-	ID         string `json:"id" jsonschema:"character identifier"`
-	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
-	Name       string `json:"name" jsonschema:"display name for the character"`
-	Kind       string `json:"kind" jsonschema:"character kind"`
-	Notes      string `json:"notes" jsonschema:"free-form notes about the character"`
-	CreatedAt  string `json:"created_at" jsonschema:"RFC3339 timestamp when character was created"`
-	UpdatedAt  string `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
+	ID         string   `json:"id" jsonschema:"character identifier"`
+	CampaignID string   `json:"campaign_id" jsonschema:"campaign identifier"`
+	Name       string   `json:"name" jsonschema:"display name for the character"`
+	Kind       string   `json:"kind" jsonschema:"character kind"`
+	Notes      string   `json:"notes" jsonschema:"free-form notes about the character"`
+	Pronouns   string   `json:"pronouns" jsonschema:"character pronouns"`
+	Aliases    []string `json:"aliases" jsonschema:"character aliases"`
+	CreatedAt  string   `json:"created_at" jsonschema:"RFC3339 timestamp when character was created"`
+	UpdatedAt  string   `json:"updated_at" jsonschema:"RFC3339 timestamp when character was last updated"`
 }
 
 // CharacterControlSetInput represents the MCP tool input for setting character control.

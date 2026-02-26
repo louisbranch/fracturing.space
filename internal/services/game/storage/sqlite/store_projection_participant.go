@@ -39,6 +39,7 @@ func (s *Store) PutParticipant(ctx context.Context, p storage.ParticipantRecord)
 		CampaignAccess: participantAccessToString(p.CampaignAccess),
 		AvatarSetID:    p.AvatarSetID,
 		AvatarAssetID:  p.AvatarAssetID,
+		Pronouns:       p.Pronouns,
 		CreatedAt:      toMillis(p.CreatedAt),
 		UpdatedAt:      toMillis(p.UpdatedAt),
 	}); err != nil {

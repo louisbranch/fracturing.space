@@ -276,6 +276,7 @@ func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfile)
 	avatarSetID := strings.TrimSpace(profile.AvatarSetID)
 	avatarAssetID := strings.TrimSpace(profile.AvatarAssetID)
 	bio := strings.TrimSpace(profile.Bio)
+	pronouns := strings.TrimSpace(profile.Pronouns)
 	createdAt := profile.CreatedAt.UTC()
 	updatedAt := profile.UpdatedAt.UTC()
 	if createdAt.IsZero() && updatedAt.IsZero() {
@@ -292,26 +293,29 @@ func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfile)
 
 	_, err = s.sqlDB.ExecContext(
 		ctx,
-		`INSERT INTO user_profiles (user_id, username, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO user_profiles (user_id, username, name, avatar_set_id, avatar_asset_id, bio, pronouns, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id) DO UPDATE SET
 		   username = excluded.username,
 		   name = excluded.name,
 		   avatar_set_id = excluded.avatar_set_id,
 		   avatar_asset_id = excluded.avatar_asset_id,
 		   bio = excluded.bio,
+		   pronouns = excluded.pronouns,
 		   updated_at = excluded.updated_at
 		 WHERE user_profiles.username <> excluded.username
 		    OR user_profiles.name <> excluded.name
 		    OR user_profiles.avatar_set_id <> excluded.avatar_set_id
 		    OR user_profiles.avatar_asset_id <> excluded.avatar_asset_id
-		    OR user_profiles.bio <> excluded.bio`,
+		    OR user_profiles.bio <> excluded.bio
+		    OR user_profiles.pronouns <> excluded.pronouns`,
 		userID,
 		canonicalUsername,
 		name,
 		avatarSetID,
 		avatarAssetID,
 		bio,
+		pronouns,
 		toMillis(createdAt),
 		toMillis(updatedAt),
 	)
@@ -339,7 +343,7 @@ func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (stor
 
 	row := s.sqlDB.QueryRowContext(
 		ctx,
-		`SELECT user_id, username, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at
+		`SELECT user_id, username, name, avatar_set_id, avatar_asset_id, bio, pronouns, created_at, updated_at
 		 FROM user_profiles
 		 WHERE user_id = ?`,
 		userID,
@@ -354,6 +358,7 @@ func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (stor
 		&record.AvatarSetID,
 		&record.AvatarAssetID,
 		&record.Bio,
+		&record.Pronouns,
 		&createdAt,
 		&updatedAt,
 	)
@@ -383,7 +388,7 @@ func (s *Store) GetUserProfileByUsername(ctx context.Context, username string) (
 
 	row := s.sqlDB.QueryRowContext(
 		ctx,
-		`SELECT user_id, username, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at
+		`SELECT user_id, username, name, avatar_set_id, avatar_asset_id, bio, pronouns, created_at, updated_at
 		 FROM user_profiles
 		 WHERE username = ?`,
 		canonicalUsername,
@@ -398,6 +403,7 @@ func (s *Store) GetUserProfileByUsername(ctx context.Context, username string) (
 		&record.AvatarSetID,
 		&record.AvatarAssetID,
 		&record.Bio,
+		&record.Pronouns,
 		&createdAt,
 		&updatedAt,
 	)

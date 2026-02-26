@@ -150,6 +150,7 @@ func (g grpcGateway) CampaignParticipants(ctx context.Context, campaignID string
 				Role:           participantRoleLabel(participant.GetRole()),
 				CampaignAccess: participantCampaignAccessLabel(participant.GetCampaignAccess()),
 				Controller:     participantControllerLabel(participant.GetController()),
+				Pronouns:       strings.TrimSpace(participant.GetPronouns()),
 				AvatarURL: websupport.AvatarImageURL(
 					g.assetBaseURL,
 					catalog.AvatarRoleParticipant,
@@ -253,6 +254,8 @@ func (g grpcGateway) CampaignCharacters(ctx context.Context, campaignID string) 
 				Name:       characterDisplayName(character),
 				Kind:       characterKindLabel(character.GetKind()),
 				Controller: controllerLabel,
+				Pronouns:   strings.TrimSpace(character.GetPronouns()),
+				Aliases:    append([]string(nil), character.GetAliases()...),
 				AvatarURL: websupport.AvatarImageURL(
 					g.assetBaseURL,
 					catalog.AvatarRoleCharacter,

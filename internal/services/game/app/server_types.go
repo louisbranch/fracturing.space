@@ -7,6 +7,7 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
@@ -19,6 +20,7 @@ type Server struct {
 	health                                   *health.Server
 	stores                                   *storageBundle
 	authConn                                 *grpc.ClientConn
+	socialConn                               *grpc.ClientConn
 	projectionApplyOutboxWorkerEnabled       bool
 	projectionApplyOutboxApply               func(context.Context, event.Event) error
 	projectionApplyOutboxShadowWorkerEnabled bool
@@ -27,6 +29,11 @@ type Server struct {
 type authGRPCClients struct {
 	conn       *grpc.ClientConn
 	authClient authv1.AuthServiceClient
+}
+
+type socialGRPCClients struct {
+	conn         *grpc.ClientConn
+	socialClient socialv1.SocialServiceClient
 }
 
 // projectionApplyOutboxShadowProcessor drains queue rows for environments where the

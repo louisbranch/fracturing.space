@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
@@ -145,6 +146,38 @@ func dialAuthGRPC(ctx context.Context, authAddr string) (authGRPCClients, error)
 	return authGRPCClients{
 		conn:       conn,
 		authClient: authv1.NewAuthServiceClient(conn),
+	}, nil
+}
+
+// dialSocialGRPC opens an authenticated gRPC client to social service.
+func dialSocialGRPC(ctx context.Context, socialAddr string) (socialGRPCClients, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("social %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		socialAddr,
+		timeouts.GRPCDial,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return socialGRPCClients{}, fmt.Errorf("social gRPC health check failed for %s: %w", socialAddr, dialErr.Err)
+			}
+			return socialGRPCClients{}, fmt.Errorf("dial social gRPC %s: %w", socialAddr, dialErr.Err)
+		}
+		return socialGRPCClients{}, fmt.Errorf("dial social gRPC %s: %w", socialAddr, err)
+	}
+	return socialGRPCClients{
+		conn:         conn,
+		socialClient: socialv1.NewSocialServiceClient(conn),
 	}, nil
 }
 

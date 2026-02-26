@@ -18,6 +18,7 @@ type SettingsProfile struct {
 	Name          string
 	AvatarSetID   string
 	AvatarAssetID string
+	Pronouns      string
 	Bio           string
 }
 
@@ -128,6 +129,7 @@ func (s service) loadProfile(ctx context.Context, userID string) (SettingsProfil
 	profile.AvatarSetID = strings.TrimSpace(profile.AvatarSetID)
 	profile.AvatarAssetID = strings.TrimSpace(profile.AvatarAssetID)
 	profile.Bio = strings.TrimSpace(profile.Bio)
+	profile.Pronouns = strings.TrimSpace(profile.Pronouns)
 	return profile, nil
 }
 
@@ -141,6 +143,7 @@ func (s service) saveProfile(ctx context.Context, userID string, profile Setting
 	profile.AvatarSetID = strings.TrimSpace(profile.AvatarSetID)
 	profile.AvatarAssetID = strings.TrimSpace(profile.AvatarAssetID)
 	profile.Bio = strings.TrimSpace(profile.Bio)
+	profile.Pronouns = strings.TrimSpace(profile.Pronouns)
 
 	if utf8.RuneCountInString(profile.Name) > userProfileNameMaxLength {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.user_profile.error_name_too_long", "name is too long")

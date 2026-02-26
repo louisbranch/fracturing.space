@@ -86,6 +86,8 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		Notes:              notes,
 		AvatarSetID:        avatarSetID,
 		AvatarAssetID:      avatarAssetID,
+		Pronouns:           strings.TrimSpace(in.GetPronouns()),
+		Aliases:            append([]string(nil), in.GetAliases()...),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -296,6 +298,18 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		trimmed := strings.TrimSpace(avatarAssetID.GetValue())
 		ch.AvatarAssetID = trimmed
 		fields["avatar_asset_id"] = trimmed
+	}
+	if pronouns := in.GetPronouns(); pronouns != nil {
+		trimmed := strings.TrimSpace(pronouns.GetValue())
+		ch.Pronouns = trimmed
+		fields["pronouns"] = trimmed
+	}
+	if in.Aliases != nil {
+		aliasesJSON, err := json.Marshal(in.GetAliases())
+		if err != nil {
+			return storage.CharacterRecord{}, status.Errorf(codes.InvalidArgument, "aliases must be a list of strings: %v", err)
+		}
+		fields["aliases"] = string(aliasesJSON)
 	}
 	transferOwnershipRequested := false
 	if ownerParticipantID := in.GetOwnerParticipantId(); ownerParticipantID != nil {

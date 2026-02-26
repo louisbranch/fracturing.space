@@ -86,6 +86,7 @@ func TestSetUserProfile_SuccessAndLookup(t *testing.T) {
 			AvatarSetId:   "avatar_set_v1",
 			AvatarAssetId: "001",
 			Bio:           "Campaign manager",
+			Pronouns:      "she/her",
 		})
 		if err != nil {
 			t.Fatalf("set user profile attempt %d: %v", i+1, err)
@@ -118,6 +119,9 @@ func TestSetUserProfile_SuccessAndLookup(t *testing.T) {
 	if got := lookupResp.GetUserProfile().GetBio(); got != "Campaign manager" {
 		t.Fatalf("bio = %q, want Campaign manager", got)
 	}
+	if got := lookupResp.GetUserProfile().GetPronouns(); got != "she/her" {
+		t.Fatalf("pronouns = %q, want she/her", got)
+	}
 }
 
 func TestSetUserProfile_SameCanonicalValueDoesNotChangeTimestamps(t *testing.T) {
@@ -134,6 +138,7 @@ func TestSetUserProfile_SameCanonicalValueDoesNotChangeTimestamps(t *testing.T) 
 		AvatarSetId:   "avatar_set_v1",
 		AvatarAssetId: "001",
 		Bio:           "Campaign manager",
+		Pronouns:      "she/her",
 	})
 	if err != nil {
 		t.Fatalf("set initial user profile: %v", err)
@@ -147,6 +152,7 @@ func TestSetUserProfile_SameCanonicalValueDoesNotChangeTimestamps(t *testing.T) 
 		AvatarSetId:   "avatar_set_v1",
 		AvatarAssetId: "001",
 		Bio:           "Campaign manager",
+		Pronouns:      "she/her",
 	})
 	if err != nil {
 		t.Fatalf("set repeated user profile: %v", err)
@@ -363,7 +369,8 @@ func (s *fakeContactStore) PutUserProfile(_ context.Context, profile storage.Use
 			existing.Name == strings.TrimSpace(profile.Name) &&
 			existing.AvatarSetID == strings.TrimSpace(profile.AvatarSetID) &&
 			existing.AvatarAssetID == strings.TrimSpace(profile.AvatarAssetID) &&
-			existing.Bio == strings.TrimSpace(profile.Bio) {
+			existing.Bio == strings.TrimSpace(profile.Bio) &&
+			existing.Pronouns == strings.TrimSpace(profile.Pronouns) {
 			profile.CreatedAt = existing.CreatedAt
 			profile.UpdatedAt = existing.UpdatedAt
 		} else {
@@ -379,6 +386,7 @@ func (s *fakeContactStore) PutUserProfile(_ context.Context, profile storage.Use
 	profile.AvatarSetID = strings.TrimSpace(profile.AvatarSetID)
 	profile.AvatarAssetID = strings.TrimSpace(profile.AvatarAssetID)
 	profile.Bio = strings.TrimSpace(profile.Bio)
+	profile.Pronouns = strings.TrimSpace(profile.Pronouns)
 	s.profilesByUser[userID] = profile
 	if canonicalUsername != "" {
 		s.profileOwnerByUsername[canonicalUsername] = userID

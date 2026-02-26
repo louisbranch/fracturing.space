@@ -33,6 +33,8 @@ func CharacterCreateHandler(client statev1.CharacterServiceClient, getContext fu
 			Name:       input.Name,
 			Kind:       characterKindFromString(input.Kind),
 			Notes:      input.Notes,
+			Pronouns:   input.Pronouns,
+			Aliases:    append([]string(nil), input.Aliases...),
 		}
 
 		response, err := client.CreateCharacter(callCtx, req, grpc.Header(&header))
@@ -49,6 +51,8 @@ func CharacterCreateHandler(client statev1.CharacterServiceClient, getContext fu
 			Name:       response.Character.GetName(),
 			Kind:       characterKindToString(response.Character.GetKind()),
 			Notes:      response.Character.GetNotes(),
+			Pronouns:   response.Character.GetPronouns(),
+			Aliases:    mcpAliases(response.Character.GetAliases()),
 			CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
 		}
@@ -103,7 +107,13 @@ func CharacterUpdateHandler(client statev1.CharacterServiceClient, getContext fu
 		if input.Notes != nil {
 			req.Notes = wrapperspb.String(*input.Notes)
 		}
-		if req.Name == nil && req.Kind == statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED && req.Notes == nil {
+		if input.Pronouns != nil {
+			req.Pronouns = wrapperspb.String(*input.Pronouns)
+		}
+		if input.Aliases != nil {
+			req.Aliases = mcpAliases(*input.Aliases)
+		}
+		if req.Name == nil && req.Kind == statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED && req.Notes == nil && req.Pronouns == nil && input.Aliases == nil {
 			return nil, CharacterUpdateResult{}, fmt.Errorf("at least one field must be provided")
 		}
 
@@ -122,6 +132,8 @@ func CharacterUpdateHandler(client statev1.CharacterServiceClient, getContext fu
 			Name:       response.Character.GetName(),
 			Kind:       characterKindToString(response.Character.GetKind()),
 			Notes:      response.Character.GetNotes(),
+			Pronouns:   response.Character.GetPronouns(),
+			Aliases:    mcpAliases(response.Character.GetAliases()),
 			CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
 		}
@@ -178,6 +190,8 @@ func CharacterDeleteHandler(client statev1.CharacterServiceClient, getContext fu
 			Name:       response.Character.GetName(),
 			Kind:       characterKindToString(response.Character.GetKind()),
 			Notes:      response.Character.GetNotes(),
+			Pronouns:   response.Character.GetPronouns(),
+			Aliases:    mcpAliases(response.Character.GetAliases()),
 			CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
 		}
@@ -307,6 +321,8 @@ func CharacterSheetGetHandler(client statev1.CharacterServiceClient, getContext 
 				Name:       response.Character.GetName(),
 				Kind:       characterKindToString(response.Character.GetKind()),
 				Notes:      response.Character.GetNotes(),
+				Pronouns:   response.Character.GetPronouns(),
+				Aliases:    mcpAliases(response.Character.GetAliases()),
 				CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
 				UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
 			},
@@ -317,6 +333,13 @@ func CharacterSheetGetHandler(client statev1.CharacterServiceClient, getContext 
 		responseMeta := MergeResponseMetadata(callMeta, header)
 		return CallToolResultWithMetadata(responseMeta), result, nil
 	}
+}
+
+func mcpAliases(values []string) []string {
+	if len(values) == 0 {
+		return []string{}
+	}
+	return append([]string(nil), values...)
 }
 
 // CharacterProfilePatchHandler executes a character profile patch request.

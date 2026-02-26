@@ -55,6 +55,7 @@ type ParticipantRecord struct {
 	CampaignAccess participant.CampaignAccess
 	AvatarSetID    string
 	AvatarAssetID  string
+	Pronouns       string
 	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
@@ -82,6 +83,8 @@ type CharacterRecord struct {
 	Notes              string
 	AvatarSetID        string
 	AvatarAssetID      string
+	Pronouns           string
+	Aliases            []string
 	CreatedAt          time.Time
 	UpdatedAt          time.Time
 }

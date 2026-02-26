@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -28,6 +29,15 @@ func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) err
 		return fmt.Errorf("character id is required")
 	}
 
+	aliases := c.Aliases
+	if aliases == nil {
+		aliases = []string{}
+	}
+	aliasesJSON, err := json.Marshal(aliases)
+	if err != nil {
+		return fmt.Errorf("encode character aliases: %w", err)
+	}
+
 	return s.q.PutCharacter(ctx, db.PutCharacterParams{
 		CampaignID:              c.CampaignID,
 		ID:                      c.ID,
@@ -38,6 +48,8 @@ func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) err
 		Notes:                   c.Notes,
 		AvatarSetID:             c.AvatarSetID,
 		AvatarAssetID:           c.AvatarAssetID,
+		Pronouns:                c.Pronouns,
+		AliasesJson:             string(aliasesJSON),
 		CreatedAt:               toMillis(c.CreatedAt),
 		UpdatedAt:               toMillis(c.UpdatedAt),
 	})

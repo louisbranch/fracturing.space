@@ -7,6 +7,7 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -62,6 +63,14 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if err != nil {
 		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
 	}
+	userID := strings.TrimSpace(in.GetUserId())
+	pronouns := strings.TrimSpace(in.GetPronouns())
+	if pronouns == "" && userID != "" && c.stores.Social != nil {
+		resp, err := c.stores.Social.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: userID})
+		if err == nil && resp != nil && resp.GetUserProfile() != nil {
+			pronouns = strings.TrimSpace(resp.GetUserProfile().GetPronouns())
+		}
+	}
 
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
@@ -69,13 +78,14 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	}
 	payload := participant.JoinPayload{
 		ParticipantID:  participantID,
-		UserID:         strings.TrimSpace(in.GetUserId()),
+		UserID:         userID,
 		Name:           name,
 		Role:           string(role),
 		Controller:     string(controller),
 		CampaignAccess: string(access),
 		AvatarSetID:    strings.TrimSpace(in.GetAvatarSetId()),
 		AvatarAssetID:  strings.TrimSpace(in.GetAvatarAssetId()),
+		Pronouns:       pronouns,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -230,6 +240,11 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		trimmed := strings.TrimSpace(avatarAssetID.GetValue())
 		current.AvatarAssetID = trimmed
 		fields["avatar_asset_id"] = trimmed
+	}
+	if pronouns := in.GetPronouns(); pronouns != nil {
+		trimmed := strings.TrimSpace(pronouns.GetValue())
+		current.Pronouns = trimmed
+		fields["pronouns"] = trimmed
 	}
 	if len(fields) == 0 {
 		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")

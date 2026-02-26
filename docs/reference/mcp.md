@@ -315,7 +315,8 @@ Creates a participant (GM or player) for a campaign.
 ```json
 {
   "campaign_id": "camp_abc123",
-  "display_name": "Alice",
+  "name": "Alice",
+  "pronouns": "she/her",
   "role": "PLAYER",
   "controller": "HUMAN"
 }
@@ -327,9 +328,10 @@ Creates a participant (GM or player) for a campaign.
 {
   "id": "part_xyz789",
   "campaign_id": "camp_abc123",
-  "display_name": "Alice",
+  "name": "Alice",
   "role": "PLAYER",
   "controller": "HUMAN",
+  "pronouns": "she/her",
   "created_at": "2025-01-15T10:30:00Z",
   "updated_at": "2025-01-15T10:30:00Z"
 }
@@ -337,7 +339,7 @@ Creates a participant (GM or player) for a campaign.
 
 #### participant_update
 
-Updates a participant's metadata (display name, role, controller).
+Updates a participant's metadata (name, role, controller, pronouns).
 
 **Input:**
 
@@ -345,12 +347,13 @@ Updates a participant's metadata (display name, role, controller).
 {
   "campaign_id": "camp_abc123",
   "participant_id": "part_xyz789",
-  "display_name": "Alice B.",
+  "name": "Alice B.",
+  "pronouns": "they/them",
   "controller": "AI"
 }
 ```
 
-At least one field (`display_name`, `role`, `controller`) is required.
+At least one field (`name`, `role`, `controller`, `pronouns`) is required.
 
 **Output:**
 
@@ -358,9 +361,10 @@ At least one field (`display_name`, `role`, `controller`) is required.
 {
   "id": "part_xyz789",
   "campaign_id": "camp_abc123",
-  "display_name": "Alice B.",
+  "name": "Alice B.",
   "role": "PLAYER",
   "controller": "AI",
+  "pronouns": "they/them",
   "created_at": "2025-01-15T10:30:00Z",
   "updated_at": "2025-01-15T10:40:00Z"
 }
@@ -386,9 +390,10 @@ Deletes a participant from a campaign.
 {
   "id": "part_xyz789",
   "campaign_id": "camp_abc123",
-  "display_name": "Alice",
+  "name": "Alice",
   "role": "PLAYER",
   "controller": "HUMAN",
+  "pronouns": "she/her",
   "created_at": "2025-01-15T10:30:00Z",
   "updated_at": "2025-01-15T10:30:00Z"
 }
@@ -405,7 +410,9 @@ Creates a character (PC or NPC) for a campaign.
   "campaign_id": "camp_abc123",
   "name": "Thorin Ironforge",
   "kind": "PC",
-  "notes": "Dwarf warrior with a mysterious past"
+  "notes": "Dwarf warrior with a mysterious past",
+  "pronouns": "he/him",
+  "aliases": ["Oakshield", "King Under the Mountain"]
 }
 ```
 
@@ -418,6 +425,8 @@ Creates a character (PC or NPC) for a campaign.
   "name": "Thorin Ironforge",
   "kind": "PC",
   "notes": "Dwarf warrior with a mysterious past",
+  "pronouns": "he/him",
+  "aliases": ["Oakshield", "King Under the Mountain"],
   "created_at": "2025-01-15T10:35:00Z",
   "updated_at": "2025-01-15T10:35:00Z"
 }
@@ -425,7 +434,7 @@ Creates a character (PC or NPC) for a campaign.
 
 #### character_update
 
-Updates a character's metadata (name, kind, notes).
+Updates a character's metadata (name, kind, notes, pronouns, aliases).
 
 **Input:**
 
@@ -434,11 +443,13 @@ Updates a character's metadata (name, kind, notes).
   "campaign_id": "camp_abc123",
   "character_id": "character_def456",
   "name": "Thorin the Bold",
-  "notes": "Updated backstory"
+  "notes": "Updated backstory",
+  "pronouns": "they/them",
+  "aliases": ["Thorin", "Bold One"]
 }
 ```
 
-At least one field (`name`, `kind`, `notes`) is required.
+At least one field (`name`, `kind`, `notes`, `pronouns`, `aliases`) is required.
 
 **Output:**
 
@@ -449,6 +460,8 @@ At least one field (`name`, `kind`, `notes`) is required.
   "name": "Thorin the Bold",
   "kind": "PC",
   "notes": "Updated backstory",
+  "pronouns": "they/them",
+  "aliases": ["Thorin", "Bold One"],
   "created_at": "2025-01-15T10:35:00Z",
   "updated_at": "2025-01-15T10:40:00Z"
 }
@@ -477,6 +490,8 @@ Deletes a character from a campaign.
   "name": "Thorin Ironforge",
   "kind": "PC",
   "notes": "Dwarf warrior with a mysterious past",
+  "pronouns": "he/him",
+  "aliases": ["Oakshield", "King Under the Mountain"],
   "created_at": "2025-01-15T10:35:00Z",
   "updated_at": "2025-01-15T10:40:00Z"
 }
@@ -1109,9 +1124,10 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
     {
       "id": "part_xyz789",
       "campaign_id": "camp_abc123",
-      "display_name": "Alice",
+      "name": "Alice",
       "role": "PLAYER",
       "controller": "HUMAN",
+      "pronouns": "she/her",
       "created_at": "2025-01-15T10:30:00Z",
       "updated_at": "2025-01-15T10:30:00Z"
     }
@@ -1136,6 +1152,8 @@ The `{campaign_id}` must be replaced with an actual campaign identifier when rea
       "name": "Thorin Ironforge",
       "kind": "PC",
       "notes": "Dwarf warrior with a mysterious past",
+      "pronouns": "he/him",
+      "aliases": ["Oakshield", "King Under the Mountain"],
       "created_at": "2025-01-15T10:35:00Z",
       "updated_at": "2025-01-15T10:35:00Z"
     }

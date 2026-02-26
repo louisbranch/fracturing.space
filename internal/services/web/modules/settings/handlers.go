@@ -87,6 +87,7 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 		Name:          strings.TrimSpace(r.FormValue("name")),
 		AvatarSetID:   existingProfile.AvatarSetID,
 		AvatarAssetID: existingProfile.AvatarAssetID,
+		Pronouns:      strings.TrimSpace(r.FormValue("pronouns")),
 		Bio:           strings.TrimSpace(r.FormValue("bio")),
 	}
 	if err := h.service.saveProfile(ctx, userID, profile); err != nil {
@@ -208,6 +209,7 @@ func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, stat
 			Name:          profile.Name,
 			AvatarSetID:   profile.AvatarSetID,
 			AvatarAssetID: profile.AvatarAssetID,
+			Pronouns:      profile.Pronouns,
 			Bio:           profile.Bio,
 			NoticeMessage: settingsProfileNoticeMessage(noticeCode, loc),
 			ErrorMessage:  errorMessage,

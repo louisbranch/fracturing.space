@@ -40,6 +40,7 @@ type serverBootstrapConfig struct {
 	buildSystemRegistry             func() (*bridge.MetadataRegistry, error)
 	validateSystemRegistration      func([]module.Module, *bridge.MetadataRegistry, *bridge.AdapterRegistry) error
 	dialAuthGRPC                    func(context.Context, string) (authGRPCClients, error)
+	dialSocialGRPC                  func(context.Context, string) (socialGRPCClients, error)
 	newGRPCServer                   func(*storageBundle) *grpc.Server
 	newHealthServer                 func() *health.Server
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
@@ -94,6 +95,9 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	}
 	if cfg.dialAuthGRPC == nil {
 		cfg.dialAuthGRPC = dialAuthGRPC
+	}
+	if cfg.dialSocialGRPC == nil {
+		cfg.dialSocialGRPC = dialSocialGRPC
 	}
 	if cfg.newGRPCServer == nil {
 		cfg.newGRPCServer = func(bundle *storageBundle) *grpc.Server {
@@ -204,6 +208,20 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 			_ = authClients.conn.Close()
 		}
 	}()
+	socialClients, socialErr := b.config.dialSocialGRPC(context.Background(), srvEnv.SocialAddr)
+	if socialErr != nil {
+		log.Printf("social client unavailable; participant pronouns fallback disabled: %v", socialErr)
+		socialClients = socialGRPCClients{}
+	}
+	defer func() {
+		if err == nil {
+			return
+		}
+		if socialClients.conn != nil {
+			_ = socialClients.conn.Close()
+		}
+	}()
+	stores.Social = socialClients.socialClient
 
 	grpcServer := b.config.newGRPCServer(bundle)
 	healthServer := b.config.newHealthServer()
@@ -233,6 +251,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		health:                                   healthServer,
 		stores:                                   bundle,
 		authConn:                                 authClients.conn,
+		socialConn:                               socialClients.conn,
 		projectionApplyOutboxWorkerEnabled:       enableApplyWorker,
 		projectionApplyOutboxApply:               b.config.buildProjectionApplyOutboxApply(bundle.projections, projectionRegistries),
 		projectionApplyOutboxShadowWorkerEnabled: enableShadowWorker,
@@ -241,6 +260,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	listener = nil
 	bundle = nil
 	authClients.conn = nil
+	socialClients.conn = nil
 	return server, nil
 }
 

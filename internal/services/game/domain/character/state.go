@@ -21,6 +21,10 @@ type State struct {
 	AvatarSetID string
 	// AvatarAssetID identifies the avatar image within AvatarSetID.
 	AvatarAssetID string
+	// Pronouns stores optional free-form character pronouns.
+	Pronouns string
+	// Aliases stores normalized ordered aliases.
+	Aliases []string
 	// OwnerParticipantID is the governance owner participant for mutation authority.
 	OwnerParticipantID string
 	// ParticipantID stores controller assignment for operational gameplay control.

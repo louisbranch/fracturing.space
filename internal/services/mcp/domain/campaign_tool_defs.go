@@ -89,7 +89,7 @@ func ParticipantCreateTool() *mcp.Tool {
 func ParticipantUpdateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "participant_update",
-		Description: "Updates a participant's metadata (display name, role, controller)",
+		Description: "Updates a participant's metadata (name, role, controller, pronouns)",
 	}
 }
 
@@ -113,7 +113,7 @@ func CharacterCreateTool() *mcp.Tool {
 func CharacterUpdateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "character_update",
-		Description: "Updates a character's metadata (name, kind, notes)",
+		Description: "Updates a character's metadata (name, kind, notes, pronouns, aliases)",
 	}
 }
 
