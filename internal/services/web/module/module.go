@@ -54,6 +54,11 @@ type InviteClient interface {
 	ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error)
 }
 
+// AuthorizationClient exposes campaign authorization checks.
+type AuthorizationClient interface {
+	Can(context.Context, *statev1.CanRequest, ...grpc.CallOption) (*statev1.CanResponse, error)
+}
+
 // AuthClient performs passkey and user bootstrap operations.
 type AuthClient interface {
 	CreateUser(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error)
@@ -87,20 +92,21 @@ type CredentialClient interface {
 
 // Dependencies carries shared runtime contracts to modules.
 type Dependencies struct {
-	ResolveViewer     ResolveViewer
-	ResolveUserID     ResolveUserID
-	ResolveLanguage   ResolveLanguage
-	AssetBaseURL      string
-	ChatFallbackPort  string
-	CampaignClient    CampaignClient
-	ParticipantClient ParticipantClient
-	CharacterClient   CharacterClient
-	SessionClient     SessionClient
-	InviteClient      InviteClient
-	AuthClient        AuthClient
-	AccountClient     AccountClient
-	ConnectionsClient ConnectionsClient
-	CredentialClient  CredentialClient
+	ResolveViewer       ResolveViewer
+	ResolveUserID       ResolveUserID
+	ResolveLanguage     ResolveLanguage
+	AssetBaseURL        string
+	ChatFallbackPort    string
+	CampaignClient      CampaignClient
+	ParticipantClient   ParticipantClient
+	CharacterClient     CharacterClient
+	SessionClient       SessionClient
+	InviteClient        InviteClient
+	AuthorizationClient AuthorizationClient
+	AuthClient          AuthClient
+	AccountClient       AccountClient
+	ConnectionsClient   ConnectionsClient
+	CredentialClient    CredentialClient
 }
 
 // Mount describes a module route mount.

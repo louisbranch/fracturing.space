@@ -566,6 +566,89 @@ func TestUpdateParticipant_CampaignAccess(t *testing.T) {
 	}
 }
 
+func TestUpdateParticipant_DeniesManagerAssigningOwnerAccess(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":   {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"manager-1": {ID: "manager-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessManager},
+		"member-1":  {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	ctx := contextWithParticipantID("manager-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "member-1",
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestUpdateParticipant_DeniesDemotingFinalOwner(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":  {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"member-1": {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "owner-1",
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestDeleteParticipant_DeniesManagerRemovingOwner(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":   {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"manager-1": {ID: "manager-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessManager},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	ctx := contextWithParticipantID("manager-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "owner-1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestDeleteParticipant_DeniesRemovingFinalOwner(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":  {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"member-1": {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "owner-1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestDeleteParticipant_DeniesMemberWithoutManageAccess(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()

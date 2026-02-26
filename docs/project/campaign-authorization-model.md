@@ -61,7 +61,8 @@ implicitly a campaign `OWNER` or `MANAGER`.
 
 | Action | ADMIN | OWNER | MANAGER | MEMBER |
 |---|---|---|---|---|
-| View campaign resources (participant/character/session/invite reads) | Allow | Allow | Allow | Allow |
+| View campaign resources (campaign/participant/character/session reads) | Allow | Allow | Allow | Allow |
+| View invite resources (invite reads) | Allow | Allow | Allow | Deny |
 | Update campaign metadata/settings | Allow | Allow | Deny | Deny |
 | End/archive/restore campaign | Allow | Allow | Deny | Deny |
 | Transfer campaign ownership | Allow | Allow | Deny | Deny |
@@ -80,6 +81,13 @@ implicitly a campaign `OWNER` or `MANAGER`.
 | Gameplay GM-only actions | Allow | Allow if GM | Allow if GM | Allow if GM |
 
 ## Matrix Notes
+
+Canonical implementation table:
+
+- Runtime role/action/resource policy lives in
+  `internal/services/game/domain/authz/policy.go`.
+- Transport boundaries call the canonical evaluator instead of re-defining role
+  matrices in handler code.
 
 `Limited` means:
 
@@ -185,6 +193,7 @@ example:
 - `AUTHZ_DENY_ACCESS_LEVEL_REQUIRED`
 - `AUTHZ_DENY_TARGET_IS_OWNER`
 - `AUTHZ_DENY_LAST_OWNER_GUARD`
+- `AUTHZ_DENY_MANAGER_OWNER_MUTATION_FORBIDDEN`
 - `AUTHZ_DENY_NOT_RESOURCE_OWNER`
 - `AUTHZ_ALLOW_ADMIN_OVERRIDE`
 
