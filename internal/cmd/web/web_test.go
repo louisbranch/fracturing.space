@@ -31,6 +31,9 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.AIAddr != "ai:8087" {
 		t.Fatalf("AIAddr = %q, want %q", cfg.AIAddr, "ai:8087")
 	}
+	if cfg.UserHubAddr != "userhub:8092" {
+		t.Fatalf("UserHubAddr = %q, want %q", cfg.UserHubAddr, "userhub:8092")
+	}
 	if cfg.EnableExperimentalModules {
 		t.Fatalf("EnableExperimentalModules = %t, want false", cfg.EnableExperimentalModules)
 	}
@@ -88,5 +91,18 @@ func TestParseConfigOverrideExperimentalModules(t *testing.T) {
 	}
 	if !cfg.EnableExperimentalModules {
 		t.Fatalf("EnableExperimentalModules = %t, want true", cfg.EnableExperimentalModules)
+	}
+}
+
+func TestParseConfigOverrideUserHubAddr(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("web", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, []string{"-userhub-addr", "127.0.0.1:18092"})
+	if err != nil {
+		t.Fatalf("ParseConfig() error = %v", err)
+	}
+	if cfg.UserHubAddr != "127.0.0.1:18092" {
+		t.Fatalf("UserHubAddr = %q, want %q", cfg.UserHubAddr, "127.0.0.1:18092")
 	}
 }

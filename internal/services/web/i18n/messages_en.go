@@ -298,6 +298,9 @@ func init() {
 	message.SetString(lang, "web.error.action_back_to_dashboard", "Back to dashboard")
 	message.SetString(lang, "error.back_to_home", "Back to home")
 	message.SetString(lang, "dashboard.title", "Dashboard")
+	message.SetString(lang, "web.dashboard.profile_pending.title", "Finish your public profile")
+	message.SetString(lang, "web.dashboard.profile_pending.body", "Set a username to make your profile discoverable across campaigns and invites.")
+	message.SetString(lang, "web.dashboard.profile_pending.cta", "Finish profile")
 	message.SetString(lang, "game.aria_label", "Game")
 
 	// Shared campaign shell

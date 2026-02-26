@@ -27,6 +27,8 @@ const (
 	ServiceMCP = "mcp"
 	// ServiceNotifications is the notifications service identity.
 	ServiceNotifications = "notifications"
+	// ServiceUserHub is the userhub gRPC service identity.
+	ServiceUserHub = "userhub"
 	// ServiceWeb is the web login HTTP service identity.
 	ServiceWeb = "web"
 	// ServiceWorker is the worker gRPC service identity.
@@ -41,6 +43,7 @@ var grpcPorts = map[string]int{
 	ServiceAI:            8087,
 	ServiceNotifications: 8088,
 	ServiceWorker:        8089,
+	ServiceUserHub:       8092,
 }
 
 var httpPorts = map[string]int{

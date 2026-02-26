@@ -29,7 +29,7 @@ func ExperimentalPublicModules() []Module {
 // DefaultProtectedModules returns stable authenticated web modules.
 func DefaultProtectedModules(deps module.Dependencies) []Module {
 	return []Module{
-		dashboard.New(),
+		dashboard.NewWithGateway(dashboard.NewGRPCGateway(deps)),
 		settings.NewWithGateway(settings.NewGRPCGateway(deps)),
 		campaigns.NewStableWithGateway(campaigns.NewGRPCGateway(deps)),
 	}
@@ -38,7 +38,7 @@ func DefaultProtectedModules(deps module.Dependencies) []Module {
 // DefaultProtectedModulesWithExperimentalCampaignRoutes returns protected modules with experimental campaign route exposure.
 func DefaultProtectedModulesWithExperimentalCampaignRoutes(deps module.Dependencies) []Module {
 	return []Module{
-		dashboard.New(),
+		dashboard.NewWithGateway(dashboard.NewGRPCGateway(deps)),
 		settings.NewWithGateway(settings.NewGRPCGateway(deps)),
 		campaigns.NewWithGateway(campaigns.NewGRPCGateway(deps)),
 	}

@@ -58,6 +58,10 @@ FROM base AS build-worker
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/worker ./cmd/worker
 
+FROM base AS build-userhub
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/userhub ./cmd/userhub
+
 FROM gcr.io/distroless/static-debian12:nonroot AS game
 
 WORKDIR /app
@@ -167,3 +171,13 @@ COPY --from=build-worker /out/worker /app/worker
 EXPOSE 8089
 
 ENTRYPOINT ["/app/worker"]
+
+FROM gcr.io/distroless/static-debian12:nonroot AS userhub
+
+WORKDIR /app
+
+COPY --from=build-userhub /out/userhub /app/userhub
+
+EXPOSE 8092
+
+ENTRYPOINT ["/app/userhub"]

@@ -71,6 +71,16 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_ENABLED`: enable background observation of pending email deliveries. Default: `false`.
 - `FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_POLL_INTERVAL`: poll cadence for pending email delivery checks. Default: `5s`.
 
+### User hub
+
+- `FRACTURING_SPACE_USERHUB_PORT`: gRPC port for userhub service. Default: `8092`.
+- `FRACTURING_SPACE_USERHUB_GAME_ADDR`: game gRPC dependency address. Default: `game:8082`.
+- `FRACTURING_SPACE_USERHUB_SOCIAL_ADDR`: social gRPC dependency address. Default: `social:8090`.
+- `FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR`: notifications gRPC dependency address. Default: `notifications:8088`.
+- `FRACTURING_SPACE_USERHUB_CACHE_FRESH_TTL`: fresh response cache TTL for dashboard aggregation. Default: `15s`.
+- `FRACTURING_SPACE_USERHUB_CACHE_STALE_TTL`: stale fallback cache TTL for dependency degradation. Default: `2m`.
+- `FRACTURING_SPACE_USERHUB_DIAL_TIMEOUT`: gRPC dependency dial timeout. Default: `2s`.
+
 ### Worker
 
 - `FRACTURING_SPACE_WORKER_PORT`: gRPC port for worker health endpoint. Default: `8089`.
@@ -192,26 +202,32 @@ The admin dashboard accepts flags for gRPC and HTTP addresses. If `FRACTURING_SP
 or `FRACTURING_SPACE_GAME_ADDR` are set, they provide defaults when the matching flag is
 omitted. Command-line flags take precedence over env values.
 
-## Web Login Configuration
+## Web Configuration
 
 ### Command-line Flags
 
-The web login server (`cmd/web`) accepts the following flags:
+The web server (`cmd/web`) accepts the following flags:
 
 - `-http-addr`: HTTP server address. Default: `localhost:8080`
 - `-chat-http-addr`: Chat HTTP server address. Default: `localhost:8086`
-- `-auth-base-url`: external auth base URL used in login redirects.
-- `-auth-addr`: auth server address. Default: `auth:8083`
+- `-auth-addr`: auth gRPC dependency address. Default: `auth:8083`
+- `-social-addr`: social gRPC dependency address. Default: `social:8090`
+- `-game-addr`: game gRPC dependency address. Default: `game:8082`
+- `-ai-addr`: AI gRPC dependency address. Default: `ai:8087`
+- `-userhub-addr`: userhub gRPC dependency address. Default: `userhub:8092`
 - `-asset-base-url`: external base URL used for image asset delivery.
-- `-asset-version`: version prefix used when building external asset keys.
+- `-enable-experimental-modules`: enables experimental module surfaces.
 
 ### Address Overrides
 
-The web login server accepts flags for HTTP and chat endpoints. If
-`FRACTURING_SPACE_WEB_HTTP_ADDR`, `FRACTURING_SPACE_CHAT_HTTP_ADDR`, `FRACTURING_SPACE_WEB_AUTH_BASE_URL`, or
-`FRACTURING_SPACE_WEB_AUTH_ADDR` are set, they provide defaults when the matching flag
-is omitted. Asset URL defaults come from `FRACTURING_SPACE_ASSET_BASE_URL` and
-`FRACTURING_SPACE_ASSET_VERSION`. Command-line flags take precedence over env values.
+The web server accepts flags for HTTP and upstream dependency addresses. If
+`FRACTURING_SPACE_WEB_HTTP_ADDR`, `FRACTURING_SPACE_CHAT_HTTP_ADDR`,
+`FRACTURING_SPACE_AUTH_ADDR`, `FRACTURING_SPACE_SOCIAL_ADDR`,
+`FRACTURING_SPACE_GAME_ADDR`, `FRACTURING_SPACE_AI_ADDR`, or
+`FRACTURING_SPACE_USERHUB_ADDR` are set, they provide defaults when matching
+flags are omitted. Asset URL defaults come from
+`FRACTURING_SPACE_ASSET_BASE_URL`. Command-line flags take precedence over env
+values.
 
 ## AI Service Configuration
 
@@ -265,3 +281,24 @@ The worker service accepts flags for dependency addresses and runtime timing. If
 the corresponding `FRACTURING_SPACE_WORKER_*` variables are set, they provide
 defaults when flags are omitted. Command-line flags take precedence over env
 values.
+
+## User Hub Service Configuration
+
+### Command-line Flags
+
+The user hub service (`cmd/userhub`) accepts the following flags:
+
+- `-port`: userhub gRPC server port. Default: `8092`
+- `-game-addr`: game gRPC dependency address. Default: `game:8082`
+- `-social-addr`: social gRPC dependency address. Default: `social:8090`
+- `-notifications-addr`: notifications gRPC dependency address. Default: `notifications:8088`
+- `-cache-fresh-ttl`: fresh dashboard cache TTL. Default: `15s`
+- `-cache-stale-ttl`: stale dashboard fallback TTL. Default: `2m`
+- `-dial-timeout`: gRPC dependency dial timeout. Default: `2s`
+
+### Address Overrides
+
+The user hub service accepts flags for dependency addresses and cache/runtime
+timing. If corresponding `FRACTURING_SPACE_USERHUB_*` variables are set, they
+provide defaults when flags are omitted. Command-line flags take precedence over
+env values.

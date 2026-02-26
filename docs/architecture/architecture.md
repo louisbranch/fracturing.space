@@ -13,7 +13,7 @@ last_reviewed: "2026-02-26"
 
 Fracturing.Space is split into four layers:
 
-- **Transport layer**: Game server (`cmd/game`) + Auth server (`cmd/auth`) + Social server (`cmd/social`) + AI server (`cmd/ai`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
+- **Transport layer**: Game server (`cmd/game`) + Auth server (`cmd/auth`) + Social server (`cmd/social`) + AI server (`cmd/ai`) + User hub server (`cmd/userhub`) + MCP bridge (`cmd/mcp`) + Admin dashboard (`cmd/admin`)
 - **Platform layer**: Shared infrastructure (`internal/platform/`)
 - **Domain layer**: Core domain packages (`internal/services/game/domain/{campaign,participant,character,invite,session,action,...}`) + game systems (`internal/services/game/domain/bridge/`)
 - **Storage layer**: SQLite persistence (`data/game-events.db`, `data/game-projections.db`, `data/game-content.db`, `data/auth.db`, `data/social.db`, `data/listing.db`, `data/admin.db`, `data/ai.db`)
@@ -192,6 +192,7 @@ The primary service boundaries are:
   - Authenticated surface: canonical `/app/*` routes (`/app/dashboard`, `/app/campaigns`, `/app/campaigns/{id}/*`, `/app/invites`, `/app/notifications`, `/app/profile`, `/app/settings/*`).
   - Internal boundaries: composition root in `internal/services/web/app`, cross-cutting primitives in `internal/services/web/platform`, feature modules in `internal/services/web/modules`, and canonical paths in `internal/services/web/routepath`.
   - Route ownership is module-scoped with stdlib `ServeMux`; composition stays thin and feature logic remains inside module/service packages.
+- **Userhub service** (`internal/services/userhub/`): Internal gRPC experience read-model service that aggregates user-at-a-glance dashboard data from game/social/notifications for client-facing transport layers.
 - **Auth service** (`internal/services/auth/`): AuthN/authZ domain logic and gRPC API surface (identity proof and access artifacts); owns the auth database.
 - **Social service** (`internal/services/social/`): Social/discovery domain logic and gRPC API surface (contacts and unified user profile metadata); owns the social database.
 - **Listing service** (`internal/services/listing/`): Public campaign listing metadata APIs; owns the listing database.

@@ -83,6 +83,11 @@ export FRACTURING_SPACE_AI_ADDR="${FRACTURING_SPACE_AI_ADDR:-localhost:8087}"
 export FRACTURING_SPACE_AI_DB_PATH="${FRACTURING_SPACE_AI_DB_PATH:-data/ai.db}"
 export FRACTURING_SPACE_NOTIFICATIONS_PORT="${FRACTURING_SPACE_NOTIFICATIONS_PORT:-8088}"
 export FRACTURING_SPACE_NOTIFICATIONS_ADDR="${FRACTURING_SPACE_NOTIFICATIONS_ADDR:-localhost:8088}"
+export FRACTURING_SPACE_USERHUB_PORT="${FRACTURING_SPACE_USERHUB_PORT:-8092}"
+export FRACTURING_SPACE_USERHUB_ADDR="${FRACTURING_SPACE_USERHUB_ADDR:-localhost:8092}"
+export FRACTURING_SPACE_USERHUB_GAME_ADDR="${FRACTURING_SPACE_USERHUB_GAME_ADDR:-localhost:8082}"
+export FRACTURING_SPACE_USERHUB_SOCIAL_ADDR="${FRACTURING_SPACE_USERHUB_SOCIAL_ADDR:-localhost:8090}"
+export FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR="${FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR:-localhost:8088}"
 export FRACTURING_SPACE_WORKER_PORT="${FRACTURING_SPACE_WORKER_PORT:-8089}"
 export FRACTURING_SPACE_WORKER_AUTH_ADDR="${FRACTURING_SPACE_WORKER_AUTH_ADDR:-localhost:8083}"
 export FRACTURING_SPACE_WORKER_SOCIAL_ADDR="${FRACTURING_SPACE_WORKER_SOCIAL_ADDR:-localhost:8090}"
@@ -159,6 +164,8 @@ wait_for_service_log_marker "social" "social server listening at"
 wait_for_service_log_marker "listing" "listing server listening at"
 wait_for_service_log_marker "ai" "ai server listening at"
 wait_for_service_log_marker "notifications" "notifications server listening at"
+start_service userhub
+wait_for_service_log_marker "userhub" "userhub server listening at"
 start_service mcp
 start_service admin
 start_service chat
