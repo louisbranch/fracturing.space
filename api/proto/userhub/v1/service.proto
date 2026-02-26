@@ -1,0 +1,119 @@
+syntax = "proto3";
+
+package userhub.v1;
+
+import "common/v1/locale.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1;userhubv1";
+
+// UserHubService aggregates user-at-a-glance data for dashboard UX surfaces.
+service UserHubService {
+  // GetDashboard returns one aggregated dashboard snapshot for the caller.
+  rpc GetDashboard(GetDashboardRequest) returns (GetDashboardResponse);
+}
+
+message GetDashboardRequest {
+  // Preferred caller locale for response shaping and cache keying.
+  common.v1.Locale locale = 1;
+
+  // Maximum number of campaign previews to return.
+  // If zero, the server defaults to 3. The server clamps values above 10 to 10.
+  int32 campaign_preview_limit = 2;
+
+  // Maximum number of pending invite previews to return.
+  // If zero, the server defaults to 3. The server clamps values above 10 to 10.
+  int32 invite_preview_limit = 3;
+}
+
+message GetDashboardResponse {
+  DashboardMetadata metadata = 1;
+  UserSummary user = 2;
+  InviteSummary invites = 3;
+  NotificationSummary notifications = 4;
+  CampaignSummary campaigns = 5;
+  repeated DashboardAction next_actions = 6;
+}
+
+message DashboardMetadata {
+  DashboardFreshness freshness = 1;
+  bool cache_hit = 2;
+  bool degraded = 3;
+  repeated string degraded_dependencies = 4;
+  google.protobuf.Timestamp generated_at = 5;
+}
+
+enum DashboardFreshness {
+  DASHBOARD_FRESHNESS_UNSPECIFIED = 0;
+  DASHBOARD_FRESHNESS_FRESH = 1;
+  DASHBOARD_FRESHNESS_STALE = 2;
+}
+
+message UserSummary {
+  string user_id = 1;
+  string username = 2;
+  string name = 3;
+  bool profile_available = 4;
+  bool discoverable = 5;
+  bool needs_profile_completion = 6;
+}
+
+message InviteSummary {
+  bool available = 1;
+  int32 listed_count = 2;
+  bool has_more = 3;
+  repeated PendingInvite pending = 4;
+}
+
+message PendingInvite {
+  string invite_id = 1;
+  string campaign_id = 2;
+  string campaign_name = 3;
+  string participant_id = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+message NotificationSummary {
+  bool available = 1;
+  bool has_unread = 2;
+  int32 unread_count = 3;
+}
+
+message CampaignSummary {
+  bool available = 1;
+  int32 listed_count = 2;
+  int32 active_count = 3;
+  bool has_more = 4;
+  repeated CampaignPreview campaigns = 5;
+}
+
+message CampaignPreview {
+  string campaign_id = 1;
+  string name = 2;
+  CampaignStatus status = 3;
+  int32 participant_count = 4;
+  int32 character_count = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+enum CampaignStatus {
+  CAMPAIGN_STATUS_UNSPECIFIED = 0;
+  CAMPAIGN_STATUS_DRAFT = 1;
+  CAMPAIGN_STATUS_ACTIVE = 2;
+  CAMPAIGN_STATUS_COMPLETED = 3;
+  CAMPAIGN_STATUS_ARCHIVED = 4;
+}
+
+message DashboardAction {
+  DashboardActionID id = 1;
+  int32 priority = 2;
+}
+
+enum DashboardActionID {
+  DASHBOARD_ACTION_ID_UNSPECIFIED = 0;
+  DASHBOARD_ACTION_ID_REVIEW_PENDING_INVITES = 1;
+  DASHBOARD_ACTION_ID_COMPLETE_PROFILE = 2;
+  DASHBOARD_ACTION_ID_CREATE_OR_JOIN_CAMPAIGN = 3;
+  DASHBOARD_ACTION_ID_CONTINUE_ACTIVE_CAMPAIGN = 4;
+  DASHBOARD_ACTION_ID_REVIEW_NOTIFICATIONS = 5;
+}

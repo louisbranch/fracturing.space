@@ -28,6 +28,7 @@ const (
 	ServiceNotifications = "notifications"
 	ServiceScenario      = "scenario"
 	ServiceSeed          = "seed"
+	ServiceUserHub       = "userhub"
 	ServiceWeb           = "web"
 	ServiceWorker        = "worker"
 )

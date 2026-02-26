@@ -9,6 +9,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	"google.golang.org/grpc"
 )
 
@@ -91,6 +92,11 @@ type CredentialClient interface {
 	RevokeCredential(context.Context, *aiv1.RevokeCredentialRequest, ...grpc.CallOption) (*aiv1.RevokeCredentialResponse, error)
 }
 
+// UserHubClient exposes user-dashboard aggregation operations.
+type UserHubClient interface {
+	GetDashboard(context.Context, *userhubv1.GetDashboardRequest, ...grpc.CallOption) (*userhubv1.GetDashboardResponse, error)
+}
+
 // Dependencies carries shared runtime contracts to modules.
 type Dependencies struct {
 	ResolveViewer       ResolveViewer
@@ -108,6 +114,7 @@ type Dependencies struct {
 	AccountClient       AccountClient
 	SocialClient        SocialClient
 	CredentialClient    CredentialClient
+	UserHubClient       UserHubClient
 }
 
 // Mount describes a module route mount.

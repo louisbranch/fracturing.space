@@ -74,6 +74,10 @@
       "grpc_port": 8088
     },
     {
+      "name": "userhub",
+      "grpc_port": 8092
+    },
+    {
       "name": "web",
       "http_port": 8080,
       "public_routes": [

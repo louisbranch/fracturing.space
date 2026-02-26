@@ -298,6 +298,9 @@ func init() {
 	message.SetString(lang, "web.error.action_back_to_dashboard", "Voltar para painel")
 	message.SetString(lang, "error.back_to_home", "Voltar para início")
 	message.SetString(lang, "dashboard.title", "Painel")
+	message.SetString(lang, "web.dashboard.profile_pending.title", "Finalize seu perfil público")
+	message.SetString(lang, "web.dashboard.profile_pending.body", "Defina um nome de usuário para tornar seu perfil descobrível em campanhas e convites.")
+	message.SetString(lang, "web.dashboard.profile_pending.cta", "Finalizar perfil")
 	message.SetString(lang, "game.aria_label", "Jogo")
 
 	// Shared campaign shell

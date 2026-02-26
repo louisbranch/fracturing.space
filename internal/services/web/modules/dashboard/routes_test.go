@@ -12,14 +12,14 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(newService(), module.Dependencies{}))
+	registerRoutes(nil, newHandlers(newService(nil), module.Dependencies{}))
 }
 
 func TestRegisterRoutesDashboardPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(newService(), module.Dependencies{}))
+	registerRoutes(mux, newHandlers(newService(nil), module.Dependencies{}))
 
 	tests := []struct {
 		name       string

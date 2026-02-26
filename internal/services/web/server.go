@@ -35,6 +35,7 @@ type Config struct {
 	AuthClient                module.AuthClient
 	AccountClient             module.AccountClient
 	CredentialClient          module.CredentialClient
+	UserHubClient             module.UserHubClient
 	SocialClient              socialv1.SocialServiceClient
 }
 
@@ -57,6 +58,7 @@ func NewHandler(cfg Config) (http.Handler, error) {
 		AuthClient:          cfg.AuthClient,
 		AccountClient:       cfg.AccountClient,
 		CredentialClient:    cfg.CredentialClient,
+		UserHubClient:       cfg.UserHubClient,
 		SocialClient:        cfg.SocialClient,
 		ResolveViewer:       principal.resolveViewer,
 		ResolveUserID:       principal.resolveRequestUserID,

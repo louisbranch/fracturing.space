@@ -12,5 +12,6 @@ x-fracturing-space-discovery:
   mcp_http_addr: mcp:8085
   notifications_grpc_addr: notifications:8088
   social_grpc_addr: social:8090
+  userhub_grpc_addr: userhub:8092
   web_http_addr: web:8080
   worker_grpc_addr: worker:8089

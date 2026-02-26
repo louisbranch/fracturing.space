@@ -1,0 +1,31 @@
+package templates
+
+import "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+
+type DashboardProfilePendingBlock struct {
+	Visible bool
+}
+
+type DashboardPageView struct {
+	ProfilePending DashboardProfilePendingBlock
+}
+
+func dashboardProfilePendingVisible(view DashboardPageView) bool {
+	return view.ProfilePending.Visible
+}
+
+templ DashboardFragment(view DashboardPageView, loc Localizer) {
+	<section id="dashboard-root" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+		if dashboardProfilePendingVisible(view) {
+			<section id="dashboard-profile-pending" data-dashboard-block="profile-pending" class="card bg-base-200 border border-base-300 shadow-sm lg:col-span-1">
+				<div class="card-body gap-4">
+					<h2 class="card-title">{ T(loc, "web.dashboard.profile_pending.title") }</h2>
+					<p class="text-sm opacity-80">{ T(loc, "web.dashboard.profile_pending.body") }</p>
+					<div class="card-actions justify-end">
+						<a href={ routepath.AppSettingsProfile } hx-get={ routepath.AppSettingsProfile } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary">{ T(loc, "web.dashboard.profile_pending.cta") }</a>
+					</div>
+				</div>
+			</section>
+		}
+	</section>
+}

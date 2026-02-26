@@ -192,6 +192,33 @@ services:
       - internal
     restart: unless-stopped
 
+  userhub:
+    build:
+      context: .
+      target: userhub
+      args:
+        GO_VERSION: ${GO_VERSION:-1.26.0}
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/userhub:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    depends_on:
+      game:
+        condition: service_started
+      social:
+        condition: service_started
+      notifications:
+        condition: service_started
+    environment:
+      FRACTURING_SPACE_USERHUB_PORT: 8092
+      FRACTURING_SPACE_USERHUB_GAME_ADDR: game:8082
+      FRACTURING_SPACE_USERHUB_SOCIAL_ADDR: social:8090
+      FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR: notifications:8088
+      FRACTURING_SPACE_USERHUB_DIAL_TIMEOUT: ${FRACTURING_SPACE_USERHUB_DIAL_TIMEOUT:-2s}
+      FRACTURING_SPACE_USERHUB_CACHE_FRESH_TTL: ${FRACTURING_SPACE_USERHUB_CACHE_FRESH_TTL:-15s}
+      FRACTURING_SPACE_USERHUB_CACHE_STALE_TTL: ${FRACTURING_SPACE_USERHUB_CACHE_STALE_TTL:-2m}
+      FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    networks:
+      - internal
+    restart: unless-stopped
+
   mcp:
     build:
       context: .

@@ -17,6 +17,7 @@ func TestDefaultGRPCAddr(t *testing.T) {
 		ServiceListing:       "listing:8091",
 		ServiceAI:            "ai:8087",
 		ServiceNotifications: "notifications:8088",
+		ServiceUserHub:       "userhub:8092",
 	}
 	for service, want := range cases {
 		if got := DefaultGRPCAddr(service); got != want {
