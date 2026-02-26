@@ -67,10 +67,12 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 		existing, err := a.Watermarks.GetProjectionWatermark(ctx, evt.CampaignID)
 		expectedNext := evt.Seq + 1
 		if err == nil && existing.ExpectedNextSeq > 0 && evt.Seq > existing.ExpectedNextSeq {
-			// Log gap detection — callers can monitor this for repair triggers.
-			// The watermark still advances to avoid blocking forward progress.
+			// Preserve the gap boundary instead of advancing past it. This
+			// keeps the mid-stream gap visible to DetectProjectionGaps so
+			// it can trigger repair without manual CLI invocation.
 			log.Printf("projection gap detected for campaign %s: expected seq %d but got %d",
 				evt.CampaignID, existing.ExpectedNextSeq, evt.Seq)
+			expectedNext = existing.ExpectedNextSeq
 		}
 
 		if err := a.Watermarks.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{

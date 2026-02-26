@@ -42,6 +42,25 @@ func TestDecisionValidate_AcceptsRejectionsOnly(t *testing.T) {
 	}
 }
 
+func TestSharedRejectionCodes_ExistAndFollowConvention(t *testing.T) {
+	codes := map[string]string{
+		"RejectionCodePayloadDecodeFailed":    RejectionCodePayloadDecodeFailed,
+		"RejectionCodeCommandTypeUnsupported": RejectionCodeCommandTypeUnsupported,
+	}
+	for name, code := range codes {
+		if code == "" {
+			t.Errorf("%s is empty", name)
+		}
+		// Convention: SCREAMING_SNAKE_CASE, no dots, no lowercase.
+		for _, c := range code {
+			if c >= 'a' && c <= 'z' {
+				t.Errorf("%s = %q contains lowercase characters", name, code)
+				break
+			}
+		}
+	}
+}
+
 func TestRejectDecision_ReturnsRejectionsOnly(t *testing.T) {
 	rejection := Rejection{Code: "INVALID"}
 	decision := Reject(rejection)

@@ -425,6 +425,7 @@ fix.
 | `fold handlers registered for audit-only events (dead code): <type>` | A fold handler exists for an `IntentAuditOnly` event. The aggregate folder skips audit-only events, so the handler is dead code. | Remove the fold handler or change the event's intent to `IntentReplayOnly` or `IntentProjectionAndReplay`. |
 | `projection handlers registered for non-projection events (dead code): <type>` | A projection handler exists for an `IntentAuditOnly` or `IntentReplayOnly` event. The projection applier skips these events. | Remove the projection handler or change the event's intent to `IntentProjectionAndReplay`. |
 | `projection stores not configured: <store>` | The projection applier is missing a required store dependency. | Ensure all stores are wired in the `projection.Applier` constructor. |
+| `git diff --exit-code` fails on `docs/events/` | Event/command types changed without regenerating catalogs | Run `go run ./internal/tools/eventdocgen` and commit the updated `docs/events/` files |
 
 All validators run before the server accepts traffic. Fix the reported type,
 then restart. Run `make integration` to verify all validators pass.
@@ -464,5 +465,5 @@ These are current documentation or architecture pain points worth improving.
      `Handler.prepareExecution`, not the projection apply.
 4. Two similarly named system registries:
    - `domain/system.Registry` (module command/event routing) and
-     `domain/bridge.Registry` (API/system metadata bridge) can be confused.
-   - Improvement: clarify names or collapse responsibilities.
+     `domain/bridge.MetadataRegistry` (API/system metadata bridge) serve
+     different layers but are wired from the same `SystemDescriptor`.

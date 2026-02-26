@@ -5,6 +5,7 @@
 package testkit
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -67,6 +68,48 @@ func ValidateSystemConformance(t *testing.T, mod module.Module, adapter bridge.A
 	// must produce identical results. This catches fold functions that use
 	// deltas instead of absolute values.
 	validateFoldIdempotency(t, mod)
+}
+
+// ValidateAdapterIdempotency applies each handled event type twice to the
+// adapter and asserts no error on the second apply. Adapters should treat
+// duplicate events idempotently — applying the same event twice must produce
+// the same result without error. This catches adapters that append to lists,
+// increment counters, or violate unique constraints on replay.
+//
+// The adapter must be backed by a functional store (even a minimal in-memory
+// one) so that Apply can read/write projection state. Event types whose first
+// Apply fails (e.g. because the empty payload is rejected) are skipped.
+func ValidateAdapterIdempotency(t *testing.T, adapter bridge.Adapter) {
+	t.Helper()
+
+	ctx := context.Background()
+	const testCampaignID = "adapter-idempotency-check"
+
+	for _, evtType := range adapter.HandledTypes() {
+		t.Run(string(evtType), func(t *testing.T) {
+			evt := event.Event{
+				CampaignID:    testCampaignID,
+				Seq:           1,
+				Type:          evtType,
+				SystemID:      adapter.ID(),
+				SystemVersion: adapter.Version(),
+				EntityType:    "character",
+				EntityID:      "char-1",
+				PayloadJSON:   []byte("{}"),
+			}
+
+			// First apply — may fail for handlers that require specific
+			// payload fields. Skip those types gracefully.
+			if err := adapter.Apply(ctx, evt); err != nil {
+				return
+			}
+
+			// Second apply — must not error if the adapter is idempotent.
+			if err := adapter.Apply(ctx, evt); err != nil {
+				t.Errorf("adapter idempotency: second Apply for %s failed: %v", evtType, err)
+			}
+		})
+	}
 }
 
 // validateFoldIdempotency folds each handled event type twice into fresh

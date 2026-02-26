@@ -129,6 +129,134 @@ make integration
 make cover
 ```
 
+## Generated event catalogs
+
+After adding or removing command/event types, regenerate the catalogs:
+
+```bash
+go run ./internal/tools/eventdocgen
+```
+
+Commit the updated files in `docs/events/`. CI enforces this via
+`make integration` which runs `event-catalog-check` before tests.
+
+## Worked example: Countdown Create
+
+This traces `sys.daggerheart.countdown.create` through every layer to show
+how the 5 helpers compose in real code.
+
+### Step 1 — Command type constant
+
+`domain/commandids/ids.go` declares the shared constant:
+
+```go
+DaggerheartCountdownCreate command.Type = "sys.daggerheart.countdown.create"
+```
+
+The module's `decider.go` imports it as a package-local alias:
+
+```go
+commandTypeCountdownCreate command.Type = commandids.DaggerheartCountdownCreate
+```
+
+### Step 2 — Command registration
+
+`module.go` declares command definitions in a slice and registers them in
+`RegisterCommands`:
+
+```go
+{Type: commandTypeCountdownCreate, Owner: command.OwnerSystem, ValidatePayload: validateCountdownCreatePayload},
+```
+
+### Step 3 — Event type constant and registration
+
+`event_types.go`:
+
+```go
+EventTypeCountdownCreated event.Type = "sys.daggerheart.countdown_created"
+```
+
+`module.go` registers it with `IntentProjectionAndReplay` — it needs both
+aggregate fold and projection writes:
+
+```go
+{Type: EventTypeCountdownCreated, Owner: event.OwnerSystem, ValidatePayload: validateCountdownCreatedPayload, Intent: event.IntentProjectionAndReplay},
+```
+
+### Step 4 — Decider (using `DecideFunc`)
+
+`decider_countdowns.go` — no aggregate state needed, so this uses the simplest
+helper:
+
+```go
+func decideCountdownCreate(cmd command.Command, now func() time.Time) command.Decision {
+    return module.DecideFunc(cmd, EventTypeCountdownCreated, "countdown",
+        func(p *CountdownCreatePayload) string { return strings.TrimSpace(p.CountdownID) },
+        func(p *CountdownCreatePayload, _ func() time.Time) *command.Rejection {
+            p.CountdownID = strings.TrimSpace(p.CountdownID)
+            p.Name = strings.TrimSpace(p.Name)
+            // ... normalize fields ...
+            return nil
+        }, now)
+}
+```
+
+`DecideFunc` unmarshals the command payload, calls `validate`, and emits one
+event of type `EventTypeCountdownCreated` with entity type `"countdown"`.
+
+### Step 5 — Fold handler (using `FoldRouter`)
+
+`folder.go` registers a typed fold handler:
+
+```go
+module.HandleFold(r, EventTypeCountdownCreated, foldCountdownCreated)
+```
+
+The handler upserts into aggregate state using absolute values:
+
+```go
+func foldCountdownCreated(state *SnapshotState, payload CountdownCreatedPayload) error {
+    applyCountdownUpsert(state, payload.CountdownID, func(cs *CountdownState) {
+        cs.Name = payload.Name
+        cs.Current = payload.Current
+        cs.Max = payload.Max
+        // ... set all fields from payload ...
+    })
+    return nil
+}
+```
+
+### Step 6 — Adapter handler (using `AdapterRouter`)
+
+`adapter.go` registers a typed projection handler:
+
+```go
+module.HandleAdapter(r, EventTypeCountdownCreated, a.handleCountdownCreated)
+```
+
+The handler writes a single projection row:
+
+```go
+func (a *Adapter) handleCountdownCreated(ctx context.Context, evt event.Event, payload CountdownCreatedPayload) error {
+    return a.store.PutDaggerheartCountdown(ctx, storage.DaggerheartCountdown{
+        CampaignID:  evt.CampaignID,
+        CountdownID: payload.CountdownID,
+        Name:        payload.Name,
+        // ... map all fields ...
+    })
+}
+```
+
+### Full flow summary
+
+```
+sys.daggerheart.countdown.create (command)
+  → decideCountdownCreate                    (DecideFunc)
+    → sys.daggerheart.countdown_created      (event, appended to journal)
+      → foldCountdownCreated                 (FoldRouter → aggregate state)
+      → handleCountdownCreated               (AdapterRouter → projection store)
+```
+
 ## Where to go next
 
 - [Event-driven system](event-driven-system.md) — Write-path invariants,

@@ -37,8 +37,8 @@ type serverBootstrapConfig struct {
 	listen                          func(network, address string) (net.Listener, error)
 	openStorageBundle               storageBundleOpener
 	configureDomain                 func(serverEnv, *gamegrpc.Stores, engine.Registries) error
-	buildSystemRegistry             func() (*bridge.Registry, error)
-	validateSystemRegistration      func([]module.Module, *bridge.Registry, *bridge.AdapterRegistry) error
+	buildSystemRegistry             func() (*bridge.MetadataRegistry, error)
+	validateSystemRegistration      func([]module.Module, *bridge.MetadataRegistry, *bridge.AdapterRegistry) error
 	dialAuthGRPC                    func(context.Context, string) (authGRPCClients, error)
 	newGRPCServer                   func(*storageBundle) *grpc.Server
 	newHealthServer                 func() *health.Server
@@ -248,7 +248,7 @@ func (b *serverBootstrap) registerServices(
 	grpcServer *grpc.Server, healthServer *health.Server,
 	stores gamegrpc.Stores,
 	bundle *storageBundle, authClient authv1.AuthServiceClient,
-	systemRegistry *bridge.Registry,
+	systemRegistry *bridge.MetadataRegistry,
 ) error {
 	daggerheartStores := daggerheartservice.Stores{
 		Campaign:           bundle.projections,

@@ -15,11 +15,11 @@ import (
 // SystemService implements the game.v1.SystemService gRPC API.
 type SystemService struct {
 	gamev1.UnimplementedSystemServiceServer
-	registry *bridge.Registry
+	registry *bridge.MetadataRegistry
 }
 
 // NewSystemService creates a SystemService backed by the registry.
-func NewSystemService(registry *bridge.Registry) *SystemService {
+func NewSystemService(registry *bridge.MetadataRegistry) *SystemService {
 	return &SystemService{registry: registry}
 }
 

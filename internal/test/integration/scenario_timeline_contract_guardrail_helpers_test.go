@@ -135,10 +135,23 @@ func loadTimelineCommandAndEventTypes(docPath string) (map[string]struct{}, map[
 	eventTypes := make(map[string]struct{})
 	commandColumn := -1
 	eventColumn := -1
+	inCodeFence := false
 
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		cells := markdownCells(scanner.Text())
+		line := scanner.Text()
+
+		// Skip content inside code fences (``` blocks) to avoid
+		// matching template placeholders like sys.daggerheart.<domain>.
+		if strings.HasPrefix(strings.TrimSpace(line), "```") {
+			inCodeFence = !inCodeFence
+			continue
+		}
+		if inCodeFence {
+			continue
+		}
+
+		cells := markdownCells(line)
 		if len(cells) == 0 {
 			continue
 		}
@@ -170,6 +183,26 @@ func loadTimelineCommandAndEventTypes(docPath string) (map[string]struct{}, map[
 	}
 
 	return commandTypes, eventTypes, nil
+}
+
+// loadTimelineCommandAndEventTypesFromDocs merges command/event types
+// from multiple timeline documents (contract + backlog).
+func loadTimelineCommandAndEventTypesFromDocs(docPaths ...string) (map[string]struct{}, map[string]struct{}, error) {
+	allCommands := make(map[string]struct{})
+	allEvents := make(map[string]struct{})
+	for _, path := range docPaths {
+		commands, events, err := loadTimelineCommandAndEventTypes(path)
+		if err != nil {
+			return nil, nil, err
+		}
+		for k := range commands {
+			allCommands[k] = struct{}{}
+		}
+		for k := range events {
+			allEvents[k] = struct{}{}
+		}
+	}
+	return allCommands, allEvents, nil
 }
 
 func markdownCells(line string) []string {

@@ -3559,7 +3559,9 @@ func TestApply_TracksExpectedNextSeqForGapDetection(t *testing.T) {
 		t.Fatalf("expected_next_seq = %d, want 2", wm.ExpectedNextSeq)
 	}
 
-	// Apply seq 3 (skipping seq 2) — gap detected, but watermark still advances.
+	// Apply seq 3 (skipping seq 2) — gap detected. AppliedSeq advances
+	// but ExpectedNextSeq is preserved at the gap boundary so gap-detect
+	// can find the mid-stream gap later.
 	updatePayload, _ := json.Marshal(map[string]any{"name": "Updated"})
 	evt3 := testevent.Event{
 		CampaignID:  "camp-1",
@@ -3578,9 +3580,9 @@ func TestApply_TracksExpectedNextSeqForGapDetection(t *testing.T) {
 	if wm.AppliedSeq != 3 {
 		t.Fatalf("applied_seq = %d, want 3", wm.AppliedSeq)
 	}
-	// ExpectedNextSeq should still advance past the applied event.
-	if wm.ExpectedNextSeq != 4 {
-		t.Fatalf("expected_next_seq = %d, want 4", wm.ExpectedNextSeq)
+	// ExpectedNextSeq stays at gap boundary (2) so gap-detect can find it.
+	if wm.ExpectedNextSeq != 2 {
+		t.Fatalf("expected_next_seq = %d, want 2 (preserved at gap boundary)", wm.ExpectedNextSeq)
 	}
 }
 

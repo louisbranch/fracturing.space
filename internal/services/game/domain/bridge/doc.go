@@ -7,5 +7,5 @@
 //
 //   - module.Registry  — write-path module routing
 //   - bridge.AdapterRegistry — projection-side adapters for system-specific read models
-//   - bridge.Registry — API metadata bridge (proto enum mapping, version catalog)
+//   - bridge.MetadataRegistry — API metadata bridge (proto enum mapping, version catalog)
 package bridge

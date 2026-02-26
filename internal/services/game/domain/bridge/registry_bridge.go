@@ -26,9 +26,12 @@ type GameSystem interface {
 	// RegistryMetadata describes the system's availability and access.
 	RegistryMetadata() RegistryMetadata
 
-	// StateFactory returns the factory for creating system-specific state.
+	// StateHandlerFactory returns the factory for creating typed
+	// character/snapshot state handlers for the API bridge layer.
 	// May return nil if the system doesn't manage state.
-	StateFactory() StateFactory
+	// Named "StateHandlerFactory" (not "StateFactory") to disambiguate from
+	// module.StateFactory which returns untyped any for the aggregate fold path.
+	StateHandlerFactory() StateHandlerFactory
 
 	// OutcomeApplier returns the handler for applying roll outcomes.
 	// May return nil if the system doesn't support outcome application.
@@ -108,15 +111,17 @@ type SnapshotStateHandler interface {
 	CampaignID() string
 }
 
-// StateFactory creates system-specific state instances for the API bridge.
-// Returns typed handlers (CharacterStateHandler, SnapshotStateHandler) so the
-// API layer can invoke resource/damage abstractions without type assertions.
+// StateHandlerFactory creates system-specific state handler instances for the
+// API bridge. Returns typed handlers (CharacterStateHandler,
+// SnapshotStateHandler) so the API layer can invoke resource/damage
+// abstractions without type assertions.
 //
-// NOTE: This is the API-bridge StateFactory. The write-path StateFactory in
-// domain/module returns untyped `any` for the aggregate fold path. Systems
-// typically implement only the module variant; this interface is satisfied by
-// the metadata/registry system implementation (e.g. DaggerheartRegistrySystem).
-type StateFactory interface {
+// Named "StateHandlerFactory" to disambiguate from module.StateFactory
+// (domain/module/registry.go), which returns untyped `any` for the aggregate
+// fold path. Systems typically implement only the module variant; this
+// interface is satisfied by the metadata/registry system implementation
+// (e.g. DaggerheartRegistrySystem).
+type StateHandlerFactory interface {
 	// NewCharacterState creates initial character state for the given character.
 	NewCharacterState(campaignID, characterID string, kind CharacterKind) (CharacterStateHandler, error)
 
@@ -152,8 +157,9 @@ type OutcomeApplier interface {
 	ApplyOutcome(ctx context.Context, outcome OutcomeContext) ([]StateChange, error)
 }
 
-// Registry manages registered game systems.
-type Registry struct {
+// MetadataRegistry manages registered game systems, mapping system_id + version
+// to protobuf GameSystem enums for API transport layers (gRPC and MCP).
+type MetadataRegistry struct {
 	mu       sync.RWMutex
 	systems  map[SystemKey]GameSystem
 	defaults map[commonv1.GameSystem]string
@@ -177,16 +183,16 @@ var (
 	ErrSystemNotRegistered     = errors.New("game system not registered")
 )
 
-// NewRegistry creates a new game system registry.
-func NewRegistry() *Registry {
-	return &Registry{
+// NewMetadataRegistry creates a new game system metadata registry.
+func NewMetadataRegistry() *MetadataRegistry {
+	return &MetadataRegistry{
 		systems:  make(map[SystemKey]GameSystem),
 		defaults: make(map[commonv1.GameSystem]string),
 	}
 }
 
 // Register adds a game system to the registry.
-func (r *Registry) Register(system GameSystem) error {
+func (r *MetadataRegistry) Register(system GameSystem) error {
 	if r == nil {
 		return ErrSystemRegistryNil
 	}
@@ -213,13 +219,13 @@ func (r *Registry) Register(system GameSystem) error {
 }
 
 // Get returns the game system for the given ID, or nil if not found.
-func (r *Registry) Get(id commonv1.GameSystem) GameSystem {
+func (r *MetadataRegistry) Get(id commonv1.GameSystem) GameSystem {
 	return r.GetVersion(id, "")
 }
 
 // GetVersion returns the game system for the given ID and version.
 // If version is empty, the default registered version is returned.
-func (r *Registry) GetVersion(id commonv1.GameSystem, version string) GameSystem {
+func (r *MetadataRegistry) GetVersion(id commonv1.GameSystem, version string) GameSystem {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -234,7 +240,7 @@ func (r *Registry) GetVersion(id commonv1.GameSystem, version string) GameSystem
 }
 
 // DefaultVersion returns the default registered version for the given system.
-func (r *Registry) DefaultVersion(id commonv1.GameSystem) string {
+func (r *MetadataRegistry) DefaultVersion(id commonv1.GameSystem) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -244,7 +250,7 @@ func (r *Registry) DefaultVersion(id commonv1.GameSystem) string {
 // MustGet returns the game system for the given ID, or panics if not registered.
 // For newcomer-safe call paths, prefer GetOrError so startup can surface
 // registry problems without panics.
-func (r *Registry) MustGet(id commonv1.GameSystem) GameSystem {
+func (r *MetadataRegistry) MustGet(id commonv1.GameSystem) GameSystem {
 	system, err := r.GetOrError(id)
 	if err != nil {
 		panic(err)
@@ -253,7 +259,7 @@ func (r *Registry) MustGet(id commonv1.GameSystem) GameSystem {
 }
 
 // GetOrError returns the game system for the given ID or an error if not found.
-func (r *Registry) GetOrError(id commonv1.GameSystem) (GameSystem, error) {
+func (r *MetadataRegistry) GetOrError(id commonv1.GameSystem) (GameSystem, error) {
 	system := r.Get(id)
 	if system == nil {
 		return nil, fmt.Errorf("%w: %s", ErrSystemNotRegistered, id)
@@ -262,7 +268,7 @@ func (r *Registry) GetOrError(id commonv1.GameSystem) (GameSystem, error) {
 }
 
 // List returns all registered game systems.
-func (r *Registry) List() []GameSystem {
+func (r *MetadataRegistry) List() []GameSystem {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 

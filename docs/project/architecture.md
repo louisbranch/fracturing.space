@@ -40,7 +40,7 @@ internal/services/game/domain/bridge/
 └── daggerheart/         # Daggerheart implementation
     ├── module.go        # domain/system.Module implementation
     ├── decider.go       # system-owned command decisions
-    ├── projector.go     # system-owned replay/projector logic
+    ├── folder.go        # system-owned fold logic (aggregate state)
     ├── adapter.go       # projection adapter for system tables
     └── domain/          # pure mechanics (outcomes/probability/etc.)
 ```

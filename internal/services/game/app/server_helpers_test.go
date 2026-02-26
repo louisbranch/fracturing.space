@@ -83,7 +83,7 @@ func (f fakeGameSystem) RegistryMetadata() bridge.RegistryMetadata {
 	return bridge.RegistryMetadata{}
 }
 
-func (f fakeGameSystem) StateFactory() bridge.StateFactory {
+func (f fakeGameSystem) StateHandlerFactory() bridge.StateHandlerFactory {
 	return nil
 }
 
@@ -1208,7 +1208,7 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 		modules := []module.Module{
 			fakeSystemModule{id: "DAGGERHEART", version: "v1"},
 		}
-		registry := bridge.NewRegistry()
+		registry := bridge.NewMetadataRegistry()
 		if err := registry.Register(fakeGameSystem{
 			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			version: "v1",
@@ -1231,7 +1231,7 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 		modules := []module.Module{
 			fakeSystemModule{id: "DAGGERHEART", version: "v1"},
 		}
-		registry := bridge.NewRegistry()
+		registry := bridge.NewMetadataRegistry()
 		if err := registry.Register(fakeGameSystem{
 			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			version: "v1",
@@ -1250,7 +1250,7 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 	})
 
 	t.Run("metadata without module", func(t *testing.T) {
-		registry := bridge.NewRegistry()
+		registry := bridge.NewMetadataRegistry()
 		if err := registry.Register(fakeGameSystem{
 			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			version: "v1",

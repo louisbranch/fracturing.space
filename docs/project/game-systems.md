@@ -11,6 +11,7 @@ quick-start-system-developer.md  (first 30 minutes)
   -> event-driven-system.md      (write-path invariants)
   -> game-systems.md             (you are here — implementation checklist)
      -> daggerheart-event-timeline-contract.md  (mechanic mappings)
+        -> daggerheart-mechanic-backlog.md      (priority backlog)
         -> scenario-missing-mechanics.md        (gap inventory)
 ```
 
@@ -54,25 +55,12 @@ Invariants:
 
 ## Event intent selection
 
-Every event definition must declare an `Intent` that controls how the system
-processes it after append. Use this decision tree when registering a new event:
+Every event definition must declare an `Intent`. For the full decision tree
+and semantics, see [Event-driven system: Event](event-driven-system.md#event).
 
-```
-Does this event need to update a projection (read-model) table?
-  YES ─→ Does the aggregate folder also need this event for state replay?
-           YES → IntentProjectionAndReplay   (most system events)
-           NO  → (not currently supported — projection-only events
-                  must also be foldable)
-  NO  ─→ Does the aggregate folder need this event for state replay?
-           YES → IntentReplayOnly            (fold-only, no projection writes)
-           NO  → IntentAuditOnly             (journal record only)
-```
-
-| Intent | Fold? | Project? | Typical use |
-|---|---|---|---|
-| `IntentProjectionAndReplay` | yes | yes | Damage applied, condition changed, adversary created |
-| `IntentReplayOnly` | yes | no | State transitions only relevant to aggregate decisions |
-| `IntentAuditOnly` | no | no | Roll resolved, outcome applied (journal observability) |
+Summary: most system events use `IntentProjectionAndReplay`. Use
+`IntentReplayOnly` for fold-only state. Use `IntentAuditOnly` for
+journal-only observability records.
 
 Startup validators enforce consistency:
 - `ValidateSystemFoldCoverage`: every `ProjectionAndReplay`/`ReplayOnly` event
@@ -148,7 +136,7 @@ SystemDescriptor (manifest/manifest.go)
 │   ├── Decider()         → command decisions
 │   └── Folder()          → aggregate fold / replay
 │
-├── BuildMetadataSystem() → bridge.Registry      (API metadata bridge)
+├── BuildMetadataSystem() → bridge.MetadataRegistry      (API metadata bridge)
 │   └── Maps system_id + version to protobuf enum for transport layers
 │
 └── BuildAdapter()        → bridge.AdapterRegistry (read-path projections)
@@ -158,7 +146,7 @@ SystemDescriptor (manifest/manifest.go)
 - **`module.Registry`** (`domain/module/registry.go`): Routes system commands to
   deciders and system events to folders. Used by the domain engine write-path
   and the replay pipeline.
-- **`bridge.Registry`** (`domain/bridge/registry_bridge.go`): Maps
+- **`bridge.MetadataRegistry`** (`domain/bridge/registry_bridge.go`): Maps
   `system_id` + `system_version` to protobuf `GameSystem` enums. Used by gRPC
   and MCP transport layers to expose system metadata.
 - **`bridge.AdapterRegistry`** (`domain/bridge/adapter_registry.go`): Routes
@@ -168,17 +156,26 @@ SystemDescriptor (manifest/manifest.go)
 When adding a new system, register all three surfaces from one
 `SystemDescriptor` so they stay aligned.
 
-### StateFactory: two interfaces, different layers
+### Package naming rationale
 
-The codebase has two `StateFactory` interfaces that serve different layers:
+| Package | Why this name |
+|---------|---------------|
+| `domain/module` | Each game system is a "module" plugged into the engine |
+| `domain/bridge` | Bridges between domain events and read-model stores / API metadata |
+| `domain/bridge/manifest` | System descriptors that manifest (wire) all three registries |
+| `domain/bridge/{system}` | Game system implementation; lives under bridge because systems implement both write-path and projection interfaces |
+
+### StateFactory vs StateHandlerFactory: two interfaces, different layers
+
+The codebase has two state factory interfaces that serve different layers:
 
 | Interface | Package | Returns | Used by |
 |---|---|---|---|
 | `module.StateFactory` | `domain/module` | `(any, error)` | Write-path aggregate fold / replay |
-| `bridge.StateFactory` | `domain/bridge` | Typed handlers (`CharacterStateHandler`, `SnapshotStateHandler`) | API bridge (gRPC/MCP transport) |
+| `bridge.StateHandlerFactory` | `domain/bridge` | Typed handlers (`CharacterStateHandler`, `SnapshotStateHandler`) | API bridge (gRPC/MCP transport) |
 
 New systems typically implement only the `module.StateFactory` variant. The
-`bridge.StateFactory` is satisfied by the metadata/registry system
+`bridge.StateHandlerFactory` is satisfied by the metadata/registry system
 implementation (e.g. `DaggerheartRegistrySystem`) which wraps domain state
 behind the resource/damage abstractions the API layer needs.
 
@@ -195,13 +192,24 @@ Server wiring entrypoints:
 
 ## Adding a new system (current flow)
 
-### 1. Add identity and versioning
+### 1. Orient from the manifest (start here)
+
+> **Start here.** `manifest.go` is the single source of truth for system
+> registration. Open it first when onboarding — it shows all three registry
+> surfaces (`BuildModule`, `BuildMetadataSystem`, `BuildAdapter`) wired from
+> one `SystemDescriptor`, and serves as a map of what exists.
+
+Add or verify your system's `SystemDescriptor` entry in
+`internal/services/game/domain/bridge/manifest/manifest.go` so `Modules()`,
+`MetadataSystems()`, and `AdapterRegistry(...)` stay aligned.
+
+### 2. Add identity and versioning
 
 - Add enum values in `api/proto/common/v1/game_system.proto`.
 - Run `make proto`.
 - Define stable `SystemID` and `SystemVersion` constants in your module package.
 
-### 2. Implement a domain module
+### 3. Implement a domain module
 
 Create `internal/services/game/domain/bridge/{system}/module.go` that
 implements `system.Module`.
@@ -221,7 +229,7 @@ instead of writing raw switch/unmarshal code:
 - **`module.FoldRouter[S]`** with **`module.HandleFold[S, P]`**: typed fold
   dispatch by event type. Auto-unmarshals payloads into `P`, calls a typed
   handler `func(S, P) error`. Eliminates the per-case unmarshal switch in
-  `Fold`. See `daggerheart/projector.go` for usage.
+  `Fold`. See `daggerheart/folder.go` for usage.
 
 - **`module.AdapterRouter`** with **`module.HandleAdapter[P]`**: typed adapter
   dispatch by event type. Auto-unmarshals payloads, calls a typed handler
@@ -275,27 +283,16 @@ state — the aggregate folder handles lazy creation.
 `NewSnapshotState` must be deterministic: given the same `campaign_id`, it
 must return the same initial state, because replay depends on this guarantee.
 
-### 3. Define payload contracts and validation
+### 4. Define payload contracts and validation
 
 - Add payload structs for command/event types.
 - Validate payload shape and invariants in registry validators.
 - Keep validation deterministic and replay-safe.
 
-### 4. Wire into engine startup
+### 5. Wire into engine startup
 
 Pass your module to `engine.BuildRegistries(...)` in
 `internal/services/game/app/domain.go`.
-
-### 5. Register system entry metadata centrally (start here)
-
-> **Start here.** `manifest.go` is the single source of truth for system
-> registration. Open it first when onboarding — it shows all three registry
-> surfaces (`BuildModule`, `BuildMetadataSystem`, `BuildAdapter`) wired from
-> one `SystemDescriptor`, and serves as a map of what exists.
-
-Add or verify your system's `SystemDescriptor` entry in
-`internal/services/game/domain/bridge/manifest/manifest.go` so `Modules()`,
-`MetadataSystems()`, and `AdapterRegistry(...)` stay aligned.
 
 ### 6. Implement system projection adapter
 
@@ -404,7 +401,7 @@ Use Daggerheart as the baseline for structure and naming.
 |---|---|
 | Module wiring | `internal/services/game/domain/bridge/daggerheart/module.go` |
 | Command decisions | `internal/services/game/domain/bridge/daggerheart/decider.go` |
-| Replay folder (Fold method) | `internal/services/game/domain/bridge/daggerheart/projector.go` |
+| Replay folder (Fold method) | `internal/services/game/domain/bridge/daggerheart/folder.go` |
 | Projection adapter | `internal/services/game/domain/bridge/daggerheart/adapter.go` |
 | Event type constants | `internal/services/game/domain/bridge/daggerheart/event_types.go` |
 | Payload contracts | `internal/services/game/domain/bridge/daggerheart/payload.go` |
@@ -417,6 +414,11 @@ Use Daggerheart as the baseline for structure and naming.
 3. Projection adapter behavior must be idempotent under replay.
 4. Domain writes must happen through commands/events only, never direct projection mutation.
 5. **Event payloads must record absolute values, not deltas** (see below).
+6. **Prefer `DecideFuncMulti` for multi-consequence atomicity** — when one
+   mechanic produces multiple events, emit them from a single command decision
+   via batch append rather than executing sequential commands. See
+   [Daggerheart timeline contract](daggerheart-event-timeline-contract.md#design-principle-prefer-decidefuncmulti-for-multi-consequence-atomicity)
+   for the full rationale and pattern.
 
 ### Invariant: absolute values in event payloads
 
@@ -447,6 +449,45 @@ payload := DamagePayload{HPBefore: 8, HPAfter: 5}
 - Adapter idempotency tests (see "Idempotency testing" section) catch delta
   patterns in projection writes.
 
+### Rejection code naming convention
+
+Command deciders return `Rejection{Code, Message}` when a command is declined.
+The `Code` is a stable string for API consumers; the `Message` is human-readable
+for diagnostics.
+
+**Format**: `SCREAMING_SNAKE_CASE` with a domain prefix.
+
+| Scope | Prefix | Example |
+|-------|--------|---------|
+| Core domain | `<DOMAIN>_` | `CAMPAIGN_NAME_EMPTY`, `SESSION_NOT_STARTED` |
+| System-specific | `<SUBDOMAIN>_` | `GM_FEAR_OUT_OF_RANGE`, `COUNTDOWN_BEFORE_MISMATCH` |
+| Shared (cross-domain) | No prefix | `PAYLOAD_DECODE_FAILED`, `COMMAND_TYPE_UNSUPPORTED` |
+
+**Shared codes**: `PAYLOAD_DECODE_FAILED` and `COMMAND_TYPE_UNSUPPORTED` are
+exported from `domain/command` as `command.RejectionCodePayloadDecodeFailed`
+and `command.RejectionCodeCommandTypeUnsupported`. Use these constants instead
+of inline string literals.
+
+**Suffix conventions**:
+
+| Suffix | Meaning | Example |
+|--------|---------|---------|
+| `_REQUIRED` | A required field is missing | `SESSION_ID_REQUIRED` |
+| `_EMPTY` | A string field is blank | `CAMPAIGN_NAME_EMPTY` |
+| `_INVALID` | A field value is outside valid range | `CAMPAIGN_INVALID_GM_MODE` |
+| `_ALREADY_EXISTS` | Duplicate creation attempt | `CAMPAIGN_ALREADY_EXISTS` |
+| `_NOT_CREATED` | Operation on a non-existent entity | `CHARACTER_NOT_CREATED` |
+| `_NO_MUTATION` | Command produces no state change | `CONDITION_CHANGE_NO_MUTATION` |
+| `_MISMATCH` | Optimistic concurrency check failed | `COUNTDOWN_BEFORE_MISMATCH` |
+
+**Rules for new codes**:
+
+1. Use `SCREAMING_SNAKE_CASE`.
+2. Start with the domain noun (`CAMPAIGN_`, `SESSION_`, `CHARACTER_`, etc.).
+3. End with a reason suffix from the table above when one fits.
+4. Keep codes short and predictable for API consumers and i18n mapping.
+5. Define codes as package-level constants, not inline strings.
+
 ## Event timeline contract requirement (for every new mechanic)
 
 Before implementing a new mechanic, define its timeline contract:
@@ -469,6 +510,20 @@ Bypass patterns that are not allowed in request handlers:
 1. Direct event append APIs from handler code.
 2. Direct projection/store mutation for mutating domain outcomes.
 3. Local duplicated execute/reject/apply loops instead of shared orchestration helpers.
+
+### Clarification gate pattern
+
+When a mechanic's command/event contract is ambiguous, add a clarification
+gate instead of implementing speculatively:
+
+1. Add a backlog row with `TBD` for command/event types.
+2. List specific questions that must be resolved.
+3. State the provisional boundary (what to do until resolved).
+4. Do not implement until the gate is resolved in docs.
+
+See Daggerheart P31 in the
+[mechanic backlog](daggerheart-mechanic-backlog.md#p31-clarification-gate-doc-first)
+for a worked example.
 
 ## Projection replay safety
 

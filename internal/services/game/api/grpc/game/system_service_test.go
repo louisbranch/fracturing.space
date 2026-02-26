@@ -33,7 +33,7 @@ func (t *testRegistrySystem) RegistryMetadata() bridge.RegistryMetadata {
 	return t.metadata
 }
 
-func (t *testRegistrySystem) StateFactory() bridge.StateFactory {
+func (t *testRegistrySystem) StateHandlerFactory() bridge.StateHandlerFactory {
 	return nil
 }
 
@@ -42,7 +42,7 @@ func (t *testRegistrySystem) OutcomeApplier() bridge.OutcomeApplier {
 }
 
 func TestListGameSystems_Defaults(t *testing.T) {
-	registry := bridge.NewRegistry()
+	registry := bridge.NewMetadataRegistry()
 	if err := registry.Register(&testRegistrySystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.0.0",
@@ -93,7 +93,7 @@ func TestListGameSystems_Defaults(t *testing.T) {
 }
 
 func TestGetGameSystem_DefaultVersion(t *testing.T) {
-	registry := bridge.NewRegistry()
+	registry := bridge.NewMetadataRegistry()
 	if err := registry.Register(&testRegistrySystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.0.0",
@@ -133,7 +133,7 @@ func TestGetGameSystem_DefaultVersion(t *testing.T) {
 }
 
 func TestGetGameSystem_NotFound(t *testing.T) {
-	registry := bridge.NewRegistry()
+	registry := bridge.NewMetadataRegistry()
 	svc := NewSystemService(registry)
 	_, err := svc.GetGameSystem(context.Background(), &gamev1.GetGameSystemRequest{Id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART})
 	assertStatusCode(t, err, codes.NotFound)

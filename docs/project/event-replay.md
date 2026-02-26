@@ -240,8 +240,67 @@ The system uses three layers of validation, each catching different failure mode
   non-zero on mismatches.
 - Domain replay checkpoints advance after every applied event to avoid duplicates.
 
+## Projection gap detection and repair
+
+Projection gaps occur when the event journal is ahead of the projection
+watermark for a campaign — events were persisted but not applied to
+projections. Common causes: process crash between event append and
+projection apply, outbox delivery failure, or manual database operations.
+
+### Detecting gaps
+
+```bash
+# Dry-run: report gaps without repairing
+cmd/maintenance -gap-detect
+
+# JSON output for tooling
+cmd/maintenance -gap-detect -json
+```
+
+Output shows each campaign with a gap, the watermark (last applied seq),
+the journal high-water mark, and the difference.
+
+### Repairing gaps
+
+```bash
+# Replay missing events for all campaigns with gaps
+cmd/maintenance -gap-repair
+
+# JSON output
+cmd/maintenance -gap-repair -json
+```
+
+`-gap-repair` calls `projection.RepairProjectionGaps`, which:
+
+1. Lists all projection watermarks.
+2. Compares each watermark against the event journal high-water mark.
+3. For each campaign with a gap, replays events after the watermark seq
+   through the full projection applier (core + system adapters).
+4. Reports the number of events replayed per campaign.
+
+### Operator workflow
+
+1. **Detect**: run `-gap-detect` to assess scope. Review which campaigns
+   are behind and by how many events.
+2. **Validate**: optionally run `-campaign-id <id> -validate` on a
+   specific campaign to check event payload health before replaying.
+3. **Repair**: run `-gap-repair`. Monitor output for errors.
+4. **Verify**: run `-campaign-id <id> -integrity` on repaired campaigns
+   to confirm projection state matches a clean replay.
+
+### Constraints
+
+- `-gap-detect` and `-gap-repair` cannot be combined with `-campaign-id`,
+  replay flags, or outbox flags — they operate across all campaigns.
+- Repair replays through the same applier pipeline as normal runtime,
+  including system adapters and watermark tracking.
+- If a replay error occurs mid-repair, the function returns partial
+  results plus the error so the operator knows which campaigns succeeded.
+
 ## Best practices
 
 - Run `-integrity` after migrations or bulk backfills.
 - Use `-validate` before replaying in production to surface invalid events.
 - Prefer snapshot-accelerated replay for routine rebuilds.
+- Run `-gap-detect` periodically (or on startup) to catch projection drift
+  early.
