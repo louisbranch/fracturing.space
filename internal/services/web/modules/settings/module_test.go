@@ -564,7 +564,7 @@ func TestMountProfilePostValidationErrorRendersBadRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	form := url.Values{"name": {"Rhea Vale"}}
+	form := url.Values{"name": {strings.Repeat("x", userProfileNameMaxLength+1)}}
 	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsProfile, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
@@ -572,7 +572,7 @@ func TestMountProfilePostValidationErrorRendersBadRequest(t *testing.T) {
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
-	if !strings.Contains(rr.Body.String(), "Username is required.") {
+	if !strings.Contains(rr.Body.String(), "Name must be at most 64 characters.") {
 		t.Fatalf("body missing validation error: %q", rr.Body.String())
 	}
 }
@@ -587,7 +587,7 @@ func TestMountProfilePostValidationErrorRendersLocalizedBadRequest(t *testing.T)
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	form := url.Values{"name": {"Rhea Vale"}}
+	form := url.Values{"name": {strings.Repeat("x", userProfileNameMaxLength+1)}}
 	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsProfile, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
@@ -595,7 +595,7 @@ func TestMountProfilePostValidationErrorRendersLocalizedBadRequest(t *testing.T)
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
-	if !strings.Contains(rr.Body.String(), "Nome de usuário é obrigatório") {
+	if !strings.Contains(rr.Body.String(), "Nome deve ter no máximo 64 caracteres") {
 		t.Fatalf("body missing localized validation error: %q", rr.Body.String())
 	}
 }

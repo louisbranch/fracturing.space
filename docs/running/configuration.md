@@ -75,6 +75,7 @@ For setup steps, see [quickstart](quickstart.md) or
 
 - `FRACTURING_SPACE_WORKER_PORT`: gRPC port for worker health endpoint. Default: `8089`.
 - `FRACTURING_SPACE_WORKER_AUTH_ADDR`: auth gRPC dependency address. Default: `auth:8083`.
+- `FRACTURING_SPACE_WORKER_SOCIAL_ADDR`: social gRPC dependency address. Default: `social:8090`.
 - `FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR`: notifications gRPC dependency address. Default: `notifications:8088`.
 - `FRACTURING_SPACE_WORKER_DB_PATH`: worker SQLite path for durable attempt logs. Default: `data/worker.db`.
 - `FRACTURING_SPACE_WORKER_CONSUMER`: auth outbox consumer identifier. Default: `worker-onboarding`.

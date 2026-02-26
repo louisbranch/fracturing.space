@@ -44,16 +44,15 @@ func WriteModulePage(w http.ResponseWriter, r *http.Request, deps module.Depende
 
 	loc, lang := webi18n.ResolveLocalizer(w, r, deps.ResolveLanguage)
 	ctx := requestContext(r)
+	viewer := module.Viewer{}
+	if deps.ResolveViewer != nil {
+		viewer = deps.ResolveViewer(r)
+	}
 	if httpx.IsHTMXRequest(r) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(statusCode)
 		main := webtemplates.AppMainContentWithLayout(page.Header, page.Layout)
 		return main.Render(templ.WithChildren(ctx, fragment), w)
-	}
-
-	viewer := module.Viewer{}
-	if deps.ResolveViewer != nil {
-		viewer = deps.ResolveViewer(r)
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")

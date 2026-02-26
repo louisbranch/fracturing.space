@@ -9,6 +9,7 @@ import (
 	"time"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -178,16 +179,30 @@ func TestSetUserProfile_InvalidUsernameReturnsInvalidArgument(t *testing.T) {
 	}
 }
 
-func TestSetUserProfile_MissingNameReturnsInvalidArgument(t *testing.T) {
+func TestSetUserProfile_AllowsMissingUsernameAndName(t *testing.T) {
 	store := newFakeContactStore()
 	svc := NewService(store)
 
-	_, err := svc.SetUserProfile(context.Background(), &socialv1.SetUserProfileRequest{
-		UserId:   "user-1",
-		Username: "alice_one",
+	resp, err := svc.SetUserProfile(context.Background(), &socialv1.SetUserProfileRequest{
+		UserId: "user-1",
 	})
-	if status.Code(err) != codes.InvalidArgument {
-		t.Fatalf("code = %v, want %v", status.Code(err), codes.InvalidArgument)
+	if err != nil {
+		t.Fatalf("set user profile: %v", err)
+	}
+	if resp.GetUserProfile() == nil {
+		t.Fatal("expected user profile record")
+	}
+	if got := resp.GetUserProfile().GetUsername(); got != "" {
+		t.Fatalf("username = %q, want empty", got)
+	}
+	if got := resp.GetUserProfile().GetName(); got != "" {
+		t.Fatalf("name = %q, want empty", got)
+	}
+	if got := resp.GetUserProfile().GetAvatarSetId(); got != assetcatalog.AvatarSetPeopleV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", got, assetcatalog.AvatarSetPeopleV1)
+	}
+	if got := resp.GetUserProfile().GetAvatarAssetId(); got == "" {
+		t.Fatal("avatar_asset_id = empty, want deterministic people-set avatar")
 	}
 }
 
@@ -338,11 +353,10 @@ func (s *fakeContactStore) PutUserProfile(_ context.Context, profile storage.Use
 		return errors.New("user id is required")
 	}
 	canonicalUsername := strings.TrimSpace(strings.ToLower(profile.Username))
-	if canonicalUsername == "" {
-		return errors.New("username is required")
-	}
-	if owner, ok := s.profileOwnerByUsername[canonicalUsername]; ok && owner != userID {
-		return storage.ErrAlreadyExists
+	if canonicalUsername != "" {
+		if owner, ok := s.profileOwnerByUsername[canonicalUsername]; ok && owner != userID {
+			return storage.ErrAlreadyExists
+		}
 	}
 	if existing, ok := s.profilesByUser[userID]; ok {
 		if existing.Username == canonicalUsername &&
@@ -353,7 +367,9 @@ func (s *fakeContactStore) PutUserProfile(_ context.Context, profile storage.Use
 			profile.CreatedAt = existing.CreatedAt
 			profile.UpdatedAt = existing.UpdatedAt
 		} else {
-			delete(s.profileOwnerByUsername, existing.Username)
+			if existing.Username != "" {
+				delete(s.profileOwnerByUsername, existing.Username)
+			}
 			profile.CreatedAt = existing.CreatedAt
 		}
 	}
@@ -364,7 +380,9 @@ func (s *fakeContactStore) PutUserProfile(_ context.Context, profile storage.Use
 	profile.AvatarAssetID = strings.TrimSpace(profile.AvatarAssetID)
 	profile.Bio = strings.TrimSpace(profile.Bio)
 	s.profilesByUser[userID] = profile
-	s.profileOwnerByUsername[canonicalUsername] = userID
+	if canonicalUsername != "" {
+		s.profileOwnerByUsername[canonicalUsername] = userID
+	}
 	return nil
 }
 
@@ -378,6 +396,9 @@ func (s *fakeContactStore) GetUserProfileByUserID(_ context.Context, userID stri
 
 func (s *fakeContactStore) GetUserProfileByUsername(_ context.Context, username string) (storage.UserProfile, error) {
 	canonical := strings.TrimSpace(strings.ToLower(username))
+	if canonical == "" {
+		return storage.UserProfile{}, storage.ErrNotFound
+	}
 	userID, ok := s.profileOwnerByUsername[canonical]
 	if !ok {
 		return storage.UserProfile{}, storage.ErrNotFound

@@ -38,6 +38,9 @@ func TestParseConfig_DefaultDiscoveryAddresses(t *testing.T) {
 	if cfg.AuthAddr != "auth:8083" {
 		t.Fatalf("auth addr = %q, want %q", cfg.AuthAddr, "auth:8083")
 	}
+	if cfg.SocialAddr != "social:8090" {
+		t.Fatalf("social addr = %q, want %q", cfg.SocialAddr, "social:8090")
+	}
 	if cfg.NotificationsAddr != "notifications:8088" {
 		t.Fatalf("notifications addr = %q, want %q", cfg.NotificationsAddr, "notifications:8088")
 	}

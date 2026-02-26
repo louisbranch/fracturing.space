@@ -142,12 +142,6 @@ func (s service) saveProfile(ctx context.Context, userID string, profile Setting
 	profile.AvatarAssetID = strings.TrimSpace(profile.AvatarAssetID)
 	profile.Bio = strings.TrimSpace(profile.Bio)
 
-	if profile.Username == "" {
-		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.user_profile.error_username_required", "username is required")
-	}
-	if profile.Name == "" {
-		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.user_profile.error_name_required", "name is required")
-	}
 	if utf8.RuneCountInString(profile.Name) > userProfileNameMaxLength {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.user_profile.error_name_too_long", "name is too long")
 	}
