@@ -19,7 +19,7 @@ Primary goals:
 
 Current implementation note:
 
-- The canonical web service currently lives under `internal/services/web2/`.
+- The canonical web service currently lives under `internal/services/web/`.
 - During package rename, move this structure to `internal/services/web/` without
   changing boundaries.
 
@@ -27,11 +27,11 @@ Current implementation note:
 
 Current package layout is organized into four layers:
 
-- `internal/services/web2/app/`: startup and composition root.
-- `internal/services/web2/platform/`: middleware and cross-cutting helpers.
-- `internal/services/web2/modules/`: area modules (`public`, `campaigns`,
+- `internal/services/web/app/`: startup and composition root.
+- `internal/services/web/platform/`: middleware and cross-cutting helpers.
+- `internal/services/web/modules/`: area modules (`public`, `campaigns`,
   `settings`, etc.).
-- `internal/services/web2/routepath/`: canonical route constants.
+- `internal/services/web/routepath/`: canonical route constants.
 
 ## Module Model
 

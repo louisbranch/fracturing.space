@@ -1,3 +1,4 @@
+// Package routepath stores canonical HTTP paths for web modules.
 package routepath
 
 import (
@@ -6,124 +7,152 @@ import (
 )
 
 const (
-	// Public/auth surface routes.
-	Root                    = "/"
-	Login                   = "/login"
-	AuthLogin               = "/auth/login"
-	AuthCallback            = "/auth/callback"
-	AuthLogout              = "/auth/logout"
-	MagicLink               = "/magic"
-	PasskeyRegisterStart    = "/passkeys/register/start"
-	PasskeyRegisterFinish   = "/passkeys/register/finish"
-	PasskeyLoginStart       = "/passkeys/login/start"
-	PasskeyLoginFinish      = "/passkeys/login/finish"
-	Health                  = "/up"
-	UserProfilePrefix       = "/u/"
-	Discover                = "/discover"
-	DiscoverPrefix          = "/discover/"
-	DiscoverCampaigns       = "/discover/campaigns"
-	DiscoverCampaignsPrefix = "/discover/campaigns/"
+	Root                                = "/"
+	Login                               = "/login"
+	Logout                              = "/logout"
+	Health                              = "/up"
+	AuthPrefix                          = "/auth/"
+	AuthLogin                           = "/auth/login"
+	PasskeysPrefix                      = "/passkeys/"
+	PasskeyRegisterStart                = "/passkeys/register/start"
+	PasskeyRegisterFinish               = "/passkeys/register/finish"
+	PasskeyLoginStart                   = "/passkeys/login/start"
+	PasskeyLoginFinish                  = "/passkeys/login/finish"
+	DiscoverPrefix                      = "/discover/"
+	UserProfilePrefix                   = "/u/"
+	AppPrefix                           = "/app/"
+	AppCampaigns                        = "/app/campaigns"
+	AppCampaignsCreate                  = "/app/campaigns/create"
+	CampaignsPrefix                     = "/app/campaigns/"
+	AppCampaignPattern                  = CampaignsPrefix + "{campaignID}"
+	AppCampaignRestPattern              = CampaignsPrefix + "{campaignID}/{rest...}"
+	AppCampaignSessionsPattern          = CampaignsPrefix + "{campaignID}/sessions"
+	AppCampaignSessionPattern           = CampaignsPrefix + "{campaignID}/sessions/{sessionID}"
+	AppCampaignSessionStartPattern      = CampaignsPrefix + "{campaignID}/sessions/start"
+	AppCampaignSessionEndPattern        = CampaignsPrefix + "{campaignID}/sessions/end"
+	AppCampaignParticipantsPattern      = CampaignsPrefix + "{campaignID}/participants"
+	AppCampaignParticipantUpdatePattern = CampaignsPrefix + "{campaignID}/participants/update"
+	AppCampaignCharactersPattern        = CampaignsPrefix + "{campaignID}/characters"
+	AppCampaignCharacterPattern         = CampaignsPrefix + "{campaignID}/characters/{characterID}"
+	AppCampaignCharacterCreatePattern   = CampaignsPrefix + "{campaignID}/characters/create"
+	AppCampaignCharacterUpdatePattern   = CampaignsPrefix + "{campaignID}/characters/update"
+	AppCampaignCharacterControlPattern  = CampaignsPrefix + "{campaignID}/characters/control"
+	AppCampaignGamePattern              = CampaignsPrefix + "{campaignID}/game"
+	AppCampaignInvitesPattern           = CampaignsPrefix + "{campaignID}/invites"
+	AppCampaignInviteCreatePattern      = CampaignsPrefix + "{campaignID}/invites/create"
+	AppCampaignInviteRevokePattern      = CampaignsPrefix + "{campaignID}/invites/revoke"
+	AppNotifications                    = "/app/notifications"
+	Notifications                       = "/app/notifications/"
+	AppProfile                          = "/app/profile"
+	ProfilePrefix                       = "/app/profile/"
+	AppSettings                         = "/app/settings"
+	SettingsPrefix                      = "/app/settings/"
+	AppSettingsAIKeyRevokePattern       = SettingsPrefix + "ai-keys/{credentialID}/revoke"
+	AppSettingsRestPattern              = SettingsPrefix + "{rest...}"
 )
 
-const (
-	// Canonical authenticated app surface routes.
-	AppRoot                = "/app"
-	AppRootPrefix          = "/app/"
-	AppCampaigns           = "/app/campaigns"
-	AppCampaignsCreate     = "/app/campaigns/create"
-	AppCampaignsPrefix     = "/app/campaigns/"
-	AppProfile             = "/app/profile"
-	AppSettings            = "/app/settings"
-	AppSettingsPrefix      = "/app/settings/"
-	AppInvites             = "/app/invites"
-	AppInviteClaim         = "/app/invites/claim"
-	AppNotifications       = "/app/notifications"
-	AppNotificationsPrefix = "/app/notifications/"
-)
-
-// Campaign returns the campaign overview route.
-func Campaign(campaignID string) string {
-	return AppCampaigns + "/" + escapeSegment(campaignID)
+// AppCampaign returns the campaign overview route.
+func AppCampaign(campaignID string) string {
+	return CampaignsPrefix + escapeSegment(campaignID)
 }
 
-// CampaignSessions returns the campaign sessions route.
-func CampaignSessions(campaignID string) string {
-	return Campaign(campaignID) + "/sessions"
+// AppCampaignSessions returns the campaign sessions route.
+func AppCampaignSessions(campaignID string) string {
+	return AppCampaign(campaignID) + "/sessions"
 }
 
-// CampaignSessionStart returns the campaign session-start route.
-func CampaignSessionStart(campaignID string) string {
-	return CampaignSessions(campaignID) + "/start"
+// AppCampaignSessionStart returns the campaign session-start route.
+func AppCampaignSessionStart(campaignID string) string {
+	return AppCampaignSessions(campaignID) + "/start"
 }
 
-// CampaignSessionEnd returns the campaign session-end route.
-func CampaignSessionEnd(campaignID string) string {
-	return CampaignSessions(campaignID) + "/end"
+// AppCampaignSessionEnd returns the campaign session-end route.
+func AppCampaignSessionEnd(campaignID string) string {
+	return AppCampaignSessions(campaignID) + "/end"
 }
 
-// CampaignSession returns the campaign session-detail route.
-func CampaignSession(campaignID string, sessionID string) string {
-	return CampaignSessions(campaignID) + "/" + escapeSegment(sessionID)
+// AppCampaignSession returns the campaign session-detail route.
+func AppCampaignSession(campaignID string, sessionID string) string {
+	return AppCampaignSessions(campaignID) + "/" + escapeSegment(sessionID)
 }
 
-// CampaignParticipants returns the campaign participants route.
-func CampaignParticipants(campaignID string) string {
-	return Campaign(campaignID) + "/participants"
+// AppCampaignParticipants returns the campaign participants route.
+func AppCampaignParticipants(campaignID string) string {
+	return AppCampaign(campaignID) + "/participants"
 }
 
-// CampaignParticipantUpdate returns the campaign participant-update route.
-func CampaignParticipantUpdate(campaignID string) string {
-	return CampaignParticipants(campaignID) + "/update"
+// AppCampaignParticipantUpdate returns the campaign participant-update route.
+func AppCampaignParticipantUpdate(campaignID string) string {
+	return AppCampaignParticipants(campaignID) + "/update"
 }
 
-// CampaignCharacters returns the campaign characters route.
-func CampaignCharacters(campaignID string) string {
-	return Campaign(campaignID) + "/characters"
+// AppCampaignCharacters returns the campaign characters route.
+func AppCampaignCharacters(campaignID string) string {
+	return AppCampaign(campaignID) + "/characters"
 }
 
-// CampaignCharacterCreate returns the campaign character-create route.
-func CampaignCharacterCreate(campaignID string) string {
-	return CampaignCharacters(campaignID) + "/create"
+// AppCampaignGame returns the campaign game route.
+func AppCampaignGame(campaignID string) string {
+	return AppCampaign(campaignID) + "/game"
 }
 
-// CampaignCharacterUpdate returns the campaign character-update route.
-func CampaignCharacterUpdate(campaignID string) string {
-	return CampaignCharacters(campaignID) + "/update"
+// AppCampaignChat returns the legacy campaign chat route alias.
+func AppCampaignChat(campaignID string) string {
+	return AppCampaignGame(campaignID)
 }
 
-// CampaignCharacterControl returns the campaign character-control route.
-func CampaignCharacterControl(campaignID string) string {
-	return CampaignCharacters(campaignID) + "/control"
+// AppCampaignCharacter returns the campaign character-detail route.
+func AppCampaignCharacter(campaignID string, characterID string) string {
+	return AppCampaignCharacters(campaignID) + "/" + escapeSegment(characterID)
 }
 
-// CampaignCharacter returns the campaign character-detail route.
-func CampaignCharacter(campaignID string, characterID string) string {
-	return CampaignCharacters(campaignID) + "/" + escapeSegment(characterID)
+// AppCampaignCharacterCreate returns the campaign character-create route.
+func AppCampaignCharacterCreate(campaignID string) string {
+	return AppCampaignCharacters(campaignID) + "/create"
 }
 
-// CampaignInvites returns the campaign invites route.
-func CampaignInvites(campaignID string) string {
-	return Campaign(campaignID) + "/invites"
+// AppCampaignCharacterUpdate returns the campaign character-update route.
+func AppCampaignCharacterUpdate(campaignID string) string {
+	return AppCampaignCharacters(campaignID) + "/update"
 }
 
-// CampaignInviteCreate returns the campaign invite-create route.
-func CampaignInviteCreate(campaignID string) string {
-	return CampaignInvites(campaignID) + "/create"
+// AppCampaignCharacterControl returns the campaign character-control route.
+func AppCampaignCharacterControl(campaignID string) string {
+	return AppCampaignCharacters(campaignID) + "/control"
 }
 
-// CampaignInviteRevoke returns the campaign invite-revoke route.
-func CampaignInviteRevoke(campaignID string) string {
-	return CampaignInvites(campaignID) + "/revoke"
+// AppCampaignInvites returns the campaign invites route.
+func AppCampaignInvites(campaignID string) string {
+	return AppCampaign(campaignID) + "/invites"
 }
 
-// UserProfile returns the public-profile route.
-func UserProfile(username string) string {
-	return UserProfilePrefix + escapeSegment(username)
+// AppCampaignInviteCreate returns the campaign invite-create route.
+func AppCampaignInviteCreate(campaignID string) string {
+	return AppCampaignInvites(campaignID) + "/create"
 }
 
-// DiscoverCampaign returns the discover campaign-detail route.
-func DiscoverCampaign(campaignID string) string {
-	return DiscoverCampaigns + "/" + escapeSegment(campaignID)
+// AppCampaignInviteRevoke returns the campaign invite-revoke route.
+func AppCampaignInviteRevoke(campaignID string) string {
+	return AppCampaignInvites(campaignID) + "/revoke"
+}
+
+// AppNotificationsOpen returns the notification-open route.
+func AppNotificationsOpen(notificationID string) string {
+	return Notifications + escapeSegment(notificationID)
+}
+
+// AppSettingsProfile returns the public profile settings route.
+const AppSettingsProfile = "/app/settings/profile"
+
+// AppSettingsLocale returns the locale settings route.
+const AppSettingsLocale = "/app/settings/locale"
+
+// AppSettingsAIKeys returns the AI keys settings route.
+const AppSettingsAIKeys = "/app/settings/ai-keys"
+
+// AppSettingsAIKeyRevoke returns the AI key revoke route.
+func AppSettingsAIKeyRevoke(credentialID string) string {
+	return AppSettingsAIKeys + "/" + escapeSegment(credentialID) + "/revoke"
 }
 
 func escapeSegment(raw string) string {

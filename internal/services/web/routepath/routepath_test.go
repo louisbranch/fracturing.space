@@ -2,90 +2,161 @@ package routepath
 
 import "testing"
 
-func TestCampaignRouteBuilders(t *testing.T) {
-	t.Parallel()
-
-	if got := Campaign("camp-1"); got != "/app/campaigns/camp-1" {
-		t.Fatalf("Campaign(%q) = %q", "camp-1", got)
-	}
-	if got := CampaignSessions("camp-1"); got != "/app/campaigns/camp-1/sessions" {
-		t.Fatalf("CampaignSessions(%q) = %q", "camp-1", got)
-	}
-	if got := CampaignParticipants("camp-1"); got != "/app/campaigns/camp-1/participants" {
-		t.Fatalf("CampaignParticipants(%q) = %q", "camp-1", got)
-	}
-	if got := CampaignCharacters("camp-1"); got != "/app/campaigns/camp-1/characters" {
-		t.Fatalf("CampaignCharacters(%q) = %q", "camp-1", got)
-	}
-	if got := CampaignInvites("camp-1"); got != "/app/campaigns/camp-1/invites" {
-		t.Fatalf("CampaignInvites(%q) = %q", "camp-1", got)
-	}
-}
-
-func TestCampaignRouteBuildersEscapeIDs(t *testing.T) {
-	t.Parallel()
-
-	if got := Campaign("camp/1"); got != "/app/campaigns/camp%2F1" {
-		t.Fatalf("Campaign(%q) = %q", "camp/1", got)
-	}
-	if got := CampaignSession("camp-1", "sess/1"); got != "/app/campaigns/camp-1/sessions/sess%2F1" {
-		t.Fatalf("CampaignSession(%q, %q) = %q", "camp-1", "sess/1", got)
-	}
-	if got := CampaignCharacter("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1" {
-		t.Fatalf("CampaignCharacter(%q, %q) = %q", "camp-1", "char/1", got)
-	}
-}
-
 func TestTopLevelRouteConstants(t *testing.T) {
 	t.Parallel()
 
-	if AppRoot != "/app" {
-		t.Fatalf("AppRoot = %q", AppRoot)
+	if Root != "/" {
+		t.Fatalf("Root = %q", Root)
 	}
-	if AppCampaigns != "/app/campaigns" {
-		t.Fatalf("AppCampaigns = %q", AppCampaigns)
+	if Login != "/login" {
+		t.Fatalf("Login = %q", Login)
 	}
-	if AppProfile != "/app/profile" {
-		t.Fatalf("AppProfile = %q", AppProfile)
+	if Logout != "/logout" {
+		t.Fatalf("Logout = %q", Logout)
 	}
-	if AppSettings != "/app/settings" {
-		t.Fatalf("AppSettings = %q", AppSettings)
+	if Health != "/up" {
+		t.Fatalf("Health = %q", Health)
 	}
-	if AppInvites != "/app/invites" {
-		t.Fatalf("AppInvites = %q", AppInvites)
+	if CampaignsPrefix != "/app/campaigns/" {
+		t.Fatalf("CampaignsPrefix = %q", CampaignsPrefix)
 	}
-	if AppNotifications != "/app/notifications" {
-		t.Fatalf("AppNotifications = %q", AppNotifications)
+	if Notifications != "/app/notifications/" {
+		t.Fatalf("Notifications = %q", Notifications)
 	}
-}
-
-func TestPublicRouteConstants(t *testing.T) {
-	t.Parallel()
-
-	if UserProfilePrefix != "/u/" {
-		t.Fatalf("UserProfilePrefix = %q", UserProfilePrefix)
-	}
-	if Discover != "/discover" {
-		t.Fatalf("Discover = %q", Discover)
-	}
-	if DiscoverCampaigns != "/discover/campaigns" {
-		t.Fatalf("DiscoverCampaigns = %q", DiscoverCampaigns)
-	}
-	if DiscoverCampaignsPrefix != "/discover/campaigns/" {
-		t.Fatalf("DiscoverCampaignsPrefix = %q", DiscoverCampaignsPrefix)
+	if SettingsPrefix != "/app/settings/" {
+		t.Fatalf("SettingsPrefix = %q", SettingsPrefix)
 	}
 }
 
-func TestPublicRouteBuilders(t *testing.T) {
+func TestCampaignRouteBuilders(t *testing.T) {
 	t.Parallel()
 
-	if got := UserProfile("alice"); got != "/u/alice" {
-		t.Fatalf("UserProfile(%q) = %q", "alice", got)
+	if got := AppCampaign("camp-1"); got != "/app/campaigns/camp-1" {
+		t.Fatalf("AppCampaign() = %q", got)
 	}
-	if got := DiscoverCampaign("camp-1"); got != "/discover/campaigns/camp-1" {
-		t.Fatalf("DiscoverCampaign(%q) = %q", "camp-1", got)
+	if got := AppCampaignSessions("camp-1"); got != "/app/campaigns/camp-1/sessions" {
+		t.Fatalf("AppCampaignSessions() = %q", got)
 	}
-	if got := DiscoverCampaign("camp/1"); got != "/discover/campaigns/camp%2F1" {
-		t.Fatalf("DiscoverCampaign(%q) = %q", "camp/1", got)
+	if got := AppCampaignSessionStart("camp-1"); got != "/app/campaigns/camp-1/sessions/start" {
+		t.Fatalf("AppCampaignSessionStart() = %q", got)
+	}
+	if got := AppCampaignSessionEnd("camp-1"); got != "/app/campaigns/camp-1/sessions/end" {
+		t.Fatalf("AppCampaignSessionEnd() = %q", got)
+	}
+	if got := AppCampaignSession("camp-1", "sess-1"); got != "/app/campaigns/camp-1/sessions/sess-1" {
+		t.Fatalf("AppCampaignSession() = %q", got)
+	}
+	if got := AppCampaignParticipants("camp-1"); got != "/app/campaigns/camp-1/participants" {
+		t.Fatalf("AppCampaignParticipants() = %q", got)
+	}
+	if got := AppCampaignParticipantUpdate("camp-1"); got != "/app/campaigns/camp-1/participants/update" {
+		t.Fatalf("AppCampaignParticipantUpdate() = %q", got)
+	}
+	if got := AppCampaignCharacters("camp-1"); got != "/app/campaigns/camp-1/characters" {
+		t.Fatalf("AppCampaignCharacters() = %q", got)
+	}
+	if got := AppCampaignGame("camp-1"); got != "/app/campaigns/camp-1/game" {
+		t.Fatalf("AppCampaignGame() = %q", got)
+	}
+	if got := AppCampaignCharacter("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1" {
+		t.Fatalf("AppCampaignCharacter() = %q", got)
+	}
+	if got := AppCampaignCharacterCreate("camp-1"); got != "/app/campaigns/camp-1/characters/create" {
+		t.Fatalf("AppCampaignCharacterCreate() = %q", got)
+	}
+	if got := AppCampaignCharacterUpdate("camp-1"); got != "/app/campaigns/camp-1/characters/update" {
+		t.Fatalf("AppCampaignCharacterUpdate() = %q", got)
+	}
+	if got := AppCampaignCharacterControl("camp-1"); got != "/app/campaigns/camp-1/characters/control" {
+		t.Fatalf("AppCampaignCharacterControl() = %q", got)
+	}
+	if got := AppCampaignInvites("camp-1"); got != "/app/campaigns/camp-1/invites" {
+		t.Fatalf("AppCampaignInvites() = %q", got)
+	}
+	if got := AppCampaignInviteCreate("camp-1"); got != "/app/campaigns/camp-1/invites/create" {
+		t.Fatalf("AppCampaignInviteCreate() = %q", got)
+	}
+	if got := AppCampaignInviteRevoke("camp-1"); got != "/app/campaigns/camp-1/invites/revoke" {
+		t.Fatalf("AppCampaignInviteRevoke() = %q", got)
+	}
+}
+
+func TestServeMuxPatternConstants(t *testing.T) {
+	t.Parallel()
+
+	if AppCampaignPattern != "/app/campaigns/{campaignID}" {
+		t.Fatalf("AppCampaignPattern = %q", AppCampaignPattern)
+	}
+	if AppCampaignSessionsPattern != "/app/campaigns/{campaignID}/sessions" {
+		t.Fatalf("AppCampaignSessionsPattern = %q", AppCampaignSessionsPattern)
+	}
+	if AppCampaignSessionPattern != "/app/campaigns/{campaignID}/sessions/{sessionID}" {
+		t.Fatalf("AppCampaignSessionPattern = %q", AppCampaignSessionPattern)
+	}
+	if AppCampaignParticipantsPattern != "/app/campaigns/{campaignID}/participants" {
+		t.Fatalf("AppCampaignParticipantsPattern = %q", AppCampaignParticipantsPattern)
+	}
+	if AppCampaignCharactersPattern != "/app/campaigns/{campaignID}/characters" {
+		t.Fatalf("AppCampaignCharactersPattern = %q", AppCampaignCharactersPattern)
+	}
+	if AppCampaignCharacterPattern != "/app/campaigns/{campaignID}/characters/{characterID}" {
+		t.Fatalf("AppCampaignCharacterPattern = %q", AppCampaignCharacterPattern)
+	}
+	if AppCampaignInvitesPattern != "/app/campaigns/{campaignID}/invites" {
+		t.Fatalf("AppCampaignInvitesPattern = %q", AppCampaignInvitesPattern)
+	}
+	if AppSettingsAIKeyRevokePattern != "/app/settings/ai-keys/{credentialID}/revoke" {
+		t.Fatalf("AppSettingsAIKeyRevokePattern = %q", AppSettingsAIKeyRevokePattern)
+	}
+}
+
+func TestNotificationAndSettingsRouteBuilders(t *testing.T) {
+	t.Parallel()
+
+	if got := AppNotificationsOpen("n1"); got != "/app/notifications/n1" {
+		t.Fatalf("AppNotificationsOpen() = %q", got)
+	}
+	if AppSettingsProfile != "/app/settings/profile" {
+		t.Fatalf("AppSettingsProfile = %q", AppSettingsProfile)
+	}
+	if AppSettingsLocale != "/app/settings/locale" {
+		t.Fatalf("AppSettingsLocale = %q", AppSettingsLocale)
+	}
+	if got := AppSettingsAIKeyRevoke("cred-1"); got != "/app/settings/ai-keys/cred-1/revoke" {
+		t.Fatalf("AppSettingsAIKeyRevoke() = %q", got)
+	}
+}
+
+func TestRouteBuildersEscapeSegments(t *testing.T) {
+	t.Parallel()
+
+	if got := AppCampaign("camp/1"); got != "/app/campaigns/camp%2F1" {
+		t.Fatalf("AppCampaign() escaped = %q", got)
+	}
+	if got := AppCampaignSession("camp-1", "sess/1"); got != "/app/campaigns/camp-1/sessions/sess%2F1" {
+		t.Fatalf("AppCampaignSession() escaped = %q", got)
+	}
+	if got := AppCampaignGame("camp/1"); got != "/app/campaigns/camp%2F1/game" {
+		t.Fatalf("AppCampaignGame() escaped = %q", got)
+	}
+	if got := AppCampaignCharacter("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1" {
+		t.Fatalf("AppCampaignCharacter() escaped = %q", got)
+	}
+	if got := AppSettingsAIKeyRevoke("cred/1"); got != "/app/settings/ai-keys/cred%2F1/revoke" {
+		t.Fatalf("AppSettingsAIKeyRevoke() escaped = %q", got)
+	}
+	if got := AppNotificationsOpen("note/1"); got != "/app/notifications/note%2F1" {
+		t.Fatalf("AppNotificationsOpen() escaped = %q", got)
+	}
+}
+
+func TestEscapeSegmentTrimsWhitespace(t *testing.T) {
+	t.Parallel()
+
+	if got := escapeSegment("  camp-1  "); got != "camp-1" {
+		t.Fatalf("escapeSegment() = %q", got)
+	}
+	if got := escapeSegment("  "); got != "" {
+		t.Fatalf("escapeSegment() empty = %q", got)
 	}
 }

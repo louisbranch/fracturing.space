@@ -10,13 +10,13 @@ This playbook defines the default way to add or modify a web area module.
 
 Path note:
 
-- Current implementation paths are under `internal/services/web2/`.
+- Current implementation paths are under `internal/services/web/`.
 - During package rename, move these packages to `internal/services/web/` while
   preserving the same boundaries.
 
 ## Module Template
 
-Create a package under `internal/services/web2/modules/<area>/` with this
+Create a package under `internal/services/web/modules/<area>/` with this
 baseline:
 
 - `module.go`: module identity and mount implementation.
@@ -41,9 +41,9 @@ baseline:
   surfaces.
 - Source browser endpoint URLs from `routepath` constants/builders (including
   script data attributes) instead of hardcoded literals.
-- Use `internal/services/web2/platform/httpx.WriteRedirect` for mutation
+- Use `internal/services/web/platform/httpx.WriteRedirect` for mutation
   success redirects so HTMX and non-HTMX clients stay in parity.
-- Use `internal/services/web2/platform/httpx.MethodNotAllowed` for `405` +
+- Use `internal/services/web/platform/httpx.MethodNotAllowed` for `405` +
   `Allow` behavior instead of duplicating module-local helpers.
 - Keep handlers thin; call service methods for behavior.
 - Return typed errors and map them once at transport boundaries.
@@ -62,8 +62,8 @@ baseline:
 ## Security Defaults
 
 - Public auth pages must treat users as authenticated only after validating
-  `web2_session` through auth service lookup.
-- Protected route auth must be session-backed (`web2_session`) and validated
+  `web_session` through auth service lookup.
+- Protected route auth must be session-backed (`web_session`) and validated
   through auth service lookup; do not trust raw user-id headers as an
   authentication source.
 - Protected mutation routes (`POST`, `PUT`, `PATCH`, `DELETE`) rely on
@@ -77,22 +77,22 @@ baseline:
 
 - Resolve principal/session once per request and reuse that resolved state
   throughout handler flow.
-- Use `internal/services/web2/platform/webctx.WithResolvedUserID` for
+- Use `internal/services/web/platform/webctx.WithResolvedUserID` for
   downstream service calls that require user identity metadata.
 - Do not pass raw request context to mutation service calls when resolved user
   identity is available.
 - Keep user-scoped service/gateway boundaries explicit: pass `userID`
   parameters instead of extracting identity from transport metadata inside
   gateways.
-- Prefer `internal/services/web2/platform/weberror.WriteModuleError` for
+- Prefer `internal/services/web/platform/weberror.WriteModuleError` for
   consistent localized error rendering across full-page and HTMX app flows.
-- Use `internal/services/web2/platform/weberror.PublicMessage` for user-visible
+- Use `internal/services/web/platform/weberror.PublicMessage` for user-visible
   JSON/text errors so raw internal strings are never exposed.
 
 ## Registering a Module
 
 1. Implement the module package.
-2. Add module constructor in `internal/services/web2/modules/registry.go`.
+2. Add module constructor in `internal/services/web/modules/registry.go`.
 3. Choose public or protected group.
 4. Choose stability tier:
    - experimental (`ExperimentalPublicModules` /
@@ -108,7 +108,7 @@ baseline:
 
 Run at minimum:
 
-- `go test ./internal/services/web2/...`
+- `go test ./internal/services/web/...`
 - `make test`
 - `make integration`
 - `make cover`

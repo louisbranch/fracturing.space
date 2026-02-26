@@ -42,10 +42,6 @@ FROM base AS build-web
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/web ./cmd/web
 
-FROM base AS build-web2
-
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/web2 ./cmd/web2
-
 FROM base AS build-chat
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/chat ./cmd/chat
@@ -131,16 +127,6 @@ COPY --from=build-web /out/web /app/web
 EXPOSE 8080
 
 ENTRYPOINT ["/app/web"]
-
-FROM gcr.io/distroless/static-debian12:nonroot AS web2
-
-WORKDIR /app
-
-COPY --from=build-web2 /out/web2 /app/web2
-
-EXPOSE 8092
-
-ENTRYPOINT ["/app/web2"]
 
 FROM gcr.io/distroless/static-debian12:nonroot AS chat
 

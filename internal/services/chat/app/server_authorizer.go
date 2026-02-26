@@ -48,8 +48,8 @@ func (a *campaignAuthorizer) Authenticate(ctx context.Context, accessToken strin
 	if accessToken == "" {
 		return "", errors.New("access token is required")
 	}
-	if strings.HasPrefix(accessToken, web2SessionTokenPrefix) {
-		return a.authenticateWebSession(ctx, strings.TrimPrefix(accessToken, web2SessionTokenPrefix))
+	if strings.HasPrefix(accessToken, webSessionTokenPrefix) {
+		return a.authenticateWebSession(ctx, strings.TrimPrefix(accessToken, webSessionTokenPrefix))
 	}
 	if a == nil || a.httpClient == nil {
 		return "", errors.New("auth is not configured")

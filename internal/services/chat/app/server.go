@@ -20,10 +20,10 @@ import (
 )
 
 const (
-	tokenCookieName       = "fs_token"
-	web2SessionCookieName = "web2_session"
+	tokenCookieName      = "fs_token"
+	webSessionCookieName = "web_session"
 
-	web2SessionTokenPrefix = "web2_session:"
+	webSessionTokenPrefix = "web_session:"
 
 	defaultSessionID = "active"
 
@@ -248,7 +248,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 			platformgrpc.DefaultClientDialOptions()...,
 		)
 		if err != nil {
-			log.Printf("auth gRPC dial failed, web2 session chat auth unavailable: %v", err)
+			log.Printf("auth gRPC dial failed, web session chat auth unavailable: %v", err)
 		} else {
 			authConn = conn
 			authSessionClient = authv1.NewAuthServiceClient(conn)

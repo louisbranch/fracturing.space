@@ -1,0 +1,606 @@
+package templates
+
+import (
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	"strings"
+)
+
+type CampaignListItem struct {
+	ID               string
+	Name             string
+	Theme            string
+	CoverImageURL    string
+	ParticipantCount string
+	CharacterCount   string
+}
+
+type CampaignDetailView struct {
+	Marker      string
+	CampaignID  string
+	SessionID   string
+	CharacterID string
+	Name        string
+	Theme       string
+	System      string
+	GMMode      string
+	Participants []CampaignParticipantView
+	Characters   []CampaignCharacterView
+	Sessions     []CampaignSessionView
+	Invites      []CampaignInviteView
+}
+
+type CampaignChatView struct {
+	CampaignID        string
+	CampaignName      string
+	BackURL           string
+	ChatFallbackPort  string
+}
+
+type CampaignParticipantView struct {
+	ID             string
+	Name           string
+	Role           string
+	CampaignAccess string
+	Controller     string
+	AvatarURL      string
+}
+
+type CampaignCharacterView struct {
+	ID         string
+	Name       string
+	Kind       string
+	Controller string
+	AvatarURL  string
+}
+
+type CampaignSessionView struct {
+	ID        string
+	Name      string
+	Status    string
+	StartedAt string
+	UpdatedAt string
+	EndedAt   string
+}
+
+type CampaignInviteView struct {
+	ID              string
+	ParticipantID   string
+	RecipientUserID string
+	Status          string
+}
+
+func campaignOverviewName(view CampaignDetailView) string {
+	if strings.TrimSpace(view.Name) != "" {
+		return strings.TrimSpace(view.Name)
+	}
+	return strings.TrimSpace(view.CampaignID)
+}
+
+func campaignOverviewTheme(loc Localizer, view CampaignDetailView) string {
+	if strings.TrimSpace(view.Theme) == "" {
+		return T(loc, "game.campaign.overview.theme_empty")
+	}
+	return strings.TrimSpace(view.Theme)
+}
+
+func campaignChatName(view CampaignChatView) string {
+	if strings.TrimSpace(view.CampaignName) != "" {
+		return strings.TrimSpace(view.CampaignName)
+	}
+	if strings.TrimSpace(view.CampaignID) != "" {
+		return strings.TrimSpace(view.CampaignID)
+	}
+	return "Campaign"
+}
+
+func campaignChatTitle(view CampaignChatView) string {
+	return campaignChatName(view) + " Game"
+}
+
+func campaignChatBackURL(view CampaignChatView) string {
+	if strings.TrimSpace(view.BackURL) != "" {
+		return strings.TrimSpace(view.BackURL)
+	}
+	if strings.TrimSpace(view.CampaignID) != "" {
+		return routepath.AppCampaign(strings.TrimSpace(view.CampaignID))
+	}
+	return routepath.AppCampaigns
+}
+
+func campaignListItemURL(item CampaignListItem) string {
+	campaignID := strings.TrimSpace(item.ID)
+	if campaignID == "" {
+		return ""
+	}
+	return routepath.AppCampaign(campaignID)
+}
+
+func campaignChatFallbackPort(view CampaignChatView) string {
+	return strings.TrimSpace(view.ChatFallbackPort)
+}
+
+func campaignSystemLabel(loc Localizer, value string) string {
+	raw := strings.TrimSpace(value)
+	value = strings.ToLower(raw)
+	switch value {
+	case "", "unspecified":
+		return T(loc, "game.campaign.system_unspecified")
+	case "daggerheart":
+		return T(loc, "game.campaigns.system_daggerheart")
+	default:
+		return raw
+	}
+}
+
+func campaignGMModeLabel(loc Localizer, value string) string {
+	raw := strings.TrimSpace(value)
+	value = strings.ToLower(raw)
+	switch value {
+	case "", "unspecified":
+		return T(loc, "game.campaign.gm_mode_unspecified")
+	case "human":
+		return T(loc, "game.create.field_gm_mode_human")
+	case "ai":
+		return T(loc, "game.create.field_gm_mode_ai")
+	case "hybrid":
+		return T(loc, "game.create.field_gm_mode_hybrid")
+	default:
+		return raw
+	}
+}
+
+func campaignOverviewSystem(loc Localizer, view CampaignDetailView) string {
+	return campaignSystemLabel(loc, view.System)
+}
+
+func campaignOverviewGMMode(loc Localizer, view CampaignDetailView) string {
+	return campaignGMModeLabel(loc, view.GMMode)
+}
+
+func campaignParticipantRoleLabel(loc Localizer, value string) string {
+	raw := strings.TrimSpace(value)
+	value = strings.ToLower(raw)
+	switch value {
+	case "gm":
+		return T(loc, "game.participants.value.gm")
+	case "player":
+		return T(loc, "game.participants.value.player")
+	case "", "unspecified":
+		return T(loc, "game.campaign.system_unspecified")
+	default:
+		return raw
+	}
+}
+
+func campaignParticipantAccessLabel(loc Localizer, value string) string {
+	raw := strings.TrimSpace(value)
+	value = strings.ToLower(raw)
+	switch value {
+	case "member":
+		return T(loc, "game.participants.value.member")
+	case "manager":
+		return T(loc, "game.participants.value.manager")
+	case "owner":
+		return T(loc, "game.participants.value.owner")
+	case "", "unspecified":
+		return T(loc, "game.campaign.system_unspecified")
+	default:
+		return raw
+	}
+}
+
+func campaignParticipantControllerLabel(loc Localizer, value string) string {
+	raw := strings.TrimSpace(value)
+	value = strings.ToLower(raw)
+	switch value {
+	case "human":
+		return T(loc, "game.participants.value.human")
+	case "ai":
+		return T(loc, "game.participants.value_ai")
+	case "unassigned":
+		return T(loc, "game.participants.value_unassigned")
+	case "", "unspecified":
+		return T(loc, "game.campaign.system_unspecified")
+	default:
+		return raw
+	}
+}
+
+func campaignCharacterKindLabel(loc Localizer, value string) string {
+	raw := strings.TrimSpace(value)
+	value = strings.ToLower(raw)
+	switch value {
+	case "pc":
+		return T(loc, "game.characters.value_pc")
+	case "npc":
+		return T(loc, "game.characters.value_npc")
+	case "", "unspecified":
+		return T(loc, "game.character_detail.kind_unspecified")
+	default:
+		return raw
+	}
+}
+
+func campaignSessionByID(view CampaignDetailView) CampaignSessionView {
+	sessionID := strings.TrimSpace(view.SessionID)
+	if sessionID == "" {
+		return CampaignSessionView{}
+	}
+	for _, session := range view.Sessions {
+		if strings.TrimSpace(session.ID) == sessionID {
+			return session
+		}
+	}
+	return CampaignSessionView{ID: sessionID, Name: sessionID, Status: "Unspecified"}
+}
+
+func campaignCharacterByID(view CampaignDetailView) CampaignCharacterView {
+	characterID := strings.TrimSpace(view.CharacterID)
+	if characterID == "" {
+		return CampaignCharacterView{}
+	}
+	for _, character := range view.Characters {
+		if strings.TrimSpace(character.ID) == characterID {
+			return character
+		}
+	}
+	return CampaignCharacterView{ID: characterID, Name: characterID, Kind: "Unspecified", Controller: "Unassigned"}
+}
+
+type CampaignCreateFormValues struct {
+	Name               string
+	System             string
+	GMMode             string
+	CreatorDisplayName string
+	ThemePrompt        string
+}
+
+func campaignCreateSystemValue(form CampaignCreateFormValues) string {
+	if form.System == "" {
+		return "daggerheart"
+	}
+	return form.System
+}
+
+func campaignCreateGMModeValue(form CampaignCreateFormValues) string {
+	if form.GMMode == "" {
+		return "human"
+	}
+	return form.GMMode
+}
+
+templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
+	<div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+		if len(items) == 0 {
+			<p>{ T(loc, "game.campaigns.empty") }</p>
+		}
+		for _, item := range items {
+			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-id={ item.ID }>
+				<figure>
+					if campaignListItemURL(item) != "" {
+						<a href={ campaignListItemURL(item) } class="group block">
+							<img src={ item.CoverImageURL } alt={ item.Name + " cover" } class="w-full object-cover"/>
+						</a>
+					} else {
+						<img src={ item.CoverImageURL } alt={ item.Name + " cover" } class="w-full object-cover"/>
+					}
+				</figure>
+				<div class="card-body">
+					<h2 class="card-title">
+						if campaignListItemURL(item) != "" {
+							<a href={ campaignListItemURL(item) }>{ item.Name }</a>
+						} else {
+							{ item.Name }
+						}
+					</h2>
+					if item.Theme != "" {
+						<p class="text-sm opacity-70">{ item.Theme }</p>
+					}
+					<div class="card-actions justify-start">
+						<div class="badge badge-outline">
+							@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_PARTICIPANT, "size-4 me-1")
+							{ T(loc, "game.campaigns.table.participants") }: { item.ParticipantCount }
+						</div>
+						<div class="badge badge-outline">
+							@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CHARACTER, "size-4 me-1")
+							{ T(loc, "game.campaigns.table.characters") }: { item.CharacterCount }
+						</div>
+					</div>
+				</div>
+			</div>
+		}
+	</div>
+}
+
+templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
+	// FIXME(web-cutover): replace marker fallback content with full route-specific pages before campaigns detail routes are treated as complete.
+	<section id={ view.Marker } class="space-y-4">
+		if view.Marker == "campaign-overview" {
+			<div class="card bg-base-200">
+				<div class="card-body">
+					<h2 class="card-title" data-campaign-overview-name={ campaignOverviewName(view) }>{ campaignOverviewName(view) }</h2>
+					<p data-campaign-overview-theme={ campaignOverviewTheme(loc, view) }>{ campaignOverviewTheme(loc, view) }</p>
+					<dl class="grid gap-3 md:grid-cols-2 text-sm">
+						<div>
+							<dt class="opacity-70">{ T(loc, "game.campaigns.table.system") }</dt>
+							<dd data-campaign-overview-system={ campaignOverviewSystem(loc, view) }>{ campaignOverviewSystem(loc, view) }</dd>
+						</div>
+						<div>
+							<dt class="opacity-70">{ T(loc, "game.campaigns.table.gm_mode") }</dt>
+							<dd data-campaign-overview-gm-mode={ campaignOverviewGMMode(loc, view) }>{ campaignOverviewGMMode(loc, view) }</dd>
+						</div>
+						<div class="md:col-span-2">
+							<dt class="opacity-70">{ T(loc, "game.campaign.overview.label_campaign_id") }</dt>
+							<dd>{ view.CampaignID }</dd>
+						</div>
+					</dl>
+				</div>
+			</div>
+		} else if view.Marker == "campaign-participants" {
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				if len(view.Participants) == 0 {
+					<p>{ T(loc, "game.participants.empty") }</p>
+				}
+				for _, participant := range view.Participants {
+					<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side overflow-hidden" data-campaign-participant-card-id={ participant.ID }>
+						<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0">
+							<img src={ participant.AvatarURL } alt={ participant.Name + " avatar" } class="h-full w-full object-cover"/>
+						</figure>
+						<div class="card-body gap-2 p-4">
+							<h2 class="card-title" data-campaign-participant-name={ participant.Name }>{ participant.Name }</h2>
+							<dl class="space-y-1 text-sm">
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "game.participants.field_role") }:</dt>
+									<dd data-campaign-participant-role={ campaignParticipantRoleLabel(loc, participant.Role) }>{ campaignParticipantRoleLabel(loc, participant.Role) }</dd>
+								</div>
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "game.participants.field_access") }:</dt>
+									<dd data-campaign-participant-access={ campaignParticipantAccessLabel(loc, participant.CampaignAccess) }>{ campaignParticipantAccessLabel(loc, participant.CampaignAccess) }</dd>
+								</div>
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "game.participants.field_controller") }:</dt>
+									<dd data-campaign-participant-controller={ campaignParticipantControllerLabel(loc, participant.Controller) }>{ campaignParticipantControllerLabel(loc, participant.Controller) }</dd>
+								</div>
+							</dl>
+						</div>
+					</div>
+				}
+			</div>
+		} else if view.Marker == "campaign-characters" {
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				if len(view.Characters) == 0 {
+					<p>{ T(loc, "game.characters.empty") }</p>
+				}
+				for _, character := range view.Characters {
+					<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side overflow-hidden" data-campaign-character-card-id={ character.ID }>
+						<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0">
+							<img src={ character.AvatarURL } alt={ character.Name + " avatar" } class="h-full w-full object-cover"/>
+						</figure>
+						<div class="card-body gap-2 p-4">
+							<h2 class="card-title" data-campaign-character-name={ character.Name }>{ character.Name }</h2>
+							<dl class="space-y-1 text-sm">
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "game.characters.field_kind") }:</dt>
+									<dd data-campaign-character-kind={ campaignCharacterKindLabel(loc, character.Kind) }>{ campaignCharacterKindLabel(loc, character.Kind) }</dd>
+								</div>
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "game.participants.field_controller") }:</dt>
+									<dd data-campaign-character-controller={ campaignParticipantControllerLabel(loc, character.Controller) }>{ campaignParticipantControllerLabel(loc, character.Controller) }</dd>
+								</div>
+							</dl>
+						</div>
+					</div>
+				}
+			</div>
+		} else if view.Marker == "campaign-sessions" {
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				if len(view.Sessions) == 0 {
+					<p>{ T(loc, "game.sessions.empty") }</p>
+				}
+				for _, session := range view.Sessions {
+					<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-session-card-id={ session.ID }>
+						<div class="card-body gap-2 p-4">
+							<h2 class="card-title" data-campaign-session-name={ session.Name }>
+								<a href={ routepath.AppCampaignSession(view.CampaignID, session.ID) }>{ session.Name }</a>
+							</h2>
+							<p data-campaign-session-status={ session.Status }>{ session.Status }</p>
+						</div>
+					</div>
+				}
+			</div>
+		} else if view.Marker == "campaign-session-detail" {
+			<div class="card bg-base-200">
+				<div class="card-body">
+					<h2 class="card-title" data-campaign-session-detail-id={ campaignSessionByID(view).ID }>{ campaignSessionByID(view).ID }</h2>
+					<p data-campaign-session-detail-name={ campaignSessionByID(view).Name }>{ campaignSessionByID(view).Name }</p>
+					<p data-campaign-session-detail-status={ campaignSessionByID(view).Status }>{ campaignSessionByID(view).Status }</p>
+				</div>
+			</div>
+		} else if view.Marker == "campaign-character-detail" {
+			<div class="card bg-base-200">
+				<div class="card-body">
+					<h2 class="card-title" data-campaign-character-detail-id={ campaignCharacterByID(view).ID }>{ campaignCharacterByID(view).ID }</h2>
+					<p data-campaign-character-detail-name={ campaignCharacterByID(view).Name }>{ campaignCharacterByID(view).Name }</p>
+					<p data-campaign-character-detail-kind={ campaignCharacterKindLabel(loc, campaignCharacterByID(view).Kind) }>{ campaignCharacterKindLabel(loc, campaignCharacterByID(view).Kind) }</p>
+					<p data-campaign-character-detail-controller={ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }>{ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }</p>
+				</div>
+			</div>
+		} else if view.Marker == "campaign-invites" {
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				if len(view.Invites) == 0 {
+					<p>{ T(loc, "game.campaign_invites.empty") }</p>
+				}
+				for _, invite := range view.Invites {
+					<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-invite-card-id={ invite.ID }>
+						<div class="card-body gap-2 p-4">
+							<p data-campaign-invite-participant={ invite.ParticipantID }>{ invite.ParticipantID }</p>
+							<p data-campaign-invite-recipient={ invite.RecipientUserID }>{ invite.RecipientUserID }</p>
+							<p data-campaign-invite-status={ invite.Status }>{ invite.Status }</p>
+						</div>
+					</div>
+				}
+			</div>
+		} else {
+			<h2>{ view.Marker }</h2>
+			<p>campaign={ view.CampaignID }</p>
+			if view.SessionID != "" {
+				<p>session={ view.SessionID }</p>
+			}
+			if view.CharacterID != "" {
+				<p>character={ view.CharacterID }</p>
+			}
+		}
+	</section>
+}
+
+templ CampaignChatPage(view CampaignChatView, lang string, loc Localizer) {
+	<!doctype html>
+	<html lang={ appLayoutLang(lang) } data-theme={ daisyTheme }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ sharedtemplates.ComposePageTitle(campaignChatTitle(view)) }</title>
+			<meta name="description" content={ T(loc, "layout.meta_description") }/>
+			@daisyThemeHead()
+			<link rel="stylesheet" href="/static/theme.css"/>
+			@htmxHead()
+		</head>
+		<body class="min-h-[100dvh] bg-base-300">
+			@sharedtemplates.LucideSprite()
+			<div class="drawer lg:drawer-open min-h-[100dvh] campaign-chat-drawer" data-campaign-chat-page="true">
+				<input id="campaign-chat-drawer" type="checkbox" class="drawer-toggle"/>
+				<div class="drawer-content flex min-h-[100dvh] flex-col">
+					<header class="navbar border-b border-base-300 bg-base-100 px-4 lg:px-6">
+						<label for="campaign-chat-drawer" class="btn btn-ghost btn-square" aria-label="Toggle sidebar">
+							@sharedtemplates.LucideIcon("panel-left-open", "chat-drawer-icon-open size-5")
+							@sharedtemplates.LucideIcon("panel-right-close", "chat-drawer-icon-close size-5")
+						</label>
+						<div class="px-2 text-lg font-bold" data-campaign-chat-title={ campaignChatTitle(view) }>{ campaignChatTitle(view) }</div>
+					</header>
+					<main class="flex-1 p-4 lg:p-6">
+						<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+							<section class="card border border-base-300 bg-base-100 shadow-xl">
+								<div
+									class="card-body"
+									data-campaign-id={ view.CampaignID }
+									data-chat-invalid-id={ T(loc, "campaign.chat.invalid_id") }
+									data-chat-connecting={ T(loc, "campaign.chat.connecting") }
+									data-chat-chat-unavailable={ T(loc, "campaign.chat.unavailable") }
+									data-chat-ws-setup-failed={ T(loc, "campaign.chat.ws_setup_failed") }
+									data-chat-connected={ T(loc, "campaign.chat.connected") }
+									data-chat-invalid-frame={ T(loc, "campaign.chat.invalid_frame") }
+									data-chat-joined={ T(loc, "campaign.chat.joined") }
+									data-chat-participant={ T(loc, "campaign.chat.participant") }
+									data-chat-request-failed={ T(loc, "campaign.chat.request_failed") }
+									data-chat-error-prefix={ T(loc, "campaign.chat.error_prefix") }
+									data-chat-unable-to-send={ T(loc, "campaign.chat.unable_to_send") }
+									data-chat-disconnected-retrying={ T(loc, "campaign.chat.disconnected_retrying") }
+									data-chat-fallback-port={ campaignChatFallbackPort(view) }
+								>
+									<div class="space-y-4">
+										<div class="flex items-center justify-between gap-4">
+											<h2 class="text-lg font-semibold">{ T(loc, "campaign.shell_chat") }</h2>
+											<span id="chat-status" class="text-sm opacity-70">{ T(loc, "campaign.shell_connecting") }</span>
+										</div>
+										<div id="chat-messages" class="h-96 overflow-y-auto rounded border border-base-300 p-3 text-sm"></div>
+										<form id="chat-form" class="flex gap-2">
+											<input id="chat-input" class="input input-bordered w-full" type="text" maxlength="2000" placeholder={ T(loc, "campaign.shell_message_placeholder") } autocomplete="off"/>
+											<button id="chat-send" class="btn btn-primary" type="submit">{ T(loc, "campaign.shell_send") }</button>
+										</form>
+									</div>
+								</div>
+							</section>
+							<div class="hidden lg:block"></div>
+						</div>
+					</main>
+				</div>
+				<div class="drawer-side is-drawer-close:overflow-visible">
+					<label for="campaign-chat-drawer" aria-label="Close sidebar" class="drawer-overlay chat-drawer-overlay lg:hidden"></label>
+					<aside class="chat-drawer-shell flex min-h-full flex-col items-start border-e border-base-300 bg-base-200">
+						<ul class="menu w-full grow gap-2 p-2">
+							<li>
+								<a
+									href={ campaignChatBackURL(view) }
+									title={ T(loc, "game.campaign.title") }
+									aria-label={ T(loc, "game.campaign.title") }
+									class="justify-start"
+								>
+									@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CAMPAIGN, "size-5")
+									<span class="chat-drawer-link-label">{ T(loc, "game.campaign.title") }</span>
+								</a>
+							</li>
+						</ul>
+					</aside>
+				</div>
+			</div>
+			<script>window.__FRACTURING_CHAT_JOIN_TYPE = "chat.join";</script>
+			<script defer src="/static/campaign-chat.js"></script>
+		</body>
+	</html>
+}
+
+templ CampaignCreateFragment(form CampaignCreateFormValues, loc Localizer) {
+	<section class="card bg-base-200">
+		<div class="card-body">
+			<form method="post" action={ routepath.AppCampaignsCreate } class="space-y-4">
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_name") }</span>
+					</label>
+					<input type="text" name="name" value={ form.Name } placeholder={ T(loc, "game.create.placeholder_name") } required class="input input-bordered w-full"/>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_system") }</span>
+					</label>
+					<select name="system" required class="select select-bordered w-full">
+						if campaignCreateSystemValue(form) == "daggerheart" {
+							<option value="daggerheart" selected>{ T(loc, "game.create.field_system_value_daggerheart") }</option>
+						} else {
+							<option value="daggerheart">{ T(loc, "game.create.field_system_value_daggerheart") }</option>
+						}
+					</select>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_gm_mode") }</span>
+					</label>
+					<select name="gm_mode" required class="select select-bordered w-full">
+						if campaignCreateGMModeValue(form) == "human" {
+							<option value="human" selected>{ T(loc, "game.create.field_gm_mode_human") }</option>
+						} else {
+							<option value="human">{ T(loc, "game.create.field_gm_mode_human") }</option>
+						}
+						if campaignCreateGMModeValue(form) == "ai" {
+							<option value="ai" selected>{ T(loc, "game.create.field_gm_mode_ai") }</option>
+						} else {
+							<option value="ai">{ T(loc, "game.create.field_gm_mode_ai") }</option>
+						}
+						if campaignCreateGMModeValue(form) == "hybrid" {
+							<option value="hybrid" selected>{ T(loc, "game.create.field_gm_mode_hybrid") }</option>
+						} else {
+							<option value="hybrid">{ T(loc, "game.create.field_gm_mode_hybrid") }</option>
+						}
+					</select>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_participant_name") }</span>
+					</label>
+					<input type="text" name="creator_display_name" value={ form.CreatorDisplayName } placeholder={ T(loc, "game.create.placeholder_participant_name") } class="input input-bordered w-full"/>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_theme_prompt") }</span>
+					</label>
+					<textarea name="theme_prompt" rows="4" placeholder={ T(loc, "game.create.placeholder_theme_prompt") } class="textarea textarea-bordered w-full">{ form.ThemePrompt }</textarea>
+				</div>
+				<div class="card-actions justify-end">
+					<button class="btn btn-primary" type="submit">{ T(loc, "game.create.submit") }</button>
+				</div>
+			</form>
+		</div>
+	</section>
+}

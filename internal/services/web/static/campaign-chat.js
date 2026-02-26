@@ -31,7 +31,19 @@
   var fallbackPort = String(root.dataset.chatFallbackPort || "").trim();
 
   function isLocalHost(hostname) {
-    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1" || hostname === "[::1]";
+    var normalized = String(hostname || "").trim().toLowerCase();
+    if (!normalized) {
+      return false;
+    }
+    return normalized === "localhost" || normalized === "127.0.0.1" || normalized === "::1" || normalized === "[::1]" || normalized.endsWith(".localhost");
+  }
+
+  function replaceAppHostPrefix(host) {
+    host = String(host || "").trim();
+    if (host.indexOf("app.") === 0) {
+      return "chat." + host.slice(4);
+    }
+    return host;
   }
 
   function addWSHostCandidate(host) {
@@ -58,14 +70,16 @@
   }
 
   function buildWSHostCandidates() {
-    var host = window.location.host;
-    var hostname = window.location.hostname;
+    var host = String(window.location.host || "").trim();
+    var hostname = String(window.location.hostname || "").trim();
     var chatBaseHostname = stripChatHostPrefix(hostname);
     var pagePort = String(window.location.port || "").trim();
     var canUseLocalFallback = isLocalHost(hostname) || isLocalHost(chatBaseHostname);
+    var resolvedHost = host.indexOf("chat.") === 0 ? host : "chat." + host;
+    var appHost = replaceAppHostPrefix(host);
     var chatProxyHost = chatBaseHostname;
 
-    if (canUseLocalFallback) {
+    if (canUseLocalFallback && !fallbackPort) {
       if (chatProxyHost === "127.0.0.1" || chatProxyHost === "::1" || chatProxyHost === "[::1]") {
         chatProxyHost = "localhost";
       }
@@ -76,23 +90,30 @@
       }
     }
 
-    if (canUseLocalFallback && fallbackPort) {
-      addWSHostCandidate(hostname + ":" + fallbackPort);
-      if (hostname === "localhost") {
-        addWSHostCandidate("127.0.0.1:" + fallbackPort);
-        addWSHostCandidate("[::1]:" + fallbackPort);
-      } else if (hostname === "127.0.0.1") {
-        addWSHostCandidate("localhost:" + fallbackPort);
-      } else if (hostname === "::1" || hostname === "[::1]") {
-        addWSHostCandidate("localhost:" + fallbackPort);
-      }
-      if (chatBaseHostname !== hostname) {
-        addWSHostCandidate(chatBaseHostname + ":" + fallbackPort);
+    if (fallbackPort) {
+      if (canUseLocalFallback) {
+        addWSHostCandidate(hostname + ":" + fallbackPort);
+        var chatHost = replaceAppHostPrefix(hostname);
+        addWSHostCandidate(chatHost + ":" + fallbackPort);
+        if (hostname === "localhost" || hostname.endsWith(".localhost")) {
+          addWSHostCandidate("127.0.0.1:" + fallbackPort);
+          addWSHostCandidate("[::1]:" + fallbackPort);
+        } else if (hostname === "127.0.0.1") {
+          addWSHostCandidate("localhost:" + fallbackPort);
+        } else if (hostname === "::1" || hostname === "[::1]") {
+          addWSHostCandidate("localhost:" + fallbackPort);
+        }
+        if (chatBaseHostname !== hostname) {
+          addWSHostCandidate(chatBaseHostname + ":" + fallbackPort);
+        }
       }
     }
 
-    if (!canUseLocalFallback) {
-      addWSHostCandidate(host.indexOf("chat.") === 0 ? host : "chat." + host);
+    if (!canUseLocalFallback || !fallbackPort) {
+      addWSHostCandidate(resolvedHost);
+      if (appHost !== host) {
+        addWSHostCandidate(appHost);
+      }
     }
   }
 

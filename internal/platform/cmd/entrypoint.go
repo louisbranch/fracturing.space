@@ -29,7 +29,6 @@ const (
 	ServiceScenario      = "scenario"
 	ServiceSeed          = "seed"
 	ServiceWeb           = "web"
-	ServiceWeb2          = "web2"
 	ServiceWorker        = "worker"
 )
 

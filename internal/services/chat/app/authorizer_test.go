@@ -233,13 +233,13 @@ func TestCampaignAuthorizerAuthenticateInactiveToken(t *testing.T) {
 	}
 }
 
-func TestCampaignAuthorizerAuthenticateWeb2SessionSuccess(t *testing.T) {
+func TestCampaignAuthorizerAuthenticateWebSessionSuccess(t *testing.T) {
 	client := &fakeWebSessionAuthClient{response: &authv1.GetWebSessionResponse{Session: &authv1.WebSession{Id: "ws-1", UserId: "user-1"}}}
 	a := &campaignAuthorizer{authSessionClient: client}
 
-	userID, err := a.Authenticate(context.Background(), "web2_session:ws-1")
+	userID, err := a.Authenticate(context.Background(), "web_session:ws-1")
 	if err != nil {
-		t.Fatalf("authenticate web2 session: %v", err)
+		t.Fatalf("authenticate web session: %v", err)
 	}
 	if userID != "user-1" {
 		t.Fatalf("userID = %q, want %q", userID, "user-1")

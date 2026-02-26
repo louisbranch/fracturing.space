@@ -184,10 +184,10 @@ The primary service boundaries are:
 - **MCP service** (`internal/services/mcp/`): JSON-RPC adapter for the MCP protocol; forwards to the game service and does not own rules or state.
 - **Admin service** (`internal/services/admin/`): HTTP admin dashboard; renders UI and calls the game/auth services for operator workflows.
   - Internal boundaries: route modules under `internal/services/admin/module/*`, canonical paths under `internal/services/admin/routepath`, transport wiring under `internal/services/admin/transport/httpmux`, and startup integration seams under `internal/services/admin/integration/*`.
-- **Web service** (`internal/services/web2/`, rename target `internal/services/web/`): Browser-facing modular BFF for end-user flows.
+- **Web service** (`internal/services/web/`, rename target `internal/services/web/`): Browser-facing modular BFF for end-user flows.
   - Public/auth/discovery surface: `/`, `/login`, `/auth/*`, `/magic`, `/passkeys/*`, `/u/{username}`, `/discover`, `/discover/campaigns/{campaignID}`.
   - Authenticated surface: canonical `/app/*` routes (`/app/campaigns`, `/app/campaigns/{id}/*`, `/app/invites`, `/app/notifications`, `/app/profile`, `/app/settings/*`).
-  - Internal boundaries: composition root in `internal/services/web2/app`, cross-cutting primitives in `internal/services/web2/platform`, feature modules in `internal/services/web2/modules`, and canonical paths in `internal/services/web2/routepath`.
+  - Internal boundaries: composition root in `internal/services/web/app`, cross-cutting primitives in `internal/services/web/platform`, feature modules in `internal/services/web/modules`, and canonical paths in `internal/services/web/routepath`.
   - Route ownership is module-scoped with stdlib `ServeMux`; composition stays thin and feature logic remains inside module/service packages.
 - **Auth service** (`internal/services/auth/`): AuthN/authZ domain logic and gRPC API surface (identity proof and access artifacts); owns the auth database.
 - **Connections service** (`internal/services/connections/`): Social/discovery domain logic and gRPC API surface (contacts and unified user profile metadata); owns the connections database.
