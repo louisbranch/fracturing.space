@@ -84,8 +84,8 @@ spreading, or compatibility glue is piling up.
 - Meaningful seam tests pass.
 - Documentation is updated for lasting decisions.
 
-## Web/Web2 Migration Note
+## Web/Web Migration Note
 
-For `web` and `web2` style transitions, prefer a clean module path in parallel,
+For `web` and `web` style transitions, prefer a clean module path in parallel,
 migrate route/service slices to that path, then delete old slice-by-slice
 handlers and adapters once each cutover is validated.

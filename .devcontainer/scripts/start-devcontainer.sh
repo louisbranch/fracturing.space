@@ -55,7 +55,7 @@ wait_for_services_ready() {
     "admin listening on"
     "chat server listening on"
     "worker server listening at"
-    "web login listening on"
+    "web server listening on"
   )
 
   local -a ready

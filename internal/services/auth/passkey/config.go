@@ -38,7 +38,6 @@ func LoadConfigFromEnv() Config {
 	if len(cfg.RPOrigins) == 0 {
 		cfg.RPOrigins = []string{"http://localhost:8086"}
 	}
-	cfg.RPOrigins = ensureLegacyLocalhostWeb2Origin(cfg.RPID, cfg.RPOrigins)
 	if cfg.SessionTTL == 0 {
 		cfg.SessionTTL = 5 * time.Minute
 	}
@@ -61,14 +60,4 @@ func normalizeOrigins(origins []string) []string {
 		return nil
 	}
 	return result
-}
-
-func ensureLegacyLocalhostWeb2Origin(rpID string, origins []string) []string {
-	if strings.TrimSpace(rpID) != "localhost" {
-		return origins
-	}
-	if len(origins) != 1 || origins[0] != "http://localhost:8080" {
-		return origins
-	}
-	return append(origins, "http://localhost:8092")
 }

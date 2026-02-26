@@ -6,105 +6,87 @@ import (
 )
 
 func TestParseConfigDefaults(t *testing.T) {
+	t.Parallel()
+
 	fs := flag.NewFlagSet("web", flag.ContinueOnError)
 	cfg, err := ParseConfig(fs, nil)
 	if err != nil {
-		t.Fatalf("parse config: %v", err)
+		t.Fatalf("ParseConfig() error = %v", err)
 	}
 	if cfg.HTTPAddr != "localhost:8080" {
-		t.Fatalf("expected default http addr, got %q", cfg.HTTPAddr)
-	}
-	if cfg.ChatHTTPAddr != "localhost:8086" {
-		t.Fatalf("expected default chat http addr, got %q", cfg.ChatHTTPAddr)
-	}
-	if cfg.AuthBaseURL != "http://localhost:8084" {
-		t.Fatalf("expected default auth base url, got %q", cfg.AuthBaseURL)
-	}
-	if cfg.AuthAddr != "auth:8083" {
-		t.Fatalf("expected default auth addr, got %q", cfg.AuthAddr)
-	}
-	if cfg.ConnectionsAddr != "connections:8090" {
-		t.Fatalf("expected default connections addr, got %q", cfg.ConnectionsAddr)
-	}
-	if cfg.OAuthClientID != "fracturing-space" {
-		t.Fatalf("expected default oauth client id, got %q", cfg.OAuthClientID)
+		t.Fatalf("HTTPAddr = %q, want %q", cfg.HTTPAddr, "localhost:8080")
 	}
 	if cfg.GameAddr != "game:8082" {
-		t.Fatalf("expected default game addr, got %q", cfg.GameAddr)
+		t.Fatalf("GameAddr = %q, want %q", cfg.GameAddr, "game:8082")
 	}
-	if cfg.NotificationsAddr != "notifications:8088" {
-		t.Fatalf("expected default notifications addr, got %q", cfg.NotificationsAddr)
+	if cfg.ChatHTTPAddr != "localhost:8086" {
+		t.Fatalf("ChatHTTPAddr = %q, want %q", cfg.ChatHTTPAddr, "localhost:8086")
 	}
-	if cfg.ListingAddr != "listing:8091" {
-		t.Fatalf("expected default listing addr, got %q", cfg.ListingAddr)
+	if cfg.AuthAddr != "auth:8083" {
+		t.Fatalf("AuthAddr = %q, want %q", cfg.AuthAddr, "auth:8083")
 	}
-	if cfg.AIAddr != "" {
-		t.Fatalf("expected empty default ai addr, got %q", cfg.AIAddr)
+	if cfg.ConnectionsAddr != "connections:8090" {
+		t.Fatalf("ConnectionsAddr = %q, want %q", cfg.ConnectionsAddr, "connections:8090")
 	}
-	if cfg.CacheDBPath != "data/web-cache.db" {
-		t.Fatalf("expected default cache db path, got %q", cfg.CacheDBPath)
+	if cfg.AIAddr != "ai:8087" {
+		t.Fatalf("AIAddr = %q, want %q", cfg.AIAddr, "ai:8087")
 	}
-	if cfg.AssetVersion != "v1" {
-		t.Fatalf("expected default asset version, got %q", cfg.AssetVersion)
+	if cfg.EnableExperimentalModules {
+		t.Fatalf("EnableExperimentalModules = %t, want false", cfg.EnableExperimentalModules)
 	}
 	if cfg.AssetBaseURL != "" {
-		t.Fatalf("expected empty default asset base url, got %q", cfg.AssetBaseURL)
+		t.Fatalf("AssetBaseURL = %q, want empty", cfg.AssetBaseURL)
 	}
 }
 
-func TestParseConfigOverrides(t *testing.T) {
+func TestParseConfigOverrideHTTPAddr(t *testing.T) {
+	t.Parallel()
+
 	fs := flag.NewFlagSet("web", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, []string{
-		"-http-addr", "127.0.0.1:9999",
-		"-chat-http-addr", "chat.internal:10001",
-		"-auth-base-url", "http://auth.test",
-		"-auth-addr", "auth:9000",
-		"-connections-addr", "connections:9004",
-		"-game-addr", "game:9001",
-		"-notifications-addr", "notifications:9003",
-		"-listing-addr", "listing:9005",
-		"-ai-addr", "ai:9002",
-		"-cache-db-path", "/tmp/web-cache.db",
-		"-asset-base-url", "https://assets.test",
-		"-asset-version", "v9",
-	})
+	cfg, err := ParseConfig(fs, []string{"-http-addr", "127.0.0.1:9002"})
 	if err != nil {
-		t.Fatalf("parse config: %v", err)
+		t.Fatalf("ParseConfig() error = %v", err)
 	}
-	if cfg.HTTPAddr != "127.0.0.1:9999" {
-		t.Fatalf("expected overridden http addr, got %q", cfg.HTTPAddr)
+	if cfg.HTTPAddr != "127.0.0.1:9002" {
+		t.Fatalf("HTTPAddr = %q, want %q", cfg.HTTPAddr, "127.0.0.1:9002")
 	}
-	if cfg.ChatHTTPAddr != "chat.internal:10001" {
-		t.Fatalf("expected overridden chat http addr, got %q", cfg.ChatHTTPAddr)
+}
+
+func TestParseConfigOverrideGameAddr(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("web", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, []string{"-game-addr", "127.0.0.1:19082"})
+	if err != nil {
+		t.Fatalf("ParseConfig() error = %v", err)
 	}
-	if cfg.AuthBaseURL != "http://auth.test" {
-		t.Fatalf("expected overridden auth base url, got %q", cfg.AuthBaseURL)
+	if cfg.GameAddr != "127.0.0.1:19082" {
+		t.Fatalf("GameAddr = %q, want %q", cfg.GameAddr, "127.0.0.1:19082")
 	}
-	if cfg.AuthAddr != "auth:9000" {
-		t.Fatalf("expected overridden auth addr, got %q", cfg.AuthAddr)
+}
+
+func TestParseConfigOverrideChatHTTPAddr(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("web", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, []string{"-chat-http-addr", "127.0.0.1:18086"})
+	if err != nil {
+		t.Fatalf("ParseConfig() error = %v", err)
 	}
-	if cfg.ConnectionsAddr != "connections:9004" {
-		t.Fatalf("expected overridden connections addr, got %q", cfg.ConnectionsAddr)
+	if cfg.ChatHTTPAddr != "127.0.0.1:18086" {
+		t.Fatalf("ChatHTTPAddr = %q, want %q", cfg.ChatHTTPAddr, "127.0.0.1:18086")
 	}
-	if cfg.GameAddr != "game:9001" {
-		t.Fatalf("expected overridden game addr, got %q", cfg.GameAddr)
+}
+
+func TestParseConfigOverrideExperimentalModules(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("web", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, []string{"-enable-experimental-modules"})
+	if err != nil {
+		t.Fatalf("ParseConfig() error = %v", err)
 	}
-	if cfg.NotificationsAddr != "notifications:9003" {
-		t.Fatalf("expected overridden notifications addr, got %q", cfg.NotificationsAddr)
-	}
-	if cfg.ListingAddr != "listing:9005" {
-		t.Fatalf("expected overridden listing addr, got %q", cfg.ListingAddr)
-	}
-	if cfg.AIAddr != "ai:9002" {
-		t.Fatalf("expected overridden ai addr, got %q", cfg.AIAddr)
-	}
-	if cfg.CacheDBPath != "/tmp/web-cache.db" {
-		t.Fatalf("expected overridden cache db path, got %q", cfg.CacheDBPath)
-	}
-	if cfg.AssetBaseURL != "https://assets.test" {
-		t.Fatalf("expected overridden asset base url, got %q", cfg.AssetBaseURL)
-	}
-	if cfg.AssetVersion != "v9" {
-		t.Fatalf("expected overridden asset version, got %q", cfg.AssetVersion)
+	if !cfg.EnableExperimentalModules {
+		t.Fatalf("EnableExperimentalModules = %t, want true", cfg.EnableExperimentalModules)
 	}
 }

@@ -422,8 +422,8 @@ func TestWebSocketEndpointRequiresTokenWhenAuthorizerConfigured(t *testing.T) {
 	}
 }
 
-func TestWebSocketEndpointAcceptsWeb2SessionCookieWhenAuthorizerConfigured(t *testing.T) {
-	conn := dialWSWithHandler(t, NewHandlerWithAuthorizer(fakeWSAuthorizer{userID: "user-1", participantAllowed: true}), "/ws", "web2_session=session-1")
+func TestWebSocketEndpointAcceptsWebSessionCookieWhenAuthorizerConfigured(t *testing.T) {
+	conn := dialWSWithHandler(t, NewHandlerWithAuthorizer(fakeWSAuthorizer{userID: "user-1", participantAllowed: true}), "/ws", "web_session=session-1")
 
 	writeFrame(t, conn, map[string]any{
 		"type":       "chat.join",

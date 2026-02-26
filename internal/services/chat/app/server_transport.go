@@ -54,7 +54,7 @@ func newHandler(authorizer wsAuthorizer, requireAuth bool, ensureCampaignUpdateS
 
 			accessToken := accessTokenFromRequest(r)
 			if accessToken == "" {
-				log.Printf("chat: websocket unauthorized: missing auth cookie (fs_token/web2_session) for host=%q remote=%s path=%q", r.Host, r.RemoteAddr, r.URL.Path)
+				log.Printf("chat: websocket unauthorized: missing auth cookie (fs_token/web_session) for host=%q remote=%s path=%q", r.Host, r.RemoteAddr, r.URL.Path)
 				http.Error(w, "authentication required", http.StatusUnauthorized)
 				return
 			}
@@ -90,12 +90,12 @@ func accessTokenFromRequest(r *http.Request) string {
 			return token
 		}
 	}
-	web2SessionCookie, err := r.Cookie(web2SessionCookieName)
+	webSessionCookie, err := r.Cookie(webSessionCookieName)
 	if err != nil {
 		return ""
 	}
-	if sessionID := strings.TrimSpace(web2SessionCookie.Value); sessionID != "" {
-		return web2SessionTokenPrefix + sessionID
+	if sessionID := strings.TrimSpace(webSessionCookie.Value); sessionID != "" {
+		return webSessionTokenPrefix + sessionID
 	}
 	return ""
 }

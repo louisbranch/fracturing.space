@@ -21,3 +21,37 @@ h3 {
 h4 {
   font-size: 1rem;
 }
+
+/* Campaign chat drawer */
+
+.campaign-chat-drawer .chat-drawer-shell {
+  width: 14rem;
+  overflow-x: hidden;
+  transition: width 0.2s ease;
+}
+
+.campaign-chat-drawer .chat-drawer-icon-open {
+  display: inline-block;
+}
+
+.campaign-chat-drawer .chat-drawer-icon-close {
+  display: none;
+}
+
+.campaign-chat-drawer > .drawer-toggle:checked ~ .drawer-content .chat-drawer-icon-open {
+  display: none;
+}
+
+.campaign-chat-drawer > .drawer-toggle:checked ~ .drawer-content .chat-drawer-icon-close {
+  display: inline-block;
+}
+
+@media (min-width: 1024px) {
+  .campaign-chat-drawer > .drawer-toggle:not(:checked) ~ .drawer-side .chat-drawer-shell {
+    width: 3.5rem;
+  }
+
+  .campaign-chat-drawer > .drawer-toggle:not(:checked) ~ .drawer-side .chat-drawer-link-label {
+    display: none;
+  }
+}

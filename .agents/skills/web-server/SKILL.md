@@ -11,7 +11,7 @@ Transport-layer guidance for the Web UI and related services.
 ## Architecture Rules
 
 - Keep transport handlers thin; orchestration and domain decisions belong in service/domain packages.
-- Preserve feature boundaries (`internal/services/web/feature/*`, `internal/services/web2/modules/*`); avoid cross-feature coupling.
+- Preserve feature boundaries (`internal/services/web/feature/*`, `internal/services/web/modules/*`); avoid cross-feature coupling.
 - Define interfaces at consumption points and avoid leaking concrete adapters across modules.
 - During refactors, prefer clean cutovers over long-lived compatibility routes.
 

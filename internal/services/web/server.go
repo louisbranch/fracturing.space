@@ -1,199 +1,182 @@
+// Package web hosts the clean-slate browser-facing service.
 package web
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"io/fs"
+	"log"
 	"net/http"
-	"sync"
-	"time"
+	"strings"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
-	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
-	webstorage "github.com/louisbranch/fracturing.space/internal/services/web/storage"
-	websqlite "github.com/louisbranch/fracturing.space/internal/services/web/storage/sqlite"
-	websupport "github.com/louisbranch/fracturing.space/internal/services/web/support"
-	webhttp "github.com/louisbranch/fracturing.space/internal/services/web/transport/http"
-	httpmux "github.com/louisbranch/fracturing.space/internal/services/web/transport/httpmux"
-	"golang.org/x/text/message"
-	"google.golang.org/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
+	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
+	webapp "github.com/louisbranch/fracturing.space/internal/services/web/app"
+	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/observability"
+	webstatic "github.com/louisbranch/fracturing.space/internal/services/web/static"
 )
 
-var subStaticFS = func() (fs.FS, error) {
-	return fs.Sub(assetsFS, "static")
-}
-
-// Config defines the inputs for the web login server.
+// Config defines startup inputs for the web service.
 type Config struct {
-	HTTPAddr             string
-	ChatHTTPAddr         string
-	AuthBaseURL          string
-	AuthAddr             string
-	ConnectionsAddr      string
-	GameAddr             string
-	NotificationsAddr    string
-	AIAddr               string
-	ListingAddr          string
-	CacheDBPath          string
-	AssetBaseURL         string
-	AssetManifestVersion string
-	AppName              string
-	GRPCDialTimeout      time.Duration
-	// OAuthClientID is the first-party OAuth client ID for web login.
-	OAuthClientID string
-	// CallbackURL is the public URL for the OAuth callback endpoint.
-	CallbackURL string
-	// AuthTokenURL is the internal auth token endpoint for code exchange.
-	AuthTokenURL string
-	// Domain is the parent domain used for cross-subdomain cookie scoping.
-	Domain string
-	// OAuthResourceSecret is used by web service to introspect access tokens.
-	OAuthResourceSecret string
+	HTTPAddr                  string
+	AssetBaseURL              string
+	ChatHTTPAddr              string
+	EnableExperimentalModules bool
+	CampaignClient            module.CampaignClient
+	ParticipantClient         module.ParticipantClient
+	CharacterClient           module.CharacterClient
+	SessionClient             module.SessionClient
+	InviteClient              module.InviteClient
+	AuthClient                module.AuthClient
+	AccountClient             module.AccountClient
+	CredentialClient          module.CredentialClient
+	ConnectionsClient         connectionsv1.ConnectionsServiceClient
 }
 
-// Server hosts the web login HTTP server.
+// Server hosts the web HTTP surface and lifecycle.
 type Server struct {
-	httpAddr                       string
-	httpServer                     *http.Server
-	authConn                       *grpc.ClientConn
-	connectionsConn                *grpc.ClientConn
-	gameConn                       *grpc.ClientConn
-	notificationsConn              *grpc.ClientConn
-	aiConn                         *grpc.ClientConn
-	listingConn                    *grpc.ClientConn
-	cacheStore                     *websqlite.Store
-	cacheInvalidationDone          chan struct{}
-	cacheInvalidationStop          context.CancelFunc
-	campaignUpdateSubscriptionDone chan struct{}
-	campaignUpdateSubscriptionStop context.CancelFunc
+	httpAddr   string
+	httpServer *http.Server
 }
 
-type handler struct {
-	config              Config
-	authClient          authv1.AuthServiceClient
-	connectionsClient   connectionsv1.ConnectionsServiceClient
-	accountClient       authv1.AccountServiceClient
-	credentialClient    aiv1.CredentialServiceClient
-	sessions            *sessionStore
-	pendingFlows        *pendingFlowStore
-	cacheStore          webstorage.Store
-	clientInitMu        sync.Mutex
-	campaignNameCacheMu sync.RWMutex
-	campaignNameCache   map[string]campaignNameCache
-	campaignClient      statev1.CampaignServiceClient
-	eventClient         statev1.EventServiceClient
-	sessionClient       statev1.SessionServiceClient
-	participantClient   statev1.ParticipantServiceClient
-	characterClient     statev1.CharacterServiceClient
-	inviteClient        statev1.InviteServiceClient
-	notificationClient  notificationsv1.NotificationServiceClient
-	listingClient       listingv1.CampaignListingServiceClient
-	campaignAccess      campaignAccessChecker
-}
-
-type handlerDependencies struct {
-	campaignAccess     campaignAccessChecker
-	cacheStore         webstorage.Store
-	accountClient      authv1.AccountServiceClient
-	connectionsClient  connectionsv1.ConnectionsServiceClient
-	credentialClient   aiv1.CredentialServiceClient
-	campaignClient     statev1.CampaignServiceClient
-	eventClient        statev1.EventServiceClient
-	sessionClient      statev1.SessionServiceClient
-	participantClient  statev1.ParticipantServiceClient
-	characterClient    statev1.CharacterServiceClient
-	inviteClient       statev1.InviteServiceClient
-	notificationClient notificationsv1.NotificationServiceClient
-	listingClient      listingv1.CampaignListingServiceClient
-}
-
-// localizer resolves the request locale, optionally persists a cookie,
-// and returns a message printer with the resolved language tag string.
-func localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string) {
-	return websupport.ResolveLocalizer(w, r)
-}
-
-// NewHandler creates the HTTP handler for the login UX.
-//
-// This function is the test-oriented entrypoint that assembles route handlers
-// while keeping gRPC dependencies injectable via NewHandlerWithCampaignAccess.
-func NewHandler(config Config, authClient authv1.AuthServiceClient) http.Handler {
-	handler, err := NewHandlerWithCampaignAccess(config, authClient, handlerDependencies{})
+// NewHandler builds a root handler from default module registry groups.
+func NewHandler(cfg Config) (http.Handler, error) {
+	principal := newPrincipalResolver(cfg)
+	deps := module.Dependencies{
+		CampaignClient:    cfg.CampaignClient,
+		ParticipantClient: cfg.ParticipantClient,
+		CharacterClient:   cfg.CharacterClient,
+		SessionClient:     cfg.SessionClient,
+		InviteClient:      cfg.InviteClient,
+		AuthClient:        cfg.AuthClient,
+		AccountClient:     cfg.AccountClient,
+		CredentialClient:  cfg.CredentialClient,
+		ConnectionsClient: cfg.ConnectionsClient,
+		ResolveViewer:     principal.resolveViewer,
+		ResolveUserID:     principal.resolveRequestUserID,
+		ResolveLanguage:   principal.resolveRequestLanguage,
+		AssetBaseURL:      cfg.AssetBaseURL,
+		ChatFallbackPort:  websupport.ResolveChatFallbackPort(cfg.ChatHTTPAddr),
+	}
+	publicModules := modules.DefaultPublicModules()
+	protectedModules := modules.DefaultProtectedModules(deps)
+	// TODO(web-cutover): revisit stable registry composition as parity gaps close so default surfaces never expose scaffold-only behavior.
+	if cfg.EnableExperimentalModules {
+		protectedModules = modules.DefaultProtectedModulesWithExperimentalCampaignRoutes(deps)
+		publicModules = append(publicModules, modules.ExperimentalPublicModules()...)
+		protectedModules = append(protectedModules, modules.ExperimentalProtectedModules(deps)...)
+	}
+	h, err := webapp.BuildRootHandler(webapp.Config{
+		Dependencies:     deps,
+		PublicModules:    publicModules,
+		ProtectedModules: protectedModules,
+	}, principal.authRequired())
 	if err != nil {
+		return nil, err
+	}
+	rootMux := http.NewServeMux()
+	rootMux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(webstatic.FS))))
+	rootMux.Handle("/", h)
+	return httpx.Chain(rootMux,
+		httpx.RecoverPanic(),
+		httpx.RequestID(),
+		withRequestPrincipalState(),
+		observability.RequestLogger(log.Default()),
+	), nil
+}
+
+func withRequestPrincipalState() httpx.Middleware {
+	return func(next http.Handler) http.Handler {
+		if next == nil {
+			next = http.NotFoundHandler()
+		}
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.web_handler_unavailable")
+			if r == nil {
+				next.ServeHTTP(w, r)
+				return
+			}
+			state := &requestPrincipalState{}
+			ctx := context.WithValue(r.Context(), requestPrincipalStateKey{}, state)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
-	return handler
 }
 
-// NewHandlerWithCampaignAccess creates the HTTP handler with campaign access checks.
-func NewHandlerWithCampaignAccess(config Config, authClient authv1.AuthServiceClient, deps handlerDependencies) (http.Handler, error) {
-	rootMux := http.NewServeMux()
-	staticFS, err := subStaticFS()
+func requestPrincipalStateFromRequest(r *http.Request) *requestPrincipalState {
+	if r == nil {
+		return nil
+	}
+	return requestPrincipalStateFromContext(r.Context())
+}
+
+func requestPrincipalStateFromContext(ctx context.Context) *requestPrincipalState {
+	if ctx == nil {
+		return nil
+	}
+	state, _ := ctx.Value(requestPrincipalStateKey{}).(*requestPrincipalState)
+	return state
+}
+
+// NewServer validates config and constructs a web server.
+func NewServer(_ context.Context, cfg Config) (*Server, error) {
+	httpAddr := strings.TrimSpace(cfg.HTTPAddr)
+	if httpAddr == "" {
+		return nil, errors.New("http address is required")
+	}
+	handler, err := NewHandler(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("resolve static assets: %w", err)
+		return nil, fmt.Errorf("compose web handler: %w", err)
 	}
-	var sessionPersistence sessionPersistence
-	if webSessionStore, ok := deps.cacheStore.(*websqlite.Store); ok && webSessionStore != nil {
-		sessionPersistence = webSessionStore
-	}
-	httpmux.MountStatic(rootMux, staticFS, webhttp.WithStaticMime)
-
-	h := &handler{
-		config:             config,
-		authClient:         authClient,
-		connectionsClient:  deps.connectionsClient,
-		accountClient:      deps.accountClient,
-		credentialClient:   deps.credentialClient,
-		sessions:           newSessionStore(sessionPersistence),
-		pendingFlows:       newPendingFlowStore(),
-		cacheStore:         deps.cacheStore,
-		campaignNameCache:  make(map[string]campaignNameCache),
-		campaignClient:     deps.campaignClient,
-		eventClient:        deps.eventClient,
-		sessionClient:      deps.sessionClient,
-		participantClient:  deps.participantClient,
-		characterClient:    deps.characterClient,
-		inviteClient:       deps.inviteClient,
-		notificationClient: deps.notificationClient,
-		listingClient:      deps.listingClient,
-		campaignAccess:     deps.campaignAccess,
-	}
-
-	gameMux := http.NewServeMux()
-	h.registerGameRoutes(gameMux)
-
-	publicMux := http.NewServeMux()
-	h.registerPublicRoutes(publicMux)
-	httpmux.MountAppAndPublicRoutes(rootMux, gameMux, publicMux)
-
-	return rootMux, nil
+	return &Server{
+		httpAddr: httpAddr,
+		httpServer: &http.Server{
+			Addr:              httpAddr,
+			Handler:           handler,
+			ReadHeaderTimeout: timeouts.ReadHeader,
+		},
+	}, nil
 }
 
-// NewServer builds a configured web server.
-func NewServer(config Config) (*Server, error) {
-	return NewServerWithContext(context.Background(), config)
-}
-
-// NewServerWithContext builds a configured web server.
-func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
-	return newServerWithContext(ctx, config)
-}
-
-// ListenAndServe runs the HTTP server until the context ends.
-//
-// On cancellation, it performs a bounded shutdown so in-flight requests
-// are drained before hard close.
+// ListenAndServe serves HTTP traffic until context cancellation or server stop.
 func (s *Server) ListenAndServe(ctx context.Context) error {
-	return s.listenAndServe(ctx)
+	if s == nil {
+		return errors.New("web server is nil")
+	}
+	if ctx == nil {
+		return errors.New("context is required")
+	}
+
+	serveErr := make(chan error, 1)
+	log.Printf("web server listening on %s", s.httpAddr)
+	go func() {
+		serveErr <- s.httpServer.ListenAndServe()
+	}()
+
+	select {
+	case <-ctx.Done():
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), timeouts.Shutdown)
+		err := s.httpServer.Shutdown(shutdownCtx)
+		cancel()
+		if err != nil {
+			return fmt.Errorf("shutdown web http server: %w", err)
+		}
+		return nil
+	case err := <-serveErr:
+		if errors.Is(err, http.ErrServerClosed) {
+			return nil
+		}
+		return fmt.Errorf("serve web http: %w", err)
+	}
 }
 
-// Close releases any gRPC resources held by the server.
+// Close closes open server resources.
 func (s *Server) Close() {
-	s.close()
+	if s == nil || s.httpServer == nil {
+		return
+	}
+	_ = s.httpServer.Close()
 }

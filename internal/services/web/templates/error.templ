@@ -1,37 +1,32 @@
 package templates
 
-// ErrorPage renders a standard web error page using the shared layout shell.
-templ ErrorPage(page PageContext, title string, message string) {
-	if isGamePagePath(page.CurrentPath) {
-		@Layout(LayoutOptions{
-			Title:            title,
-			Lang:             page.Lang,
-			AppName:          page.AppName,
-			Loc:              page.Loc,
-			CurrentPath:      page.CurrentPath,
-			CampaignName:     page.CampaignName,
-			UserName:         page.UserName,
-			UserAvatarURL:    page.UserAvatarURL,
-			HasUnreadNotifications: page.HasUnreadNotifications,
-			UseCustomBreadcrumbs: false,
-		}) {
-			@errorPageContent(page, title, message)
-		}
-	} else {
-		@ShellLayout(title, page) {
-			@errorPageContent(page, title, message)
-		}
-	}
+import (
+	"strconv"
+
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+)
+
+func appErrorStatusLabel(statusCode int) string {
+	return strconv.Itoa(statusCode)
 }
 
-templ errorPageContent(page PageContext, title string, message string) {
-	<main class="landing-shell">
-		<section class="landing-hero">
-			<h2>{ title }</h2>
-			<p class="hero-tagline">{ message }</p>
-			<div class="mt-4">
-				<a class="btn btn-primary" href="/">{ T(page.Loc, "error.back_to_home") }</a>
-			</div>
-		</section>
-	</main>
+templ AppErrorState(statusCode int, loc Localizer) {
+	<section id="app-error-state" data-error-status={ appErrorStatusLabel(statusCode) } class="mx-auto grid max-w-3xl gap-4 rounded-box border border-base-300 bg-base-200 p-8 text-center shadow-sm">
+		<p class="text-sm uppercase tracking-[0.2em] opacity-70">{ appErrorStatusLabel(statusCode) }</p>
+		<h1 class="text-3xl font-bold">{ appErrorHeading(statusCode, loc) }</h1>
+		<p class="text-base-content/80">{ appErrorMessage(statusCode, loc) }</p>
+		<div class="mt-2 flex flex-wrap justify-center gap-3">
+			<a
+				class="btn btn-primary"
+				href={ routepath.AppCampaigns }
+				hx-get={ routepath.AppCampaigns }
+				hx-target="#main"
+				hx-swap="innerHTML"
+				hx-push-url="true"
+			>
+				{ T(loc, appErrorBackToCampaignsTextKey) }
+			</a>
+			<a class="btn btn-ghost" href={ routepath.Root }>{ T(loc, "error.back_to_home") }</a>
+		</div>
+	</section>
 }

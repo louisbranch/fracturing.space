@@ -1,181 +1,198 @@
 package templates
 
-import commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-import sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	"strings"
+)
 
-templ SettingsMenu(page PageContext) {
-	<ul class="menu bg-base-200 rounded-box w-full">
-		<li>
-			<a
-				class={ settingsMenuLinkClass(page.CurrentPath, "/app/settings/user-profile") }
-				href="/app/settings/user-profile"
-				hx-get="/app/settings/user-profile"
-				hx-target="#main"
-				hx-swap="innerHTML"
-				hx-push-url="true"
-				>
-				@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_PROFILE, "size-4 me-2")
-				{ T(page.Loc, "web.settings.user_profile.link") }
-			</a>
-		</li>
-		<li>
-			<a
-				class={ settingsMenuLinkClass(page.CurrentPath, "/app/settings/ai-keys") }
-				href="/app/settings/ai-keys"
-				hx-get="/app/settings/ai-keys"
-				hx-target="#main"
-				hx-swap="innerHTML"
-				hx-push-url="true"
-				>
-				@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_AI, "size-4 me-2")
-				{ T(page.Loc, "web.settings.ai_keys.link") }
-			</a>
-		</li>
-	</ul>
+type SettingsProfileForm struct {
+	Username      string
+	Name          string
+	AvatarSetID   string
+	AvatarAssetID string
+	Bio           string
+	ErrorMessage  string
 }
 
-templ SettingsPage(page PageContext) {
-	@Layout(SettingsLayoutOptions(page)) {
-		<section class="card bg-base-200">
+type SettingsLocaleForm struct {
+	SelectedLocale string
+	ErrorMessage   string
+}
+
+type SettingsAIKeysForm struct {
+	Label        string
+	Provider     string
+	ErrorMessage string
+}
+
+type SettingsAIKeyRow struct {
+	ID        string
+	Label     string
+	Provider  string
+	Status    string
+	CreatedAt string
+	RevokedAt string
+	CanRevoke bool
+}
+
+func settingsLocaleValue(form SettingsLocaleForm) string {
+	selected := strings.TrimSpace(form.SelectedLocale)
+	if selected == "" {
+		return "en-US"
+	}
+	return selected
+}
+
+func settingsAIKeyProviderLabel(form SettingsAIKeysForm) string {
+	provider := strings.TrimSpace(form.Provider)
+	if provider == "" {
+		return "OpenAI"
+	}
+	return provider
+}
+
+templ SettingsProfileFragment(form SettingsProfileForm, loc Localizer) {
+	<section id="settings-profile" class="card bg-base-200">
+		<div class="card-body">
+			<h2 class="card-title">{ T(loc, "web.settings.user_profile.title") }</h2>
+			if form.ErrorMessage != "" {
+				<div class="alert alert-error">{ form.ErrorMessage }</div>
+			}
+			<form method="post" action={ routepath.AppSettingsProfile } class="space-y-4">
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "web.settings.user_profile.field_username") }</span>
+					</label>
+					<input class="input input-bordered w-full" type="text" name="username" value={ form.Username } required/>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "web.settings.user_profile.field_name") }</span>
+					</label>
+					<input class="input input-bordered w-full" type="text" name="name" value={ form.Name } required/>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "web.settings.user_profile.field_bio") }</span>
+					</label>
+					<textarea class="textarea textarea-bordered w-full" name="bio">{ form.Bio }</textarea>
+				</div>
+				<div class="card-actions justify-end">
+					<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.user_profile.submit_save") }</button>
+				</div>
+			</form>
+		</div>
+	</section>
+}
+
+templ SettingsLocaleFragment(form SettingsLocaleForm, loc Localizer) {
+	<section id="settings-locale" class="card bg-base-200">
+		<div class="card-body">
+			<h2 class="card-title">{ T(loc, "web.settings.locale.title") }</h2>
+			if form.ErrorMessage != "" {
+				<div class="alert alert-error">{ form.ErrorMessage }</div>
+			}
+			<form method="post" action={ routepath.AppSettingsLocale } class="space-y-4">
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "web.profile.field_locale") }</span>
+					</label>
+					<select class="select select-bordered w-full" name="locale">
+						if settingsLocaleValue(form) == "en-US" {
+							<option value="en-US" selected>{ T(loc, "web.settings.locale.option_en_us") }</option>
+						} else {
+							<option value="en-US">{ T(loc, "web.settings.locale.option_en_us") }</option>
+						}
+						if settingsLocaleValue(form) == "pt-BR" {
+							<option value="pt-BR" selected>{ T(loc, "web.settings.locale.option_pt_br") }</option>
+						} else {
+							<option value="pt-BR">{ T(loc, "web.settings.locale.option_pt_br") }</option>
+						}
+					</select>
+				</div>
+				<div class="card-actions justify-end">
+					<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.locale.submit_save") }</button>
+				</div>
+			</form>
+		</div>
+	</section>
+}
+
+templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, loc Localizer) {
+	<section id="settings-ai-keys" class="space-y-6">
+		<div class="card bg-base-200">
 			<div class="card-body">
-				<h2 class="card-title">{ T(page.Loc, "layout.settings") }</h2>
-				<p>{ T(page.Loc, "web.settings.select_prompt") }</p>
+				<h2 class="card-title">{ T(loc, "web.settings.ai_keys.title") }</h2>
+				if form.ErrorMessage != "" {
+					<div class="alert alert-error">{ form.ErrorMessage }</div>
+				}
+				<form method="post" action={ routepath.AppSettingsAIKeys } class="space-y-4">
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_provider") }</span>
+						</label>
+						<input class="input input-bordered w-full" type="text" value={ settingsAIKeyProviderLabel(form) } disabled/>
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_label") }</span>
+						</label>
+						<input class="input input-bordered w-full" type="text" name="label" value={ form.Label } required/>
+					</div>
+					<div class="form-control">
+						<label class="label">
+							<span class="label-text">{ T(loc, "web.settings.ai_keys.field_secret") }</span>
+						</label>
+						<input class="input input-bordered w-full" type="password" name="secret" required/>
+					</div>
+					<div class="card-actions justify-end">
+						<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.ai_keys.submit_add") }</button>
+					</div>
+				</form>
 			</div>
-		</section>
-	}
-}
-
-templ UserProfileSettingsPage(page PageContext, state UserProfileSettingsPageState) {
-	@Layout(SettingsUserProfileLayoutOptions(page)) {
-		<section class="space-y-4">
-			<div class="card bg-base-200">
-				<div class="card-body">
-					<h2 class="card-title">{ T(page.Loc, "web.settings.user_profile.title") }</h2>
-					if state.ErrorMessage != "" {
-						<div class="alert alert-error">{ state.ErrorMessage }</div>
-					}
-					<form method="post" action="/app/settings/user-profile" class="space-y-4">
-						<div class="form-control">
-							<label class="label">
-								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_username") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="text" name="username" value={ state.Username } placeholder={ T(page.Loc, "web.settings.user_profile.placeholder_username") }>
-						</div>
-						<div class="form-control">
-							<label class="label">
-								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_name") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="text" name="name" value={ state.Name } placeholder={ T(page.Loc, "web.settings.user_profile.placeholder_name") }>
-						</div>
-						<div class="form-control">
-							<label class="label">
-								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_avatar_set_id") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="text" name="avatar_set_id" value={ state.AvatarSetID }>
-						</div>
-						<div class="form-control">
-							<label class="label">
-								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_avatar_asset_id") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="text" name="avatar_asset_id" value={ state.AvatarAssetID }>
-						</div>
-						<div class="form-control">
-							<label class="label">
-								<span class="label-text">{ T(page.Loc, "web.settings.user_profile.field_bio") }</span>
-							</label>
-							<textarea class="textarea textarea-bordered w-full" name="bio">{ state.Bio }</textarea>
-						</div>
-						<div class="card-actions justify-end">
-							<button class="btn btn-primary" type="submit">{ T(page.Loc, "web.settings.user_profile.submit_save") }</button>
-						</div>
-					</form>
-				</div>
-			</div>
-		</section>
-	}
-}
-
-templ AIKeysPage(page PageContext, state AIKeysPageState) {
-	@Layout(SettingsAIKeysLayoutOptions(page)) {
-		<section class="space-y-6">
-			<div class="card bg-base-200">
-				<div class="card-body">
-					<h2 class="card-title">{ T(page.Loc, "web.settings.ai_keys.add_title") }</h2>
-					if state.ErrorMessage != "" {
-						<div class="alert alert-error">{ state.ErrorMessage }</div>
-					}
-					<form method="post" action="/app/settings/ai-keys" class="space-y-4">
-						<div class="form-control">
-							<label class="label">
-								<span class="label-text">{ T(page.Loc, "web.settings.ai_keys.field_provider") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="text" value={ state.FormProvider } disabled>
-						</div>
-						<div class="form-control">
-							<label class="label">
-								<span class="label-text">{ T(page.Loc, "web.settings.ai_keys.field_label") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="text" name="label" value={ state.FormLabel } required>
-						</div>
-						<div class="form-control">
-							<label class="label">
-								<span class="label-text">{ T(page.Loc, "web.settings.ai_keys.field_secret") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="password" name="secret" required>
-						</div>
-						<div class="card-actions justify-end">
-							<button class="btn btn-primary" type="submit">{ T(page.Loc, "web.settings.ai_keys.submit_add") }</button>
-						</div>
-					</form>
-				</div>
-			</div>
-			<div class="card bg-base-200">
-				<div class="card-body">
-					<h2 class="card-title">{ T(page.Loc, "web.settings.ai_keys.list_title") }</h2>
-					if len(state.Keys) == 0 {
-						<div class="text-sm opacity-80">{ T(page.Loc, "web.settings.ai_keys.empty") }</div>
-					} else {
-						<div class="overflow-x-auto">
-							<table class="table table-zebra">
-								<thead>
+		</div>
+		<div class="card bg-base-200">
+			<div class="card-body">
+				<h3 class="card-title">{ T(loc, "web.settings.ai_keys.list_title") }</h3>
+				if len(keys) == 0 {
+					<div class="text-sm opacity-80">{ T(loc, "web.settings.ai_keys.empty") }</div>
+				} else {
+					<div class="overflow-x-auto">
+						<table class="table table-zebra">
+							<thead>
+								<tr>
+									<th>{ T(loc, "web.settings.ai_keys.table.label") }</th>
+									<th>{ T(loc, "web.settings.ai_keys.table.provider") }</th>
+									<th>{ T(loc, "web.settings.ai_keys.table.status") }</th>
+									<th>{ T(loc, "web.settings.ai_keys.table.created") }</th>
+									<th>{ T(loc, "web.settings.ai_keys.table.revoked") }</th>
+									<th>{ T(loc, "web.settings.ai_keys.table.actions") }</th>
+								</tr>
+							</thead>
+							<tbody>
+								for _, key := range keys {
 									<tr>
-										<th>{ T(page.Loc, "web.settings.ai_keys.table.label") }</th>
-										<th>{ T(page.Loc, "web.settings.ai_keys.table.provider") }</th>
-										<th>{ T(page.Loc, "web.settings.ai_keys.table.status") }</th>
-										<th>{ T(page.Loc, "web.settings.ai_keys.table.created") }</th>
-										<th>{ T(page.Loc, "web.settings.ai_keys.table.revoked") }</th>
-										<th>{ T(page.Loc, "web.settings.ai_keys.table.actions") }</th>
+										<td>{ key.Label }</td>
+										<td>{ key.Provider }</td>
+										<td>{ key.Status }</td>
+										<td>{ key.CreatedAt }</td>
+										<td>{ key.RevokedAt }</td>
+										<td>
+											if key.CanRevoke {
+												<form method="post" action={ routepath.AppSettingsAIKeyRevoke(key.ID) }>
+													<button class="btn btn-error btn-xs" type="submit">{ T(loc, "web.settings.ai_keys.revoke") }</button>
+												</form>
+											} else {
+												<span class="opacity-60">-</span>
+											}
+										</td>
 									</tr>
-								</thead>
-								<tbody>
-									for _, row := range state.Keys {
-										<tr>
-											<td>{ row.Label }</td>
-											<td>{ row.Provider }</td>
-											<td>{ row.Status }</td>
-											<td>{ row.CreatedAt }</td>
-											<td>{ row.RevokedAt }</td>
-											<td>
-												if row.CanRevoke {
-													<form method="post" action={ "/app/settings/ai-keys/" + row.ID + "/revoke" }>
-														<button
-														class="btn btn-error btn-xs"
-														type="submit"
-														onclick={ templ.JSUnsafeFuncCall("return " + templ.SafeScriptInline("confirm", T(page.Loc, "web.settings.ai_keys.confirm_revoke"))) }
-														>{ T(page.Loc, "web.settings.ai_keys.revoke") }</button>
-													</form>
-												} else {
-													<span class="opacity-60">-</span>
-												}
-											</td>
-										</tr>
-									}
-								</tbody>
-							</table>
-						</div>
-					}
-				</div>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
 			</div>
-		</section>
-	}
+		</div>
+	</section>
 }

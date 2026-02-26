@@ -1,1638 +1,1201 @@
 package web
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io/fs"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"os"
-	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/branding"
-	authfeature "github.com/louisbranch/fracturing.space/internal/services/web/feature/auth"
-	webcache "github.com/louisbranch/fracturing.space/internal/services/web/infra/cache"
-	webgrpcdial "github.com/louisbranch/fracturing.space/internal/services/web/infra/grpc"
+	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/icons"
+	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/health"
-	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/status"
 )
 
-func TestLoginWithoutPendingIDRedirectsToAuthLogin(t *testing.T) {
-	handler := NewHandler(Config{
-		AuthBaseURL:   "http://auth.local",
-		OAuthClientID: "fracturing-space",
-		CallbackURL:   "http://localhost:8080/auth/callback",
-	}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/login", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
-	}
-	if loc := w.Header().Get("Location"); loc != "/auth/login" {
-		t.Fatalf("Location = %q, want %q", loc, "/auth/login")
-	}
-}
-
-func TestLoginWithoutPendingIDErrorsWhenOAuthNotConfigured(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/login", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestLoginHandlerRendersForm(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/login?pending_id=pending-1&client_id=client-1&client_name=Test+Client", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	body := w.Body.String()
-	if !strings.Contains(body, "pending-1") {
-		t.Fatalf("expected pending_id in body")
-	}
-	if !strings.Contains(body, "<title>Sign In | "+branding.AppName+"</title>") {
-		t.Fatalf("expected title suffix on login page")
-	}
-	if !strings.Contains(body, `data-layout="auth"`) {
-		t.Fatalf("expected auth layout marker in login page")
-	}
-}
-
-func TestLoginHandlerRendersLocaleSwitcher(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/login?pending_id=pending-1", nil)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	body := w.Body.String()
-	if !strings.Contains(body, `data-lang="en-US"`) {
-		t.Fatalf("expected en-US locale option in shell locale switcher, got %q", body)
-	}
-	if !strings.Contains(body, `data-lang="pt-BR"`) {
-		t.Fatalf("expected pt-BR locale option in shell locale switcher, got %q", body)
-	}
-}
-
-func TestLoginHandlerLocaleLinksPreserveQuery(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/login?pending_id=pending-1", nil)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	body := w.Body.String()
-	if !strings.Contains(body, `href="/login?lang=en-US&amp;pending_id=pending-1"`) {
-		t.Fatalf("expected en-US link preserving query on login page, got %q", body)
-	}
-	if !strings.Contains(body, `href="/login?lang=pt-BR&amp;pending_id=pending-1"`) {
-		t.Fatalf("expected pt-BR link preserving query on login page, got %q", body)
-	}
-}
-
-func TestLandingPageRenders(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	body := w.Body.String()
-	if !strings.Contains(body, branding.AppName) {
-		t.Fatalf("expected app name in body")
-	}
-	if !strings.Contains(body, "<title>Open source AI GM engine | "+branding.AppName+"</title>") {
-		t.Fatalf("expected title suffix on landing page")
-	}
-	if !strings.Contains(body, "Open-source, server-authoritative engine") {
-		t.Fatalf("expected hero tagline in body")
-	}
-	if !strings.Contains(body, `data-layout="auth"`) {
-		t.Fatalf("expected auth layout marker in landing page")
-	}
-}
-
-func TestLandingLocaleLinksPreserveQuery(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/?src=landing", nil)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	body := w.Body.String()
-	if !strings.Contains(body, `href="/?lang=en-US&amp;src=landing"`) {
-		t.Fatalf("expected en-US link preserving query on landing page, got %q", body)
-	}
-	if !strings.Contains(body, `href="/?lang=pt-BR&amp;src=landing"`) {
-		t.Fatalf("expected pt-BR link preserving query on landing page, got %q", body)
-	}
-}
-
-func TestLandingPageShowsSignIn(t *testing.T) {
-	handler := NewHandler(Config{
-		AuthBaseURL:   "http://auth.local",
-		OAuthClientID: "fracturing-space",
-		CallbackURL:   "http://localhost:8080/auth/callback",
-	}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	body := w.Body.String()
-	if !strings.Contains(body, "Sign in") {
-		t.Fatalf("expected Sign in button in body")
-	}
-	if !strings.Contains(body, "/auth/login") {
-		t.Fatalf("expected /auth/login link in body")
-	}
-}
-
-func TestLandingPageShowsSignedInUser(t *testing.T) {
-	h := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-			CallbackURL:   "http://localhost:8080/auth/callback",
-		},
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-
-	// Build the full handler so we go through the mux.
-	handler := NewHandler(h.config, nil)
-
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	body := w.Body.String()
-	// The handler creates its own session store, so this session won't be found.
-	// Instead, it should show "Sign in" since the session is unknown.
-	if !strings.Contains(body, "Sign in") {
-		t.Fatalf("expected Sign in for unknown session")
-	}
-}
-
-func TestLandingPageRejectsNonRootPath(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/something", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusNotFound)
-	}
-}
-
-func TestLandingPageRejectsNonGETMethod(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
-	}
-}
-
-func TestPasskeyLoginStartRequiresClient(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/start", bytes.NewBufferString(`{"pending_id":"pending-1"}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestPasskeyLoginStartSuccess(t *testing.T) {
-	fake := &fakeAuthClient{
-		beginLoginResp: &authv1.BeginPasskeyLoginResponse{
-			SessionId:                    "session-1",
-			CredentialRequestOptionsJson: []byte(`{"challenge":"test"}`),
-		},
-	}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/start", bytes.NewBufferString(`{"pending_id":"pending-1"}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if payload["session_id"] != "session-1" {
-		t.Fatalf("session_id = %v", payload["session_id"])
-	}
-}
-
-func TestPasskeyLoginFinishRequiresFields(t *testing.T) {
-	fake := &fakeAuthClient{}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/finish", bytes.NewBufferString(`{"pending_id":"pending-1"}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestPasskeyLoginFinishSuccess(t *testing.T) {
-	fake := &fakeAuthClient{
-		finishLoginResp: &authv1.FinishPasskeyLoginResponse{},
-	}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/finish", bytes.NewBufferString(`{"pending_id":"pending-1","session_id":"session-1","credential":{}}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if payload["redirect_url"] != "http://auth.local/authorize/consent?pending_id=pending-1" {
-		t.Fatalf("redirect_url = %v", payload["redirect_url"])
-	}
-}
-
-func TestMagicLinkRequiresToken(t *testing.T) {
-	fake := &fakeAuthClient{}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodGet, "/magic", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-	if !strings.Contains(w.Body.String(), "Magic link missing") {
-		t.Fatalf("expected error page")
-	}
-	if !strings.Contains(w.Body.String(), `data-layout="auth"`) {
-		t.Fatalf("expected auth layout marker in magic page")
-	}
-}
-
-func TestMagicLocaleLinksPreserveQuery(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/magic?src=magic", nil)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
-	}
-	body := w.Body.String()
-	if !strings.Contains(body, `href="/magic?lang=en-US&amp;src=magic"`) {
-		t.Fatalf("expected en-US link preserving query on magic page, got %q", body)
-	}
-	if !strings.Contains(body, `href="/magic?lang=pt-BR&amp;src=magic"`) {
-		t.Fatalf("expected pt-BR link preserving query on magic page, got %q", body)
-	}
-}
-
-func TestMagicLinkRedirectsToConsent(t *testing.T) {
-	fake := &fakeAuthClient{
-		consumeMagicResp: &authv1.ConsumeMagicLinkResponse{PendingId: "pending-1"},
-	}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodGet, "/magic?token=token-1", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
-	}
-	if location := w.Header().Get("Location"); location != "http://auth.local/authorize/consent?pending_id=pending-1" {
-		t.Fatalf("location = %q", location)
-	}
-}
-
-func TestMagicLinkSuccessPage(t *testing.T) {
-	fake := &fakeAuthClient{
-		consumeMagicResp: &authv1.ConsumeMagicLinkResponse{},
-	}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodGet, "/magic?token=token-1", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	if !strings.Contains(w.Body.String(), "Magic link verified") {
-		t.Fatalf("expected success page")
-	}
-}
-
-func TestPasskeyRegisterStartRequiresFields(t *testing.T) {
-	fake := &fakeAuthClient{}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/start", bytes.NewBufferString(`{}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestPasskeyRegisterStartSuccess(t *testing.T) {
-	fake := &fakeAuthClient{
-		createUserResp: &authv1.CreateUserResponse{
-			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
-		},
-		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
-			SessionId:                     "session-1",
-			CredentialCreationOptionsJson: []byte(`{"challenge":"test","user":{"id":"user"}}`),
-		},
-	}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/start", bytes.NewBufferString(`{"email":"alpha@example.com"}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if payload["session_id"] != "session-1" {
-		t.Fatalf("session_id = %v", payload["session_id"])
-	}
-	if payload["user_id"] != "user-1" {
-		t.Fatalf("user_id = %v", payload["user_id"])
-	}
-}
-
-func TestPasskeyRegisterStartDoesNotWriteLocaleViaAccountProfile(t *testing.T) {
-	fakeAuth := &fakeAuthClient{
-		createUserResp: &authv1.CreateUserResponse{
-			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
-		},
-		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
-			SessionId:                     "session-1",
-			CredentialCreationOptionsJson: []byte(`{"challenge":"test","user":{"id":"user"}}`),
-		},
-	}
-	fakeAccount := &fakeAccountClient{}
-	h := &handler{
-		config:        Config{AuthBaseURL: "http://auth.local"},
-		authClient:    fakeAuth,
-		accountClient: fakeAccount,
-		sessions:      newSessionStore(),
-		pendingFlows:  newPendingFlowStore(),
-	}
-	req := httptest.NewRequest(
-		http.MethodPost,
-		"/passkeys/register/start",
-		bytes.NewBufferString(`{"email":"alpha@example.com","locale":"pt-BR"}`),
-	)
-	w := httptest.NewRecorder()
-
-	h.handlePasskeyRegisterStart(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	if fakeAccount.lastUpdateReq != nil {
-		t.Fatalf("unexpected UpdateProfile call: %+v", fakeAccount.lastUpdateReq)
-	}
-}
-
-func TestPasskeyRegisterStartRejectsInvalidLocale(t *testing.T) {
-	fakeAuth := &fakeAuthClient{
-		createUserResp: &authv1.CreateUserResponse{
-			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
-		},
-		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
-			SessionId:                     "session-1",
-			CredentialCreationOptionsJson: []byte(`{"challenge":"test","user":{"id":"user"}}`),
-		},
-	}
-	h := &handler{
-		config:       Config{AuthBaseURL: "http://auth.local"},
-		authClient:   fakeAuth,
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-	req := httptest.NewRequest(
-		http.MethodPost,
-		"/passkeys/register/start",
-		bytes.NewBufferString(`{"email":"alpha@example.com","locale":"not-a-locale"}`),
-	)
-	w := httptest.NewRecorder()
-
-	h.handlePasskeyRegisterStart(w, req)
-
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-	if body := w.Body.String(); !strings.Contains(body, "invalid locale") {
-		t.Fatalf("expected invalid locale error body, got %q", body)
-	}
-}
-
-func TestPasskeyRegisterStartIgnoresAccountProfileClient(t *testing.T) {
-	fakeAuth := &fakeAuthClient{
-		createUserResp: &authv1.CreateUserResponse{
-			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
-		},
-		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
-			SessionId:                     "session-1",
-			CredentialCreationOptionsJson: []byte(`{"challenge":"test","user":{"id":"user"}}`),
-		},
-	}
-	fakeAccount := &fakeAccountClient{
-		updateProfileErr: status.Error(codes.Unavailable, "profile write unavailable"),
-	}
-	h := &handler{
-		config:        Config{AuthBaseURL: "http://auth.local"},
-		authClient:    fakeAuth,
-		accountClient: fakeAccount,
-		sessions:      newSessionStore(),
-		pendingFlows:  newPendingFlowStore(),
-	}
-	req := httptest.NewRequest(
-		http.MethodPost,
-		"/passkeys/register/start",
-		bytes.NewBufferString(`{"email":"alpha@example.com","locale":"pt-BR"}`),
-	)
-	w := httptest.NewRecorder()
-
-	h.handlePasskeyRegisterStart(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	if fakeAccount.lastUpdateReq != nil {
-		t.Fatalf("unexpected UpdateProfile call: %+v", fakeAccount.lastUpdateReq)
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(w.Body.Bytes(), &payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if payload["session_id"] != "session-1" {
-		t.Fatalf("session_id = %v", payload["session_id"])
-	}
-}
-
-func TestPasskeyRegisterStartPassesLocaleToCreateUser(t *testing.T) {
-	fakeAuth := &fakeAuthClient{
-		createUserResp: &authv1.CreateUserResponse{
-			User: &authv1.User{Id: "user-1", Email: "alpha@example.com"},
-		},
-		beginRegResp: &authv1.BeginPasskeyRegistrationResponse{
-			SessionId:                     "session-1",
-			CredentialCreationOptionsJson: []byte(`{"challenge":"test","user":{"id":"user"}}`),
-		},
-	}
-	h := &handler{
-		config:       Config{AuthBaseURL: "http://auth.local"},
-		authClient:   fakeAuth,
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-	req := httptest.NewRequest(
-		http.MethodPost,
-		"/passkeys/register/start",
-		bytes.NewBufferString(`{"email":"alpha@example.com","locale":"pt-BR"}`),
-	)
-	w := httptest.NewRecorder()
-
-	h.handlePasskeyRegisterStart(w, req)
-
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-	if fakeAuth.createUserReq == nil {
-		t.Fatal("expected CreateUser request")
-	}
-	if got := fakeAuth.createUserReq.GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
-		t.Fatalf("locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
-	}
-}
-
-func TestPasskeyRegisterFinishRequiresFields(t *testing.T) {
-	fake := &fakeAuthClient{}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/finish", bytes.NewBufferString(`{"session_id":"session-1"}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestPasskeyRegisterFinishSuccess(t *testing.T) {
-	fake := &fakeAuthClient{
-		finishRegResp: &authv1.FinishPasskeyRegistrationResponse{},
-	}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/finish", bytes.NewBufferString(`{"session_id":"session-1","user_id":"user-1","credential":{}}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
-	}
-}
-
-func TestAuthLoginRedirect(t *testing.T) {
-	handler := NewHandler(Config{
-		AuthBaseURL:   "http://auth.local",
-		OAuthClientID: "fracturing-space",
-		CallbackURL:   "http://localhost:8080/auth/callback",
-	}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
-	}
-	location := w.Header().Get("Location")
-	if location == "" {
-		t.Fatal("expected Location header")
-	}
-	parsed, err := url.Parse(location)
-	if err != nil {
-		t.Fatalf("parse location: %v", err)
-	}
-	if parsed.Host != "auth.local" {
-		t.Fatalf("host = %q, want %q", parsed.Host, "auth.local")
-	}
-	if parsed.Path != "/authorize" {
-		t.Fatalf("path = %q, want %q", parsed.Path, "/authorize")
-	}
-	q := parsed.Query()
-	if q.Get("response_type") != "code" {
-		t.Fatalf("response_type = %q", q.Get("response_type"))
-	}
-	if q.Get("client_id") != "fracturing-space" {
-		t.Fatalf("client_id = %q", q.Get("client_id"))
-	}
-	if q.Get("redirect_uri") != "http://localhost:8080/auth/callback" {
-		t.Fatalf("redirect_uri = %q", q.Get("redirect_uri"))
-	}
-	if q.Get("code_challenge") == "" {
-		t.Fatal("expected code_challenge")
-	}
-	if q.Get("code_challenge_method") != "S256" {
-		t.Fatalf("code_challenge_method = %q", q.Get("code_challenge_method"))
-	}
-	if q.Get("state") == "" {
-		t.Fatal("expected state parameter")
-	}
-}
-
-func TestAuthCallbackExchangesCodeAndSetsCookie(t *testing.T) {
-	// Mock token endpoint.
-	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-			return
-		}
-		// Verify the required fields are sent.
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, "bad form", http.StatusBadRequest)
-			return
-		}
-		if r.FormValue("grant_type") != "authorization_code" {
-			http.Error(w, "wrong grant_type", http.StatusBadRequest)
-			return
-		}
-		if r.FormValue("client_id") != "fracturing-space" {
-			http.Error(w, "wrong client_id", http.StatusBadRequest)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}`))
-	}))
-	defer tokenServer.Close()
-
-	h := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-			CallbackURL:   "http://localhost:8080/auth/callback",
-			AuthTokenURL:  tokenServer.URL,
-		},
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-
-	// Seed a pending flow.
-	state := h.pendingFlows.create("test-verifier")
-
-	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code&state="+state, nil)
-	w := httptest.NewRecorder()
-	h.handleAuthCallback(w, req)
-
-	if w.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusFound, w.Body.String())
-	}
-	if w.Header().Get("Location") != "/" {
-		t.Fatalf("Location = %q, want %q", w.Header().Get("Location"), "/")
-	}
-
-	// Verify session cookie was set.
-	cookies := w.Result().Cookies()
-	var sessionCookie *http.Cookie
-	for _, c := range cookies {
-		if c.Name == sessionCookieName {
-			sessionCookie = c
-			break
-		}
-	}
-	if sessionCookie == nil {
-		t.Fatal("expected session cookie")
-	}
-
-	// Verify session exists in the store.
-	sess := h.sessions.get(sessionCookie.Value, "test-access-token")
-	if sess == nil {
-		t.Fatal("expected session in store")
-	}
-	if sess.accessToken != "test-access-token" {
-		t.Fatalf("accessToken = %q, want %q", sess.accessToken, "test-access-token")
-	}
-}
-
-func TestAuthCallbackPersistsSessionForRestart(t *testing.T) {
-	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}`))
-	}))
-	defer tokenServer.Close()
-
-	cachePath := filepath.Join(t.TempDir(), "web-cache.db")
-	cacheStore, err := webcache.OpenStore(cachePath)
-	if err != nil {
-		t.Fatalf("open cache store: %v", err)
-	}
-	h1 := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-			CallbackURL:   "http://localhost:8080/auth/callback",
-			AuthTokenURL:  tokenServer.URL,
-		},
-		sessions:     newSessionStore(cacheStore),
-		pendingFlows: newPendingFlowStore(),
-	}
-
-	state := h1.pendingFlows.create("test-verifier")
-	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code&state="+state, nil)
-	w := httptest.NewRecorder()
-	h1.handleAuthCallback(w, req)
-
-	if w.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusFound, w.Body.String())
-	}
-	var sessionCookie *http.Cookie
-	for _, c := range w.Result().Cookies() {
-		if c.Name == sessionCookieName {
-			sessionCookie = c
-			break
-		}
-	}
-	if sessionCookie == nil {
-		t.Fatal("expected session cookie")
-	}
-
-	accessToken, _, _, found, err := cacheStore.LoadSession(context.Background(), sessionCookie.Value)
-	if err != nil {
-		t.Fatalf("load session from cache store: %v", err)
-	}
-	if !found {
-		t.Fatal("expected session persisted to cache store")
-	}
-	expectedAccessTokenHash := sessionAccessTokenFingerprint("test-access-token")
-	if accessToken != expectedAccessTokenHash {
-		t.Fatalf("persisted access token = %q, want %q", accessToken, expectedAccessTokenHash)
-	}
-	if err := cacheStore.Close(); err != nil {
-		t.Fatalf("close cache store: %v", err)
-	}
-
-	reopenedStore, err := webcache.OpenStore(cachePath)
-	if err != nil {
-		t.Fatalf("reopen cache store: %v", err)
-	}
-	h2 := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-			CallbackURL:   "http://localhost:8080/auth/callback",
-			AuthTokenURL:  tokenServer.URL,
-		},
-		sessions:     newSessionStore(reopenedStore),
-		pendingFlows: newPendingFlowStore(),
-	}
-	t.Cleanup(func() {
-		if err := reopenedStore.Close(); err != nil {
-			t.Fatalf("close reopened cache store: %v", err)
-		}
-	})
-
-	replayReq := httptest.NewRequest(http.MethodGet, "/", nil)
-	replayReq.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionCookie.Value})
-	replayReq.AddCookie(&http.Cookie{Name: tokenCookieName, Value: "test-access-token"})
-	sess := sessionFromRequest(replayReq, h2.sessions)
-	if sess == nil {
-		t.Fatal("expected session restored from persistent cache")
-	}
-	if sess.accessToken != "test-access-token" {
-		t.Fatalf("restored access token = %q, want %q", sess.accessToken, "test-access-token")
-	}
-}
-
-func TestAuthCallbackSetsTokenCookie(t *testing.T) {
-	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"access_token":"test-access-token","token_type":"Bearer","expires_in":3600}`))
-	}))
-	defer tokenServer.Close()
-
-	h := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-			CallbackURL:   "http://localhost:8080/auth/callback",
-			AuthTokenURL:  tokenServer.URL,
-			Domain:        "example.com",
-		},
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-
-	state := h.pendingFlows.create("test-verifier")
-	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code&state="+state, nil)
-	w := httptest.NewRecorder()
-	h.handleAuthCallback(w, req)
-
-	if w.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusFound, w.Body.String())
-	}
-
-	var tokenCookie *http.Cookie
-	for _, c := range w.Result().Cookies() {
-		if c.Name == tokenCookieName {
-			tokenCookie = c
-			break
-		}
-	}
-	if tokenCookie == nil {
-		t.Fatal("expected fs_token cookie")
-	}
-	if tokenCookie.Value != "test-access-token" {
-		t.Fatalf("token cookie value = %q, want %q", tokenCookie.Value, "test-access-token")
-	}
-	if tokenCookie.Domain != "example.com" {
-		t.Fatalf("token cookie domain = %q, want %q", tokenCookie.Domain, "example.com")
-	}
-	if tokenCookie.MaxAge != 3600 {
-		t.Fatalf("token cookie MaxAge = %d, want 3600", tokenCookie.MaxAge)
-	}
-}
-
-func TestAuthLogoutClearsTokenCookie(t *testing.T) {
-	h := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-			Domain:        "example.com",
-		},
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-
-	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
-	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
-	w := httptest.NewRecorder()
-	h.handleAuthLogout(w, req)
-
-	if w.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
-	}
-
-	var tokenCleared bool
-	for _, c := range w.Result().Cookies() {
-		if c.Name == tokenCookieName && c.MaxAge == -1 {
-			tokenCleared = true
-		}
-	}
-	if !tokenCleared {
-		t.Fatal("expected fs_token cookie to be cleared")
-	}
-}
-
-func TestAuthCallbackMissingCodeOrState(t *testing.T) {
-	h := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-			CallbackURL:   "http://localhost:8080/auth/callback",
-		},
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code", nil)
-	w := httptest.NewRecorder()
-	h.handleAuthCallback(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestAuthCallbackInvalidState(t *testing.T) {
-	h := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-			CallbackURL:   "http://localhost:8080/auth/callback",
-		},
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/auth/callback?code=test-code&state=bogus", nil)
-	w := httptest.NewRecorder()
-	h.handleAuthCallback(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestAuthLogoutClearsSessionAndRedirects(t *testing.T) {
-	h := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-		},
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-
-	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
-
-	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
-	req.AddCookie(&http.Cookie{Name: sessionCookieName, Value: sessionID})
-	w := httptest.NewRecorder()
-	h.handleAuthLogout(w, req)
-
-	if w.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusFound)
-	}
-	if w.Header().Get("Location") != "/" {
-		t.Fatalf("Location = %q, want %q", w.Header().Get("Location"), "/")
-	}
-
-	// Session should be deleted.
-	if sess := h.sessions.get(sessionID, "token-1"); sess != nil {
-		t.Fatal("expected session to be deleted")
-	}
-
-	// Session cookie should be cleared.
-	cookies := w.Result().Cookies()
-	var cleared bool
-	for _, c := range cookies {
-		if c.Name == sessionCookieName && c.MaxAge == -1 {
-			cleared = true
-		}
-	}
-	if !cleared {
-		t.Fatal("expected session cookie to be cleared")
-	}
-}
-
-func TestAuthLogoutMethodNotAllowed(t *testing.T) {
-	h := &handler{
-		config: Config{
-			AuthBaseURL:   "http://auth.local",
-			OAuthClientID: "fracturing-space",
-		},
-		sessions:     newSessionStore(),
-		pendingFlows: newPendingFlowStore(),
-	}
-
-	req := httptest.NewRequest(http.MethodGet, "/auth/logout", nil)
-	w := httptest.NewRecorder()
-	h.handleAuthLogout(w, req)
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
-	}
-}
-
-func TestAuthLoginNotConfigured(t *testing.T) {
-	handler := NewHandler(Config{
-		AuthBaseURL: "http://auth.local",
-		// OAuthClientID is empty — not configured.
-	}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/auth/login", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
-	}
-}
-
 func TestNewServerRequiresHTTPAddr(t *testing.T) {
-	_, err := NewServer(Config{AuthBaseURL: "http://auth.local"})
+	t.Parallel()
+
+	_, err := NewServer(context.Background(), Config{})
 	if err == nil {
-		t.Fatalf("expected error")
+		t.Fatalf("expected error for empty HTTPAddr")
 	}
 }
 
-func TestNewServerRequiresAuthBaseURL(t *testing.T) {
-	_, err := NewServer(Config{HTTPAddr: "127.0.0.1:0"})
-	if err == nil {
-		t.Fatalf("expected error")
+func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+
+	publicReq := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
+	publicRR := httptest.NewRecorder()
+	h.ServeHTTP(publicRR, publicReq)
+	if publicRR.Code != http.StatusOK {
+		t.Fatalf("public status = %d, want %d", publicRR.Code, http.StatusOK)
+	}
+
+	publicProfileReq := httptest.NewRequest(http.MethodGet, "/u/alice", nil)
+	publicProfileRR := httptest.NewRecorder()
+	h.ServeHTTP(publicProfileRR, publicProfileReq)
+	if publicProfileRR.Code != http.StatusOK {
+		t.Fatalf("public profile status = %d, want %d", publicProfileRR.Code, http.StatusOK)
+	}
+
+	protectedReq := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	protectedRR := httptest.NewRecorder()
+	h.ServeHTTP(protectedRR, protectedReq)
+	if protectedRR.Code != http.StatusFound {
+		t.Fatalf("protected status = %d, want %d", protectedRR.Code, http.StatusFound)
+	}
+
+	campaignsReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/123", nil)
+	campaignsRR := httptest.NewRecorder()
+	h.ServeHTTP(campaignsRR, campaignsReq)
+	if campaignsRR.Code != http.StatusFound {
+		t.Fatalf("campaigns status = %d, want %d", campaignsRR.Code, http.StatusFound)
+	}
+	if got := campaignsRR.Header().Get("Location"); got != "/login" {
+		t.Fatalf("campaigns redirect = %q, want %q", got, "/login")
+	}
+
+	experimentalProtectedReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
+	experimentalProtectedRR := httptest.NewRecorder()
+	h.ServeHTTP(experimentalProtectedRR, experimentalProtectedReq)
+	if experimentalProtectedRR.Code != http.StatusNotFound {
+		t.Fatalf("experimental protected status = %d, want %d", experimentalProtectedRR.Code, http.StatusNotFound)
 	}
 }
 
-func TestNewServerRequiresOAuthClientID(t *testing.T) {
-	_, err := NewServer(Config{
-		HTTPAddr:    "127.0.0.1:0",
-		AuthBaseURL: "http://auth.local",
+func TestNewHandlerMountsExperimentalModulesWhenEnabled(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{EnableExperimentalModules: true})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+
+	publicReq := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
+	publicRR := httptest.NewRecorder()
+	h.ServeHTTP(publicRR, publicReq)
+	if publicRR.Code != http.StatusOK {
+		t.Fatalf("public status = %d, want %d", publicRR.Code, http.StatusOK)
+	}
+
+	protectedReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
+	protectedRR := httptest.NewRecorder()
+	h.ServeHTTP(protectedRR, protectedReq)
+	if protectedRR.Code != http.StatusFound {
+		t.Fatalf("protected status = %d, want %d", protectedRR.Code, http.StatusFound)
+	}
+
+	campaignsReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/123", nil)
+	campaignsRR := httptest.NewRecorder()
+	h.ServeHTTP(campaignsRR, campaignsReq)
+	if campaignsRR.Code != http.StatusFound {
+		t.Fatalf("campaigns status = %d, want %d", campaignsRR.Code, http.StatusFound)
+	}
+}
+
+func TestDefaultCampaignStableSurfaceHidesScaffoldDetailRoutes(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultStableProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+
+	for _, path := range []string{
+		"/app/campaigns/c1/sessions",
+		"/app/campaigns/c1/sessions/sess-1",
+		"/app/campaigns/c1/characters/char-1",
+		"/app/campaigns/c1/invites",
+		"/app/campaigns/c1/game",
+	} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		attachSessionCookie(t, req, auth, "user-1")
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		if rr.Code != http.StatusNotFound {
+			t.Fatalf("path %q status = %d, want %d", path, rr.Code, http.StatusNotFound)
+		}
+	}
+}
+
+func TestExperimentalCampaignSurfaceExposesDetailRoutes(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+
+	for _, path := range []string{
+		"/app/campaigns/c1/sessions",
+		"/app/campaigns/c1/sessions/sess-1",
+		"/app/campaigns/c1/characters/char-1",
+		"/app/campaigns/c1/invites",
+		"/app/campaigns/c1/game",
+	} {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		attachSessionCookie(t, req, auth, "user-1")
+		rr := httptest.NewRecorder()
+		h.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("path %q status = %d, want %d", path, rr.Code, http.StatusOK)
+		}
+	}
+}
+
+func TestExperimentalCampaignMutationRouteRejectsMemberAccess(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(Config{
+		EnableExperimentalModules: true,
+		AuthClient:                auth,
+		CampaignClient:            defaultCampaignClient(),
+		ParticipantClient: fakeWebParticipantClient{response: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{{
+			Id:             "p-member",
+			CampaignId:     "c1",
+			UserId:         "user-1",
+			CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
+		}}}},
+		ConnectionsClient: defaultConnectionsClient(),
+		CredentialClient:  fakeCredentialClient{},
 	})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if !strings.Contains(err.Error(), "oauth client id is required") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestNewServerRequiresCallbackURL(t *testing.T) {
-	_, err := NewServer(Config{
-		HTTPAddr:      "127.0.0.1:0",
-		AuthBaseURL:   "http://auth.local",
-		OAuthClientID: "fracturing-space",
-	})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if !strings.Contains(err.Error(), "oauth callback url is required") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestNewServerOpensCacheStoreWhenConfigured(t *testing.T) {
-	cachePath := filepath.Join(t.TempDir(), "web-cache.db")
-	server, err := NewServer(Config{
-		HTTPAddr:      "127.0.0.1:0",
-		AuthBaseURL:   "http://auth.local",
-		OAuthClientID: "fracturing-space",
-		CallbackURL:   "http://localhost:8080/auth/callback",
-		CacheDBPath:   cachePath,
-		AuthAddr:      "",
-		GameAddr:      "",
-	})
 	if err != nil {
-		t.Fatalf("new server: %v", err)
+		t.Fatalf("NewHandler() error = %v", err)
 	}
-	t.Cleanup(server.Close)
 
-	if server.cacheStore == nil {
-		t.Fatalf("expected cache store to be configured")
-	}
-	if _, err := os.Stat(cachePath); err != nil {
-		t.Fatalf("stat cache db path: %v", err)
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/c1/sessions/start", nil)
+	req.Header.Set("Origin", "http://example.com")
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusForbidden)
 	}
 }
 
-func TestNewHandlerWithCampaignAccessStaticAssetsFailure(t *testing.T) {
-	origSubStaticFS := subStaticFS
-	subStaticFS = func() (fs.FS, error) {
-		return nil, fmt.Errorf("injected static assets failure")
-	}
-	defer func() {
-		subStaticFS = origSubStaticFS
-	}()
+func TestProtectedRouteDoesNotTrustUserHeader(t *testing.T) {
+	t.Parallel()
 
-	_, err := NewHandlerWithCampaignAccess(Config{AuthBaseURL: "http://auth.local"}, nil, handlerDependencies{})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if !strings.Contains(err.Error(), "resolve static assets") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestNewHandlerFallsBackToInternalServerError(t *testing.T) {
-	origSubStaticFS := subStaticFS
-	subStaticFS = func() (fs.FS, error) {
-		return nil, fmt.Errorf("injected static assets failure")
-	}
-	defer func() {
-		subStaticFS = origSubStaticFS
-	}()
-
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", rec.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestNewServerWithContextRequiresContext(t *testing.T) {
-	_, err := NewServerWithContext(nil, Config{
-		HTTPAddr:    "127.0.0.1:0",
-		AuthBaseURL: "http://auth.local",
-	})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestDialAuthGRPCNilAddr(t *testing.T) {
-	clients, err := webgrpcdial.DialAuth(context.Background(), "", 0)
+	h, err := NewHandler(Config{})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("NewHandler() error = %v", err)
 	}
-	if clients.Conn != nil || clients.AuthClient != nil {
-		t.Fatalf("expected nil conn and client")
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	req.Header.Set("X-Web-User", "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-}
-
-func TestDialAuthGRPCNilContextReturnsError(t *testing.T) {
-	_, err := webgrpcdial.DialAuth(nil, "127.0.0.1:1", 0)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if !strings.Contains(err.Error(), "context is required") {
-		t.Fatalf("unexpected error: %v", err)
+	if got := rr.Header().Get("Location"); got != "/login" {
+		t.Fatalf("Location = %q, want %q", got, "/login")
 	}
 }
 
-func TestDialAuthGRPCSuccess(t *testing.T) {
-	listener, server := startGRPCServer(t)
-	defer server.Stop()
+func TestNewHandlerAddsRequestIDHeader(t *testing.T) {
+	t.Parallel()
 
-	clients, err := webgrpcdial.DialAuth(context.Background(), listener.Addr().String(), 2*time.Second)
+	h, err := NewHandler(Config{})
 	if err != nil {
-		t.Fatalf("dial: %v", err)
+		t.Fatalf("NewHandler() error = %v", err)
 	}
-	if clients.Conn == nil || clients.AuthClient == nil {
-		t.Fatalf("expected conn and client")
-	}
-	_ = clients.Conn.Close()
-}
-
-func TestDialAuthGRPCDialError(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-
-	_, err := webgrpcdial.DialAuth(ctx, "127.0.0.1:1", 50*time.Millisecond)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "dial auth gRPC") {
-		t.Fatalf("unexpected error: %v", err)
+	req := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if got := rr.Header().Get("X-Request-ID"); got == "" {
+		t.Fatalf("expected response request id header")
 	}
 }
 
-func TestDialAuthGRPCHealthError(t *testing.T) {
-	listener, server := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
-	defer server.Stop()
+func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
+	t.Parallel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-
-	_, err := webgrpcdial.DialAuth(ctx, listener.Addr().String(), 100*time.Millisecond)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "auth gRPC health check failed") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestDialGameGRPCNilAddr(t *testing.T) {
-	clients, err := webgrpcdial.DialGame(context.Background(), "", 0)
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(Config{EnableExperimentalModules: true, AuthClient: auth, CampaignClient: fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}}})
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("NewHandler() error = %v", err)
 	}
-	if clients.Conn != nil || clients.ParticipantClient != nil || clients.CampaignClient != nil || clients.EventClient != nil || clients.SessionClient != nil || clients.CharacterClient != nil || clients.InviteClient != nil {
-		t.Fatalf("expected nil connection and clients")
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-}
-
-func TestDialGameGRPCNilContextReturnsError(t *testing.T) {
-	_, err := webgrpcdial.DialGame(nil, "127.0.0.1:1", 0)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if !strings.Contains(err.Error(), "context is required") {
-		t.Fatalf("unexpected error: %v", err)
+	body := rr.Body.String()
+	if !strings.Contains(body, "Remote") {
+		t.Fatalf("body = %q, want configured campaign response", body)
 	}
 }
 
-func TestDialGameGRPCSuccessIncludesEventClient(t *testing.T) {
-	listener, server := startGRPCServer(t)
-	defer server.Stop()
+func TestAppCampaignsPageRendersPrimaryNavigation(t *testing.T) {
+	t.Parallel()
 
-	clients, err := webgrpcdial.DialGame(context.Background(), listener.Addr().String(), 2*time.Second)
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
 	if err != nil {
-		t.Fatalf("dial: %v", err)
+		t.Fatalf("NewHandler() error = %v", err)
 	}
-	if clients.Conn == nil || clients.ParticipantClient == nil || clients.CampaignClient == nil || clients.EventClient == nil || clients.SessionClient == nil || clients.CharacterClient == nil || clients.InviteClient == nil {
-		t.Fatalf("expected all game service clients")
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	_ = clients.Conn.Close()
+	assertPrimaryNavLinks(t, rr.Body.String())
 }
 
-func TestBuildAuthConsentURL(t *testing.T) {
-	cases := []struct {
-		name      string
-		base      string
-		pendingID string
-		want      string
+func TestAppSettingsPageRendersPrimaryNavigation(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	assertPrimaryNavLinks(t, rr.Body.String())
+}
+
+func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing.T) {
+	t.Parallel()
+
+	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(Config{AuthClient: auth, AccountClient: account, CampaignClient: defaultCampaignClient(), ConnectionsClient: defaultConnectionsClient(), CredentialClient: fakeCredentialClient{}})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if !account.getProfileCalled {
+		t.Fatalf("expected account profile lookup for authenticated locale")
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`<html lang="pt-BR"`,
+		`>Configurações</a>`,
+		`>Campanhas</a>`,
+		`<h1 class="mb-0">Configurações</h1>`,
+		`<h2 class="card-title">Perfil público</h2>`,
+		`<span class="label-text">Nome de usuário</span>`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing pt-BR marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T) {
+	t.Parallel()
+
+	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(Config{AuthClient: auth, AccountClient: account, CampaignClient: defaultCampaignClient(), ConnectionsClient: defaultConnectionsClient(), CredentialClient: fakeCredentialClient{}})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	form := url.Values{"name": {"Rhea"}}
+	req := httptest.NewRequest(http.MethodPost, "/app/settings/profile", strings.NewReader(form.Encode()))
+	attachSessionCookie(t, req, auth, "user-1")
+	req.Header.Set("Origin", "http://example.com")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`<html lang="pt-BR"`,
+		"Nome de usuário é obrigatório.",
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing pt-BR validation marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestAppSettingsRootRedirectsToProfile(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != "/app/settings/profile" {
+		t.Fatalf("Location = %q, want %q", got, "/app/settings/profile")
+	}
+}
+
+func TestAppSettingsProfileRendersSettingsMenuAndContent(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`<h1 class="mb-0">Settings</h1>`,
+		`id="settings-profile"`,
+		`href="/app/settings/profile"`,
+		`href="/app/settings/locale"`,
+		`href="/app/settings/ai-keys"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing settings marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestPrimaryNavigationOmitsExperimentalLinksByDefault(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, `href="/app/notifications"`) {
+		t.Fatalf("body unexpectedly includes experimental notifications link: %q", body)
+	}
+	if strings.Contains(body, `href="/app/profile"`) {
+		t.Fatalf("body unexpectedly includes experimental profile link: %q", body)
+	}
+}
+
+func TestPrimaryNavigationUsesCampaignCatalogIcon(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `href="/app/campaigns"`) {
+		t.Fatalf("body missing campaigns nav link")
+	}
+	campaignIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_CAMPAIGN)) + `"`
+	if !strings.Contains(body, campaignIconHref) {
+		t.Fatalf("body missing campaigns icon %q", campaignIconHref)
+	}
+}
+
+func TestAppPageTitleUsesWebComposition(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `<title>Profile Settings | Fracturing.Space</title>`) {
+		t.Fatalf("body missing composed page title: %q", body)
+	}
+}
+
+func TestPrimaryNavigationOmitsInvitesLinkWhileScaffoldDisabled(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	// Invariant: invites scaffolding is intentionally hidden until a real invites feature is enabled.
+	if strings.Contains(rr.Body.String(), `href="/app/invites"`) {
+		t.Fatalf("body unexpectedly includes invites nav link: %q", rr.Body.String())
+	}
+}
+
+func TestInvitesRouteReturnsNotFoundWhileScaffoldDisabled(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/invites", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+}
+
+func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/123", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+	if got := rr.Header().Get("Content-Type"); !strings.Contains(got, "text/html") {
+		t.Fatalf("content-type = %q, want text/html", got)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{`id="auth-shell"`, `id="app-error-state"`} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing route-miss marker %q: %q", marker, body)
+		}
+	}
+	// Invariant: unknown routes should use the shared HTML not-found surface, never net/http plain text.
+	if strings.Contains(body, "404 page not found") {
+		t.Fatalf("body unexpectedly rendered plain 404 text: %q", body)
+	}
+}
+
+func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/login", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`id="auth-shell"`,
+		`id="auth-language-menu"`,
+		`/passkeys/login/start`,
+		`/passkeys/login/finish`,
+		`/passkeys/register/start`,
+		`/passkeys/register/finish`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing auth contract marker %q", marker)
+		}
+	}
+}
+
+func TestLoginPageLocaleMenuUsesConsistentLabels(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+
+	tests := []struct {
+		path        string
+		wantTrigger string
 	}{
-		{
-			name:      "empty base",
-			base:      "",
-			pendingID: "pending 1",
-			want:      "/authorize/consent?pending_id=pending+1",
-		},
-		{
-			name:      "base trims slash",
-			base:      "http://auth.local/",
-			pendingID: "pending 1",
-			want:      "http://auth.local/authorize/consent?pending_id=pending+1",
-		},
+		{path: "/login?lang=en-US", wantTrigger: "EN"},
+		{path: "/login?lang=pt-BR", wantTrigger: "PT-BR"},
 	}
 
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := webcache.BuildAuthConsentURL(tc.base, tc.pendingID); got != tc.want {
-				t.Fatalf("BuildAuthConsentURL(%q, %q) = %q, want %q", tc.base, tc.pendingID, got, tc.want)
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.path, func(t *testing.T) {
+			t.Parallel()
+			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, req)
+			if rr.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+			}
+			body := rr.Body.String()
+			if !strings.Contains(body, `id="auth-language-menu"`) {
+				t.Fatalf("body missing auth language menu: %q", body)
+			}
+			if !strings.Contains(body, `backdrop-blur">`+tc.wantTrigger+`</div>`) {
+				t.Fatalf("body missing locale trigger label %q: %q", tc.wantTrigger, body)
+			}
+			for _, marker := range []string{`data-lang="en-US"`, `>EN</a>`, `data-lang="pt-BR"`, `>PT-BR</a>`} {
+				if !strings.Contains(body, marker) {
+					t.Fatalf("body missing locale option marker %q: %q", marker, body)
+				}
 			}
 		})
 	}
 }
 
-func TestWriteJSON(t *testing.T) {
-	w := httptest.NewRecorder()
-	authfeature.WriteJSON(w, http.StatusAccepted, map[string]any{"ok": true})
+func TestAppPageIncludesThemeAssets(t *testing.T) {
+	t.Parallel()
 
-	if w.Code != http.StatusAccepted {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusAccepted)
-	}
-	if got := w.Header().Get("Content-Type"); got != "application/json" {
-		t.Fatalf("content-type = %q, want %q", got, "application/json")
-	}
-
-	var payload map[string]any
-	if err := json.NewDecoder(w.Body).Decode(&payload); err != nil {
-		t.Fatalf("decode response: %v", err)
-	}
-	if payload["ok"] != true {
-		t.Fatalf("ok = %v, want true", payload["ok"])
-	}
-}
-
-func TestNewServerSuccessAndClose(t *testing.T) {
-	listener, server := startGRPCServer(t)
-	defer server.Stop()
-
-	webServer, err := NewServer(Config{
-		HTTPAddr:        "127.0.0.1:0",
-		AuthBaseURL:     "http://auth.local",
-		OAuthClientID:   "fracturing-space",
-		CallbackURL:     "http://localhost:8080/auth/callback",
-		AuthAddr:        listener.Addr().String(),
-		GRPCDialTimeout: 2 * time.Second,
-	})
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
 	if err != nil {
-		t.Fatalf("new server: %v", err)
+		t.Fatalf("NewHandler() error = %v", err)
 	}
-	webServer.Close()
-}
-
-func TestServerCloseStopsCacheInvalidationWorker(t *testing.T) {
-	done := make(chan struct{})
-	stopped := false
-	server := &Server{
-		cacheInvalidationDone: done,
-		cacheInvalidationStop: func() {
-			stopped = true
-			close(done)
-		},
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-
-	server.Close()
-
-	if !stopped {
-		t.Fatalf("expected cache invalidation stop to be called")
-	}
-}
-
-func TestServerCloseStopsCampaignUpdateSubscriptionWorker(t *testing.T) {
-	done := make(chan struct{})
-	stopped := false
-	server := &Server{
-		campaignUpdateSubscriptionDone: done,
-		campaignUpdateSubscriptionStop: func() {
-			stopped = true
-			close(done)
-		},
-	}
-
-	server.Close()
-
-	if !stopped {
-		t.Fatalf("expected campaign update subscription stop to be called")
-	}
-}
-
-func TestServerCloseStopsWorkersBeforeWaiting(t *testing.T) {
-	cacheDone := make(chan struct{})
-	campaignDone := make(chan struct{})
-	server := &Server{
-		cacheInvalidationDone:          cacheDone,
-		campaignUpdateSubscriptionDone: campaignDone,
-		cacheInvalidationStop:          func() { close(campaignDone) },
-		campaignUpdateSubscriptionStop: func() { close(cacheDone) },
-	}
-
-	done := make(chan struct{})
-	go func() {
-		server.Close()
-		close(done)
-	}()
-
-	select {
-	case <-done:
-	case <-time.After(500 * time.Millisecond):
-		t.Fatal("expected close to stop both workers before waiting")
-	}
-}
-
-func TestListenAndServeShutsDown(t *testing.T) {
-	webServer, err := NewServer(Config{
-		HTTPAddr:        "127.0.0.1:0",
-		AuthBaseURL:     "http://auth.local",
-		OAuthClientID:   "fracturing-space",
-		CallbackURL:     "http://localhost:8080/auth/callback",
-		GRPCDialTimeout: 2 * time.Second,
-	})
-	if err != nil {
-		t.Fatalf("new server: %v", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
-	result := make(chan error, 1)
-	go func() {
-		result <- webServer.ListenAndServe(ctx)
-	}()
-
-	time.Sleep(30 * time.Millisecond)
-	cancel()
-
-	select {
-	case err := <-result:
-		if err != nil {
-			t.Fatalf("expected nil error, got %v", err)
+	body := rr.Body.String()
+	for _, marker := range []string{`/static/theme.css`, `/static/app-shell.js`, `data-layout="app"`, `id="main"`} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing app shell marker %q", marker)
 		}
-	case <-time.After(500 * time.Millisecond):
-		t.Fatalf("timeout waiting for shutdown")
 	}
 }
 
-func TestListenAndServeReturnsServeError(t *testing.T) {
-	server := &Server{
-		httpAddr:   "127.0.0.1:-1",
-		httpServer: &http.Server{Addr: "127.0.0.1:-1"},
-	}
+func TestAppPageUsesWebStyleChromeMarkers(t *testing.T) {
+	t.Parallel()
 
-	err := server.ListenAndServe(context.Background())
-	if err == nil {
-		t.Fatal("expected error")
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
 	}
-	if !strings.Contains(err.Error(), "serve http") {
-		t.Fatalf("unexpected error: %v", err)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{`Fracturing.Space`, `data-layout="app"`, `id="main"`} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing app chrome contract marker %q", marker)
+		}
+	}
+	assertPrimaryNavLinks(t, body)
+}
+
+func TestAppLayoutIncludesHTMXErrorSwapContract(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{`src="/static/app-shell.js"`} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing app shell script marker %q", marker)
+		}
+	}
+}
+
+func TestAppPageRendersUserDropdownFromConnections(t *testing.T) {
+	t.Parallel()
+
+	connections := &fakeConnectionsClient{getUserProfileResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "001"}}}
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(Config{AuthClient: auth, ConnectionsClient: connections, AssetBaseURL: "https://cdn.example.com/avatars", AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !connections.getUserProfileCalled {
+		t.Fatalf("expected connections profile lookup")
+	}
+	for _, marker := range []string{
+		`src="https://cdn.example.com/avatars/001.png"`,
+		`alt="Rhea Vale"`,
+		`href="/app/settings"`,
+		`action="/logout"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing user dropdown contract marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing.T) {
+	t.Parallel()
+
+	connections := &fakeConnectionsClient{getUserProfileResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{Name: "Rhea Vale"}}}
+	assetBaseURL := "https://cdn.example.com/avatars"
+	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "", "")
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(Config{AuthClient: auth, ConnectionsClient: connections, AssetBaseURL: assetBaseURL, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`src="` + expectedAvatarURL + `"`,
+		`alt="Rhea Vale"`,
+		`class="rounded-full"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing deterministic avatar marker %q: %q", marker, body)
+		}
+	}
+}
+
+type fakeConnectionsClient struct {
+	getUserProfileResp   *connectionsv1.GetUserProfileResponse
+	getUserProfileErr    error
+	getUserProfileCalled bool
+}
+
+type fakeAccountClient struct {
+	getProfileResp   *authv1.GetProfileResponse
+	getProfileErr    error
+	getProfileCalled bool
+	lastUpdateReq    *authv1.UpdateProfileRequest
+	updateErr        error
+}
+
+type fakeCredentialClient struct{}
+
+func (f *fakeAccountClient) GetProfile(context.Context, *authv1.GetProfileRequest, ...grpc.CallOption) (*authv1.GetProfileResponse, error) {
+	f.getProfileCalled = true
+	if f.getProfileErr != nil {
+		return nil, f.getProfileErr
+	}
+	if f.getProfileResp != nil {
+		return f.getProfileResp, nil
+	}
+	return &authv1.GetProfileResponse{}, nil
+}
+
+func (f *fakeAccountClient) UpdateProfile(_ context.Context, req *authv1.UpdateProfileRequest, _ ...grpc.CallOption) (*authv1.UpdateProfileResponse, error) {
+	f.lastUpdateReq = req
+	if f.updateErr != nil {
+		return nil, f.updateErr
+	}
+	return &authv1.UpdateProfileResponse{}, nil
+}
+
+func (f *fakeConnectionsClient) AddContact(context.Context, *connectionsv1.AddContactRequest, ...grpc.CallOption) (*connectionsv1.AddContactResponse, error) {
+	return &connectionsv1.AddContactResponse{}, nil
+}
+
+func (f *fakeConnectionsClient) RemoveContact(context.Context, *connectionsv1.RemoveContactRequest, ...grpc.CallOption) (*connectionsv1.RemoveContactResponse, error) {
+	return &connectionsv1.RemoveContactResponse{}, nil
+}
+
+func (f *fakeConnectionsClient) ListContacts(context.Context, *connectionsv1.ListContactsRequest, ...grpc.CallOption) (*connectionsv1.ListContactsResponse, error) {
+	return &connectionsv1.ListContactsResponse{}, nil
+}
+
+func (f *fakeConnectionsClient) SetUserProfile(context.Context, *connectionsv1.SetUserProfileRequest, ...grpc.CallOption) (*connectionsv1.SetUserProfileResponse, error) {
+	return &connectionsv1.SetUserProfileResponse{}, nil
+}
+
+func (f *fakeConnectionsClient) GetUserProfile(context.Context, *connectionsv1.GetUserProfileRequest, ...grpc.CallOption) (*connectionsv1.GetUserProfileResponse, error) {
+	f.getUserProfileCalled = true
+	if f.getUserProfileErr != nil {
+		return nil, f.getUserProfileErr
+	}
+	if f.getUserProfileResp != nil {
+		return f.getUserProfileResp, nil
+	}
+	return &connectionsv1.GetUserProfileResponse{}, nil
+}
+
+func (f *fakeConnectionsClient) LookupUserProfile(context.Context, *connectionsv1.LookupUserProfileRequest, ...grpc.CallOption) (*connectionsv1.LookupUserProfileResponse, error) {
+	return &connectionsv1.LookupUserProfileResponse{}, nil
+}
+
+func (fakeCredentialClient) ListCredentials(context.Context, *aiv1.ListCredentialsRequest, ...grpc.CallOption) (*aiv1.ListCredentialsResponse, error) {
+	return &aiv1.ListCredentialsResponse{}, nil
+}
+
+func (fakeCredentialClient) CreateCredential(context.Context, *aiv1.CreateCredentialRequest, ...grpc.CallOption) (*aiv1.CreateCredentialResponse, error) {
+	return &aiv1.CreateCredentialResponse{}, nil
+}
+
+func (fakeCredentialClient) RevokeCredential(context.Context, *aiv1.RevokeCredentialRequest, ...grpc.CallOption) (*aiv1.RevokeCredentialResponse, error) {
+	return &aiv1.RevokeCredentialResponse{}, nil
+}
+
+func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
+	t.Parallel()
+
+	auth := newCountingWebAuthClient()
+	_, _ = auth.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: "user-1"})
+	h, err := NewHandler(Config{AuthClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, ConnectionsClient: defaultConnectionsClient(), CredentialClient: fakeCredentialClient{}})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	req.AddCookie(&http.Cookie{Name: "web_session", Value: "ws-1"})
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if auth.GetWebSessionCalls() != 1 {
+		t.Fatalf("GetWebSession calls = %d, want %d", auth.GetWebSessionCalls(), 1)
+	}
+}
+
+func TestNewServerBuildsHTTPServer(t *testing.T) {
+	t.Parallel()
+
+	srv, err := NewServer(context.Background(), Config{HTTPAddr: "127.0.0.1:0", AuthClient: newFakeWebAuthClient()})
+	if err != nil {
+		t.Fatalf("NewServer() error = %v", err)
+	}
+	if srv.httpAddr != "127.0.0.1:0" {
+		t.Fatalf("httpAddr = %q, want %q", srv.httpAddr, "127.0.0.1:0")
+	}
+	if srv.httpServer == nil {
+		t.Fatalf("expected http server")
+	}
+	srv.Close()
+}
+
+func TestListenAndServeRejectsNilServer(t *testing.T) {
+	t.Parallel()
+
+	var srv *Server
+	err := srv.ListenAndServe(context.Background())
+	if err == nil {
+		t.Fatalf("expected nil server error")
+	}
+	if !strings.Contains(err.Error(), "web server is nil") {
+		t.Fatalf("error = %q, want nil server message", err.Error())
 	}
 }
 
 func TestListenAndServeRequiresContext(t *testing.T) {
-	server := &Server{
-		httpAddr:   "127.0.0.1:0",
-		httpServer: &http.Server{Addr: "127.0.0.1:0"},
-	}
-	err := server.ListenAndServe(nil)
+	t.Parallel()
+
+	srv := &Server{httpServer: &http.Server{Addr: "127.0.0.1:0", Handler: http.NotFoundHandler()}}
+	err := srv.ListenAndServe(nil)
 	if err == nil {
-		t.Fatal("expected error")
+		t.Fatalf("expected context-required error")
+	}
+	if !strings.Contains(err.Error(), "context is required") {
+		t.Fatalf("error = %q, want context-required message", err.Error())
 	}
 }
 
-type fakeAuthClient struct {
-	beginLoginResp   *authv1.BeginPasskeyLoginResponse
-	finishLoginResp  *authv1.FinishPasskeyLoginResponse
-	createUserResp   *authv1.CreateUserResponse
-	createUserReq    *authv1.CreateUserRequest
-	beginRegResp     *authv1.BeginPasskeyRegistrationResponse
-	finishRegResp    *authv1.FinishPasskeyRegistrationResponse
-	consumeMagicResp *authv1.ConsumeMagicLinkResponse
-}
+func TestListenAndServeReturnsServeError(t *testing.T) {
+	t.Parallel()
 
-func (f *fakeAuthClient) CreateUser(ctx context.Context, req *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-	f.createUserReq = req
-	if f.createUserResp != nil {
-		return f.createUserResp, nil
+	srv := &Server{httpServer: &http.Server{Addr: "bad address", Handler: http.NotFoundHandler()}}
+	err := srv.ListenAndServe(context.Background())
+	if err == nil {
+		t.Fatalf("expected serve error")
 	}
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) BeginPasskeyRegistration(ctx context.Context, req *authv1.BeginPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
-	if f.beginRegResp != nil {
-		return f.beginRegResp, nil
-	}
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) FinishPasskeyRegistration(ctx context.Context, req *authv1.FinishPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
-	if f.finishRegResp != nil {
-		return f.finishRegResp, nil
-	}
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) BeginPasskeyLogin(ctx context.Context, req *authv1.BeginPasskeyLoginRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error) {
-	if f.beginLoginResp != nil {
-		return f.beginLoginResp, nil
-	}
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) FinishPasskeyLogin(ctx context.Context, req *authv1.FinishPasskeyLoginRequest, opts ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error) {
-	if f.finishLoginResp != nil {
-		return f.finishLoginResp, nil
-	}
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) CreateWebSession(ctx context.Context, req *authv1.CreateWebSessionRequest, opts ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) GetWebSession(ctx context.Context, req *authv1.GetWebSessionRequest, opts ...grpc.CallOption) (*authv1.GetWebSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) RevokeWebSession(ctx context.Context, req *authv1.RevokeWebSessionRequest, opts ...grpc.CallOption) (*authv1.RevokeWebSessionResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) GenerateMagicLink(ctx context.Context, req *authv1.GenerateMagicLinkRequest, opts ...grpc.CallOption) (*authv1.GenerateMagicLinkResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) ConsumeMagicLink(ctx context.Context, req *authv1.ConsumeMagicLinkRequest, opts ...grpc.CallOption) (*authv1.ConsumeMagicLinkResponse, error) {
-	if f.consumeMagicResp != nil {
-		return f.consumeMagicResp, nil
-	}
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) ListUserEmails(ctx context.Context, req *authv1.ListUserEmailsRequest, opts ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) IssueJoinGrant(ctx context.Context, req *authv1.IssueJoinGrantRequest, opts ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) GetUser(ctx context.Context, req *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) ListUsers(ctx context.Context, req *authv1.ListUsersRequest, opts ...grpc.CallOption) (*authv1.ListUsersResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) LeaseIntegrationOutboxEvents(ctx context.Context, req *authv1.LeaseIntegrationOutboxEventsRequest, opts ...grpc.CallOption) (*authv1.LeaseIntegrationOutboxEventsResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (f *fakeAuthClient) AckIntegrationOutboxEvent(ctx context.Context, req *authv1.AckIntegrationOutboxEventRequest, opts ...grpc.CallOption) (*authv1.AckIntegrationOutboxEventResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func TestMagicLinkNilAuthClient(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/magic?token=token-1", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
-	}
-	if !strings.Contains(w.Body.String(), "Magic link unavailable") {
-		t.Fatalf("expected unavailable page")
+	if !strings.Contains(err.Error(), "serve web http") {
+		t.Fatalf("error = %q, want wrapped serve message", err.Error())
 	}
 }
 
-func TestPasskeyLoginStartMethodNotAllowed(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/passkeys/login/start", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
-	}
-}
+func TestListenAndServeShutsDownOnContextCancel(t *testing.T) {
+	t.Parallel()
 
-func TestPasskeyRegisterFinishMethodNotAllowed(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/passkeys/register/finish", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
-	}
-}
+	srv := &Server{httpServer: &http.Server{Addr: "127.0.0.1:0", Handler: http.NotFoundHandler()}}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-func TestLoginHandlerMethodNotAllowed(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/login?pending_id=pending-1", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
-	}
-}
-
-func TestPasskeyLoginFinishMethodNotAllowed(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/passkeys/login/finish", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
-	}
-}
-
-func TestPasskeyRegisterStartMethodNotAllowed(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodGet, "/passkeys/register/start", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusMethodNotAllowed)
-	}
-}
-
-func TestPasskeyLoginFinishNilAuthClient(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/finish", bytes.NewBufferString(`{}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestPasskeyRegisterStartNilAuthClient(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/start", bytes.NewBufferString(`{}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestPasskeyRegisterFinishNilAuthClient(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/finish", bytes.NewBufferString(`{}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestMagicLinkInvalidToken(t *testing.T) {
-	fake := &fakeAuthClient{}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodGet, "/magic?token=bad-token", nil)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-	if !strings.Contains(w.Body.String(), "Magic link invalid") {
-		t.Fatalf("expected invalid page")
-	}
-}
-
-func TestPasskeyLoginStartNilAuthClient(t *testing.T) {
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, nil)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/start", bytes.NewBufferString(`{"pending_id":"p1"}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestPasskeyLoginFinishError(t *testing.T) {
-	fake := &fakeAuthClient{}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/finish",
-		bytes.NewBufferString(`{"pending_id":"p1","session_id":"s1","credential":{}}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestPasskeyLoginStartError(t *testing.T) {
-	fake := &fakeAuthClient{}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/start",
-		bytes.NewBufferString(`{"pending_id":"p1"}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func TestPasskeyRegisterFinishError(t *testing.T) {
-	fake := &fakeAuthClient{}
-	handler := NewHandler(Config{AuthBaseURL: "http://auth.local"}, fake)
-	req := httptest.NewRequest(http.MethodPost, "/passkeys/register/finish",
-		bytes.NewBufferString(`{"session_id":"s1","user_id":"u1","credential":{}}`))
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", w.Code, http.StatusBadRequest)
-	}
-}
-
-func startGRPCServer(t *testing.T) (net.Listener, *grpc.Server) {
-	return startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
-}
-
-func startHealthServer(t *testing.T, status grpc_health_v1.HealthCheckResponse_ServingStatus) (net.Listener, *grpc.Server) {
-	t.Helper()
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatalf("listen: %v", err)
-	}
-	server := grpc.NewServer()
-	healthServer := health.NewServer()
-	grpc_health_v1.RegisterHealthServer(server, healthServer)
-	healthServer.SetServingStatus("", status)
+	errCh := make(chan error, 1)
 	go func() {
-		_ = server.Serve(listener)
+		errCh <- srv.ListenAndServe(ctx)
 	}()
-	t.Cleanup(func() {
-		server.Stop()
-		_ = listener.Close()
-	})
-	return listener, server
+
+	time.Sleep(50 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("ListenAndServe() error = %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatalf("timeout waiting for server shutdown")
+	}
+}
+
+func TestCloseHandlesNilServerAndNilHTTPServer(t *testing.T) {
+	t.Parallel()
+
+	var nilServer *Server
+	nilServer.Close()
+
+	(&Server{}).Close()
+}
+
+func assertPrimaryNavLinks(t *testing.T, body string) {
+	t.Helper()
+	for _, href := range []string{"/app/campaigns", "/app/settings"} {
+		if !strings.Contains(body, "href=\""+href+"\"") {
+			t.Fatalf("body missing nav href %q", href)
+		}
+	}
+	if !strings.Contains(body, `action="/logout"`) {
+		t.Fatalf("body missing logout form action %q", "/logout")
+	}
+}
+
+func attachSessionCookie(t *testing.T, req *http.Request, auth *fakeWebAuthClient, userID string) {
+	t.Helper()
+	if req == nil {
+		t.Fatalf("request is required")
+	}
+	if auth == nil {
+		t.Fatalf("auth client is required")
+	}
+	if strings.TrimSpace(userID) == "" {
+		t.Fatalf("user id is required")
+	}
+	resp, err := auth.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: userID})
+	if err != nil {
+		t.Fatalf("CreateWebSession() error = %v", err)
+	}
+	sessionID := strings.TrimSpace(resp.GetSession().GetId())
+	if sessionID == "" {
+		t.Fatalf("expected non-empty session id")
+	}
+	req.AddCookie(&http.Cookie{Name: "web_session", Value: sessionID})
+}
+
+func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
+	return Config{
+		EnableExperimentalModules: true,
+		AuthClient:                auth,
+		CampaignClient:            defaultCampaignClient(),
+		ParticipantClient:         defaultParticipantClient(),
+		CharacterClient:           defaultCharacterClient(),
+		SessionClient:             defaultSessionClient(),
+		InviteClient:              defaultInviteClient(),
+		AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
+			Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
+		}},
+		ConnectionsClient: defaultConnectionsClient(),
+		CredentialClient:  fakeCredentialClient{},
+	}
+}
+
+func defaultStableProtectedConfig(auth *fakeWebAuthClient) Config {
+	return Config{
+		EnableExperimentalModules: false,
+		AuthClient:                auth,
+		CampaignClient:            defaultCampaignClient(),
+		AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
+			Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
+		}},
+		ConnectionsClient: defaultConnectionsClient(),
+		CredentialClient:  fakeCredentialClient{},
+	}
+}
+
+func defaultConnectionsClient() *fakeConnectionsClient {
+	return &fakeConnectionsClient{getUserProfileResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{Username: "adventurer", Name: "Adventurer"}}}
+}
+
+func defaultCampaignClient() fakeCampaignClient {
+	return fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Campaign"}}}}
+}
+
+func defaultParticipantClient() fakeWebParticipantClient {
+	return fakeWebParticipantClient{response: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{{
+		Id:             "p1",
+		CampaignId:     "c1",
+		UserId:         "user-1",
+		Name:           "Owner",
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+	}}}}
+}
+
+func defaultCharacterClient() fakeWebCharacterClient {
+	return fakeWebCharacterClient{response: &statev1.ListCharactersResponse{Characters: []*statev1.Character{{
+		Id:   "char-1",
+		Name: "Aria",
+		Kind: statev1.CharacterKind_PC,
+	}}}}
+}
+
+func defaultSessionClient() fakeWebSessionClient {
+	return fakeWebSessionClient{response: &statev1.ListSessionsResponse{Sessions: []*statev1.Session{{
+		Id:     "sess-1",
+		Name:   "Session One",
+		Status: statev1.SessionStatus_SESSION_ACTIVE,
+	}}}}
+}
+
+func defaultInviteClient() fakeWebInviteClient {
+	return fakeWebInviteClient{response: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
+		Id:              "inv-1",
+		CampaignId:      "c1",
+		ParticipantId:   "p1",
+		RecipientUserId: "user-2",
+		Status:          statev1.InviteStatus_PENDING,
+	}}}}
+}
+
+type fakeCampaignClient struct {
+	response   *statev1.ListCampaignsResponse
+	err        error
+	getResp    *statev1.GetCampaignResponse
+	getErr     error
+	createResp *statev1.CreateCampaignResponse
+	createErr  error
+}
+
+type fakeWebParticipantClient struct {
+	response *statev1.ListParticipantsResponse
+	err      error
+}
+
+func (f fakeWebParticipantClient) ListParticipants(context.Context, *statev1.ListParticipantsRequest, ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.response != nil {
+		return f.response, nil
+	}
+	return &statev1.ListParticipantsResponse{}, nil
+}
+
+type fakeWebCharacterClient struct {
+	response *statev1.ListCharactersResponse
+	err      error
+}
+
+func (f fakeWebCharacterClient) ListCharacters(context.Context, *statev1.ListCharactersRequest, ...grpc.CallOption) (*statev1.ListCharactersResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.response != nil {
+		return f.response, nil
+	}
+	return &statev1.ListCharactersResponse{}, nil
+}
+
+type fakeWebSessionClient struct {
+	response *statev1.ListSessionsResponse
+	err      error
+}
+
+func (f fakeWebSessionClient) ListSessions(context.Context, *statev1.ListSessionsRequest, ...grpc.CallOption) (*statev1.ListSessionsResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.response != nil {
+		return f.response, nil
+	}
+	return &statev1.ListSessionsResponse{}, nil
+}
+
+type fakeWebInviteClient struct {
+	response *statev1.ListInvitesResponse
+	err      error
+}
+
+func (f fakeWebInviteClient) ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.response != nil {
+		return f.response, nil
+	}
+	return &statev1.ListInvitesResponse{}, nil
+}
+
+type fakeWebAuthClient struct {
+	mu       sync.Mutex
+	sessions map[string]string
+}
+
+type countingWebAuthClient struct {
+	*fakeWebAuthClient
+	countMu            sync.Mutex
+	getWebSessionCalls int
+}
+
+func newCountingWebAuthClient() *countingWebAuthClient {
+	return &countingWebAuthClient{fakeWebAuthClient: newFakeWebAuthClient()}
+}
+
+func (f *countingWebAuthClient) GetWebSession(ctx context.Context, req *authv1.GetWebSessionRequest, opts ...grpc.CallOption) (*authv1.GetWebSessionResponse, error) {
+	f.countMu.Lock()
+	f.getWebSessionCalls++
+	f.countMu.Unlock()
+	return f.fakeWebAuthClient.GetWebSession(ctx, req, opts...)
+}
+
+func (f *countingWebAuthClient) GetWebSessionCalls() int {
+	f.countMu.Lock()
+	defer f.countMu.Unlock()
+	return f.getWebSessionCalls
+}
+
+func newFakeWebAuthClient() *fakeWebAuthClient {
+	return &fakeWebAuthClient{sessions: map[string]string{}}
+}
+
+func (f *fakeWebAuthClient) CreateUser(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
+	return &authv1.CreateUserResponse{User: &authv1.User{Id: "user-1"}}, nil
+}
+
+func (f *fakeWebAuthClient) BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
+	return &authv1.BeginPasskeyRegistrationResponse{SessionId: "register-session", CredentialCreationOptionsJson: []byte(`{"publicKey":{"challenge":"ZmFrZQ","rp":{"name":"web"},"user":{"id":"dXNlcg","name":"new@example.com","displayName":"new@example.com"},"pubKeyCredParams":[{"type":"public-key","alg":-7}]}}`)}, nil
+}
+
+func (f *fakeWebAuthClient) FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
+	return &authv1.FinishPasskeyRegistrationResponse{User: &authv1.User{Id: "user-1"}}, nil
+}
+
+func (f *fakeWebAuthClient) BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest, ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error) {
+	return &authv1.BeginPasskeyLoginResponse{SessionId: "login-session", CredentialRequestOptionsJson: []byte(`{"publicKey":{"challenge":"ZmFrZQ","timeout":60000,"userVerification":"preferred"}}`)}, nil
+}
+
+func (f *fakeWebAuthClient) FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest, ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error) {
+	return &authv1.FinishPasskeyLoginResponse{User: &authv1.User{Id: "user-1"}}, nil
+}
+
+func (f *fakeWebAuthClient) CreateWebSession(_ context.Context, req *authv1.CreateWebSessionRequest, _ ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	id := "ws-1"
+	f.sessions[id] = req.GetUserId()
+	return &authv1.CreateWebSessionResponse{Session: &authv1.WebSession{Id: id, UserId: req.GetUserId()}, User: &authv1.User{Id: req.GetUserId()}}, nil
+}
+
+func (f *fakeWebAuthClient) GetWebSession(_ context.Context, req *authv1.GetWebSessionRequest, _ ...grpc.CallOption) (*authv1.GetWebSessionResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	userID, ok := f.sessions[req.GetSessionId()]
+	if !ok {
+		return nil, context.Canceled
+	}
+	return &authv1.GetWebSessionResponse{Session: &authv1.WebSession{Id: req.GetSessionId(), UserId: userID}, User: &authv1.User{Id: userID}}, nil
+}
+
+func (f *fakeWebAuthClient) RevokeWebSession(_ context.Context, req *authv1.RevokeWebSessionRequest, _ ...grpc.CallOption) (*authv1.RevokeWebSessionResponse, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.sessions, req.GetSessionId())
+	return &authv1.RevokeWebSessionResponse{}, nil
+}
+
+func (f fakeCampaignClient) ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.response, nil
+}
+
+func (f fakeCampaignClient) GetCampaign(context.Context, *statev1.GetCampaignRequest, ...grpc.CallOption) (*statev1.GetCampaignResponse, error) {
+	if f.getErr != nil {
+		return nil, f.getErr
+	}
+	if f.getResp != nil {
+		return f.getResp, nil
+	}
+	return &statev1.GetCampaignResponse{Campaign: &statev1.Campaign{Id: "c1", Name: "Campaign"}}, nil
+}
+
+func (f fakeCampaignClient) CreateCampaign(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
+	if f.createErr != nil {
+		return nil, f.createErr
+	}
+	if f.createResp != nil {
+		return f.createResp, nil
+	}
+	return &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{Id: "created"}}, nil
 }
