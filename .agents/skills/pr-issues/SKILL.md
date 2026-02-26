@@ -1,6 +1,6 @@
 ---
 name: pr-issues
-description: PR review triage, fixes, testing, and auto-merge workflow
+description: PR review triage, scoped fixes, verification, and merge workflow
 user-invocable: true
 ---
 
@@ -28,7 +28,7 @@ Use this skill when the user asks to:
    - If the review has not arrived, report that status and retry as needed.
 
 3. **Triage feedback**
-   - Must-fix: correctness, security, test failures, required reviewer notes.
+   - Must-fix: correctness, security, test failures, required reviewer notes, architecture boundary regressions.
    - Should-fix: maintainability, clarity, small risks.
    - Won't-fix: stylistic preference, low impact, or conflicts with existing conventions.
 
@@ -38,11 +38,13 @@ Use this skill when the user asks to:
    - Call out won’t-fix items with rationale.
 
 5. **Implement approved changes**
-   - Apply only agreed changes; avoid unrelated refactors.
+   - Apply agreed changes with an architecture-first lens.
+   - Avoid unrelated churn, but include small supporting refactors when needed to keep boundaries clean.
+   - If a requested micro-fix worsens architecture, propose the cleaner path and explain the trade-off.
    - Use relevant skills if changes touch those domains (`schema`, `error-handling`, `go-style`, `mcp`, `web-server`).
 
 6. **Verify**
-   - Run `make integration` after code changes (per repo policy).
+   - Run `make test` and `make integration` after code changes (per repo policy).
    - Note failures and propose fixes before proceeding.
 
 7. **Update PR and enable auto-merge**

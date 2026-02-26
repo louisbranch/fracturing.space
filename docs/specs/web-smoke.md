@@ -4,7 +4,7 @@
 
 Quick regression coverage for the web UI: landing page renders with branding
 and sign-in link, login page renders with passkey form elements, and route
-cutover behavior keeps `/campaigns/{id}` canonical.
+canonicalization keeps `/campaigns/{id}` canonical.
 
 ## Preconditions
 
@@ -58,7 +58,7 @@ async page => {
 EOF
 )"
 
-step "Verify campaign route cutover behavior"
+step "Verify canonical campaign route behavior"
 cli run-code "$(cat <<'EOF'
 async page => {
   page.setDefaultTimeout(10000);
@@ -74,12 +74,12 @@ async page => {
     throw new Error("Expected /campaigns/camp-123 Location starting with /auth/login, got: " + location);
   }
 
-  const legacyResponse = await page.request.get(origin + "/app/campaigns/camp-123", { maxRedirects: 0 });
-  if (legacyResponse.status() !== 404) {
-    throw new Error("Expected /app/campaigns/camp-123 status 404, got: " + legacyResponse.status());
+  const deprecatedResponse = await page.request.get(origin + "/app/campaigns/camp-123", { maxRedirects: 0 });
+  if (deprecatedResponse.status() !== 404) {
+    throw new Error("Expected deprecated /app/campaigns/camp-123 status 404, got: " + deprecatedResponse.status());
   }
 
-  console.log("Campaign route cutover OK");
+  console.log("Campaign route canonicalization OK");
 }
 EOF
 )"

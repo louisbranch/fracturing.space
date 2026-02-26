@@ -1,122 +1,126 @@
 # AGENTS.md
 
-Single source of agent directives and project context.
+Agent directives for architecture-first, maintainable engineering.
+
+## Priority Order
+
+When trade-offs are required, prefer this order:
+
+1. Clear architecture and domain boundaries.
+2. Long-term maintainability and testability.
+3. Correctness and operational safety.
+4. Delivery speed.
+5. Internal backward compatibility.
+
+External/API compatibility is a product decision, not a default technical constraint.
 
 ## Preflight
 
-- At the start of a session, verify you are not on `main` with `git branch --show-current`; if you are on `main`, stop, and ask for instructions. Do not create new branches.
+- For non-trivial work, read relevant docs in `docs/project/` before editing.
 
-## ExecPlans
+## Engineering Posture
 
-- For complex features or significant refactors, write an ExecPlan and follow `PLANS.md`.
-- ExecPlans live in `.agents/plans/` and must be kept up to date as work progresses.
+- Optimize for codebase health over "just completing the next ticket".
+- If the requested micro-change would worsen architecture, propose and prefer the architectural path.
+- Favor deletion over accumulation: remove obsolete code, tests, and compatibility layers quickly.
 
-## Safety
+## Architecture-First Refactor Strategy
 
-- Do not commit files containing secrets (.env, credentials).
-- Game service writes are event-driven: mutate state by emitting events and applying projections; do not write projection/storage records directly from non-read handlers.
+Use this when existing structure fights the target design:
 
-## Documentation culture
+1. Define target boundaries and package responsibilities.
+2. Build the new package/feature path in parallel (clean structure first).
+3. Port behavior behind stable contracts (tests at package seams or integration level).
+4. Switch callers to the new path.
+5. Delete old code paths and stale tests.
 
-- Maintain a domain-driven design vision; keep domain language and boundaries intentional.
-- Offer to promote high-level decisions, domain language changes, and architecture evolution to `docs/` .
-- Document code, including non exported functions and types, focused on why not how.
+Rules:
 
-## Test-Driven Development (TDD)
+- Internal compatibility shims are temporary and must include removal criteria.
+- Do not keep legacy abstractions "just in case".
+- Prefer one clean cutover over indefinite dual-path maintenance.
 
-- **Invariant**: For behavior changes, follow TDD end-to-end (test first, then minimal implementation, then refactor). Exceptions are limited to non-behavioral changes (docs-only or refactors with no behavior change), which must be explicitly called out.
-- **Red**: Write one small test that defines a single behavior and verify it fails before writing any implementation code.
-- **Green**: Implement the minimum code necessary to make that test pass—no extra features or generalization.
-- **Refactor**: Improve structure and clarity while keeping all tests passing and without changing behavior.
-- **Coverage as guardrail**: When adding or changing production code, run `make cover` and report the coverage impact.
-- **Behavior tests required**: Add or update tests for new behavior; if a change is test-neutral (docs/refactor), call it out explicitly.
-- **Non-regression**: Keep coverage from regressing versus the current baseline; CI enforces non-regression.
-- **Generated code**: When introducing new generated outputs, update `COVER_EXCLUDE_REGEX` in `Makefile` so coverage reflects hand-written code.
+## Go Heuristics
 
-### TDD Gate (Strict)
+- Keep packages cohesive and acyclic; design around domain boundaries.
+- Define interfaces at consumption points; avoid speculative interfaces.
+- Prefer explicit constructors and enforce invariants early.
+- Pass `context.Context` first for request-scoped work.
+- Return rich errors with context; reserve sentinel errors for real branching needs.
+- Keep functions small and intention-revealing; optimize readability before cleverness.
+- Inject time/IO/randomness dependencies for deterministic tests.
 
-- **No production code edits before Red**: Do not modify non-test, non-docs files until a failing test exists and is reported.
-- **Required response sequence**: State the Red intent, write the test, run it, report the failure, then implement, re-run, report passing, and only then refactor.
-- **Evidence required**: Always name the test file and the exact command used for the failing run.
-- **Refuse test-last requests**: If asked to implement without tests, refuse and propose the smallest failing test first.
-- **Exception path (rare)**: If a test is truly impossible, stop and ask for guidance. Include: (1) why it is impossible, (2) attempted testability approaches (fakes, DI, seams), (3) a proposal to add a testability seam first.
-- **Testability-first expectation**: Use existing fakes (for example `fakeStorage`) to simulate error paths; do not claim errors are hard to reproduce without checking available fakes.
+## Testing Policy (Meaningful Over Ritual)
 
-### UI Negative Assertion Policy
+- Tests should protect durable behavior, invariants, and contracts.
+- Use the right level of tests:
+  - unit tests for deterministic domain logic,
+  - integration tests for component seams and workflows,
+  - end-to-end coverage only for critical user/system paths.
+- Prefer test-first when it improves design or confidence; avoid ceremonial red/green scripts.
+- If behavior is intentionally removed, remove stale tests instead of preserving historical expectations.
+- Avoid brittle tests that lock internal implementation details.
+- Coverage is a guardrail, not a target to game.
 
-- UI changes should prefer positive behavior assertions over incidental "not contains" checks.
-- `assertNotContains`/`assertHTMLNotContains` are allowed only for explicit invariants and must include a nearby `// Invariant: ...` rationale.
-- Keep detailed UI negative-assertion guidance and examples in `.agents/skills/testing/SKILL.md`.
-
-### TDD Example (Required Response Shape)
-
-Example response for a behavior change:
-
-"Red intent: add a test for <behavior> in <test file>. I will run `<test command>` and expect it to fail."
-
-"Red evidence: `<test command>` failed in <test file> with <short failure message>."
-
-"Green: implement the minimum code to satisfy the test."
-
-"Green evidence: `<test command>` now passes."
-
-"Refactor: optional, no behavior change."
-
-## Planning sessions
-
-- Create `.agents/plans/<topic>.md` before modifying any other files.
-- Plans are session-only and should include a description, task list that is updated as work progresses, plus next steps and out of scope if applicable.
-- Before any PR, move lingering knowledge or tasks from `.agents/plans` into `docs/` so it survives the worktree lifecycle.
-
-## Verification
-
-Run `make integration` after code changes (covers full gRPC + MCP + storage path).
+Verification expectations after code changes:
 
 ```bash
-make test        # Unit tests
-make integration # Integration tests
-make proto       # Regenerate proto code
+make test
+make integration
 ```
 
-## Commits and PRs
+Run `make cover` when production behavior changes and report notable coverage impact.
 
-Commit in small, task-sized increments as you work; do not batch everything into a single final commit.
+## Documentation and Knowledge Durability
 
-If `git config --local --get core.hooksPath` is not `.githooks`, run `make setup-hooks`; pre-commit then formats staged Go files automatically.
+- Document both exported and non-exported functions/types with "why" context.
+- Promote durable decisions (architecture, domain language, migration rationale) to `docs/`.
+- Treat `.agents/plans/` notes as temporary working memory; migrate lasting knowledge before PR.
+- Keep domain language intentional and consistent with `docs/project/domain-language.md`.
 
-Use matching prefixes with a short, why-focused subject:
-- `feat:` - New features
-- `fix:` - Bug fixes
-- `chore:` - Maintenance
-- `docs:` - Documentation
+## Planning and Execution
 
-Example: `feat: add duality outcome tool`
+- For complex features or significant refactors, create an ExecPlan in `.agents/plans/<topic>.md` before editing code.
+- Keep plan task lists current as work progresses.
+- Include explicit out-of-scope notes to prevent accidental scope creep.
 
 ## Skills
 
-Load the relevant skill when working in these areas:
+Load the relevant skill when work enters one of these areas:
 
-Skills live in `.agents/skills/`.
-
-| skill | what | when to use |
+| skill | focus | when to use |
 | --- | --- | --- |
-| `testing` | Test-Driven Development and coverage guardrails | optional deep-dive when guidance is needed |
-| `go-style` | Go conventions, build commands, naming, error handling patterns | when editing Go code or running Go build/test |
-| `error-handling` | Structured errors and i18n-friendly messaging workflow | when adding or changing error flows/messages |
-| `schema` | Database migrations and proto field ordering rules | when editing migrations or protos |
-| `game-system` | Steps and checklists for adding a new game system | when implementing a new system |
-| `mcp` | MCP tool/resource guidance and parity rules with gRPC | when touching MCP tooling or MCP endpoints |
-| `web-server` | Web UI and transport layer conventions | when working on web UI or HTTP transport |
-| `pr-issues` | PR review triage, fixes, testing, and auto-merge workflow | when triaging or fixing PR review comments |
+| `testing` | Meaningful testing strategy and coverage guardrails | when deciding test scope, assertions, or coverage trade-offs |
+| `architecture-refactor` | Parallel-path refactor and cutover workflow | when incremental edits worsen boundaries or compatibility glue starts spreading |
+| `go-style` | Go conventions, naming, package boundaries, and docs | when editing Go code or restructuring packages |
+| `error-handling` | Structured errors and i18n-friendly messaging | when adding/changing domain or transport error paths |
+| `schema` | Migration/proto change policy and compatibility decisions | when editing migrations, SQL schema, or proto contracts |
+| `game-system` | New game-system implementation workflow | when adding/changing game systems or manifest registration |
+| `mcp` | MCP transport boundaries and gRPC parity rules | when touching MCP tools/resources/handlers |
+| `web-server` | Web transport and feature-boundary conventions | when changing HTTP handlers, routes, or rendering flow |
+| `pr-issues` | PR review triage and merge workflow | when triaging/fixing review comments on an existing PR |
+| `playwright-cli` | Browser automation commands and workflows | when interacting with web UIs, screenshots, forms, or extraction |
 
-## Docs
+## Project Safety Constraints
 
-Use these project docs for architecture and domain guidance:
+- Never commit secrets (`.env`, credentials, tokens).
+- Game service writes are event-driven: emit domain events and project state; do not write projection/storage records directly from non-read handlers.
+- Prefer safe, reversible operations; avoid destructive git actions unless explicitly requested.
 
-| doc | what | when to use |
-| --- | --- | --- |
-| [docs/project/architecture.md](docs/project/architecture.md) | System architecture, service boundaries, layers | when orienting to overall system design |
-| [docs/project/domain-language.md](docs/project/domain-language.md) | Canonical domain terms and naming principles | when naming new APIs/packages/events |
-| [docs/project/event-replay.md](docs/project/event-replay.md) | Event journal, replay modes, snapshots | when working on replay, snapshots, maintenance CLI |
-| [docs/project/game-systems.md](docs/project/game-systems.md) | Pluggable game-system architecture and add-a-system guide | when adding or modifying a game system |
-| [docs/project/participant-invitation.md](docs/project/participant-invitation.md) | Participant invitation flow and follow-ups | when designing auth or participant flows |
+## Completion Criteria
+
+A change is done when:
+
+- architecture is cleaner than before,
+- tests validate meaningful behavior at the correct seams,
+- obsolete paths are removed,
+- documentation is updated where knowledge should persist.
+
+## Commit Guidance
+
+- Commit in small, coherent increments.
+- Use concise, why-focused subjects:
+  - `feat:` new capability
+  - `fix:` behavior correction
+  - `chore:` maintenance/refactor/tooling
+  - `docs:` documentation-only changes
