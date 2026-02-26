@@ -9,9 +9,9 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -126,10 +126,10 @@ func TestRunManifest_IdempotentSecondRun(t *testing.T) {
 		StatePath:    statePath,
 		Verbose:      true,
 	}, runnerDeps{
-		auth:        deps.auth,
-		connections: deps.connections,
-		campaigns:   deps.game,
-		listings:    deps.listing,
+		auth:      deps.auth,
+		social:    deps.social,
+		campaigns: deps.game,
+		listings:  deps.listing,
 	})
 
 	if err := runner.RunManifest(context.Background(), manifest); err != nil {
@@ -212,18 +212,18 @@ func TestValidateManifest_RejectsMissingReferences(t *testing.T) {
 }
 
 type fakeDeps struct {
-	auth        *fakeAuthClient
-	connections *fakeConnectionsClient
-	game        *fakeGameClient
-	listing     *fakeListingClient
+	auth    *fakeAuthClient
+	social  *fakeSocialClient
+	game    *fakeGameClient
+	listing *fakeListingClient
 }
 
 func newFakeDeps() fakeDeps {
 	return fakeDeps{
-		auth:        &fakeAuthClient{},
-		connections: &fakeConnectionsClient{},
-		game:        &fakeGameClient{},
-		listing:     &fakeListingClient{},
+		auth:    &fakeAuthClient{},
+		social:  &fakeSocialClient{},
+		game:    &fakeGameClient{},
+		listing: &fakeListingClient{},
 	}
 }
 
@@ -291,19 +291,19 @@ func (f *fakeAuthClient) ListUserEmails(_ context.Context, in *authv1.ListUserEm
 	}, nil
 }
 
-type fakeConnectionsClient struct {
+type fakeSocialClient struct {
 	setProfileCalls int
 	addContactCalls int
 }
 
-func (f *fakeConnectionsClient) SetUserProfile(_ context.Context, _ *connectionsv1.SetUserProfileRequest, _ ...grpc.CallOption) (*connectionsv1.SetUserProfileResponse, error) {
+func (f *fakeSocialClient) SetUserProfile(_ context.Context, _ *socialv1.SetUserProfileRequest, _ ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error) {
 	f.setProfileCalls++
-	return &connectionsv1.SetUserProfileResponse{}, nil
+	return &socialv1.SetUserProfileResponse{}, nil
 }
 
-func (f *fakeConnectionsClient) AddContact(_ context.Context, _ *connectionsv1.AddContactRequest, _ ...grpc.CallOption) (*connectionsv1.AddContactResponse, error) {
+func (f *fakeSocialClient) AddContact(_ context.Context, _ *socialv1.AddContactRequest, _ ...grpc.CallOption) (*socialv1.AddContactResponse, error) {
 	f.addContactCalls++
-	return &connectionsv1.AddContactResponse{}, nil
+	return &socialv1.AddContactResponse{}, nil
 }
 
 type fakeGameClient struct {

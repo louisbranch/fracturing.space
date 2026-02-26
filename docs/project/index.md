@@ -27,6 +27,6 @@ Start here unless you are working on a specific roadmap slice:
 
 Open only the subsystem you are actively changing:
 
-- Connections: [connections-roadmap.md](connections-roadmap.md)
+- Social: [social-roadmap.md](social-roadmap.md)
 - Chat: [chat-service.md](chat-service.md)
 - AI assignment: [ai-campaign-assignment-phase4.md](ai-campaign-assignment-phase4.md)

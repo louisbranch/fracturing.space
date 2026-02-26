@@ -30,9 +30,9 @@ FROM base AS build-auth
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/auth ./cmd/auth
 
-FROM base AS build-connections
+FROM base AS build-social
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/connections ./cmd/connections
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/social ./cmd/social
 
 FROM base AS build-listing
 
@@ -98,15 +98,15 @@ EXPOSE 8083
 
 ENTRYPOINT ["/app/auth"]
 
-FROM gcr.io/distroless/static-debian12:nonroot AS connections
+FROM gcr.io/distroless/static-debian12:nonroot AS social
 
 WORKDIR /app
 
-COPY --from=build-connections /out/connections /app/connections
+COPY --from=build-social /out/social /app/social
 
 EXPOSE 8090
 
-ENTRYPOINT ["/app/connections"]
+ENTRYPOINT ["/app/social"]
 
 FROM gcr.io/distroless/static-debian12:nonroot AS listing
 

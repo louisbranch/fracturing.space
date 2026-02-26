@@ -129,14 +129,14 @@ func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 		if cfg.SeedConfig.AuthAddr != "127.0.0.1:8083" {
 			t.Fatalf("expected normalized auth addr, got %q", cfg.SeedConfig.AuthAddr)
 		}
-		if cfg.ConnectionsAddr != "127.0.0.1:8090" {
-			t.Fatalf("expected normalized connections addr, got %q", cfg.ConnectionsAddr)
+		if cfg.SocialAddr != "127.0.0.1:8090" {
+			t.Fatalf("expected normalized social addr, got %q", cfg.SocialAddr)
 		}
 		if cfg.ListingAddr != "127.0.0.1:8091" {
 			t.Fatalf("expected normalized listing addr, got %q", cfg.ListingAddr)
 		}
-		if cfg.ConnectionsAddr == "" {
-			t.Fatal("connections addr should be set")
+		if cfg.SocialAddr == "" {
+			t.Fatal("social addr should be set")
 		}
 		return nil
 	}
@@ -148,11 +148,11 @@ func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 	}
 
 	cfg := Config{
-		Timeout:         10,
-		ManifestPath:    "internal/tools/seed/manifests/local-dev.json",
-		SeedStatePath:   filepath.Join(".tmp", "seed-state", "local-dev.state.json"),
-		ConnectionsAddr: "connections:8090",
-		ListingAddr:     "listing:8091",
+		Timeout:       10,
+		ManifestPath:  "internal/tools/seed/manifests/local-dev.json",
+		SeedStatePath: filepath.Join(".tmp", "seed-state", "local-dev.state.json"),
+		SocialAddr:    "social:8090",
+		ListingAddr:   "listing:8091",
 		SeedConfig: seedtool.Config{
 			GRPCAddr: "game:8082",
 			AuthAddr: "auth:8083",
@@ -196,14 +196,14 @@ func TestParseConfigManifestModeRejectsGenerate(t *testing.T) {
 	}
 }
 
-func TestParseConfigDefaultConnectionsAddr(t *testing.T) {
+func TestParseConfigDefaultSocialAddr(t *testing.T) {
 	fs := flag.NewFlagSet("seed", flag.ContinueOnError)
 	cfg, err := ParseConfig(fs, nil)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
-	if cfg.ConnectionsAddr != "connections:8090" {
-		t.Fatalf("connections addr = %q, want %q", cfg.ConnectionsAddr, "connections:8090")
+	if cfg.SocialAddr != "social:8090" {
+		t.Fatalf("social addr = %q, want %q", cfg.SocialAddr, "social:8090")
 	}
 }
 

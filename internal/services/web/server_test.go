@@ -13,8 +13,8 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	"google.golang.org/grpc"
@@ -172,8 +172,8 @@ func TestExperimentalCampaignMutationRouteRejectsMemberAccess(t *testing.T) {
 			UserId:         "user-1",
 			CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
 		}}}},
-		ConnectionsClient: defaultConnectionsClient(),
-		CredentialClient:  fakeCredentialClient{},
+		SocialClient:     defaultSocialClient(),
+		CredentialClient: fakeCredentialClient{},
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -285,7 +285,7 @@ func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing
 
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{AuthClient: auth, AccountClient: account, CampaignClient: defaultCampaignClient(), ConnectionsClient: defaultConnectionsClient(), CredentialClient: fakeCredentialClient{}})
+	h, err := NewHandler(Config{AuthClient: auth, AccountClient: account, CampaignClient: defaultCampaignClient(), SocialClient: defaultSocialClient(), CredentialClient: fakeCredentialClient{}})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -319,7 +319,7 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{AuthClient: auth, AccountClient: account, CampaignClient: defaultCampaignClient(), ConnectionsClient: defaultConnectionsClient(), CredentialClient: fakeCredentialClient{}})
+	h, err := NewHandler(Config{AuthClient: auth, AccountClient: account, CampaignClient: defaultCampaignClient(), SocialClient: defaultSocialClient(), CredentialClient: fakeCredentialClient{}})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -669,12 +669,12 @@ func TestAppLayoutIncludesHTMXErrorSwapContract(t *testing.T) {
 	}
 }
 
-func TestAppPageRendersUserDropdownFromConnections(t *testing.T) {
+func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	t.Parallel()
 
-	connections := &fakeConnectionsClient{getUserProfileResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "001"}}}
+	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "001"}}}
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{AuthClient: auth, ConnectionsClient: connections, AssetBaseURL: "https://cdn.example.com/avatars", AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
+	h, err := NewHandler(Config{AuthClient: auth, SocialClient: social, AssetBaseURL: "https://cdn.example.com/avatars", AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -686,8 +686,8 @@ func TestAppPageRendersUserDropdownFromConnections(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if !connections.getUserProfileCalled {
-		t.Fatalf("expected connections profile lookup")
+	if !social.getUserProfileCalled {
+		t.Fatalf("expected social profile lookup")
 	}
 	for _, marker := range []string{
 		`src="https://cdn.example.com/avatars/001.png"`,
@@ -704,11 +704,11 @@ func TestAppPageRendersUserDropdownFromConnections(t *testing.T) {
 func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing.T) {
 	t.Parallel()
 
-	connections := &fakeConnectionsClient{getUserProfileResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{Name: "Rhea Vale"}}}
+	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale"}}}
 	assetBaseURL := "https://cdn.example.com/avatars"
 	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "", "")
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{AuthClient: auth, ConnectionsClient: connections, AssetBaseURL: assetBaseURL, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
+	h, err := NewHandler(Config{AuthClient: auth, SocialClient: social, AssetBaseURL: assetBaseURL, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -731,8 +731,8 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 	}
 }
 
-type fakeConnectionsClient struct {
-	getUserProfileResp   *connectionsv1.GetUserProfileResponse
+type fakeSocialClient struct {
+	getUserProfileResp   *socialv1.GetUserProfileResponse
 	getUserProfileErr    error
 	getUserProfileCalled bool
 }
@@ -766,23 +766,23 @@ func (f *fakeAccountClient) UpdateProfile(_ context.Context, req *authv1.UpdateP
 	return &authv1.UpdateProfileResponse{}, nil
 }
 
-func (f *fakeConnectionsClient) AddContact(context.Context, *connectionsv1.AddContactRequest, ...grpc.CallOption) (*connectionsv1.AddContactResponse, error) {
-	return &connectionsv1.AddContactResponse{}, nil
+func (f *fakeSocialClient) AddContact(context.Context, *socialv1.AddContactRequest, ...grpc.CallOption) (*socialv1.AddContactResponse, error) {
+	return &socialv1.AddContactResponse{}, nil
 }
 
-func (f *fakeConnectionsClient) RemoveContact(context.Context, *connectionsv1.RemoveContactRequest, ...grpc.CallOption) (*connectionsv1.RemoveContactResponse, error) {
-	return &connectionsv1.RemoveContactResponse{}, nil
+func (f *fakeSocialClient) RemoveContact(context.Context, *socialv1.RemoveContactRequest, ...grpc.CallOption) (*socialv1.RemoveContactResponse, error) {
+	return &socialv1.RemoveContactResponse{}, nil
 }
 
-func (f *fakeConnectionsClient) ListContacts(context.Context, *connectionsv1.ListContactsRequest, ...grpc.CallOption) (*connectionsv1.ListContactsResponse, error) {
-	return &connectionsv1.ListContactsResponse{}, nil
+func (f *fakeSocialClient) ListContacts(context.Context, *socialv1.ListContactsRequest, ...grpc.CallOption) (*socialv1.ListContactsResponse, error) {
+	return &socialv1.ListContactsResponse{}, nil
 }
 
-func (f *fakeConnectionsClient) SetUserProfile(context.Context, *connectionsv1.SetUserProfileRequest, ...grpc.CallOption) (*connectionsv1.SetUserProfileResponse, error) {
-	return &connectionsv1.SetUserProfileResponse{}, nil
+func (f *fakeSocialClient) SetUserProfile(context.Context, *socialv1.SetUserProfileRequest, ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error) {
+	return &socialv1.SetUserProfileResponse{}, nil
 }
 
-func (f *fakeConnectionsClient) GetUserProfile(context.Context, *connectionsv1.GetUserProfileRequest, ...grpc.CallOption) (*connectionsv1.GetUserProfileResponse, error) {
+func (f *fakeSocialClient) GetUserProfile(context.Context, *socialv1.GetUserProfileRequest, ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error) {
 	f.getUserProfileCalled = true
 	if f.getUserProfileErr != nil {
 		return nil, f.getUserProfileErr
@@ -790,11 +790,11 @@ func (f *fakeConnectionsClient) GetUserProfile(context.Context, *connectionsv1.G
 	if f.getUserProfileResp != nil {
 		return f.getUserProfileResp, nil
 	}
-	return &connectionsv1.GetUserProfileResponse{}, nil
+	return &socialv1.GetUserProfileResponse{}, nil
 }
 
-func (f *fakeConnectionsClient) LookupUserProfile(context.Context, *connectionsv1.LookupUserProfileRequest, ...grpc.CallOption) (*connectionsv1.LookupUserProfileResponse, error) {
-	return &connectionsv1.LookupUserProfileResponse{}, nil
+func (f *fakeSocialClient) LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest, ...grpc.CallOption) (*socialv1.LookupUserProfileResponse, error) {
+	return &socialv1.LookupUserProfileResponse{}, nil
 }
 
 func (fakeCredentialClient) ListCredentials(context.Context, *aiv1.ListCredentialsRequest, ...grpc.CallOption) (*aiv1.ListCredentialsResponse, error) {
@@ -814,7 +814,7 @@ func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
 
 	auth := newCountingWebAuthClient()
 	_, _ = auth.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: "user-1"})
-	h, err := NewHandler(Config{AuthClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, ConnectionsClient: defaultConnectionsClient(), CredentialClient: fakeCredentialClient{}})
+	h, err := NewHandler(Config{AuthClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, SocialClient: defaultSocialClient(), CredentialClient: fakeCredentialClient{}})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -965,8 +965,8 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 		AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
 			Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
 		}},
-		ConnectionsClient: defaultConnectionsClient(),
-		CredentialClient:  fakeCredentialClient{},
+		SocialClient:     defaultSocialClient(),
+		CredentialClient: fakeCredentialClient{},
 	}
 }
 
@@ -978,13 +978,13 @@ func defaultStableProtectedConfig(auth *fakeWebAuthClient) Config {
 		AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
 			Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
 		}},
-		ConnectionsClient: defaultConnectionsClient(),
-		CredentialClient:  fakeCredentialClient{},
+		SocialClient:     defaultSocialClient(),
+		CredentialClient: fakeCredentialClient{},
 	}
 }
 
-func defaultConnectionsClient() *fakeConnectionsClient {
-	return &fakeConnectionsClient{getUserProfileResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{Username: "adventurer", Name: "Adventurer"}}}
+func defaultSocialClient() *fakeSocialClient {
+	return &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "adventurer", Name: "Adventurer"}}}
 }
 
 func defaultCampaignClient() fakeCampaignClient {

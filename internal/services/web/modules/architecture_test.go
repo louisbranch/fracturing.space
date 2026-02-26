@@ -89,9 +89,9 @@ func TestCampaignsAndSettingsMountDoNotReadGatewayClientsFromDependencies(t *tes
 		"AssetBaseURL":      {},
 	})
 	assertMountDoesNotReadDependencyFields(t, filepath.Join("settings", "module.go"), map[string]struct{}{
-		"ConnectionsClient": {},
-		"AccountClient":     {},
-		"CredentialClient":  {},
+		"SocialClient":     {},
+		"AccountClient":    {},
+		"CredentialClient": {},
 	})
 }
 

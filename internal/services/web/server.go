@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"strings"
 
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	webapp "github.com/louisbranch/fracturing.space/internal/services/web/app"
@@ -35,7 +35,7 @@ type Config struct {
 	AuthClient                module.AuthClient
 	AccountClient             module.AccountClient
 	CredentialClient          module.CredentialClient
-	ConnectionsClient         connectionsv1.ConnectionsServiceClient
+	SocialClient              socialv1.SocialServiceClient
 }
 
 // Server hosts the web HTTP surface and lifecycle.
@@ -57,7 +57,7 @@ func NewHandler(cfg Config) (http.Handler, error) {
 		AuthClient:          cfg.AuthClient,
 		AccountClient:       cfg.AccountClient,
 		CredentialClient:    cfg.CredentialClient,
-		ConnectionsClient:   cfg.ConnectionsClient,
+		SocialClient:        cfg.SocialClient,
 		ResolveViewer:       principal.resolveViewer,
 		ResolveUserID:       principal.resolveRequestUserID,
 		ResolveLanguage:     principal.resolveRequestLanguage,

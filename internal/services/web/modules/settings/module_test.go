@@ -11,7 +11,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -194,18 +194,18 @@ func TestModuleIDReturnsSettings(t *testing.T) {
 	}
 }
 
-func TestMountUsesDependenciesConnectionsClientWhenGatewayNotProvided(t *testing.T) {
+func TestMountUsesDependenciesSocialClientWhenGatewayNotProvided(t *testing.T) {
 	t.Parallel()
 
-	connections := &connectionsClientStub{getResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{
+	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{
 		UserId:   "user-1",
 		Username: "remote-user",
 		Name:     "Remote Name",
 		Bio:      "From dependencies",
 	}}}
 	deps := module.Dependencies{
-		ResolveUserID:     func(*http.Request) string { return "user-1" },
-		ConnectionsClient: connections,
+		ResolveUserID: func(*http.Request) string { return "user-1" },
+		SocialClient:  social,
 	}
 	m := NewWithGateway(NewGRPCGateway(deps))
 	mount, err := m.Mount(deps)
@@ -226,7 +226,7 @@ func TestMountUsesDependenciesConnectionsClientWhenGatewayNotProvided(t *testing
 	}
 }
 
-func TestMountSettingsProfileFailsClosedWhenConnectionsClientMissing(t *testing.T) {
+func TestMountSettingsProfileFailsClosedWhenSocialClientMissing(t *testing.T) {
 	t.Parallel()
 
 	deps := module.Dependencies{
@@ -252,10 +252,10 @@ func TestMountSettingsProfileFailsClosedWhenConnectionsClientMissing(t *testing.
 func TestMountSettingsLocaleFailsClosedWhenAccountClientMissing(t *testing.T) {
 	t.Parallel()
 
-	connections := &connectionsClientStub{getResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
+	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
 	deps := module.Dependencies{
-		ResolveUserID:     func(*http.Request) string { return "user-1" },
-		ConnectionsClient: connections,
+		ResolveUserID: func(*http.Request) string { return "user-1" },
+		SocialClient:  social,
 	}
 	m := NewWithGateway(NewGRPCGateway(deps))
 	mount, err := m.Mount(deps)
@@ -276,10 +276,10 @@ func TestMountSettingsLocaleFailsClosedWhenAccountClientMissing(t *testing.T) {
 func TestMountSettingsAIKeysFailsClosedWhenCredentialClientMissing(t *testing.T) {
 	t.Parallel()
 
-	connections := &connectionsClientStub{getResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
+	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
 	deps := module.Dependencies{
-		ResolveUserID:     func(*http.Request) string { return "user-1" },
-		ConnectionsClient: connections,
+		ResolveUserID: func(*http.Request) string { return "user-1" },
+		SocialClient:  social,
 	}
 	m := NewWithGateway(NewGRPCGateway(deps))
 	mount, err := m.Mount(deps)
@@ -499,10 +499,10 @@ func TestMountProfilePostSavesAndRedirects(t *testing.T) {
 	}
 }
 
-func TestMountProfilePostUsesDependenciesConnectionsClientWhenGatewayNotProvided(t *testing.T) {
+func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *testing.T) {
 	t.Parallel()
 
-	connections := &connectionsClientStub{getResp: &connectionsv1.GetUserProfileResponse{UserProfile: &connectionsv1.UserProfile{
+	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{
 		UserId:        "user-1",
 		Username:      "remote-user",
 		Name:          "Remote Name",
@@ -511,8 +511,8 @@ func TestMountProfilePostUsesDependenciesConnectionsClientWhenGatewayNotProvided
 		Bio:           "Before",
 	}}}
 	deps := module.Dependencies{
-		ResolveUserID:     func(*http.Request) string { return "user-1" },
-		ConnectionsClient: connections,
+		ResolveUserID: func(*http.Request) string { return "user-1" },
+		SocialClient:  social,
 	}
 	m := NewWithGateway(NewGRPCGateway(deps))
 	mount, err := m.Mount(deps)
@@ -536,23 +536,23 @@ func TestMountProfilePostUsesDependenciesConnectionsClientWhenGatewayNotProvided
 	if got := rr.Header().Get("Location"); got != routepath.AppSettingsProfile {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsProfile)
 	}
-	if connections.lastSetReq == nil {
+	if social.lastSetReq == nil {
 		t.Fatalf("expected SetUserProfile to be called")
 	}
-	if connections.lastSetReq.GetUsername() != "updated-user" {
-		t.Fatalf("username = %q, want %q", connections.lastSetReq.GetUsername(), "updated-user")
+	if social.lastSetReq.GetUsername() != "updated-user" {
+		t.Fatalf("username = %q, want %q", social.lastSetReq.GetUsername(), "updated-user")
 	}
-	if connections.lastSetReq.GetName() != "Updated Name" {
-		t.Fatalf("name = %q, want %q", connections.lastSetReq.GetName(), "Updated Name")
+	if social.lastSetReq.GetName() != "Updated Name" {
+		t.Fatalf("name = %q, want %q", social.lastSetReq.GetName(), "Updated Name")
 	}
-	if connections.lastSetReq.GetBio() != "After" {
-		t.Fatalf("bio = %q, want %q", connections.lastSetReq.GetBio(), "After")
+	if social.lastSetReq.GetBio() != "After" {
+		t.Fatalf("bio = %q, want %q", social.lastSetReq.GetBio(), "After")
 	}
-	if connections.lastSetReq.GetAvatarSetId() != "set-a" {
-		t.Fatalf("avatar set id = %q, want %q", connections.lastSetReq.GetAvatarSetId(), "set-a")
+	if social.lastSetReq.GetAvatarSetId() != "set-a" {
+		t.Fatalf("avatar set id = %q, want %q", social.lastSetReq.GetAvatarSetId(), "set-a")
 	}
-	if connections.lastSetReq.GetAvatarAssetId() != "asset-1" {
-		t.Fatalf("avatar asset id = %q, want %q", connections.lastSetReq.GetAvatarAssetId(), "asset-1")
+	if social.lastSetReq.GetAvatarAssetId() != "asset-1" {
+		t.Fatalf("avatar asset id = %q, want %q", social.lastSetReq.GetAvatarAssetId(), "asset-1")
 	}
 }
 

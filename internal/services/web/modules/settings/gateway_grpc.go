@@ -7,7 +7,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -15,31 +15,31 @@ import (
 
 // NewGRPCGateway builds the production settings gateway from shared dependencies.
 func NewGRPCGateway(deps module.Dependencies) SettingsGateway {
-	if deps.ConnectionsClient == nil && deps.AccountClient == nil && deps.CredentialClient == nil {
+	if deps.SocialClient == nil && deps.AccountClient == nil && deps.CredentialClient == nil {
 		return unavailableGateway{}
 	}
 	return grpcGateway{
-		connectionsClient: deps.ConnectionsClient,
-		accountClient:     deps.AccountClient,
-		credentialClient:  deps.CredentialClient,
+		socialClient:     deps.SocialClient,
+		accountClient:    deps.AccountClient,
+		credentialClient: deps.CredentialClient,
 	}
 }
 
 type grpcGateway struct {
-	connectionsClient module.ConnectionsClient
-	accountClient     module.AccountClient
-	credentialClient  module.CredentialClient
+	socialClient     module.SocialClient
+	accountClient    module.AccountClient
+	credentialClient module.CredentialClient
 }
 
 func (g grpcGateway) LoadProfile(ctx context.Context, userID string) (SettingsProfile, error) {
-	if g.connectionsClient == nil {
-		return SettingsProfile{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.connections_service_is_not_configured", "connections service client is not configured")
+	if g.socialClient == nil {
+		return SettingsProfile{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.social_service_is_not_configured", "social service client is not configured")
 	}
 	resolvedUserID, err := requireUserID(userID)
 	if err != nil {
 		return SettingsProfile{}, err
 	}
-	resp, err := g.connectionsClient.GetUserProfile(ctx, &connectionsv1.GetUserProfileRequest{UserId: resolvedUserID})
+	resp, err := g.socialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: resolvedUserID})
 	if err != nil {
 		return SettingsProfile{}, err
 	}
@@ -57,14 +57,14 @@ func (g grpcGateway) LoadProfile(ctx context.Context, userID string) (SettingsPr
 }
 
 func (g grpcGateway) SaveProfile(ctx context.Context, userID string, profile SettingsProfile) error {
-	if g.connectionsClient == nil {
-		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.connections_service_is_not_configured", "connections service client is not configured")
+	if g.socialClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.social_service_is_not_configured", "social service client is not configured")
 	}
 	resolvedUserID, err := requireUserID(userID)
 	if err != nil {
 		return err
 	}
-	_, err = g.connectionsClient.SetUserProfile(ctx, &connectionsv1.SetUserProfileRequest{
+	_, err = g.socialClient.SetUserProfile(ctx, &socialv1.SetUserProfileRequest{
 		UserId:        resolvedUserID,
 		Username:      profile.Username,
 		Name:          profile.Name,

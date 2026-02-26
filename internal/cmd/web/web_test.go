@@ -25,8 +25,8 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.AuthAddr != "auth:8083" {
 		t.Fatalf("AuthAddr = %q, want %q", cfg.AuthAddr, "auth:8083")
 	}
-	if cfg.ConnectionsAddr != "connections:8090" {
-		t.Fatalf("ConnectionsAddr = %q, want %q", cfg.ConnectionsAddr, "connections:8090")
+	if cfg.SocialAddr != "social:8090" {
+		t.Fatalf("SocialAddr = %q, want %q", cfg.SocialAddr, "social:8090")
 	}
 	if cfg.AIAddr != "ai:8087" {
 		t.Fatalf("AIAddr = %q, want %q", cfg.AIAddr, "ai:8087")

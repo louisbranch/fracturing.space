@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -30,9 +30,9 @@ type authClient interface {
 	ListUserEmails(ctx context.Context, in *authv1.ListUserEmailsRequest, opts ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error)
 }
 
-type connectionsClient interface {
-	SetUserProfile(ctx context.Context, in *connectionsv1.SetUserProfileRequest, opts ...grpc.CallOption) (*connectionsv1.SetUserProfileResponse, error)
-	AddContact(ctx context.Context, in *connectionsv1.AddContactRequest, opts ...grpc.CallOption) (*connectionsv1.AddContactResponse, error)
+type socialClient interface {
+	SetUserProfile(ctx context.Context, in *socialv1.SetUserProfileRequest, opts ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error)
+	AddContact(ctx context.Context, in *socialv1.AddContactRequest, opts ...grpc.CallOption) (*socialv1.AddContactResponse, error)
 }
 
 type campaignClient interface {
@@ -72,7 +72,7 @@ type listingClient interface {
 
 type runnerDeps struct {
 	auth         authClient
-	connections  connectionsClient
+	social       socialClient
 	campaigns    campaignClient
 	participants participantClient
 	characters   characterClient
@@ -172,8 +172,8 @@ func (r *Runner) requireDeps() error {
 	if r.deps.auth == nil {
 		return fmt.Errorf("auth client is required")
 	}
-	if r.deps.connections == nil {
-		return fmt.Errorf("connections client is required")
+	if r.deps.social == nil {
+		return fmt.Errorf("social client is required")
 	}
 	if r.deps.campaigns == nil {
 		return fmt.Errorf("campaign client is required")
@@ -300,7 +300,7 @@ func (r *Runner) applyPublicProfile(ctx context.Context, userID string, profile 
 		return nil
 	}
 
-	_, err := r.deps.connections.SetUserProfile(ctx, &connectionsv1.SetUserProfileRequest{
+	_, err := r.deps.social.SetUserProfile(ctx, &socialv1.SetUserProfileRequest{
 		UserId:        userID,
 		Username:      username,
 		Name:          name,
@@ -325,7 +325,7 @@ func (r *Runner) applyContacts(ctx context.Context, manifest Manifest, userIDs m
 			if contactUserID == "" {
 				return fmt.Errorf("missing resolved contact user id for key %q", contactKey)
 			}
-			_, err := r.deps.connections.AddContact(ctx, &connectionsv1.AddContactRequest{
+			_, err := r.deps.social.AddContact(ctx, &socialv1.AddContactRequest{
 				OwnerUserId:   ownerUserID,
 				ContactUserId: contactUserID,
 			})

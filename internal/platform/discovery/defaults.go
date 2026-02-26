@@ -11,8 +11,8 @@ const (
 	ServiceAdmin = "admin"
 	// ServiceAI is the AI gRPC service identity.
 	ServiceAI = "ai"
-	// ServiceConnections is the connections gRPC service identity.
-	ServiceConnections = "connections"
+	// ServiceSocial is the social gRPC service identity.
+	ServiceSocial = "social"
 	// ServiceListing is the listing gRPC service identity.
 	ServiceListing = "listing"
 	// ServiceAuth is the auth service identity.
@@ -36,7 +36,7 @@ const (
 var grpcPorts = map[string]int{
 	ServiceGame:          8082,
 	ServiceAuth:          8083,
-	ServiceConnections:   8090,
+	ServiceSocial:        8090,
 	ServiceListing:       8091,
 	ServiceAI:            8087,
 	ServiceNotifications: 8088,

@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	seed "github.com/louisbranch/fracturing.space/internal/tools/seed"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -16,10 +16,10 @@ import (
 
 // DialConfig defines gRPC addresses used by the declarative runner.
 type DialConfig struct {
-	GameAddr        string
-	AuthAddr        string
-	ConnectionsAddr string
-	ListingAddr     string
+	GameAddr    string
+	AuthAddr    string
+	SocialAddr  string
+	ListingAddr string
 }
 
 // GRPCRunner owns client connections and applies one manifest end-to-end.
@@ -40,11 +40,11 @@ func NewGRPCRunner(cfg Config, dial DialConfig) (*GRPCRunner, error) {
 		return nil, fmt.Errorf("auth address is required")
 	}
 	authAddr = seed.ResolveLocalFallbackAddr(authAddr)
-	connectionsAddr := strings.TrimSpace(dial.ConnectionsAddr)
-	if connectionsAddr == "" {
-		return nil, fmt.Errorf("connections address is required")
+	socialAddr := strings.TrimSpace(dial.SocialAddr)
+	if socialAddr == "" {
+		return nil, fmt.Errorf("social address is required")
 	}
-	connectionsAddr = seed.ResolveLocalFallbackAddr(connectionsAddr)
+	socialAddr = seed.ResolveLocalFallbackAddr(socialAddr)
 	listingAddr := strings.TrimSpace(dial.ListingAddr)
 	if listingAddr == "" {
 		return nil, fmt.Errorf("listing address is required")
@@ -68,15 +68,15 @@ func NewGRPCRunner(cfg Config, dial DialConfig) (*GRPCRunner, error) {
 		_ = gameConn.Close()
 		return nil, fmt.Errorf("connect auth server: %w", err)
 	}
-	connectionsConn, err := grpc.NewClient(
-		connectionsAddr,
+	socialConn, err := grpc.NewClient(
+		socialAddr,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {
 		_ = authConn.Close()
 		_ = gameConn.Close()
-		return nil, fmt.Errorf("connect connections server: %w", err)
+		return nil, fmt.Errorf("connect social server: %w", err)
 	}
 	listingConn, err := grpc.NewClient(
 		listingAddr,
@@ -84,7 +84,7 @@ func NewGRPCRunner(cfg Config, dial DialConfig) (*GRPCRunner, error) {
 		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {
-		_ = connectionsConn.Close()
+		_ = socialConn.Close()
 		_ = authConn.Close()
 		_ = gameConn.Close()
 		return nil, fmt.Errorf("connect listing server: %w", err)
@@ -93,7 +93,7 @@ func NewGRPCRunner(cfg Config, dial DialConfig) (*GRPCRunner, error) {
 	return &GRPCRunner{
 		runner: newRunnerWithClients(cfg, runnerDeps{
 			auth:         authv1.NewAuthServiceClient(authConn),
-			connections:  connectionsv1.NewConnectionsServiceClient(connectionsConn),
+			social:       socialv1.NewSocialServiceClient(socialConn),
 			campaigns:    gamev1.NewCampaignServiceClient(gameConn),
 			participants: gamev1.NewParticipantServiceClient(gameConn),
 			characters:   gamev1.NewCharacterServiceClient(gameConn),
@@ -101,7 +101,7 @@ func NewGRPCRunner(cfg Config, dial DialConfig) (*GRPCRunner, error) {
 			forks:        gamev1.NewForkServiceClient(gameConn),
 			listings:     listingv1.NewCampaignListingServiceClient(listingConn),
 		}),
-		conns: []*grpc.ClientConn{gameConn, authConn, connectionsConn, listingConn},
+		conns: []*grpc.ClientConn{gameConn, authConn, socialConn, listingConn},
 	}, nil
 }
 

@@ -74,19 +74,19 @@ services:
       - internal
     restart: unless-stopped
 
-  connections:
+  social:
     build:
       context: .
-      target: connections
+      target: social
       args:
         GO_VERSION: ${GO_VERSION:-1.26.0}
-    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/connections:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/social:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       init-data:
         condition: service_completed_successfully
     environment:
-      FRACTURING_SPACE_CONNECTIONS_PORT: 8090
-      FRACTURING_SPACE_CONNECTIONS_DB_PATH: /data/connections.db
+      FRACTURING_SPACE_SOCIAL_PORT: 8090
+      FRACTURING_SPACE_SOCIAL_DB_PATH: /data/social.db
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     ports:
       - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:8090:8090"
@@ -244,7 +244,7 @@ services:
     image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/web:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       - auth
-      - connections
+      - social
       - game
       - ai
       - notifications
@@ -252,7 +252,7 @@ services:
       FRACTURING_SPACE_WEB_HTTP_ADDR: 0.0.0.0:8080
       FRACTURING_SPACE_CHAT_HTTP_ADDR: ${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0.0:8086}
       FRACTURING_SPACE_WEB_AUTH_BASE_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://auth.${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}
-      FRACTURING_SPACE_CONNECTIONS_ADDR: connections:8090
+      FRACTURING_SPACE_SOCIAL_ADDR: social:8090
       FRACTURING_SPACE_NOTIFICATIONS_ADDR: notifications:8088
       FRACTURING_SPACE_WEB_DIAL_TIMEOUT: ${FRACTURING_SPACE_WEB_DIAL_TIMEOUT:-2s}
       FRACTURING_SPACE_WEB_CACHE_DB_PATH: ${FRACTURING_SPACE_WEB_CACHE_DB_PATH:-/tmp/web-cache.db}
@@ -336,7 +336,7 @@ services:
       - game
       - auth
       - listing
-      - connections
+      - social
     entrypoint: ["go", "run", "./cmd/seed", "-manifest=internal/tools/seed/manifests/local-dev.json", "-v"]
     networks:
       - internal
