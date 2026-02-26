@@ -31,6 +31,7 @@ type Config struct {
 	CharacterClient           module.CharacterClient
 	SessionClient             module.SessionClient
 	InviteClient              module.InviteClient
+	AuthorizationClient       module.AuthorizationClient
 	AuthClient                module.AuthClient
 	AccountClient             module.AccountClient
 	CredentialClient          module.CredentialClient
@@ -47,20 +48,21 @@ type Server struct {
 func NewHandler(cfg Config) (http.Handler, error) {
 	principal := newPrincipalResolver(cfg)
 	deps := module.Dependencies{
-		CampaignClient:    cfg.CampaignClient,
-		ParticipantClient: cfg.ParticipantClient,
-		CharacterClient:   cfg.CharacterClient,
-		SessionClient:     cfg.SessionClient,
-		InviteClient:      cfg.InviteClient,
-		AuthClient:        cfg.AuthClient,
-		AccountClient:     cfg.AccountClient,
-		CredentialClient:  cfg.CredentialClient,
-		ConnectionsClient: cfg.ConnectionsClient,
-		ResolveViewer:     principal.resolveViewer,
-		ResolveUserID:     principal.resolveRequestUserID,
-		ResolveLanguage:   principal.resolveRequestLanguage,
-		AssetBaseURL:      cfg.AssetBaseURL,
-		ChatFallbackPort:  websupport.ResolveChatFallbackPort(cfg.ChatHTTPAddr),
+		CampaignClient:      cfg.CampaignClient,
+		ParticipantClient:   cfg.ParticipantClient,
+		CharacterClient:     cfg.CharacterClient,
+		SessionClient:       cfg.SessionClient,
+		InviteClient:        cfg.InviteClient,
+		AuthorizationClient: cfg.AuthorizationClient,
+		AuthClient:          cfg.AuthClient,
+		AccountClient:       cfg.AccountClient,
+		CredentialClient:    cfg.CredentialClient,
+		ConnectionsClient:   cfg.ConnectionsClient,
+		ResolveViewer:       principal.resolveViewer,
+		ResolveUserID:       principal.resolveRequestUserID,
+		ResolveLanguage:     principal.resolveRequestLanguage,
+		AssetBaseURL:        cfg.AssetBaseURL,
+		ChatFallbackPort:    websupport.ResolveChatFallbackPort(cfg.ChatHTTPAddr),
 	}
 	publicModules := modules.DefaultPublicModules()
 	protectedModules := modules.DefaultProtectedModules(deps)

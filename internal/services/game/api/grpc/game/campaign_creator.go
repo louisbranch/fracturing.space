@@ -14,6 +14,7 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -195,7 +196,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, policyActionManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -241,7 +242,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, policyActionManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -287,7 +288,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, policyActionManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusDraft); err != nil {
@@ -329,7 +330,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, policyActionManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {

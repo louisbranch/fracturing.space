@@ -10,6 +10,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -39,7 +40,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, policyActionManageParticipants, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageParticipants, campaignRecord); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
 
@@ -121,7 +122,8 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, policyActionManageParticipants, campaignRecord); err != nil {
+	policyActor, err := requirePolicyActor(ctx, c.stores, domainauthz.CapabilityManageParticipants, campaignRecord)
+	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
 
@@ -134,6 +136,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
+	targetAccessBefore := current.CampaignAccess
 
 	fields := make(map[string]any)
 	if name := in.GetName(); name != nil {
@@ -169,6 +172,30 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		access := campaignAccessFromProto(in.GetCampaignAccess())
 		if access == participant.CampaignAccessUnspecified {
 			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "campaign_access is invalid")
+		}
+		ownerCount, err := countCampaignOwners(ctx, c.stores.Participant, campaignID)
+		if err != nil {
+			return storage.ParticipantRecord{}, err
+		}
+		decision := domainauthz.CanParticipantAccessChange(policyActor.CampaignAccess, targetAccessBefore, access, ownerCount)
+		if !decision.Allowed {
+			authErr := participantPolicyDecisionError(decision.ReasonCode)
+			emitAuthzDecisionTelemetry(
+				ctx,
+				c.stores.Audit,
+				campaignID,
+				domainauthz.CapabilityManageParticipants,
+				authzDecisionDeny,
+				decision.ReasonCode,
+				policyActor,
+				authErr,
+				map[string]any{
+					"target_participant_id":     participantID,
+					"target_campaign_access":    strings.TrimSpace(string(targetAccessBefore)),
+					"requested_campaign_access": strings.TrimSpace(string(access)),
+				},
+			)
+			return storage.ParticipantRecord{}, authErr
 		}
 		current.CampaignAccess = access
 		fields["campaign_access"] = in.GetCampaignAccess().String()
@@ -248,7 +275,8 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, policyActionManageParticipants, campaignRecord); err != nil {
+	policyActor, err := requirePolicyActor(ctx, c.stores, domainauthz.CapabilityManageParticipants, campaignRecord)
+	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
 
@@ -260,6 +288,29 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	current, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
+	}
+	ownerCount, err := countCampaignOwners(ctx, c.stores.Participant, campaignID)
+	if err != nil {
+		return storage.ParticipantRecord{}, err
+	}
+	decision := domainauthz.CanParticipantRemoval(policyActor.CampaignAccess, current.CampaignAccess, ownerCount)
+	if !decision.Allowed {
+		authErr := participantPolicyDecisionError(decision.ReasonCode)
+		emitAuthzDecisionTelemetry(
+			ctx,
+			c.stores.Audit,
+			campaignID,
+			domainauthz.CapabilityManageParticipants,
+			authzDecisionDeny,
+			decision.ReasonCode,
+			policyActor,
+			authErr,
+			map[string]any{
+				"target_participant_id":  participantID,
+				"target_campaign_access": strings.TrimSpace(string(current.CampaignAccess)),
+			},
+		)
+		return storage.ParticipantRecord{}, authErr
 	}
 	if err := ensureParticipantHasNoOwnedCharacters(ctx, c.stores.Event, campaignID, participantID); err != nil {
 		return storage.ParticipantRecord{}, err
@@ -328,4 +379,36 @@ func ensureParticipantHasNoOwnedCharacters(ctx context.Context, events storage.E
 		}
 	}
 	return nil
+}
+
+// countCampaignOwners returns current owner-seat count for invariant checks.
+func countCampaignOwners(ctx context.Context, participants storage.ParticipantStore, campaignID string) (int, error) {
+	if participants == nil {
+		return 0, status.Error(codes.Internal, "participant store is not configured")
+	}
+	records, err := participants.ListParticipantsByCampaign(ctx, campaignID)
+	if err != nil {
+		return 0, status.Errorf(codes.Internal, "list participants: %v", err)
+	}
+	ownerCount := 0
+	for _, record := range records {
+		if record.CampaignAccess == participant.CampaignAccessOwner {
+			ownerCount++
+		}
+	}
+	return ownerCount, nil
+}
+
+// participantPolicyDecisionError maps policy reason codes to denial messages.
+func participantPolicyDecisionError(reasonCode string) error {
+	switch strings.TrimSpace(reasonCode) {
+	case domainauthz.ReasonDenyManagerOwnerMutationForbidden:
+		return status.Error(codes.PermissionDenied, "manager cannot assign owner access")
+	case domainauthz.ReasonDenyTargetIsOwner:
+		return status.Error(codes.PermissionDenied, "manager cannot mutate owner participant")
+	case domainauthz.ReasonDenyLastOwnerGuard:
+		return status.Error(codes.PermissionDenied, "cannot remove or demote final owner")
+	default:
+		return status.Error(codes.PermissionDenied, "participant lacks permission")
+	}
 }

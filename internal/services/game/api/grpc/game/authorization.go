@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
@@ -18,24 +19,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// policyAction identifies a campaign management action requiring access checks.
-type policyAction int
-
-const (
-	// policyActionManageParticipants allows managing participants.
-	policyActionManageParticipants policyAction = iota + 1
-	// policyActionManageInvites allows managing invites.
-	policyActionManageInvites
-	// policyActionManageSessions allows session lifecycle and controls.
-	policyActionManageSessions
-	// policyActionManageCharacters allows character write operations.
-	policyActionManageCharacters
-	// policyActionManageCampaign allows campaign governance mutations.
-	policyActionManageCampaign
-	// policyActionReadCampaign allows campaign-scoped read operations.
-	policyActionReadCampaign
-)
-
 const (
 	authzEventDecisionName                = events.AuthzDecision
 	authzDecisionAllow                    = "allow"
@@ -44,42 +27,42 @@ const (
 	authzPlatformRoleHeader               = grpcmeta.PlatformRoleHeader
 	authzOverrideReasonHeader             = grpcmeta.AuthzOverrideReasonHeader
 	authzPlatformRoleAdmin                = grpcmeta.PlatformRoleAdmin
-	authzReasonAllowAdminOverride         = "AUTHZ_ALLOW_ADMIN_OVERRIDE"
-	authzReasonAllowAccessLevel           = "AUTHZ_ALLOW_ACCESS_LEVEL"
-	authzReasonAllowResourceOwner         = "AUTHZ_ALLOW_RESOURCE_OWNER"
-	authzReasonDenyAccessLevelRequired    = "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"
-	authzReasonDenyMissingIdentity        = "AUTHZ_DENY_MISSING_IDENTITY"
-	authzReasonDenyActorNotFound          = "AUTHZ_DENY_ACTOR_NOT_FOUND"
-	authzReasonDenyNotResourceOwner       = "AUTHZ_DENY_NOT_RESOURCE_OWNER"
-	authzReasonDenyOverrideReasonRequired = "AUTHZ_DENY_OVERRIDE_REASON_REQUIRED"
-	authzReasonErrorDependencyUnavailable = "AUTHZ_ERROR_DEPENDENCY_UNAVAILABLE"
-	authzReasonErrorActorLoad             = "AUTHZ_ERROR_ACTOR_LOAD"
-	authzReasonErrorOwnerResolution       = "AUTHZ_ERROR_OWNER_RESOLUTION"
+	authzReasonAllowAdminOverride         = domainauthz.ReasonAllowAdminOverride
+	authzReasonAllowAccessLevel           = domainauthz.ReasonAllowAccessLevel
+	authzReasonAllowResourceOwner         = domainauthz.ReasonAllowResourceOwner
+	authzReasonDenyAccessLevelRequired    = domainauthz.ReasonDenyAccessLevelRequired
+	authzReasonDenyMissingIdentity        = domainauthz.ReasonDenyMissingIdentity
+	authzReasonDenyActorNotFound          = domainauthz.ReasonDenyActorNotFound
+	authzReasonDenyNotResourceOwner       = domainauthz.ReasonDenyNotResourceOwner
+	authzReasonDenyOverrideReasonRequired = domainauthz.ReasonDenyOverrideReasonRequired
+	authzReasonErrorDependencyUnavailable = domainauthz.ReasonErrorDependencyUnavailable
+	authzReasonErrorActorLoad             = domainauthz.ReasonErrorActorLoad
+	authzReasonErrorOwnerResolution       = domainauthz.ReasonErrorOwnerResolution
 )
 
 // requirePolicy ensures the participant has access for the requested action.
-func requirePolicy(ctx context.Context, stores Stores, action policyAction, campaignRecord storage.CampaignRecord) error {
-	_, err := requirePolicyActor(ctx, stores, action, campaignRecord)
+func requirePolicy(ctx context.Context, stores Stores, capability domainauthz.Capability, campaignRecord storage.CampaignRecord) error {
+	_, err := requirePolicyActor(ctx, stores, capability, campaignRecord)
 	return err
 }
 
 // requireReadPolicy ensures the actor can access campaign-scoped reads.
 func requireReadPolicy(ctx context.Context, stores Stores, campaignRecord storage.CampaignRecord) error {
-	return requirePolicy(ctx, stores, policyActionReadCampaign, campaignRecord)
+	return requirePolicy(ctx, stores, domainauthz.CapabilityReadCampaign, campaignRecord)
 }
 
 // requirePolicyActor ensures access and returns the resolved participant actor.
-func requirePolicyActor(ctx context.Context, stores Stores, action policyAction, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, error) {
-	actor, reasonCode, err := authorizePolicyActor(ctx, stores, action, campaignRecord)
+func requirePolicyActor(ctx context.Context, stores Stores, capability domainauthz.Capability, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, error) {
+	actor, reasonCode, err := authorizePolicyActor(ctx, stores, capability, campaignRecord)
 	if err != nil {
-		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, action, authzDecisionDeny, reasonCode, actor, err, nil)
+		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, capability, authzDecisionDeny, reasonCode, actor, err, nil)
 		return storage.ParticipantRecord{}, err
 	}
 	emitAuthzDecisionTelemetry(
 		ctx,
 		stores.Audit,
 		campaignRecord.ID,
-		action,
+		capability,
 		authzDecisionForReason(reasonCode),
 		reasonCode,
 		actor,
@@ -96,7 +79,7 @@ func requireCharacterMutationPolicy(
 	campaignRecord storage.CampaignRecord,
 	characterID string,
 ) (storage.ParticipantRecord, error) {
-	actor, reasonCode, err := authorizePolicyActor(ctx, stores, policyActionManageCharacters, campaignRecord)
+	actor, reasonCode, err := authorizePolicyActor(ctx, stores, domainauthz.CapabilityMutateCharacters, campaignRecord)
 	characterAttributes := map[string]any{
 		"character_id": strings.TrimSpace(characterID),
 	}
@@ -105,7 +88,7 @@ func requireCharacterMutationPolicy(
 			ctx,
 			stores.Audit,
 			campaignRecord.ID,
-			policyActionManageCharacters,
+			domainauthz.CapabilityMutateCharacters,
 			authzDecisionDeny,
 			reasonCode,
 			actor,
@@ -121,7 +104,7 @@ func requireCharacterMutationPolicy(
 			ctx,
 			stores.Audit,
 			campaignRecord.ID,
-			policyActionManageCharacters,
+			domainauthz.CapabilityMutateCharacters,
 			decision,
 			reasonCode,
 			actor,
@@ -130,12 +113,12 @@ func requireCharacterMutationPolicy(
 		)
 		return actor, nil
 	}
-	if actor.CampaignAccess != participant.CampaignAccessMember {
+	if reasonCode == authzReasonAllowAccessLevel && actor.CampaignAccess != participant.CampaignAccessMember {
 		emitAuthzDecisionTelemetry(
 			ctx,
 			stores.Audit,
 			campaignRecord.ID,
-			policyActionManageCharacters,
+			domainauthz.CapabilityMutateCharacters,
 			authzDecisionAllow,
 			reasonCode,
 			actor,
@@ -146,22 +129,23 @@ func requireCharacterMutationPolicy(
 	}
 	ownerParticipantID, err := resolveCharacterMutationOwnerParticipantID(ctx, stores, campaignRecord.ID, characterID)
 	if err != nil {
-		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, policyActionManageCharacters, authzDecisionDeny, authzReasonErrorOwnerResolution, actor, err, characterAttributes)
+		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, domainauthz.CapabilityMutateCharacters, authzDecisionDeny, authzReasonErrorOwnerResolution, actor, err, characterAttributes)
 		return storage.ParticipantRecord{}, err
 	}
-	if ownerParticipantID == "" || ownerParticipantID != actor.ID {
+	ownershipDecision := domainauthz.CanCharacterMutation(actor.CampaignAccess, actor.ID, ownerParticipantID)
+	if !ownershipDecision.Allowed {
 		err := status.Error(codes.PermissionDenied, "participant lacks permission")
-		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, policyActionManageCharacters, authzDecisionDeny, authzReasonDenyNotResourceOwner, actor, err, map[string]any{
+		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, domainauthz.CapabilityMutateCharacters, authzDecisionDeny, ownershipDecision.ReasonCode, actor, err, map[string]any{
 			"character_id":         characterAttributes["character_id"],
 			"owner_participant_id": ownerParticipantID,
 		})
 		return storage.ParticipantRecord{}, err
 	}
-	emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, policyActionManageCharacters, authzDecisionAllow, authzReasonAllowResourceOwner, actor, nil, characterAttributes)
+	emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, domainauthz.CapabilityMutateCharacters, authzDecisionAllow, ownershipDecision.ReasonCode, actor, nil, characterAttributes)
 	return actor, nil
 }
 
-func authorizePolicyActor(ctx context.Context, stores Stores, action policyAction, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, string, error) {
+func authorizePolicyActor(ctx context.Context, stores Stores, capability domainauthz.Capability, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, string, error) {
 	if overrideReason, overrideRequested := adminOverrideFromContext(ctx); overrideRequested {
 		if overrideReason == "" {
 			return storage.ParticipantRecord{}, authzReasonDenyOverrideReasonRequired, status.Error(codes.PermissionDenied, "admin override reason is required")
@@ -179,10 +163,11 @@ func authorizePolicyActor(ctx context.Context, stores Stores, action policyActio
 	if err != nil {
 		return storage.ParticipantRecord{}, reasonCode, err
 	}
-	if !canPerformPolicyAction(action, actor.CampaignAccess) {
-		return storage.ParticipantRecord{}, authzReasonDenyAccessLevelRequired, status.Error(codes.PermissionDenied, "participant lacks permission")
+	decision := domainauthz.CanCampaignAccess(actor.CampaignAccess, capability)
+	if !decision.Allowed {
+		return storage.ParticipantRecord{}, decision.ReasonCode, status.Error(codes.PermissionDenied, "participant lacks permission")
 	}
-	return actor, authzReasonAllowAccessLevel, nil
+	return actor, decision.ReasonCode, nil
 }
 
 func resolvePolicyActor(ctx context.Context, participants storage.ParticipantStore, campaignID string) (storage.ParticipantRecord, string, error) {
@@ -213,24 +198,6 @@ func resolvePolicyActor(ctx context.Context, participants storage.ParticipantSto
 		}
 	}
 	return storage.ParticipantRecord{}, authzReasonDenyActorNotFound, status.Error(codes.PermissionDenied, "participant lacks permission")
-}
-
-// canPerformPolicyAction enforces the v0 access model for management actions.
-func canPerformPolicyAction(action policyAction, access participant.CampaignAccess) bool {
-	switch action {
-	case policyActionManageParticipants, policyActionManageInvites, policyActionManageSessions:
-		return access == participant.CampaignAccessOwner || access == participant.CampaignAccessManager
-	case policyActionManageCharacters:
-		return access == participant.CampaignAccessOwner || access == participant.CampaignAccessManager || access == participant.CampaignAccessMember
-	case policyActionManageCampaign:
-		return access == participant.CampaignAccessOwner
-	case policyActionReadCampaign:
-		return access == participant.CampaignAccessOwner ||
-			access == participant.CampaignAccessManager ||
-			access == participant.CampaignAccessMember
-	default:
-		return false
-	}
 }
 
 // characterOwnershipState tracks the current owner and deletion state of a character
@@ -408,22 +375,22 @@ func mergeAuthzAttributes(attributes ...map[string]any) map[string]any {
 	return merged
 }
 
-func policyActionLabel(action policyAction) string {
-	switch action {
-	case policyActionManageParticipants:
+func policyCapabilityLabel(capability domainauthz.Capability) string {
+	switch capability {
+	case domainauthz.CapabilityManageParticipants:
 		return "manage_participants"
-	case policyActionManageInvites:
+	case domainauthz.CapabilityManageInvites:
 		return "manage_invites"
-	case policyActionManageSessions:
+	case domainauthz.CapabilityManageSessions:
 		return "manage_sessions"
-	case policyActionManageCharacters:
+	case domainauthz.CapabilityMutateCharacters:
 		return "manage_characters"
-	case policyActionManageCampaign:
+	case domainauthz.CapabilityManageCampaign:
 		return "manage_campaign"
-	case policyActionReadCampaign:
+	case domainauthz.CapabilityReadCampaign:
 		return "read_campaign"
 	default:
-		return "unknown"
+		return capability.Label()
 	}
 }
 
@@ -431,7 +398,7 @@ func emitAuthzDecisionTelemetry(
 	ctx context.Context,
 	store storage.AuditEventStore,
 	campaignID string,
-	action policyAction,
+	capability domainauthz.Capability,
 	decision string,
 	reasonCode string,
 	actor storage.ParticipantRecord,
@@ -468,7 +435,7 @@ func emitAuthzDecisionTelemetry(
 	attributes := map[string]any{
 		"decision":      decision,
 		"reason_code":   reasonCode,
-		"policy_action": policyActionLabel(action),
+		"policy_action": policyCapabilityLabel(capability),
 		"grpc_code":     code.String(),
 	}
 	if access := strings.TrimSpace(string(actor.CampaignAccess)); access != "" {

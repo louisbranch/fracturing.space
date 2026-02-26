@@ -91,7 +91,7 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		defer aiConn.Close()
 
-		server, err := web.NewServer(ctx, web.Config{HTTPAddr: cfg.HTTPAddr, AssetBaseURL: cfg.AssetBaseURL, ChatHTTPAddr: cfg.ChatHTTPAddr, EnableExperimentalModules: cfg.EnableExperimentalModules, CampaignClient: statev1.NewCampaignServiceClient(gameConn), ParticipantClient: statev1.NewParticipantServiceClient(gameConn), CharacterClient: statev1.NewCharacterServiceClient(gameConn), SessionClient: statev1.NewSessionServiceClient(gameConn), InviteClient: statev1.NewInviteServiceClient(gameConn), AuthClient: authv1.NewAuthServiceClient(authConn), AccountClient: authv1.NewAccountServiceClient(authConn), ConnectionsClient: connectionsv1.NewConnectionsServiceClient(connectionsConn), CredentialClient: aiv1.NewCredentialServiceClient(aiConn)})
+		server, err := web.NewServer(ctx, web.Config{HTTPAddr: cfg.HTTPAddr, AssetBaseURL: cfg.AssetBaseURL, ChatHTTPAddr: cfg.ChatHTTPAddr, EnableExperimentalModules: cfg.EnableExperimentalModules, CampaignClient: statev1.NewCampaignServiceClient(gameConn), ParticipantClient: statev1.NewParticipantServiceClient(gameConn), CharacterClient: statev1.NewCharacterServiceClient(gameConn), SessionClient: statev1.NewSessionServiceClient(gameConn), InviteClient: statev1.NewInviteServiceClient(gameConn), AuthorizationClient: statev1.NewAuthorizationServiceClient(gameConn), AuthClient: authv1.NewAuthServiceClient(authConn), AccountClient: authv1.NewAccountServiceClient(authConn), ConnectionsClient: connectionsv1.NewConnectionsServiceClient(connectionsConn), CredentialClient: aiv1.NewCredentialServiceClient(aiConn)})
 		if err != nil {
 			return fmt.Errorf("init web server: %w", err)
 		}

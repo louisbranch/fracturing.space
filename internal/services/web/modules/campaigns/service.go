@@ -108,6 +108,16 @@ type campaignMutationGateway interface {
 	RevokeInvite(context.Context, string) error
 }
 
+type campaignAuthorizationDecision struct {
+	Evaluated  bool
+	Allowed    bool
+	ReasonCode string
+}
+
+type campaignAuthorizationGateway interface {
+	CanCampaignAction(context.Context, string, statev1.AuthorizationAction, statev1.AuthorizationResource) (campaignAuthorizationDecision, error)
+}
+
 // CampaignGateway loads campaign summaries and applies workspace mutations.
 type CampaignGateway interface {
 	campaignReadGateway
@@ -530,6 +540,23 @@ func (s service) requireMutationAccess(ctx context.Context, campaignID string) e
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	if checker, ok := s.readGateway.(campaignAuthorizationGateway); ok {
+		decision, err := checker.CanCampaignAction(
+			ctx,
+			campaignID,
+			statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+			statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_PARTICIPANT,
+		)
+		if err != nil {
+			return err
+		}
+		if decision.Evaluated {
+			if !decision.Allowed {
+				return apperrors.EK(apperrors.KindForbidden, "error.web.message.campaign_mutation_requires_manager_access", "campaign mutation requires manager access")
+			}
+			return nil
+		}
 	}
 	userID := resolvedUserID(ctx)
 	if userID == "" {

@@ -279,6 +279,7 @@ func (b *serverBootstrap) registerServices(
 	eventService := gamegrpc.NewEventService(stores)
 	statisticsService := gamegrpc.NewStatisticsService(stores)
 	systemService := gamegrpc.NewSystemService(systemRegistry)
+	authorizationService := gamegrpc.NewAuthorizationService(stores)
 
 	daggerheartv1.RegisterDaggerheartServiceServer(grpcServer, daggerheartService)
 	daggerheartv1.RegisterDaggerheartContentServiceServer(grpcServer, contentService)
@@ -292,6 +293,7 @@ func (b *serverBootstrap) registerServices(
 	statev1.RegisterEventServiceServer(grpcServer, eventService)
 	statev1.RegisterStatisticsServiceServer(grpcServer, statisticsService)
 	statev1.RegisterSystemServiceServer(grpcServer, systemService)
+	statev1.RegisterAuthorizationServiceServer(grpcServer, authorizationService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("systems.daggerheart.v1.DaggerheartService", grpc_health_v1.HealthCheckResponse_SERVING)
@@ -306,5 +308,6 @@ func (b *serverBootstrap) registerServices(
 	healthServer.SetServingStatus("game.v1.EventService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.StatisticsService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.SystemService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("game.v1.AuthorizationService", grpc_health_v1.HealthCheckResponse_SERVING)
 	return nil
 }

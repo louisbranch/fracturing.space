@@ -21,22 +21,24 @@ func NewGRPCGateway(deps module.Dependencies) CampaignGateway {
 		return unavailableGateway{}
 	}
 	return grpcGateway{
-		client:            deps.CampaignClient,
-		participantClient: deps.ParticipantClient,
-		characterClient:   deps.CharacterClient,
-		sessionClient:     deps.SessionClient,
-		inviteClient:      deps.InviteClient,
-		assetBaseURL:      deps.AssetBaseURL,
+		client:              deps.CampaignClient,
+		participantClient:   deps.ParticipantClient,
+		characterClient:     deps.CharacterClient,
+		sessionClient:       deps.SessionClient,
+		inviteClient:        deps.InviteClient,
+		authorizationClient: deps.AuthorizationClient,
+		assetBaseURL:        deps.AssetBaseURL,
 	}
 }
 
 type grpcGateway struct {
-	client            module.CampaignClient
-	participantClient module.ParticipantClient
-	characterClient   module.CharacterClient
-	sessionClient     module.SessionClient
-	inviteClient      module.InviteClient
-	assetBaseURL      string
+	client              module.CampaignClient
+	participantClient   module.ParticipantClient
+	characterClient     module.CharacterClient
+	sessionClient       module.SessionClient
+	inviteClient        module.InviteClient
+	authorizationClient module.AuthorizationClient
+	assetBaseURL        string
 }
 
 func (g grpcGateway) ListCampaigns(ctx context.Context) ([]CampaignSummary, error) {
@@ -386,6 +388,37 @@ func (g grpcGateway) CreateCampaign(ctx context.Context, input CreateCampaignInp
 		return CreateCampaignResult{}, apperrors.E(apperrors.KindUnknown, "created campaign id was empty")
 	}
 	return CreateCampaignResult{CampaignID: campaignID}, nil
+}
+
+func (g grpcGateway) CanCampaignAction(
+	ctx context.Context,
+	campaignID string,
+	action statev1.AuthorizationAction,
+	resource statev1.AuthorizationResource,
+) (campaignAuthorizationDecision, error) {
+	if g.authorizationClient == nil {
+		return campaignAuthorizationDecision{}, nil
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return campaignAuthorizationDecision{}, nil
+	}
+	resp, err := g.authorizationClient.Can(ctx, &statev1.CanRequest{
+		CampaignId: campaignID,
+		Action:     action,
+		Resource:   resource,
+	})
+	if err != nil {
+		return campaignAuthorizationDecision{}, err
+	}
+	if resp == nil {
+		return campaignAuthorizationDecision{}, nil
+	}
+	return campaignAuthorizationDecision{
+		Evaluated:  true,
+		Allowed:    resp.GetAllowed(),
+		ReasonCode: strings.TrimSpace(resp.GetReasonCode()),
+	}, nil
 }
 
 // FIXME(web-cutover): session/participant/character/invite mutations remain scaffolded while campaigns can be mounted as stable defaults.

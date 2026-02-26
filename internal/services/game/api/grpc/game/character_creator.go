@@ -11,6 +11,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -52,7 +53,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		return storage.CharacterRecord{}, apperrors.New(apperrors.CodeCharacterInvalidKind, "character kind is required")
 	}
 	notes := strings.TrimSpace(in.GetNotes())
-	policyActor, err := requirePolicyActor(ctx, c.stores, policyActionManageCharacters, campaignRecord)
+	policyActor, err := requirePolicyActor(ctx, c.stores, domainauthz.CapabilityMutateCharacters, campaignRecord)
 	if err != nil {
 		return storage.CharacterRecord{}, err
 	}
@@ -317,7 +318,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 
 	var policyActor storage.ParticipantRecord
 	if transferOwnershipRequested {
-		policyActor, err = requirePolicyActor(ctx, c.stores, policyActionManageCampaign, campaignRecord)
+		policyActor, err = requirePolicyActor(ctx, c.stores, domainauthz.CapabilityTransferCharacterOwnership, campaignRecord)
 		if err != nil {
 			return storage.CharacterRecord{}, err
 		}
@@ -502,7 +503,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 			avatarAssetID = resolvedAssetID
 		}
 	}
-	if err := requirePolicy(ctx, c.stores, policyActionManageParticipants, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCharacters, campaignRecord); err != nil {
 		return "", "", err
 	}
 

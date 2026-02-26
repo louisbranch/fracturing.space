@@ -387,6 +387,49 @@ func TestMutationMethodsAllowManagerAndOwnerCampaignAccess(t *testing.T) {
 	}
 }
 
+func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
+	t.Parallel()
+
+	t.Run("allow", func(t *testing.T) {
+		t.Parallel()
+		gateway := &campaignGatewayStub{
+			authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		}
+		svc := newService(gateway)
+		if err := svc.startSession(contextWithResolvedUserID("user-1"), "c1"); err != nil {
+			t.Fatalf("startSession() error = %v", err)
+		}
+		if gateway.authorizationCalls != 1 {
+			t.Fatalf("authorization calls = %d, want 1", gateway.authorizationCalls)
+		}
+		if len(gateway.calls) != 1 || gateway.calls[0] != "start" {
+			t.Fatalf("mutation gateway calls = %v, want [start]", gateway.calls)
+		}
+	})
+
+	t.Run("deny", func(t *testing.T) {
+		t.Parallel()
+		gateway := &campaignGatewayStub{
+			authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+			campaignParticipants:  []CampaignParticipant{{ID: "p-manager", UserID: "user-1", CampaignAccess: "Manager"}},
+		}
+		svc := newService(gateway)
+		err := svc.startSession(contextWithResolvedUserID("user-1"), "c1")
+		if err == nil {
+			t.Fatal("expected forbidden error")
+		}
+		if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+			t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
+		}
+		if gateway.authorizationCalls != 1 {
+			t.Fatalf("authorization calls = %d, want 1", gateway.authorizationCalls)
+		}
+		if len(gateway.calls) != 0 {
+			t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+		}
+	})
+}
+
 func TestMutationMethodsDenyUnknownCampaignActor(t *testing.T) {
 	t.Parallel()
 
@@ -443,6 +486,9 @@ type campaignGatewayStub struct {
 	createCampaignResult    CreateCampaignResult
 	createCampaignErr       error
 	lastCreateInput         CreateCampaignInput
+	authorizationDecision   campaignAuthorizationDecision
+	authorizationErr        error
+	authorizationCalls      int
 	calls                   []string
 }
 
@@ -551,6 +597,14 @@ func (f *campaignGatewayStub) CreateInvite(context.Context, string) error {
 func (f *campaignGatewayStub) RevokeInvite(context.Context, string) error {
 	f.calls = append(f.calls, "revoke-invite")
 	return nil
+}
+
+func (f *campaignGatewayStub) CanCampaignAction(context.Context, string, statev1.AuthorizationAction, statev1.AuthorizationResource) (campaignAuthorizationDecision, error) {
+	f.authorizationCalls++
+	if f.authorizationErr != nil {
+		return campaignAuthorizationDecision{}, f.authorizationErr
+	}
+	return f.authorizationDecision, nil
 }
 
 func TestCreateCampaignForwardsInputToGateway(t *testing.T) {

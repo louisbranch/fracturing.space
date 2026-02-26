@@ -13,6 +13,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -52,7 +53,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.InviteRecord{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, policyActionManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
 		return storage.InviteRecord{}, err
 	}
 	if _, err := a.stores.Participant.GetParticipant(ctx, campaignID, participantID); err != nil {
@@ -331,7 +332,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	if err != nil {
 		return storage.InviteRecord{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, policyActionManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
 		return storage.InviteRecord{}, err
 	}
 	if inv.Status == invite.StatusRevoked {

@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -114,7 +115,7 @@ func (s *InviteService) GetInvite(ctx context.Context, in *campaignv1.GetInviteR
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if err := requirePolicy(ctx, s.stores, policyActionManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, s.stores, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -137,7 +138,7 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if err := requirePolicy(ctx, s.stores, policyActionManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, s.stores, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -182,7 +183,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
-	if err := requirePolicy(ctx, s.stores, policyActionManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, s.stores, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 

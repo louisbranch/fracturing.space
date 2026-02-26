@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -88,10 +89,10 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 	if overrideRequested {
 		if overrideReason == "" {
 			err := status.Error(codes.PermissionDenied, "admin override reason is required")
-			emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", policyActionReadCampaign, authzDecisionDeny, authzReasonDenyOverrideReasonRequired, storage.ParticipantRecord{}, err, nil)
+			emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", domainauthz.CapabilityReadCampaign, authzDecisionDeny, authzReasonDenyOverrideReasonRequired, storage.ParticipantRecord{}, err, nil)
 			return nil, err
 		}
-		emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", policyActionReadCampaign, authzDecisionAllow, authzReasonAllowAdminOverride, storage.ParticipantRecord{}, nil, nil)
+		emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", domainauthz.CapabilityReadCampaign, authzDecisionAllow, authzReasonAllowAdminOverride, storage.ParticipantRecord{}, nil, nil)
 		page, err := s.stores.Campaign.List(ctx, pageSize, in.GetPageToken())
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "list campaigns: %v", err)
@@ -109,7 +110,7 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 
 	if participantID == "" && userID == "" {
 		err := status.Error(codes.PermissionDenied, "missing participant identity")
-		emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", policyActionReadCampaign, authzDecisionDeny, authzReasonDenyMissingIdentity, storage.ParticipantRecord{}, err, nil)
+		emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", domainauthz.CapabilityReadCampaign, authzDecisionDeny, authzReasonDenyMissingIdentity, storage.ParticipantRecord{}, err, nil)
 		return nil, err
 	}
 	if s.stores.Participant == nil {
