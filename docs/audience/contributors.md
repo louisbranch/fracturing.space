@@ -32,6 +32,6 @@ Canonical onboarding path for developers adding features, fixing bugs, or improv
 
 ## Architecture context (only when needed)
 
-- [Project overview](../project/overview.md)
-- [Architecture](../project/architecture.md)
-- [Domain language](../project/domain-language.md)
+- [Project overview](../architecture/overview.md)
+- [Architecture](../architecture/architecture.md)
+- [Domain language](../architecture/domain-language.md)

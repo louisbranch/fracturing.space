@@ -2,6 +2,9 @@
 title: "Docker Compose"
 parent: "Running"
 nav_order: 3
+status: canonical
+owner: engineering
+last_reviewed: "2026-02-26"
 ---
 
 # Docker Compose (Local)

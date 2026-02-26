@@ -7,11 +7,10 @@ cd "$repo_root"
 if [ "$#" -gt 0 ]; then
 	files=("$@")
 else
-	files=(
-		"CONTRIBUTING.md"
-		"docs/audience/contributors.md"
-		"docs/audience/contributor-map.md"
-	)
+	files=("README.md" "CONTRIBUTING.md" "AGENTS.md")
+	while IFS= read -r path; do
+		files+=("$path")
+	done < <(find docs -type f -name '*.md' | sort)
 fi
 
 missing=()
@@ -35,7 +34,7 @@ for file in "${files[@]}"; do
 			*"://"* | localhost:* | http:* | https:*)
 				continue
 				;;
-			*"{"* | *"}"* | *"*"* | *"|"* | *"..."*)
+			*"{"* | *"}"* | *"<"* | *">"* | *"*"* | *"|"* | *"..."*)
 				continue
 				;;
 			-*)
@@ -58,11 +57,33 @@ for file in "${files[@]}"; do
 			resolved="$dir/$candidate"
 		fi
 
+		resolved="${resolved%%#*}"
+		resolved="${resolved%%\?*}"
+		resolved="$(printf '%s' "$resolved" | perl -pe 's/:[0-9]+(?::[0-9]+)?$//')"
 		resolved="${resolved%,}"
 		resolved="${resolved%.}"
 		resolved="${resolved%/}"
 
 		if [ ! -e "$resolved" ]; then
+			base=$(basename "$resolved")
+			if [[ "$candidate" != */ ]] \
+				&& [ "$candidate" != "README.md" ] \
+				&& [ "$candidate" != "CONTRIBUTING.md" ] \
+				&& [ "$candidate" != "AGENTS.md" ] \
+				&& [ "$candidate" != "PLANS.md" ] \
+				&& [ "$candidate" != "Makefile" ]; then
+				ext="${base##*.}"
+				if [ "$base" = "$ext" ]; then
+					continue
+				fi
+				case "$ext" in
+					md|go|sh|json|jsonc|yml|yaml|proto|templ|sql|lua|txt|svg|toml|conf|ini|csv)
+						;;
+					*)
+						continue
+						;;
+				esac
+			fi
 			missing+=("$file:$candidate")
 		fi
 	done < <(perl -ne 'while(/`([^`]+)`/g){print "$1\n"}' "$file")

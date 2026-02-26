@@ -1,7 +1,7 @@
 ---
 title: "System designers"
 parent: "Audience"
-nav_order: 4
+nav_order: 6
 ---
 
 # System designers
@@ -10,14 +10,14 @@ For adding or extending a game system and mechanics.
 
 ## First action
 
-- Design checklist: [Systems checklist](../project/systems.md)
-- Implementation architecture: [Game systems architecture](../project/game-systems.md)
-- Write-path semantics: [Event-driven system](../project/event-driven-system.md)
+- Design checklist: [Systems checklist](../architecture/systems.md)
+- Implementation architecture: [Game systems architecture](../architecture/game-systems.md)
+- Write-path semantics: [Event-driven system](../architecture/event-driven-system.md)
 
 ## Adjacent references
 
-- [Event replay and snapshots](../project/event-replay.md)
-- [Domain language](../project/domain-language.md)
+- [Event replay and snapshots](../architecture/event-replay.md)
+- [Domain language](../architecture/domain-language.md)
 
 ## Next step
 

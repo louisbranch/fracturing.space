@@ -26,7 +26,7 @@ func run(args []string, stdout io.Writer, stderr io.Writer) error {
 	var outPath string
 	var rootFlag string
 	flags := flag.NewFlagSet("icondocgen", flag.ContinueOnError)
-	flags.StringVar(&outPath, "out", "docs/project/icon-catalog.md", "output path for the icon catalog")
+	flags.StringVar(&outPath, "out", "docs/reference/icon-catalog.md", "output path for the icon catalog")
 	flags.StringVar(&rootFlag, "root", "", "repo root (defaults to locating go.mod)")
 	flags.SetOutput(stderr)
 	if err := flags.Parse(args); err != nil {
@@ -44,8 +44,8 @@ func run(args []string, stdout io.Writer, stderr io.Writer) error {
 
 	content := fmt.Sprintf(`---
 title: "Icon Catalog"
-parent: "Project"
-nav_order: 30
+parent: "Reference"
+nav_order: 3
 ---
 
 %s`, icons.CatalogMarkdown())

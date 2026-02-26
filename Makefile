@@ -12,7 +12,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/notifications/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration scenario scenario-missing-doc-check templ-generate event-catalog-check topology-generate topology-check docs-path-check negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration scenario templ-generate event-catalog-check topology-generate topology-check docs-check docs-path-check docs-link-check docs-index-check docs-lifecycle-check negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -104,11 +104,19 @@ integration:
 scenario:
 	go test -tags=scenario ./internal/test/game
 
-scenario-missing-doc-check:
-	@bash ./scripts/check-scenario-missing-mechanics.sh
+docs-check: docs-path-check docs-link-check docs-index-check docs-lifecycle-check
 
 docs-path-check:
 	@bash ./scripts/check-doc-paths.sh
+
+docs-link-check:
+	@bash ./scripts/check-doc-links.sh
+
+docs-index-check:
+	@bash ./scripts/check-doc-index-coverage.sh
+
+docs-lifecycle-check:
+	@bash ./scripts/check-doc-lifecycle.sh
 
 negative-test-assertion-check:
 	@bash ./scripts/check-negative-test-assertions.sh

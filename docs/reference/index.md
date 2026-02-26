@@ -11,6 +11,8 @@ Protocol and API contracts.
 ## Start here
 
 - [MCP tools and resources](mcp.md)
+- [Icon rendering](icon-rendering.md)
+- [Icon catalog](icon-catalog.md)
 
 ## Related exact-contract docs
 

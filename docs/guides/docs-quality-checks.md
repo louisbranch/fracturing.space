@@ -11,10 +11,15 @@ Use these checks before opening documentation-heavy PRs.
 ## Quick run
 
 ```sh
-make docs-path-check
+make docs-check
 ```
 
-This verifies key docs do not reference broken repo paths.
+This runs:
+
+- `make docs-path-check` for backtick path references.
+- `make docs-link-check` for markdown link validity.
+- `make docs-index-check` for section index coverage.
+- `make docs-lifecycle-check` to block roadmap/phase/backlog tracker artifacts in `docs/`.
 
 ## Drift spot checks (recommended)
 
@@ -23,6 +28,6 @@ For onboarding docs, run quick consistency greps:
 ```sh
 rg -n "docker compose|make bootstrap" README.md docs/running
 rg -n "FRACTURING_SPACE_MCP_HTTP_ADDR|http-addr|8081|8085" docs/running docs/reference/mcp.md internal/cmd/mcp internal/services/mcp
-rg -n "defined by an email|independent of any email address" docs/project/domain-language.md docs/project/identity.md
-rg -n "WEBAUTHN_RP_ORIGINS|MAGIC_LINK_BASE_URL" docs/running/configuration.md docs/project/oauth.md internal/services/auth
+rg -n "defined by an email|independent of any email address" docs/architecture/domain-language.md docs/architecture/identity.md
+rg -n "WEBAUTHN_RP_ORIGINS|MAGIC_LINK_BASE_URL" docs/running/configuration.md docs/architecture/oauth.md internal/services/auth
 ```

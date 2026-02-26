@@ -186,7 +186,7 @@ func loadTimelineCommandAndEventTypes(docPath string) (map[string]struct{}, map[
 }
 
 // loadTimelineCommandAndEventTypesFromDocs merges command/event types
-// from multiple timeline documents (contract + backlog).
+// from one or more timeline documents.
 func loadTimelineCommandAndEventTypesFromDocs(docPaths ...string) (map[string]struct{}, map[string]struct{}, error) {
 	allCommands := make(map[string]struct{})
 	allEvents := make(map[string]struct{})

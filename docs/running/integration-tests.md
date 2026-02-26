@@ -2,6 +2,9 @@
 title: "Integration tests"
 parent: "Running"
 nav_order: 7
+status: canonical
+owner: engineering
+last_reviewed: "2026-02-26"
 ---
 
 # Integration Tests

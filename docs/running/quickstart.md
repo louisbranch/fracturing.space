@@ -2,6 +2,9 @@
 title: "Quickstart"
 parent: "Running"
 nav_order: 1
+status: canonical
+owner: engineering
+last_reviewed: "2026-02-26"
 ---
 
 # Quickstart (Docker)

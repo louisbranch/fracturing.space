@@ -67,8 +67,12 @@ scripts/playwright-admin-smoke.sh
 
 ### Specs
 
-The admin smoke flow lives in [admin smoke spec](../specs/admin-smoke.md) and is executed by
-the spec runner:
+Smoke specs live in:
+
+- [Admin smoke spec](../specs/admin-smoke.md)
+- [Web smoke spec](../specs/web-smoke.md)
+
+Run a spec with the spec runner:
 
 ```bash
 scripts/playwright-run-spec.sh docs/specs/admin-smoke.md

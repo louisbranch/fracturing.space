@@ -40,11 +40,11 @@ This writes:
   `internal/services/game/domain/command` registries.
 - Generated files in this folder are artifacts of the generator and should
   not be edited manually.
-- Author conceptual intent and invariants in project docs, not duplicated
+- Author conceptual intent and invariants in architecture docs, not duplicated
   type/payload inventories:
-  - [Event-driven system](../project/event-driven-system.md)
-  - [Game systems architecture](../project/game-systems.md)
-  - [Daggerheart event timeline contract](../project/daggerheart-event-timeline-contract.md)
+  - [Event-driven system](../architecture/event-driven-system.md)
+  - [Game systems architecture](../architecture/game-systems.md)
+  - [Daggerheart event timeline contract](../architecture/daggerheart-event-timeline-contract.md)
 
 ## CI check
 

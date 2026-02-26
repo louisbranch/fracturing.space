@@ -17,5 +17,5 @@ Read order:
 
 For lifecycle semantics, invariants, and replay model, see:
 
-- [Event-driven system](../project/event-driven-system.md)
-- [Game systems architecture](../project/game-systems.md)
+- [Event-driven system](../architecture/event-driven-system.md)
+- [Game systems architecture](../architecture/game-systems.md)

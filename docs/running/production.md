@@ -2,6 +2,9 @@
 title: "Production"
 parent: "Running"
 nav_order: 4
+status: canonical
+owner: engineering
+last_reviewed: "2026-02-26"
 ---
 
 # Production (Docker + Caddy)

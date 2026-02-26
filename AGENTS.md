@@ -16,7 +16,7 @@ External/API compatibility is a product decision, not a default technical constr
 
 ## Preflight
 
-- For non-trivial work, read relevant docs in `docs/project/` before editing.
+- For non-trivial work, read relevant canonical docs in `docs/architecture/` (and `docs/running/` when runtime behavior is involved) before editing.
 
 ## Engineering Posture
 
@@ -76,7 +76,11 @@ Run `make cover` when production behavior changes and report notable coverage im
 - Document both exported and non-exported functions/types with "why" context.
 - Promote durable decisions (architecture, domain language, migration rationale) to `docs/`.
 - Treat `.agents/plans/` notes as temporary working memory; migrate lasting knowledge before PR.
-- Keep domain language intentional and consistent with `docs/project/domain-language.md`.
+- Keep domain language intentional and consistent with `docs/architecture/domain-language.md`.
+- Docs lifecycle policy:
+  - Keep `docs/` reader-first and durable; remove stale or completed implementation notes instead of preserving them as historical clutter.
+  - Keep in-progress plans, phase trackers, and working backlogs in `.agents/plans/`, not in reader-facing docs.
+  - Use section intent consistently: `docs/architecture/` for canonical design, `docs/running/` for runtime operations, `docs/reference/` and `docs/events/` for contracts/generated reference, and `docs/specs/` for executable smoke/QA specs.
 
 ## Planning and Execution
 
