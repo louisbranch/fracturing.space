@@ -746,7 +746,7 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
-func TestEndCampaign_DeniesManagerAccess(t *testing.T) {
+func TestEndCampaign_AllowsManagerAccess(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	eventStore := newFakeEventStore()
@@ -786,8 +786,13 @@ func TestEndCampaign_DeniesManagerAccess(t *testing.T) {
 		clock: fixedClock(now),
 	}
 
-	_, err := svc.EndCampaign(contextWithParticipantID("manager-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
-	assertStatusCode(t, err, codes.PermissionDenied)
+	resp, err := svc.EndCampaign(contextWithParticipantID("manager-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
+	if err != nil {
+		t.Fatalf("EndCampaign returned error: %v", err)
+	}
+	if resp.GetCampaign().GetStatus() != statev1.CampaignStatus_COMPLETED {
+		t.Fatalf("campaign status = %v, want %v", resp.GetCampaign().GetStatus(), statev1.CampaignStatus_COMPLETED)
+	}
 }
 
 func TestEndCampaign_RequiresDomainEngine(t *testing.T) {

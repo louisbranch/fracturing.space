@@ -23,7 +23,7 @@ import (
 )
 
 func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
-	ctx := context.Background()
+	ctx := contextWithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := newFakeCampaignStore()
@@ -265,8 +265,116 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	}
 }
 
+func TestForkCampaign_RequiresCampaignManagePolicy(t *testing.T) {
+	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
+		ID:     "source",
+		Name:   "Source Campaign",
+		Status: campaign.StatusActive,
+	}
+
+	svc := &ForkService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			CampaignFork: newFakeCampaignForkStore(),
+			Event:        newFakeEventStore(),
+			Participant:  newFakeParticipantStore(),
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("fork-1"),
+	}
+
+	_, err := svc.ForkCampaign(context.Background(), &statev1.ForkCampaignRequest{
+		SourceCampaignId: "source",
+		NewCampaignName:  "Forked Campaign",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestForkCampaign_AllowsManagerManagePolicy(t *testing.T) {
+	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
+		ID:     "source",
+		Name:   "Source Campaign",
+		Status: campaign.StatusActive,
+	}
+	participantStore.participants["source"] = map[string]storage.ParticipantRecord{
+		"manager-1": {ID: "manager-1", CampaignID: "source", CampaignAccess: participant.CampaignAccessManager},
+	}
+
+	svc := &ForkService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			CampaignFork: newFakeCampaignForkStore(),
+			Event:        newFakeEventStore(),
+			Participant:  participantStore,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("fork-1"),
+	}
+
+	_, err := svc.ForkCampaign(contextWithParticipantID("manager-1"), &statev1.ForkCampaignRequest{
+		SourceCampaignId: "source",
+		NewCampaignName:  "Forked Campaign",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestForkCampaign_DeniesMemberManagePolicy(t *testing.T) {
+	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
+		ID:     "source",
+		Name:   "Source Campaign",
+		Status: campaign.StatusActive,
+	}
+	participantStore.participants["source"] = map[string]storage.ParticipantRecord{
+		"member-1": {ID: "member-1", CampaignID: "source", CampaignAccess: participant.CampaignAccessMember},
+	}
+
+	svc := &ForkService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			CampaignFork: newFakeCampaignForkStore(),
+			Event:        newFakeEventStore(),
+			Participant:  participantStore,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("fork-1"),
+	}
+
+	_, err := svc.ForkCampaign(contextWithParticipantID("member-1"), &statev1.ForkCampaignRequest{
+		SourceCampaignId: "source",
+		NewCampaignName:  "Forked Campaign",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestGetLineage_RequiresCampaignReadPolicy(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{
+		ID:     "camp-1",
+		Status: campaign.StatusActive,
+	}
+
+	svc := &ForkService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			CampaignFork: newFakeCampaignForkStore(),
+			Participant:  newFakeParticipantStore(),
+		},
+	}
+
+	_, err := svc.GetLineage(context.Background(), &statev1.GetLineageRequest{CampaignId: "camp-1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *testing.T) {
-	ctx := context.Background()
+	ctx := contextWithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 3, 11, 0, 0, 0, time.UTC)
 
 	campaignStore := newFakeCampaignStore()
@@ -387,7 +495,7 @@ func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *test
 }
 
 func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
-	ctx := context.Background()
+	ctx := contextWithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := newFakeCampaignStore()
@@ -442,7 +550,7 @@ func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
 }
 
 func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
-	ctx := context.Background()
+	ctx := contextWithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := newFakeCampaignStore()
@@ -684,7 +792,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 }
 
 func TestForkCampaign_UsesDomainEngine(t *testing.T) {
-	ctx := context.Background()
+	ctx := contextWithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	campaignStore := newFakeCampaignStore()
@@ -795,7 +903,7 @@ func TestForkCampaign_UsesDomainEngine(t *testing.T) {
 }
 
 func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
-	ctx := context.Background()
+	ctx := contextWithAdminOverride("fork-test")
 	now := time.Date(2025, 2, 2, 9, 0, 0, 0, time.UTC)
 
 	campaignStore := newFakeCampaignStore()

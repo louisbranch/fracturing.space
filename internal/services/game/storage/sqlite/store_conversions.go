@@ -541,16 +541,17 @@ func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
 		participantID = row.ControllerParticipantID.String
 	}
 	return storage.CharacterRecord{
-		ID:            row.ID,
-		CampaignID:    row.CampaignID,
-		ParticipantID: participantID,
-		Name:          row.Name,
-		Kind:          stringToCharacterKind(row.Kind),
-		Notes:         row.Notes,
-		AvatarSetID:   row.AvatarSetID,
-		AvatarAssetID: row.AvatarAssetID,
-		CreatedAt:     fromMillis(row.CreatedAt),
-		UpdatedAt:     fromMillis(row.UpdatedAt),
+		ID:                 row.ID,
+		CampaignID:         row.CampaignID,
+		OwnerParticipantID: row.OwnerParticipantID,
+		ParticipantID:      participantID,
+		Name:               row.Name,
+		Kind:               stringToCharacterKind(row.Kind),
+		Notes:              row.Notes,
+		AvatarSetID:        row.AvatarSetID,
+		AvatarAssetID:      row.AvatarAssetID,
+		CreatedAt:          fromMillis(row.CreatedAt),
+		UpdatedAt:          fromMillis(row.UpdatedAt),
 	}, nil
 }
 

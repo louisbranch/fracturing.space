@@ -85,6 +85,10 @@ func (s *EventService) ListTimelineEntries(ctx context.Context, in *campaignv1.L
 		cursorReverse = c.Reverse
 	}
 
+	if err := requireReadPolicy(ctx, s.stores, storage.CampaignRecord{ID: campaignID}); err != nil {
+		return nil, err
+	}
+
 	req := storage.ListEventsPageRequest{
 		CampaignID:    campaignID,
 		PageSize:      pageSize,

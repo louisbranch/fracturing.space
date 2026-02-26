@@ -1214,6 +1214,18 @@ func contextWithUserID(userID string) context.Context {
 	return metadata.NewIncomingContext(context.Background(), md)
 }
 
+func contextWithAdminOverride(reason string) context.Context {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		reason = "test-override"
+	}
+	md := metadata.Pairs(
+		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
+		grpcmeta.AuthzOverrideReasonHeader, reason,
+	)
+	return metadata.NewIncomingContext(context.Background(), md)
+}
+
 type joinGrantSigner struct {
 	issuer   string
 	audience string

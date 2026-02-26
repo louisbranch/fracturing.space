@@ -45,6 +45,21 @@ func TestGetSnapshot_CampaignNotFound(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
+func TestGetSnapshot_RequiresCampaignReadPolicy(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+
+	svc := NewSnapshotService(Stores{
+		Campaign:     campaignStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Character:    newFakeCharacterStore(),
+		Participant:  newFakeParticipantStore(),
+	})
+
+	_, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestGetSnapshot_CampaignArchivedAllowed(t *testing.T) {
 	// GetSnapshot uses CampaignOpRead which is allowed for all campaign statuses,
 	// including archived campaigns. This allows viewing historical campaign state.
@@ -64,7 +79,7 @@ func TestGetSnapshot_CampaignArchivedAllowed(t *testing.T) {
 		Character:    characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(contextWithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -90,7 +105,7 @@ func TestGetSnapshot_Success_NoCharacters(t *testing.T) {
 		Character:    characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(contextWithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -131,7 +146,7 @@ func TestGetSnapshot_Success_WithCharacters(t *testing.T) {
 		Character:    characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(contextWithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -157,7 +172,7 @@ func TestGetSnapshot_Success_DefaultGmFear(t *testing.T) {
 		Character:    characterStore,
 	})
 
-	resp, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{CampaignId: "c1"})
+	resp, err := svc.GetSnapshot(contextWithAdminOverride("snapshot-test"), &statev1.GetSnapshotRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetSnapshot returned error: %v", err)
 	}
@@ -192,6 +207,7 @@ func TestPatchCharacterState_MissingCharacterId(t *testing.T) {
 		Campaign:     campaignStore,
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
+		Participant:  newFakeParticipantStore(),
 	})
 	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
 		CampaignId: "c1",
@@ -212,6 +228,27 @@ func TestPatchCharacterState_CampaignNotFound(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
+func TestPatchCharacterState_RequiresCharacterMutationPolicy(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+
+	svc := NewSnapshotService(Stores{
+		Campaign:     campaignStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Event:        newFakeEventStore(),
+		Participant:  newFakeParticipantStore(),
+	})
+
+	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{
+			Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 10, Hope: 3, Stress: 1},
+		},
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestPatchCharacterState_CampaignArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusArchived}
@@ -220,6 +257,7 @@ func TestPatchCharacterState_CampaignArchivedDisallowed(t *testing.T) {
 		Campaign:     campaignStore,
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
+		Participant:  newFakeParticipantStore(),
 	})
 	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
 		CampaignId:  "c1",
@@ -236,8 +274,9 @@ func TestPatchCharacterState_StateNotFound(t *testing.T) {
 		Campaign:     campaignStore,
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
+		Participant:  newFakeParticipantStore(),
 	})
-	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:  "c1",
 		CharacterId: "nonexistent",
 	})
@@ -259,7 +298,7 @@ func TestPatchCharacterState_InvalidHope(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 	})
-	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 15, Hope: 7, Stress: 1}}, // Hope max is 6
@@ -285,7 +324,7 @@ func TestPatchCharacterState_InvalidStress(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 	})
-	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 15, Hope: 3, Stress: 10}}, // Stress max is 6
@@ -311,7 +350,7 @@ func TestPatchCharacterState_InvalidHp(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 	})
-	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 25, Hope: 3, Stress: 1}}, // Hp max is 18
@@ -338,7 +377,7 @@ func TestPatchCharacterState_RequiresDomainEngine(t *testing.T) {
 		Event:        eventStore,
 	})
 
-	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
+	_, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{
@@ -405,7 +444,7 @@ func TestPatchCharacterState_Success(t *testing.T) {
 		Domain:       domain,
 	})
 
-	resp, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
+	resp, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 10, Hope: 5, Stress: 3}},
@@ -500,7 +539,7 @@ func TestPatchCharacterState_SetToZero(t *testing.T) {
 		Domain:       domain,
 	})
 
-	resp, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
+	resp, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:       "c1",
 		CharacterId:      "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartCharacterState{Hp: 0, Hope: 0, Stress: 0}},
@@ -560,6 +599,26 @@ func TestUpdateSnapshotState_CampaignNotFound(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
+func TestUpdateSnapshotState_RequiresManageSessionsPolicy(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+
+	svc := NewSnapshotService(Stores{
+		Campaign:     campaignStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		Event:        newFakeEventStore(),
+		Participant:  newFakeParticipantStore(),
+	})
+
+	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
+		CampaignId: "c1",
+		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
+			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 2},
+		},
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestUpdateSnapshotState_CampaignArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusArchived}
@@ -587,7 +646,7 @@ func TestUpdateSnapshotState_NegativeGmFear(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 	})
-	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
+	_, err := svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: -1},
@@ -609,7 +668,7 @@ func TestUpdateSnapshotState_RequiresDomainEngine(t *testing.T) {
 		Event:        eventStore,
 	})
 
-	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
+	_, err := svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 7},
@@ -654,7 +713,7 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 		Domain:       domain,
 	})
 
-	resp, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
+	resp, err := svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 7},
@@ -721,7 +780,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 		Domain:       domain,
 	})
 
-	resp, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
+	resp, err := svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 10},
@@ -778,7 +837,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 		Domain:       domain,
 	})
 
-	resp, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
+	resp, err := svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 0},
@@ -828,7 +887,7 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 		Domain:       domain,
 	})
 
-	_, err = svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
+	_, err = svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
 		CampaignId: "c1",
 		SystemSnapshotUpdate: &statev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 5},
@@ -905,7 +964,7 @@ func TestPatchCharacterState_UsesDomainEngine(t *testing.T) {
 		Domain:       domain,
 	})
 
-	_, err = svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
+	_, err = svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{

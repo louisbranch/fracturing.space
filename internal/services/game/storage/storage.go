@@ -73,16 +73,17 @@ type InviteRecord struct {
 
 // CharacterRecord captures character identity/state metadata for campaign read views.
 type CharacterRecord struct {
-	ID            string
-	CampaignID    string
-	ParticipantID string
-	Name          string
-	Kind          character.Kind
-	Notes         string
-	AvatarSetID   string
-	AvatarAssetID string
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	ID                 string
+	CampaignID         string
+	OwnerParticipantID string
+	ParticipantID      string
+	Name               string
+	Kind               character.Kind
+	Notes              string
+	AvatarSetID        string
+	AvatarAssetID      string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 // SessionRecord captures session lifecycle metadata that defines active session boundaries.

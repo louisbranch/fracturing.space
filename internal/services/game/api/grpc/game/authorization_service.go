@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -59,24 +60,55 @@ func (s *AuthorizationService) Can(ctx context.Context, in *campaignv1.CanReques
 		return nil, err
 	}
 
-	extraAttributes := map[string]any{}
-	if capability == domainauthz.CapabilityMutateCharacters {
-		ownerParticipantID, evaluateOwnership, resolveErr := resolveCanCharacterOwnerParticipantID(ctx, s.stores, campaignID, in.GetTarget())
-		if resolveErr != nil {
-			emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, domainauthz.ReasonErrorOwnerResolution, actor, resolveErr, nil)
-			return nil, resolveErr
-		}
-		if evaluateOwnership {
-			characterID := strings.TrimSpace(in.GetTarget().GetResourceId())
-			decision := domainauthz.CanCharacterMutation(actor.CampaignAccess, actor.ID, ownerParticipantID)
-			extraAttributes["character_id"] = characterID
-			extraAttributes["owner_participant_id"] = ownerParticipantID
-			if !decision.Allowed {
-				authErr := status.Error(codes.PermissionDenied, "participant lacks permission")
-				emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, decision.ReasonCode, actor, authErr, extraAttributes)
-				return canResponse(false, decision.ReasonCode, actor), nil
+	extraAttributes := authzExtraAttributesForReason(ctx, reasonCode)
+	if reasonCode != authzReasonAllowAdminOverride {
+		if capability == domainauthz.CapabilityMutateCharacters {
+			ownerParticipantID, evaluateOwnership, resolveErr := resolveCanCharacterOwnerParticipantID(ctx, s.stores, campaignID, in.GetTarget())
+			if resolveErr != nil {
+				emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, domainauthz.ReasonErrorOwnerResolution, actor, resolveErr, nil)
+				return nil, resolveErr
 			}
-			reasonCode = decision.ReasonCode
+			if evaluateOwnership {
+				characterID := ""
+				if target := in.GetTarget(); target != nil {
+					characterID = strings.TrimSpace(target.GetResourceId())
+				}
+				characterAttributes := map[string]any{
+					"character_id":         characterID,
+					"owner_participant_id": ownerParticipantID,
+				}
+				extraAttributes = mergeAuthzAttributes(extraAttributes, characterAttributes)
+				decision := domainauthz.CanCharacterMutation(actor.CampaignAccess, actor.ID, ownerParticipantID)
+				if !decision.Allowed {
+					authErr := status.Error(codes.PermissionDenied, "participant lacks permission")
+					emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, decision.ReasonCode, actor, authErr, extraAttributes)
+					return canResponse(false, decision.ReasonCode, actor), nil
+				}
+				reasonCode = decision.ReasonCode
+			}
+		}
+
+		if capability == domainauthz.CapabilityManageParticipants {
+			decision, participantAttributes, evaluated, evaluationErr := evaluateCanParticipantGovernanceTarget(
+				ctx,
+				s.stores,
+				campaignID,
+				actor,
+				in.GetTarget(),
+			)
+			if evaluationErr != nil {
+				emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, authzReasonErrorActorLoad, actor, evaluationErr, participantAttributes)
+				return nil, evaluationErr
+			}
+			if evaluated {
+				extraAttributes = mergeAuthzAttributes(extraAttributes, participantAttributes)
+				if !decision.Allowed {
+					authErr := status.Error(codes.PermissionDenied, "participant lacks permission")
+					emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, decision.ReasonCode, actor, authErr, extraAttributes)
+					return canResponse(false, decision.ReasonCode, actor), nil
+				}
+				reasonCode = decision.ReasonCode
+			}
 		}
 	}
 
@@ -92,6 +124,45 @@ func (s *AuthorizationService) Can(ctx context.Context, in *campaignv1.CanReques
 		extraAttributes,
 	)
 	return canResponse(true, reasonCode, actor), nil
+}
+
+// BatchCan evaluates whether the request actor can perform each batch item
+// action/resource in campaign.
+func (s *AuthorizationService) BatchCan(ctx context.Context, in *campaignv1.BatchCanRequest) (*campaignv1.BatchCanResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "batch authorization request is required")
+	}
+	checks := in.GetChecks()
+	if len(checks) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "at least one batch authorization check is required")
+	}
+
+	results := make([]*campaignv1.BatchCanResult, 0, len(checks))
+	for idx, check := range checks {
+		if check == nil {
+			return nil, status.Errorf(codes.InvalidArgument, "batch authorization check at index %d is required", idx)
+		}
+
+		resp, err := s.Can(ctx, &campaignv1.CanRequest{
+			CampaignId: strings.TrimSpace(check.GetCampaignId()),
+			Action:     check.GetAction(),
+			Resource:   check.GetResource(),
+			Target:     check.GetTarget(),
+		})
+		if err != nil {
+			return nil, err
+		}
+
+		results = append(results, &campaignv1.BatchCanResult{
+			CheckId:             strings.TrimSpace(check.GetCheckId()),
+			Allowed:             resp.GetAllowed(),
+			ReasonCode:          strings.TrimSpace(resp.GetReasonCode()),
+			ActorCampaignAccess: resp.GetActorCampaignAccess(),
+			ActorParticipantId:  strings.TrimSpace(resp.GetActorParticipantId()),
+		})
+	}
+
+	return &campaignv1.BatchCanResponse{Results: results}, nil
 }
 
 func canResponse(allowed bool, reasonCode string, actor storage.ParticipantRecord) *campaignv1.CanResponse {
@@ -161,4 +232,115 @@ func resolveCanCharacterOwnerParticipantID(
 		return "", false, err
 	}
 	return ownerParticipantID, true, nil
+}
+
+func evaluateCanParticipantGovernanceTarget(
+	ctx context.Context,
+	stores Stores,
+	campaignID string,
+	actor storage.ParticipantRecord,
+	target *campaignv1.AuthorizationTarget,
+) (domainauthz.PolicyDecision, map[string]any, bool, error) {
+	if target == nil {
+		return domainauthz.PolicyDecision{}, nil, false, nil
+	}
+
+	targetParticipantID := strings.TrimSpace(target.GetTargetParticipantId())
+	if targetParticipantID == "" {
+		targetParticipantID = strings.TrimSpace(target.GetResourceId())
+	}
+	targetAccess := campaignAccessFromProto(target.GetTargetCampaignAccess())
+	requestedAccess := campaignAccessFromProto(target.GetRequestedCampaignAccess())
+	participantOperation := target.GetParticipantOperation()
+
+	if targetParticipantID != "" && targetAccess == participant.CampaignAccessUnspecified && stores.Participant != nil {
+		targetRecord, err := stores.Participant.GetParticipant(ctx, campaignID, targetParticipantID)
+		if err != nil {
+			if err != storage.ErrNotFound {
+				return domainauthz.PolicyDecision{}, nil, false, status.Errorf(codes.Internal, "load target participant: %v", err)
+			}
+		} else {
+			targetAccess = targetRecord.CampaignAccess
+		}
+	}
+
+	extraAttributes := map[string]any{}
+	if targetParticipantID != "" {
+		extraAttributes["target_participant_id"] = targetParticipantID
+	}
+	if targetAccess != participant.CampaignAccessUnspecified {
+		extraAttributes["target_campaign_access"] = strings.TrimSpace(string(targetAccess))
+	}
+	if requestedAccess != participant.CampaignAccessUnspecified {
+		extraAttributes["requested_campaign_access"] = strings.TrimSpace(string(requestedAccess))
+	}
+	if label := participantGovernanceOperationLabel(participantOperation); label != "" {
+		extraAttributes["participant_operation"] = label
+	}
+
+	decision := domainauthz.CanParticipantMutation(actor.CampaignAccess, targetAccess)
+	if !decision.Allowed {
+		return decision, extraAttributes, true, nil
+	}
+
+	if participantOperation == campaignv1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_REMOVE {
+		if targetParticipantID == "" {
+			if len(extraAttributes) == 0 {
+				return domainauthz.PolicyDecision{}, nil, false, nil
+			}
+			return decision, extraAttributes, true, nil
+		}
+		ownerCount, err := countCampaignOwners(ctx, stores.Participant, campaignID)
+		if err != nil {
+			return domainauthz.PolicyDecision{}, extraAttributes, false, err
+		}
+		targetOwnsActiveCharacters, err := participantOwnsActiveCharacters(ctx, stores.Character, campaignID, targetParticipantID)
+		if err != nil {
+			return domainauthz.PolicyDecision{}, extraAttributes, false, err
+		}
+		extraAttributes["target_owns_active_characters"] = targetOwnsActiveCharacters
+		decision = domainauthz.CanParticipantRemovalWithOwnedResources(
+			actor.CampaignAccess,
+			targetAccess,
+			ownerCount,
+			targetOwnsActiveCharacters,
+		)
+		return decision, extraAttributes, true, nil
+	}
+	if participantOperation == campaignv1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_ACCESS_CHANGE && requestedAccess == participant.CampaignAccessUnspecified {
+		return domainauthz.PolicyDecision{}, extraAttributes, false, status.Error(codes.InvalidArgument, "requested campaign access is required for access-change operation")
+	}
+
+	if requestedAccess == participant.CampaignAccessUnspecified {
+		if len(extraAttributes) == 0 {
+			return domainauthz.PolicyDecision{}, nil, false, nil
+		}
+		return decision, extraAttributes, true, nil
+	}
+
+	ownerCount, err := countCampaignOwners(ctx, stores.Participant, campaignID)
+	if err != nil {
+		return domainauthz.PolicyDecision{}, extraAttributes, false, err
+	}
+
+	decision = domainauthz.CanParticipantAccessChange(
+		actor.CampaignAccess,
+		targetAccess,
+		requestedAccess,
+		ownerCount,
+	)
+	return decision, extraAttributes, true, nil
+}
+
+func participantGovernanceOperationLabel(operation campaignv1.ParticipantGovernanceOperation) string {
+	switch operation {
+	case campaignv1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_MUTATE:
+		return "mutate"
+	case campaignv1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_ACCESS_CHANGE:
+		return "access_change"
+	case campaignv1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_REMOVE:
+		return "remove"
+	default:
+		return ""
+	}
 }

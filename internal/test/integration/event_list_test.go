@@ -35,6 +35,7 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 	defer cancel()
 	userID := createAuthUser(t, authAddr, "event-list-creator")
 	ctxWithUser := withUserID(ctx, userID)
+	ctx = ctxWithUser
 
 	// Create a campaign
 	createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{

@@ -45,6 +45,9 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
+	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
+		return nil, err
+	}
 
 	// Get Daggerheart snapshot projection (GM Fear)
 	dhSnapshot, err := s.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)

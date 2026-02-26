@@ -7,9 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-	"google.golang.org/grpc/metadata"
 )
 
 // CampaignSummary is a transport-safe summary for campaign listings.
@@ -46,11 +44,13 @@ type CampaignParticipant struct {
 
 // CampaignCharacter stores character details used by campaign characters pages.
 type CampaignCharacter struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	Kind       string `json:"kind"`
-	Controller string `json:"controller"`
-	AvatarURL  string `json:"avatarUrl"`
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Kind           string `json:"kind"`
+	Controller     string `json:"controller"`
+	AvatarURL      string `json:"avatarUrl"`
+	CanEdit        bool   `json:"canEdit"`
+	EditReasonCode string `json:"editReasonCode"`
 }
 
 // CampaignSession stores session details used by campaign sessions pages.
@@ -109,13 +109,25 @@ type campaignMutationGateway interface {
 }
 
 type campaignAuthorizationDecision struct {
+	CheckID    string
 	Evaluated  bool
 	Allowed    bool
 	ReasonCode string
 }
 
+type campaignAuthorizationCheck struct {
+	CheckID  string
+	Action   statev1.AuthorizationAction
+	Resource statev1.AuthorizationResource
+	Target   *statev1.AuthorizationTarget
+}
+
 type campaignAuthorizationGateway interface {
-	CanCampaignAction(context.Context, string, statev1.AuthorizationAction, statev1.AuthorizationResource) (campaignAuthorizationDecision, error)
+	CanCampaignAction(context.Context, string, statev1.AuthorizationAction, statev1.AuthorizationResource, *statev1.AuthorizationTarget) (campaignAuthorizationDecision, error)
+}
+
+type campaignBatchAuthorizationGateway interface {
+	BatchCanCampaignAction(context.Context, string, []campaignAuthorizationCheck) ([]campaignAuthorizationDecision, error)
 }
 
 // CampaignGateway loads campaign summaries and applies workspace mutations.
@@ -389,7 +401,68 @@ func (s service) campaignCharacters(ctx context.Context, campaignID string) ([]C
 		return leftName < rightName
 	})
 
+	s.hydrateCharacterEditability(ctx, campaignID, normalized)
+
 	return normalized, nil
+}
+
+func (s service) hydrateCharacterEditability(ctx context.Context, campaignID string, characters []CampaignCharacter) {
+	if len(characters) == 0 {
+		return
+	}
+	checker, ok := s.readGateway.(campaignBatchAuthorizationGateway)
+	if !ok {
+		return
+	}
+
+	checks := make([]campaignAuthorizationCheck, 0, len(characters))
+	indexesByCheckID := make(map[string][]int, len(characters))
+	for idx := range characters {
+		characterID := strings.TrimSpace(characters[idx].ID)
+		if characterID == "" {
+			continue
+		}
+		indexesByCheckID[characterID] = append(indexesByCheckID[characterID], idx)
+		if len(indexesByCheckID[characterID]) > 1 {
+			continue
+		}
+		checks = append(checks, campaignAuthorizationCheck{
+			CheckID:  characterID,
+			Action:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
+			Resource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+			Target: &statev1.AuthorizationTarget{
+				ResourceId: characterID,
+			},
+		})
+	}
+	if len(checks) == 0 {
+		return
+	}
+
+	decisions, err := checker.BatchCanCampaignAction(ctx, campaignID, checks)
+	if err != nil {
+		return
+	}
+
+	for idx, decision := range decisions {
+		checkID := strings.TrimSpace(decision.CheckID)
+		if checkID == "" && idx < len(checks) {
+			checkID = strings.TrimSpace(checks[idx].CheckID)
+		}
+		if checkID == "" {
+			continue
+		}
+		characterIndexes, found := indexesByCheckID[checkID]
+		if !found {
+			continue
+		}
+		for _, characterIndex := range characterIndexes {
+			characters[characterIndex].EditReasonCode = strings.TrimSpace(decision.ReasonCode)
+			if decision.Evaluated && decision.Allowed {
+				characters[characterIndex].CanEdit = true
+			}
+		}
+	}
 }
 
 func (s service) campaignSessions(ctx context.Context, campaignID string) ([]CampaignSession, error) {
@@ -481,136 +554,154 @@ func (s service) campaignInvites(ctx context.Context, campaignID string) ([]Camp
 }
 
 func (s service) startSession(ctx context.Context, campaignID string) error {
-	if err := s.requireMutationAccess(ctx, campaignID); err != nil {
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION,
+		nil,
+		"error.web.message.manager_or_owner_access_required_for_session_action",
+		"manager or owner access required for session action",
+	); err != nil {
 		return err
 	}
 	return s.mutationGateway.StartSession(ctx, campaignID)
 }
 
 func (s service) endSession(ctx context.Context, campaignID string) error {
-	if err := s.requireMutationAccess(ctx, campaignID); err != nil {
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION,
+		nil,
+		"error.web.message.manager_or_owner_access_required_for_session_action",
+		"manager or owner access required for session action",
+	); err != nil {
 		return err
 	}
 	return s.mutationGateway.EndSession(ctx, campaignID)
 }
 
 func (s service) updateParticipants(ctx context.Context, campaignID string) error {
-	if err := s.requireMutationAccess(ctx, campaignID); err != nil {
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_PARTICIPANT,
+		nil,
+		"error.web.message.manager_or_owner_access_required_for_participant_action",
+		"manager or owner access required for participant action",
+	); err != nil {
 		return err
 	}
 	return s.mutationGateway.UpdateParticipants(ctx, campaignID)
 }
 
 func (s service) createCharacter(ctx context.Context, campaignID string) error {
-	if err := s.requireMutationAccess(ctx, campaignID); err != nil {
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+		nil,
+		"error.web.message.campaign_membership_required_for_character_action",
+		"campaign membership required for character action",
+	); err != nil {
 		return err
 	}
 	return s.mutationGateway.CreateCharacter(ctx, campaignID)
 }
 
 func (s service) updateCharacter(ctx context.Context, campaignID string) error {
-	if err := s.requireMutationAccess(ctx, campaignID); err != nil {
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+		nil,
+		"error.web.message.campaign_membership_required_for_character_action",
+		"campaign membership required for character action",
+	); err != nil {
 		return err
 	}
 	return s.mutationGateway.UpdateCharacter(ctx, campaignID)
 }
 
 func (s service) controlCharacter(ctx context.Context, campaignID string) error {
-	if err := s.requireMutationAccess(ctx, campaignID); err != nil {
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+		nil,
+		"error.web.message.manager_or_owner_access_required_for_character_action",
+		"manager or owner access required for character action",
+	); err != nil {
 		return err
 	}
 	return s.mutationGateway.ControlCharacter(ctx, campaignID)
 }
 
 func (s service) createInvite(ctx context.Context, campaignID string) error {
-	if err := s.requireMutationAccess(ctx, campaignID); err != nil {
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_INVITE,
+		nil,
+		"error.web.message.manager_or_owner_access_required_for_invite_action",
+		"manager or owner access required for invite action",
+	); err != nil {
 		return err
 	}
 	return s.mutationGateway.CreateInvite(ctx, campaignID)
 }
 
 func (s service) revokeInvite(ctx context.Context, campaignID string) error {
-	if err := s.requireMutationAccess(ctx, campaignID); err != nil {
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_INVITE,
+		nil,
+		"error.web.message.manager_or_owner_access_required_for_invite_action",
+		"manager or owner access required for invite action",
+	); err != nil {
 		return err
 	}
 	return s.mutationGateway.RevokeInvite(ctx, campaignID)
 }
 
-func (s service) requireMutationAccess(ctx context.Context, campaignID string) error {
+func (s service) requireCampaignActionAccess(
+	ctx context.Context,
+	campaignID string,
+	action statev1.AuthorizationAction,
+	resource statev1.AuthorizationResource,
+	target *statev1.AuthorizationTarget,
+	denyMessageKey string,
+	denyMessage string,
+) error {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
 	}
-	if checker, ok := s.readGateway.(campaignAuthorizationGateway); ok {
-		decision, err := checker.CanCampaignAction(
-			ctx,
-			campaignID,
-			statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-			statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_PARTICIPANT,
-		)
-		if err != nil {
-			return err
-		}
-		if decision.Evaluated {
-			if !decision.Allowed {
-				return apperrors.EK(apperrors.KindForbidden, "error.web.message.campaign_mutation_requires_manager_access", "campaign mutation requires manager access")
-			}
-			return nil
-		}
+	checker, ok := s.readGateway.(campaignAuthorizationGateway)
+	if !ok {
+		return apperrors.EK(apperrors.KindForbidden, denyMessageKey, denyMessage)
 	}
-	userID := resolvedUserID(ctx)
-	if userID == "" {
-		return apperrors.EK(apperrors.KindForbidden, "error.web.message.campaign_mutation_requires_manager_access", "campaign mutation requires manager access")
-	}
-	participants, err := s.readGateway.CampaignParticipants(ctx, campaignID)
+	decision, err := checker.CanCampaignAction(
+		ctx,
+		campaignID,
+		action,
+		resource,
+		target,
+	)
 	if err != nil {
-		return err
+		return apperrors.EK(apperrors.KindForbidden, denyMessageKey, denyMessage)
 	}
-	access, ok := campaignAccessForUser(participants, userID)
-	if !ok || !allowsMutationForCampaignAccess(access) {
-		return apperrors.EK(apperrors.KindForbidden, "error.web.message.campaign_mutation_requires_manager_access", "campaign mutation requires manager access")
+	if !decision.Evaluated || !decision.Allowed {
+		return apperrors.EK(apperrors.KindForbidden, denyMessageKey, denyMessage)
 	}
 	return nil
-}
-
-func resolvedUserID(ctx context.Context) string {
-	if ctx == nil {
-		return ""
-	}
-	md, ok := metadata.FromOutgoingContext(ctx)
-	if !ok {
-		return ""
-	}
-	values := md.Get(grpcmeta.UserIDHeader)
-	if len(values) == 0 {
-		return ""
-	}
-	return strings.TrimSpace(values[0])
-}
-
-func campaignAccessForUser(participants []CampaignParticipant, userID string) (string, bool) {
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return "", false
-	}
-	for _, participant := range participants {
-		if strings.TrimSpace(participant.UserID) != userID {
-			continue
-		}
-		access := strings.TrimSpace(participant.CampaignAccess)
-		if access == "" {
-			return "", false
-		}
-		return access, true
-	}
-	return "", false
-}
-
-func allowsMutationForCampaignAccess(access string) bool {
-	switch strings.ToLower(strings.TrimSpace(access)) {
-	case "owner", "manager":
-		return true
-	default:
-		return false
-	}
 }

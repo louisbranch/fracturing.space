@@ -55,9 +55,14 @@ baseline:
   Promotion to default registries is allowed when the exposed route surface is
   stable; unfinished routes must remain unregistered (or explicitly
   experimental).
-- For campaign mutation behavior, enforce role/access policy in service logic
-  before calling mutation gateways; baseline policy is owner/manager allowed
-  and member denied.
+- For campaign mutation behavior, require evaluated game authorization decisions
+  (`AuthorizationService.Can`) before calling mutation gateways.
+- For per-row action visibility (for example character editability), use
+  `AuthorizationService.BatchCan` with one check per row and map decisions back
+  by correlation id.
+- Campaign mutation gates must fail closed when authz is unavailable or returns
+  an unevaluated decision; do not approximate mutation permissions from
+  participant-list fallback logic.
 
 ## Security Defaults
 

@@ -104,9 +104,12 @@ This keeps route ownership explicit and avoids framework lock-in.
 - Stable campaigns route exposure currently includes
   list/create/overview/participants/characters; scaffold detail surfaces
   (sessions, invites, game chat, character detail) remain unregistered.
-- Campaign mutation flows must enforce participant campaign-access policy at
-  service boundaries (owner/manager allowed, member denied) before invoking
-  gateway mutations.
+- Campaign mutation flows must enforce authorization through evaluated
+  `AuthorizationService.Can` decisions and fail closed when authz decisions are
+  missing, unevaluated, or unavailable.
+- Campaign list/detail pages should use `AuthorizationService.BatchCan` for
+  per-entity action visibility (for example character edit badges) instead of
+  issuing N unary auth checks.
 
 ## Verification
 

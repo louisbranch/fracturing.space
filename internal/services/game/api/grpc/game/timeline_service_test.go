@@ -31,6 +31,12 @@ func TestListTimelineEntries_MissingCampaignId(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestListTimelineEntries_RequiresCampaignReadPolicy(t *testing.T) {
+	service := NewEventService(Stores{Event: newFakeEventStore(), Participant: newFakeParticipantStore()})
+	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestListTimelineEntries_InvalidFilter(t *testing.T) {
 	service := NewEventService(Stores{Event: newFakeEventStore()})
 	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
@@ -57,7 +63,7 @@ func TestListTimelineEntries_MissingParticipantStoreFailsFast(t *testing.T) {
 		Event: eventStore,
 	})
 
-	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+	_, err := service.ListTimelineEntries(contextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -83,7 +89,7 @@ func TestListTimelineEntries_MissingCampaignStoreFailsFast(t *testing.T) {
 		Event: eventStore,
 	})
 
-	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+	_, err := service.ListTimelineEntries(contextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -109,7 +115,7 @@ func TestListTimelineEntries_MissingCharacterStoreFailsFast(t *testing.T) {
 		Event: eventStore,
 	})
 
-	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+	_, err := service.ListTimelineEntries(contextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -135,7 +141,7 @@ func TestListTimelineEntries_MissingSessionStoreFailsFast(t *testing.T) {
 		Event: eventStore,
 	})
 
-	_, err := service.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+	_, err := service.ListTimelineEntries(contextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
@@ -241,7 +247,7 @@ func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {
 		Session:     sessionStore,
 	})
 
-	resp, err := svc.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+	resp, err := svc.ListTimelineEntries(contextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 		OrderBy:    "seq",
 	})
@@ -325,7 +331,7 @@ func TestListTimelineEntries_CharacterStateChanges(t *testing.T) {
 		Character: characterStore,
 	})
 
-	resp, err := svc.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+	resp, err := svc.ListTimelineEntries(contextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 		OrderBy:    "seq",
 	})
@@ -421,7 +427,7 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 		Character: characterStore,
 	})
 
-	resp, err := svc.ListTimelineEntries(context.Background(), &campaignv1.ListTimelineEntriesRequest{
+	resp, err := svc.ListTimelineEntries(contextWithAdminOverride("timeline-test"), &campaignv1.ListTimelineEntriesRequest{
 		CampaignId: "c1",
 		OrderBy:    "seq",
 	})

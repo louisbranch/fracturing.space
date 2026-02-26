@@ -580,7 +580,7 @@ func TestUpdateCharacter_NoFields(t *testing.T) {
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
+		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
 	}
 
 	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: characterStore, Event: eventStore})
@@ -612,7 +612,7 @@ func TestUpdateCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 		},
 	}
 	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
+		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
 	}
 	eventStore.events["c1"] = []event.Event{
 		{
@@ -719,7 +719,7 @@ func TestUpdateCharacter_AllowsMemberWhenOwner(t *testing.T) {
 		},
 	}
 	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
+		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-1", Name: "Hero", Kind: character.KindPC},
 	}
 	eventStore.events["c1"] = []event.Event{
 		{
@@ -795,7 +795,7 @@ func TestUpdateCharacter_AllowsMemberWhenOwnershipTransferred(t *testing.T) {
 		},
 	}
 	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
+		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-1", Name: "Hero", Kind: character.KindPC},
 	}
 	eventStore.events["c1"] = []event.Event{
 		{
@@ -2125,6 +2125,10 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
+	characterStore := newFakeCharacterStore()
+	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
+	}
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 6, StressMax: 6},
 	}
@@ -2161,6 +2165,7 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 	svc := NewCharacterService(Stores{
 		Campaign:     activeCampaignStore("c1"),
 		Participant:  participantStore,
+		Character:    characterStore,
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Domain:       domain,

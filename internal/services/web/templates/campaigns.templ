@@ -48,11 +48,20 @@ type CampaignParticipantView struct {
 }
 
 type CampaignCharacterView struct {
-	ID         string
-	Name       string
-	Kind       string
-	Controller string
-	AvatarURL  string
+	ID             string
+	Name           string
+	Kind           string
+	Controller     string
+	AvatarURL      string
+	CanEdit        bool
+	EditReasonCode string
+}
+
+func campaignCharacterCanEditAttr(character CampaignCharacterView) string {
+	if character.CanEdit {
+		return "true"
+	}
+	return "false"
 }
 
 type CampaignSessionView struct {
@@ -388,6 +397,16 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 								<div class="flex gap-2">
 									<dt class="opacity-70">{ T(loc, "game.participants.field_controller") }:</dt>
 									<dd data-campaign-character-controller={ campaignParticipantControllerLabel(loc, character.Controller) }>{ campaignParticipantControllerLabel(loc, character.Controller) }</dd>
+								</div>
+								<div class="flex gap-2 items-center">
+									<dt class="opacity-70">{ T(loc, "game.characters.field_editability") }:</dt>
+									<dd data-campaign-character-can-edit={ campaignCharacterCanEditAttr(character) } data-campaign-character-edit-reason={ character.EditReasonCode }>
+										if character.CanEdit {
+											<span class="badge badge-outline badge-success">{ T(loc, "game.characters.value_editable") }</span>
+										} else {
+											<span class="badge badge-outline badge-ghost">{ T(loc, "game.characters.value_read_only") }</span>
+										}
+									</dd>
 								</div>
 							</dl>
 						</div>

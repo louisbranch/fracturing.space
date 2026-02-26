@@ -110,6 +110,8 @@ const (
 	ReasonDenyLastOwnerGuard = "AUTHZ_DENY_LAST_OWNER_GUARD"
 	// ReasonDenyManagerOwnerMutationForbidden indicates manager attempted owner assignment.
 	ReasonDenyManagerOwnerMutationForbidden = "AUTHZ_DENY_MANAGER_OWNER_MUTATION_FORBIDDEN"
+	// ReasonDenyTargetOwnsActiveCharacters indicates participant removal target still owns active characters.
+	ReasonDenyTargetOwnsActiveCharacters = "AUTHZ_DENY_TARGET_OWNS_ACTIVE_CHARACTERS"
 
 	// ReasonDenyMissingIdentity indicates no participant-id/user-id identity was provided.
 	ReasonDenyMissingIdentity = "AUTHZ_DENY_MISSING_IDENTITY"
@@ -145,6 +147,7 @@ var rolePolicyTable = []RolePolicyRow{
 	{Role: participant.CampaignAccessManager, Action: ActionRead, Resource: ResourceInvite},
 
 	{Role: participant.CampaignAccessOwner, Action: ActionManage, Resource: ResourceCampaign},
+	{Role: participant.CampaignAccessManager, Action: ActionManage, Resource: ResourceCampaign},
 
 	{Role: participant.CampaignAccessOwner, Action: ActionManage, Resource: ResourceParticipant},
 	{Role: participant.CampaignAccessManager, Action: ActionManage, Resource: ResourceParticipant},
@@ -219,6 +222,19 @@ func CanCharacterMutation(access participant.CampaignAccess, actorParticipantID,
 	return PolicyDecision{Allowed: true, ReasonCode: ReasonAllowResourceOwner}
 }
 
+// CanParticipantMutation evaluates baseline participant-governance mutation
+// access and manager owner-target guard rails.
+func CanParticipantMutation(actorAccess participant.CampaignAccess, targetAccess participant.CampaignAccess) PolicyDecision {
+	decision := CanCampaignAccess(actorAccess, CapabilityManageParticipants)
+	if !decision.Allowed {
+		return decision
+	}
+	if actorAccess == participant.CampaignAccessManager && targetAccess == participant.CampaignAccessOwner {
+		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyTargetIsOwner}
+	}
+	return decision
+}
+
 // CanParticipantAccessChange evaluates role-based participant access updates and
 // enforces manager/owner governance invariants.
 func CanParticipantAccessChange(
@@ -227,7 +243,7 @@ func CanParticipantAccessChange(
 	requestedAccess participant.CampaignAccess,
 	ownerCount int,
 ) PolicyDecision {
-	decision := CanCampaignAccess(actorAccess, CapabilityManageParticipants)
+	decision := CanParticipantMutation(actorAccess, targetAccess)
 	if !decision.Allowed {
 		return decision
 	}
@@ -235,9 +251,6 @@ func CanParticipantAccessChange(
 		return decision
 	}
 	if actorAccess == participant.CampaignAccessManager {
-		if targetAccess == participant.CampaignAccessOwner {
-			return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyTargetIsOwner}
-		}
 		if requestedAccess == participant.CampaignAccessOwner {
 			return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyManagerOwnerMutationForbidden}
 		}
@@ -255,15 +268,30 @@ func CanParticipantRemoval(
 	targetAccess participant.CampaignAccess,
 	ownerCount int,
 ) PolicyDecision {
-	decision := CanCampaignAccess(actorAccess, CapabilityManageParticipants)
+	decision := CanParticipantMutation(actorAccess, targetAccess)
 	if !decision.Allowed {
 		return decision
 	}
-	if actorAccess == participant.CampaignAccessManager && targetAccess == participant.CampaignAccessOwner {
-		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyTargetIsOwner}
-	}
 	if targetAccess == participant.CampaignAccessOwner && ownerCount <= 1 {
 		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyLastOwnerGuard}
+	}
+	return decision
+}
+
+// CanParticipantRemovalWithOwnedResources evaluates participant removal and
+// enforces the active-owned-character guard after role-based invariants pass.
+func CanParticipantRemovalWithOwnedResources(
+	actorAccess participant.CampaignAccess,
+	targetAccess participant.CampaignAccess,
+	ownerCount int,
+	targetOwnsActiveCharacters bool,
+) PolicyDecision {
+	decision := CanParticipantRemoval(actorAccess, targetAccess, ownerCount)
+	if !decision.Allowed {
+		return decision
+	}
+	if targetOwnsActiveCharacters {
+		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyTargetOwnsActiveCharacters}
 	}
 	return decision
 }

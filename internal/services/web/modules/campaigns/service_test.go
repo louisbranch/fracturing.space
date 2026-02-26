@@ -89,10 +89,10 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 			t.Parallel()
 			err := tc.run()
 			if err == nil {
-				t.Fatalf("expected unavailable error")
+				t.Fatalf("expected forbidden error")
 			}
-			if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
-				t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+			if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+				t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
 			}
 		})
 	}
@@ -276,6 +276,122 @@ func TestCampaignCharactersSortByName(t *testing.T) {
 	}
 }
 
+func TestCampaignCharactersHydratesEditabilityFromBatchAuthorization(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignCharacters: []CampaignCharacter{
+			{ID: "ch-z", Name: "Zara", Kind: "NPC", Controller: "Moss"},
+			{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne"},
+		},
+		batchAuthorizationDecisions: []campaignAuthorizationDecision{
+			{CheckID: "ch-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
+			{CheckID: "ch-z", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_NOT_RESOURCE_OWNER"},
+		},
+	}
+	svc := newService(gateway)
+
+	characters, err := svc.campaignCharacters(context.Background(), "c-1")
+	if err != nil {
+		t.Fatalf("campaignCharacters() error = %v", err)
+	}
+	if len(characters) != 2 {
+		t.Fatalf("len(characters) = %d, want 2", len(characters))
+	}
+	if !characters[0].CanEdit {
+		t.Fatalf("characters[0].CanEdit = %v, want true", characters[0].CanEdit)
+	}
+	if got := characters[0].EditReasonCode; got != "AUTHZ_ALLOW_RESOURCE_OWNER" {
+		t.Fatalf("characters[0].EditReasonCode = %q, want %q", got, "AUTHZ_ALLOW_RESOURCE_OWNER")
+	}
+	if characters[1].CanEdit {
+		t.Fatalf("characters[1].CanEdit = %v, want false", characters[1].CanEdit)
+	}
+	if got := characters[1].EditReasonCode; got != "AUTHZ_DENY_NOT_RESOURCE_OWNER" {
+		t.Fatalf("characters[1].EditReasonCode = %q, want %q", got, "AUTHZ_DENY_NOT_RESOURCE_OWNER")
+	}
+	if gateway.batchAuthorizationCalls != 1 {
+		t.Fatalf("batch authorization calls = %d, want 1", gateway.batchAuthorizationCalls)
+	}
+	if len(gateway.batchAuthorizationRequests) != 2 {
+		t.Fatalf("batch authorization requests = %d, want 2", len(gateway.batchAuthorizationRequests))
+	}
+	for _, req := range gateway.batchAuthorizationRequests {
+		if req.Action != statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE {
+			t.Fatalf("batch authorization action = %v, want %v", req.Action, statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE)
+		}
+		if req.Resource != statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER {
+			t.Fatalf("batch authorization resource = %v, want %v", req.Resource, statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER)
+		}
+		if req.Target == nil || strings.TrimSpace(req.Target.GetResourceId()) == "" {
+			t.Fatalf("batch authorization target resource id was empty")
+		}
+	}
+}
+
+func TestCampaignCharactersHydratesEditabilityForDuplicateCharacterIDs(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignCharacters: []CampaignCharacter{
+			{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne"},
+			{ID: "ch-a", Name: "Aria Clone", Kind: "PC", Controller: "Ariadne"},
+		},
+		batchAuthorizationDecisions: []campaignAuthorizationDecision{
+			{CheckID: "ch-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
+		},
+	}
+	svc := newService(gateway)
+
+	characters, err := svc.campaignCharacters(context.Background(), "c-1")
+	if err != nil {
+		t.Fatalf("campaignCharacters() error = %v", err)
+	}
+	if len(characters) != 2 {
+		t.Fatalf("len(characters) = %d, want 2", len(characters))
+	}
+	for idx := range characters {
+		if !characters[idx].CanEdit {
+			t.Fatalf("characters[%d].CanEdit = %v, want true", idx, characters[idx].CanEdit)
+		}
+		if got := characters[idx].EditReasonCode; got != "AUTHZ_ALLOW_RESOURCE_OWNER" {
+			t.Fatalf("characters[%d].EditReasonCode = %q, want %q", idx, got, "AUTHZ_ALLOW_RESOURCE_OWNER")
+		}
+	}
+	if gateway.batchAuthorizationCalls != 1 {
+		t.Fatalf("batch authorization calls = %d, want 1", gateway.batchAuthorizationCalls)
+	}
+	if len(gateway.batchAuthorizationRequests) != 1 {
+		t.Fatalf("batch authorization requests = %d, want 1", len(gateway.batchAuthorizationRequests))
+	}
+}
+
+func TestCampaignCharactersFailClosedWhenBatchAuthorizationErrors(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		campaignCharacters: []CampaignCharacter{{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne"}},
+		batchAuthorizationErr: apperrors.E(
+			apperrors.KindUnavailable,
+			"authorization unavailable",
+		),
+	})
+
+	characters, err := svc.campaignCharacters(context.Background(), "c-1")
+	if err != nil {
+		t.Fatalf("campaignCharacters() error = %v", err)
+	}
+	if len(characters) != 1 {
+		t.Fatalf("len(characters) = %d, want 1", len(characters))
+	}
+	if characters[0].CanEdit {
+		t.Fatalf("characters[0].CanEdit = %v, want false", characters[0].CanEdit)
+	}
+	if got := strings.TrimSpace(characters[0].EditReasonCode); got != "" {
+		t.Fatalf("characters[0].EditReasonCode = %q, want empty", got)
+	}
+}
+
 func TestCampaignParticipantsReturnsGatewayError(t *testing.T) {
 	t.Parallel()
 
@@ -305,7 +421,9 @@ func TestCampaignCharactersReturnsGatewayError(t *testing.T) {
 func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	t.Parallel()
 
-	gateway := &campaignGatewayStub{campaignParticipants: []CampaignParticipant{{ID: "p-manager", UserID: "user-1", CampaignAccess: "Manager"}}}
+	gateway := &campaignGatewayStub{
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+	}
 	svc := newService(gateway)
 	ctx := contextWithResolvedUserID("user-1")
 
@@ -348,7 +466,9 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 func TestMutationMethodsDenyMemberCampaignAccess(t *testing.T) {
 	t.Parallel()
 
-	gateway := &campaignGatewayStub{campaignParticipants: []CampaignParticipant{{ID: "p-member", UserID: "user-1", CampaignAccess: "Member"}}}
+	gateway := &campaignGatewayStub{
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+	}
 	svc := newService(gateway)
 	err := svc.startSession(contextWithResolvedUserID("user-1"), "c1")
 	if err == nil {
@@ -375,7 +495,10 @@ func TestMutationMethodsAllowManagerAndOwnerCampaignAccess(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			gateway := &campaignGatewayStub{campaignParticipants: []CampaignParticipant{{ID: "p-1", UserID: "user-1", CampaignAccess: tc.access}}}
+			gateway := &campaignGatewayStub{
+				authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+				campaignParticipants:  []CampaignParticipant{{ID: "p-1", UserID: "user-1", CampaignAccess: tc.access}},
+			}
 			svc := newService(gateway)
 			if err := svc.startSession(contextWithResolvedUserID("user-1"), "c1"); err != nil {
 				t.Fatalf("startSession() error = %v", err)
@@ -402,6 +525,15 @@ func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
 		if gateway.authorizationCalls != 1 {
 			t.Fatalf("authorization calls = %d, want 1", gateway.authorizationCalls)
 		}
+		if len(gateway.authorizationRequests) != 1 {
+			t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
+		}
+		if got := gateway.authorizationRequests[0].Action; got != statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE {
+			t.Fatalf("authorization action = %v, want %v", got, statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE)
+		}
+		if got := gateway.authorizationRequests[0].Resource; got != statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION {
+			t.Fatalf("authorization resource = %v, want %v", got, statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION)
+		}
 		if len(gateway.calls) != 1 || gateway.calls[0] != "start" {
 			t.Fatalf("mutation gateway calls = %v, want [start]", gateway.calls)
 		}
@@ -411,7 +543,6 @@ func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
 		t.Parallel()
 		gateway := &campaignGatewayStub{
 			authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
-			campaignParticipants:  []CampaignParticipant{{ID: "p-manager", UserID: "user-1", CampaignAccess: "Manager"}},
 		}
 		svc := newService(gateway)
 		err := svc.startSession(contextWithResolvedUserID("user-1"), "c1")
@@ -424,20 +555,147 @@ func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
 		if gateway.authorizationCalls != 1 {
 			t.Fatalf("authorization calls = %d, want 1", gateway.authorizationCalls)
 		}
+		if len(gateway.authorizationRequests) != 1 {
+			t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
+		}
+		if got := gateway.authorizationRequests[0].Action; got != statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE {
+			t.Fatalf("authorization action = %v, want %v", got, statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE)
+		}
+		if got := gateway.authorizationRequests[0].Resource; got != statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION {
+			t.Fatalf("authorization resource = %v, want %v", got, statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION)
+		}
 		if len(gateway.calls) != 0 {
 			t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
 		}
 	})
 }
 
-func TestMutationMethodsDenyUnknownCampaignActor(t *testing.T) {
+func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 	t.Parallel()
 
-	gateway := &campaignGatewayStub{campaignParticipants: []CampaignParticipant{{ID: "p-owner", UserID: "other-user", CampaignAccess: "Owner"}}}
+	tests := []struct {
+		name         string
+		run          func(service) error
+		wantAction   statev1.AuthorizationAction
+		wantResource statev1.AuthorizationResource
+	}{
+		{
+			name: "start session",
+			run: func(s service) error {
+				return s.startSession(contextWithResolvedUserID("user-1"), "c1")
+			},
+			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION,
+		},
+		{
+			name: "end session",
+			run: func(s service) error {
+				return s.endSession(contextWithResolvedUserID("user-1"), "c1")
+			},
+			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION,
+		},
+		{
+			name: "update participants",
+			run: func(s service) error {
+				return s.updateParticipants(contextWithResolvedUserID("user-1"), "c1")
+			},
+			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_PARTICIPANT,
+		},
+		{
+			name: "create character",
+			run: func(s service) error {
+				return s.createCharacter(contextWithResolvedUserID("user-1"), "c1")
+			},
+			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
+			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+		},
+		{
+			name: "update character",
+			run: func(s service) error {
+				return s.updateCharacter(contextWithResolvedUserID("user-1"), "c1")
+			},
+			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
+			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+		},
+		{
+			name: "control character",
+			run: func(s service) error {
+				return s.controlCharacter(contextWithResolvedUserID("user-1"), "c1")
+			},
+			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+		},
+		{
+			name: "create invite",
+			run: func(s service) error {
+				return s.createInvite(contextWithResolvedUserID("user-1"), "c1")
+			},
+			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_INVITE,
+		},
+		{
+			name: "revoke invite",
+			run: func(s service) error {
+				return s.revokeInvite(contextWithResolvedUserID("user-1"), "c1")
+			},
+			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
+			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_INVITE,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			gateway := &campaignGatewayStub{
+				authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+			}
+			svc := newService(gateway)
+			if err := tc.run(svc); err != nil {
+				t.Fatalf("mutation call error = %v", err)
+			}
+			if len(gateway.authorizationRequests) != 1 {
+				t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
+			}
+			req := gateway.authorizationRequests[0]
+			if req.Action != tc.wantAction {
+				t.Fatalf("authorization action = %v, want %v", req.Action, tc.wantAction)
+			}
+			if req.Resource != tc.wantResource {
+				t.Fatalf("authorization resource = %v, want %v", req.Resource, tc.wantResource)
+			}
+		})
+	}
+}
+
+func TestCharacterMutationMethodsAllowMemberCampaignAccess(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+	}
+	svc := newService(gateway)
+	if err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1"); err != nil {
+		t.Fatalf("createCharacter() error = %v", err)
+	}
+	if err := svc.updateCharacter(contextWithResolvedUserID("user-1"), "c1"); err != nil {
+		t.Fatalf("updateCharacter() error = %v", err)
+	}
+	if len(gateway.calls) != 2 || gateway.calls[0] != "create-character" || gateway.calls[1] != "update-character" {
+		t.Fatalf("mutation gateway calls = %v, want [create-character update-character]", gateway.calls)
+	}
+}
+
+func TestMutationMethodsDenyWhenAuthorizationNotEvaluated(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{}
 	svc := newService(gateway)
 	err := svc.startSession(contextWithResolvedUserID("user-1"), "c1")
 	if err == nil {
-		t.Fatalf("expected forbidden error when actor is not a campaign participant")
+		t.Fatalf("expected forbidden error when authorization was not evaluated")
 	}
 	if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
 		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
@@ -447,14 +705,14 @@ func TestMutationMethodsDenyUnknownCampaignActor(t *testing.T) {
 	}
 }
 
-func TestMutationMethodsDenyWhenResolvedUserIDMissing(t *testing.T) {
+func TestMutationMethodsDenyWhenAuthorizationGatewayErrors(t *testing.T) {
 	t.Parallel()
 
-	gateway := &campaignGatewayStub{campaignParticipants: []CampaignParticipant{{ID: "p-owner", UserID: "user-1", CampaignAccess: "Owner"}}}
+	gateway := &campaignGatewayStub{authorizationErr: errors.New("authz unavailable")}
 	svc := newService(gateway)
-	err := svc.startSession(context.Background(), "c1")
+	err := svc.startSession(contextWithResolvedUserID("user-1"), "c1")
 	if err == nil {
-		t.Fatalf("expected forbidden error when resolved user id is missing")
+		t.Fatalf("expected forbidden error when authz check fails")
 	}
 	if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
 		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
@@ -469,27 +727,38 @@ func contextWithResolvedUserID(userID string) context.Context {
 }
 
 type campaignGatewayStub struct {
-	items                   []CampaignSummary
-	listErr                 error
-	campaignName            string
-	campaignNameErr         error
-	campaignWorkspace       CampaignWorkspace
-	campaignWorkspaceErr    error
-	campaignParticipants    []CampaignParticipant
-	campaignParticipantsErr error
-	campaignCharacters      []CampaignCharacter
-	campaignCharactersErr   error
-	campaignSessions        []CampaignSession
-	campaignSessionsErr     error
-	campaignInvites         []CampaignInvite
-	campaignInvitesErr      error
-	createCampaignResult    CreateCampaignResult
-	createCampaignErr       error
-	lastCreateInput         CreateCampaignInput
-	authorizationDecision   campaignAuthorizationDecision
-	authorizationErr        error
-	authorizationCalls      int
-	calls                   []string
+	items                       []CampaignSummary
+	listErr                     error
+	campaignName                string
+	campaignNameErr             error
+	campaignWorkspace           CampaignWorkspace
+	campaignWorkspaceErr        error
+	campaignParticipants        []CampaignParticipant
+	campaignParticipantsErr     error
+	campaignCharacters          []CampaignCharacter
+	campaignCharactersErr       error
+	campaignSessions            []CampaignSession
+	campaignSessionsErr         error
+	campaignInvites             []CampaignInvite
+	campaignInvitesErr          error
+	createCampaignResult        CreateCampaignResult
+	createCampaignErr           error
+	lastCreateInput             CreateCampaignInput
+	authorizationDecision       campaignAuthorizationDecision
+	authorizationErr            error
+	authorizationCalls          int
+	authorizationRequests       []campaignAuthorizationRequest
+	batchAuthorizationDecisions []campaignAuthorizationDecision
+	batchAuthorizationErr       error
+	batchAuthorizationCalls     int
+	batchAuthorizationRequests  []campaignAuthorizationCheck
+	calls                       []string
+}
+
+type campaignAuthorizationRequest struct {
+	Action   statev1.AuthorizationAction
+	Resource statev1.AuthorizationResource
+	Target   *statev1.AuthorizationTarget
 }
 
 func (f *campaignGatewayStub) ListCampaigns(context.Context) ([]CampaignSummary, error) {
@@ -599,12 +868,32 @@ func (f *campaignGatewayStub) RevokeInvite(context.Context, string) error {
 	return nil
 }
 
-func (f *campaignGatewayStub) CanCampaignAction(context.Context, string, statev1.AuthorizationAction, statev1.AuthorizationResource) (campaignAuthorizationDecision, error) {
+func (f *campaignGatewayStub) CanCampaignAction(
+	_ context.Context,
+	_ string,
+	action statev1.AuthorizationAction,
+	resource statev1.AuthorizationResource,
+	target *statev1.AuthorizationTarget,
+) (campaignAuthorizationDecision, error) {
 	f.authorizationCalls++
+	f.authorizationRequests = append(f.authorizationRequests, campaignAuthorizationRequest{Action: action, Resource: resource, Target: target})
 	if f.authorizationErr != nil {
 		return campaignAuthorizationDecision{}, f.authorizationErr
 	}
 	return f.authorizationDecision, nil
+}
+
+func (f *campaignGatewayStub) BatchCanCampaignAction(
+	_ context.Context,
+	_ string,
+	checks []campaignAuthorizationCheck,
+) ([]campaignAuthorizationDecision, error) {
+	f.batchAuthorizationCalls++
+	f.batchAuthorizationRequests = append(f.batchAuthorizationRequests, checks...)
+	if f.batchAuthorizationErr != nil {
+		return nil, f.batchAuthorizationErr
+	}
+	return f.batchAuthorizationDecisions, nil
 }
 
 func TestCreateCampaignForwardsInputToGateway(t *testing.T) {

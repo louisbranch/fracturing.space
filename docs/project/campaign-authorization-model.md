@@ -43,6 +43,13 @@ This model covers:
 Gameplay role is independent from campaign governance access. A `GM` is not
 implicitly a campaign `OWNER` or `MANAGER`.
 
+Current enforcement note:
+
+- Character mutation authorization is driven by campaign access + ownership
+  invariants, not by gameplay role labels. This keeps `GM`/`PLAYER` orthogonal
+  to campaign governance while still allowing participants to mutate characters
+  they own.
+
 ### Resource Relationship
 
 - `RESOURCE_OWNER`: participant owns the resource.
@@ -62,9 +69,11 @@ implicitly a campaign `OWNER` or `MANAGER`.
 | Action | ADMIN | OWNER | MANAGER | MEMBER |
 |---|---|---|---|---|
 | View campaign resources (campaign/participant/character/session reads) | Allow | Allow | Allow | Allow |
+| Fork campaign (`ForkCampaign`) | Allow | Allow | Allow | Deny |
+| View campaign lineage (`GetLineage`) | Allow | Allow | Allow | Allow |
 | View invite resources (invite reads) | Allow | Allow | Allow | Deny |
-| Update campaign metadata/settings | Allow | Allow | Deny | Deny |
-| End/archive/restore campaign | Allow | Allow | Deny | Deny |
+| Update campaign metadata/settings | Allow | Allow | Allow | Deny |
+| End/archive/restore campaign | Allow | Allow | Allow | Deny |
 | Transfer campaign ownership | Allow | Allow | Deny | Deny |
 | Promote/demote participants across access levels | Allow | Allow | Limited | Deny |
 | Create participant | Allow | Allow | Allow | Deny |
@@ -88,6 +97,12 @@ Canonical implementation table:
   `internal/services/game/domain/authz/policy.go`.
 - Transport boundaries call the canonical evaluator instead of re-defining role
   matrices in handler code.
+- Campaign-scoped coverage now includes event feeds
+  (`ListEvents`/`ListTimelineEntries`/`SubscribeCampaignUpdates`), snapshot
+  reads/writes (`GetSnapshot`/`PatchCharacterState`/`UpdateSnapshotState`), and
+  fork APIs (`ForkCampaign`/`GetLineage`). `ForkCampaign` is a campaign
+  governance action and enforces `CapabilityManageCampaign`; `GetLineage`
+  remains read-level.
 
 `Limited` means:
 
@@ -141,14 +156,79 @@ Rules:
 
 Implementation note:
 
-- Ownership is resolved from both `character.created` payload
-  (`owner_participant_id`, with actor-id fallback for legacy events) and
-  `character.updated` payload field `owner_participant_id`.
+- Ownership is persisted in character projection state as
+  `owner_participant_id`.
+- Projection owner state is sourced from `character.created`
+  (`owner_participant_id`, with actor-id fallback for created events) and from
+  `character.updated.fields.owner_participant_id` transfers.
+- Runtime authorization reads owner from projection-backed character state
+  (request-path auth checks do not replay event history).
 - Ownership transfer is represented by `character.updated` with
   `fields.owner_participant_id` and is restricted to campaign `OWNER` access in
   server authorization.
 - Controller assignment currently uses `participant_id` in
   `character.updated` payloads (`SetDefaultControl` path).
+
+## AuthorizationService.Can Target Semantics
+
+`AuthorizationService.Can` accepts optional `AuthorizationTarget` context.
+
+Participant governance behavior (action/resource = `manage` + `participant`):
+
+1. `target_participant_id` (or fallback `resource_id`) can identify the target.
+2. `target_campaign_access` may be provided directly; when omitted and target id
+   is present, server policy attempts to resolve current target access.
+3. `requested_campaign_access` triggers access-change invariant checks using the
+   same domain evaluator as participant write paths.
+4. Managers are denied when mutating owner targets
+   (`AUTHZ_DENY_TARGET_IS_OWNER`) and when assigning owner access
+   (`AUTHZ_DENY_MANAGER_OWNER_MUTATION_FORBIDDEN`).
+5. Final-owner demotion is denied with
+   `AUTHZ_DENY_LAST_OWNER_GUARD` when applicable.
+6. `participant_operation` target context can be used to disambiguate
+   participant checks:
+   - `MUTATE`: baseline participant mutation checks.
+   - `ACCESS_CHANGE`: access-change invariant checks (requires
+     `requested_campaign_access`).
+   - `REMOVE`: participant-removal checks including final-owner and
+     active-owned-character guards.
+
+Character mutation behavior (action/resource = `mutate` + `character`) evaluates
+ownership (`owner_participant_id` from target, or projection owner resolved from
+`resource_id`) for member-level mutation guards.
+
+## Fork Policy
+
+- `ForkCampaign` requires campaign governance (`OWNER`/`MANAGER`/`ADMIN`)
+  because it creates a new campaign branch.
+- `GetLineage` remains campaign-read scoped and is available to campaign
+  members.
+- Future TODO: starter campaigns may adopt an open-fork policy that allows
+  non-members to fork into a new campaign where they become owner.
+
+## Batch Authorization Guidance
+
+- Web surfaces should prefer batched authorization checks for show/hide and
+  per-row actions instead of issuing many unary `Can` requests.
+- `AuthorizationService.BatchCan` accepts repeated checks (`check_id`,
+  `campaign_id`, `action`, `resource`, optional `target`) and returns per-check
+  results with echoed `check_id`.
+- Batch results are returned in request order and should be correlated by
+  `check_id` on the client.
+- Batch item evaluation uses the same policy path as unary `Can` (same reason
+  codes and actor resolution behavior).
+- Invalid batch payloads fail the whole request (fail-fast), matching unary
+  input validation semantics.
+- Batch checks should carry full target context (resource id, target
+  participant access, requested access) so server policy decisions match write
+  invariants.
+
+## Web Mutation Gate Guidance
+
+- Campaign mutation routes in web must require an evaluated authorization
+  decision from the game authorization service.
+- If authz is unavailable or decision evaluation is missing, web must deny
+  mutation actions (fail closed).
 
 ## Override Model
 
@@ -195,6 +275,7 @@ example:
 - `AUTHZ_DENY_LAST_OWNER_GUARD`
 - `AUTHZ_DENY_MANAGER_OWNER_MUTATION_FORBIDDEN`
 - `AUTHZ_DENY_NOT_RESOURCE_OWNER`
+- `AUTHZ_DENY_TARGET_OWNS_ACTIVE_CHARACTERS`
 - `AUTHZ_ALLOW_ADMIN_OVERRIDE`
 
 ## Phased Rollout

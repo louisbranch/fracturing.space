@@ -57,6 +57,7 @@ type InviteClient interface {
 // AuthorizationClient exposes campaign authorization checks.
 type AuthorizationClient interface {
 	Can(context.Context, *statev1.CanRequest, ...grpc.CallOption) (*statev1.CanResponse, error)
+	BatchCan(context.Context, *statev1.BatchCanRequest, ...grpc.CallOption) (*statev1.BatchCanResponse, error)
 }
 
 // AuthClient performs passkey and user bootstrap operations.

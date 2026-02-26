@@ -25,6 +25,14 @@ enum AuthorizationResource {
   AUTHORIZATION_RESOURCE_CHARACTER = 5;
 }
 
+// ParticipantGovernanceOperation identifies participant-manage operation intent.
+enum ParticipantGovernanceOperation {
+  PARTICIPANT_GOVERNANCE_OPERATION_UNSPECIFIED = 0;
+  PARTICIPANT_GOVERNANCE_OPERATION_MUTATE = 1;
+  PARTICIPANT_GOVERNANCE_OPERATION_ACCESS_CHANGE = 2;
+  PARTICIPANT_GOVERNANCE_OPERATION_REMOVE = 3;
+}
+
 // AuthorizationTarget carries optional target context for richer policy checks.
 message AuthorizationTarget {
   // Optional resource ID (for example participant or character id).
@@ -41,6 +49,9 @@ message AuthorizationTarget {
 
   // Optional requested access level for participant mutations.
   CampaignAccess requested_campaign_access = 5;
+
+  // Optional participant-governance operation intent.
+  ParticipantGovernanceOperation participant_operation = 6;
 }
 
 message CanRequest {
@@ -71,8 +82,57 @@ message CanResponse {
   string actor_participant_id = 4;
 }
 
+// BatchCanCheck describes a single authorization check inside a batch request.
+message BatchCanCheck {
+  // Optional client correlation id echoed back in response.
+  string check_id = 1;
+
+  // The campaign being evaluated.
+  string campaign_id = 2;
+
+  // The requested action.
+  AuthorizationAction action = 3;
+
+  // The requested resource.
+  AuthorizationResource resource = 4;
+
+  // Optional target context.
+  AuthorizationTarget target = 5;
+}
+
+// BatchCanRequest groups multiple campaign authorization checks.
+message BatchCanRequest {
+  repeated BatchCanCheck checks = 1;
+}
+
+// BatchCanResult is the decision for one batch check.
+message BatchCanResult {
+  // Client correlation id copied from request.
+  string check_id = 1;
+
+  // True when policy allows the operation.
+  bool allowed = 2;
+
+  // Stable machine-readable reason code.
+  string reason_code = 3;
+
+  // Resolved actor campaign access when available.
+  CampaignAccess actor_campaign_access = 4;
+
+  // Resolved actor participant id when available.
+  string actor_participant_id = 5;
+}
+
+// BatchCanResponse returns decisions for all request checks in request order.
+message BatchCanResponse {
+  repeated BatchCanResult results = 1;
+}
+
 // AuthorizationService exposes campaign authorization checks.
 service AuthorizationService {
   // Can evaluates whether the caller may perform action/resource in campaign.
   rpc Can(CanRequest) returns (CanResponse);
+
+  // BatchCan evaluates authorization for multiple checks in one request.
+  rpc BatchCan(BatchCanRequest) returns (BatchCanResponse);
 }

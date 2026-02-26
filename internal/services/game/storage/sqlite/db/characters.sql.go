@@ -26,7 +26,7 @@ func (q *Queries) DeleteCharacter(ctx context.Context, arg DeleteCharacterParams
 }
 
 const getCharacter = `-- name: GetCharacter :one
-SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id FROM characters WHERE campaign_id = ? AND id = ?
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id, owner_participant_id FROM characters WHERE campaign_id = ? AND id = ?
 `
 
 type GetCharacterParams struct {
@@ -48,12 +48,13 @@ func (q *Queries) GetCharacter(ctx context.Context, arg GetCharacterParams) (Cha
 		&i.UpdatedAt,
 		&i.AvatarSetID,
 		&i.AvatarAssetID,
+		&i.OwnerParticipantID,
 	)
 	return i, err
 }
 
 const listCharactersByCampaign = `-- name: ListCharactersByCampaign :many
-SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id FROM characters
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id, owner_participant_id FROM characters
 WHERE campaign_id = ?
 ORDER BY id
 `
@@ -78,6 +79,7 @@ func (q *Queries) ListCharactersByCampaign(ctx context.Context, campaignID strin
 			&i.UpdatedAt,
 			&i.AvatarSetID,
 			&i.AvatarAssetID,
+			&i.OwnerParticipantID,
 		); err != nil {
 			return nil, err
 		}
@@ -93,7 +95,7 @@ func (q *Queries) ListCharactersByCampaign(ctx context.Context, campaignID strin
 }
 
 const listCharactersByCampaignPaged = `-- name: ListCharactersByCampaignPaged :many
-SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id FROM characters
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id, owner_participant_id FROM characters
 WHERE campaign_id = ? AND id > ?
 ORDER BY id
 LIMIT ?
@@ -125,6 +127,7 @@ func (q *Queries) ListCharactersByCampaignPaged(ctx context.Context, arg ListCha
 			&i.UpdatedAt,
 			&i.AvatarSetID,
 			&i.AvatarAssetID,
+			&i.OwnerParticipantID,
 		); err != nil {
 			return nil, err
 		}
@@ -140,7 +143,7 @@ func (q *Queries) ListCharactersByCampaignPaged(ctx context.Context, arg ListCha
 }
 
 const listCharactersByCampaignPagedFirst = `-- name: ListCharactersByCampaignPagedFirst :many
-SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id FROM characters
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, created_at, updated_at, avatar_set_id, avatar_asset_id, owner_participant_id FROM characters
 WHERE campaign_id = ?
 ORDER BY id
 LIMIT ?
@@ -171,6 +174,7 @@ func (q *Queries) ListCharactersByCampaignPagedFirst(ctx context.Context, arg Li
 			&i.UpdatedAt,
 			&i.AvatarSetID,
 			&i.AvatarAssetID,
+			&i.OwnerParticipantID,
 		); err != nil {
 			return nil, err
 		}
@@ -187,9 +191,10 @@ func (q *Queries) ListCharactersByCampaignPagedFirst(ctx context.Context, arg Li
 
 const putCharacter = `-- name: PutCharacter :exec
 INSERT INTO characters (
-    campaign_id, id, controller_participant_id, name, kind, notes, avatar_set_id, avatar_asset_id, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    campaign_id, id, owner_participant_id, controller_participant_id, name, kind, notes, avatar_set_id, avatar_asset_id, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, id) DO UPDATE SET
+    owner_participant_id = excluded.owner_participant_id,
     controller_participant_id = excluded.controller_participant_id,
     name = excluded.name,
     kind = excluded.kind,
@@ -202,6 +207,7 @@ ON CONFLICT(campaign_id, id) DO UPDATE SET
 type PutCharacterParams struct {
 	CampaignID              string         `json:"campaign_id"`
 	ID                      string         `json:"id"`
+	OwnerParticipantID      string         `json:"owner_participant_id"`
 	ControllerParticipantID sql.NullString `json:"controller_participant_id"`
 	Name                    string         `json:"name"`
 	Kind                    string         `json:"kind"`
@@ -216,6 +222,7 @@ func (q *Queries) PutCharacter(ctx context.Context, arg PutCharacterParams) erro
 	_, err := q.db.ExecContext(ctx, putCharacter,
 		arg.CampaignID,
 		arg.ID,
+		arg.OwnerParticipantID,
 		arg.ControllerParticipantID,
 		arg.Name,
 		arg.Kind,

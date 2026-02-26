@@ -196,7 +196,7 @@ func TestGmConsequenceOpensGateAndSpotlight(t *testing.T) {
 	difficulty := 8
 	seed := findReplaySeedForFearOutcome(t, difficulty)
 
-	rollResp, err := daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
+	rollResp, err := daggerheartClient.SessionActionRoll(ctxWithUser, &daggerheartv1.SessionActionRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		CharacterId: characterID,
@@ -212,7 +212,7 @@ func TestGmConsequenceOpensGateAndSpotlight(t *testing.T) {
 		t.Fatalf("session action roll: %v", err)
 	}
 
-	ctxWithMeta := metadata.NewOutgoingContext(ctx, metadata.Pairs(
+	ctxWithMeta := metadata.NewOutgoingContext(ctxWithUser, metadata.Pairs(
 		grpcmeta.CampaignIDHeader, campaignID,
 		grpcmeta.SessionIDHeader, sessionID,
 	))
@@ -224,10 +224,10 @@ func TestGmConsequenceOpensGateAndSpotlight(t *testing.T) {
 		t.Fatalf("apply roll outcome: %v", err)
 	}
 
-	if err := findSessionSpotlightSet(ctx, eventClient, campaignID, sessionID, "gm"); err != nil {
+	if err := findSessionSpotlightSet(ctxWithUser, eventClient, campaignID, sessionID, "gm"); err != nil {
 		t.Fatalf("find spotlight set: %v", err)
 	}
-	if err := findSessionGateOpened(ctx, eventClient, campaignID, sessionID, "gm_consequence"); err != nil {
+	if err := findSessionGateOpened(ctxWithUser, eventClient, campaignID, sessionID, "gm_consequence"); err != nil {
 		t.Fatalf("find gate opened: %v", err)
 	}
 }

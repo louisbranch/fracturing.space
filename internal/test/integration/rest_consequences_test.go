@@ -67,7 +67,7 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 	}
 	sessionID := startSession.GetSession().GetId()
 
-	createCountdown, err := daggerheartClient.CreateCountdown(ctx, &daggerheartv1.DaggerheartCreateCountdownRequest{
+	createCountdown, err := daggerheartClient.CreateCountdown(ctxWithUser, &daggerheartv1.DaggerheartCreateCountdownRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 		Name:       "Long-Term Countdown",
@@ -88,7 +88,7 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 		t.Fatal("expected countdown id")
 	}
 
-	_, err = snapshotClient.UpdateSnapshotState(ctx, &gamev1.UpdateSnapshotStateRequest{
+	_, err = snapshotClient.UpdateSnapshotState(ctxWithUser, &gamev1.UpdateSnapshotStateRequest{
 		CampaignId: campaignID,
 		SystemSnapshotUpdate: &gamev1.UpdateSnapshotStateRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartSnapshot{
@@ -121,7 +121,7 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 		expectedFear = daggerheart.GMFearMax
 	}
 
-	sessionCtx := withSessionID(ctx, sessionID)
+	sessionCtx := withSessionID(ctxWithUser, sessionID)
 	resp, err := daggerheartClient.ApplyRest(sessionCtx, &daggerheartv1.DaggerheartApplyRestRequest{
 		CampaignId: campaignID,
 		Rest: &daggerheartv1.DaggerheartRestRequest{
@@ -148,7 +148,7 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 		t.Fatalf("short rests = %d, want 0", resp.GetSnapshot().GetConsecutiveShortRests())
 	}
 
-	if err := findCountdownUpdated(ctx, eventClient, campaignID, sessionID, countdownID, 0, 1); err != nil {
+	if err := findCountdownUpdated(ctxWithUser, eventClient, campaignID, sessionID, countdownID, 0, 1); err != nil {
 		t.Fatalf("find countdown updated: %v", err)
 	}
 }

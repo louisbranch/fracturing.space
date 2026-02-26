@@ -31,6 +31,7 @@ func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) err
 	return s.q.PutCharacter(ctx, db.PutCharacterParams{
 		CampaignID:              c.CampaignID,
 		ID:                      c.ID,
+		OwnerParticipantID:      c.OwnerParticipantID,
 		ControllerParticipantID: toNullString(c.ParticipantID),
 		Name:                    c.Name,
 		Kind:                    characterKindToString(c.Kind),

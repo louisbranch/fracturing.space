@@ -51,6 +51,14 @@ func TestListEvents_MissingCampaignId(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestListEvents_RequiresCampaignReadPolicy(t *testing.T) {
+	eventStore := newFakeEventStore()
+	svc := NewEventService(Stores{Event: eventStore, Participant: newFakeParticipantStore()})
+
+	_, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestListEvents_InvalidOrderBy(t *testing.T) {
 	eventStore := newFakeEventStore()
 	svc := NewEventService(Stores{Event: eventStore})
@@ -135,6 +143,7 @@ func TestListEvents_TokenWithChangedOrderBy(t *testing.T) {
 
 func TestListEvents_TokenWithChangedAfterSeq(t *testing.T) {
 	eventStore := newFakeEventStore()
+	authzCtx := contextWithAdminOverride("events-test")
 	now := time.Now().UTC()
 	eventStore.events["c1"] = []event.Event{
 		{CampaignID: "c1", Seq: 1, Type: event.Type("e1"), Timestamp: now},
@@ -145,7 +154,7 @@ func TestListEvents_TokenWithChangedAfterSeq(t *testing.T) {
 	}
 	svc := NewEventService(Stores{Event: eventStore})
 
-	firstResp, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	firstResp, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 		PageSize:   2,
 		AfterSeq:   2,
@@ -157,7 +166,7 @@ func TestListEvents_TokenWithChangedAfterSeq(t *testing.T) {
 		t.Fatalf("expected next page token")
 	}
 
-	_, err = svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	_, err = svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 		PageSize:   2,
 		AfterSeq:   1,
@@ -168,9 +177,10 @@ func TestListEvents_TokenWithChangedAfterSeq(t *testing.T) {
 
 func TestListEvents_EmptyResult(t *testing.T) {
 	eventStore := newFakeEventStore()
+	authzCtx := contextWithAdminOverride("events-test")
 	svc := NewEventService(Stores{Event: eventStore})
 
-	resp, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	resp, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 	})
 	if err != nil {
@@ -186,6 +196,7 @@ func TestListEvents_EmptyResult(t *testing.T) {
 
 func TestListEvents_AfterSeqFiltersResults(t *testing.T) {
 	eventStore := newFakeEventStore()
+	authzCtx := contextWithAdminOverride("events-test")
 	now := time.Now().UTC()
 
 	eventStore.events["c1"] = []event.Event{
@@ -197,7 +208,7 @@ func TestListEvents_AfterSeqFiltersResults(t *testing.T) {
 	}
 
 	svc := NewEventService(Stores{Event: eventStore})
-	resp, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	resp, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 		AfterSeq:   3,
 	})
@@ -214,6 +225,7 @@ func TestListEvents_AfterSeqFiltersResults(t *testing.T) {
 
 func TestListEvents_ASC_Pagination(t *testing.T) {
 	eventStore := newFakeEventStore()
+	authzCtx := contextWithAdminOverride("events-test")
 	now := time.Now().UTC()
 
 	// Add 5 events
@@ -228,7 +240,7 @@ func TestListEvents_ASC_Pagination(t *testing.T) {
 	svc := NewEventService(Stores{Event: eventStore})
 
 	// Page 1: get first 2 events (ASC order)
-	resp, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	resp, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 		PageSize:   2,
 	})
@@ -249,7 +261,7 @@ func TestListEvents_ASC_Pagination(t *testing.T) {
 	}
 
 	// Page 2: use next token
-	resp2, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	resp2, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 		PageSize:   2,
 		PageToken:  resp.NextPageToken,
@@ -271,7 +283,7 @@ func TestListEvents_ASC_Pagination(t *testing.T) {
 	}
 
 	// Go back to page 1 using previous token
-	respBack, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	respBack, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 		PageSize:   2,
 		PageToken:  resp2.PreviousPageToken,
@@ -504,6 +516,7 @@ func TestAppendEvent_ReturnsRequestedMappedEventWhenDomainEmitsMultipleEvents(t 
 
 func TestListEvents_DESC_Pagination(t *testing.T) {
 	eventStore := newFakeEventStore()
+	authzCtx := contextWithAdminOverride("events-test")
 	now := time.Now().UTC()
 
 	// Add 5 events
@@ -518,7 +531,7 @@ func TestListEvents_DESC_Pagination(t *testing.T) {
 	svc := NewEventService(Stores{Event: eventStore})
 
 	// Page 1: get first 2 events (DESC order, so highest seqs first)
-	resp, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	resp, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 		PageSize:   2,
 		OrderBy:    "seq desc",
@@ -540,7 +553,7 @@ func TestListEvents_DESC_Pagination(t *testing.T) {
 	}
 
 	// Page 2: use next token (should get seqs 3, 2)
-	resp2, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	resp2, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 		PageSize:   2,
 		OrderBy:    "seq desc",
@@ -563,7 +576,7 @@ func TestListEvents_DESC_Pagination(t *testing.T) {
 	}
 
 	// Go back to page 1 using previous token
-	respBack, err := svc.ListEvents(context.Background(), &campaignv1.ListEventsRequest{
+	respBack, err := svc.ListEvents(authzCtx, &campaignv1.ListEventsRequest{
 		CampaignId: "c1",
 		PageSize:   2,
 		OrderBy:    "seq desc",
@@ -610,6 +623,16 @@ func TestSubscribeCampaignUpdates_MissingCampaignID(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestSubscribeCampaignUpdates_RequiresCampaignReadPolicy(t *testing.T) {
+	svc := NewEventService(Stores{Event: newFakeEventStore(), Participant: newFakeParticipantStore()})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	stream := &fakeCampaignUpdateStream{ctx: ctx}
+
+	err := svc.SubscribeCampaignUpdates(&campaignv1.SubscribeCampaignUpdatesRequest{CampaignId: "camp-1"}, stream)
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestSubscribeCampaignUpdates_StreamsCommittedAndProjectionUpdates(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
@@ -625,7 +648,7 @@ func TestSubscribeCampaignUpdates_StreamsCommittedAndProjectionUpdates(t *testin
 	}
 
 	svc := NewEventService(Stores{Event: eventStore})
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(contextWithAdminOverride("events-test"))
 	stream := &fakeCampaignUpdateStream{ctx: ctx}
 	stream.onSend = func() {
 		if len(stream.updates) >= 2 {
