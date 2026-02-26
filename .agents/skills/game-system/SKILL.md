@@ -1,6 +1,6 @@
 ---
 name: game-system
-description: Steps and checklists for adding a new game system
+description: Workflow and checks for adding a new game system
 user-invocable: true
 ---
 

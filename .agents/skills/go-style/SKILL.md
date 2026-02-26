@@ -1,12 +1,18 @@
 ---
 name: go-style
-description: Go language conventions including build commands, formatting, naming, error handling, and testing patterns
+description: Go conventions for architecture-first, maintainable code
 user-invocable: true
 ---
 
 # Go Style Guide
 
-Go language conventions for this project.
+Go conventions for this project with domain boundaries and maintainability first.
+
+## Architecture First
+
+- Prefer package boundaries that model the domain, not transport or storage details.
+- If a small patch would worsen boundaries, prefer the cleaner package shape and cut over callers.
+- Remove obsolete compatibility layers after cutover.
 
 ## Build / Test / Lint
 
@@ -78,9 +84,8 @@ Use the `error-handling` skill for structured error workflows and messaging rule
 
 ## Documentation
 
-- Document all non-generated exported types and functions
-- For unexported helpers, add docs when behavior is complex or domain-critical
-- Explain what the function/type does and why it exists; avoid narrating how it works
+- Document all non-generated exported and non-exported functions and types with concise, why-focused comments
+- Explain contracts and invariants; avoid narrating line-by-line implementation details
 - Use inline comments to clarify non-obvious steps, invariants, or edge cases
 - Add package comments explaining intent and scope
 - Create or update `doc.go` when package intent changes; capture responsibilities, boundaries, and non-goals

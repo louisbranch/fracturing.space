@@ -1,6 +1,6 @@
 ---
 name: error-handling
-description: Structured errors and i18n-friendly messaging workflow
+description: Structured domain and transport errors with i18n-friendly messages
 user-invocable: true
 ---
 
