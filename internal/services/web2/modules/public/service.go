@@ -63,12 +63,19 @@ func (service) healthBody() string {
 }
 
 func mapAuthGatewayError(err error, fallbackKind apperrors.Kind, fallbackMessage string) error {
+	return mapAuthGatewayErrorWithKey(err, fallbackKind, "", fallbackMessage)
+}
+
+func mapAuthGatewayErrorWithKey(err error, fallbackKind apperrors.Kind, fallbackKey string, fallbackMessage string) error {
 	if err == nil {
 		return nil
 	}
 	// TODO(web2-errors): preserve richer upstream grpc/app error kinds so fallback mapping does not blur invalid-input vs dependency failures.
 	if apperrors.HTTPStatus(err) == http.StatusServiceUnavailable {
 		return apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+	}
+	if strings.TrimSpace(fallbackKey) != "" {
+		return apperrors.EK(fallbackKind, fallbackKey, fallbackMessage)
 	}
 	return apperrors.E(fallbackKind, fallbackMessage)
 }
@@ -116,7 +123,7 @@ func (s service) passkeyRegisterStart(ctx context.Context, email string) (passke
 	}
 	created, err := s.auth.CreateUser(ctx, &authv1.CreateUserRequest{Email: strings.TrimSpace(email), Locale: commonv1.Locale_LOCALE_EN_US})
 	if err != nil {
-		return passkeyRegisterStart{}, mapAuthGatewayError(err, apperrors.KindInvalidInput, "failed to create user")
+		return passkeyRegisterStart{}, mapAuthGatewayErrorWithKey(err, apperrors.KindInvalidInput, "error.http.failed_to_create_user", "failed to create user")
 	}
 	userID := strings.TrimSpace(created.GetUser().GetId())
 	if userID == "" {
