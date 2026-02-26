@@ -20,6 +20,9 @@ const (
 	PasskeyLoginFinish                  = "/passkeys/login/finish"
 	DiscoverPrefix                      = "/discover/"
 	UserProfilePrefix                   = "/u/"
+	UserProfilePattern                  = UserProfilePrefix + "{username}"
+	UserProfilePatternWithTrailingSlash = UserProfilePrefix + "{username}/"
+	UserProfileRestPattern              = UserProfilePrefix + "{username}/{rest...}"
 	AppPrefix                           = "/app/"
 	AppDashboard                        = "/app/dashboard"
 	DashboardPrefix                     = "/app/dashboard/"
@@ -51,7 +54,14 @@ const (
 	SettingsPrefix                      = "/app/settings/"
 	AppSettingsAIKeyRevokePattern       = SettingsPrefix + "ai-keys/{credentialID}/revoke"
 	AppSettingsRestPattern              = SettingsPrefix + "{rest...}"
+	SettingsNoticeQueryKey              = "notice"
+	SettingsNoticePublicProfileRequired = "public-profile-required"
 )
+
+// UserProfile returns the public user profile route.
+func UserProfile(username string) string {
+	return UserProfilePrefix + escapeSegment(username)
+}
 
 // AppCampaign returns the campaign overview route.
 func AppCampaign(campaignID string) string {
@@ -155,6 +165,15 @@ const AppSettingsAIKeys = "/app/settings/ai-keys"
 // AppSettingsAIKeyRevoke returns the AI key revoke route.
 func AppSettingsAIKeyRevoke(credentialID string) string {
 	return AppSettingsAIKeys + "/" + escapeSegment(credentialID) + "/revoke"
+}
+
+// AppSettingsProfileWithNotice returns the profile settings route with a notice code.
+func AppSettingsProfileWithNotice(notice string) string {
+	notice = strings.TrimSpace(notice)
+	if notice == "" {
+		return AppSettingsProfile
+	}
+	return AppSettingsProfile + "?" + SettingsNoticeQueryKey + "=" + url.QueryEscape(notice)
 }
 
 func escapeSegment(raw string) string {

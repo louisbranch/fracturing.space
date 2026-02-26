@@ -47,8 +47,8 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	publicProfileReq := httptest.NewRequest(http.MethodGet, "/u/alice", nil)
 	publicProfileRR := httptest.NewRecorder()
 	h.ServeHTTP(publicProfileRR, publicProfileReq)
-	if publicProfileRR.Code != http.StatusOK {
-		t.Fatalf("public profile status = %d, want %d", publicProfileRR.Code, http.StatusOK)
+	if publicProfileRR.Code != http.StatusServiceUnavailable {
+		t.Fatalf("public profile status = %d, want %d", publicProfileRR.Code, http.StatusServiceUnavailable)
 	}
 
 	protectedReq := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
@@ -718,7 +718,7 @@ func TestAppLayoutIncludesHTMXErrorSwapContract(t *testing.T) {
 func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	t.Parallel()
 
-	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "001"}}}
+	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "rhea", Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "001"}}}
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{AuthClient: auth, SocialClient: social, AssetBaseURL: "https://cdn.example.com/avatars", AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
 	if err != nil {
@@ -738,12 +738,38 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	for _, marker := range []string{
 		`src="https://cdn.example.com/avatars/001.png"`,
 		`alt="Rhea Vale"`,
+		`href="/u/rhea"`,
 		`href="/app/settings"`,
 		`action="/logout"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing user dropdown contract marker %q: %q", marker, body)
 		}
+	}
+	if strings.Index(body, `href="/u/rhea"`) > strings.Index(body, `href="/app/settings"`) {
+		t.Fatalf("expected profile menu item before settings menu item: %q", body)
+	}
+}
+
+func TestAppPageUserDropdownProfileFallsBackToSettingsNoticeWhenUsernameMissing(t *testing.T) {
+	t.Parallel()
+
+	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale"}}}
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(Config{AuthClient: auth, SocialClient: social, AssetBaseURL: "https://cdn.example.com/avatars", AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `href="/app/settings/profile?notice=public-profile-required"`) {
+		t.Fatalf("body missing profile fallback notice link: %q", body)
 	}
 }
 

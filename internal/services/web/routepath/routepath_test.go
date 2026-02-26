@@ -23,6 +23,9 @@ func TestTopLevelRouteConstants(t *testing.T) {
 	if DashboardPrefix != "/app/dashboard/" {
 		t.Fatalf("DashboardPrefix = %q", DashboardPrefix)
 	}
+	if UserProfilePrefix != "/u/" {
+		t.Fatalf("UserProfilePrefix = %q", UserProfilePrefix)
+	}
 	if CampaignsPrefix != "/app/campaigns/" {
 		t.Fatalf("CampaignsPrefix = %q", CampaignsPrefix)
 	}
@@ -31,6 +34,12 @@ func TestTopLevelRouteConstants(t *testing.T) {
 	}
 	if SettingsPrefix != "/app/settings/" {
 		t.Fatalf("SettingsPrefix = %q", SettingsPrefix)
+	}
+	if SettingsNoticeQueryKey != "notice" {
+		t.Fatalf("SettingsNoticeQueryKey = %q", SettingsNoticeQueryKey)
+	}
+	if SettingsNoticePublicProfileRequired != "public-profile-required" {
+		t.Fatalf("SettingsNoticePublicProfileRequired = %q", SettingsNoticePublicProfileRequired)
 	}
 }
 
@@ -111,6 +120,15 @@ func TestServeMuxPatternConstants(t *testing.T) {
 	if AppCampaignInvitesPattern != "/app/campaigns/{campaignID}/invites" {
 		t.Fatalf("AppCampaignInvitesPattern = %q", AppCampaignInvitesPattern)
 	}
+	if UserProfilePattern != "/u/{username}" {
+		t.Fatalf("UserProfilePattern = %q", UserProfilePattern)
+	}
+	if UserProfilePatternWithTrailingSlash != "/u/{username}/" {
+		t.Fatalf("UserProfilePatternWithTrailingSlash = %q", UserProfilePatternWithTrailingSlash)
+	}
+	if UserProfileRestPattern != "/u/{username}/{rest...}" {
+		t.Fatalf("UserProfileRestPattern = %q", UserProfileRestPattern)
+	}
 	if AppSettingsAIKeyRevokePattern != "/app/settings/ai-keys/{credentialID}/revoke" {
 		t.Fatalf("AppSettingsAIKeyRevokePattern = %q", AppSettingsAIKeyRevokePattern)
 	}
@@ -122,11 +140,20 @@ func TestNotificationAndSettingsRouteBuilders(t *testing.T) {
 	if got := AppNotificationsOpen("n1"); got != "/app/notifications/n1" {
 		t.Fatalf("AppNotificationsOpen() = %q", got)
 	}
+	if got := UserProfile("louis"); got != "/u/louis" {
+		t.Fatalf("UserProfile() = %q", got)
+	}
 	if AppSettingsProfile != "/app/settings/profile" {
 		t.Fatalf("AppSettingsProfile = %q", AppSettingsProfile)
 	}
 	if AppSettingsLocale != "/app/settings/locale" {
 		t.Fatalf("AppSettingsLocale = %q", AppSettingsLocale)
+	}
+	if got := AppSettingsProfileWithNotice(SettingsNoticePublicProfileRequired); got != "/app/settings/profile?notice=public-profile-required" {
+		t.Fatalf("AppSettingsProfileWithNotice() = %q", got)
+	}
+	if got := AppSettingsProfileWithNotice("   "); got != "/app/settings/profile" {
+		t.Fatalf("AppSettingsProfileWithNotice() empty = %q", got)
 	}
 	if got := AppSettingsAIKeyRevoke("cred-1"); got != "/app/settings/ai-keys/cred-1/revoke" {
 		t.Fatalf("AppSettingsAIKeyRevoke() = %q", got)
@@ -153,6 +180,12 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	}
 	if got := AppNotificationsOpen("note/1"); got != "/app/notifications/note%2F1" {
 		t.Fatalf("AppNotificationsOpen() escaped = %q", got)
+	}
+	if got := UserProfile("name/with/slash"); got != "/u/name%2Fwith%2Fslash" {
+		t.Fatalf("UserProfile() escaped = %q", got)
+	}
+	if got := AppSettingsProfileWithNotice("profile/needed"); got != "/app/settings/profile?notice=profile%2Fneeded" {
+		t.Fatalf("AppSettingsProfileWithNotice() escaped = %q", got)
 	}
 }
 

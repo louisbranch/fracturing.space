@@ -258,6 +258,7 @@ func init() {
 	message.SetString(lang, "web.settings.user_profile.error_name_required", "Nome é obrigatório.")
 	message.SetString(lang, "web.settings.user_profile.error_name_too_long", "Nome deve ter no máximo 64 caracteres.")
 	message.SetString(lang, "web.settings.user_profile.error_save_failed", "Falha ao salvar perfil de usuário.")
+	message.SetString(lang, "web.settings.user_profile.notice_public_profile_required", "Escolha um nome de usuário para publicar sua página de perfil público.")
 	message.SetString(lang, "web.settings.locale.title", "Idioma")
 	message.SetString(lang, "web.settings.locale.option_en_us", "Inglês (EUA)")
 	message.SetString(lang, "web.settings.locale.option_pt_br", "Português (Brasil)")

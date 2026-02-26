@@ -48,6 +48,14 @@ func viewerName(viewer module.Viewer) string {
 	return viewer.DisplayName
 }
 
+func viewerProfileURL(viewer module.Viewer) string {
+	profileURL := strings.TrimSpace(viewer.ProfileURL)
+	if profileURL == "" {
+		return routepath.AppSettingsProfile
+	}
+	return profileURL
+}
+
 func viewerLocalizedName(viewer module.Viewer, loc Localizer) string {
 	if strings.TrimSpace(viewer.DisplayName) == "" {
 		return T(loc, "web.profile.display_name_fallback_adventurer")
@@ -367,6 +375,10 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 							}
 						</button>
 						<div class="dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow">
+							<a href={ viewerProfileURL(viewer) } class="btn btn-ghost btn-sm w-full justify-start">
+								@sharedtemplates.LucideIcon("user", "size-4 me-2")
+								{ T(loc, "layout.profile") }
+							</a>
 							<a href={ routepath.AppSettings } hx-get={ routepath.AppSettings } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-ghost btn-sm w-full justify-start">
 								@sharedtemplates.LucideIcon("settings", "size-4 me-2")
 								{ T(loc, "layout.settings") }

@@ -230,6 +230,8 @@ func TestGRPCGatewayMissingClientBehavior(t *testing.T) {
 type socialClientStub struct {
 	getResp    *socialv1.GetUserProfileResponse
 	getErr     error
+	lookupResp *socialv1.LookupUserProfileResponse
+	lookupErr  error
 	setErr     error
 	lastSetReq *socialv1.SetUserProfileRequest
 }
@@ -250,6 +252,16 @@ func (f *socialClientStub) SetUserProfile(_ context.Context, req *socialv1.SetUs
 		return nil, f.setErr
 	}
 	return &socialv1.SetUserProfileResponse{}, nil
+}
+
+func (f *socialClientStub) LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest, ...grpc.CallOption) (*socialv1.LookupUserProfileResponse, error) {
+	if f.lookupErr != nil {
+		return nil, f.lookupErr
+	}
+	if f.lookupResp != nil {
+		return f.lookupResp, nil
+	}
+	return &socialv1.LookupUserProfileResponse{}, nil
 }
 
 type accountClientStub struct {

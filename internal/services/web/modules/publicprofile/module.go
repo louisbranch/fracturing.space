@@ -17,10 +17,10 @@ func New() Module { return Module{} }
 func (Module) ID() string { return "publicprofile" }
 
 // Mount wires public profile route handlers.
-func (Module) Mount(module.Dependencies) (module.Mount, error) {
+func (Module) Mount(deps module.Dependencies) (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := newService()
-	h := newHandlers(svc)
+	svc := newService(newGRPCGateway(deps), deps.AssetBaseURL)
+	h := newHandlers(svc, deps)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.UserProfilePrefix, Handler: mux}, nil
 }
