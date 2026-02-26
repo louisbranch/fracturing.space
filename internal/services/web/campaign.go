@@ -8,6 +8,7 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	campaignfeature "github.com/louisbranch/fracturing.space/internal/services/web/feature/campaign"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -39,17 +40,18 @@ func (h *handler) campaignCoverImage(ctx context.Context, campaignID string) str
 		config = h.config
 	}
 	if campaignID == "" {
-		return campaignCoverImageURL(config, "", "", "")
+		return campaignfeature.CampaignCoverImageURL(config.AssetBaseURL, "", "", "")
 	}
 	if h == nil {
-		return campaignCoverImageURL(config, campaignID, "", "")
+		return campaignfeature.CampaignCoverImageURL(config.AssetBaseURL, campaignID, "", "")
 	}
 
-	if cachedCampaign, ok := h.cachedCampaign(ctx, campaignID); ok {
-		return campaignCoverImageURL(config, campaignID, cachedCampaign.GetCoverSetId(), cachedCampaign.GetCoverAssetId())
+	cachedCampaign, ok := campaignfeature.NewCampaignCache(h.cacheStore).CachedCampaign(ctx, campaignID)
+	if ok {
+		return campaignfeature.CampaignCoverImageURL(config.AssetBaseURL, campaignID, cachedCampaign.GetCoverSetId(), cachedCampaign.GetCoverAssetId())
 	}
 	if h.campaignClient == nil {
-		return campaignCoverImageURL(config, campaignID, "", "")
+		return campaignfeature.CampaignCoverImageURL(config.AssetBaseURL, campaignID, "", "")
 	}
 	if ctx == nil {
 		ctx = context.Background()
@@ -59,11 +61,11 @@ func (h *handler) campaignCoverImage(ctx context.Context, campaignID string) str
 		CampaignId: campaignID,
 	})
 	if err != nil || resp == nil || resp.GetCampaign() == nil {
-		return campaignCoverImageURL(config, campaignID, "", "")
+		return campaignfeature.CampaignCoverImageURL(config.AssetBaseURL, campaignID, "", "")
 	}
-	h.setCampaignCache(ctx, resp.GetCampaign())
+	campaignfeature.NewCampaignCache(h.cacheStore).SetCampaignCache(ctx, resp.GetCampaign())
 	campaign := resp.GetCampaign()
-	return campaignCoverImageURL(config, campaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId())
+	return campaignfeature.CampaignCoverImageURL(config.AssetBaseURL, campaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId())
 }
 
 func (h *handler) campaignDisplayName(ctx context.Context, campaignID string) string {
@@ -74,7 +76,8 @@ func (h *handler) campaignDisplayName(ctx context.Context, campaignID string) st
 	if cached := h.cachedCampaignName(campaignID); cached != "" {
 		return cached
 	}
-	if cachedCampaign, ok := h.cachedCampaign(ctx, campaignID); ok {
+	cachedCampaign, ok := campaignfeature.NewCampaignCache(h.cacheStore).CachedCampaign(ctx, campaignID)
+	if ok {
 		name := strings.TrimSpace(cachedCampaign.GetName())
 		if name == "" {
 			return campaignID
@@ -103,7 +106,7 @@ func (h *handler) campaignDisplayName(ctx context.Context, campaignID string) st
 	if name == "" {
 		return campaignID
 	}
-	h.setCampaignCache(ctx, resp.GetCampaign())
+	campaignfeature.NewCampaignCache(h.cacheStore).SetCampaignCache(ctx, resp.GetCampaign())
 	h.setCampaignNameCache(campaignID, name)
 	return name
 }

@@ -25,10 +25,8 @@ Start here unless you are working on a specific roadmap slice:
 
 Open only the subsystem you are actively changing:
 
+- Web/web2 cutover: [web2-cutover-readiness.md](web2-cutover-readiness.md)
+- Web2 cutover runbook: [web2-cutover-runbook.md](web2-cutover-runbook.md)
 - Connections: [connections-roadmap.md](connections-roadmap.md)
 - Chat: [chat-service.md](chat-service.md)
 - AI assignment: [ai-campaign-assignment-phase4.md](ai-campaign-assignment-phase4.md)
-
-## Historical docs policy
-
-Historical/completed implementation logs are intentionally not promoted on onboarding pages. Keep retained historical notes under `docs/notes/` with explicit status/date.

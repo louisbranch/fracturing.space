@@ -3,6 +3,7 @@ coverage.html
 coverage.raw
 coverage.log
 coverage-treemap.svg
+coverage.func
 data/
 .env
 .env.local

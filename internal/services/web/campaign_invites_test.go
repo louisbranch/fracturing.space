@@ -13,6 +13,7 @@ import (
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	campaignfeature "github.com/louisbranch/fracturing.space/internal/services/web/feature/campaign"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"golang.org/x/text/language"
@@ -1342,7 +1343,7 @@ func TestAppCampaignInvitesPageUsesCachedParticipantsForContactOptions(t *testin
 			participantClient:   participantClient,
 		},
 	}
-	h.setCampaignParticipantsCache(context.Background(), "camp-123", []*statev1.Participant{
+	campaignfeature.NewCampaignCache(h.cacheStore).SetCampaignParticipantsCache(context.Background(), "camp-123", []*statev1.Participant{
 		{Id: "part-owner", CampaignId: "camp-123", UserId: "user-123", CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER},
 	})
 	sessionID := h.sessions.create("token-1", "Alice", time.Now().Add(time.Hour))
@@ -1363,9 +1364,9 @@ func TestAppCampaignInvitesPageUsesCachedParticipantsForContactOptions(t *testin
 func TestRenderAppCampaignInvitesPageHidesWriteActionsWithoutManageAccess(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
+	campaignfeature.RenderCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
 		{Id: "inv-1", CampaignId: "camp-123", RecipientUserId: "user-456"},
-	}, false)
+	}, nil, false)
 
 	body := w.Body.String()
 	if strings.Contains(body, "/app/campaigns/camp-123/invites/create") {
@@ -1379,9 +1380,9 @@ func TestRenderAppCampaignInvitesPageHidesWriteActionsWithoutManageAccess(t *tes
 func TestRenderAppCampaignInvitesPageSkipsRevokeForMissingInviteID(t *testing.T) {
 	w := httptest.NewRecorder()
 
-	renderAppCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
+	campaignfeature.RenderCampaignInvitesPage(w, httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-123/invites", nil), webtemplates.PageContext{}, "camp-123", []*statev1.Invite{
 		{CampaignId: "camp-123", RecipientUserId: "user-456"},
-	}, true)
+	}, nil, true)
 
 	body := w.Body.String()
 	if !strings.Contains(body, "unknown-invite - user-456") {
@@ -1400,7 +1401,7 @@ func TestRenderAppCampaignInvitesPageUsesRecipientUsernameCopy(t *testing.T) {
 		Loc:  webi18n.Printer(language.English),
 	}
 
-	renderAppCampaignInvitesPage(w, req, page, "camp-123", []*statev1.Invite{}, true)
+	campaignfeature.RenderCampaignInvitesPage(w, req, page, "camp-123", []*statev1.Invite{}, nil, true)
 
 	body := w.Body.String()
 	if !strings.Contains(body, "Recipient Username or User ID") {
@@ -1412,7 +1413,7 @@ func TestRenderAppCampaignInvitesPageUsesRecipientUsernameCopy(t *testing.T) {
 }
 
 func TestBuildInviteContactOptionsFiltersParticipantsAndPendingInvites(t *testing.T) {
-	options := buildInviteContactOptions(
+	options := campaignfeature.BuildInviteContactOptions(
 		[]*connectionsv1.Contact{
 			{OwnerUserId: "user-1", ContactUserId: "user-200"},
 			{OwnerUserId: "user-1", ContactUserId: "user-300"},
@@ -1453,7 +1454,9 @@ func TestListAllContactsRejectsRepeatedPageToken(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
-	_, err := h.listAllContacts(ctx, "user-1")
+	_, err := campaignfeature.ListAllContacts(ctx, "user-1", func(ctx context.Context, req *connectionsv1.ListContactsRequest) (*connectionsv1.ListContactsResponse, error) {
+		return h.connectionsClient.ListContacts(ctx, req)
+	})
 	if err == nil {
 		t.Fatal("expected error for repeated page token")
 	}
@@ -1477,7 +1480,9 @@ func TestListAllContactsPaginates(t *testing.T) {
 		},
 	}
 
-	contacts, err := h.listAllContacts(context.Background(), "user-1")
+	contacts, err := campaignfeature.ListAllContacts(context.Background(), "user-1", func(ctx context.Context, req *connectionsv1.ListContactsRequest) (*connectionsv1.ListContactsResponse, error) {
+		return h.connectionsClient.ListContacts(ctx, req)
+	})
 	if err != nil {
 		t.Fatalf("list all contacts: %v", err)
 	}
@@ -1510,7 +1515,15 @@ func TestListAllCampaignParticipantsRejectsRepeatedPageToken(t *testing.T) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
-	_, err := h.listAllCampaignParticipants(ctx, "camp-1")
+	_, err := campaignfeature.ListAllCampaignParticipants(
+		ctx,
+		"camp-1",
+		campaignfeature.NewCampaignCache(h.cacheStore).CachedCampaignParticipants,
+		func(ctx context.Context, req *statev1.ListParticipantsRequest) (*statev1.ListParticipantsResponse, error) {
+			return h.participantClient.ListParticipants(ctx, req)
+		},
+		campaignfeature.NewCampaignCache(h.cacheStore).SetCampaignParticipantsCache,
+	)
 	if err == nil {
 		t.Fatal("expected error for repeated page token")
 	}
@@ -1537,7 +1550,15 @@ func TestListAllCampaignParticipantsPaginatesAndCaches(t *testing.T) {
 		participantClient: participantClient,
 	}
 
-	first, err := h.listAllCampaignParticipants(context.Background(), "camp-1")
+	first, err := campaignfeature.ListAllCampaignParticipants(
+		context.Background(),
+		"camp-1",
+		campaignfeature.NewCampaignCache(h.cacheStore).CachedCampaignParticipants,
+		func(ctx context.Context, req *statev1.ListParticipantsRequest) (*statev1.ListParticipantsResponse, error) {
+			return h.participantClient.ListParticipants(ctx, req)
+		},
+		campaignfeature.NewCampaignCache(h.cacheStore).SetCampaignParticipantsCache,
+	)
 	if err != nil {
 		t.Fatalf("first list participants: %v", err)
 	}
@@ -1548,7 +1569,15 @@ func TestListAllCampaignParticipantsPaginatesAndCaches(t *testing.T) {
 		t.Fatalf("participant calls = %d, want 2", len(participantClient.calls))
 	}
 
-	second, err := h.listAllCampaignParticipants(context.Background(), "camp-1")
+	second, err := campaignfeature.ListAllCampaignParticipants(
+		context.Background(),
+		"camp-1",
+		campaignfeature.NewCampaignCache(h.cacheStore).CachedCampaignParticipants,
+		func(ctx context.Context, req *statev1.ListParticipantsRequest) (*statev1.ListParticipantsResponse, error) {
+			return h.participantClient.ListParticipants(ctx, req)
+		},
+		campaignfeature.NewCampaignCache(h.cacheStore).SetCampaignParticipantsCache,
+	)
 	if err != nil {
 		t.Fatalf("second list participants: %v", err)
 	}

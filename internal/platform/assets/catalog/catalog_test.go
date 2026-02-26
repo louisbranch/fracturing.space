@@ -31,6 +31,12 @@ func TestResolveSelection_DefaultsAssetDeterministically(t *testing.T) {
 	if setA == "" || assetA == "" {
 		t.Fatalf("expected set/asset defaults, got %q/%q", setA, assetA)
 	}
+	if setA != "avatar_set_blank_v1" {
+		t.Fatalf("default set = %q, want %q", setA, "avatar_set_blank_v1")
+	}
+	if assetA != "000" {
+		t.Fatalf("default asset = %q, want %q", assetA, "000")
+	}
 	if setA != setB || assetA != assetB {
 		t.Fatalf("expected deterministic result, got %q/%q and %q/%q", setA, assetA, setB, assetB)
 	}
@@ -77,5 +83,19 @@ func TestResolveSelection_AcceptsCanonicalCampaignCoverID(t *testing.T) {
 	}
 	if assetID != "mountain_pass" {
 		t.Fatalf("asset id = %q, want %q", assetID, "mountain_pass")
+	}
+}
+
+func TestAvatarManifest_ContainsBlankAvatarAssetInBlankSet(t *testing.T) {
+	manifest := AvatarManifest()
+	if !manifest.ValidateAssetInSet("avatar_set_blank_v1", "000") {
+		t.Fatalf("expected %q asset %q to be valid", "avatar_set_blank_v1", "000")
+	}
+}
+
+func TestAvatarManifest_PeopleSetExcludesBlankAsset(t *testing.T) {
+	manifest := AvatarManifest()
+	if manifest.ValidateAssetInSet(AvatarSetV1, "000") {
+		t.Fatalf("expected %q asset %q to be invalid", AvatarSetV1, "000")
 	}
 }

@@ -9,6 +9,8 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	webcache "github.com/louisbranch/fracturing.space/internal/services/web/infra/cache"
 )
 
 type countingPersistenceStore struct {
@@ -89,7 +91,7 @@ func TestSessionStoreDelete(t *testing.T) {
 
 func TestSessionStoreRestoreFromPersistentStore(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "web-cache.db")
-	persistentStore, err := openWebCacheStore(path)
+	persistentStore, err := webcache.OpenStore(path)
 	if err != nil {
 		t.Fatalf("open web cache store: %v", err)
 	}
@@ -100,7 +102,7 @@ func TestSessionStoreRestoreFromPersistentStore(t *testing.T) {
 		t.Fatalf("close web cache store: %v", err)
 	}
 
-	reopenedStore, err := openWebCacheStore(path)
+	reopenedStore, err := webcache.OpenStore(path)
 	if err != nil {
 		t.Fatalf("reopen web cache store: %v", err)
 	}
@@ -128,7 +130,7 @@ func TestSessionStoreRestoreFromPersistentStore(t *testing.T) {
 
 func TestSessionStoreRestoreFromPersistentStoreRejectsMismatchedToken(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "web-cache.db")
-	persistentStore, err := openWebCacheStore(path)
+	persistentStore, err := webcache.OpenStore(path)
 	if err != nil {
 		t.Fatalf("open web cache store: %v", err)
 	}
@@ -139,7 +141,7 @@ func TestSessionStoreRestoreFromPersistentStoreRejectsMismatchedToken(t *testing
 		t.Fatalf("close web cache store: %v", err)
 	}
 
-	reopenedStore, err := openWebCacheStore(path)
+	reopenedStore, err := webcache.OpenStore(path)
 	if err != nil {
 		t.Fatalf("reopen web cache store: %v", err)
 	}
@@ -169,7 +171,7 @@ func TestSessionStoreRestoreFromPersistentStoreRejectsMismatchedToken(t *testing
 
 func TestSessionStoreExpiredFromPersistentStore(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "web-cache.db")
-	persistentStore, err := openWebCacheStore(path)
+	persistentStore, err := webcache.OpenStore(path)
 	if err != nil {
 		t.Fatalf("open web cache store: %v", err)
 	}
@@ -180,7 +182,7 @@ func TestSessionStoreExpiredFromPersistentStore(t *testing.T) {
 		t.Fatalf("close web cache store: %v", err)
 	}
 
-	reopenedStore, err := openWebCacheStore(path)
+	reopenedStore, err := webcache.OpenStore(path)
 	if err != nil {
 		t.Fatalf("reopen web cache store: %v", err)
 	}
@@ -202,7 +204,7 @@ func TestSessionStoreExpiredFromPersistentStore(t *testing.T) {
 
 func TestSessionStoreDeleteRemovesPersistentSession(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "web-cache.db")
-	persistentStore, err := openWebCacheStore(path)
+	persistentStore, err := webcache.OpenStore(path)
 	if err != nil {
 		t.Fatalf("open web cache store: %v", err)
 	}
@@ -226,7 +228,7 @@ func TestSessionStoreDeleteRemovesPersistentSession(t *testing.T) {
 
 func TestSessionStoreConcurrentRestoreLoadsOnlyOnce(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "web-cache.db")
-	persistentStore, err := openWebCacheStore(path)
+	persistentStore, err := webcache.OpenStore(path)
 	if err != nil {
 		t.Fatalf("open web cache store: %v", err)
 	}

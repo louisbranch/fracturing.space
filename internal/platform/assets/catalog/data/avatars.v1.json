@@ -1,8 +1,14 @@
 {
   "manifest": {
     "id": "avatars-v1",
-    "default_set": "avatar_set_v1",
+    "default_set": "avatar_set_blank_v1",
     "sets": [
+      {
+        "id": "avatar_set_blank_v1",
+        "asset_ids": [
+          "000"
+        ]
+      },
       {
         "id": "avatar_set_v1",
         "asset_ids": [
@@ -19,7 +25,9 @@
         ]
       }
     ],
-    "set_aliases": {},
+    "set_aliases": {
+      "avatar_set_people_v1": "avatar_set_v1"
+    },
     "asset_aliases": {}
   },
   "sheets": [

@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	campaignfeature "github.com/louisbranch/fracturing.space/internal/services/web/feature/campaign"
 	webstorage "github.com/louisbranch/fracturing.space/internal/services/web/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -396,7 +397,7 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 					Id:               "camp-1",
 					Name:             "Campaign One",
 					CoverAssetId:     "abandoned_castle_courtyard",
-					ThemePrompt:      strings.Repeat("x", campaignThemePromptLimit+10),
+					ThemePrompt:      strings.Repeat("x", campaignfeature.CampaignThemePromptLimit+10),
 					ParticipantCount: 12,
 					CharacterCount:   7,
 				},
@@ -455,7 +456,7 @@ func TestAppCampaignsPageRendersUserScopedCampaigns(t *testing.T) {
 	if !strings.Contains(body, `<a href="/app/campaigns/camp-1">Campaign One</a>`) {
 		t.Fatalf("expected campaign name link for camp-1")
 	}
-	expectedTheme := strings.Repeat("x", campaignThemePromptLimit) + "..."
+	expectedTheme := strings.Repeat("x", campaignfeature.CampaignThemePromptLimit) + "..."
 	if !strings.Contains(body, `<p class="text-sm opacity-70">`+expectedTheme+`</p>`) {
 		t.Fatalf("expected truncated campaign theme in response")
 	}
@@ -544,54 +545,49 @@ func TestCampaignsListPageRendersCreateButtonInHeadingRow(t *testing.T) {
 }
 
 func TestTruncateCampaignTheme(t *testing.T) {
-	longTheme := strings.Repeat("x", campaignThemePromptLimit+1)
-	if got := truncateCampaignTheme(longTheme); got != strings.Repeat("x", campaignThemePromptLimit)+"..." {
-		t.Fatalf("truncateCampaignTheme(%q) = %q, want %q", longTheme, got, strings.Repeat("x", campaignThemePromptLimit)+"...")
+	longTheme := strings.Repeat("x", campaignfeature.CampaignThemePromptLimit+1)
+	if got := campaignfeature.TruncateCampaignTheme(longTheme); got != strings.Repeat("x", campaignfeature.CampaignThemePromptLimit)+"..." {
+		t.Fatalf("campaignfeature.TruncateCampaignTheme(%q) = %q, want %q", longTheme, got, strings.Repeat("x", campaignfeature.CampaignThemePromptLimit)+"...")
 	}
-	if got := truncateCampaignTheme("Quiet dawn"); got != "Quiet dawn" {
-		t.Fatalf("truncateCampaignTheme(%q) = %q, want %q", "Quiet dawn", got, "Quiet dawn")
+	if got := campaignfeature.TruncateCampaignTheme("Quiet dawn"); got != "Quiet dawn" {
+		t.Fatalf("campaignfeature.TruncateCampaignTheme(%q) = %q, want %q", "Quiet dawn", got, "Quiet dawn")
 	}
-	if got := truncateCampaignTheme("  trimmed  "); got != "trimmed" {
-		t.Fatalf("truncateCampaignTheme(%q) = %q, want %q", "  trimmed  ", got, "trimmed")
+	if got := campaignfeature.TruncateCampaignTheme("  trimmed  "); got != "trimmed" {
+		t.Fatalf("campaignfeature.TruncateCampaignTheme(%q) = %q, want %q", "  trimmed  ", got, "trimmed")
 	}
 }
 
 func TestCampaignCoverImageURL_DefaultsToFirstPNGAsset(t *testing.T) {
-	got := campaignCoverImageURL(Config{}, "", "", "")
+	got := campaignfeature.CampaignCoverImageURL("", "", "", "")
 	want := "/static/campaign-covers/abandoned_castle_courtyard.png"
 	if got != want {
-		t.Fatalf("campaignCoverImageURL(\"\") = %q, want %q", got, want)
+		t.Fatalf("campaignfeature.CampaignCoverImageURL(\"\") = %q, want %q", got, want)
 	}
 }
 
 func TestCampaignCoverImageURL_UsesExternalAssetBaseURLWhenConfigured(t *testing.T) {
-	got := campaignCoverImageURL(
-		Config{
-			AssetBaseURL:         "https://cdn.example.com/assets",
-			AssetManifestVersion: "v9",
-		},
+	got := campaignfeature.CampaignCoverImageURL(
+		"https://cdn.example.com/assets",
 		"camp-1",
 		catalog.CampaignCoverSetV1,
 		"abandoned_castle_courtyard",
 	)
 	want := "https://cdn.example.com/assets/abandoned_castle_courtyard.png"
 	if got != want {
-		t.Fatalf("campaignCoverImageURL(...) = %q, want %q", got, want)
+		t.Fatalf("campaignfeature.CampaignCoverImageURL(...) = %q, want %q", got, want)
 	}
 }
 
 func TestCampaignCoverImageURL_UsesCloudinaryBasePathWithoutResize(t *testing.T) {
-	got := campaignCoverImageURL(
-		Config{
-			AssetBaseURL: "https://res.cloudinary.com/fracturing-space/image/upload",
-		},
+	got := campaignfeature.CampaignCoverImageURL(
+		"https://res.cloudinary.com/fracturing-space/image/upload",
 		"camp-1",
 		catalog.CampaignCoverSetV1,
 		"abandoned_castle_courtyard",
 	)
 	want := "https://res.cloudinary.com/fracturing-space/image/upload/abandoned_castle_courtyard.png"
 	if got != want {
-		t.Fatalf("campaignCoverImageURL(...) = %q, want %q", got, want)
+		t.Fatalf("campaignfeature.CampaignCoverImageURL(...) = %q, want %q", got, want)
 	}
 }
 
@@ -831,7 +827,7 @@ func TestAppCampaignCreateExpiresUserCampaignListCache(t *testing.T) {
 	t.Cleanup(authServer.Close)
 
 	cacheStore := newFakeWebCacheStore()
-	cacheKey := campaignListCacheKey("user-123")
+	cacheKey := "campaign_list:user:" + strings.TrimSpace("user-123")
 	cacheStore.entries[cacheKey] = webstorage.CacheEntry{
 		CacheKey:     cacheKey,
 		Scope:        cacheScopeCampaignSummary,

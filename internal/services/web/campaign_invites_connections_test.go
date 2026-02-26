@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
+	campaignfeature "github.com/louisbranch/fracturing.space/internal/services/web/feature/campaign"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -21,7 +22,9 @@ func TestListAllContactsUsesConnectionsClient(t *testing.T) {
 	}
 	h := &handler{connectionsClient: client}
 
-	contacts, err := h.listAllContacts(context.Background(), "user-1")
+	contacts, err := campaignfeature.ListAllContacts(context.Background(), "user-1", func(ctx context.Context, req *connectionsv1.ListContactsRequest) (*connectionsv1.ListContactsResponse, error) {
+		return h.connectionsClient.ListContacts(ctx, req)
+	})
 	if err != nil {
 		t.Fatalf("list all contacts: %v", err)
 	}

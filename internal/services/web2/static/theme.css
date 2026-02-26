@@ -1,0 +1,57 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Space+Grotesk:wght@400;500;600&display=swap");
+
+body {
+  font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
+}
+
+/* Typography */
+
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1.8rem;
+}
+
+h3 {
+  font-size: 1.5rem;
+}
+
+h4 {
+  font-size: 1rem;
+}
+
+/* Campaign chat drawer */
+
+.campaign-chat-drawer .chat-drawer-shell {
+  width: 14rem;
+  overflow-x: hidden;
+  transition: width 0.2s ease;
+}
+
+.campaign-chat-drawer .chat-drawer-icon-open {
+  display: inline-block;
+}
+
+.campaign-chat-drawer .chat-drawer-icon-close {
+  display: none;
+}
+
+.campaign-chat-drawer > .drawer-toggle:checked ~ .drawer-content .chat-drawer-icon-open {
+  display: none;
+}
+
+.campaign-chat-drawer > .drawer-toggle:checked ~ .drawer-content .chat-drawer-icon-close {
+  display: inline-block;
+}
+
+@media (min-width: 1024px) {
+  .campaign-chat-drawer > .drawer-toggle:not(:checked) ~ .drawer-side .chat-drawer-shell {
+    width: 3.5rem;
+  }
+
+  .campaign-chat-drawer > .drawer-toggle:not(:checked) ~ .drawer-side .chat-drawer-link-label {
+    display: none;
+  }
+}

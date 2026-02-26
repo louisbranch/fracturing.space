@@ -11,15 +11,18 @@ import (
 var participantAvatarManifest = assetcatalog.AvatarManifest()
 
 func resolveParticipantAvatarSelection(participantID, userID, setID, assetID string) (string, string, error) {
-	entityType := "participant"
-	entityID := participantID
-	if trimmedUserID := strings.TrimSpace(userID); trimmedUserID != "" {
-		entityType = "user"
-		entityID = trimmedUserID
+	trimmedUserID := strings.TrimSpace(userID)
+	if trimmedUserID == "" {
+		return participantAvatarManifest.ResolveSelection(assetcatalog.SelectionInput{
+			EntityType: assetcatalog.AvatarRoleParticipant,
+			EntityID:   strings.TrimSpace(participantID),
+			SetID:      assetcatalog.AvatarSetBlankV1,
+			AssetID:    "",
+		})
 	}
 	return participantAvatarManifest.ResolveSelection(assetcatalog.SelectionInput{
-		EntityType: entityType,
-		EntityID:   entityID,
+		EntityType: assetcatalog.AvatarRoleUser,
+		EntityID:   trimmedUserID,
 		SetID:      setID,
 		AssetID:    assetID,
 	})

@@ -1082,6 +1082,18 @@ func (c *testAuthClient) FinishPasskeyLogin(ctx context.Context, in *authv1.Fini
 	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
 }
 
+func (c *testAuthClient) CreateWebSession(ctx context.Context, in *authv1.CreateWebSessionRequest, opts ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
+func (c *testAuthClient) GetWebSession(ctx context.Context, in *authv1.GetWebSessionRequest, opts ...grpc.CallOption) (*authv1.GetWebSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
+func (c *testAuthClient) RevokeWebSession(ctx context.Context, in *authv1.RevokeWebSessionRequest, opts ...grpc.CallOption) (*authv1.RevokeWebSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in test auth client")
+}
+
 type testCampaignClient struct {
 	lastMetadata    metadata.MD
 	lastRequest     *statev1.CreateCampaignRequest

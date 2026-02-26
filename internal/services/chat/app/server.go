@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -19,7 +20,10 @@ import (
 )
 
 const (
-	tokenCookieName = "fs_token"
+	tokenCookieName       = "fs_token"
+	web2SessionCookieName = "web2_session"
+
+	web2SessionTokenPrefix = "web2_session:"
 
 	defaultSessionID = "active"
 
@@ -43,6 +47,7 @@ var errCampaignParticipantRequired = errors.New("campaign participant access req
 // auth token introspection without owning gameplay state.
 type Config struct {
 	HTTPAddr            string
+	AuthAddr            string
 	GameAddr            string
 	AuthBaseURL         string
 	OAuthResourceSecret string
@@ -60,6 +65,7 @@ type Server struct {
 	shutdownTimeout                time.Duration
 	httpServer                     *http.Server
 	gameConn                       *gogrpc.ClientConn
+	authConn                       *gogrpc.ClientConn
 	campaignUpdateSubscriptionDone chan struct{}
 	campaignUpdateSubscriptionStop context.CancelFunc
 }
@@ -85,6 +91,10 @@ type gameGRPCClients struct {
 	conn              *gogrpc.ClientConn
 	participantClient statev1.ParticipantServiceClient
 	eventClient       statev1.EventServiceClient
+}
+
+type webSessionAuthClient interface {
+	GetWebSession(context.Context, *authv1.GetWebSessionRequest, ...gogrpc.CallOption) (*authv1.GetWebSessionResponse, error)
 }
 
 type joinPayload struct {
@@ -169,6 +179,7 @@ type campaignAuthorizer struct {
 	authBaseURL         string
 	oauthResourceSecret string
 	httpClient          *http.Client
+	authSessionClient   webSessionAuthClient
 	participantClient   statev1.ParticipantServiceClient
 	sessionClient       statev1.SessionServiceClient
 	campaignClient      statev1.CampaignServiceClient
@@ -210,6 +221,8 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	var sessionClient statev1.SessionServiceClient
 	var campaignClient statev1.CampaignServiceClient
 	var eventClient statev1.EventServiceClient
+	var authConn *gogrpc.ClientConn
+	var authSessionClient webSessionAuthClient
 	if strings.TrimSpace(config.GameAddr) != "" {
 		clients, err := dialGameGRPC(ctx, config)
 		if err != nil {
@@ -222,8 +235,27 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 			eventClient = clients.eventClient
 		}
 	}
+	if authAddr := strings.TrimSpace(config.AuthAddr); authAddr != "" {
+		logf := func(format string, args ...any) {
+			log.Printf("auth %s", fmt.Sprintf(format, args...))
+		}
+		conn, err := platformgrpc.DialWithHealth(
+			ctx,
+			nil,
+			authAddr,
+			config.GRPCDialTimeout,
+			logf,
+			platformgrpc.DefaultClientDialOptions()...,
+		)
+		if err != nil {
+			log.Printf("auth gRPC dial failed, web2 session chat auth unavailable: %v", err)
+		} else {
+			authConn = conn
+			authSessionClient = authv1.NewAuthServiceClient(conn)
+		}
+	}
 
-	authorizer := newCampaignAuthorizer(config, participantClient, sessionClient, campaignClient)
+	authorizer := newCampaignAuthorizer(config, participantClient, sessionClient, campaignClient, authSessionClient)
 	ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription, campaignUpdateStop, campaignUpdateDone := startCampaignEventCommittedSubscriptionWorker(eventClient)
 	httpServer := &http.Server{
 		Addr:              httpAddr,
@@ -236,6 +268,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		shutdownTimeout:                config.ShutdownTimeout,
 		httpServer:                     httpServer,
 		gameConn:                       gameConn,
+		authConn:                       authConn,
 		campaignUpdateSubscriptionDone: campaignUpdateDone,
 		campaignUpdateSubscriptionStop: campaignUpdateStop,
 	}, nil
@@ -303,6 +336,11 @@ func (s *Server) Close() {
 	if s.gameConn != nil {
 		if err := s.gameConn.Close(); err != nil {
 			log.Printf("close game gRPC connection: %v", err)
+		}
+	}
+	if s.authConn != nil {
+		if err := s.authConn.Close(); err != nil {
+			log.Printf("close auth gRPC connection: %v", err)
 		}
 	}
 }

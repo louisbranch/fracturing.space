@@ -4,10 +4,12 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"testing"
+
+	authfeature "github.com/louisbranch/fracturing.space/internal/services/web/feature/auth"
 )
 
 func TestGenerateCodeVerifier(t *testing.T) {
-	v1, err := generateCodeVerifier()
+	v1, err := authfeature.GenerateCodeVerifier()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -17,7 +19,7 @@ func TestGenerateCodeVerifier(t *testing.T) {
 	}
 
 	// Should be unique across calls.
-	v2, err := generateCodeVerifier()
+	v2, err := authfeature.GenerateCodeVerifier()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -28,7 +30,7 @@ func TestGenerateCodeVerifier(t *testing.T) {
 
 func TestComputeS256Challenge(t *testing.T) {
 	verifier := "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk"
-	got := computeS256Challenge(verifier)
+	got := authfeature.ComputeS256Challenge(verifier)
 
 	// Independently compute the expected value.
 	hash := sha256.Sum256([]byte(verifier))

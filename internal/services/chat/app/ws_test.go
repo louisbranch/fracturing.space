@@ -422,6 +422,23 @@ func TestWebSocketEndpointRequiresTokenWhenAuthorizerConfigured(t *testing.T) {
 	}
 }
 
+func TestWebSocketEndpointAcceptsWeb2SessionCookieWhenAuthorizerConfigured(t *testing.T) {
+	conn := dialWSWithHandler(t, NewHandlerWithAuthorizer(fakeWSAuthorizer{userID: "user-1", participantAllowed: true}), "/ws", "web2_session=session-1")
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.join",
+		"request_id": "req-join-1",
+		"payload": map[string]any{
+			"campaign_id": "camp-1",
+		},
+	})
+
+	got := readFrame(t, conn)
+	if got.Type != "chat.joined" {
+		t.Fatalf("frame type = %q, want %q", got.Type, "chat.joined")
+	}
+}
+
 func TestWebSocketJoinRequiresParticipantMembership(t *testing.T) {
 	authorizer := fakeWSAuthorizer{
 		userID:             "user-1",

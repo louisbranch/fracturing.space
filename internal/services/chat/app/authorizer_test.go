@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -87,6 +88,12 @@ type fakeCampaignClient struct {
 	calls    []*statev1.GetCampaignRequest
 }
 
+type fakeWebSessionAuthClient struct {
+	response *authv1.GetWebSessionResponse
+	err      error
+	calls    []*authv1.GetWebSessionRequest
+}
+
 func (f *fakeCampaignClient) GetCampaign(_ context.Context, req *statev1.GetCampaignRequest, _ ...grpc.CallOption) (*statev1.GetCampaignResponse, error) {
 	if f.err != nil {
 		return nil, f.err
@@ -121,6 +128,18 @@ func (*fakeCampaignClient) RestoreCampaign(context.Context, *statev1.RestoreCamp
 
 func (*fakeCampaignClient) SetCampaignCover(context.Context, *statev1.SetCampaignCoverRequest, ...grpc.CallOption) (*statev1.SetCampaignCoverResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (f *fakeWebSessionAuthClient) GetWebSession(_ context.Context, req *authv1.GetWebSessionRequest, _ ...grpc.CallOption) (*authv1.GetWebSessionResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	clone := *req
+	f.calls = append(f.calls, &clone)
+	if f.response != nil {
+		return f.response, nil
+	}
+	return &authv1.GetWebSessionResponse{Session: &authv1.WebSession{Id: req.GetSessionId(), UserId: "user-1"}}, nil
 }
 
 func (f *fakeParticipantClient) ListParticipants(ctx context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
@@ -211,6 +230,22 @@ func TestCampaignAuthorizerAuthenticateInactiveToken(t *testing.T) {
 	_, err := a.Authenticate(context.Background(), "token-1")
 	if err == nil {
 		t.Fatal("expected error for inactive token")
+	}
+}
+
+func TestCampaignAuthorizerAuthenticateWeb2SessionSuccess(t *testing.T) {
+	client := &fakeWebSessionAuthClient{response: &authv1.GetWebSessionResponse{Session: &authv1.WebSession{Id: "ws-1", UserId: "user-1"}}}
+	a := &campaignAuthorizer{authSessionClient: client}
+
+	userID, err := a.Authenticate(context.Background(), "web2_session:ws-1")
+	if err != nil {
+		t.Fatalf("authenticate web2 session: %v", err)
+	}
+	if userID != "user-1" {
+		t.Fatalf("userID = %q, want %q", userID, "user-1")
+	}
+	if len(client.calls) != 1 || client.calls[0].GetSessionId() != "ws-1" {
+		t.Fatalf("web session lookup calls = %d, want one lookup for ws-1", len(client.calls))
 	}
 }
 

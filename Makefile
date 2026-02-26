@@ -63,10 +63,25 @@ down: ## Stop watcher-based local services and devcontainer
 	@bash .devcontainer/scripts/stop-devcontainer.sh
 
 cover:
-	rm -f coverage.raw coverage.out coverage.html coverage-treemap.svg
-	@bash -euo pipefail -c 'go test -tags=integration -v -coverpkg=./... -coverprofile=coverage.raw ./... | tee coverage.log'
+	rm -f coverage.raw coverage.out coverage.html coverage-treemap.svg coverage.log
+	@bash -euo pipefail -c '\
+	  mkdir -p .tmp/coverage; \
+	  rm -f .tmp/coverage/*.out; \
+	  : > coverage.log; \
+	  printf "mode: set\n" > coverage.raw; \
+	  i=0; total=$$(go list ./... | wc -l); \
+	  for pkg in $$(go list ./...); do \
+	    i=$$((i + 1)); \
+	    if [ $$((i % 25)) -eq 0 ]; then \
+	      printf "[cover %d/%d] %s\n" "$$i" "$$total" "$$pkg"; \
+	    fi; \
+	    profile=$$(printf "%s" "$$pkg" | tr "/" "_" | tr "." "_").out; \
+	    go test -tags=integration -covermode=set -coverprofile=.tmp/coverage/"$$profile" "$$pkg" >> coverage.log 2>&1; \
+	    awk "FNR > 1 { print }" .tmp/coverage/"$$profile" >> coverage.raw; \
+	  done'
 	awk -v exclude='$(COVER_EXCLUDE_REGEX)' 'NR==1 || $$1 !~ exclude' coverage.raw > coverage.out
-	go tool cover -func coverage.out
+	go tool cover -func coverage.out > coverage.func
+	@awk '/^total:/{print}' coverage.func
 	go tool cover -html=coverage.out -o coverage.html
 
 cover-treemap: cover

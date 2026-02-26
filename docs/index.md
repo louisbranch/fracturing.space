@@ -28,7 +28,6 @@ Choose the path that matches your immediate goal:
 
 - Canonical: required for current contributor workflows and runtime behavior.
 - Roadmap: active future-facing design/specification work.
-- Historical: completed implementation notes kept only when they still add decision value.
 
 Gateway pages prioritize Canonical docs. For Roadmap pages, start from the subsystem entrypoint in [project index](project/index.md).
 

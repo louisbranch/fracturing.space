@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
@@ -674,11 +675,49 @@ func TestDecideParticipantJoin_DefaultsAvatarSelection(t *testing.T) {
 	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
-	if payload.AvatarSetID == "" {
-		t.Fatal("expected avatar set to be defaulted")
+	if payload.AvatarSetID != assetcatalog.AvatarSetBlankV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, assetcatalog.AvatarSetBlankV1)
 	}
-	if payload.AvatarAssetID == "" {
-		t.Fatal("expected avatar asset to be defaulted")
+	if payload.AvatarAssetID != "000" {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.AvatarAssetID, "000")
+	}
+}
+
+func TestDecideParticipantUpdate_UserIDClearedSetsBlankAvatar(t *testing.T) {
+	cmd := command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("participant.update"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(
+			`{"participant_id":"p-1","fields":{"user_id":""}}`,
+		),
+	}
+
+	decision := Decide(State{
+		Joined:        true,
+		UserID:        "user-1",
+		AvatarSetID:   "avatar_set_v1",
+		AvatarAssetID: "007",
+	}, cmd, nil)
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload UpdatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.Fields["user_id"] != "" {
+		t.Fatalf("user_id = %q, want empty", payload.Fields["user_id"])
+	}
+	if payload.Fields["avatar_set_id"] != assetcatalog.AvatarSetBlankV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.Fields["avatar_set_id"], assetcatalog.AvatarSetBlankV1)
+	}
+	if payload.Fields["avatar_asset_id"] != "000" {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.Fields["avatar_asset_id"], "000")
 	}
 }
 
@@ -687,7 +726,7 @@ func TestDecideParticipantJoin_InvalidAvatarSetRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER","avatar_set_id":"missing"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-1","name":"Alice","role":"PLAYER","avatar_set_id":"missing"}`),
 	}
 
 	decision := Decide(State{}, cmd, nil)
@@ -748,6 +787,7 @@ func TestDecideParticipantUpdate_InvalidAvatarAssetRejected(t *testing.T) {
 
 	decision := Decide(State{
 		Joined:        true,
+		UserID:        "user-1",
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "001",
 	}, cmd, nil)

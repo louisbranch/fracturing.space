@@ -19,6 +19,9 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+	authfeature "github.com/louisbranch/fracturing.space/internal/services/web/feature/auth"
+	webcache "github.com/louisbranch/fracturing.space/internal/services/web/infra/cache"
+	webgrpcdial "github.com/louisbranch/fracturing.space/internal/services/web/infra/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
@@ -697,7 +700,7 @@ func TestAuthCallbackPersistsSessionForRestart(t *testing.T) {
 	defer tokenServer.Close()
 
 	cachePath := filepath.Join(t.TempDir(), "web-cache.db")
-	cacheStore, err := openWebCacheStore(cachePath)
+	cacheStore, err := webcache.OpenStore(cachePath)
 	if err != nil {
 		t.Fatalf("open cache store: %v", err)
 	}
@@ -746,7 +749,7 @@ func TestAuthCallbackPersistsSessionForRestart(t *testing.T) {
 		t.Fatalf("close cache store: %v", err)
 	}
 
-	reopenedStore, err := openWebCacheStore(cachePath)
+	reopenedStore, err := webcache.OpenStore(cachePath)
 	if err != nil {
 		t.Fatalf("reopen cache store: %v", err)
 	}
@@ -1084,19 +1087,17 @@ func TestNewServerWithContextRequiresContext(t *testing.T) {
 }
 
 func TestDialAuthGRPCNilAddr(t *testing.T) {
-	clients, err := dialAuthGRPC(context.Background(), Config{})
+	clients, err := webgrpcdial.DialAuth(context.Background(), "", 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if clients.conn != nil || clients.authClient != nil {
+	if clients.Conn != nil || clients.AuthClient != nil {
 		t.Fatalf("expected nil conn and client")
 	}
 }
 
 func TestDialAuthGRPCNilContextReturnsError(t *testing.T) {
-	_, err := dialAuthGRPC(nil, Config{
-		AuthAddr: "127.0.0.1:1",
-	})
+	_, err := webgrpcdial.DialAuth(nil, "127.0.0.1:1", 0)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -1109,27 +1110,21 @@ func TestDialAuthGRPCSuccess(t *testing.T) {
 	listener, server := startGRPCServer(t)
 	defer server.Stop()
 
-	clients, err := dialAuthGRPC(context.Background(), Config{
-		AuthAddr:        listener.Addr().String(),
-		GRPCDialTimeout: 2 * time.Second,
-	})
+	clients, err := webgrpcdial.DialAuth(context.Background(), listener.Addr().String(), 2*time.Second)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	if clients.conn == nil || clients.authClient == nil {
+	if clients.Conn == nil || clients.AuthClient == nil {
 		t.Fatalf("expected conn and client")
 	}
-	_ = clients.conn.Close()
+	_ = clients.Conn.Close()
 }
 
 func TestDialAuthGRPCDialError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	_, err := dialAuthGRPC(ctx, Config{
-		AuthAddr:        "127.0.0.1:1",
-		GRPCDialTimeout: 50 * time.Millisecond,
-	})
+	_, err := webgrpcdial.DialAuth(ctx, "127.0.0.1:1", 50*time.Millisecond)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1145,10 +1140,7 @@ func TestDialAuthGRPCHealthError(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	_, err := dialAuthGRPC(ctx, Config{
-		AuthAddr:        listener.Addr().String(),
-		GRPCDialTimeout: 100 * time.Millisecond,
-	})
+	_, err := webgrpcdial.DialAuth(ctx, listener.Addr().String(), 100*time.Millisecond)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1158,19 +1150,17 @@ func TestDialAuthGRPCHealthError(t *testing.T) {
 }
 
 func TestDialGameGRPCNilAddr(t *testing.T) {
-	clients, err := dialGameGRPC(context.Background(), Config{})
+	clients, err := webgrpcdial.DialGame(context.Background(), "", 0)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if clients.conn != nil || clients.participantClient != nil || clients.campaignClient != nil || clients.eventClient != nil || clients.sessionClient != nil || clients.characterClient != nil || clients.inviteClient != nil {
+	if clients.Conn != nil || clients.ParticipantClient != nil || clients.CampaignClient != nil || clients.EventClient != nil || clients.SessionClient != nil || clients.CharacterClient != nil || clients.InviteClient != nil {
 		t.Fatalf("expected nil connection and clients")
 	}
 }
 
 func TestDialGameGRPCNilContextReturnsError(t *testing.T) {
-	_, err := dialGameGRPC(nil, Config{
-		GameAddr: "127.0.0.1:1",
-	})
+	_, err := webgrpcdial.DialGame(nil, "127.0.0.1:1", 0)
 	if err == nil {
 		t.Fatalf("expected error")
 	}
@@ -1183,17 +1173,14 @@ func TestDialGameGRPCSuccessIncludesEventClient(t *testing.T) {
 	listener, server := startGRPCServer(t)
 	defer server.Stop()
 
-	clients, err := dialGameGRPC(context.Background(), Config{
-		GameAddr:        listener.Addr().String(),
-		GRPCDialTimeout: 2 * time.Second,
-	})
+	clients, err := webgrpcdial.DialGame(context.Background(), listener.Addr().String(), 2*time.Second)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
 	}
-	if clients.conn == nil || clients.participantClient == nil || clients.campaignClient == nil || clients.eventClient == nil || clients.sessionClient == nil || clients.characterClient == nil || clients.inviteClient == nil {
+	if clients.Conn == nil || clients.ParticipantClient == nil || clients.CampaignClient == nil || clients.EventClient == nil || clients.SessionClient == nil || clients.CharacterClient == nil || clients.InviteClient == nil {
 		t.Fatalf("expected all game service clients")
 	}
-	_ = clients.conn.Close()
+	_ = clients.Conn.Close()
 }
 
 func TestBuildAuthConsentURL(t *testing.T) {
@@ -1219,8 +1206,8 @@ func TestBuildAuthConsentURL(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := buildAuthConsentURL(tc.base, tc.pendingID); got != tc.want {
-				t.Fatalf("buildAuthConsentURL(%q, %q) = %q, want %q", tc.base, tc.pendingID, got, tc.want)
+			if got := webcache.BuildAuthConsentURL(tc.base, tc.pendingID); got != tc.want {
+				t.Fatalf("BuildAuthConsentURL(%q, %q) = %q, want %q", tc.base, tc.pendingID, got, tc.want)
 			}
 		})
 	}
@@ -1228,7 +1215,7 @@ func TestBuildAuthConsentURL(t *testing.T) {
 
 func TestWriteJSON(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeJSON(w, http.StatusAccepted, map[string]any{"ok": true})
+	authfeature.WriteJSON(w, http.StatusAccepted, map[string]any{"ok": true})
 
 	if w.Code != http.StatusAccepted {
 		t.Fatalf("status = %d, want %d", w.Code, http.StatusAccepted)
@@ -1423,6 +1410,18 @@ func (f *fakeAuthClient) FinishPasskeyLogin(ctx context.Context, req *authv1.Fin
 	if f.finishLoginResp != nil {
 		return f.finishLoginResp, nil
 	}
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (f *fakeAuthClient) CreateWebSession(ctx context.Context, req *authv1.CreateWebSessionRequest, opts ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (f *fakeAuthClient) GetWebSession(ctx context.Context, req *authv1.GetWebSessionRequest, opts ...grpc.CallOption) (*authv1.GetWebSessionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (f *fakeAuthClient) RevokeWebSession(ctx context.Context, req *authv1.RevokeWebSessionRequest, opts ...grpc.CallOption) (*authv1.RevokeWebSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 

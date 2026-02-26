@@ -33,6 +33,15 @@ service AuthService {
   // Finish a passkey login ceremony.
   rpc FinishPasskeyLogin(FinishPasskeyLoginRequest) returns (FinishPasskeyLoginResponse);
 
+  // Create a durable web session for an authenticated user.
+  rpc CreateWebSession(CreateWebSessionRequest) returns (CreateWebSessionResponse);
+
+  // Resolve a durable web session by ID.
+  rpc GetWebSession(GetWebSessionRequest) returns (GetWebSessionResponse);
+
+  // Revoke a durable web session by ID.
+  rpc RevokeWebSession(RevokeWebSessionRequest) returns (RevokeWebSessionResponse);
+
   // Generate a magic link token for email recovery.
   rpc GenerateMagicLink(GenerateMagicLinkRequest) returns (GenerateMagicLinkResponse);
 
@@ -105,6 +114,39 @@ message FinishPasskeyLoginResponse {
   User user = 1;
   string credential_id = 2;
 }
+
+message WebSession {
+  string id = 1;
+  string user_id = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  google.protobuf.Timestamp revoked_at = 5;
+}
+
+message CreateWebSessionRequest {
+  string user_id = 1;
+  int64 ttl_seconds = 2;
+}
+
+message CreateWebSessionResponse {
+  WebSession session = 1;
+  User user = 2;
+}
+
+message GetWebSessionRequest {
+  string session_id = 1;
+}
+
+message GetWebSessionResponse {
+  WebSession session = 1;
+  User user = 2;
+}
+
+message RevokeWebSessionRequest {
+  string session_id = 1;
+}
+
+message RevokeWebSessionResponse {}
 
 message GenerateMagicLinkRequest {
   string user_id = 1;

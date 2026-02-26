@@ -427,6 +427,50 @@ func TestDeleteExpiredPasskeySessions(t *testing.T) {
 	}
 }
 
+func TestWebSessionRoundTrip(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
+
+	if err := store.PutUser(context.Background(), user.User{
+		ID:        "user-1",
+		Email:     "primary@example.com",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+
+	if err := store.PutWebSession(context.Background(), storage.WebSession{ID: "ws-1", UserID: "user-1", CreatedAt: now, ExpiresAt: now.Add(30 * time.Minute)}); err != nil {
+		t.Fatalf("put web session: %v", err)
+	}
+
+	got, err := store.GetWebSession(context.Background(), "ws-1")
+	if err != nil {
+		t.Fatalf("get web session: %v", err)
+	}
+	if got.ID != "ws-1" || got.UserID != "user-1" {
+		t.Fatalf("unexpected web session: %+v", got)
+	}
+
+	if err := store.RevokeWebSession(context.Background(), "ws-1", now.Add(time.Minute)); err != nil {
+		t.Fatalf("revoke web session: %v", err)
+	}
+	revoked, err := store.GetWebSession(context.Background(), "ws-1")
+	if err != nil {
+		t.Fatalf("get revoked web session: %v", err)
+	}
+	if revoked.RevokedAt == nil {
+		t.Fatalf("expected revoked_at")
+	}
+
+	if err := store.DeleteExpiredWebSessions(context.Background(), now.Add(time.Hour)); err != nil {
+		t.Fatalf("delete expired web sessions: %v", err)
+	}
+	if _, err := store.GetWebSession(context.Background(), "ws-1"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found after expiry deletion, got %v", err)
+	}
+}
+
 func TestUserEmailRoundTrip(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)

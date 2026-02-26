@@ -7,6 +7,7 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -67,12 +68,9 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 	avatarSetID := strings.TrimSpace(in.GetAvatarSetId())
 	avatarAssetID := strings.TrimSpace(in.GetAvatarAssetId())
-	if actorID != "" && avatarSetID == "" && avatarAssetID == "" && c.stores.Participant != nil {
-		participantRecord, err := c.stores.Participant.GetParticipant(ctx, campaignID, actorID)
-		if err == nil {
-			avatarSetID = strings.TrimSpace(participantRecord.AvatarSetID)
-			avatarAssetID = strings.TrimSpace(participantRecord.AvatarAssetID)
-		}
+	if avatarSetID == "" && avatarAssetID == "" {
+		avatarSetID = assetcatalog.AvatarSetBlankV1
+		avatarAssetID = ""
 	}
 
 	applier := c.stores.Applier()
@@ -487,12 +485,21 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		return "", "", status.Error(codes.InvalidArgument, "participant id is required")
 	}
 	participantID := strings.TrimSpace(in.GetParticipantId().GetValue())
+	avatarSetID := assetcatalog.AvatarSetBlankV1
+	avatarAssetID := ""
 	if participantID != "" {
 		if c.stores.Participant == nil {
 			return "", "", status.Error(codes.Internal, "participant store is not configured")
 		}
-		if _, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID); err != nil {
+		participantRecord, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
+		if err != nil {
 			return "", "", err
+		}
+		resolvedSetID := strings.TrimSpace(participantRecord.AvatarSetID)
+		resolvedAssetID := strings.TrimSpace(participantRecord.AvatarAssetID)
+		if resolvedSetID != "" && resolvedAssetID != "" {
+			avatarSetID = resolvedSetID
+			avatarAssetID = resolvedAssetID
 		}
 	}
 	if err := requirePolicy(ctx, c.stores, policyActionManageParticipants, campaignRecord); err != nil {
@@ -506,7 +513,9 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 	payload := character.UpdatePayload{
 		CharacterID: characterID,
 		Fields: map[string]string{
-			"participant_id": participantID,
+			"participant_id":  participantID,
+			"avatar_set_id":   avatarSetID,
+			"avatar_asset_id": avatarAssetID,
 		},
 	}
 	payloadJSON, err := json.Marshal(payload)

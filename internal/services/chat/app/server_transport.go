@@ -54,7 +54,7 @@ func newHandler(authorizer wsAuthorizer, requireAuth bool, ensureCampaignUpdateS
 
 			accessToken := accessTokenFromRequest(r)
 			if accessToken == "" {
-				log.Printf("chat: websocket unauthorized: missing fs_token for host=%q remote=%s path=%q", r.Host, r.RemoteAddr, r.URL.Path)
+				log.Printf("chat: websocket unauthorized: missing auth cookie (fs_token/web2_session) for host=%q remote=%s path=%q", r.Host, r.RemoteAddr, r.URL.Path)
 				http.Error(w, "authentication required", http.StatusUnauthorized)
 				return
 			}
@@ -85,10 +85,19 @@ func accessTokenFromRequest(r *http.Request) string {
 		return ""
 	}
 	cookie, err := r.Cookie(tokenCookieName)
+	if err == nil {
+		if token := strings.TrimSpace(cookie.Value); token != "" {
+			return token
+		}
+	}
+	web2SessionCookie, err := r.Cookie(web2SessionCookieName)
 	if err != nil {
 		return ""
 	}
-	return strings.TrimSpace(cookie.Value)
+	if sessionID := strings.TrimSpace(web2SessionCookie.Value); sessionID != "" {
+		return web2SessionTokenPrefix + sessionID
+	}
+	return ""
 }
 
 func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer, ensureCampaignUpdateSubscription func(string), releaseCampaignUpdateSubscription func(string)) {

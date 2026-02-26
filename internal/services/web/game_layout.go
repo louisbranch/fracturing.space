@@ -2,10 +2,7 @@ package web
 
 import (
 	"context"
-	"errors"
-	"net"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -16,17 +13,15 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
-	sharedhtmx "github.com/louisbranch/fracturing.space/internal/services/shared/htmx"
-	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
+	websupport "github.com/louisbranch/fracturing.space/internal/services/web/support"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-const gamePageContentType = "text/html; charset=utf-8"
 const unreadNotificationProbeTTL = 20 * time.Second
 const unreadNotificationProbeTimeout = 350 * time.Millisecond
 
-var errNoWebPageComponent = errors.New("web: no page component provided")
+var errNoWebPageComponent = websupport.ErrNoWebPageComponent
 
 func (h *handler) resolvedAppName() string {
 	if h == nil {
@@ -110,52 +105,15 @@ func (h *handler) pageContextLanguage(ctx context.Context, sess *session, fallba
 }
 
 func shouldSetLanguageCookie(r *http.Request, expected string) bool {
-	expected = strings.TrimSpace(expected)
-	if expected == "" {
-		return false
-	}
-	if r == nil {
-		return true
-	}
-	cookie, err := r.Cookie(webi18n.LangCookieName)
-	if err != nil {
-		return true
-	}
-	return strings.TrimSpace(cookie.Value) != expected
+	return websupport.ShouldSetLanguageCookie(r, expected)
 }
 
 func chatFallbackPort(rawAddr string) string {
-	trimmed := strings.TrimSpace(rawAddr)
-	if trimmed == "" {
-		return ""
-	}
-	_, port, err := net.SplitHostPort(trimmed)
-	if err == nil {
-		return sanitizePort(port)
-	}
-
-	if strings.Count(trimmed, ":") <= 1 {
-		if idx := strings.LastIndex(trimmed, ":"); idx >= 0 {
-			return sanitizePort(trimmed[idx+1:])
-		}
-	}
-
-	return sanitizePort(trimmed)
+	return websupport.ResolveChatFallbackPort(rawAddr)
 }
 
 func sanitizePort(raw string) string {
-	port := strings.TrimSpace(raw)
-	if port == "" {
-		return ""
-	}
-	n, err := strconv.Atoi(port)
-	if err != nil {
-		return ""
-	}
-	if n < 1 || n > 65535 {
-		return ""
-	}
-	return port
+	return websupport.SanitizePort(raw)
 }
 
 func (h *handler) pageContextUserAvatar(ctx context.Context, sess *session) string {
@@ -179,7 +137,7 @@ func (h *handler) pageContextUserAvatar(ctx context.Context, sess *session) stri
 		return ""
 	}
 
-	avatarURL := avatarImageURL(h.config, catalog.AvatarRoleUser, userID, "", "")
+	avatarURL := websupport.AvatarImageURL(h.config.AssetBaseURL, catalog.AvatarRoleUser, userID, "", "")
 	sess.setCachedUserAvatar(avatarURL)
 	return avatarURL
 }
@@ -250,22 +208,11 @@ func (h *handler) writePage(w http.ResponseWriter, r *http.Request, page templ.C
 }
 
 func writePage(w http.ResponseWriter, r *http.Request, page templ.Component, htmxTitle string) error {
-	writeGameContentType(w)
-	if page == nil {
-		return errNoWebPageComponent
-	}
-	if sharedhtmx.IsHTMXRequest(r) {
-		sharedhtmx.RenderPage(w, r, page, page, htmxTitle)
-		return nil
-	}
-	return page.Render(r.Context(), w)
+	return websupport.WritePage(w, r, page, htmxTitle)
 }
 
 func composeHTMXTitle(loc webtemplates.Localizer, title string, args ...any) string {
-	if loc == nil {
-		return sharedhtmx.TitleTag(sharedtemplates.ComposePageTitle(title))
-	}
-	return sharedhtmx.TitleTag(sharedtemplates.ComposePageTitle(webtemplates.T(loc, title, args...)))
+	return websupport.ComposeHTMXTitle(loc, title, args...)
 }
 
 func composeHTMXTitleForPage(page webtemplates.PageContext, title string, args ...any) string {
@@ -273,5 +220,5 @@ func composeHTMXTitleForPage(page webtemplates.PageContext, title string, args .
 }
 
 func writeGameContentType(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", gamePageContentType)
+	websupport.WriteGameContentType(w)
 }

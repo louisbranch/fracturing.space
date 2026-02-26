@@ -3,13 +3,14 @@ package web
 import (
 	"strings"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	websupport "github.com/louisbranch/fracturing.space/internal/services/web/support"
 )
 
 func TestAvatarImageURL_CloudinaryParticipantUsesFirstPortraitCrop(t *testing.T) {
-	got := avatarImageURL(
-		Config{
-			AssetBaseURL: "https://res.cloudinary.com/fracturing-space/image/upload",
-		},
+	got := websupport.AvatarImageURL(
+		"https://res.cloudinary.com/fracturing-space/image/upload",
 		"participant",
 		"part-1",
 		"avatar_set_v1",
@@ -22,19 +23,15 @@ func TestAvatarImageURL_CloudinaryParticipantUsesFirstPortraitCrop(t *testing.T)
 }
 
 func TestAvatarImageURL_CloudinaryCharacterUsesDeterministicVariantPortrait(t *testing.T) {
-	gotA := avatarImageURL(
-		Config{
-			AssetBaseURL: "https://res.cloudinary.com/fracturing-space/image/upload",
-		},
+	gotA := websupport.AvatarImageURL(
+		"https://res.cloudinary.com/fracturing-space/image/upload",
 		"character",
 		"char-1",
 		"avatar_set_v1",
 		"007",
 	)
-	gotB := avatarImageURL(
-		Config{
-			AssetBaseURL: "https://res.cloudinary.com/fracturing-space/image/upload",
-		},
+	gotB := websupport.AvatarImageURL(
+		"https://res.cloudinary.com/fracturing-space/image/upload",
 		"character",
 		"char-1",
 		"avatar_set_v1",
@@ -61,16 +58,42 @@ func TestAvatarImageURL_CloudinaryCharacterUsesDeterministicVariantPortrait(t *t
 }
 
 func TestAvatarImageURL_NonCloudinaryBaseUsesFlatAssetPath(t *testing.T) {
-	got := avatarImageURL(
-		Config{
-			AssetBaseURL: "https://cdn.example.com/avatars",
-		},
+	got := websupport.AvatarImageURL(
+		"https://cdn.example.com/avatars",
 		"user",
 		"user-1",
 		"avatar_set_v1",
 		"001",
 	)
 	want := "https://cdn.example.com/avatars/001.png"
+	if got != want {
+		t.Fatalf("avatarImageURL(...) = %q, want %q", got, want)
+	}
+}
+
+func TestAvatarImageURL_RespectsExplicitBlankAvatarSelection(t *testing.T) {
+	got := websupport.AvatarImageURL(
+		"https://cdn.example.com/avatars",
+		"participant",
+		"part-1",
+		catalog.AvatarSetBlankV1,
+		"000",
+	)
+	want := "https://cdn.example.com/avatars/000.png"
+	if got != want {
+		t.Fatalf("avatarImageURL(...) = %q, want %q", got, want)
+	}
+}
+
+func TestAvatarImageURL_LegacyPeopleSetBlankSelectionFallsBackToBlankSet(t *testing.T) {
+	got := websupport.AvatarImageURL(
+		"https://cdn.example.com/avatars",
+		"participant",
+		"part-legacy",
+		catalog.AvatarSetPeopleV1,
+		catalog.AvatarAssetBlank,
+	)
+	want := "https://cdn.example.com/avatars/000.png"
 	if got != want {
 		t.Fatalf("avatarImageURL(...) = %q, want %q", got, want)
 	}

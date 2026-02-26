@@ -11,6 +11,7 @@ import (
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	featureNotifications "github.com/louisbranch/fracturing.space/internal/services/web/feature/notifications"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
 	"golang.org/x/text/language"
 	"google.golang.org/grpc"
@@ -115,7 +116,7 @@ func TestToNotificationListItems_UnknownTopicAndUnknownSignupUseSafeRenderedBody
 	t.Parallel()
 
 	now := time.Date(2026, 2, 22, 0, 0, 0, 0, time.UTC)
-	items := toNotificationListItems(webi18n.Printer(language.AmericanEnglish), []*notificationsv1.Notification{
+	items := featureNotifications.ToNotificationListItems(webi18n.Printer(language.AmericanEnglish), []*notificationsv1.Notification{
 		{
 			Id:          "notif-signup-unknown",
 			Topic:       "auth.onboarding.welcome",

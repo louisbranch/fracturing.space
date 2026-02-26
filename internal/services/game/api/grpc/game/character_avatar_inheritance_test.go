@@ -7,6 +7,7 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -19,7 +20,7 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func TestCreateCharacter_InheritsActorParticipantAvatarWhenAvatarNotProvided(t *testing.T) {
+func TestCreateCharacter_UsesBlankAvatarWhenControllerIsUnassigned(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	characterStore := newFakeCharacterStore()
@@ -37,7 +38,7 @@ func TestCreateCharacter_InheritsActorParticipantAvatarWhenAvatarNotProvided(t *
 			CampaignID:     "c1",
 			Name:           "Alice",
 			CampaignAccess: participant.CampaignAccessMember,
-			AvatarSetID:    "avatar_set_v1",
+			AvatarSetID:    assetcatalog.AvatarSetPeopleV1,
 			AvatarAssetID:  "007",
 			CreatedAt:      now,
 		},
@@ -55,7 +56,7 @@ func TestCreateCharacter_InheritsActorParticipantAvatarWhenAvatarNotProvided(t *
 					ActorID:     "part-1",
 					EntityType:  "character",
 					EntityID:    "char-123",
-					PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_v1","avatar_asset_id":"007"}`),
+					PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_blank_v1","avatar_asset_id":"000"}`),
 				}),
 			},
 			command.Type("character.profile_update"): {
@@ -122,10 +123,10 @@ func TestCreateCharacter_InheritsActorParticipantAvatarWhenAvatarNotProvided(t *
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode create payload: %v", err)
 	}
-	if payload.AvatarSetID != "avatar_set_v1" {
-		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, "avatar_set_v1")
+	if payload.AvatarSetID != assetcatalog.AvatarSetBlankV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, assetcatalog.AvatarSetBlankV1)
 	}
-	if payload.AvatarAssetID != "007" {
-		t.Fatalf("avatar_asset_id = %q, want %q", payload.AvatarAssetID, "007")
+	if payload.AvatarAssetID != "" {
+		t.Fatalf("avatar_asset_id = %q, want empty", payload.AvatarAssetID)
 	}
 }

@@ -8,6 +8,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -1655,6 +1656,22 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 	if resp.CharacterId != "ch1" {
 		t.Errorf("Response CharacterId = %q, want %q", resp.CharacterId, "ch1")
 	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	var payload character.UpdatePayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode command payload: %v", err)
+	}
+	if payload.Fields["participant_id"] != "" {
+		t.Fatalf("participant_id = %q, want empty", payload.Fields["participant_id"])
+	}
+	if payload.Fields["avatar_set_id"] != assetcatalog.AvatarSetBlankV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.Fields["avatar_set_id"], assetcatalog.AvatarSetBlankV1)
+	}
+	if payload.Fields["avatar_asset_id"] != "" {
+		t.Fatalf("avatar_asset_id = %q, want empty", payload.Fields["avatar_asset_id"])
+	}
 
 	// Verify persisted
 	updated, err := characterStore.GetCharacter(context.Background(), "c1", "ch1")
@@ -1691,7 +1708,14 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 			CampaignAccess: participant.CampaignAccessManager,
 			CreatedAt:      now,
 		},
-		"p1": {ID: "p1", CampaignID: "c1", Name: "Player 1", CreatedAt: now},
+		"p1": {
+			ID:            "p1",
+			CampaignID:    "c1",
+			Name:          "Player 1",
+			AvatarSetID:   assetcatalog.AvatarSetPeopleV1,
+			AvatarAssetID: "009",
+			CreatedAt:     now,
+		},
 	}
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
@@ -1722,6 +1746,22 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("SetDefaultControl returned error: %v", err)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	var payload character.UpdatePayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode command payload: %v", err)
+	}
+	if payload.Fields["participant_id"] != "p1" {
+		t.Fatalf("participant_id = %q, want %q", payload.Fields["participant_id"], "p1")
+	}
+	if payload.Fields["avatar_set_id"] != assetcatalog.AvatarSetPeopleV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.Fields["avatar_set_id"], assetcatalog.AvatarSetPeopleV1)
+	}
+	if payload.Fields["avatar_asset_id"] != "009" {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.Fields["avatar_asset_id"], "009")
 	}
 
 	// Verify persisted
