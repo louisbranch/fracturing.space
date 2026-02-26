@@ -1,0 +1,70 @@
+package templates
+
+import (
+	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+)
+
+type PublicProfileView struct {
+	Username       string
+	Name           string
+	Bio            string
+	AvatarURL      string
+	ViewerSignedIn bool
+}
+
+func publicProfileValue(value string) string {
+	return strings.TrimSpace(value)
+}
+
+func publicProfileAvatarAlt(view PublicProfileView) string {
+	displayName := publicProfileValue(view.Name)
+	if displayName == "" {
+		displayName = publicProfileValue(view.Username)
+	}
+	if displayName == "" {
+		return "Profile avatar"
+	}
+	return displayName + " avatar"
+}
+
+templ PublicProfilePage(view PublicProfileView, loc Localizer) {
+	<section id="public-profile-page" class="w-full grid gap-6">
+		<header class="flex items-center justify-between gap-4">
+			<h1 data-public-profile-username={ publicProfileValue(view.Username) }>{ publicProfileValue(view.Username) }</h1>
+			if view.ViewerSignedIn {
+				<a href={ routepath.AppDashboard } class="btn btn-primary btn-sm">{ T(loc, "web.error.action_back_to_dashboard") }</a>
+			} else {
+				<a href={ routepath.Root } class="btn btn-primary btn-sm">{ T(loc, "error.back_to_home") }</a>
+			}
+		</header>
+		<div class="card bg-base-200 border border-base-300 shadow-xl overflow-hidden" data-public-profile-card="true">
+			<div class="grid gap-0 lg:grid-cols-[1fr_20rem]">
+				<div class="card-body order-2 lg:order-1 gap-4">
+					<dl class="space-y-3 text-sm">
+						<div>
+							<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_username") }</dt>
+							<dd data-public-profile-field="username">{ publicProfileValue(view.Username) }</dd>
+						</div>
+						if publicProfileValue(view.Name) != "" {
+							<div>
+								<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_name") }</dt>
+								<dd data-public-profile-field="name">{ publicProfileValue(view.Name) }</dd>
+							</div>
+						}
+						if publicProfileValue(view.Bio) != "" {
+							<div>
+								<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_bio") }</dt>
+								<dd data-public-profile-field="bio" class="whitespace-pre-wrap">{ publicProfileValue(view.Bio) }</dd>
+							</div>
+						}
+					</dl>
+				</div>
+				<figure class="order-1 lg:order-2 h-72 lg:h-full bg-base-300">
+					<img src={ publicProfileValue(view.AvatarURL) } alt={ publicProfileAvatarAlt(view) } class="h-full w-full object-cover"/>
+				</figure>
+			</div>
+		</div>
+	</section>
+}

@@ -17,6 +17,7 @@ import (
 type Viewer struct {
 	DisplayName string
 	AvatarURL   string
+	ProfileURL  string
 }
 
 // ResolveViewer resolves app chrome viewer state for a request.
@@ -82,6 +83,7 @@ type AccountClient interface {
 // SocialClient exposes profile lookup and mutation operations.
 type SocialClient interface {
 	GetUserProfile(context.Context, *socialv1.GetUserProfileRequest, ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error)
+	LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest, ...grpc.CallOption) (*socialv1.LookupUserProfileResponse, error)
 	SetUserProfile(context.Context, *socialv1.SetUserProfileRequest, ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error)
 }
 

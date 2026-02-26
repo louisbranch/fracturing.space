@@ -68,7 +68,7 @@ func (h handlers) handleProfileGet(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, r, err)
 		return
 	}
-	h.renderProfilePage(w, r, http.StatusOK, profile, "")
+	h.renderProfilePage(w, r, http.StatusOK, profile, "", settingsProfileNoticeCode(r))
 }
 
 func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
@@ -92,7 +92,7 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.saveProfile(ctx, userID, profile); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
 			loc, _ := h.pageLocalizer(w, r)
-			h.renderProfilePage(w, r, http.StatusBadRequest, profile, webi18n.LocalizeError(loc, err))
+			h.renderProfilePage(w, r, http.StatusBadRequest, profile, webi18n.LocalizeError(loc, err), "")
 			return
 		}
 		h.writeError(w, r, err)
@@ -193,7 +193,7 @@ func (h handlers) handleNotFound(w http.ResponseWriter, r *http.Request) {
 	weberror.WriteAppError(w, r, http.StatusNotFound, h.deps.moduleDependencies())
 }
 
-func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, statusCode int, profile SettingsProfile, errorMessage string) {
+func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, statusCode int, profile SettingsProfile, errorMessage string, noticeCode string) {
 	loc, _ := h.pageLocalizer(w, r)
 	layout := webtemplates.AppMainLayoutOptions{SideMenu: settingsSideMenu(routepath.AppSettingsProfile, loc)}
 	h.writePage(
@@ -209,6 +209,7 @@ func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, stat
 			AvatarSetID:   profile.AvatarSetID,
 			AvatarAssetID: profile.AvatarAssetID,
 			Bio:           profile.Bio,
+			NoticeMessage: settingsProfileNoticeMessage(noticeCode, loc),
 			ErrorMessage:  errorMessage,
 		}, loc),
 	)
@@ -305,6 +306,22 @@ func (h handlers) requestUserID(r *http.Request) string {
 func (h handlers) requestContextAndUserID(r *http.Request) (context.Context, string) {
 	ctx := webctx.WithResolvedUserID(r, h.deps.resolveUserID)
 	return ctx, h.requestUserID(r)
+}
+
+func settingsProfileNoticeCode(r *http.Request) string {
+	if r == nil || r.URL == nil {
+		return ""
+	}
+	return strings.TrimSpace(r.URL.Query().Get(routepath.SettingsNoticeQueryKey))
+}
+
+func settingsProfileNoticeMessage(code string, loc webtemplates.Localizer) string {
+	switch strings.TrimSpace(code) {
+	case routepath.SettingsNoticePublicProfileRequired:
+		return webtemplates.T(loc, "web.settings.user_profile.notice_public_profile_required")
+	default:
+		return ""
+	}
 }
 
 func settingsSideMenu(currentPath string, loc webtemplates.Localizer) *webtemplates.AppSideMenu {

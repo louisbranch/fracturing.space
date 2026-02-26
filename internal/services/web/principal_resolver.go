@@ -16,6 +16,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/authctx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type requestPrincipalState struct {
@@ -97,6 +100,7 @@ func (r principalResolver) resolveViewerUncached(request *http.Request) module.V
 	viewer := module.Viewer{
 		DisplayName: "Adventurer",
 		AvatarURL:   websupport.AvatarImageURL(r.assetBaseURL, "user", userID, "", ""),
+		ProfileURL:  routepath.AppSettingsProfile,
 	}
 	if r.socialClient == nil {
 		return viewer
@@ -104,10 +108,18 @@ func (r principalResolver) resolveViewerUncached(request *http.Request) module.V
 	ctx := grpcauthctx.WithUserID(request.Context(), userID)
 	resp, err := r.socialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: userID})
 	if err != nil || resp == nil || resp.GetUserProfile() == nil {
+		if status.Code(err) == codes.NotFound {
+			viewer.ProfileURL = routepath.AppSettingsProfileWithNotice(routepath.SettingsNoticePublicProfileRequired)
+		}
 		return viewer
 	}
 	record := resp.GetUserProfile()
 	username := strings.TrimSpace(record.GetUsername())
+	if username != "" {
+		viewer.ProfileURL = routepath.UserProfile(username)
+	} else {
+		viewer.ProfileURL = routepath.AppSettingsProfileWithNotice(routepath.SettingsNoticePublicProfileRequired)
+	}
 	if name := strings.TrimSpace(record.GetName()); name != "" {
 		viewer.DisplayName = name
 	} else if username != "" {

@@ -56,6 +56,49 @@ func TestMountServesSettingsProfileGet(t *testing.T) {
 	}
 }
 
+func TestMountSettingsProfileGetRendersNoticeForMissingPublicProfile(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(newModuleGatewayStub())
+	mount, err := m.Mount(settingsTestDependencies())
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfileWithNotice(routepath.SettingsNoticePublicProfileRequired), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `alert alert-info`) {
+		t.Fatalf("body missing info alert for notice: %q", body)
+	}
+	if !strings.Contains(body, `Choose a username to publish your public profile page.`) {
+		t.Fatalf("body missing profile notice copy: %q", body)
+	}
+}
+
+func TestMountSettingsProfileGetIgnoresUnknownNoticeCode(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(newModuleGatewayStub())
+	mount, err := m.Mount(settingsTestDependencies())
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfileWithNotice("unknown-notice"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, `alert alert-info`) {
+		t.Fatalf("body unexpectedly rendered info alert for unknown notice: %q", body)
+	}
+}
+
 func TestMountServesSettingsProfileHead(t *testing.T) {
 	t.Parallel()
 
