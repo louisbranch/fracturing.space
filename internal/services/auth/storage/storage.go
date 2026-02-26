@@ -43,6 +43,15 @@ type PasskeySession struct {
 	ExpiresAt   time.Time
 }
 
+// WebSession stores durable authenticated web session state.
+type WebSession struct {
+	ID        string
+	UserID    string
+	CreatedAt time.Time
+	ExpiresAt time.Time
+	RevokedAt *time.Time
+}
+
 // UserEmail stores a verified contact address and verification lifecycle metadata.
 type UserEmail struct {
 	ID         string
@@ -74,6 +83,14 @@ type PasskeyStore interface {
 	GetPasskeySession(ctx context.Context, id string) (PasskeySession, error)
 	DeletePasskeySession(ctx context.Context, id string) error
 	DeleteExpiredPasskeySessions(ctx context.Context, now time.Time) error
+}
+
+// WebSessionStore persists durable authenticated web sessions.
+type WebSessionStore interface {
+	PutWebSession(ctx context.Context, session WebSession) error
+	GetWebSession(ctx context.Context, id string) (WebSession, error)
+	RevokeWebSession(ctx context.Context, id string, revokedAt time.Time) error
+	DeleteExpiredWebSessions(ctx context.Context, now time.Time) error
 }
 
 // EmailStore persists user contacts used for identity recovery and validation.

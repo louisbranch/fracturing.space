@@ -33,6 +33,7 @@ type AuthService struct {
 	authv1.UnimplementedAuthServiceServer
 	store              storage.UserStore
 	passkeyStore       storage.PasskeyStore
+	webSessionStore    storage.WebSessionStore
 	emailStore         storage.EmailStore
 	magicLinkStore     storage.MagicLinkStore
 	oauthStore         *oauth.Store
@@ -45,6 +46,8 @@ type AuthService struct {
 	idGenerator        func() (string, error)
 	passkeyIDGenerator func() (string, error)
 }
+
+const defaultWebSessionTTL = 24 * time.Hour
 
 // NewAuthService builds a service with defaults for the auth package.
 //
@@ -60,6 +63,7 @@ func NewAuthService(store storage.UserStore, passkeyStore storage.PasskeyStore, 
 	})
 	var emailStore storage.EmailStore
 	var magicLinkStore storage.MagicLinkStore
+	var webSessionStore storage.WebSessionStore
 	if store != nil {
 		if typed, ok := store.(storage.EmailStore); ok {
 			emailStore = typed
@@ -67,10 +71,14 @@ func NewAuthService(store storage.UserStore, passkeyStore storage.PasskeyStore, 
 		if typed, ok := store.(storage.MagicLinkStore); ok {
 			magicLinkStore = typed
 		}
+		if typed, ok := store.(storage.WebSessionStore); ok {
+			webSessionStore = typed
+		}
 	}
 	return &AuthService{
 		store:              store,
 		passkeyStore:       passkeyStore,
+		webSessionStore:    webSessionStore,
 		emailStore:         emailStore,
 		magicLinkStore:     magicLinkStore,
 		oauthStore:         oauthStore,

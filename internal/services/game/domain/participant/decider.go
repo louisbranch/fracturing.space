@@ -185,6 +185,7 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 
 	rawAvatarSetID, avatarSetProvided := payload.Fields["avatar_set_id"]
 	rawAvatarAssetID, avatarAssetProvided := payload.Fields["avatar_asset_id"]
+	rawUserID, userIDProvided := payload.Fields["user_id"]
 	normalizedFields := make(map[string]string, len(payload.Fields))
 	for key, value := range payload.Fields {
 		switch key {
@@ -235,9 +236,9 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 			})
 		}
 	}
-	if avatarSetProvided || avatarAssetProvided {
+	if avatarSetProvided || avatarAssetProvided || userIDProvided {
 		avatarUserID := strings.TrimSpace(state.UserID)
-		if rawUserID, ok := normalizedFields["user_id"]; ok {
+		if userIDProvided {
 			avatarUserID = strings.TrimSpace(rawUserID)
 		}
 
@@ -262,10 +263,10 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 		if err != nil {
 			return command.Reject(participantAvatarRejection(err))
 		}
-		if avatarSetProvided {
+		if avatarSetProvided || userIDProvided {
 			normalizedFields["avatar_set_id"] = resolvedSetID
 		}
-		if avatarAssetProvided || avatarSetProvided {
+		if avatarAssetProvided || avatarSetProvided || userIDProvided {
 			normalizedFields["avatar_asset_id"] = resolvedAssetID
 		}
 	}

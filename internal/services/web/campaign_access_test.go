@@ -94,7 +94,7 @@ func TestNewCampaignAccessCheckerRequiresConfigAndClient(t *testing.T) {
 	}
 }
 
-func TestCampaignAccessServiceIntrospectUserIDSuccess(t *testing.T) {
+func TestCampaignAccessServiceResolveUserIDSuccess(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("method = %s, want POST", r.Method)
@@ -119,7 +119,7 @@ func TestCampaignAccessServiceIntrospectUserIDSuccess(t *testing.T) {
 		httpClient:          srv.Client(),
 	}
 
-	userID, err := svc.introspectUserID(context.Background(), "token-1")
+	userID, err := svc.ResolveUserID(context.Background(), "token-1")
 	if err != nil {
 		t.Fatalf("introspect user id: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestCampaignAccessServiceIntrospectUserIDSuccess(t *testing.T) {
 	}
 }
 
-func TestCampaignAccessServiceIntrospectUserIDInactive(t *testing.T) {
+func TestCampaignAccessServiceResolveUserIDInactive(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(introspectResponse{Active: false, UserID: "user-1"})
@@ -141,7 +141,7 @@ func TestCampaignAccessServiceIntrospectUserIDInactive(t *testing.T) {
 		httpClient:          srv.Client(),
 	}
 
-	userID, err := svc.introspectUserID(context.Background(), "token-1")
+	userID, err := svc.ResolveUserID(context.Background(), "token-1")
 	if err != nil {
 		t.Fatalf("introspect user id: %v", err)
 	}

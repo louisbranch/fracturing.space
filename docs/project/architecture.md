@@ -187,7 +187,10 @@ The primary service boundaries are:
 - **Web service** (`internal/services/web/`): Browser-facing BFF for end-user flows.
   - Public/auth/discovery surface: `/`, `/login`, `/auth/*`, `/magic`, `/passkeys/*`, `/u/{username}`, `/discover`, `/discover/campaigns/{campaignID}`.
   - Authenticated surface: canonical `/app/*` routes (`/app/campaigns`, `/app/campaigns/{id}/*`, `/app/invites`, `/app/notifications`, `/app/profile`, `/app/settings/*`) with OAuth-required startup contract.
-  - Internal boundaries: route modules under `internal/services/web/module/*` (module-local path dispatch + callback-backed service constructors), shared module runtime helpers under `internal/services/web/module/runtime`, and composition seams under `internal/services/web/integration/*` and `internal/services/web/transport/httpmux`.
+  - Feature boundary strategy: route orchestration is delegated to `internal/services/web/feature/*`; `internal/services/web` contains adapter and composition glue around thin request entrypoints.
+  - Internal boundaries: feature adapters in `internal/services/web/feature` and small shared route utilities in `internal/services/web/feature/routing`, composition and module-like entrypoints in `internal/services/web/transport/httpmux`, and lifecycle integration in `internal/services/web/infra/*` and `internal/services/web/integration/*`.
+- **Web2 service** (`internal/services/web2/`): Clean-slate browser-facing modular BFF using stdlib `ServeMux` with small per-area muxes.
+  - Internal boundaries: composition root in `internal/services/web2/app`, cross-cutting primitives in `internal/services/web2/platform`, feature modules in `internal/services/web2/modules`, and canonical paths in `internal/services/web2/routepath`.
 - **Auth service** (`internal/services/auth/`): AuthN/authZ domain logic and gRPC API surface (identity proof and access artifacts); owns the auth database.
 - **Connections service** (`internal/services/connections/`): Social/discovery domain logic and gRPC API surface (contacts and unified user profile metadata); owns the connections database.
 - **Listing service** (`internal/services/listing/`): Public campaign listing metadata APIs; owns the listing database.

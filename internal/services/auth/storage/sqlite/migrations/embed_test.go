@@ -27,6 +27,7 @@ func TestMigrationsEmbedded(t *testing.T) {
 	expected := []string{
 		"001_auth.sql",
 		"002_auth_remove_social.sql",
+		"003_auth_web_sessions.sql",
 	}
 	if len(files) != len(expected) {
 		t.Fatalf("migration file count = %d, want %d (%v)", len(files), len(expected), expected)

@@ -16,6 +16,7 @@ import (
 // It forms the boundary between authenticated identity and campaign membership.
 type campaignAccessChecker interface {
 	IsCampaignParticipant(ctx context.Context, campaignID string, accessToken string) (bool, error)
+	ResolveUserID(ctx context.Context, accessToken string) (string, error)
 }
 
 // campaignAccessService adapts auth introspection + participant reads into a
@@ -65,7 +66,7 @@ func (s *campaignAccessService) IsCampaignParticipant(ctx context.Context, campa
 		return false, nil
 	}
 
-	userID, err := s.introspectUserID(ctx, accessToken)
+	userID, err := s.ResolveUserID(ctx, accessToken)
 	if err != nil {
 		return false, err
 	}
@@ -96,9 +97,7 @@ func (s *campaignAccessService) IsCampaignParticipant(ctx context.Context, campa
 	return false, nil
 }
 
-func (s *campaignAccessService) introspectUserID(ctx context.Context, accessToken string) (string, error) {
-	// introspectUserID is the auth boundary for web-gate decisions, so
-	// authorization here is always rooted in active user identity.
+func (s *campaignAccessService) ResolveUserID(ctx context.Context, accessToken string) (string, error) {
 	if s == nil || s.httpClient == nil {
 		return "", fmt.Errorf("campaign access checker is not configured")
 	}

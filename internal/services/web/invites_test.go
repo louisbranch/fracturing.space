@@ -13,6 +13,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	campaignfeature "github.com/louisbranch/fracturing.space/internal/services/web/feature/campaign"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -194,7 +195,7 @@ func TestAppCampaignInvitesPageCachesCampaignInvites(t *testing.T) {
 
 func TestCampaignInvitesCacheIsolatesByUser(t *testing.T) {
 	cacheStore := newFakeWebCacheStore()
-	h := &handler{cacheStore: cacheStore}
+	cacheHelpers := campaignfeature.NewCampaignCache(cacheStore)
 
 	ctx := context.Background()
 	invites := []*statev1.Invite{
@@ -202,10 +203,10 @@ func TestCampaignInvitesCacheIsolatesByUser(t *testing.T) {
 	}
 
 	// Cache invites for user-A.
-	h.setCampaignInvitesCache(ctx, "camp-1", "user-A", invites)
+	cacheHelpers.SetCampaignInvitesCache(ctx, "camp-1", "user-A", invites)
 
 	// User-A should get a cache hit.
-	got, ok := h.cachedCampaignInvites(ctx, "camp-1", "user-A")
+	got, ok := cacheHelpers.CachedCampaignInvites(ctx, "camp-1", "user-A")
 	if !ok {
 		t.Fatal("expected cache hit for user-A")
 	}
@@ -214,7 +215,7 @@ func TestCampaignInvitesCacheIsolatesByUser(t *testing.T) {
 	}
 
 	// User-B should get a cache miss — invites are policy-scoped.
-	_, ok = h.cachedCampaignInvites(ctx, "camp-1", "user-B")
+	_, ok = cacheHelpers.CachedCampaignInvites(ctx, "camp-1", "user-B")
 	if ok {
 		t.Fatal("expected cache miss for user-B, got hit")
 	}

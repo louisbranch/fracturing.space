@@ -8,7 +8,15 @@ import (
 
 const (
 	DomainAvatars = "avatars"
-	AvatarSetV1   = "avatar_set_v1"
+	// AvatarSetBlankV1 is the dedicated blank-avatar set.
+	AvatarSetBlankV1 = "avatar_set_blank_v1"
+	// AvatarSetPeopleV1 is the canonical people-avatar set.
+	AvatarSetPeopleV1 = "avatar_set_v1"
+	// AvatarSetV1 remains as a compatibility alias for the people set.
+	AvatarSetV1 = AvatarSetPeopleV1
+	// AvatarAssetBlank is the canonical blank avatar image used when identity
+	// linkage is intentionally absent.
+	AvatarAssetBlank = "000"
 
 	// AvatarRoleUser resolves to portrait slot 1.
 	AvatarRoleUser = "user"
@@ -50,13 +58,13 @@ func AvatarManifest() Manifest {
 	return copyManifest(avatarData)
 }
 
-// AvatarAssetIDs returns the stable ordered avatar asset ids for v1 avatars.
+// AvatarAssetIDs returns the stable ordered avatar asset ids for the people set.
 func AvatarAssetIDs() []string {
 	_, avatarData, _, err := EmbeddedCatalogManifests()
 	if err != nil {
 		return []string{}
 	}
-	avatarSet, ok := avatarData.Sets[AvatarSetV1]
+	avatarSet, ok := avatarData.Sets[AvatarSetPeopleV1]
 	if !ok {
 		return []string{}
 	}

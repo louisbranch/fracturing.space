@@ -3,182 +3,16 @@ package web
 import (
 	"context"
 	"errors"
-	"net/http"
-	"net/url"
-	"sort"
-	"strconv"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
-	"github.com/louisbranch/fracturing.space/internal/platform/assets/imagecdn"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
-	routepath "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	webgrpc "github.com/louisbranch/fracturing.space/internal/services/web/infra/grpc"
 )
-
-func (h *handler) handleAppCampaigns(w http.ResponseWriter, r *http.Request) {
-	// Campaign list is the web entrypoint into the campaign read model and is
-	// intentionally user-scoped so each campaign user can view all relevant
-	// entries regardless of active participant context.
-	if r.Method != http.MethodGet {
-		w.Header().Set("Allow", http.MethodGet)
-		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
-		return
-	}
-
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
-		return
-	}
-
-	if err := h.ensureCampaignClients(r.Context()); err != nil {
-		renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, []*statev1.Campaign{})
-		return
-	}
-	if h.campaignClient == nil || h.campaignAccess == nil {
-		renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, []*statev1.Campaign{})
-		return
-	}
-
-	requestCtx := r.Context()
-	userID, err := h.sessionUserIDForSession(requestCtx, sess)
-	listCampaigns := func(ctx context.Context) ([]*statev1.Campaign, error) {
-		resp, err := h.campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
-		if err != nil {
-			return nil, err
-		}
-		return resp.GetCampaigns(), nil
-	}
-
-	if err != nil || strings.TrimSpace(userID) == "" {
-		renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, []*statev1.Campaign{})
-		return
-	}
-
-	requestCtx = grpcauthctx.WithUserID(requestCtx, userID)
-	if campaigns, ok := h.cachedUserCampaigns(requestCtx, userID); ok {
-		renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, campaigns)
-		return
-	}
-
-	campaigns, err := listCampaigns(requestCtx)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaigns unavailable", "failed to list campaigns")
-		return
-	}
-	h.setUserCampaignsCache(requestCtx, userID, campaigns)
-	renderAppCampaignsListPageWithConfig(w, r, h.pageContext(w, r), h.config, campaigns)
-}
-
-func (h *handler) handleAppCampaignCreate(w http.ResponseWriter, r *http.Request) {
-	// Campaign create is the onboarding bridge from HTML form into typed
-	// campaign service behavior.
-	if r.Method == http.MethodGet {
-		sess := sessionFromRequest(r, h.sessions)
-		if sess == nil {
-			http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
-			return
-		}
-		renderAppCampaignCreatePage(w, r, h.pageContext(w, r))
-		return
-	}
-	if r.Method != http.MethodPost {
-		w.Header().Set("Allow", "GET, POST")
-		localizeHTTPError(w, r, http.StatusMethodNotAllowed, "error.http.method_not_allowed")
-		return
-	}
-
-	sess := sessionFromRequest(r, h.sessions)
-	if sess == nil {
-		http.Redirect(w, r, routepath.AuthLogin, http.StatusFound)
-		return
-	}
-	if err := h.ensureCampaignClients(r.Context()); err != nil {
-		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Campaign create unavailable", "campaign service client is not configured")
-		return
-	}
-	if h.campaignClient == nil {
-		h.renderErrorPage(w, r, http.StatusServiceUnavailable, "Campaign create unavailable", "campaign service client is not configured")
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		h.renderErrorPage(w, r, http.StatusBadRequest, "Campaign create unavailable", "failed to parse campaign create form")
-		return
-	}
-	campaignName := strings.TrimSpace(r.FormValue("name"))
-	if campaignName == "" {
-		h.renderErrorPage(w, r, http.StatusBadRequest, "Campaign create unavailable", "campaign name is required")
-		return
-	}
-	systemValue := strings.TrimSpace(r.FormValue("system"))
-	if systemValue == "" {
-		systemValue = "daggerheart"
-	}
-	system, ok := parseAppGameSystem(systemValue)
-	if !ok {
-		h.renderErrorPage(w, r, http.StatusBadRequest, "Campaign create unavailable", "campaign system is invalid")
-		return
-	}
-	gmModeValue := strings.TrimSpace(r.FormValue("gm_mode"))
-	if gmModeValue == "" {
-		gmModeValue = "human"
-	}
-	gmMode, ok := parseAppGmMode(gmModeValue)
-	if !ok {
-		h.renderErrorPage(w, r, http.StatusBadRequest, "Campaign create unavailable", "campaign gm mode is invalid")
-		return
-	}
-	themePrompt := strings.TrimSpace(r.FormValue("theme_prompt"))
-	creatorDisplayName := strings.TrimSpace(r.FormValue("creator_display_name"))
-	if creatorDisplayName == "" {
-		creatorDisplayName = strings.TrimSpace(sess.displayName)
-	}
-
-	userID, err := h.sessionUserIDForSession(r.Context(), sess)
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaign create unavailable", "failed to resolve current user")
-		return
-	}
-	if userID == "" {
-		h.renderErrorPage(w, r, http.StatusUnauthorized, "Authentication required", "no user identity was resolved for this session")
-		return
-	}
-
-	ctx := grpcauthctx.WithUserID(r.Context(), userID)
-	resp, err := h.campaignClient.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
-		Name:               campaignName,
-		Locale:             commonv1.Locale_LOCALE_EN_US,
-		System:             system,
-		GmMode:             gmMode,
-		ThemePrompt:        themePrompt,
-		CreatorDisplayName: creatorDisplayName,
-	})
-	if err != nil {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaign create unavailable", "failed to create campaign")
-		return
-	}
-	campaignID := strings.TrimSpace(resp.GetCampaign().GetId())
-	if campaignID == "" {
-		h.renderErrorPage(w, r, http.StatusBadGateway, "Campaign create unavailable", "created campaign id was empty")
-		return
-	}
-	h.expireUserCampaignsCache(ctx, userID)
-
-	http.Redirect(w, r, routepath.Campaign(campaignID), http.StatusFound)
-}
 
 func (h *handler) sessionUserID(ctx context.Context, accessToken string) (string, error) {
 	if h == nil || h.campaignAccess == nil {
 		return "", errors.New("campaign access checker is not configured")
 	}
-	svc, ok := h.campaignAccess.(*campaignAccessService)
-	if !ok {
-		return "", errors.New("campaign access checker does not support user introspection")
-	}
-	return svc.introspectUserID(ctx, accessToken)
+	return h.campaignAccess.ResolveUserID(ctx, accessToken)
 }
 
 func (h *handler) sessionUserIDForSession(ctx context.Context, sess *session) (string, error) {
@@ -214,172 +48,20 @@ func (h *handler) ensureCampaignClients(ctx context.Context) error {
 		return nil
 	}
 
-	clients, err := dialGameGRPC(ctx, h.config)
+	clients, err := webgrpc.DialGame(ctx, h.config.GameAddr, h.config.GRPCDialTimeout)
 	if err != nil {
 		return err
 	}
-	if clients.campaignClient == nil || clients.sessionClient == nil || clients.participantClient == nil || clients.characterClient == nil || clients.inviteClient == nil {
+	if clients.CampaignClient == nil || clients.SessionClient == nil || clients.ParticipantClient == nil || clients.CharacterClient == nil || clients.InviteClient == nil {
 		return errors.New("campaign service client is not configured")
 	}
 
-	h.participantClient = clients.participantClient
-	h.campaignClient = clients.campaignClient
-	h.eventClient = clients.eventClient
-	h.sessionClient = clients.sessionClient
-	h.characterClient = clients.characterClient
-	h.inviteClient = clients.inviteClient
-	h.campaignAccess = newCampaignAccessChecker(h.config, clients.participantClient)
+	h.participantClient = clients.ParticipantClient
+	h.campaignClient = clients.CampaignClient
+	h.eventClient = clients.EventClient
+	h.sessionClient = clients.SessionClient
+	h.characterClient = clients.CharacterClient
+	h.inviteClient = clients.InviteClient
+	h.campaignAccess = newCampaignAccessChecker(h.config, clients.ParticipantClient)
 	return nil
-}
-
-func renderAppCampaignsPage(w http.ResponseWriter, r *http.Request, campaigns []*statev1.Campaign) {
-	renderAppCampaignsListPageWithConfig(w, r, webtemplates.PageContext{}, Config{}, campaigns)
-}
-
-func renderAppCampaignsListPage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, campaigns []*statev1.Campaign) {
-	renderAppCampaignsListPageWithConfig(w, r, page, Config{}, campaigns)
-}
-
-func renderAppCampaignsListPageWithConfig(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext, config Config, campaigns []*statev1.Campaign) {
-	// renderAppCampaignsListPageWithAppName maps the list of campaign read models into
-	// links that become the canonical campaign navigation point for this boundary.
-	sortedCampaigns := append([]*statev1.Campaign(nil), campaigns...)
-	sort.SliceStable(sortedCampaigns, func(i, j int) bool {
-		return campaignCreatedAtUnixNano(sortedCampaigns[i]) > campaignCreatedAtUnixNano(sortedCampaigns[j])
-	})
-
-	normalized := make([]webtemplates.CampaignListItem, 0, len(sortedCampaigns))
-	for _, campaign := range sortedCampaigns {
-		if campaign == nil {
-			continue
-		}
-		campaignID := strings.TrimSpace(campaign.GetId())
-		name := strings.TrimSpace(campaign.GetName())
-		if name == "" {
-			name = campaignID
-		}
-		normalized = append(normalized, webtemplates.CampaignListItem{
-			ID:               campaignID,
-			Name:             name,
-			Theme:            truncateCampaignTheme(campaign.GetThemePrompt()),
-			CoverImageURL:    campaignCoverImageURL(config, campaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId()),
-			ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
-			CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
-		})
-	}
-	if err := writePage(w, r, webtemplates.CampaignsListPage(page, normalized), composeHTMXTitleForPage(page, "game.campaigns.title")); err != nil {
-		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaigns_list_page")
-	}
-}
-
-func campaignCreatedAtUnixNano(campaign *statev1.Campaign) int64 {
-	if campaign == nil || campaign.GetCreatedAt() == nil {
-		return 0
-	}
-	return campaign.GetCreatedAt().AsTime().UTC().UnixNano()
-}
-
-const (
-	campaignThemePromptLimit = 80
-)
-
-var webCampaignCoverManifest = catalog.CampaignCoverManifest()
-
-func truncateCampaignTheme(themePrompt string) string {
-	runes := []rune(strings.TrimSpace(themePrompt))
-	if campaignThemePromptLimit <= 0 || len(runes) == 0 {
-		return ""
-	}
-	if len(runes) <= campaignThemePromptLimit {
-		return string(runes)
-	}
-	return string(runes[:campaignThemePromptLimit]) + "..."
-}
-
-func campaignCoverImageURL(config Config, campaignID, coverSetID, coverAssetID string) string {
-	_, resolvedCoverAssetID := resolveWebCampaignCoverSelection(campaignID, coverSetID, coverAssetID)
-	resolvedAssetURL, err := imagecdn.New(config.AssetBaseURL).URL(imagecdn.Request{
-		AssetID:   resolvedCoverAssetID,
-		Extension: ".png",
-	})
-	if err == nil {
-		return resolvedAssetURL
-	}
-	return "/static/campaign-covers/" + url.PathEscape(resolvedCoverAssetID) + ".png"
-}
-
-func normalizeWebCampaignCoverAssetID(raw string) (string, bool) {
-	normalizedCoverAssetID := webCampaignCoverManifest.NormalizeAssetID(raw)
-	if normalizedCoverAssetID == "" {
-		return "", false
-	}
-	if !webCampaignCoverManifest.ValidateAssetInSet(catalog.CampaignCoverSetV1, normalizedCoverAssetID) {
-		return "", false
-	}
-	return normalizedCoverAssetID, true
-}
-
-func defaultWebCampaignCoverAssetID() string {
-	coverSet, ok := webCampaignCoverManifest.Sets[catalog.CampaignCoverSetV1]
-	if !ok || len(coverSet.AssetIDs) == 0 {
-		return ""
-	}
-	return coverSet.AssetIDs[0]
-}
-
-func resolveWebCampaignCoverSelection(campaignID, coverSetID, coverAssetID string) (string, string) {
-	resolvedCoverSetID, resolvedCoverAssetID, err := webCampaignCoverManifest.ResolveSelection(catalog.SelectionInput{
-		EntityType: "campaign",
-		EntityID:   strings.TrimSpace(campaignID),
-		SetID:      coverSetID,
-		AssetID:    coverAssetID,
-	})
-	if err == nil {
-		return resolvedCoverSetID, resolvedCoverAssetID
-	}
-
-	fallbackCoverSetID, fallbackCoverAssetID, fallbackErr := webCampaignCoverManifest.ResolveSelection(catalog.SelectionInput{
-		EntityType: "campaign",
-		EntityID:   strings.TrimSpace(campaignID),
-		SetID:      catalog.CampaignCoverSetV1,
-		AssetID:    "",
-	})
-	if fallbackErr == nil {
-		return fallbackCoverSetID, fallbackCoverAssetID
-	}
-	return catalog.CampaignCoverSetV1, defaultWebCampaignCoverAssetID()
-}
-
-func renderAppCampaignCreatePage(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext) {
-	renderAppCampaignCreatePageWithContext(w, r, page)
-}
-
-func renderAppCampaignCreatePageWithContext(w http.ResponseWriter, r *http.Request, page webtemplates.PageContext) {
-	// renderAppCampaignCreatePageWithAppName renders the campaign creation form used by
-	// the create flow.
-	if err := writePage(w, r, webtemplates.CampaignCreatePage(page), composeHTMXTitleForPage(page, "game.create.title")); err != nil {
-		localizeHTTPError(w, r, http.StatusInternalServerError, "error.http.failed_to_render_campaign_create_page")
-	}
-}
-
-func parseAppGameSystem(value string) (commonv1.GameSystem, bool) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "daggerheart", "game_system_daggerheart":
-		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, true
-	default:
-		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, false
-	}
-}
-
-func parseAppGmMode(value string) (statev1.GmMode, bool) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "human":
-		return statev1.GmMode_HUMAN, true
-	case "ai":
-		return statev1.GmMode_AI, true
-	case "hybrid":
-		return statev1.GmMode_HYBRID, true
-	default:
-		return statev1.GmMode_GM_MODE_UNSPECIFIED, false
-	}
 }

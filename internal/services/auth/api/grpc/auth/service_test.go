@@ -258,6 +258,52 @@ func TestGetUser_Success(t *testing.T) {
 	}
 }
 
+func TestCreateWebSession_Success(t *testing.T) {
+	store := openTempAuthStore(t)
+	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
+	if err := store.PutUser(context.Background(), user.User{ID: "user-1", Email: "alpha@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+	svc := NewAuthService(store, store, nil)
+	svc.clock = func() time.Time { return now }
+	svc.idGenerator = func() (string, error) { return "ws-1", nil }
+
+	resp, err := svc.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: "user-1"})
+	if err != nil {
+		t.Fatalf("create web session: %v", err)
+	}
+	if resp.GetSession().GetId() != "ws-1" {
+		t.Fatalf("session id = %q, want %q", resp.GetSession().GetId(), "ws-1")
+	}
+}
+
+func TestGetWebSession_NotFound(t *testing.T) {
+	store := openTempAuthStore(t)
+	svc := NewAuthService(store, store, nil)
+	_, err := svc.GetWebSession(context.Background(), &authv1.GetWebSessionRequest{SessionId: "missing"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestRevokeWebSession_RevokesSession(t *testing.T) {
+	store := openTempAuthStore(t)
+	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
+	if err := store.PutUser(context.Background(), user.User{ID: "user-1", Email: "alpha@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+	svc := NewAuthService(store, store, nil)
+	svc.clock = func() time.Time { return now }
+	svc.idGenerator = func() (string, error) { return "ws-1", nil }
+
+	if _, err := svc.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: "user-1"}); err != nil {
+		t.Fatalf("create web session: %v", err)
+	}
+	if _, err := svc.RevokeWebSession(context.Background(), &authv1.RevokeWebSessionRequest{SessionId: "ws-1"}); err != nil {
+		t.Fatalf("revoke web session: %v", err)
+	}
+	_, err := svc.GetWebSession(context.Background(), &authv1.GetWebSessionRequest{SessionId: "ws-1"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
 func TestListUsers_NilRequest(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.ListUsers(context.Background(), nil)

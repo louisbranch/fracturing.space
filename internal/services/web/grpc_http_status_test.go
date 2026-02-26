@@ -7,6 +7,8 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+
+	websupport "github.com/louisbranch/fracturing.space/internal/services/web/support"
 )
 
 func TestGRPCErrorHTTPStatus(t *testing.T) {
@@ -68,7 +70,7 @@ func TestGRPCErrorHTTPStatus(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got := grpcErrorHTTPStatus(tc.err, tc.fallback)
+			got := websupport.GRPCErrorHTTPStatus(tc.err, tc.fallback)
 			if got != tc.want {
 				t.Fatalf("status = %d, want %d", got, tc.want)
 			}

@@ -1,0 +1,59 @@
+package templates
+
+import "github.com/louisbranch/fracturing.space/internal/services/web2/routepath"
+import web2i18n "github.com/louisbranch/fracturing.space/internal/services/web2/platform/i18n"
+
+templ PublicRootFragment(copy web2i18n.AuthCopy) {
+	<section id="public-root" class="landing-hero">
+		<h1>Fracturing.Space</h1>
+		<p class="hero-tagline">{ copy.LandingTagline }</p>
+		<div class="hero-links">
+			<a class="btn btn-primary" href={ routepath.AuthLogin }>{ copy.LandingSignIn }</a>
+			<a class="btn btn-primary" href="https://louisbranch.github.io/fracturing.space/">{ copy.LandingDocs }</a>
+			<a class="btn btn-outline" href="https://github.com/louisbranch/fracturing.space">{ copy.LandingGitHub }</a>
+		</div>
+	</section>
+}
+
+templ PasskeyLoginPage(copy web2i18n.AuthCopy) {
+	<section id="passkey-page" class="w-full grid gap-8">
+		<header class="grid gap-2">
+			<h1 class="text-3xl font-bold">{ copy.LoginHeading }</h1>
+		</header>
+		<div class="card bg-base-200 border border-base-300 shadow-xl">
+			<div class="card-body">
+				<h2 class="card-title text-xl">{ copy.LoginCardTitle }</h2>
+				<p class="opacity-70">{ copy.LoginCardSubtitle }</p>
+				<div id="passkey-error" role="alert" class="alert alert-error mt-4" hidden></div>
+				<div id="register-error" role="alert" class="alert alert-error mt-4" hidden></div>
+				<div id="register-success" role="status" class="alert alert-success mt-4" hidden></div>
+				<form class="grid gap-4 mt-4" id="register-form">
+					<label for="email" class="form-control w-full">
+						<span class="label-text">{ copy.LoginEmail }</span>
+						<input id="email" name="email" type="email" autocomplete="email" class="input input-bordered w-full"/>
+					</label>
+					<button id="passkey-register" type="button" class="btn btn-primary">{ copy.LoginCreatePasskey }</button>
+				</form>
+				<div class="divider">{ copy.LoginDivider }</div>
+				<button id="passkey-login" type="button" class="btn btn-outline">{ copy.LoginSignInPasskey }</button>
+			</div>
+		</div>
+	</section>
+	<div
+		id="i18n-strings"
+		hidden
+		data-login-start-path={ routepath.PasskeyLoginStart }
+		data-login-finish-path={ routepath.PasskeyLoginFinish }
+		data-register-start-path={ routepath.PasskeyRegisterStart }
+		data-register-finish-path={ routepath.PasskeyRegisterFinish }
+		data-login-start-error={ copy.JSLoginStartError }
+		data-login-finish-error={ copy.JSLoginFinishError }
+		data-register-start-error={ copy.JSRegisterStartErr }
+		data-register-finish-error={ copy.JSRegisterFinishErr }
+		data-passkey-failed={ copy.JSPasskeyFailed }
+		data-email-required={ copy.JSEmailRequired }
+		data-passkey-created={ copy.JSPasskeyCreated }
+		data-register-failed={ copy.JSRegisterFailed }
+	></div>
+	<script defer src="/static/passkey-auth.js"></script>
+}

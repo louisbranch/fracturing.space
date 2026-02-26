@@ -13,6 +13,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	connectionsv1 "github.com/louisbranch/fracturing.space/api/gen/go/connections/v1"
+	featureSettings "github.com/louisbranch/fracturing.space/internal/services/web/feature/settings"
 	"golang.org/x/text/message"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -633,7 +634,7 @@ func (testLocalizer) Sprintf(key message.Reference, _ ...any) string {
 }
 
 func TestToAIKeyRowsDisablesRevokeForUnsafeCredentialID(t *testing.T) {
-	rows := toAIKeyRows(testLocalizer{}, []*aiv1.Credential{
+	rows := featureSettings.ToAIKeyRows(testLocalizer{}, []*aiv1.Credential{
 		{
 			Id:       "cred/unsafe",
 			Label:    "Primary",

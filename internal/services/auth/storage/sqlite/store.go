@@ -298,6 +298,7 @@ func dbMagicLinkToDomain(row db.MagicLink) storage.MagicLink {
 var _ storage.UserStore = (*Store)(nil)
 var _ storage.StatisticsStore = (*Store)(nil)
 var _ storage.PasskeyStore = (*Store)(nil)
+var _ storage.WebSessionStore = (*Store)(nil)
 var _ storage.EmailStore = (*Store)(nil)
 var _ storage.MagicLinkStore = (*Store)(nil)
 var _ storage.IntegrationOutboxStore = (*Store)(nil)

@@ -1,0 +1,425 @@
+package templates
+
+import (
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	module "github.com/louisbranch/fracturing.space/internal/services/web2/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web2/routepath"
+	sharedi18n "github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	"strings"
+)
+
+const daisyTheme = "abyss"
+const metaDescription = "Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters."
+
+func languageLinkClass(activeLang string, target string) string {
+	if strings.EqualFold(strings.TrimSpace(activeLang), strings.TrimSpace(target)) {
+		return "font-bold"
+	}
+	return ""
+}
+
+func languageMenuLabel(tag string) string {
+	tag = strings.TrimSpace(tag)
+	switch {
+	case strings.EqualFold(tag, "en"), strings.EqualFold(tag, "en-US"):
+		return "EN"
+	case strings.EqualFold(tag, "pt"), strings.EqualFold(tag, "pt-BR"):
+		return "PT-BR"
+	default:
+		return strings.ToUpper(tag)
+	}
+}
+
+templ daisyThemeHead() {
+	<link href="https://cdn.jsdelivr.net/npm/daisyui@5.5.18" rel="stylesheet" type="text/css" integrity="sha384-ww1btmC3Ah3rEb6jt/coOxyQ9JYMoxQpFSB/bxdE20ZYMK4kWSb+TwcgbHR/GFCq" crossorigin="anonymous"/>
+	<link href={ "https://cdn.jsdelivr.net/npm/daisyui@5.5.18/theme/" + daisyTheme + ".css" } rel="stylesheet" type="text/css" crossorigin="anonymous"/>
+	<script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.1.18" integrity="sha384-WrpyCFNrMmN/IC7KmMNiXxIouXEFpoDIuJ2P+ys++uYEzegAW2MSl+X6Unsahaij" crossorigin="anonymous"></script>
+}
+
+templ htmxHead() {
+	<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2" crossorigin="anonymous"></script>
+}
+
+func viewerName(viewer module.Viewer) string {
+	if strings.TrimSpace(viewer.DisplayName) == "" {
+		return "Adventurer"
+	}
+	return viewer.DisplayName
+}
+
+func viewerLocalizedName(viewer module.Viewer, loc Localizer) string {
+	if strings.TrimSpace(viewer.DisplayName) == "" {
+		return T(loc, "web.profile.display_name_fallback_adventurer")
+	}
+	return viewer.DisplayName
+}
+
+func viewerInitials(viewer module.Viewer, loc Localizer) string {
+	name := strings.TrimSpace(viewerLocalizedName(viewer, loc))
+	if name == "" {
+		return "A"
+	}
+	parts := strings.Fields(name)
+	if len(parts) == 0 {
+		return "A"
+	}
+	if len(parts) == 1 {
+		r := []rune(parts[0])
+		if len(r) == 0 {
+			return "A"
+		}
+		return strings.ToUpper(string(r[0]))
+	}
+	first := []rune(parts[0])
+	last := []rune(parts[len(parts)-1])
+	if len(first) == 0 || len(last) == 0 {
+		return "A"
+	}
+	return strings.ToUpper(string(first[0]) + string(last[0]))
+}
+
+func appLayoutLang(lang string) string {
+	lang = strings.TrimSpace(lang)
+	if lang == "" {
+		return "en-US"
+	}
+	return lang
+}
+
+type AppMainHeaderAction struct {
+	Label string
+	URL   string
+}
+
+type AppMainHeader struct {
+	Title  string
+	Action *AppMainHeaderAction
+	Breadcrumbs []sharedtemplates.BreadcrumbItem
+}
+
+type AppSideMenuItem struct {
+	Label       string
+	URL         string
+	MatchPrefix string
+	MatchExact  bool
+	IconID      commonv1.IconId
+}
+
+type AppSideMenu struct {
+	CurrentPath string
+	Items       []AppSideMenuItem
+}
+
+type AppMainLayoutOptions struct {
+	MainStyle string
+	MainClass string
+	SideMenu  *AppSideMenu
+}
+
+const breadcrumbLabelMaxChars = 32
+
+func appMainLayoutMainStyle(layout AppMainLayoutOptions) string {
+	return strings.TrimSpace(layout.MainStyle)
+}
+
+func appMainLayoutMainClass(layout AppMainLayoutOptions) string {
+	return strings.TrimSpace(layout.MainClass)
+}
+
+func appMainContainerClass(mainStyle, mainClass string) string {
+	mainStyle = strings.TrimSpace(mainStyle)
+	mainClass = strings.TrimSpace(mainClass)
+
+	baseClasses := "max-w-screen-xl px-4 pt-20 flex-1"
+	if strings.Contains(mainClass, "max-w-none") {
+		baseClasses = "w-full max-w-none px-4 pt-20 flex-1"
+	}
+	if mainStyle != "" {
+		baseClasses = "w-full max-w-none px-0 pt-20 flex-1"
+	}
+	if mainClass != "" {
+		baseClasses = baseClasses + " " + mainClass
+	}
+	return baseClasses
+}
+
+func appSideMenuHasItems(menu *AppSideMenu) bool {
+	if menu == nil || len(menu.Items) == 0 {
+		return false
+	}
+	for _, item := range menu.Items {
+		if appSideMenuItemLabel(item) == "" || appSideMenuItemURL(item) == "" {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+func appSideMenuItemLabel(item AppSideMenuItem) string {
+	return strings.TrimSpace(item.Label)
+}
+
+func appSideMenuItemURL(item AppSideMenuItem) string {
+	return strings.TrimSpace(item.URL)
+}
+
+func appSideMenuItemMatchPrefix(item AppSideMenuItem) string {
+	matchPrefix := strings.TrimSpace(item.MatchPrefix)
+	if matchPrefix != "" {
+		return matchPrefix
+	}
+	return appSideMenuItemURL(item)
+}
+
+func appSideMenuLinkClass(menu *AppSideMenu, item AppSideMenuItem) string {
+	if menu == nil {
+		return ""
+	}
+	currentPath := strings.TrimSpace(menu.CurrentPath)
+	target := appSideMenuItemURL(item)
+	matchPrefix := appSideMenuItemMatchPrefix(item)
+	if currentPath == "" || target == "" || matchPrefix == "" {
+		return ""
+	}
+	if currentPath == target || currentPath == matchPrefix {
+		return "menu-active"
+	}
+	if item.MatchExact {
+		return ""
+	}
+	if strings.HasPrefix(currentPath, matchPrefix+"/") {
+		return "menu-active"
+	}
+	return ""
+}
+
+func appSideMenuItemIconID(item AppSideMenuItem) commonv1.IconId {
+	return item.IconID
+}
+
+func appMainHeaderTitle(header *AppMainHeader) string {
+	if header == nil {
+		return ""
+	}
+	return strings.TrimSpace(header.Title)
+}
+
+func appMainHeaderAction(header *AppMainHeader) *AppMainHeaderAction {
+	if header == nil || header.Action == nil {
+		return nil
+	}
+	label := strings.TrimSpace(header.Action.Label)
+	url := strings.TrimSpace(header.Action.URL)
+	if label == "" || url == "" {
+		return nil
+	}
+	return &AppMainHeaderAction{Label: label, URL: url}
+}
+
+func appMainHeaderHasContent(header *AppMainHeader) bool {
+	return appMainHeaderTitle(header) != "" || appMainHeaderAction(header) != nil
+}
+
+func appMainHeaderBreadcrumbs(header *AppMainHeader) []sharedtemplates.BreadcrumbItem {
+	if header == nil || len(header.Breadcrumbs) == 0 {
+		return nil
+	}
+	items := make([]sharedtemplates.BreadcrumbItem, 0, len(header.Breadcrumbs))
+	for _, item := range header.Breadcrumbs {
+		items = append(items, sharedtemplates.BreadcrumbItem{
+			Label: truncateBreadcrumbLabel(item.Label),
+			URL:   item.URL,
+		})
+	}
+	return items
+}
+
+func truncateBreadcrumbLabel(label string) string {
+	label = strings.TrimSpace(label)
+	if label == "" {
+		return ""
+	}
+	runes := []rune(label)
+	if len(runes) <= breadcrumbLabelMaxChars {
+		return label
+	}
+	if breadcrumbLabelMaxChars <= 3 {
+		return "..."
+	}
+	return string(runes[:breadcrumbLabelMaxChars-3]) + "..."
+}
+
+templ AppSideMenuComponent(menu *AppSideMenu) {
+	if appSideMenuHasItems(menu) {
+		<ul class="menu bg-base-200 rounded-box w-full">
+			for _, item := range menu.Items {
+				if appSideMenuItemLabel(item) != "" && appSideMenuItemURL(item) != "" {
+					<li>
+						<a
+							class={ appSideMenuLinkClass(menu, item) }
+							href={ appSideMenuItemURL(item) }
+							hx-get={ appSideMenuItemURL(item) }
+							hx-target="#main"
+							hx-swap="innerHTML"
+							hx-push-url="true"
+						>
+							if appSideMenuItemIconID(item) != commonv1.IconId_ICON_ID_UNSPECIFIED {
+								@sharedtemplates.LucideIconID(appSideMenuItemIconID(item), "size-4 me-2")
+							}
+							{ appSideMenuItemLabel(item) }
+						</a>
+					</li>
+				}
+			}
+		</ul>
+	}
+}
+
+templ AppMainContent(header *AppMainHeader) {
+	@AppMainContentWithLayout(header, AppMainLayoutOptions{})
+}
+
+templ AppMainContentWithLayout(header *AppMainHeader, layout AppMainLayoutOptions) {
+	if len(appMainHeaderBreadcrumbs(header)) > 0 {
+		@sharedtemplates.Breadcrumbs(appMainHeaderBreadcrumbs(header), false)
+	}
+	if appMainHeaderHasContent(header) {
+		<div class="mb-5 flex items-center justify-between gap-3">
+			if appMainHeaderTitle(header) != "" {
+				<h1 class="mb-0">{ appMainHeaderTitle(header) }</h1>
+			}
+			if action := appMainHeaderAction(header); action != nil {
+				<div class="shrink-0">
+					<a class="btn btn-primary btn-sm" href={ action.URL }>{ action.Label }</a>
+				</div>
+			}
+		</div>
+	}
+	<div
+		data-app-main-style={ appMainLayoutMainStyle(layout) }
+		data-app-main-extra-class={ appMainLayoutMainClass(layout) }
+		class="sr-only"
+		aria-hidden="true"
+	></div>
+	if appSideMenuHasItems(layout.SideMenu) {
+		<div class="grid gap-6 lg:grid-cols-[16rem_1fr]">
+			<aside class="h-fit">
+				@AppSideMenuComponent(layout.SideMenu)
+			</aside>
+			<div class="grid gap-4">
+				{ children... }
+			</div>
+		</div>
+	} else {
+		<div class="grid gap-4">
+			{ children... }
+		</div>
+	}
+}
+
+templ AppLayout(title string, viewer module.Viewer, lang string, loc Localizer) {
+	@AppLayoutWithMainHeaderAndLayout(title, viewer, nil, AppMainLayoutOptions{}, lang, loc)
+}
+
+templ AppLayoutWithMainHeader(title string, viewer module.Viewer, header *AppMainHeader, lang string, loc Localizer) {
+	@AppLayoutWithMainHeaderAndLayout(title, viewer, header, AppMainLayoutOptions{}, lang, loc)
+}
+
+templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, header *AppMainHeader, layout AppMainLayoutOptions, lang string, loc Localizer) {
+	<!doctype html>
+	<html lang={ appLayoutLang(lang) } data-theme={ daisyTheme }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ sharedtemplates.ComposePageTitle(title) }</title>
+			<meta name="description" content={ T(loc, "layout.meta_description") }/>
+			@daisyThemeHead()
+			<link rel="stylesheet" href="/static/theme.css"/>
+			@htmxHead()
+		</head>
+		<body class="min-h-[100dvh] flex flex-col" data-layout="app">
+			@sharedtemplates.LucideSprite()
+			<header class="navbar bg-base-200 fixed top-0 w-full z-50">
+				<div class="navbar-start w-auto">
+					<a href={ routepath.AppCampaigns } class="text-lg font-bold">Fracturing.Space</a>
+				</div>
+				<nav aria-label={ T(loc, "layout.primary_nav_aria_label") } class="navbar-end w-full justify-end gap-3">
+					<a href={ routepath.AppCampaigns } hx-get={ routepath.AppCampaigns } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" data-nav-item="true" class="btn btn-ghost btn-sm">
+						@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CAMPAIGN, "size-4 me-1")
+						{ T(loc, "game.campaigns.title") }
+					</a>
+					<div class="dropdown dropdown-end">
+						<button type="button" class="btn btn-ghost btn-circle avatar">
+							if strings.TrimSpace(viewer.AvatarURL) != "" {
+								<div class="w-10 rounded-full">
+									<img src={ viewer.AvatarURL } alt={ viewerLocalizedName(viewer, loc) } class="rounded-full"/>
+								</div>
+							} else {
+								<div class="avatar placeholder">
+									<div class="bg-neutral text-neutral-content rounded-full w-10"><span class="text-sm">{ viewerInitials(viewer, loc) }</span></div>
+								</div>
+							}
+						</button>
+						<div class="dropdown-content bg-base-100 rounded-box z-[1] mt-3 w-40 p-2 shadow">
+							<a href={ routepath.AppSettings } hx-get={ routepath.AppSettings } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-ghost btn-sm w-full justify-start">
+								@sharedtemplates.LucideIcon("settings", "size-4 me-2")
+								{ T(loc, "layout.settings") }
+							</a>
+							<form method="post" action={ routepath.Logout } class="w-full">
+								<button type="submit" class="btn btn-ghost btn-sm w-full justify-start">
+									@sharedtemplates.LucideIcon("log-out", "size-4 me-2")
+									{ T(loc, "layout.sign_out") }
+								</button>
+							</form>
+						</div>
+					</div>
+				</nav>
+			</header>
+			<main
+				id="main"
+				class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }
+				style={ appMainLayoutMainStyle(layout) }
+				data-default-style={ appMainLayoutMainStyle(layout) }
+				data-default-class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }
+				data-fallback-class={ appMainContainerClass("", "") }
+				aria-label={ T(loc, "layout.main_content_aria_label") }
+			>
+				@AppMainContentWithLayout(header, layout) {
+					{ children... }
+				}
+			</main>
+			<script src="/static/app-shell.js"></script>
+		</body>
+	</html>
+}
+
+templ AuthLayout(title string, metaDesc string, lang string, currentPath string, currentQuery string) {
+	<!doctype html>
+	<html lang={ lang } data-theme={ daisyTheme }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ sharedtemplates.ComposePageTitle(title) }</title>
+			<meta name="description" content={ metaDesc }/>
+			@daisyThemeHead()
+			<link rel="stylesheet" href="/static/shell.css"/>
+		</head>
+		<body class="landing-body" data-layout="auth">
+			@sharedtemplates.LucideSprite()
+			<div id="auth-language-menu" class="fixed right-4 top-4 z-50">
+				<div class="dropdown dropdown-end">
+					<div tabindex="0" role="button" class="btn btn-sm btn-ghost bg-base-200/80 backdrop-blur">{ languageMenuLabel(lang) }</div>
+					<ul tabindex="0" class="dropdown-content menu menu-sm bg-base-200 rounded-box z-10 mt-2 w-24 p-2 shadow">
+						<li><a href={ sharedi18n.LanguageURL(currentPath, currentQuery, "en-US") } data-lang="en-US" class={ languageLinkClass(lang, "en-US") }>{ languageMenuLabel("en-US") }</a></li>
+						<li><a href={ sharedi18n.LanguageURL(currentPath, currentQuery, "pt-BR") } data-lang="pt-BR" class={ languageLinkClass(lang, "pt-BR") }>{ languageMenuLabel("pt-BR") }</a></li>
+					</ul>
+				</div>
+			</div>
+			<main id="auth-shell" class="landing-shell">
+				{ children... }
+			</main>
+		</body>
+	</html>
+}

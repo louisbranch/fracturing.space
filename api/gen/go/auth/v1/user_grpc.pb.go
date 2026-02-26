@@ -25,6 +25,9 @@ const (
 	AuthService_FinishPasskeyRegistration_FullMethodName    = "/auth.v1.AuthService/FinishPasskeyRegistration"
 	AuthService_BeginPasskeyLogin_FullMethodName            = "/auth.v1.AuthService/BeginPasskeyLogin"
 	AuthService_FinishPasskeyLogin_FullMethodName           = "/auth.v1.AuthService/FinishPasskeyLogin"
+	AuthService_CreateWebSession_FullMethodName             = "/auth.v1.AuthService/CreateWebSession"
+	AuthService_GetWebSession_FullMethodName                = "/auth.v1.AuthService/GetWebSession"
+	AuthService_RevokeWebSession_FullMethodName             = "/auth.v1.AuthService/RevokeWebSession"
 	AuthService_GenerateMagicLink_FullMethodName            = "/auth.v1.AuthService/GenerateMagicLink"
 	AuthService_ConsumeMagicLink_FullMethodName             = "/auth.v1.AuthService/ConsumeMagicLink"
 	AuthService_ListUserEmails_FullMethodName               = "/auth.v1.AuthService/ListUserEmails"
@@ -51,6 +54,12 @@ type AuthServiceClient interface {
 	BeginPasskeyLogin(ctx context.Context, in *BeginPasskeyLoginRequest, opts ...grpc.CallOption) (*BeginPasskeyLoginResponse, error)
 	// Finish a passkey login ceremony.
 	FinishPasskeyLogin(ctx context.Context, in *FinishPasskeyLoginRequest, opts ...grpc.CallOption) (*FinishPasskeyLoginResponse, error)
+	// Create a durable web session for an authenticated user.
+	CreateWebSession(ctx context.Context, in *CreateWebSessionRequest, opts ...grpc.CallOption) (*CreateWebSessionResponse, error)
+	// Resolve a durable web session by ID.
+	GetWebSession(ctx context.Context, in *GetWebSessionRequest, opts ...grpc.CallOption) (*GetWebSessionResponse, error)
+	// Revoke a durable web session by ID.
+	RevokeWebSession(ctx context.Context, in *RevokeWebSessionRequest, opts ...grpc.CallOption) (*RevokeWebSessionResponse, error)
 	// Generate a magic link token for email recovery.
 	GenerateMagicLink(ctx context.Context, in *GenerateMagicLinkRequest, opts ...grpc.CallOption) (*GenerateMagicLinkResponse, error)
 	// Consume a magic link token.
@@ -121,6 +130,36 @@ func (c *authServiceClient) FinishPasskeyLogin(ctx context.Context, in *FinishPa
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FinishPasskeyLoginResponse)
 	err := c.cc.Invoke(ctx, AuthService_FinishPasskeyLogin_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) CreateWebSession(ctx context.Context, in *CreateWebSessionRequest, opts ...grpc.CallOption) (*CreateWebSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateWebSessionResponse)
+	err := c.cc.Invoke(ctx, AuthService_CreateWebSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) GetWebSession(ctx context.Context, in *GetWebSessionRequest, opts ...grpc.CallOption) (*GetWebSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetWebSessionResponse)
+	err := c.cc.Invoke(ctx, AuthService_GetWebSession_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) RevokeWebSession(ctx context.Context, in *RevokeWebSessionRequest, opts ...grpc.CallOption) (*RevokeWebSessionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RevokeWebSessionResponse)
+	err := c.cc.Invoke(ctx, AuthService_RevokeWebSession_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -223,6 +262,12 @@ type AuthServiceServer interface {
 	BeginPasskeyLogin(context.Context, *BeginPasskeyLoginRequest) (*BeginPasskeyLoginResponse, error)
 	// Finish a passkey login ceremony.
 	FinishPasskeyLogin(context.Context, *FinishPasskeyLoginRequest) (*FinishPasskeyLoginResponse, error)
+	// Create a durable web session for an authenticated user.
+	CreateWebSession(context.Context, *CreateWebSessionRequest) (*CreateWebSessionResponse, error)
+	// Resolve a durable web session by ID.
+	GetWebSession(context.Context, *GetWebSessionRequest) (*GetWebSessionResponse, error)
+	// Revoke a durable web session by ID.
+	RevokeWebSession(context.Context, *RevokeWebSessionRequest) (*RevokeWebSessionResponse, error)
 	// Generate a magic link token for email recovery.
 	GenerateMagicLink(context.Context, *GenerateMagicLinkRequest) (*GenerateMagicLinkResponse, error)
 	// Consume a magic link token.
@@ -263,6 +308,15 @@ func (UnimplementedAuthServiceServer) BeginPasskeyLogin(context.Context, *BeginP
 }
 func (UnimplementedAuthServiceServer) FinishPasskeyLogin(context.Context, *FinishPasskeyLoginRequest) (*FinishPasskeyLoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FinishPasskeyLogin not implemented")
+}
+func (UnimplementedAuthServiceServer) CreateWebSession(context.Context, *CreateWebSessionRequest) (*CreateWebSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateWebSession not implemented")
+}
+func (UnimplementedAuthServiceServer) GetWebSession(context.Context, *GetWebSessionRequest) (*GetWebSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetWebSession not implemented")
+}
+func (UnimplementedAuthServiceServer) RevokeWebSession(context.Context, *RevokeWebSessionRequest) (*RevokeWebSessionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RevokeWebSession not implemented")
 }
 func (UnimplementedAuthServiceServer) GenerateMagicLink(context.Context, *GenerateMagicLinkRequest) (*GenerateMagicLinkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GenerateMagicLink not implemented")
@@ -395,6 +449,60 @@ func _AuthService_FinishPasskeyLogin_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServiceServer).FinishPasskeyLogin(ctx, req.(*FinishPasskeyLoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_CreateWebSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateWebSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).CreateWebSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_CreateWebSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).CreateWebSession(ctx, req.(*CreateWebSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_GetWebSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetWebSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).GetWebSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_GetWebSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).GetWebSession(ctx, req.(*GetWebSessionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_RevokeWebSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RevokeWebSessionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).RevokeWebSession(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_RevokeWebSession_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).RevokeWebSession(ctx, req.(*RevokeWebSessionRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -569,6 +677,18 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FinishPasskeyLogin",
 			Handler:    _AuthService_FinishPasskeyLogin_Handler,
+		},
+		{
+			MethodName: "CreateWebSession",
+			Handler:    _AuthService_CreateWebSession_Handler,
+		},
+		{
+			MethodName: "GetWebSession",
+			Handler:    _AuthService_GetWebSession_Handler,
+		},
+		{
+			MethodName: "RevokeWebSession",
+			Handler:    _AuthService_RevokeWebSession_Handler,
 		},
 		{
 			MethodName: "GenerateMagicLink",
