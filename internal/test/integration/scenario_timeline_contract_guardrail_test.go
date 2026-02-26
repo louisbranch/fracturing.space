@@ -14,7 +14,7 @@ func TestScenarioMissingMechanicTimelineCoverage(t *testing.T) {
 	repoRoot := integrationRepoRoot(t)
 	scenarioDir := filepath.Join(repoRoot, "internal", "test", "game", "scenarios")
 	missingMechanicsDoc := filepath.Join(repoRoot, "docs", "project", "scenario-missing-mechanics.md")
-	timelineDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-event-timeline-contract.md")
+	backlogDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-mechanic-backlog.md")
 
 	markerScenarios, err := loadMarkedScenarioFiles(scenarioDir, "-- Missing DSL:")
 	if err != nil {
@@ -29,7 +29,7 @@ func TestScenarioMissingMechanicTimelineCoverage(t *testing.T) {
 		t.Fatal("expected at least one scenario timeline mapping")
 	}
 
-	timelineRowIDs, err := loadTimelineRowIDs(timelineDoc)
+	timelineRowIDs, err := loadTimelineRowIDs(backlogDoc)
 	if err != nil {
 		t.Fatalf("load timeline row ids: %v", err)
 	}
@@ -45,16 +45,17 @@ func TestScenarioMissingMechanicTimelineCoverage(t *testing.T) {
 func TestDaggerheartTimelineTypesAreRegistered(t *testing.T) {
 	repoRoot := integrationRepoRoot(t)
 	timelineDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-event-timeline-contract.md")
+	backlogDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-mechanic-backlog.md")
 
-	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypes(timelineDoc)
+	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypesFromDocs(timelineDoc, backlogDoc)
 	if err != nil {
 		t.Fatalf("load timeline command/event types: %v", err)
 	}
 	if len(commandTypes) == 0 {
-		t.Fatal("expected at least one command type in timeline contract")
+		t.Fatal("expected at least one command type in timeline docs")
 	}
 	if len(eventTypes) == 0 {
-		t.Fatal("expected at least one event type in timeline contract")
+		t.Fatal("expected at least one event type in timeline docs")
 	}
 
 	registries, err := engine.BuildRegistries(daggerheart.NewModule())
@@ -88,8 +89,9 @@ func TestDaggerheartTimelineTypesAreRegistered(t *testing.T) {
 func TestRegisteredDaggerheartTimelineTypesAreDocumented(t *testing.T) {
 	repoRoot := integrationRepoRoot(t)
 	timelineDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-event-timeline-contract.md")
+	backlogDoc := filepath.Join(repoRoot, "docs", "project", "daggerheart-mechanic-backlog.md")
 
-	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypes(timelineDoc)
+	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypesFromDocs(timelineDoc, backlogDoc)
 	if err != nil {
 		t.Fatalf("load timeline command/event types: %v", err)
 	}
@@ -101,11 +103,11 @@ func TestRegisteredDaggerheartTimelineTypesAreDocumented(t *testing.T) {
 
 	missingCommands := missingDaggerheartTimelineCommandTypes(commandTypes, registries.Commands.ListDefinitions())
 	if len(missingCommands) > 0 {
-		t.Fatalf("registered timeline-tracked command types missing from timeline contract doc: %v", missingCommands)
+		t.Fatalf("registered timeline-tracked command types missing from timeline docs: %v", missingCommands)
 	}
 
 	missingEvents := missingDaggerheartTimelineEventTypes(eventTypes, registries.Events.ListDefinitions())
 	if len(missingEvents) > 0 {
-		t.Fatalf("registered timeline-tracked event types missing from timeline contract doc: %v", missingEvents)
+		t.Fatalf("registered timeline-tracked event types missing from timeline docs: %v", missingEvents)
 	}
 }

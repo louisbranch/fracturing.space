@@ -5,29 +5,30 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module/testkit"
 )
 
 func TestDaggerheartHandlersUseSharedDomainWriteHelper(t *testing.T) {
-	files, err := daggerheartArchScanFiles(t)
+	dir := handlerDir(t)
+	files, err := testkit.ScanHandlerDir(dir)
 	if err != nil {
 		t.Fatalf("load architecture scan files: %v", err)
 	}
 
 	var violations []string
 	for _, filename := range files {
-		sourcePath := localSourcePath(t, filename)
+		sourcePath := filepath.Join(dir, filename)
 		domainAliases, err := findDomainStoreAliases(sourcePath)
 		if err != nil {
 			t.Fatalf("scan aliases in %s: %v", filename, err)
 		}
-		lines, err := findCallLines(sourcePath, func(callPath string, _ *ast.CallExpr) bool {
+		lines, err := testkit.ScanCallViolations(sourcePath, func(callPath string) bool {
 			if callPath == "s.stores.Domain.Execute" {
 				return true
 			}
@@ -47,68 +48,29 @@ func TestDaggerheartHandlersUseSharedDomainWriteHelper(t *testing.T) {
 	assertNoViolations(t, "direct Domain.Execute usage found in Daggerheart handlers", violations)
 }
 
-func TestDaggerheartHandlersDoNotInlineApplyEvents(t *testing.T) {
-	files, err := daggerheartArchScanFiles(t)
-	if err != nil {
-		t.Fatalf("load architecture scan files: %v", err)
-	}
-
-	var violations []string
-	for _, filename := range files {
-		sourcePath := localSourcePath(t, filename)
-		lines, err := findCallLines(sourcePath, func(callPath string, _ *ast.CallExpr) bool {
-			return strings.HasSuffix(callPath, ".Apply")
-		})
-		if err != nil {
-			t.Fatalf("scan %s: %v", filename, err)
-		}
-		violations = append(violations, linesWithFile(filename, lines)...)
-	}
-
-	assertNoViolations(t, "inline Apply(ctx, evt) calls found in Daggerheart handlers", violations)
-}
-
-func TestDaggerheartHandlersNoDirectStorageMutationBypass(t *testing.T) {
-	files, err := daggerheartArchScanFiles(t)
-	if err != nil {
-		t.Fatalf("load architecture scan files: %v", err)
-	}
-
-	literalPolicies := map[string][]string{
-		"actions.go": {
-			"action.outcome_rejected",
-			"story.note_added",
+// TestDaggerheartWritePathArchitecture uses the generalized write-path guard
+// to enforce: no inline Apply calls, no direct storage mutations, and no
+// forbidden string literals.
+func TestDaggerheartWritePathArchitecture(t *testing.T) {
+	testkit.ValidateWritePathArchitecture(t, testkit.WritePathPolicy{
+		HandlerDir: handlerDir(t),
+		StoreMutationSubstrings: []string{
+			".PutDaggerheart",
+			".UpdateDaggerheart",
+			".DeleteDaggerheart",
 		},
-	}
-
-	for _, filename := range files {
-		t.Run(strings.TrimSuffix(filename, ".go"), func(t *testing.T) {
-			sourcePath := localSourcePath(t, filename)
-			callLines, err := findCallLines(sourcePath, func(callPath string, _ *ast.CallExpr) bool {
-				if callPath == "s.stores.Event.AppendEvent" {
-					return true
-				}
-				return hasDisallowedStoreMutationCall(callPath)
-			})
-			if err != nil {
-				t.Fatalf("scan calls in %s: %v", filename, err)
-			}
-
-			literalLines, err := findStringLiteralLines(sourcePath, literalPolicies[filename])
-			if err != nil {
-				t.Fatalf("scan literals in %s: %v", filename, err)
-			}
-
-			var violations []string
-			violations = append(violations, linesWithFile(filename, callLines)...)
-			violations = append(violations, linesWithFile(filename, literalLines)...)
-			assertNoViolations(t, fmt.Sprintf("%s contains write-path bypass patterns", filename), violations)
-		})
-	}
+		LiteralPolicies: map[string][]string{
+			"actions.go": {
+				"action.outcome_rejected",
+				"story.note_added",
+			},
+		},
+	})
 }
 
 func TestDaggerheartArchScanIncludesNonLegacyFiles(t *testing.T) {
-	files, err := daggerheartArchScanFiles(t)
+	dir := handlerDir(t)
+	files, err := testkit.ScanHandlerDir(dir)
 	if err != nil {
 		t.Fatalf("load architecture scan files: %v", err)
 	}
@@ -117,96 +79,18 @@ func TestDaggerheartArchScanIncludesNonLegacyFiles(t *testing.T) {
 	}
 }
 
-func localSourcePath(t *testing.T, filename string) string {
+// handlerDir resolves the directory containing this test file at runtime.
+func handlerDir(t *testing.T) string {
 	t.Helper()
 	_, thisFile, _, ok := runtime.Caller(0)
 	if !ok {
 		t.Fatal("resolve current file path")
 	}
-	return filepath.Join(filepath.Dir(thisFile), filename)
+	return filepath.Dir(thisFile)
 }
 
-func daggerheartArchScanFiles(t *testing.T) ([]string, error) {
-	t.Helper()
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		return nil, fmt.Errorf("resolve current file path")
-	}
-	dir := filepath.Dir(thisFile)
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("read daggerheart directory: %w", err)
-	}
-	files := make([]string, 0, len(entries))
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		name := entry.Name()
-		if filepath.Ext(name) != ".go" || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		files = append(files, name)
-	}
-	sort.Strings(files)
-	return files, nil
-}
-
-func findCallLines(path string, disallowed func(callPath string, call *ast.CallExpr) bool) ([]int, error) {
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
-	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
-	}
-	lines := make([]int, 0)
-	ast.Inspect(file, func(node ast.Node) bool {
-		call, ok := node.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		callPath := selectorPath(call.Fun)
-		if callPath == "" || !disallowed(callPath, call) {
-			return true
-		}
-		lines = append(lines, fset.Position(call.Lparen).Line)
-		return true
-	})
-	return lines, nil
-}
-
-func findStringLiteralLines(path string, values []string) ([]int, error) {
-	if len(values) == 0 {
-		return nil, nil
-	}
-	valueSet := make(map[string]struct{}, len(values))
-	for _, value := range values {
-		valueSet[value] = struct{}{}
-	}
-
-	fset := token.NewFileSet()
-	file, err := parser.ParseFile(fset, path, nil, 0)
-	if err != nil {
-		return nil, fmt.Errorf("parse %s: %w", path, err)
-	}
-
-	lines := make([]int, 0)
-	ast.Inspect(file, func(node ast.Node) bool {
-		lit, ok := node.(*ast.BasicLit)
-		if !ok || lit.Kind != token.STRING {
-			return true
-		}
-		value, err := strconv.Unquote(lit.Value)
-		if err != nil {
-			return true
-		}
-		if _, exists := valueSet[value]; exists {
-			lines = append(lines, fset.Position(lit.ValuePos).Line)
-		}
-		return true
-	})
-	return lines, nil
-}
-
+// findDomainStoreAliases detects local variables assigned from s.stores.Domain
+// so the shared-helper guard catches aliased calls too.
 func findDomainStoreAliases(path string) (map[string]struct{}, error) {
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, path, nil, 0)
@@ -245,13 +129,16 @@ func findDomainStoreAliases(path string) (map[string]struct{}, error) {
 }
 
 func isDomainStoreSelector(expr ast.Expr) bool {
-	return selectorPath(expr) == "s.stores.Domain"
+	return selectorPathLocal(expr) == "s.stores.Domain"
 }
 
-func selectorPath(expr ast.Expr) string {
+// selectorPathLocal resolves the dot-separated selector path. This is the
+// package-local version needed for alias detection; the shared version lives
+// in testkit.
+func selectorPathLocal(expr ast.Expr) string {
 	switch typed := expr.(type) {
 	case *ast.SelectorExpr:
-		prefix := selectorPath(typed.X)
+		prefix := selectorPathLocal(typed.X)
 		if prefix == "" {
 			return typed.Sel.Name
 		}
@@ -259,18 +146,12 @@ func selectorPath(expr ast.Expr) string {
 	case *ast.Ident:
 		return typed.Name
 	case *ast.ParenExpr:
-		return selectorPath(typed.X)
+		return selectorPathLocal(typed.X)
 	case *ast.StarExpr:
-		return selectorPath(typed.X)
+		return selectorPathLocal(typed.X)
 	default:
 		return ""
 	}
-}
-
-func hasDisallowedStoreMutationCall(callPath string) bool {
-	return strings.Contains(callPath, ".PutDaggerheart") ||
-		strings.Contains(callPath, ".UpdateDaggerheart") ||
-		strings.Contains(callPath, ".DeleteDaggerheart")
 }
 
 func linesWithFile(filename string, lines []int) []string {

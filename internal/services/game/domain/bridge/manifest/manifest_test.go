@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"testing"
@@ -8,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	domainsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -210,6 +212,78 @@ func TestValidateSystemDescriptors_RejectsNilBuildAdapter(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "BuildAdapter") {
 		t.Fatalf("expected error to mention BuildAdapter, got: %v", err)
+	}
+}
+
+// noProfileAdapter is a minimal adapter that does NOT implement ProfileAdapter.
+type noProfileAdapter struct {
+	id      string
+	version string
+}
+
+func (a noProfileAdapter) ID() string                                        { return a.id }
+func (a noProfileAdapter) Version() string                                   { return a.version }
+func (a noProfileAdapter) Apply(_ context.Context, _ event.Event) error      { return nil }
+func (a noProfileAdapter) Snapshot(_ context.Context, _ string) (any, error) { return nil, nil }
+func (a noProfileAdapter) HandledTypes() []event.Type                        { return nil }
+
+func TestValidateProfileAdapterCoverage_PassesForBuiltIns(t *testing.T) {
+	registry, err := AdapterRegistry(ProjectionStores{
+		Daggerheart: fakeDaggerheartStore{},
+	})
+	if err != nil {
+		t.Fatalf("build registry: %v", err)
+	}
+	if err := ValidateProfileAdapterCoverage(registry); err != nil {
+		t.Fatalf("expected no error for built-ins, got: %v", err)
+	}
+}
+
+func TestValidateProfileAdapterCoverage_FailsWhenAdapterMissesInterface(t *testing.T) {
+	orig := builtInSystems
+	builtInSystems = []SystemDescriptor{{
+		ID:                  "test-system",
+		Version:             "v1",
+		HasProfileSupport:   true,
+		BuildModule:         func() domainsystem.Module { return nil },
+		BuildMetadataSystem: func() domainbridge.GameSystem { return nil },
+		BuildAdapter: func(ProjectionStores) domainbridge.Adapter {
+			return noProfileAdapter{id: "test-system", version: "v1"}
+		},
+	}}
+	defer func() { builtInSystems = orig }()
+
+	registry := domainbridge.NewAdapterRegistry()
+	_ = registry.Register(noProfileAdapter{id: "test-system", version: "v1"})
+
+	err := ValidateProfileAdapterCoverage(registry)
+	if err == nil {
+		t.Fatal("expected error when adapter does not implement ProfileAdapter")
+	}
+	if !strings.Contains(err.Error(), "ProfileAdapter") {
+		t.Fatalf("error should mention ProfileAdapter, got: %v", err)
+	}
+}
+
+func TestValidateProfileAdapterCoverage_SkipsNonProfileSystems(t *testing.T) {
+	orig := builtInSystems
+	builtInSystems = []SystemDescriptor{{
+		ID:                  "simple-system",
+		Version:             "v1",
+		HasProfileSupport:   false,
+		BuildModule:         func() domainsystem.Module { return nil },
+		BuildMetadataSystem: func() domainbridge.GameSystem { return nil },
+		BuildAdapter: func(ProjectionStores) domainbridge.Adapter {
+			return noProfileAdapter{id: "simple-system", version: "v1"}
+		},
+	}}
+	defer func() { builtInSystems = orig }()
+
+	registry := domainbridge.NewAdapterRegistry()
+	_ = registry.Register(noProfileAdapter{id: "simple-system", version: "v1"})
+
+	if err := ValidateProfileAdapterCoverage(registry); err != nil {
+		t.Fatalf("expected no error for non-profile system, got: %v", err)
 	}
 }
 

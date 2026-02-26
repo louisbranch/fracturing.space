@@ -39,7 +39,7 @@ func registeredMetadataSystems() []domainbridge.GameSystem {
 // If a module is missing from either metadata or adapters (or vice versa), the
 // server refuses startup because command execution and read-model projection would
 // diverge by system.
-func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *domainbridge.Registry, adapters *domainbridge.AdapterRegistry) error {
+func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *domainbridge.MetadataRegistry, adapters *domainbridge.AdapterRegistry) error {
 	if metadata == nil {
 		return errSystemMetadataRegistryRequired
 	}
@@ -73,6 +73,10 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 		if !adapters.Has(moduleID, moduleVersion) {
 			return fmt.Errorf("%w: adapter missing for module %s@%s", errSystemModuleRegistryMismatch, moduleID, moduleVersion)
 		}
+	}
+
+	if err := systemmanifest.ValidateProfileAdapterCoverage(adapters); err != nil {
+		return fmt.Errorf("%w: %v", errSystemModuleRegistryMismatch, err)
 	}
 
 	for _, gameSystem := range metadata.List() {

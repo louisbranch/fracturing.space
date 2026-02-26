@@ -12,8 +12,9 @@ import (
 
 // fakeEventStore implements storage.EventStore with canned events.
 type fakeEventStore struct {
-	events  map[string][]event.Event // keyed by campaignID
-	listErr error
+	events     map[string][]event.Event // keyed by campaignID
+	latestSeqs map[string]uint64        // keyed by campaignID
+	listErr    error
 }
 
 func (f *fakeEventStore) AppendEvent(_ context.Context, _ event.Event) (event.Event, error) {
@@ -49,7 +50,13 @@ func (f *fakeEventStore) ListEventsBySession(_ context.Context, _, _ string, _ u
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (f *fakeEventStore) GetLatestEventSeq(_ context.Context, _ string) (uint64, error) {
+func (f *fakeEventStore) GetLatestEventSeq(_ context.Context, campaignID string) (uint64, error) {
+	if f.latestSeqs != nil {
+		seq, ok := f.latestSeqs[campaignID]
+		if ok {
+			return seq, nil
+		}
+	}
 	return 0, fmt.Errorf("not implemented")
 }
 
@@ -88,6 +95,7 @@ type fakeProjectionStore struct {
 	putDaggerheartAdversary    func(ctx context.Context, adversary storage.DaggerheartAdversary) error
 	getDaggerheartAdversary    func(ctx context.Context, campaignID, adversaryID string) (storage.DaggerheartAdversary, error)
 	deleteDaggerheartAdversary func(ctx context.Context, campaignID, adversaryID string) error
+	listProjectionWatermarks   func(ctx context.Context) ([]storage.ProjectionWatermark, error)
 }
 
 func (f *fakeProjectionStore) Put(ctx context.Context, c storage.CampaignRecord) error {
@@ -344,7 +352,10 @@ func (f *fakeProjectionStore) SaveProjectionWatermark(context.Context, storage.P
 	return nil
 }
 
-func (f *fakeProjectionStore) ListProjectionWatermarks(context.Context) ([]storage.ProjectionWatermark, error) {
+func (f *fakeProjectionStore) ListProjectionWatermarks(ctx context.Context) ([]storage.ProjectionWatermark, error) {
+	if f.listProjectionWatermarks != nil {
+		return f.listProjectionWatermarks(ctx)
+	}
 	return nil, nil
 }
 

@@ -53,6 +53,8 @@ type Config struct {
 	OutboxRequeueDeadLimit  int
 	OutboxRequeueCampaignID string
 	OutboxRequeueSeq        uint64
+	GapDetect               bool
+	GapRepair               bool
 }
 
 type envConfig struct {
@@ -101,6 +103,8 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.IntVar(&cfg.OutboxRequeueDeadLimit, "outbox-requeue-dead-limit", 0, "max dead outbox rows to requeue (required with -outbox-requeue-dead)")
 	fs.StringVar(&cfg.OutboxRequeueCampaignID, "outbox-requeue-campaign-id", "", "campaign id for outbox requeue")
 	fs.Uint64Var(&cfg.OutboxRequeueSeq, "outbox-requeue-seq", 0, "event sequence for outbox requeue")
+	fs.BoolVar(&cfg.GapDetect, "gap-detect", false, "detect projection gaps (dry-run: reports gaps without repairing)")
+	fs.BoolVar(&cfg.GapRepair, "gap-repair", false, "detect and repair projection gaps by replaying missing events")
 	fs.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "overall timeout")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
@@ -217,6 +221,36 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 			}
 		}()
 		return runOutboxReport(ctx, eventStore, cfg.OutboxStatus, cfg.OutboxLimit, cfg.JSONOutput, out, errOut)
+	}
+	if cfg.GapDetect || cfg.GapRepair {
+		if cfg.GapDetect && cfg.GapRepair {
+			return errors.New("-gap-detect cannot be combined with -gap-repair")
+		}
+		if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
+			return errors.New("-gap-detect/-gap-repair cannot be combined with -campaign-id or -campaign-ids")
+		}
+		if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
+			return errors.New("-gap-detect/-gap-repair cannot be combined with replay/scan flags")
+		}
+		if cfg.OutboxReport || cfg.OutboxRequeue || cfg.OutboxRequeueDead {
+			return errors.New("-gap-detect/-gap-repair cannot be combined with outbox flags")
+		}
+		eventStore, projStore, err := openStores(ctx, cfg.EventsDBPath, cfg.ProjectionsDBPath)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if closeErr := eventStore.Close(); closeErr != nil {
+				fmt.Fprintf(errOut, "Error: close event store: %v\n", closeErr)
+			}
+			if closeErr := projStore.Close(); closeErr != nil {
+				fmt.Fprintf(errOut, "Error: close projection store: %v\n", closeErr)
+			}
+		}()
+		if cfg.GapDetect {
+			return runGapDetect(ctx, eventStore, projStore, cfg.JSONOutput, out, errOut)
+		}
+		return runGapRepair(ctx, eventStore, projStore, cfg.JSONOutput, out, errOut)
 	}
 	if cfg.Integrity && (cfg.DryRun || cfg.Validate) {
 		return errors.New("-integrity cannot be combined with -dry-run or -validate")
@@ -1013,4 +1047,100 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 	}
 
 	return report, warnings, nil
+}
+
+// gapDetectReport holds the result of a projection gap detection scan.
+type gapDetectReport struct {
+	Mode string                     `json:"mode"`
+	Gaps []projection.ProjectionGap `json:"gaps"`
+}
+
+// gapRepairReport holds the result of a projection gap repair operation.
+type gapRepairReport struct {
+	Mode    string                       `json:"mode"`
+	Results []projection.GapRepairResult `json:"results"`
+}
+
+// runGapDetect compares projection watermarks against the event journal and
+// reports campaigns where projections are behind.
+func runGapDetect(ctx context.Context, eventStore storage.EventStore, projStore storage.ProjectionWatermarkStore, jsonOutput bool, out io.Writer, errOut io.Writer) error {
+	if out == nil {
+		out = io.Discard
+	}
+	if errOut == nil {
+		errOut = io.Discard
+	}
+
+	gaps, err := projection.DetectProjectionGaps(ctx, projStore, eventStore)
+	if err != nil {
+		return fmt.Errorf("detect projection gaps: %w", err)
+	}
+
+	if jsonOutput {
+		report := gapDetectReport{Mode: "gap-detect", Gaps: gaps}
+		encoded, encErr := json.Marshal(report)
+		if encErr != nil {
+			return fmt.Errorf("encode gap detect report: %w", encErr)
+		}
+		fmt.Fprintln(out, string(encoded))
+		return nil
+	}
+
+	if len(gaps) == 0 {
+		fmt.Fprintln(out, "No projection gaps detected.")
+		return nil
+	}
+	fmt.Fprintf(out, "Detected %d projection gap(s):\n", len(gaps))
+	for _, gap := range gaps {
+		fmt.Fprintf(out, "  %s: watermark=%d journal=%d (behind by %d)\n",
+			gap.CampaignID, gap.WatermarkSeq, gap.JournalSeq, gap.JournalSeq-gap.WatermarkSeq)
+	}
+	return nil
+}
+
+// runGapRepair detects projection gaps and replays missing events to close them.
+func runGapRepair(ctx context.Context, eventStore storage.EventStore, projStore storage.ProjectionStore, jsonOutput bool, out io.Writer, errOut io.Writer) error {
+	if out == nil {
+		out = io.Discard
+	}
+	if errOut == nil {
+		errOut = io.Discard
+	}
+
+	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{
+		Daggerheart: projStore,
+	})
+	if err != nil {
+		return fmt.Errorf("build projection adapters: %w", err)
+	}
+	applier := projection.Applier{
+		Campaign:   projStore,
+		Adapters:   systemAdapters,
+		Watermarks: projStore,
+	}
+
+	results, err := projection.RepairProjectionGaps(ctx, projStore, eventStore, applier)
+	if err != nil {
+		return fmt.Errorf("repair projection gaps: %w", err)
+	}
+
+	if jsonOutput {
+		report := gapRepairReport{Mode: "gap-repair", Results: results}
+		encoded, encErr := json.Marshal(report)
+		if encErr != nil {
+			return fmt.Errorf("encode gap repair report: %w", encErr)
+		}
+		fmt.Fprintln(out, string(encoded))
+		return nil
+	}
+
+	if len(results) == 0 {
+		fmt.Fprintln(out, "No projection gaps found.")
+		return nil
+	}
+	fmt.Fprintf(out, "Repaired %d campaign(s):\n", len(results))
+	for _, r := range results {
+		fmt.Fprintf(out, "  %s: replayed %d event(s)\n", r.CampaignID, r.EventsReplayed)
+	}
+	return nil
 }

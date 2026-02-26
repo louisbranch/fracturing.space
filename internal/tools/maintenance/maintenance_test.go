@@ -1615,3 +1615,86 @@ func TestCheckIntegrityWithStores_CampaignLoadError(t *testing.T) {
 		t.Fatalf("expected load campaign error, got: %v", err)
 	}
 }
+
+func TestRunGapDetect_ReportsGaps(t *testing.T) {
+	evtStore := &fakeClosableEventStore{
+		fakeEventStore: fakeEventStore{
+			latestSeqs: map[string]uint64{
+				"camp-1": 10,
+				"camp-2": 5,
+			},
+		},
+	}
+	projStore := &fakeClosableProjectionStore{
+		fakeProjectionStore: fakeProjectionStore{
+			listProjectionWatermarks: func(context.Context) ([]storage.ProjectionWatermark, error) {
+				return []storage.ProjectionWatermark{
+					{CampaignID: "camp-1", AppliedSeq: 7},
+					{CampaignID: "camp-2", AppliedSeq: 5},
+				}, nil
+			},
+		},
+	}
+	var out bytes.Buffer
+	err := runGapDetect(context.Background(), evtStore, projStore, false, &out, io.Discard)
+	if err != nil {
+		t.Fatalf("runGapDetect: %v", err)
+	}
+	result := out.String()
+	if !strings.Contains(result, "camp-1") {
+		t.Errorf("expected camp-1 gap in output, got: %s", result)
+	}
+	// camp-2 has no gap (applied=journal), should not appear
+	if strings.Contains(result, "camp-2") {
+		t.Errorf("expected no camp-2 in output (no gap), got: %s", result)
+	}
+}
+
+func TestRunGapDetect_NoGaps(t *testing.T) {
+	evtStore := &fakeClosableEventStore{
+		fakeEventStore: fakeEventStore{
+			latestSeqs: map[string]uint64{
+				"camp-1": 5,
+			},
+		},
+	}
+	projStore := &fakeClosableProjectionStore{
+		fakeProjectionStore: fakeProjectionStore{
+			listProjectionWatermarks: func(context.Context) ([]storage.ProjectionWatermark, error) {
+				return []storage.ProjectionWatermark{
+					{CampaignID: "camp-1", AppliedSeq: 5},
+				}, nil
+			},
+		},
+	}
+	var out bytes.Buffer
+	err := runGapDetect(context.Background(), evtStore, projStore, false, &out, io.Discard)
+	if err != nil {
+		t.Fatalf("runGapDetect: %v", err)
+	}
+	if strings.Contains(out.String(), "camp-1") {
+		t.Errorf("expected no gaps reported, got: %s", out.String())
+	}
+}
+
+func TestParseConfig_GapDetect(t *testing.T) {
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, []string{"-gap-detect"})
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	if !cfg.GapDetect {
+		t.Fatal("expected GapDetect to be true")
+	}
+}
+
+func TestParseConfig_GapRepair(t *testing.T) {
+	fs := flag.NewFlagSet("test", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, []string{"-gap-repair"})
+	if err != nil {
+		t.Fatalf("ParseConfig: %v", err)
+	}
+	if !cfg.GapRepair {
+		t.Fatal("expected GapRepair to be true")
+	}
+}

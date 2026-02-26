@@ -199,6 +199,48 @@ func TestRepairProjectionGaps_ReplaysGaps(t *testing.T) {
 	}
 }
 
+// TestDetectProjectionGaps_FindsMidStreamGap verifies that gap detection
+// catches mid-stream gaps where the watermark advanced past skipped events.
+// A mid-stream gap is identified by ExpectedNextSeq being behind AppliedSeq.
+func TestDetectProjectionGaps_FindsMidStreamGap(t *testing.T) {
+	watermarks := newFakeWatermarkStore()
+	ctx := context.Background()
+	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	// Camp-1: applied seq 5 but expected_next_seq stayed at 3 (mid-stream gap).
+	// This means seq 3 and 4 were skipped during live processing.
+	// Journal is also at 5, so there's no trailing gap — only a mid-stream one.
+	_ = watermarks.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{
+		CampaignID:      "camp-1",
+		AppliedSeq:      5,
+		ExpectedNextSeq: 3,
+		UpdatedAt:       now,
+	})
+
+	events := &fakeEventHighWaterStore{
+		seqs: map[string]uint64{"camp-1": 5},
+	}
+
+	gaps, err := DetectProjectionGaps(ctx, watermarks, events)
+	if err != nil {
+		t.Fatalf("detect gaps: %v", err)
+	}
+	if len(gaps) != 1 {
+		t.Fatalf("expected 1 gap, got %d", len(gaps))
+	}
+	if gaps[0].CampaignID != "camp-1" {
+		t.Fatalf("gap campaign = %s, want camp-1", gaps[0].CampaignID)
+	}
+	// WatermarkSeq should be the gap boundary (ExpectedNextSeq - 1),
+	// so repair replays from there.
+	if gaps[0].WatermarkSeq != 2 {
+		t.Fatalf("watermark = %d, want 2 (gap boundary)", gaps[0].WatermarkSeq)
+	}
+	if gaps[0].JournalSeq != 5 {
+		t.Fatalf("journal = %d, want 5", gaps[0].JournalSeq)
+	}
+}
+
 func TestRepairProjectionGaps_NoGaps(t *testing.T) {
 	ctx := context.Background()
 	watermarks := newFakeWatermarkStore()

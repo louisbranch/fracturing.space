@@ -55,7 +55,7 @@ func (t *testGameSystem) RegistryMetadata() RegistryMetadata {
 	return RegistryMetadata{}
 }
 
-func (t *testGameSystem) StateFactory() StateFactory {
+func (t *testGameSystem) StateHandlerFactory() StateHandlerFactory {
 	return nil
 }
 
@@ -149,7 +149,7 @@ func TestAdapterRegistryGetRequired_NilRegistryReturnsError(t *testing.T) {
 }
 
 func TestRegistryRegister_RequiresVersion(t *testing.T) {
-	registry := NewRegistry()
+	registry := NewMetadataRegistry()
 	err := registry.Register(&testGameSystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "   ",
@@ -160,7 +160,7 @@ func TestRegistryRegister_RequiresVersion(t *testing.T) {
 }
 
 func TestRegistryRegister_Duplicate(t *testing.T) {
-	registry := NewRegistry()
+	registry := NewMetadataRegistry()
 	system := &testGameSystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.0.0",
@@ -175,7 +175,7 @@ func TestRegistryRegister_Duplicate(t *testing.T) {
 }
 
 func TestRegistryRegister_NilRegistry(t *testing.T) {
-	var registry *Registry
+	var registry *MetadataRegistry
 	err := registry.Register(&testGameSystem{
 		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		version: "1.0.0",
@@ -186,7 +186,7 @@ func TestRegistryRegister_NilRegistry(t *testing.T) {
 }
 
 func TestRegistryRegister_NilSystem(t *testing.T) {
-	registry := NewRegistry()
+	registry := NewMetadataRegistry()
 	err := registry.Register(nil)
 	if !errors.Is(err, ErrSystemRequired) {
 		t.Fatalf("expected ErrSystemRequired, got %v", err)
@@ -194,7 +194,7 @@ func TestRegistryRegister_NilSystem(t *testing.T) {
 }
 
 func TestRegistryMustGetPanicsWhenMissing(t *testing.T) {
-	registry := NewRegistry()
+	registry := NewMetadataRegistry()
 	defer func() {
 		r := recover()
 		if r == nil {
@@ -208,7 +208,7 @@ func TestRegistryMustGetPanicsWhenMissing(t *testing.T) {
 }
 
 func TestRegistryGetOrError(t *testing.T) {
-	registry := NewRegistry()
+	registry := NewMetadataRegistry()
 	_, err := registry.GetOrError(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
 	if !errors.Is(err, ErrSystemNotRegistered) {
 		t.Fatalf("expected ErrSystemNotRegistered, got %v", err)

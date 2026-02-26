@@ -98,3 +98,60 @@ func TestChainHashDeterministic(t *testing.T) {
 		t.Fatalf("expected deterministic chain hash, got %s and %s", first, second)
 	}
 }
+
+// TestHashParityWithDomainPackage asserts that the integrity package and the
+// domain event package produce identical hashes for the same event. This guards
+// against canonical-field drift when a new envelope field is added to only one
+// of the two implementations.
+func TestHashParityWithDomainPackage(t *testing.T) {
+	// Representative event with ALL optional fields populated to maximize
+	// surface area for drift detection.
+	ts := time.Date(2024, 6, 15, 8, 45, 30, 123456789, time.UTC)
+	evt := event.Event{
+		CampaignID:    "camp-parity",
+		Seq:           42,
+		Hash:          "abcdef1234567890",
+		Type:          event.Type("sys.daggerheart.character.hp_patched"),
+		Timestamp:     ts,
+		ActorType:     event.ActorTypeParticipant,
+		ActorID:       "actor-1",
+		SessionID:     "sess-1",
+		RequestID:     "req-1",
+		InvocationID:  "inv-1",
+		EntityType:    "character",
+		EntityID:      "char-1",
+		SystemID:      "DAGGERHEART",
+		SystemVersion: "0.4.2",
+		CorrelationID: "corr-1",
+		CausationID:   "cause-1",
+		PayloadJSON:   []byte(`{"hp_after":5,"source":"damage"}`),
+	}
+
+	t.Run("EventHash", func(t *testing.T) {
+		domainHash, err := event.EventHash(evt)
+		if err != nil {
+			t.Fatalf("domain EventHash: %v", err)
+		}
+		integrityHash, err := EventHash(evt)
+		if err != nil {
+			t.Fatalf("integrity EventHash: %v", err)
+		}
+		if domainHash != integrityHash {
+			t.Fatalf("EventHash drift: domain=%s integrity=%s", domainHash, integrityHash)
+		}
+	})
+
+	t.Run("ChainHash", func(t *testing.T) {
+		domainChain, err := event.ChainHash(evt, "prev-hash-abc")
+		if err != nil {
+			t.Fatalf("domain ChainHash: %v", err)
+		}
+		integrityChain, err := ChainHash(evt, "prev-hash-abc")
+		if err != nil {
+			t.Fatalf("integrity ChainHash: %v", err)
+		}
+		if domainChain != integrityChain {
+			t.Fatalf("ChainHash drift: domain=%s integrity=%s", domainChain, integrityChain)
+		}
+	})
+}

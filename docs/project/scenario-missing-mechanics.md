@@ -29,8 +29,8 @@ Required mapping:
 
 For Daggerheart mechanics, use:
 [Daggerheart Event Timeline Contract](daggerheart-event-timeline-contract.md).
-Priority backlog mappings live under
-[Priority Missing-Mechanic Timeline Mappings](daggerheart-event-timeline-contract.md#priority-missing-mechanic-timeline-mappings)
+Priority backlog mappings live in the
+[Daggerheart Mechanic Backlog](daggerheart-mechanic-backlog.md#priority-missing-mechanic-timeline-mappings)
 with row IDs (`P1`, `P2`, ...).
 
 Review gate:

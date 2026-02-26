@@ -9,6 +9,20 @@ import (
 // ErrDecisionEmpty indicates a decision has neither events nor rejections.
 var ErrDecisionEmpty = errors.New("decision must emit at least one event or rejection")
 
+// Shared rejection codes used by multiple domain deciders.
+// Convention: SCREAMING_SNAKE_CASE with domain prefix (e.g. CAMPAIGN_NAME_EMPTY).
+// System-specific codes should use the system domain as prefix
+// (e.g. GM_FEAR_OUT_OF_RANGE for daggerheart).
+const (
+	// RejectionCodePayloadDecodeFailed is returned when a command payload
+	// cannot be unmarshalled into the expected type.
+	RejectionCodePayloadDecodeFailed = "PAYLOAD_DECODE_FAILED"
+
+	// RejectionCodeCommandTypeUnsupported is returned when a command type
+	// has no matching handler in the decider.
+	RejectionCodeCommandTypeUnsupported = "COMMAND_TYPE_UNSUPPORTED"
+)
+
 // Decision represents the pure outcome of handling a command.
 //
 // It separates accepted future state changes from immediate domain reasons so

@@ -71,10 +71,21 @@ func DetectProjectionGaps(ctx context.Context, watermarks storage.ProjectionWate
 		if err != nil {
 			return nil, fmt.Errorf("get latest event seq for %s: %w", wm.CampaignID, err)
 		}
-		if journalSeq > wm.AppliedSeq {
+		// Mid-stream gap: watermark advanced past a sequence gap, so
+		// ExpectedNextSeq is behind AppliedSeq. Use the gap boundary
+		// as the replay starting point.
+		hasMidStreamGap := wm.ExpectedNextSeq > 0 && wm.ExpectedNextSeq <= wm.AppliedSeq
+		// Trailing gap: journal has events beyond what was projected.
+		hasTrailingGap := journalSeq > wm.AppliedSeq
+
+		if hasMidStreamGap || hasTrailingGap {
+			wmSeq := wm.AppliedSeq
+			if hasMidStreamGap {
+				wmSeq = wm.ExpectedNextSeq - 1
+			}
 			gaps = append(gaps, ProjectionGap{
 				CampaignID:   wm.CampaignID,
-				WatermarkSeq: wm.AppliedSeq,
+				WatermarkSeq: wmSeq,
 				JournalSeq:   journalSeq,
 			})
 		}

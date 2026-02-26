@@ -70,8 +70,8 @@ func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store, event
 	}
 }
 
-func buildSystemRegistry() (*bridge.Registry, error) {
-	registry := bridge.NewRegistry()
+func buildSystemRegistry() (*bridge.MetadataRegistry, error) {
+	registry := bridge.NewMetadataRegistry()
 	for _, gameSystem := range registeredMetadataSystems() {
 		if err := registry.Register(gameSystem); err != nil {
 			return nil, fmt.Errorf("register system %s@%s: %w", gameSystem.ID(), gameSystem.Version(), err)

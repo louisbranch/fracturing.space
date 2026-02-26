@@ -38,8 +38,8 @@ func (r *RegistrySystem) RegistryMetadata() bridge.RegistryMetadata {
 	}
 }
 
-// StateFactory returns nil until SystemService metadata is backed by state APIs.
-func (r *RegistrySystem) StateFactory() bridge.StateFactory {
+// StateHandlerFactory returns nil until SystemService metadata is backed by state APIs.
+func (r *RegistrySystem) StateHandlerFactory() bridge.StateHandlerFactory {
 	return nil
 }
 
