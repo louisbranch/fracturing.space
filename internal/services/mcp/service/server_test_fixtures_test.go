@@ -259,6 +259,26 @@ func (f *fakeCharacterClient) PatchCharacterProfile(ctx context.Context, req *st
 	return f.patchCharacterProfileResponse, f.patchCharacterProfileErr
 }
 
+// GetCharacterCreationProgress records the request and returns unimplemented for tests that don't use it.
+func (f *fakeCharacterClient) GetCharacterCreationProgress(ctx context.Context, req *statev1.GetCharacterCreationProgressRequest, opts ...grpc.CallOption) (*statev1.GetCharacterCreationProgressResponse, error) {
+	return nil, errors.New("GetCharacterCreationProgress not implemented")
+}
+
+// ApplyCharacterCreationStep records the request and returns unimplemented for tests that don't use it.
+func (f *fakeCharacterClient) ApplyCharacterCreationStep(ctx context.Context, req *statev1.ApplyCharacterCreationStepRequest, opts ...grpc.CallOption) (*statev1.ApplyCharacterCreationStepResponse, error) {
+	return nil, errors.New("ApplyCharacterCreationStep not implemented")
+}
+
+// ApplyCharacterCreationWorkflow records the request and returns unimplemented for tests that don't use it.
+func (f *fakeCharacterClient) ApplyCharacterCreationWorkflow(ctx context.Context, req *statev1.ApplyCharacterCreationWorkflowRequest, opts ...grpc.CallOption) (*statev1.ApplyCharacterCreationWorkflowResponse, error) {
+	return nil, errors.New("ApplyCharacterCreationWorkflow not implemented")
+}
+
+// ResetCharacterCreationWorkflow records the request and returns unimplemented for tests that don't use it.
+func (f *fakeCharacterClient) ResetCharacterCreationWorkflow(ctx context.Context, req *statev1.ResetCharacterCreationWorkflowRequest, opts ...grpc.CallOption) (*statev1.ResetCharacterCreationWorkflowResponse, error) {
+	return nil, errors.New("ResetCharacterCreationWorkflow not implemented")
+}
+
 // GetSnapshot records the request and returns the configured response.
 func (f *fakeSnapshotClient) GetSnapshot(ctx context.Context, req *statev1.GetSnapshotRequest, opts ...grpc.CallOption) (*statev1.GetSnapshotResponse, error) {
 	f.lastGetSnapshotRequest = req

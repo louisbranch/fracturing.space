@@ -193,6 +193,18 @@ New systems typically implement only the `module.StateFactory` variant. The
 implementation (e.g. `DaggerheartRegistrySystem`) which wraps domain state
 behind the resource/damage abstractions the API layer needs.
 
+### Character creation workflow providers (transport boundary)
+
+Location: `internal/services/game/api/grpc/game/character_workflow.go`
+
+`CharacterService` creation workflow RPCs dispatch by campaign `game_system`
+through a provider interface at the transport/application layer.
+
+- Generic RPC surface: progress, single-step apply, bulk apply, reset.
+- System provider owns step semantics and content validation.
+- Workflow-owned profile fields must flow through workflow RPCs (no patch
+  bypass); profile patch is for non-workflow fields.
+
 ## Where systems plug in
 
 Core registration entrypoint:
@@ -417,9 +429,13 @@ Use Daggerheart as the baseline for structure and naming.
 | Command decisions | `internal/services/game/domain/bridge/daggerheart/decider.go` |
 | Replay folder (Fold method) | `internal/services/game/domain/bridge/daggerheart/folder.go` |
 | Projection adapter | `internal/services/game/domain/bridge/daggerheart/adapter.go` |
+| Creation workflow evaluator | `internal/services/game/domain/bridge/daggerheart/creation_workflow.go` |
 | Event type constants | `internal/services/game/domain/bridge/daggerheart/event_types.go` |
 | Payload contracts | `internal/services/game/domain/bridge/daggerheart/payload.go` |
 | gRPC system handlers | `internal/services/game/api/grpc/systems/daggerheart/` |
+
+For Daggerheart-specific character creation and readiness contracts, see
+[Daggerheart creation workflow](daggerheart-creation-workflow.md).
 
 ## Consistency expectations for system authors
 

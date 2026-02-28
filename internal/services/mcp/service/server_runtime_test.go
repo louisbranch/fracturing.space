@@ -90,10 +90,28 @@ func TestRunWithTransportServesAndStops(t *testing.T) {
 	client := mcp.NewClient(&mcp.Implementation{Name: "client", Version: "v0.0.1"}, nil)
 	clientCtx, clientCancel := context.WithTimeout(context.Background(), time.Second)
 	defer clientCancel()
-	session, err := client.Connect(clientCtx, clientTransport, nil)
-	if err != nil {
-		t.Fatalf("connect client: %v", err)
+
+	type connectResult struct {
+		session *mcp.ClientSession
+		err     error
 	}
+	connectDone := make(chan connectResult, 1)
+	go func() {
+		session, err := client.Connect(clientCtx, clientTransport, nil)
+		connectDone <- connectResult{session: session, err: err}
+	}()
+
+	var session *mcp.ClientSession
+	select {
+	case result := <-connectDone:
+		if result.err != nil {
+			t.Fatalf("connect client: %v", result.err)
+		}
+		session = result.session
+	case <-time.After(2 * time.Second):
+		t.Fatal("connect client timed out")
+	}
+
 	defer session.Close()
 
 	cancel()

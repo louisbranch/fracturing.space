@@ -2360,101 +2360,34 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 	}
 }
 
-func TestPatchCharacterProfile_UpdateTraits(t *testing.T) {
+func TestPatchCharacterProfile_RejectsCreationWorkflowFields(t *testing.T) {
 	participantStore := characterManagerParticipantStore("c1")
 	dhStore := newFakeDaggerheartStore()
-	// Set initial values for all 6 traits
 	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {
-			CampaignID:      "c1",
-			CharacterID:     "ch1",
-			HpMax:           12,
-			StressMax:       6,
-			Evasion:         10,
-			MajorThreshold:  5,
-			SevereThreshold: 10,
-			Agility:         2,
-			Strength:        0, // Initial value (legitimately zero)
-			Finesse:         1,
-			Instinct:        -1, // Negative trait
-			Presence:        3,
-			Knowledge:       2,
+			CampaignID:  "c1",
+			CharacterID: "ch1",
+			HpMax:       12,
+			StressMax:   6,
 		},
 	}
 
-	eventStore := newFakeEventStore()
-	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
-	profileJSON, err := json.Marshal(map[string]any{
-		"character_id": "ch1",
-		"system_profile": map[string]any{
-			"daggerheart": map[string]any{
-				"hp_max":   12,
-				"agility":  3,
-				"strength": 1,
-			},
-		},
+	svc := NewCharacterService(Stores{
+		Campaign:     activeCampaignStore("c1"),
+		Participant:  participantStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		Event:        newFakeEventStore(),
+		Domain:       &fakeDomainEngine{},
 	})
-	if err != nil {
-		t.Fatalf("encode profile payload: %v", err)
-	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("character.profile_update"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.profile_updated"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "character",
-				EntityID:    "ch1",
-				PayloadJSON: profileJSON,
-			}),
-		},
-	}}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: eventStore, Domain: domain})
-	// Patch only Agility and Strength, leaving other 4 traits unchanged
-	resp, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
+
+	_, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		SystemProfilePatch: &statev1.PatchCharacterProfileRequest_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{
-			Agility:  wrapperspb.Int32(3),
-			Strength: wrapperspb.Int32(1),
+			Agility: wrapperspb.Int32(3),
 		}},
 	})
-	if err != nil {
-		t.Fatalf("PatchCharacterProfile returned error: %v", err)
-	}
-	dh := resp.Profile.GetDaggerheart()
-	if dh == nil {
-		t.Fatal("Expected Daggerheart profile, got nil")
-	}
-
-	// Verify patched traits have new values
-	if dh.GetAgility().GetValue() != 3 {
-		t.Errorf("Profile Agility = %d, want %d", dh.GetAgility().GetValue(), 3)
-	}
-	if dh.GetStrength().GetValue() != 1 {
-		t.Errorf("Profile Strength = %d, want %d", dh.GetStrength().GetValue(), 1)
-	}
-
-	// Verify unpatched traits retain original values
-	if dh.GetFinesse().GetValue() != 1 {
-		t.Errorf("Profile Finesse = %d, want %d (unchanged)", dh.GetFinesse().GetValue(), 1)
-	}
-	if dh.GetInstinct().GetValue() != -1 {
-		t.Errorf("Profile Instinct = %d, want %d (unchanged)", dh.GetInstinct().GetValue(), -1)
-	}
-	if dh.GetPresence().GetValue() != 3 {
-		t.Errorf("Profile Presence = %d, want %d (unchanged)", dh.GetPresence().GetValue(), 3)
-	}
-	if dh.GetKnowledge().GetValue() != 2 {
-		t.Errorf("Profile Knowledge = %d, want %d (unchanged)", dh.GetKnowledge().GetValue(), 2)
-	}
-	if got := len(eventStore.events["c1"]); got != 1 {
-		t.Fatalf("expected 1 event, got %d", got)
-	}
-	if eventStore.events["c1"][0].Type != event.Type("character.profile_updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.profile_updated"))
-	}
+	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestDaggerheartExperiencesToProto(t *testing.T) {

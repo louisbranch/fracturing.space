@@ -41,6 +41,30 @@ SELECT
 						AND ch.controller_participant_id = p.id
 				)
 		) THEN 0
+		WHEN c.game_system = 'DAGGERHEART'
+				AND EXISTS (
+					SELECT 1
+					FROM characters ch
+					LEFT JOIN daggerheart_character_profiles dcp
+						ON ch.campaign_id = dcp.campaign_id AND ch.id = dcp.character_id
+					WHERE ch.campaign_id = c.id
+						AND (
+							dcp.character_id IS NULL
+							OR TRIM(COALESCE(dcp.class_id, '')) = ''
+							OR TRIM(COALESCE(dcp.subclass_id, '')) = ''
+							OR TRIM(COALESCE(dcp.ancestry_id, '')) = ''
+							OR TRIM(COALESCE(dcp.community_id, '')) = ''
+							OR COALESCE(dcp.traits_assigned, 0) = 0
+							OR COALESCE(dcp.details_recorded, 0) = 0
+							OR COALESCE(json_array_length(dcp.starting_weapon_ids_json), 0) = 0
+							OR TRIM(COALESCE(dcp.starting_armor_id, '')) = ''
+							OR TRIM(COALESCE(dcp.starting_potion_item_id, '')) = ''
+							OR TRIM(COALESCE(dcp.background, '')) = ''
+							OR COALESCE(json_array_length(dcp.experiences_json), 0) = 0
+							OR COALESCE(json_array_length(dcp.domain_card_ids_json), 0) = 0
+							OR TRIM(COALESCE(dcp.connections, '')) = ''
+						)
+				) THEN 0
 		ELSE 1
 	END AS can_start_session,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
@@ -113,6 +137,30 @@ SELECT
 						AND ch.controller_participant_id = p.id
 				)
 		) THEN 0
+		WHEN c.game_system = 'DAGGERHEART'
+				AND EXISTS (
+					SELECT 1
+					FROM characters ch
+					LEFT JOIN daggerheart_character_profiles dcp
+						ON ch.campaign_id = dcp.campaign_id AND ch.id = dcp.character_id
+					WHERE ch.campaign_id = c.id
+						AND (
+							dcp.character_id IS NULL
+							OR TRIM(COALESCE(dcp.class_id, '')) = ''
+							OR TRIM(COALESCE(dcp.subclass_id, '')) = ''
+							OR TRIM(COALESCE(dcp.ancestry_id, '')) = ''
+							OR TRIM(COALESCE(dcp.community_id, '')) = ''
+							OR COALESCE(dcp.traits_assigned, 0) = 0
+							OR COALESCE(dcp.details_recorded, 0) = 0
+							OR COALESCE(json_array_length(dcp.starting_weapon_ids_json), 0) = 0
+							OR TRIM(COALESCE(dcp.starting_armor_id, '')) = ''
+							OR TRIM(COALESCE(dcp.starting_potion_item_id, '')) = ''
+							OR TRIM(COALESCE(dcp.background, '')) = ''
+							OR COALESCE(json_array_length(dcp.experiences_json), 0) = 0
+							OR COALESCE(json_array_length(dcp.domain_card_ids_json), 0) = 0
+							OR TRIM(COALESCE(dcp.connections, '')) = ''
+						)
+				) THEN 0
 		ELSE 1
 	END AS can_start_session,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
@@ -165,6 +213,30 @@ SELECT
 						AND ch.controller_participant_id = p.id
 				)
 		) THEN 0
+		WHEN c.game_system = 'DAGGERHEART'
+				AND EXISTS (
+					SELECT 1
+					FROM characters ch
+					LEFT JOIN daggerheart_character_profiles dcp
+						ON ch.campaign_id = dcp.campaign_id AND ch.id = dcp.character_id
+					WHERE ch.campaign_id = c.id
+						AND (
+							dcp.character_id IS NULL
+							OR TRIM(COALESCE(dcp.class_id, '')) = ''
+							OR TRIM(COALESCE(dcp.subclass_id, '')) = ''
+							OR TRIM(COALESCE(dcp.ancestry_id, '')) = ''
+							OR TRIM(COALESCE(dcp.community_id, '')) = ''
+							OR COALESCE(dcp.traits_assigned, 0) = 0
+							OR COALESCE(dcp.details_recorded, 0) = 0
+							OR COALESCE(json_array_length(dcp.starting_weapon_ids_json), 0) = 0
+							OR TRIM(COALESCE(dcp.starting_armor_id, '')) = ''
+							OR TRIM(COALESCE(dcp.starting_potion_item_id, '')) = ''
+							OR TRIM(COALESCE(dcp.background, '')) = ''
+							OR COALESCE(json_array_length(dcp.experiences_json), 0) = 0
+							OR COALESCE(json_array_length(dcp.domain_card_ids_json), 0) = 0
+							OR TRIM(COALESCE(dcp.connections, '')) = ''
+						)
+				) THEN 0
 		ELSE 1
 	END AS can_start_session,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,

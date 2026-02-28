@@ -63,6 +63,7 @@ func registerCampaignTools(
 		{tool: domain.CharacterControlSetTool(), handler: domain.CharacterControlSetHandler(characterClient, getContext, notify)},
 		{tool: domain.CharacterSheetGetTool(), handler: domain.CharacterSheetGetHandler(characterClient, getContext)},
 		{tool: domain.CharacterProfilePatchTool(), handler: domain.CharacterProfilePatchHandler(characterClient, getContext, notify)},
+		{tool: domain.CharacterCreationWorkflowApplyTool(), handler: domain.CharacterCreationWorkflowApplyHandler(characterClient, getContext, notify)},
 		{tool: domain.CharacterStatePatchTool(), handler: domain.CharacterStatePatchHandler(snapshotClient, getContext, notify)},
 	}
 	for _, registration := range registrations {

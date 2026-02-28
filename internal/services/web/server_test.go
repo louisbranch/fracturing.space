@@ -16,6 +16,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	"google.golang.org/grpc"
@@ -130,7 +131,7 @@ func TestNewHandlerMountsExperimentalModulesWhenEnabled(t *testing.T) {
 	}
 }
 
-func TestDefaultCampaignStableSurfaceHidesScaffoldDetailRoutes(t *testing.T) {
+func TestDefaultCampaignStableSurfaceExposesWorkflowRoutesAndHidesScaffoldedRoutes(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
@@ -142,7 +143,6 @@ func TestDefaultCampaignStableSurfaceHidesScaffoldDetailRoutes(t *testing.T) {
 	for _, path := range []string{
 		"/app/campaigns/c1/sessions",
 		"/app/campaigns/c1/sessions/sess-1",
-		"/app/campaigns/c1/characters/char-1",
 		"/app/campaigns/c1/invites",
 		"/app/campaigns/c1/game",
 	} {
@@ -153,6 +153,24 @@ func TestDefaultCampaignStableSurfaceHidesScaffoldDetailRoutes(t *testing.T) {
 		if rr.Code != http.StatusNotFound {
 			t.Fatalf("path %q status = %d, want %d", path, rr.Code, http.StatusNotFound)
 		}
+	}
+
+	characterReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/c1/characters/char-1", nil)
+	attachSessionCookie(t, characterReq, auth, "user-1")
+	characterRR := httptest.NewRecorder()
+	h.ServeHTTP(characterRR, characterReq)
+	if characterRR.Code == http.StatusNotFound {
+		t.Fatalf("character detail route unexpectedly hidden")
+	}
+
+	createReq := httptest.NewRequest(http.MethodPost, "/app/campaigns/c1/characters/create", strings.NewReader("name=Hero&kind=pc"))
+	createReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	createReq.Header.Set("Origin", "http://example.com")
+	attachSessionCookie(t, createReq, auth, "user-1")
+	createRR := httptest.NewRecorder()
+	h.ServeHTTP(createRR, createReq)
+	if createRR.Code == http.StatusNotFound {
+		t.Fatalf("stable character create route unexpectedly hidden")
 	}
 }
 
@@ -1112,6 +1130,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 		CampaignClient:            defaultCampaignClient(),
 		ParticipantClient:         defaultParticipantClient(),
 		CharacterClient:           defaultCharacterClient(),
+		DaggerheartContentClient:  defaultDaggerheartContentClient(),
 		SessionClient:             defaultSessionClient(),
 		InviteClient:              defaultInviteClient(),
 		AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
@@ -1179,6 +1198,10 @@ func defaultInviteClient() fakeWebInviteClient {
 	}}}}
 }
 
+func defaultDaggerheartContentClient() fakeWebDaggerheartContentClient {
+	return fakeWebDaggerheartContentClient{response: &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{}}}
+}
+
 type fakeCampaignClient struct {
 	response   *statev1.ListCampaignsResponse
 	err        error
@@ -1218,6 +1241,41 @@ func (f fakeWebCharacterClient) ListCharacters(context.Context, *statev1.ListCha
 	return &statev1.ListCharactersResponse{}, nil
 }
 
+func (f fakeWebCharacterClient) CreateCharacter(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.CreateCharacterResponse{Character: &statev1.Character{Id: "char-created"}}, nil
+}
+
+func (f fakeWebCharacterClient) GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.GetCharacterSheetResponse{}, nil
+}
+
+func (f fakeWebCharacterClient) GetCharacterCreationProgress(context.Context, *statev1.GetCharacterCreationProgressRequest, ...grpc.CallOption) (*statev1.GetCharacterCreationProgressResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.GetCharacterCreationProgressResponse{}, nil
+}
+
+func (f fakeWebCharacterClient) ApplyCharacterCreationStep(context.Context, *statev1.ApplyCharacterCreationStepRequest, ...grpc.CallOption) (*statev1.ApplyCharacterCreationStepResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.ApplyCharacterCreationStepResponse{}, nil
+}
+
+func (f fakeWebCharacterClient) ResetCharacterCreationWorkflow(context.Context, *statev1.ResetCharacterCreationWorkflowRequest, ...grpc.CallOption) (*statev1.ResetCharacterCreationWorkflowResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.ResetCharacterCreationWorkflowResponse{}, nil
+}
+
 type fakeWebSessionClient struct {
 	response *statev1.ListSessionsResponse
 	err      error
@@ -1246,6 +1304,21 @@ func (f fakeWebInviteClient) ListInvites(context.Context, *statev1.ListInvitesRe
 		return f.response, nil
 	}
 	return &statev1.ListInvitesResponse{}, nil
+}
+
+type fakeWebDaggerheartContentClient struct {
+	response *daggerheartv1.GetDaggerheartContentCatalogResponse
+	err      error
+}
+
+func (f fakeWebDaggerheartContentClient) GetContentCatalog(context.Context, *daggerheartv1.GetDaggerheartContentCatalogRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.response != nil {
+		return f.response, nil
+	}
+	return &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{}}, nil
 }
 
 type fakeWebNotificationClient struct {

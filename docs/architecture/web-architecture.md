@@ -103,10 +103,12 @@ This keeps route ownership explicit and avoids framework lock-in.
   experimental surfaces are explicitly opt-in.
 - Campaigns are stable-by-default for read/create workspace flows; in-campaign
   mutation routes remain hidden until participant permission policy is
-  finalized.
+  finalized, except participant-level character create plus workflow apply/reset.
 - Stable campaigns route exposure currently includes
-  list/create/overview/participants/characters; scaffold detail surfaces
-  (sessions, invites, game chat, character detail) remain unregistered.
+  list/create/overview/participants/characters plus character create,
+  character detail, and character-creation apply/reset workflow routes.
+- Scaffold detail surfaces for sessions/invites/game chat remain unregistered
+  on stable defaults.
 - Campaign mutation flows must enforce authorization through evaluated
   `AuthorizationService.Can` decisions and fail closed when authz decisions are
   missing, unevaluated, or unavailable.

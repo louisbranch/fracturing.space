@@ -129,6 +129,9 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		}
 		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignOutput.ID, lastSeq, "character.updated")
 
+		ensureMCPCharacterCreationReadiness(t, ctx, suite.client, characterOutput.ID)
+		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignOutput.ID, lastSeq, "character.profile_updated")
+
 		sessionResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "session_start",
 			Arguments: map[string]any{

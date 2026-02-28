@@ -147,6 +147,7 @@ type classRecord struct {
 type subclassRecord struct {
 	ID                     string          `json:"id"`
 	Name                   string          `json:"name"`
+	ClassID                string          `json:"class_id"`
 	SpellcastTrait         string          `json:"spellcast_trait"`
 	FoundationFeatures     []featureRecord `json:"foundation_features"`
 	SpecializationFeatures []featureRecord `json:"specialization_features"`

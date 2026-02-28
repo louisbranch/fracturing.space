@@ -13,6 +13,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
@@ -111,7 +112,7 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		defer notificationsConn.Close()
 
-		server, err := web.NewServer(ctx, web.Config{HTTPAddr: cfg.HTTPAddr, AssetBaseURL: cfg.AssetBaseURL, ChatHTTPAddr: cfg.ChatHTTPAddr, EnableExperimentalModules: cfg.EnableExperimentalModules, CampaignClient: statev1.NewCampaignServiceClient(gameConn), ParticipantClient: statev1.NewParticipantServiceClient(gameConn), CharacterClient: statev1.NewCharacterServiceClient(gameConn), SessionClient: statev1.NewSessionServiceClient(gameConn), InviteClient: statev1.NewInviteServiceClient(gameConn), AuthorizationClient: statev1.NewAuthorizationServiceClient(gameConn), AuthClient: authv1.NewAuthServiceClient(authConn), AccountClient: authv1.NewAccountServiceClient(authConn), SocialClient: socialv1.NewSocialServiceClient(socialConn), CredentialClient: aiv1.NewCredentialServiceClient(aiConn), UserHubClient: userhubv1.NewUserHubServiceClient(userHubConn), NotificationClient: notificationsv1.NewNotificationServiceClient(notificationsConn)})
+		server, err := web.NewServer(ctx, web.Config{HTTPAddr: cfg.HTTPAddr, AssetBaseURL: cfg.AssetBaseURL, ChatHTTPAddr: cfg.ChatHTTPAddr, EnableExperimentalModules: cfg.EnableExperimentalModules, CampaignClient: statev1.NewCampaignServiceClient(gameConn), ParticipantClient: statev1.NewParticipantServiceClient(gameConn), CharacterClient: statev1.NewCharacterServiceClient(gameConn), DaggerheartContentClient: daggerheartv1.NewDaggerheartContentServiceClient(gameConn), SessionClient: statev1.NewSessionServiceClient(gameConn), InviteClient: statev1.NewInviteServiceClient(gameConn), AuthorizationClient: statev1.NewAuthorizationServiceClient(gameConn), AuthClient: authv1.NewAuthServiceClient(authConn), AccountClient: authv1.NewAccountServiceClient(authConn), SocialClient: socialv1.NewSocialServiceClient(socialConn), CredentialClient: aiv1.NewCredentialServiceClient(aiConn), UserHubClient: userhubv1.NewUserHubServiceClient(userHubConn), NotificationClient: notificationsv1.NewNotificationServiceClient(notificationsConn)})
 		if err != nil {
 			return fmt.Errorf("init web server: %w", err)
 		}

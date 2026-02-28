@@ -364,6 +364,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		if controlResult == nil || controlResult.IsError {
 			t.Fatalf("character_control_set failed: %+v", controlResult)
 		}
+		ensureMCPCharacterCreationReadiness(t, ctx, suite.client, characterOutput.ID)
 
 		startSessionParams := &mcp.CallToolParams{
 			Name: "session_start",

@@ -11,22 +11,35 @@ import (
 // profilePayload is the system-specific profile schema carried inside
 // character.profile_updated events under the "daggerheart" key.
 type profilePayload struct {
-	Level           int                        `json:"level"`
-	HpMax           int                        `json:"hp_max"`
-	StressMax       int                        `json:"stress_max"`
-	Evasion         int                        `json:"evasion"`
-	MajorThreshold  int                        `json:"major_threshold"`
-	SevereThreshold int                        `json:"severe_threshold"`
-	Proficiency     int                        `json:"proficiency"`
-	ArmorScore      int                        `json:"armor_score"`
-	ArmorMax        int                        `json:"armor_max"`
-	Experiences     []experienceProfilePayload `json:"experiences"`
-	Agility         int                        `json:"agility"`
-	Strength        int                        `json:"strength"`
-	Finesse         int                        `json:"finesse"`
-	Instinct        int                        `json:"instinct"`
-	Presence        int                        `json:"presence"`
-	Knowledge       int                        `json:"knowledge"`
+	Level                int                        `json:"level"`
+	HpMax                int                        `json:"hp_max"`
+	StressMax            int                        `json:"stress_max"`
+	Evasion              int                        `json:"evasion"`
+	MajorThreshold       int                        `json:"major_threshold"`
+	SevereThreshold      int                        `json:"severe_threshold"`
+	Proficiency          int                        `json:"proficiency"`
+	ArmorScore           int                        `json:"armor_score"`
+	ArmorMax             int                        `json:"armor_max"`
+	Experiences          []experienceProfilePayload `json:"experiences"`
+	Agility              int                        `json:"agility"`
+	Strength             int                        `json:"strength"`
+	Finesse              int                        `json:"finesse"`
+	Instinct             int                        `json:"instinct"`
+	Presence             int                        `json:"presence"`
+	Knowledge            int                        `json:"knowledge"`
+	ClassID              string                     `json:"class_id"`
+	SubclassID           string                     `json:"subclass_id"`
+	AncestryID           string                     `json:"ancestry_id"`
+	CommunityID          string                     `json:"community_id"`
+	TraitsAssigned       bool                       `json:"traits_assigned"`
+	DetailsRecorded      bool                       `json:"details_recorded"`
+	StartingWeaponIDs    []string                   `json:"starting_weapon_ids"`
+	StartingArmorID      string                     `json:"starting_armor_id"`
+	StartingPotionItemID string                     `json:"starting_potion_item_id"`
+	Background           string                     `json:"background"`
+	DomainCardIDs        []string                   `json:"domain_card_ids"`
+	Connections          string                     `json:"connections"`
+	Reset                bool                       `json:"reset,omitempty"`
 }
 
 type experienceProfilePayload struct {
@@ -44,6 +57,12 @@ func (a *Adapter) ApplyProfile(ctx context.Context, campaignID, characterID stri
 	var profile profilePayload
 	if err := json.Unmarshal(profileData, &profile); err != nil {
 		return fmt.Errorf("decode daggerheart profile payload: %w", err)
+	}
+	if profile.Reset {
+		if err := a.store.DeleteDaggerheartCharacterProfile(ctx, campaignID, characterID); err != nil {
+			return fmt.Errorf("delete daggerheart profile: %w", err)
+		}
+		return nil
 	}
 
 	experiences := make([]Experience, 0, len(profile.Experiences))
@@ -91,23 +110,35 @@ func (a *Adapter) ApplyProfile(ctx context.Context, campaignID, characterID stri
 	}
 
 	return a.store.PutDaggerheartCharacterProfile(ctx, storage.DaggerheartCharacterProfile{
-		CampaignID:      campaignID,
-		CharacterID:     characterID,
-		Level:           level,
-		HpMax:           profile.HpMax,
-		StressMax:       profile.StressMax,
-		Evasion:         profile.Evasion,
-		MajorThreshold:  profile.MajorThreshold,
-		SevereThreshold: profile.SevereThreshold,
-		Proficiency:     profile.Proficiency,
-		ArmorScore:      profile.ArmorScore,
-		ArmorMax:        profile.ArmorMax,
-		Experiences:     experienceStorage,
-		Agility:         profile.Agility,
-		Strength:        profile.Strength,
-		Finesse:         profile.Finesse,
-		Instinct:        profile.Instinct,
-		Presence:        profile.Presence,
-		Knowledge:       profile.Knowledge,
+		CampaignID:           campaignID,
+		CharacterID:          characterID,
+		Level:                level,
+		HpMax:                profile.HpMax,
+		StressMax:            profile.StressMax,
+		Evasion:              profile.Evasion,
+		MajorThreshold:       profile.MajorThreshold,
+		SevereThreshold:      profile.SevereThreshold,
+		Proficiency:          profile.Proficiency,
+		ArmorScore:           profile.ArmorScore,
+		ArmorMax:             profile.ArmorMax,
+		Experiences:          experienceStorage,
+		ClassID:              profile.ClassID,
+		SubclassID:           profile.SubclassID,
+		AncestryID:           profile.AncestryID,
+		CommunityID:          profile.CommunityID,
+		TraitsAssigned:       profile.TraitsAssigned,
+		DetailsRecorded:      profile.DetailsRecorded,
+		StartingWeaponIDs:    append([]string(nil), profile.StartingWeaponIDs...),
+		StartingArmorID:      profile.StartingArmorID,
+		StartingPotionItemID: profile.StartingPotionItemID,
+		Background:           profile.Background,
+		DomainCardIDs:        append([]string(nil), profile.DomainCardIDs...),
+		Connections:          profile.Connections,
+		Agility:              profile.Agility,
+		Strength:             profile.Strength,
+		Finesse:              profile.Finesse,
+		Instinct:             profile.Instinct,
+		Presence:             profile.Presence,
+		Knowledge:            profile.Knowledge,
 	})
 }

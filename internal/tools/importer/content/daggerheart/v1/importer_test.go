@@ -481,7 +481,7 @@ func TestUpsertClasses_LocaleOnly(t *testing.T) {
 func TestUpsertSubclasses(t *testing.T) {
 	store := newFakeContentStore()
 	items := []subclassRecord{{
-		ID: "sub-1", Name: "Bladeweaver", SpellcastTrait: "agility",
+		ID: "sub-1", ClassID: "class-ranger", Name: "Bladeweaver", SpellcastTrait: "agility",
 		FoundationFeatures:     []featureRecord{{ID: "ff1", Name: "Blade", Description: "Desc"}},
 		SpecializationFeatures: []featureRecord{{ID: "sf1", Name: "Spec", Description: "Desc"}},
 		MasteryFeatures:        []featureRecord{{ID: "mf1", Name: "Master", Description: "Desc"}},
@@ -498,6 +498,31 @@ func TestUpsertSubclasses_EmptyID(t *testing.T) {
 	err := upsertSubclasses(context.Background(), newFakeContentStore(), []subclassRecord{{ID: ""}}, "en-US", true, time.Now())
 	if err == nil {
 		t.Fatal("expected error for empty ID")
+	}
+}
+
+func TestUpsertSubclasses_EmptyClassID(t *testing.T) {
+	err := upsertSubclasses(context.Background(), newFakeContentStore(), []subclassRecord{{ID: "sub-1", ClassID: ""}}, "en-US", true, time.Now())
+	if err == nil {
+		t.Fatal("expected error for empty class_id")
+	}
+}
+
+func TestUpsertSubclasses_LocaleOnlyAllowsEmptyClassID(t *testing.T) {
+	store := newFakeContentStore()
+	items := []subclassRecord{{
+		ID:   "sub-1",
+		Name: "Lamina Dan",
+	}}
+
+	if err := upsertSubclasses(context.Background(), store, items, "pt-BR", false, time.Now()); err != nil {
+		t.Fatalf("upsertSubclasses locale-only: %v", err)
+	}
+	if len(store.subclasses) != 0 {
+		t.Error("expected no subclass stored for non-base locale")
+	}
+	if len(store.contentStrings) == 0 {
+		t.Error("expected content strings for locale")
 	}
 }
 
@@ -795,7 +820,7 @@ func TestUpsertLocale_AllContentTypes(t *testing.T) {
 		Domains:              &domainPayload{Items: []domainRecord{{ID: "dom-1", Name: "Valor", Description: "Courage"}}},
 		DomainCards:          &domainCardPayload{Items: []domainCardRecord{{ID: "card-1", Name: "Shield", DomainID: "dom-1", UsageLimit: "1/rest", FeatureText: "Block"}}},
 		Classes:              &classPayload{Items: []classRecord{{ID: "cls-1", Name: "Guardian", Features: []featureRecord{{ID: "f1", Name: "Block", Description: "Reduce"}}}}},
-		Subclasses:           &subclassPayload{Items: []subclassRecord{{ID: "sub-1", Name: "Bladeweaver"}}},
+		Subclasses:           &subclassPayload{Items: []subclassRecord{{ID: "sub-1", ClassID: "class-ranger", Name: "Bladeweaver"}}},
 		Heritages:            &heritagePayload{Items: []heritageRecord{{ID: "her-1", Name: "Elf", Kind: "ancestry"}}},
 		Experiences:          &experiencePayload{Items: []experienceRecord{{ID: "exp-1", Name: "Wanderer", Description: "Traveled"}}},
 		Adversaries:          &adversaryPayload{Items: []adversaryRecord{{ID: "adv-1", Name: "Goblin", Features: []adversaryFeatureRecord{{ID: "af1", Name: "Sneaky", Description: "D"}}}}},

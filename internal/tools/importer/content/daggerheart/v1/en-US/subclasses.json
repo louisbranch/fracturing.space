@@ -6,6 +6,7 @@
   "items": [
     {
       "id": "subclass.troubadour",
+      "class_id": "class.bard",
       "name": "Troubadour",
       "spellcast_trait": "Presence",
       "foundation_features": [
@@ -35,6 +36,7 @@
     },
     {
       "id": "subclass.wordsmith",
+      "class_id": "class.bard",
       "name": "Wordsmith",
       "spellcast_trait": "Presence",
       "foundation_features": [
@@ -70,6 +72,7 @@
     },
     {
       "id": "subclass.warden-elements",
+      "class_id": "class.druid",
       "name": "Warden of the Elements",
       "spellcast_trait": "Instinct",
       "foundation_features": [
@@ -99,6 +102,7 @@
     },
     {
       "id": "subclass.warden-renewal",
+      "class_id": "class.druid",
       "name": "Warden of Renewal",
       "spellcast_trait": "Instinct",
       "foundation_features": [
@@ -140,6 +144,7 @@
     },
     {
       "id": "subclass.stalwart",
+      "class_id": "class.guardian",
       "name": "Stalwart",
       "spellcast_trait": "Strength",
       "foundation_features": [
@@ -187,6 +192,7 @@
     },
     {
       "id": "subclass.vengeance",
+      "class_id": "class.guardian",
       "name": "Vengeance",
       "spellcast_trait": "Strength",
       "foundation_features": [
@@ -222,6 +228,7 @@
     },
     {
       "id": "subclass.beastbound",
+      "class_id": "class.ranger",
       "name": "Beastbound",
       "spellcast_trait": "Agility",
       "foundation_features": [
@@ -263,6 +270,7 @@
     },
     {
       "id": "subclass.wayfinder",
+      "class_id": "class.ranger",
       "name": "Wayfinder",
       "spellcast_trait": "Agility",
       "foundation_features": [
@@ -298,6 +306,7 @@
     },
     {
       "id": "subclass.nightwalker",
+      "class_id": "class.rogue",
       "name": "Nightwalker",
       "spellcast_trait": "Finesse",
       "foundation_features": [
@@ -339,6 +348,7 @@
     },
     {
       "id": "subclass.syndicate",
+      "class_id": "class.rogue",
       "name": "Syndicate",
       "spellcast_trait": "Finesse",
       "foundation_features": [
@@ -368,6 +378,7 @@
     },
     {
       "id": "subclass.divine-wielder",
+      "class_id": "class.seraph",
       "name": "Divine Wielder",
       "spellcast_trait": "Strength",
       "foundation_features": [
@@ -403,6 +414,7 @@
     },
     {
       "id": "subclass.winged-sentinel",
+      "class_id": "class.seraph",
       "name": "Winged Sentinel",
       "spellcast_trait": "Strength",
       "foundation_features": [
@@ -438,6 +450,7 @@
     },
     {
       "id": "subclass.elemental-origin",
+      "class_id": "class.sorcerer",
       "name": "Elemental Origin",
       "spellcast_trait": "Instinct",
       "foundation_features": [
@@ -467,6 +480,7 @@
     },
     {
       "id": "subclass.primal-origin",
+      "class_id": "class.sorcerer",
       "name": "Primal Origin",
       "spellcast_trait": "Instinct",
       "foundation_features": [
@@ -496,6 +510,7 @@
     },
     {
       "id": "subclass.call-brave",
+      "class_id": "class.warrior",
       "name": "Call of the Brave",
       "spellcast_trait": "Strength",
       "foundation_features": [
@@ -531,6 +546,7 @@
     },
     {
       "id": "subclass.call-slayer",
+      "class_id": "class.warrior",
       "name": "Call of the Slayer",
       "spellcast_trait": "Strength",
       "foundation_features": [
@@ -560,6 +576,7 @@
     },
     {
       "id": "subclass.school-knowledge",
+      "class_id": "class.wizard",
       "name": "School of Knowledge",
       "spellcast_trait": "Knowledge",
       "foundation_features": [
@@ -607,6 +624,7 @@
     },
     {
       "id": "subclass.school-war",
+      "class_id": "class.wizard",
       "name": "School of War",
       "spellcast_trait": "Knowledge",
       "foundation_features": [

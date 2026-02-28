@@ -132,6 +132,22 @@ func (f *fakeCharacterClient) PatchCharacterState(ctx context.Context, in *gamev
 	return nil, unimplemented("PatchCharacterState")
 }
 
+func (f *fakeCharacterClient) GetCharacterCreationProgress(context.Context, *gamev1.GetCharacterCreationProgressRequest, ...grpc.CallOption) (*gamev1.GetCharacterCreationProgressResponse, error) {
+	return nil, unimplemented("GetCharacterCreationProgress")
+}
+
+func (f *fakeCharacterClient) ApplyCharacterCreationStep(context.Context, *gamev1.ApplyCharacterCreationStepRequest, ...grpc.CallOption) (*gamev1.ApplyCharacterCreationStepResponse, error) {
+	return nil, unimplemented("ApplyCharacterCreationStep")
+}
+
+func (f *fakeCharacterClient) ApplyCharacterCreationWorkflow(context.Context, *gamev1.ApplyCharacterCreationWorkflowRequest, ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error) {
+	return nil, unimplemented("ApplyCharacterCreationWorkflow")
+}
+
+func (f *fakeCharacterClient) ResetCharacterCreationWorkflow(context.Context, *gamev1.ResetCharacterCreationWorkflowRequest, ...grpc.CallOption) (*gamev1.ResetCharacterCreationWorkflowResponse, error) {
+	return nil, unimplemented("ResetCharacterCreationWorkflow")
+}
+
 type fakeEventClient struct {
 	seq int64
 }

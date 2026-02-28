@@ -83,6 +83,7 @@ func TestDaggerheartSubclassCRUD(t *testing.T) {
 
 	expected := storage.DaggerheartSubclass{
 		ID:             "sub-berserker",
+		ClassID:        "class-warrior",
 		Name:           "Berserker",
 		SpellcastTrait: "Strength",
 		FoundationFeatures: []storage.DaggerheartFeature{
@@ -108,6 +109,9 @@ func TestDaggerheartSubclassCRUD(t *testing.T) {
 	}
 	if got.SpellcastTrait != "Strength" {
 		t.Fatalf("expected spellcast trait %q, got %q", "Strength", got.SpellcastTrait)
+	}
+	if got.ClassID != "class-warrior" {
+		t.Fatalf("expected class id %q, got %q", "class-warrior", got.ClassID)
 	}
 	if len(got.FoundationFeatures) != 1 || got.FoundationFeatures[0].Name != "Rage" {
 		t.Fatalf("expected foundation features to match")

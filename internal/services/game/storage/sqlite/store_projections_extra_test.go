@@ -58,6 +58,42 @@ func TestCampaignCanStartSessionComputed(t *testing.T) {
 		if err := store.PutCharacter(context.Background(), record); err != nil {
 			t.Fatalf("put character %s: %v", characterID, err)
 		}
+		if err := store.PutDaggerheartCharacterProfile(context.Background(), storage.DaggerheartCharacterProfile{
+			CampaignID:      campaignID,
+			CharacterID:     characterID,
+			Level:           1,
+			HpMax:           6,
+			StressMax:       6,
+			Evasion:         10,
+			MajorThreshold:  8,
+			SevereThreshold: 12,
+			Proficiency:     1,
+			ArmorScore:      0,
+			ArmorMax:        0,
+			Experiences: []storage.DaggerheartExperience{
+				{Name: "Guard Duty", Modifier: 2},
+			},
+			ClassID:              "class.guardian",
+			SubclassID:           "subclass.stalwart",
+			AncestryID:           "heritage.clank",
+			CommunityID:          "heritage.farmer",
+			TraitsAssigned:       true,
+			DetailsRecorded:      true,
+			StartingWeaponIDs:    []string{"weapon.longsword"},
+			StartingArmorID:      "armor.gambeson-armor",
+			StartingPotionItemID: "item.minor-health-potion",
+			Agility:              2,
+			Strength:             1,
+			Finesse:              1,
+			Instinct:             0,
+			Presence:             0,
+			Knowledge:            -1,
+			Background:           "Veteran of the city watch",
+			DomainCardIDs:        []string{"domain-card.ward"},
+			Connections:          "Trusted by the gate captain",
+		}); err != nil {
+			t.Fatalf("put daggerheart profile %s: %v", characterID, err)
+		}
 	}
 
 	assertReadiness := func(t *testing.T, store *Store, campaignID string, want bool) {
@@ -230,6 +266,42 @@ func TestCampaignCanStartSessionAfterSessionEnds(t *testing.T) {
 		UpdatedAt:          now,
 	}); err != nil {
 		t.Fatalf("put character: %v", err)
+	}
+	if err := store.PutDaggerheartCharacterProfile(context.Background(), storage.DaggerheartCharacterProfile{
+		CampaignID:      campaignID,
+		CharacterID:     "char-1",
+		Level:           1,
+		HpMax:           6,
+		StressMax:       6,
+		Evasion:         10,
+		MajorThreshold:  8,
+		SevereThreshold: 12,
+		Proficiency:     1,
+		ArmorScore:      0,
+		ArmorMax:        0,
+		Experiences: []storage.DaggerheartExperience{
+			{Name: "Guard Duty", Modifier: 2},
+		},
+		ClassID:              "class.guardian",
+		SubclassID:           "subclass.stalwart",
+		AncestryID:           "heritage.clank",
+		CommunityID:          "heritage.farmer",
+		TraitsAssigned:       true,
+		DetailsRecorded:      true,
+		StartingWeaponIDs:    []string{"weapon.longsword"},
+		StartingArmorID:      "armor.gambeson-armor",
+		StartingPotionItemID: "item.minor-health-potion",
+		Agility:              2,
+		Strength:             1,
+		Finesse:              1,
+		Instinct:             0,
+		Presence:             0,
+		Knowledge:            -1,
+		Background:           "Veteran of the city watch",
+		DomainCardIDs:        []string{"domain-card.ward"},
+		Connections:          "Trusted by the gate captain",
+	}); err != nil {
+		t.Fatalf("put daggerheart profile: %v", err)
 	}
 
 	campaignRecord, err := store.Get(context.Background(), campaignID)

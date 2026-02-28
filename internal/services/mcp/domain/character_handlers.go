@@ -370,9 +370,7 @@ func CharacterProfilePatchHandler(client statev1.CharacterServiceClient, getCont
 
 		// All profile fields are now Daggerheart-specific (including hp_max)
 		hasDaggerheartPatch := input.HpMax != nil || input.StressMax != nil || input.Evasion != nil ||
-			input.MajorThreshold != nil || input.SevereThreshold != nil ||
-			input.Agility != nil || input.Strength != nil || input.Finesse != nil ||
-			input.Instinct != nil || input.Presence != nil || input.Knowledge != nil
+			input.MajorThreshold != nil || input.SevereThreshold != nil
 		if hasDaggerheartPatch {
 			dhProfile := &daggerheartv1.DaggerheartProfile{}
 			if input.HpMax != nil {
@@ -389,24 +387,6 @@ func CharacterProfilePatchHandler(client statev1.CharacterServiceClient, getCont
 			}
 			if input.SevereThreshold != nil {
 				dhProfile.SevereThreshold = wrapperspb.Int32(int32(*input.SevereThreshold))
-			}
-			if input.Agility != nil {
-				dhProfile.Agility = wrapperspb.Int32(int32(*input.Agility))
-			}
-			if input.Strength != nil {
-				dhProfile.Strength = wrapperspb.Int32(int32(*input.Strength))
-			}
-			if input.Finesse != nil {
-				dhProfile.Finesse = wrapperspb.Int32(int32(*input.Finesse))
-			}
-			if input.Instinct != nil {
-				dhProfile.Instinct = wrapperspb.Int32(int32(*input.Instinct))
-			}
-			if input.Presence != nil {
-				dhProfile.Presence = wrapperspb.Int32(int32(*input.Presence))
-			}
-			if input.Knowledge != nil {
-				dhProfile.Knowledge = wrapperspb.Int32(int32(*input.Knowledge))
 			}
 			req.SystemProfilePatch = &statev1.PatchCharacterProfileRequest_Daggerheart{
 				Daggerheart: dhProfile,
@@ -432,6 +412,110 @@ func CharacterProfilePatchHandler(client statev1.CharacterServiceClient, getCont
 			fmt.Sprintf("campaign://%s/characters", campaignID),
 		)
 		return CallToolResultWithMetadata(responseMeta), result, nil
+	}
+}
+
+// CharacterCreationWorkflowApplyHandler executes an atomic creation workflow apply.
+func CharacterCreationWorkflowApplyHandler(client statev1.CharacterServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CharacterCreationWorkflowApplyInput, CharacterCreationWorkflowApplyResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input CharacterCreationWorkflowApplyInput) (*mcp.CallToolResult, CharacterCreationWorkflowApplyResult, error) {
+		callContext, err := newToolInvocationContext(ctx, getContext)
+		if err != nil {
+			return nil, CharacterCreationWorkflowApplyResult{}, fmt.Errorf("generate invocation id: %w", err)
+		}
+		defer callContext.Cancel()
+
+		campaignID := callContext.MCPContext.CampaignID
+		if campaignID == "" {
+			return nil, CharacterCreationWorkflowApplyResult{}, fmt.Errorf("campaign context is required")
+		}
+
+		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		if err != nil {
+			return nil, CharacterCreationWorkflowApplyResult{}, fmt.Errorf("create request metadata: %w", err)
+		}
+
+		experiences := make([]*daggerheartv1.DaggerheartExperience, 0, len(input.Experiences))
+		for _, experience := range input.Experiences {
+			experiences = append(experiences, &daggerheartv1.DaggerheartExperience{
+				Name:     experience.Name,
+				Modifier: int32(experience.Modifier),
+			})
+		}
+
+		req := &statev1.ApplyCharacterCreationWorkflowRequest{
+			CampaignId:  campaignID,
+			CharacterId: input.CharacterID,
+			SystemWorkflow: &statev1.ApplyCharacterCreationWorkflowRequest_Daggerheart{
+				Daggerheart: &daggerheartv1.DaggerheartCreationWorkflowInput{
+					ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
+						ClassId:    input.ClassID,
+						SubclassId: input.SubclassID,
+					},
+					HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
+						AncestryId:  input.AncestryID,
+						CommunityId: input.CommunityID,
+					},
+					TraitsInput:  &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: int32(input.Agility), Strength: int32(input.Strength), Finesse: int32(input.Finesse), Instinct: int32(input.Instinct), Presence: int32(input.Presence), Knowledge: int32(input.Knowledge)},
+					DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{},
+					EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{
+						WeaponIds:    append([]string(nil), input.WeaponIDs...),
+						ArmorId:      input.ArmorID,
+						PotionItemId: input.PotionItemID,
+					},
+					BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{Background: input.Background},
+					ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{
+						Experiences: experiences,
+					},
+					DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: append([]string(nil), input.DomainCardIDs...)},
+					ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{Connections: input.Connections},
+				},
+			},
+		}
+
+		var header metadata.MD
+		response, err := client.ApplyCharacterCreationWorkflow(callCtx, req, grpc.Header(&header))
+		if err != nil {
+			return nil, CharacterCreationWorkflowApplyResult{}, fmt.Errorf("character creation workflow apply failed: %w", err)
+		}
+		if response == nil || response.Profile == nil || response.Progress == nil {
+			return nil, CharacterCreationWorkflowApplyResult{}, fmt.Errorf("character creation workflow apply response is missing")
+		}
+
+		result := CharacterCreationWorkflowApplyResult{
+			Profile:  characterProfileResultFromProto(response.Profile),
+			Progress: characterCreationProgressResultFromProto(response.Progress),
+		}
+
+		responseMeta := MergeResponseMetadata(callMeta, header)
+		NotifyResourceUpdates(
+			ctx,
+			notify,
+			fmt.Sprintf("campaign://%s/characters", campaignID),
+		)
+		return CallToolResultWithMetadata(responseMeta), result, nil
+	}
+}
+
+func characterCreationProgressResultFromProto(progress *statev1.CharacterCreationProgress) CharacterCreationProgressResult {
+	if progress == nil {
+		return CharacterCreationProgressResult{UnmetReasons: []string{}, Steps: []CharacterCreationStepProgressResult{}}
+	}
+	steps := make([]CharacterCreationStepProgressResult, 0, len(progress.GetSteps()))
+	for _, step := range progress.GetSteps() {
+		steps = append(steps, CharacterCreationStepProgressResult{
+			Step:     int(step.GetStep()),
+			Key:      step.GetKey(),
+			Complete: step.GetComplete(),
+		})
+	}
+	unmetReasons := make([]string, 0, len(progress.GetUnmetReasons()))
+	unmetReasons = append(unmetReasons, progress.GetUnmetReasons()...)
+	return CharacterCreationProgressResult{
+		CharacterID:  progress.GetCharacterId(),
+		Ready:        progress.GetReady(),
+		NextStep:     int(progress.GetNextStep()),
+		UnmetReasons: unmetReasons,
+		Steps:        steps,
 	}
 }
 

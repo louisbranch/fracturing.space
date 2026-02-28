@@ -431,6 +431,12 @@ func (s *projectionDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Co
 	return profile, nil
 }
 
+func (s *projectionDaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {
+	key := campaignID + ":" + characterID
+	delete(s.profiles, key)
+	return nil
+}
+
 func (s *projectionDaggerheartStore) PutDaggerheartCharacterState(_ context.Context, state storage.DaggerheartCharacterState) error {
 	key := state.CampaignID + ":" + state.CharacterID
 	s.states[key] = state

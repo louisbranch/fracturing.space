@@ -8,18 +8,30 @@ import (
 // DaggerheartCharacterProfile is the stored projection of Daggerheart
 // character progression and stats for read-heavy operations.
 type DaggerheartCharacterProfile struct {
-	CampaignID      string
-	CharacterID     string
-	Level           int
-	HpMax           int
-	StressMax       int
-	Evasion         int
-	MajorThreshold  int
-	SevereThreshold int
-	Proficiency     int
-	ArmorScore      int
-	ArmorMax        int
-	Experiences     []DaggerheartExperience
+	CampaignID           string
+	CharacterID          string
+	Level                int
+	HpMax                int
+	StressMax            int
+	Evasion              int
+	MajorThreshold       int
+	SevereThreshold      int
+	Proficiency          int
+	ArmorScore           int
+	ArmorMax             int
+	Experiences          []DaggerheartExperience
+	ClassID              string
+	SubclassID           string
+	AncestryID           string
+	CommunityID          string
+	TraitsAssigned       bool
+	DetailsRecorded      bool
+	StartingWeaponIDs    []string
+	StartingArmorID      string
+	StartingPotionItemID string
+	Background           string
+	DomainCardIDs        []string
+	Connections          string
 	// Daggerheart traits
 	Agility   int
 	Strength  int
@@ -130,6 +142,7 @@ type DaggerheartClass struct {
 type DaggerheartSubclass struct {
 	ID                     string
 	Name                   string
+	ClassID                string
 	SpellcastTrait         string
 	FoundationFeatures     []DaggerheartFeature
 	SpecializationFeatures []DaggerheartFeature
@@ -367,6 +380,7 @@ type DaggerheartStore interface {
 	// Character Profile Extensions
 	PutDaggerheartCharacterProfile(ctx context.Context, profile DaggerheartCharacterProfile) error
 	GetDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) (DaggerheartCharacterProfile, error)
+	DeleteDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) error
 
 	// Character State Extensions
 	PutDaggerheartCharacterState(ctx context.Context, state DaggerheartCharacterState) error

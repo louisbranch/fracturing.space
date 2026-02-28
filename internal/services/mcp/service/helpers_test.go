@@ -864,7 +864,7 @@ func TestMCPRegistrationModulesAreIsolated(t *testing.T) {
 
 	expectedCounts := map[string]int{
 		mcpDaggerheartToolsModuleName: 6,
-		mcpCampaignToolsModuleName:    14,
+		mcpCampaignToolsModuleName:    15,
 		mcpSessionToolsModuleName:     2,
 		mcpForkToolsModuleName:        2,
 		mcpEventToolsModuleName:       1,

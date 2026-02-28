@@ -13,6 +13,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
@@ -597,6 +598,185 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 	}
 }
 
+func TestMountCampaignCharacterDetailRendersCreationWorkflowForm(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+		}},
+		characterCreationProgress: CampaignCharacterCreationProgress{
+			Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+			NextStep: 1,
+		},
+		characterCreationCatalog: CampaignCharacterCreationCatalog{
+			Classes:    []DaggerheartCreationClass{{ID: "warrior", Name: "Warrior"}},
+			Subclasses: []DaggerheartCreationSubclass{{ID: "guardian", Name: "Guardian", ClassID: "warrior"}},
+		},
+	})
+	mount, err := m.Mount(module.Dependencies{})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-character-creation-workflow="true"`,
+		`data-character-creation-next-step="1"`,
+		`data-character-creation-form-step="1"`,
+		`action="/app/campaigns/c1/characters/char-1/creation/step"`,
+		`<option value="warrior">Warrior</option>`,
+		`<option value="guardian">Guardian</option>`,
+		`action="/app/campaigns/c1/characters/char-1/creation/reset"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing workflow marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignCharacterDetailHidesWorkflowForNonDaggerheartCampaigns(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{
+		items:           []CampaignSummary{{ID: "c1", Name: "First"}},
+		workspaceSystem: "Pathfinder",
+		characters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+		}},
+		characterCreationProgressErr: errors.New("workflow should not be loaded for non-daggerheart systems"),
+	})
+	mount, err := m.Mount(module.Dependencies{})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, `data-character-creation-workflow="true"`) {
+		t.Fatalf("body unexpectedly contains character creation workflow card: %q", body)
+	}
+}
+
+func TestMountCampaignCharacterDetailPrefillsEquipmentStepFromProfile(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+		}},
+		characterCreationProgress: CampaignCharacterCreationProgress{
+			Steps:    []CampaignCharacterCreationStep{{Step: 5, Key: "equipment", Complete: false}},
+			NextStep: 5,
+		},
+		characterCreationCatalog: CampaignCharacterCreationCatalog{
+			Weapons: []DaggerheartCreationWeapon{
+				{ID: "weapon.longsword", Name: "Longsword", Category: "primary", Tier: 1},
+				{ID: "weapon.dagger", Name: "Dagger", Category: "secondary", Tier: 1},
+			},
+			Armor: []DaggerheartCreationArmor{{ID: "armor.chain", Name: "Chain", Tier: 1}},
+			Items: []DaggerheartCreationItem{{ID: "item.minor-health-potion", Name: "Minor Health Potion"}},
+		},
+		characterCreationProfile: CampaignCharacterCreationProfile{
+			PrimaryWeaponID:   "weapon.longsword",
+			SecondaryWeaponID: "weapon.dagger",
+			ArmorID:           "armor.chain",
+			PotionItemID:      "item.minor-health-potion",
+		},
+	})
+	mount, err := m.Mount(module.Dependencies{})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-character-creation-form-step="5"`,
+		`<option value="weapon.longsword" selected>Longsword</option>`,
+		`<option value="weapon.dagger" selected>Dagger</option>`,
+		`<option value="armor.chain" selected>Chain</option>`,
+		`<option value="item.minor-health-potion" selected>Minor Health Potion</option>`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing workflow prefill marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignCharacterDetailPrefillsDomainCardStepFromProfile(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+		}},
+		characterCreationProgress: CampaignCharacterCreationProgress{
+			Steps:    []CampaignCharacterCreationStep{{Step: 8, Key: "domain_cards", Complete: false}},
+			NextStep: 8,
+		},
+		characterCreationCatalog: CampaignCharacterCreationCatalog{
+			DomainCards: []DaggerheartCreationDomainCard{
+				{ID: "card.guard", Name: "Guard", DomainID: "valor", Level: 1},
+				{ID: "card.cleave", Name: "Cleave", DomainID: "valor", Level: 1},
+			},
+		},
+		characterCreationProfile: CampaignCharacterCreationProfile{DomainCardIDs: []string{"card.guard"}},
+	})
+	mount, err := m.Mount(module.Dependencies{})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-character-creation-form-step="8"`,
+		`value="card.guard" class="checkbox checkbox-sm" checked`,
+		`value="card.cleave" class="checkbox checkbox-sm"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing workflow domain-card marker %q: %q", marker, body)
+		}
+	}
+}
+
 func TestMountCampaignGameRouteRendersDedicatedDrawerChrome(t *testing.T) {
 	t.Parallel()
 
@@ -896,9 +1076,17 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`href="/app/campaigns/c1/characters"`,
+		`data-campaign-character-create-entry="true"`,
+		`data-campaign-character-create-form="true"`,
+		`action="/app/campaigns/c1/characters/create"`,
+		`data-campaign-character-create-name="true"`,
+		`Add Character`,
 		`class="grid grid-cols-1 md:grid-cols-2 gap-4"`,
 		`data-campaign-character-card-id="ch-a"`,
 		`data-campaign-character-name="Aria"`,
+		`href="/app/campaigns/c1/characters/ch-a"`,
+		`data-campaign-character-detail-link="true"`,
+		`data-campaign-character-creation-entry="false"`,
 		`data-campaign-character-kind="PC"`,
 		`data-campaign-character-controller="Ariadne"`,
 		`src="/static/avatars/aria.png"`,
@@ -920,6 +1108,146 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 	}
 	if !strings.Contains(body, `class="menu-active" href="/app/campaigns/c1/characters"`) {
 		t.Fatalf("expected characters menu item active: %q", body)
+	}
+}
+
+func TestMountCampaignCharactersEmptyStateStillShowsCreateForm(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}})
+	mount, err := m.Mount(module.Dependencies{})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacters("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`No characters yet.`,
+		`data-campaign-character-create-form="true"`,
+		`action="/app/campaigns/c1/characters/create"`,
+		`Add Character`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing empty-state create marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignCharactersShowsCreationEntryForEditableDaggerheartCharacters(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{
+		items: []CampaignSummary{{
+			ID:            "c1",
+			Name:          "The Guildhouse",
+			CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
+		}},
+		characters: []CampaignCharacter{{
+			ID:         "ch-a",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+		}},
+		batchAuthorizationDecisions: []campaignAuthorizationDecision{{CheckID: "ch-a", Evaluated: true, Allowed: true}},
+	})
+	mount, err := m.Mount(module.Dependencies{})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacters("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`href="/app/campaigns/c1/characters/ch-a"`,
+		`data-campaign-character-creation-entry="true"`,
+		`Open creation workflow`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing creation-entry marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignCharactersHidesCreationEntryForReadOnlyCharacters(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		characters: []CampaignCharacter{{
+			ID:         "ch-a",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+			CanEdit:    false,
+		}},
+	})
+	mount, err := m.Mount(module.Dependencies{})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacters("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, `data-campaign-character-creation-entry="true"`) {
+		t.Fatalf("body unexpectedly contains editable creation entry: %q", body)
+	}
+	for _, marker := range []string{
+		`data-campaign-character-creation-entry="false"`,
+		`View details`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing read-only entry marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignCharactersHidesCreationEntryForNonDaggerheartCampaigns(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{
+		items:           []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceSystem: "Pathfinder",
+		characters: []CampaignCharacter{{
+			ID:         "ch-a",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+			CanEdit:    true,
+		}},
+	})
+	mount, err := m.Mount(module.Dependencies{})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacters("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, `data-campaign-character-creation-entry="true"`) {
+		t.Fatalf("body unexpectedly contains non-daggerheart creation entry: %q", body)
+	}
+	if !strings.Contains(body, `data-campaign-character-creation-entry="false"`) {
+		t.Fatalf("body missing fallback detail entry for non-daggerheart campaign: %q", body)
 	}
 }
 
@@ -1600,12 +1928,44 @@ func TestMountCharacterCreateUsesHXRedirect(t *testing.T) {
 	t.Parallel()
 	m := NewWithGateway(managerMutationGateway())
 	mount, _ := m.Mount(managerMutationDeps())
-	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), nil)
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&kind=pc"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
-	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignCharacters("c1") {
-		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignCharacters("c1"))
+	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignCharacter("c1", "char-created") {
+		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignCharacter("c1", "char-created"))
+	}
+}
+
+func TestMountCharacterCreateRedirectsForNonHTMX(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(managerMutationGateway())
+	mount, _ := m.Mount(managerMutationDeps())
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&kind=pc"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("c1", "char-created") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("c1", "char-created"))
+	}
+}
+
+func TestMountCharacterCreateRejectsInvalidKind(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(managerMutationGateway())
+	mount, _ := m.Mount(managerMutationDeps())
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&kind=invalid"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
 }
 
@@ -1738,6 +2098,16 @@ func TestParseAppGameSystemAndGmMode(t *testing.T) {
 	if _, ok := parseAppGmMode("invalid"); ok {
 		t.Fatalf("expected invalid gm mode to fail parse")
 	}
+
+	if kind, ok := parseAppCharacterKind("pc"); !ok || kind != statev1.CharacterKind_PC {
+		t.Fatalf("parseAppCharacterKind pc = (%v, %v)", kind, ok)
+	}
+	if kind, ok := parseAppCharacterKind("npc"); !ok || kind != statev1.CharacterKind_NPC {
+		t.Fatalf("parseAppCharacterKind npc = (%v, %v)", kind, ok)
+	}
+	if _, ok := parseAppCharacterKind("invalid"); ok {
+		t.Fatalf("expected invalid character kind to fail parse")
+	}
 }
 
 func TestCampaignDetailBreadcrumbsFallbackToCampaignID(t *testing.T) {
@@ -1811,9 +2181,14 @@ func TestGRPCGatewayMutationMethodsReturnUnavailable(t *testing.T) {
 		{name: "start session", err: g.StartSession(context.Background(), "c1")},
 		{name: "end session", err: g.EndSession(context.Background(), "c1")},
 		{name: "update participants", err: g.UpdateParticipants(context.Background(), "c1")},
-		{name: "create character", err: g.CreateCharacter(context.Background(), "c1")},
+		{name: "create character", err: func() error {
+			_, err := g.CreateCharacter(context.Background(), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC})
+			return err
+		}()},
 		{name: "update character", err: g.UpdateCharacter(context.Background(), "c1")},
 		{name: "control character", err: g.ControlCharacter(context.Background(), "c1")},
+		{name: "apply character creation step", err: g.ApplyCharacterCreationStep(context.Background(), "c1", "char-1", &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{}}})},
+		{name: "reset character creation workflow", err: g.ResetCharacterCreationWorkflow(context.Background(), "c1", "char-1")},
 		{name: "create invite", err: g.CreateInvite(context.Background(), "c1")},
 		{name: "revoke invite", err: g.RevokeInvite(context.Background(), "c1")},
 	}
@@ -1907,18 +2282,31 @@ func TestGRPCGatewayCampaignInvitesFailsClosedWhenInviteClientMissing(t *testing
 }
 
 type fakeGateway struct {
-	items             []CampaignSummary
-	participants      []CampaignParticipant
-	participantsErr   error
-	characters        []CampaignCharacter
-	charactersErr     error
-	sessions          []CampaignSession
-	sessionsErr       error
-	invites           []CampaignInvite
-	invitesErr        error
-	err               error
-	createErr         error
-	createdCampaignID string
+	items                             []CampaignSummary
+	workspaceSystem                   string
+	participants                      []CampaignParticipant
+	participantsErr                   error
+	characters                        []CampaignCharacter
+	charactersErr                     error
+	sessions                          []CampaignSession
+	sessionsErr                       error
+	invites                           []CampaignInvite
+	invitesErr                        error
+	characterCreationProgress         CampaignCharacterCreationProgress
+	characterCreationProgressErr      error
+	characterCreationCatalog          CampaignCharacterCreationCatalog
+	characterCreationCatalogErr       error
+	characterCreationProfile          CampaignCharacterCreationProfile
+	characterCreationProfileErr       error
+	batchAuthorizationDecisions       []campaignAuthorizationDecision
+	batchAuthorizationErr             error
+	applyCharacterCreationStepErr     error
+	resetCharacterCreationWorkflowErr error
+	createCharacterErr                error
+	createdCharacterID                string
+	err                               error
+	createErr                         error
+	createdCampaignID                 string
 }
 
 type mutationContextGateway struct {
@@ -1969,11 +2357,15 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (Ca
 		if name == "" {
 			name = campaignID
 		}
+		system := strings.TrimSpace(f.workspaceSystem)
+		if system == "" {
+			system = "Daggerheart"
+		}
 		return CampaignWorkspace{
 			ID:            campaignID,
 			Name:          name,
 			Theme:         strings.TrimSpace(item.Theme),
-			System:        "Daggerheart",
+			System:        system,
 			GMMode:        "Human",
 			CoverImageURL: strings.TrimSpace(item.CoverImageURL),
 		}, nil
@@ -2009,6 +2401,27 @@ func (f fakeGateway) CampaignInvites(context.Context, string) ([]CampaignInvite,
 	return f.invites, nil
 }
 
+func (f fakeGateway) CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error) {
+	if f.characterCreationProgressErr != nil {
+		return CampaignCharacterCreationProgress{}, f.characterCreationProgressErr
+	}
+	return f.characterCreationProgress, nil
+}
+
+func (f fakeGateway) CharacterCreationCatalog(context.Context, commonv1.Locale) (CampaignCharacterCreationCatalog, error) {
+	if f.characterCreationCatalogErr != nil {
+		return CampaignCharacterCreationCatalog{}, f.characterCreationCatalogErr
+	}
+	return f.characterCreationCatalog, nil
+}
+
+func (f fakeGateway) CharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error) {
+	if f.characterCreationProfileErr != nil {
+		return CampaignCharacterCreationProfile{}, f.characterCreationProfileErr
+	}
+	return f.characterCreationProfile, nil
+}
+
 func (f fakeGateway) CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error) {
 	if f.createErr != nil {
 		return CreateCampaignResult{}, f.createErr
@@ -2023,13 +2436,35 @@ func (f fakeGateway) CreateCampaign(context.Context, CreateCampaignInput) (Creat
 func (fakeGateway) StartSession(context.Context, string) error       { return nil }
 func (fakeGateway) EndSession(context.Context, string) error         { return nil }
 func (fakeGateway) UpdateParticipants(context.Context, string) error { return nil }
-func (fakeGateway) CreateCharacter(context.Context, string) error    { return nil }
-func (fakeGateway) UpdateCharacter(context.Context, string) error    { return nil }
-func (fakeGateway) ControlCharacter(context.Context, string) error   { return nil }
-func (fakeGateway) CreateInvite(context.Context, string) error       { return nil }
-func (fakeGateway) RevokeInvite(context.Context, string) error       { return nil }
+func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error) {
+	if f.createCharacterErr != nil {
+		return CreateCharacterResult{}, f.createCharacterErr
+	}
+	createdCharacterID := strings.TrimSpace(f.createdCharacterID)
+	if createdCharacterID == "" {
+		createdCharacterID = "char-created"
+	}
+	return CreateCharacterResult{CharacterID: createdCharacterID}, nil
+}
+func (fakeGateway) UpdateCharacter(context.Context, string) error  { return nil }
+func (fakeGateway) ControlCharacter(context.Context, string) error { return nil }
+func (fakeGateway) CreateInvite(context.Context, string) error     { return nil }
+func (fakeGateway) RevokeInvite(context.Context, string) error     { return nil }
+func (f fakeGateway) ApplyCharacterCreationStep(context.Context, string, string, *daggerheartv1.DaggerheartCreationStepInput) error {
+	return f.applyCharacterCreationStepErr
+}
+func (f fakeGateway) ResetCharacterCreationWorkflow(context.Context, string, string) error {
+	return f.resetCharacterCreationWorkflowErr
+}
 func (fakeGateway) CanCampaignAction(context.Context, string, statev1.AuthorizationAction, statev1.AuthorizationResource, *statev1.AuthorizationTarget) (campaignAuthorizationDecision, error) {
 	return campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil
+}
+
+func (f fakeGateway) BatchCanCampaignAction(context.Context, string, []campaignAuthorizationCheck) ([]campaignAuthorizationDecision, error) {
+	if f.batchAuthorizationErr != nil {
+		return nil, f.batchAuthorizationErr
+	}
+	return append([]campaignAuthorizationDecision(nil), f.batchAuthorizationDecisions...), nil
 }
 
 type fakeCampaignClient struct {

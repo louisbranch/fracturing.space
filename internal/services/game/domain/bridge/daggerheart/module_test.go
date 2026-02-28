@@ -168,7 +168,40 @@ func TestModule_ImplementsCharacterReadinessChecker(t *testing.T) {
 		t.Fatal("expected daggerheart module to implement CharacterReadinessChecker")
 	}
 
-	ready, reason := checker.CharacterReady(map[string]any{"daggerheart": map[string]any{"class": "guardian"}})
+	ready, _ := checker.CharacterReady(map[string]any{"daggerheart": map[string]any{"class_id": "class.guardian"}})
+	if ready {
+		t.Fatal("character readiness = true, want false for incomplete workflow")
+	}
+
+	ready, reason := checker.CharacterReady(map[string]any{
+		"daggerheart": map[string]any{
+			"class_id":                "class.guardian",
+			"subclass_id":             "subclass.stalwart",
+			"ancestry_id":             "heritage.clank",
+			"community_id":            "heritage.farmer",
+			"traits_assigned":         true,
+			"agility":                 2,
+			"strength":                1,
+			"finesse":                 1,
+			"instinct":                0,
+			"presence":                0,
+			"knowledge":               -1,
+			"details_recorded":        true,
+			"level":                   1,
+			"hp_max":                  6,
+			"stress_max":              6,
+			"evasion":                 10,
+			"starting_weapon_ids":     []string{"weapon.longsword"},
+			"starting_armor_id":       "armor.gambeson-armor",
+			"starting_potion_item_id": StartingPotionMinorHealthID,
+			"background":              "Former watch captain",
+			"experiences": []map[string]any{
+				{"name": "Shield tactics", "modifier": 2},
+			},
+			"domain_card_ids": []string{"domain-card.ward"},
+			"connections":     "Trusted by the town guard",
+		},
+	})
 	if !ready {
 		t.Fatal("character readiness = false, want true")
 	}

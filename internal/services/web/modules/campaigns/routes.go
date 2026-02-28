@@ -10,7 +10,7 @@ type routeSurface uint8
 
 const (
 	routeSurfaceFull routeSurface = iota
-	routeSurfaceStable
+	routeSurfaceStableWorkflow
 )
 
 func registerRoutes(mux *http.ServeMux, h handlers) {
@@ -18,7 +18,7 @@ func registerRoutes(mux *http.ServeMux, h handlers) {
 }
 
 func registerStableRoutes(mux *http.ServeMux, h handlers) {
-	registerRoutesForSurface(mux, h, routeSurfaceStable)
+	registerRoutesForSurface(mux, h, routeSurfaceStableWorkflow)
 }
 
 func registerRoutesForSurface(mux *http.ServeMux, h handlers, surface routeSurface) {
@@ -40,16 +40,21 @@ func registerRoutesForSurface(mux *http.ServeMux, h handlers, surface routeSurfa
 
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignCharactersPattern, h.handleCharactersRoute)
 
+	if surface == routeSurfaceFull || surface == routeSurfaceStableWorkflow {
+		mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignCharacterPattern, h.handleCharacterDetailRoute)
+		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreatePattern, h.handleCharacterCreateRoute)
+		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreationStepPattern, h.handleCharacterCreationStepRoute)
+		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreationResetPattern, h.handleCharacterCreationResetRoute)
+	}
+
 	if surface == routeSurfaceFull {
 		mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignSessionsPattern, h.handleSessionsRoute)
 		mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignSessionPattern, h.handleSessionDetailRoute)
-		mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignCharacterPattern, h.handleCharacterDetailRoute)
 		mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignGamePattern, h.handleGameRoute)
 		mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignInvitesPattern, h.handleInvitesRoute)
 		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignSessionStartPattern, h.handleSessionStartRoute)
 		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignSessionEndPattern, h.handleSessionEndRoute)
 		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignParticipantUpdatePattern, h.handleParticipantUpdateRoute)
-		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreatePattern, h.handleCharacterCreateRoute)
 		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterUpdatePattern, h.handleCharacterUpdateRoute)
 		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterControlPattern, h.handleCharacterControlRoute)
 		mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteCreatePattern, h.handleInviteCreateRoute)

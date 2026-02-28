@@ -20,9 +20,12 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
@@ -57,6 +60,7 @@ func startGRPCServer(t *testing.T) (string, string, func()) {
 
 	setTempDBPath(t)
 	setTempAuthDBPath(t)
+	seedDaggerheartContent(t)
 	setJoinGrantEnv(t)
 	authAddr, stopAuth := startAuthServer(t)
 	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr)
@@ -468,6 +472,15 @@ func ensureSessionStartReadiness(
 		setCharacterController(t, ctx, characterClient, campaignID, characterID, fallbackController)
 	}
 
+	characters = listAllCharactersForReadiness(t, ctx, characterClient, campaignID)
+	for _, ch := range characters {
+		characterID := strings.TrimSpace(ch.GetId())
+		if characterID == "" {
+			continue
+		}
+		ensureDaggerheartCreationReadiness(t, ctx, characterClient, campaignID, characterID)
+	}
+
 	playerCharacterCounts := make(map[string]int, len(playerParticipantIDs))
 	for _, pid := range playerParticipantIDs {
 		playerCharacterCounts[pid] = 0
@@ -500,9 +513,44 @@ func ensureSessionStartReadiness(
 			t.Fatal("create readiness character returned empty id")
 		}
 		setCharacterController(t, ctx, characterClient, campaignID, characterID, pid)
+		ensureDaggerheartCreationReadiness(t, ctx, characterClient, campaignID, characterID)
 	}
 
 	return playerParticipantIDs[0]
+}
+
+func ensureDaggerheartCreationReadiness(
+	t *testing.T,
+	ctx context.Context,
+	characterClient statev1.CharacterServiceClient,
+	campaignID string,
+	characterID string,
+) {
+	t.Helper()
+
+	_, err := characterClient.ApplyCharacterCreationWorkflow(ctx, &statev1.ApplyCharacterCreationWorkflowRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+		SystemWorkflow: &statev1.ApplyCharacterCreationWorkflowRequest_Daggerheart{
+			Daggerheart: &daggerheartv1.DaggerheartCreationWorkflowInput{
+				ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{ClassId: "class.guardian", SubclassId: "subclass.stalwart"},
+				HeritageInput:      &daggerheartv1.DaggerheartCreationStepHeritageInput{AncestryId: "heritage.human", CommunityId: "heritage.highborne"},
+				TraitsInput:        &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: 2, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1},
+				DetailsInput:       &daggerheartv1.DaggerheartCreationStepDetailsInput{},
+				EquipmentInput:     &daggerheartv1.DaggerheartCreationStepEquipmentInput{WeaponIds: []string{"weapon.longsword"}, ArmorId: "armor.gambeson-armor", PotionItemId: "item.minor-health-potion"},
+				BackgroundInput:    &daggerheartv1.DaggerheartCreationStepBackgroundInput{Background: "integration background"},
+				ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{Experiences: []*daggerheartv1.DaggerheartExperience{{
+					Name:     "integration experience",
+					Modifier: 1,
+				}}},
+				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: []string{"domain_card.valor-bare-bones"}},
+				ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{Connections: "integration connections"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("apply readiness workflow for %s: %v", characterID, err)
+	}
 }
 
 func listAllCharactersForReadiness(
@@ -631,7 +679,139 @@ func setTempDBPath(t *testing.T) {
 	base := t.TempDir()
 	t.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", filepath.Join(base, "game-events.db"))
 	t.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", filepath.Join(base, "game-projections.db"))
+	t.Setenv("FRACTURING_SPACE_GAME_CONTENT_DB_PATH", filepath.Join(base, "game-content.db"))
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
+}
+
+// seedDaggerheartContent writes minimal catalog rows required by integration
+// readiness setup so workflow apply can validate content IDs.
+func seedDaggerheartContent(t *testing.T) {
+	t.Helper()
+
+	contentPath := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_CONTENT_DB_PATH"))
+	if contentPath == "" {
+		t.Fatal("content DB path env is required")
+	}
+
+	store, err := storagesqlite.OpenContent(contentPath)
+	if err != nil {
+		t.Fatalf("open content store: %v", err)
+	}
+	defer store.Close()
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	if err := store.PutDaggerheartClass(ctx, storage.DaggerheartClass{
+		ID:              "class.guardian",
+		Name:            "Guardian",
+		StartingEvasion: 9,
+		StartingHP:      7,
+		DomainIDs:       []string{"domain.valor"},
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}); err != nil {
+		t.Fatalf("seed class: %v", err)
+	}
+
+	if err := store.PutDaggerheartSubclass(ctx, storage.DaggerheartSubclass{
+		ID:        "subclass.stalwart",
+		Name:      "Stalwart",
+		ClassID:   "class.guardian",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed subclass: %v", err)
+	}
+
+	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
+		ID:        "heritage.human",
+		Name:      "Human",
+		Kind:      "ancestry",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed ancestry heritage: %v", err)
+	}
+
+	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
+		ID:        "heritage.highborne",
+		Name:      "Highborne",
+		Kind:      "community",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed community heritage: %v", err)
+	}
+
+	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
+		ID:          "domain_card.valor-bare-bones",
+		Name:        "Bare Bones",
+		DomainID:    "domain.valor",
+		Level:       1,
+		Type:        "ability",
+		UsageLimit:  "None",
+		FeatureText: "Integration seed card",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		t.Fatalf("seed domain card: %v", err)
+	}
+
+	if err := store.PutDaggerheartWeapon(ctx, storage.DaggerheartWeapon{
+		ID:         "weapon.longsword",
+		Name:       "Longsword",
+		Category:   "primary",
+		Tier:       1,
+		Trait:      "Agility",
+		Range:      "melee",
+		DamageDice: []storage.DaggerheartDamageDie{{Sides: 10, Count: 1}},
+		DamageType: "physical",
+		Burden:     2,
+		Feature:    "Integration seed weapon",
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}); err != nil {
+		t.Fatalf("seed weapon: %v", err)
+	}
+
+	if err := store.PutDaggerheartArmor(ctx, storage.DaggerheartArmor{
+		ID:                  "armor.gambeson-armor",
+		Name:                "Gambeson Armor",
+		Tier:                1,
+		BaseMajorThreshold:  6,
+		BaseSevereThreshold: 12,
+		ArmorScore:          1,
+		Feature:             "Integration seed armor",
+		CreatedAt:           now,
+		UpdatedAt:           now,
+	}); err != nil {
+		t.Fatalf("seed armor: %v", err)
+	}
+
+	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
+		ID:        "item.minor-health-potion",
+		Name:      "Minor Health Potion",
+		Rarity:    "common",
+		Kind:      "consumable",
+		StackMax:  99,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed health potion: %v", err)
+	}
+
+	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
+		ID:        "item.minor-stamina-potion",
+		Name:      "Minor Stamina Potion",
+		Rarity:    "common",
+		Kind:      "consumable",
+		StackMax:  99,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed stamina potion: %v", err)
+	}
 }
 
 func setTempAuthDBPath(t *testing.T) {

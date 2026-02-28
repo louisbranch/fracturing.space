@@ -10,6 +10,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	"google.golang.org/grpc"
 )
@@ -46,6 +47,16 @@ type ParticipantClient interface {
 // CharacterClient exposes character listing for campaign workspace pages.
 type CharacterClient interface {
 	ListCharacters(context.Context, *statev1.ListCharactersRequest, ...grpc.CallOption) (*statev1.ListCharactersResponse, error)
+	CreateCharacter(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error)
+	GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error)
+	GetCharacterCreationProgress(context.Context, *statev1.GetCharacterCreationProgressRequest, ...grpc.CallOption) (*statev1.GetCharacterCreationProgressResponse, error)
+	ApplyCharacterCreationStep(context.Context, *statev1.ApplyCharacterCreationStepRequest, ...grpc.CallOption) (*statev1.ApplyCharacterCreationStepResponse, error)
+	ResetCharacterCreationWorkflow(context.Context, *statev1.ResetCharacterCreationWorkflowRequest, ...grpc.CallOption) (*statev1.ResetCharacterCreationWorkflowResponse, error)
+}
+
+// DaggerheartContentClient exposes Daggerheart content catalog operations.
+type DaggerheartContentClient interface {
+	GetContentCatalog(context.Context, *daggerheartv1.GetDaggerheartContentCatalogRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error)
 }
 
 // SessionClient exposes session listing for campaign workspace pages.
@@ -110,23 +121,24 @@ type NotificationClient interface {
 
 // Dependencies carries shared runtime contracts to modules.
 type Dependencies struct {
-	ResolveViewer       ResolveViewer
-	ResolveUserID       ResolveUserID
-	ResolveLanguage     ResolveLanguage
-	AssetBaseURL        string
-	ChatFallbackPort    string
-	CampaignClient      CampaignClient
-	ParticipantClient   ParticipantClient
-	CharacterClient     CharacterClient
-	SessionClient       SessionClient
-	InviteClient        InviteClient
-	AuthorizationClient AuthorizationClient
-	AuthClient          AuthClient
-	AccountClient       AccountClient
-	SocialClient        SocialClient
-	CredentialClient    CredentialClient
-	UserHubClient       UserHubClient
-	NotificationClient  NotificationClient
+	ResolveViewer            ResolveViewer
+	ResolveUserID            ResolveUserID
+	ResolveLanguage          ResolveLanguage
+	AssetBaseURL             string
+	ChatFallbackPort         string
+	CampaignClient           CampaignClient
+	ParticipantClient        ParticipantClient
+	CharacterClient          CharacterClient
+	DaggerheartContentClient DaggerheartContentClient
+	SessionClient            SessionClient
+	InviteClient             InviteClient
+	AuthorizationClient      AuthorizationClient
+	AuthClient               AuthClient
+	AccountClient            AccountClient
+	SocialClient             SocialClient
+	CredentialClient         CredentialClient
+	UserHubClient            UserHubClient
+	NotificationClient       NotificationClient
 }
 
 // Mount describes a module route mount.

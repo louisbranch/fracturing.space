@@ -1151,6 +1151,64 @@ func TestCharacterProfilePatchHandler(t *testing.T) {
 	})
 }
 
+func TestCharacterCreationWorkflowApplyHandler(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		client := &fakeCharacterClient{
+			workflowResp: &statev1.ApplyCharacterCreationWorkflowResponse{
+				Profile: &statev1.CharacterProfile{CharacterId: "ch1"},
+				Progress: &statev1.CharacterCreationProgress{
+					CharacterId: "ch1",
+					Ready:       true,
+				},
+			},
+		}
+		handler := CharacterCreationWorkflowApplyHandler(client, func() Context { return Context{CampaignID: "c1"} }, nil)
+		_, result, err := handler(context.Background(), nil, CharacterCreationWorkflowApplyInput{
+			CharacterID:   "ch1",
+			ClassID:       "class.guardian",
+			SubclassID:    "subclass.stalwart",
+			AncestryID:    "heritage.ancestry.clank",
+			CommunityID:   "heritage.community.farmer",
+			Agility:       2,
+			Strength:      1,
+			Finesse:       1,
+			Instinct:      0,
+			Presence:      0,
+			Knowledge:     -1,
+			Background:    "Watch veteran",
+			Experiences:   []CharacterExperienceInput{{Name: "Tactics", Modifier: 2}},
+			DomainCardIDs: []string{"domain-card.ward"},
+			Connections:   "Trusted ally",
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if result.Profile.CharacterID != "ch1" {
+			t.Fatalf("profile.character_id = %q, want %q", result.Profile.CharacterID, "ch1")
+		}
+		if !result.Progress.Ready {
+			t.Fatal("progress.ready = false, want true")
+		}
+	})
+
+	t.Run("missing campaign context", func(t *testing.T) {
+		handler := CharacterCreationWorkflowApplyHandler(&fakeCharacterClient{}, func() Context { return Context{} }, nil)
+		_, _, err := handler(context.Background(), nil, CharacterCreationWorkflowApplyInput{CharacterID: "ch1"})
+		if err == nil {
+			t.Fatal("expected error for missing campaign context")
+		}
+	})
+
+	t.Run("gRPC error", func(t *testing.T) {
+		client := &fakeCharacterClient{workflowErr: fmt.Errorf("error")}
+		handler := CharacterCreationWorkflowApplyHandler(client, func() Context { return Context{CampaignID: "c1"} }, nil)
+		_, _, err := handler(context.Background(), nil, CharacterCreationWorkflowApplyInput{CharacterID: "ch1"})
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+}
+
 func TestCharacterStatePatchHandler(t *testing.T) {
 	t.Run("success with daggerheart fields", func(t *testing.T) {
 		hp := 15
@@ -1435,12 +1493,6 @@ func TestCharacterProfilePatchHandler_AllFields(t *testing.T) {
 			Evasion:         intPtr(10),
 			MajorThreshold:  intPtr(7),
 			SevereThreshold: intPtr(14),
-			Agility:         intPtr(2),
-			Strength:        intPtr(1),
-			Finesse:         intPtr(3),
-			Instinct:        intPtr(0),
-			Presence:        intPtr(2),
-			Knowledge:       intPtr(1),
 		})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

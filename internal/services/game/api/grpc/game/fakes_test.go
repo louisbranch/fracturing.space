@@ -475,6 +475,21 @@ func (s *fakeDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context,
 	return p, nil
 }
 
+func (s *fakeDaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {
+	if s.putErr != nil {
+		return s.putErr
+	}
+	byID, ok := s.profiles[campaignID]
+	if !ok {
+		return nil
+	}
+	delete(byID, characterID)
+	if len(byID) == 0 {
+		delete(s.profiles, campaignID)
+	}
+	return nil
+}
+
 func (s *fakeDaggerheartStore) PutDaggerheartCharacterState(_ context.Context, st storage.DaggerheartCharacterState) error {
 	if s.putErr != nil {
 		return s.putErr

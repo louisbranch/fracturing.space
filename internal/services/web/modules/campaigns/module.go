@@ -25,7 +25,7 @@ func NewWithGateway(gateway CampaignGateway) Module {
 
 // NewStableWithGateway returns a campaigns module with stable route exposure.
 func NewStableWithGateway(gateway CampaignGateway) Module {
-	return Module{gateway: gateway, surface: routeSurfaceStable}
+	return Module{gateway: gateway, surface: routeSurfaceStableWorkflow}
 }
 
 // ID returns a stable module identifier.
@@ -40,7 +40,7 @@ func (m Module) Mount(deps module.Dependencies) (module.Mount, error) {
 	}
 	svc := newService(gateway)
 	h := newHandlers(svc, deps)
-	if m.surface == routeSurfaceStable {
+	if m.surface == routeSurfaceStableWorkflow {
 		registerStableRoutes(mux, h)
 	} else {
 		registerRoutes(mux, h)

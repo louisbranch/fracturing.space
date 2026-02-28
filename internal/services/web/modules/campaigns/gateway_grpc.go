@@ -7,12 +7,14 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/protobuf/types/known/timestamppb"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // NewGRPCGateway builds the production campaigns gateway from shared dependencies.
@@ -24,6 +26,7 @@ func NewGRPCGateway(deps module.Dependencies) CampaignGateway {
 		client:              deps.CampaignClient,
 		participantClient:   deps.ParticipantClient,
 		characterClient:     deps.CharacterClient,
+		daggerheartClient:   deps.DaggerheartContentClient,
 		sessionClient:       deps.SessionClient,
 		inviteClient:        deps.InviteClient,
 		authorizationClient: deps.AuthorizationClient,
@@ -35,6 +38,7 @@ type grpcGateway struct {
 	client              module.CampaignClient
 	participantClient   module.ParticipantClient
 	characterClient     module.CharacterClient
+	daggerheartClient   module.DaggerheartContentClient
 	sessionClient       module.SessionClient
 	inviteClient        module.InviteClient
 	authorizationClient module.AuthorizationClient
@@ -370,6 +374,277 @@ func (g grpcGateway) CampaignInvites(ctx context.Context, campaignID string) ([]
 	return invites, nil
 }
 
+func (g grpcGateway) CharacterCreationProgress(ctx context.Context, campaignID string, characterID string) (CampaignCharacterCreationProgress, error) {
+	if g.characterClient == nil {
+		return CampaignCharacterCreationProgress{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return CampaignCharacterCreationProgress{}, apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+
+	resp, err := g.characterClient.GetCharacterCreationProgress(ctx, &statev1.GetCharacterCreationProgressRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil {
+		return CampaignCharacterCreationProgress{}, err
+	}
+	if resp == nil || resp.GetProgress() == nil {
+		return CampaignCharacterCreationProgress{Steps: []CampaignCharacterCreationStep{}, UnmetReasons: []string{}}, nil
+	}
+
+	progress := resp.GetProgress()
+	steps := make([]CampaignCharacterCreationStep, 0, len(progress.GetSteps()))
+	for _, step := range progress.GetSteps() {
+		if step == nil {
+			continue
+		}
+		steps = append(steps, CampaignCharacterCreationStep{
+			Step:     step.GetStep(),
+			Key:      strings.TrimSpace(step.GetKey()),
+			Complete: step.GetComplete(),
+		})
+	}
+	unmetReasons := make([]string, 0, len(progress.GetUnmetReasons()))
+	for _, reason := range progress.GetUnmetReasons() {
+		trimmedReason := strings.TrimSpace(reason)
+		if trimmedReason == "" {
+			continue
+		}
+		unmetReasons = append(unmetReasons, trimmedReason)
+	}
+	return CampaignCharacterCreationProgress{
+		Steps:        steps,
+		NextStep:     progress.GetNextStep(),
+		Ready:        progress.GetReady(),
+		UnmetReasons: unmetReasons,
+	}, nil
+}
+
+func (g grpcGateway) CharacterCreationCatalog(ctx context.Context, locale commonv1.Locale) (CampaignCharacterCreationCatalog, error) {
+	if g.daggerheartClient == nil {
+		return CampaignCharacterCreationCatalog{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.daggerheart_content_client_is_not_configured", "daggerheart content client is not configured")
+	}
+	locale = platformi18n.NormalizeLocale(locale)
+	if locale == commonv1.Locale_LOCALE_UNSPECIFIED {
+		locale = commonv1.Locale_LOCALE_EN_US
+	}
+
+	resp, err := g.daggerheartClient.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{Locale: locale})
+	if err != nil {
+		return CampaignCharacterCreationCatalog{}, err
+	}
+	if resp == nil || resp.GetCatalog() == nil {
+		return CampaignCharacterCreationCatalog{}, nil
+	}
+
+	catalogResp := resp.GetCatalog()
+	catalog := CampaignCharacterCreationCatalog{}
+
+	catalog.Classes = make([]DaggerheartCreationClass, 0, len(catalogResp.GetClasses()))
+	for _, class := range catalogResp.GetClasses() {
+		if class == nil {
+			continue
+		}
+		classID := strings.TrimSpace(class.GetId())
+		if classID == "" {
+			continue
+		}
+		domainIDs := make([]string, 0, len(class.GetDomainIds()))
+		for _, domainID := range class.GetDomainIds() {
+			trimmedDomainID := strings.TrimSpace(domainID)
+			if trimmedDomainID == "" {
+				continue
+			}
+			domainIDs = append(domainIDs, trimmedDomainID)
+		}
+		catalog.Classes = append(catalog.Classes, DaggerheartCreationClass{
+			ID:        classID,
+			Name:      strings.TrimSpace(class.GetName()),
+			DomainIDs: domainIDs,
+		})
+	}
+
+	catalog.Subclasses = make([]DaggerheartCreationSubclass, 0, len(catalogResp.GetSubclasses()))
+	for _, subclass := range catalogResp.GetSubclasses() {
+		if subclass == nil {
+			continue
+		}
+		subclassID := strings.TrimSpace(subclass.GetId())
+		if subclassID == "" {
+			continue
+		}
+		catalog.Subclasses = append(catalog.Subclasses, DaggerheartCreationSubclass{
+			ID:      subclassID,
+			Name:    strings.TrimSpace(subclass.GetName()),
+			ClassID: strings.TrimSpace(subclass.GetClassId()),
+		})
+	}
+
+	catalog.Heritages = make([]DaggerheartCreationHeritage, 0, len(catalogResp.GetHeritages()))
+	for _, heritage := range catalogResp.GetHeritages() {
+		if heritage == nil {
+			continue
+		}
+		heritageID := strings.TrimSpace(heritage.GetId())
+		if heritageID == "" {
+			continue
+		}
+		catalog.Heritages = append(catalog.Heritages, DaggerheartCreationHeritage{
+			ID:   heritageID,
+			Name: strings.TrimSpace(heritage.GetName()),
+			Kind: daggerheartHeritageKindLabel(heritage.GetKind()),
+		})
+	}
+
+	catalog.Weapons = make([]DaggerheartCreationWeapon, 0, len(catalogResp.GetWeapons()))
+	for _, weapon := range catalogResp.GetWeapons() {
+		if weapon == nil {
+			continue
+		}
+		weaponID := strings.TrimSpace(weapon.GetId())
+		if weaponID == "" {
+			continue
+		}
+		catalog.Weapons = append(catalog.Weapons, DaggerheartCreationWeapon{
+			ID:       weaponID,
+			Name:     strings.TrimSpace(weapon.GetName()),
+			Category: daggerheartWeaponCategoryLabel(weapon.GetCategory()),
+			Tier:     weapon.GetTier(),
+		})
+	}
+
+	catalog.Armor = make([]DaggerheartCreationArmor, 0, len(catalogResp.GetArmor()))
+	for _, armor := range catalogResp.GetArmor() {
+		if armor == nil {
+			continue
+		}
+		armorID := strings.TrimSpace(armor.GetId())
+		if armorID == "" {
+			continue
+		}
+		catalog.Armor = append(catalog.Armor, DaggerheartCreationArmor{
+			ID:   armorID,
+			Name: strings.TrimSpace(armor.GetName()),
+			Tier: armor.GetTier(),
+		})
+	}
+
+	catalog.Items = make([]DaggerheartCreationItem, 0, len(catalogResp.GetItems()))
+	for _, item := range catalogResp.GetItems() {
+		if item == nil {
+			continue
+		}
+		itemID := strings.TrimSpace(item.GetId())
+		if itemID == "" {
+			continue
+		}
+		catalog.Items = append(catalog.Items, DaggerheartCreationItem{
+			ID:   itemID,
+			Name: strings.TrimSpace(item.GetName()),
+		})
+	}
+
+	catalog.DomainCards = make([]DaggerheartCreationDomainCard, 0, len(catalogResp.GetDomainCards()))
+	for _, domainCard := range catalogResp.GetDomainCards() {
+		if domainCard == nil {
+			continue
+		}
+		domainCardID := strings.TrimSpace(domainCard.GetId())
+		if domainCardID == "" {
+			continue
+		}
+		catalog.DomainCards = append(catalog.DomainCards, DaggerheartCreationDomainCard{
+			ID:       domainCardID,
+			Name:     strings.TrimSpace(domainCard.GetName()),
+			DomainID: strings.TrimSpace(domainCard.GetDomainId()),
+			Level:    domainCard.GetLevel(),
+		})
+	}
+
+	return catalog, nil
+}
+
+func (g grpcGateway) CharacterCreationProfile(ctx context.Context, campaignID string, characterID string) (CampaignCharacterCreationProfile, error) {
+	if g.characterClient == nil {
+		return CampaignCharacterCreationProfile{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return CampaignCharacterCreationProfile{}, apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+
+	resp, err := g.characterClient.GetCharacterSheet(ctx, &statev1.GetCharacterSheetRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil {
+		return CampaignCharacterCreationProfile{}, err
+	}
+	if resp == nil || resp.GetProfile() == nil || resp.GetProfile().GetDaggerheart() == nil {
+		return CampaignCharacterCreationProfile{}, nil
+	}
+	profile := resp.GetProfile().GetDaggerheart()
+
+	startingWeaponIDs := make([]string, 0, len(profile.GetStartingWeaponIds()))
+	for _, weaponID := range profile.GetStartingWeaponIds() {
+		trimmedWeaponID := strings.TrimSpace(weaponID)
+		if trimmedWeaponID == "" {
+			continue
+		}
+		startingWeaponIDs = append(startingWeaponIDs, trimmedWeaponID)
+	}
+	primaryWeaponID := ""
+	secondaryWeaponID := ""
+	if len(startingWeaponIDs) > 0 {
+		primaryWeaponID = startingWeaponIDs[0]
+	}
+	if len(startingWeaponIDs) > 1 {
+		secondaryWeaponID = startingWeaponIDs[1]
+	}
+
+	domainCardIDs := make([]string, 0, len(profile.GetDomainCardIds()))
+	for _, domainCardID := range profile.GetDomainCardIds() {
+		trimmedDomainCardID := strings.TrimSpace(domainCardID)
+		if trimmedDomainCardID == "" {
+			continue
+		}
+		domainCardIDs = append(domainCardIDs, trimmedDomainCardID)
+	}
+
+	experienceName := ""
+	experienceModifier := ""
+	if len(profile.GetExperiences()) > 0 && profile.GetExperiences()[0] != nil {
+		experienceName = strings.TrimSpace(profile.GetExperiences()[0].GetName())
+		experienceModifier = strconv.FormatInt(int64(profile.GetExperiences()[0].GetModifier()), 10)
+	}
+
+	return CampaignCharacterCreationProfile{
+		ClassID:            strings.TrimSpace(profile.GetClassId()),
+		SubclassID:         strings.TrimSpace(profile.GetSubclassId()),
+		AncestryID:         strings.TrimSpace(profile.GetAncestryId()),
+		CommunityID:        strings.TrimSpace(profile.GetCommunityId()),
+		Agility:            int32ValueString(profile.GetAgility()),
+		Strength:           int32ValueString(profile.GetStrength()),
+		Finesse:            int32ValueString(profile.GetFinesse()),
+		Instinct:           int32ValueString(profile.GetInstinct()),
+		Presence:           int32ValueString(profile.GetPresence()),
+		Knowledge:          int32ValueString(profile.GetKnowledge()),
+		PrimaryWeaponID:    primaryWeaponID,
+		SecondaryWeaponID:  secondaryWeaponID,
+		ArmorID:            strings.TrimSpace(profile.GetStartingArmorId()),
+		PotionItemID:       strings.TrimSpace(profile.GetStartingPotionItemId()),
+		Background:         strings.TrimSpace(profile.GetBackground()),
+		ExperienceName:     experienceName,
+		ExperienceModifier: experienceModifier,
+		DomainCardIDs:      domainCardIDs,
+		Connections:        strings.TrimSpace(profile.GetConnections()),
+	}, nil
+}
+
 func (g grpcGateway) CreateCampaign(ctx context.Context, input CreateCampaignInput) (CreateCampaignResult, error) {
 	locale := platformi18n.NormalizeLocale(input.Locale)
 	if locale == commonv1.Locale_LOCALE_UNSPECIFIED {
@@ -484,7 +759,43 @@ func (g grpcGateway) BatchCanCampaignAction(
 	return decisions, nil
 }
 
-// FIXME(web-cutover): session/participant/character/invite mutations remain scaffolded while campaigns can be mounted as stable defaults.
+func (g grpcGateway) ApplyCharacterCreationStep(ctx context.Context, campaignID string, characterID string, step *daggerheartv1.DaggerheartCreationStepInput) error {
+	if g.characterClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+	if step == nil {
+		return apperrors.E(apperrors.KindInvalidInput, "character creation step is required")
+	}
+	_, err := g.characterClient.ApplyCharacterCreationStep(ctx, &statev1.ApplyCharacterCreationStepRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+		SystemStep:  &statev1.ApplyCharacterCreationStepRequest_Daggerheart{Daggerheart: step},
+	})
+	return err
+}
+
+func (g grpcGateway) ResetCharacterCreationWorkflow(ctx context.Context, campaignID string, characterID string) error {
+	if g.characterClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+	_, err := g.characterClient.ResetCharacterCreationWorkflow(ctx, &statev1.ResetCharacterCreationWorkflowRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+	})
+	return err
+}
+
+// FIXME(web-cutover): session/participant/invite mutations remain scaffolded while campaigns can be mounted as stable defaults.
 func (g grpcGateway) StartSession(context.Context, string) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaign start session is not implemented")
 }
@@ -497,8 +808,35 @@ func (g grpcGateway) UpdateParticipants(context.Context, string) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaign participant updates are not implemented")
 }
 
-func (g grpcGateway) CreateCharacter(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaign character creation is not implemented")
+func (g grpcGateway) CreateCharacter(ctx context.Context, campaignID string, input CreateCharacterInput) (CreateCharacterResult, error) {
+	if g.characterClient == nil {
+		return CreateCharacterResult{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return CreateCharacterResult{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_name_is_required", "character name is required")
+	}
+	if input.Kind == statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED {
+		return CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_kind_value_is_invalid", "character kind value is invalid")
+	}
+
+	resp, err := g.characterClient.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
+		CampaignId: campaignID,
+		Name:       name,
+		Kind:       input.Kind,
+	})
+	if err != nil {
+		return CreateCharacterResult{}, err
+	}
+	createdCharacterID := strings.TrimSpace(resp.GetCharacter().GetId())
+	if createdCharacterID == "" {
+		return CreateCharacterResult{}, apperrors.EK(apperrors.KindUnknown, "error.web.message.created_character_id_was_empty", "created character id was empty")
+	}
+	return CreateCharacterResult{CharacterID: createdCharacterID}, nil
 }
 
 func (g grpcGateway) UpdateCharacter(context.Context, string) error {
@@ -643,4 +981,33 @@ func timestampString(ts *timestamppb.Timestamp) string {
 		return ""
 	}
 	return strings.TrimSpace(ts.AsTime().UTC().Format("2006-01-02 15:04 UTC"))
+}
+
+func int32ValueString(value *wrapperspb.Int32Value) string {
+	if value == nil {
+		return ""
+	}
+	return strconv.FormatInt(int64(value.GetValue()), 10)
+}
+
+func daggerheartHeritageKindLabel(kind daggerheartv1.DaggerheartHeritageKind) string {
+	switch kind {
+	case daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY:
+		return "ancestry"
+	case daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_COMMUNITY:
+		return "community"
+	default:
+		return ""
+	}
+}
+
+func daggerheartWeaponCategoryLabel(category daggerheartv1.DaggerheartWeaponCategory) string {
+	switch category {
+	case daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_PRIMARY:
+		return "primary"
+	case daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_SECONDARY:
+		return "secondary"
+	default:
+		return ""
+	}
 }

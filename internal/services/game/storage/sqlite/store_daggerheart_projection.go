@@ -34,26 +34,54 @@ func (s *Store) PutDaggerheartCharacterProfile(ctx context.Context, profile stor
 	if err != nil {
 		return fmt.Errorf("marshal experiences: %w", err)
 	}
+	domainCardIDsJSON, err := json.Marshal(profile.DomainCardIDs)
+	if err != nil {
+		return fmt.Errorf("marshal domain card ids: %w", err)
+	}
+	startingWeaponIDsJSON, err := json.Marshal(profile.StartingWeaponIDs)
+	if err != nil {
+		return fmt.Errorf("marshal starting weapon ids: %w", err)
+	}
+	traitsAssigned := int64(0)
+	if profile.TraitsAssigned {
+		traitsAssigned = 1
+	}
+	detailsRecorded := int64(0)
+	if profile.DetailsRecorded {
+		detailsRecorded = 1
+	}
 
 	return s.q.PutDaggerheartCharacterProfile(ctx, db.PutDaggerheartCharacterProfileParams{
-		CampaignID:      profile.CampaignID,
-		CharacterID:     profile.CharacterID,
-		Level:           int64(profile.Level),
-		HpMax:           int64(profile.HpMax),
-		StressMax:       int64(profile.StressMax),
-		Evasion:         int64(profile.Evasion),
-		MajorThreshold:  int64(profile.MajorThreshold),
-		SevereThreshold: int64(profile.SevereThreshold),
-		Proficiency:     int64(profile.Proficiency),
-		ArmorScore:      int64(profile.ArmorScore),
-		ArmorMax:        int64(profile.ArmorMax),
-		ExperiencesJson: string(experiencesJSON),
-		Agility:         int64(profile.Agility),
-		Strength:        int64(profile.Strength),
-		Finesse:         int64(profile.Finesse),
-		Instinct:        int64(profile.Instinct),
-		Presence:        int64(profile.Presence),
-		Knowledge:       int64(profile.Knowledge),
+		CampaignID:            profile.CampaignID,
+		CharacterID:           profile.CharacterID,
+		Level:                 int64(profile.Level),
+		HpMax:                 int64(profile.HpMax),
+		StressMax:             int64(profile.StressMax),
+		Evasion:               int64(profile.Evasion),
+		MajorThreshold:        int64(profile.MajorThreshold),
+		SevereThreshold:       int64(profile.SevereThreshold),
+		Proficiency:           int64(profile.Proficiency),
+		ArmorScore:            int64(profile.ArmorScore),
+		ArmorMax:              int64(profile.ArmorMax),
+		ExperiencesJson:       string(experiencesJSON),
+		ClassID:               profile.ClassID,
+		SubclassID:            profile.SubclassID,
+		AncestryID:            profile.AncestryID,
+		CommunityID:           profile.CommunityID,
+		TraitsAssigned:        traitsAssigned,
+		DetailsRecorded:       detailsRecorded,
+		StartingWeaponIdsJson: string(startingWeaponIDsJSON),
+		StartingArmorID:       profile.StartingArmorID,
+		StartingPotionItemID:  profile.StartingPotionItemID,
+		Background:            profile.Background,
+		DomainCardIdsJson:     string(domainCardIDsJSON),
+		Connections:           profile.Connections,
+		Agility:               int64(profile.Agility),
+		Strength:              int64(profile.Strength),
+		Finesse:               int64(profile.Finesse),
+		Instinct:              int64(profile.Instinct),
+		Presence:              int64(profile.Presence),
+		Knowledge:             int64(profile.Knowledge),
 	})
 }
 
@@ -84,30 +112,71 @@ func (s *Store) GetDaggerheartCharacterProfile(ctx context.Context, campaignID, 
 	}
 
 	profile := storage.DaggerheartCharacterProfile{
-		CampaignID:      row.CampaignID,
-		CharacterID:     row.CharacterID,
-		Level:           int(row.Level),
-		HpMax:           int(row.HpMax),
-		StressMax:       int(row.StressMax),
-		Evasion:         int(row.Evasion),
-		MajorThreshold:  int(row.MajorThreshold),
-		SevereThreshold: int(row.SevereThreshold),
-		Proficiency:     int(row.Proficiency),
-		ArmorScore:      int(row.ArmorScore),
-		ArmorMax:        int(row.ArmorMax),
-		Agility:         int(row.Agility),
-		Strength:        int(row.Strength),
-		Finesse:         int(row.Finesse),
-		Instinct:        int(row.Instinct),
-		Presence:        int(row.Presence),
-		Knowledge:       int(row.Knowledge),
+		CampaignID:           row.CampaignID,
+		CharacterID:          row.CharacterID,
+		Level:                int(row.Level),
+		HpMax:                int(row.HpMax),
+		StressMax:            int(row.StressMax),
+		Evasion:              int(row.Evasion),
+		MajorThreshold:       int(row.MajorThreshold),
+		SevereThreshold:      int(row.SevereThreshold),
+		Proficiency:          int(row.Proficiency),
+		ArmorScore:           int(row.ArmorScore),
+		ArmorMax:             int(row.ArmorMax),
+		ClassID:              row.ClassID,
+		SubclassID:           row.SubclassID,
+		AncestryID:           row.AncestryID,
+		CommunityID:          row.CommunityID,
+		TraitsAssigned:       row.TraitsAssigned != 0,
+		DetailsRecorded:      row.DetailsRecorded != 0,
+		StartingArmorID:      row.StartingArmorID,
+		StartingPotionItemID: row.StartingPotionItemID,
+		Background:           row.Background,
+		Connections:          row.Connections,
+		Agility:              int(row.Agility),
+		Strength:             int(row.Strength),
+		Finesse:              int(row.Finesse),
+		Instinct:             int(row.Instinct),
+		Presence:             int(row.Presence),
+		Knowledge:            int(row.Knowledge),
 	}
 	if row.ExperiencesJson != "" {
 		if err := json.Unmarshal([]byte(row.ExperiencesJson), &profile.Experiences); err != nil {
 			return storage.DaggerheartCharacterProfile{}, fmt.Errorf("decode experiences: %w", err)
 		}
 	}
+	if row.DomainCardIdsJson != "" {
+		if err := json.Unmarshal([]byte(row.DomainCardIdsJson), &profile.DomainCardIDs); err != nil {
+			return storage.DaggerheartCharacterProfile{}, fmt.Errorf("decode domain card ids: %w", err)
+		}
+	}
+	if row.StartingWeaponIdsJson != "" {
+		if err := json.Unmarshal([]byte(row.StartingWeaponIdsJson), &profile.StartingWeaponIDs); err != nil {
+			return storage.DaggerheartCharacterProfile{}, fmt.Errorf("decode starting weapon ids: %w", err)
+		}
+	}
 	return profile, nil
+}
+
+// DeleteDaggerheartCharacterProfile deletes a Daggerheart character profile extension.
+func (s *Store) DeleteDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(characterID) == "" {
+		return fmt.Errorf("character id is required")
+	}
+
+	return s.q.DeleteDaggerheartCharacterProfile(ctx, db.DeleteDaggerheartCharacterProfileParams{
+		CampaignID:  campaignID,
+		CharacterID: characterID,
+	})
 }
 
 // PutDaggerheartCharacterState persists a Daggerheart character state extension.

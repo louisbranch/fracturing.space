@@ -210,6 +210,7 @@ func toProtoDaggerheartSubclass(subclass storage.DaggerheartSubclass) *pb.Dagger
 	return &pb.DaggerheartSubclass{
 		Id:                     subclass.ID,
 		Name:                   subclass.Name,
+		ClassId:                subclass.ClassID,
 		SpellcastTrait:         subclass.SpellcastTrait,
 		FoundationFeatures:     toProtoDaggerheartFeatures(subclass.FoundationFeatures),
 		SpecializationFeatures: toProtoDaggerheartFeatures(subclass.SpecializationFeatures),
