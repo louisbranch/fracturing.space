@@ -96,7 +96,15 @@ func mountProtectedModule(root *http.ServeMux, feature module.Module, deps modul
 	if !isProtectedPrefix(prefix) {
 		return fmt.Errorf("module %q must mount under /app/, got %q", feature.ID(), prefix)
 	}
-	return mountModule(root, feature, mount, prefix, seen, wrap)
+	if err := mountModule(root, feature, mount, prefix, seen, wrap); err != nil {
+		return err
+	}
+	if alias := protectedSlashlessPrefixAlias(prefix); alias != "" {
+		if err := mountModule(root, feature, mount, alias, seen, wrap); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func isProtectedPrefix(prefix string) bool {
@@ -134,6 +142,18 @@ func normalizePrefix(prefix string) string {
 		prefix += "/"
 	}
 	return prefix
+}
+
+func protectedSlashlessPrefixAlias(prefix string) string {
+	prefix = strings.TrimSpace(prefix)
+	if !isProtectedPrefix(prefix) || !strings.HasSuffix(prefix, "/") {
+		return ""
+	}
+	alias := strings.TrimSuffix(prefix, "/")
+	if alias == "" {
+		return ""
+	}
+	return alias
 }
 
 func requireAuth(authenticated func(*http.Request) bool) func(http.Handler) http.Handler {

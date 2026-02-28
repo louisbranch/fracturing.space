@@ -74,6 +74,38 @@ func TestComposeWrapsProtectedModulesWithAuth(t *testing.T) {
 	}
 }
 
+func TestComposeProtectsSlashlessProtectedRootBeforePublicFallback(t *testing.T) {
+	t.Parallel()
+
+	composer := Composer{}
+	h, err := composer.Compose(ComposeInput{
+		AuthRequired: func(*http.Request) bool { return false },
+		PublicModules: []module.Module{
+			stubModule{id: "public", mount: module.Mount{Prefix: "/", Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+			})}},
+		},
+		ProtectedModules: []module.Module{
+			stubModule{id: "campaigns", mount: module.Mount{Prefix: "/app/campaigns/", Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusNoContent)
+			})}},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Compose() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != "/login" {
+		t.Fatalf("Location = %q, want %q", got, "/login")
+	}
+}
+
 func TestComposeMountsPublicModulesWithoutAuth(t *testing.T) {
 	t.Parallel()
 
