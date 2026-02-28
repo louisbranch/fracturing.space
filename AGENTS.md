@@ -69,6 +69,18 @@ make test
 make integration
 ```
 
+Command guidance for agents:
+
+- Fast feedback during implementation:
+  - `make integration-smoke`
+  - `make scenario-smoke`
+- Full verification before declaring runtime test changes done:
+  - `make integration`
+  - `make scenario-full` (or shard-equivalent when validating CI fanout behavior)
+- CI parity checks for integration sharding:
+  - `INTEGRATION_VERIFY_SHARDS_TOTAL=4 make integration-shard-check`
+  - `INTEGRATION_SHARD_TOTAL=4 INTEGRATION_SHARD_INDEX=<n> make integration-shard`
+
 Run `make cover` when production behavior changes and report notable coverage impact.
 
 ## Documentation and Knowledge Durability

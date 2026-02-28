@@ -89,3 +89,35 @@ scene:prefab("frodo")
 ## Mock Auth
 
 Scenario runs use a permissive in-process auth helper that generates synthetic user IDs and allows invite-related actions. No auth service is required.
+
+## Scenario Test Lanes
+
+Use the scenario-focused Make targets when validating Lua suites:
+
+```bash
+make scenario-smoke
+make scenario-full
+make scenario-fast
+```
+
+## Scenario Command Matrix
+
+Use these commands by audience and intent:
+
+| Audience | Command | Use case | When to run |
+| --- | --- | --- | --- |
+| Users | `make scenario-smoke` | Fast local scenario contract check | During active feature work |
+| Users | `make scenario-full` | Full scenario regression sweep | Before merging gameplay/runtime-affecting changes |
+| Users | `make scenario-fast` | Faster local full run with parallel workers | When iterating on large scenario suites locally |
+| Agents | `make scenario-smoke` | Short feedback loop | After incremental scenario/harness edits |
+| Agents | `make scenario-full` | Completion gate for scenario behavior | Before reporting done |
+| CI (PR) | `make scenario-smoke` | Fast PR gate for scenario contracts | Every pull request |
+| CI (main/nightly) | `SCENARIO_VERIFY_SHARDS_TOTAL=6 make scenario-shard-check` | Ensure shard coverage is complete/non-overlapping | Before shard matrix execution |
+| CI (main/nightly) | `SCENARIO_SHARD_TOTAL=6 SCENARIO_SHARD_INDEX=<n> make scenario-shard` | Parallel full scenario fanout | Matrix jobs on non-PR workflows |
+
+Optional environment controls:
+
+- `SCENARIO_MANIFEST`: newline-delimited scenario list for selective runs.
+- `SCENARIO_ONLY`: comma-separated scenario names/paths.
+- `SCENARIO_FILTER`: regex filter for scenario names/paths.
+- `SCENARIO_SHARD_TOTAL` + `SCENARIO_SHARD_INDEX`: deterministic shard selection.

@@ -1,6 +1,9 @@
 PROTO_DIR := api/proto
 GEN_GO_DIR := api/gen/go
 COVER_EXCLUDE_REGEX := (api/gen/|_templ[.]go|internal/services/admin/templates/|internal/services/game/storage/sqlite/db/|internal/services/auth/storage/sqlite/db/|internal/services/admin/storage/sqlite/db/|internal/tools/eventdocgen/|cmd/|internal/cmd/)
+SCENARIO_SMOKE_MANIFEST := internal/test/game/scenarios/smoke.txt
+INTEGRATION_SMOKE_FULL_PATTERN := ^(TestMCPStdioEndToEnd|TestMCPHTTPBlackbox)$$
+INTEGRATION_SMOKE_PR_PATTERN := ^(TestMCPStdioEndToEnd|TestMCPHTTPBlackboxSmoke)$$
 
 PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/common/v1/*.proto) \
@@ -13,7 +16,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/userhub/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration scenario templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-lifecycle-check negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration integration-full integration-smoke integration-smoke-full integration-smoke-pr integration-shard integration-shard-check scenario scenario-full scenario-smoke scenario-shard scenario-shard-check scenario-fast templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-lifecycle-check negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -98,12 +101,53 @@ test-changed:
 	@bash ./scripts/test-changed.sh
 
 integration:
+	@if [ -n "$${INTEGRATION_SHARD_TOTAL:-}" ] || [ -n "$${INTEGRATION_SHARD_INDEX:-}" ]; then \
+		$(MAKE) integration-shard; \
+	else \
+		$(MAKE) integration-full; \
+	fi
+
+integration-full:
 	$(MAKE) event-catalog-check
 	$(MAKE) topology-check
 	go test -tags=integration ./...
 
+integration-smoke:
+	$(MAKE) integration-smoke-pr
+
+integration-smoke-full:
+	$(MAKE) event-catalog-check
+	$(MAKE) topology-check
+	go test -tags=integration ./internal/test/integration -run '$(INTEGRATION_SMOKE_FULL_PATTERN)'
+
+integration-smoke-pr:
+	$(MAKE) event-catalog-check
+	$(MAKE) topology-check
+	go test -tags=integration ./internal/test/integration -run '$(INTEGRATION_SMOKE_PR_PATTERN)'
+
+integration-shard:
+	INTEGRATION_SHARD_TOTAL=$${INTEGRATION_SHARD_TOTAL:?set INTEGRATION_SHARD_TOTAL} INTEGRATION_SHARD_INDEX=$${INTEGRATION_SHARD_INDEX:?set INTEGRATION_SHARD_INDEX} bash ./scripts/integration-shard.sh
+
+integration-shard-check:
+	INTEGRATION_VERIFY_SHARDS_TOTAL=$${INTEGRATION_VERIFY_SHARDS_TOTAL:?set INTEGRATION_VERIFY_SHARDS_TOTAL} bash ./scripts/integration-shard.sh --check
+
 scenario:
+	$(MAKE) scenario-full
+
+scenario-full:
 	go test -tags=scenario ./internal/test/game
+
+scenario-smoke:
+	SCENARIO_MANIFEST=$(SCENARIO_SMOKE_MANIFEST) go test -tags=scenario ./internal/test/game
+
+scenario-shard:
+	SCENARIO_SHARD_TOTAL=$${SCENARIO_SHARD_TOTAL:?set SCENARIO_SHARD_TOTAL} SCENARIO_SHARD_INDEX=$${SCENARIO_SHARD_INDEX:?set SCENARIO_SHARD_INDEX} go test -tags=scenario ./internal/test/game
+
+scenario-shard-check:
+	SCENARIO_VERIFY_SHARDS_TOTAL=$${SCENARIO_VERIFY_SHARDS_TOTAL:?set SCENARIO_VERIFY_SHARDS_TOTAL} go test -tags=scenario ./internal/test/game -run '^TestScenarioShardCoverage$$'
+
+scenario-fast:
+	SCENARIO_PARALLELISM=$${SCENARIO_PARALLELISM:-4} go test -parallel=$${SCENARIO_PARALLELISM} -tags=scenario ./internal/test/game
 
 docs-check: docs-path-check docs-link-check docs-index-check docs-lifecycle-check
 

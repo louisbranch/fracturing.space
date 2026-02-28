@@ -14,14 +14,13 @@ import (
 
 // TestMCPStdioBlackbox validates the stdio MCP surface using the shared fixture.
 func TestMCPStdioBlackbox(t *testing.T) {
-	grpcAddr, authAddr, stopGRPC := startGRPCServer(t)
-	defer stopGRPC()
-	userID := createAuthUser(t, authAddr, "blackbox-creator")
+	fixture := newSuiteFixture(t)
+	userID := fixture.newUserID(t, "blackbox-creator")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	client, err := seed.StartMCPClient(ctx, repoRoot(t), grpcAddr)
+	client, err := seed.StartMCPClient(ctx, repoRoot(t), fixture.grpcAddr)
 	if err != nil {
 		t.Fatalf("start MCP stdio server: %v", err)
 	}

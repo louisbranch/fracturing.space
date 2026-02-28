@@ -31,17 +31,33 @@ import (
 
 const blackboxFixtureGlob = "internal/test/integration/fixtures/blackbox_*.json"
 
+var httpBlackboxSmokeFixtureFiles = []string{
+	"blackbox_campaign_flow.json",
+}
+
 // TestMCPHTTPBlackbox validates HTTP transport behavior using raw JSON-RPC payloads.
 func TestMCPHTTPBlackbox(t *testing.T) {
-	grpcAddr, authAddr, stopGRPC := startGRPCServer(t)
-	defer stopGRPC()
-	userID := createAuthUser(t, authAddr, "blackbox-creator")
+	fixtures := loadBlackboxFixtures(t, filepath.Join(repoRoot(t), blackboxFixtureGlob))
+	runHTTPBlackboxFixtures(t, fixtures, "blackbox-creator")
+}
+
+// TestMCPHTTPBlackboxSmoke validates a minimal HTTP MCP path for fast PR lanes.
+func TestMCPHTTPBlackboxSmoke(t *testing.T) {
+	fixtures := loadBlackboxFixtureFiles(t, httpBlackboxSmokeFixtureFiles)
+	runHTTPBlackboxFixtures(t, fixtures, "blackbox-smoke-creator")
+}
+
+func runHTTPBlackboxFixtures(t *testing.T, fixtures []seed.BlackboxFixture, username string) {
+	t.Helper()
+
+	fixture := newSuiteFixture(t)
+	userID := fixture.newUserID(t, username)
 
 	httpAddr := pickUnusedAddress(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mcpCmd, err := startMCPHTTPServer(ctx, t, grpcAddr, httpAddr)
+	mcpCmd, err := startMCPHTTPServer(ctx, t, fixture.grpcAddr, httpAddr)
 	if err != nil {
 		t.Fatalf("start MCP HTTP server: %v", err)
 	}
@@ -51,7 +67,6 @@ func TestMCPHTTPBlackbox(t *testing.T) {
 	client := newHTTPClient(t)
 	waitForHTTPHealth(t, client, baseURL+"/mcp/health")
 
-	fixtures := loadBlackboxFixtures(t, filepath.Join(repoRoot(t), blackboxFixtureGlob))
 	for _, fixture := range fixtures {
 		captures := make(map[string]string)
 		var sseResp *http.Response
@@ -88,6 +103,19 @@ func loadBlackboxFixtures(t *testing.T, pattern string) []seed.BlackboxFixture {
 	fixtures := make([]seed.BlackboxFixture, 0, len(paths))
 	for _, path := range paths {
 		fixtures = append(fixtures, loadBlackboxFixture(t, path))
+	}
+	return fixtures
+}
+
+func loadBlackboxFixtureFiles(t *testing.T, fixtureFiles []string) []seed.BlackboxFixture {
+	t.Helper()
+	if len(fixtureFiles) == 0 {
+		t.Fatal("fixture file list is required")
+	}
+	fixtures := make([]seed.BlackboxFixture, 0, len(fixtureFiles))
+	base := filepath.Join(repoRoot(t), "internal/test/integration/fixtures")
+	for _, fixtureFile := range fixtureFiles {
+		fixtures = append(fixtures, loadBlackboxFixture(t, filepath.Join(base, fixtureFile)))
 	}
 	return fixtures
 }

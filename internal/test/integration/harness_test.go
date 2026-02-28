@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -27,6 +28,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	mcpservice "github.com/louisbranch/fracturing.space/internal/services/mcp/service"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -41,12 +43,47 @@ type integrationSuite struct {
 	userID string
 }
 
+// suiteFixture provides shared startup/shutdown wiring for integration tests.
+type suiteFixture struct {
+	grpcAddr string
+	authAddr string
+}
+
+func newSuiteFixture(t *testing.T) *suiteFixture {
+	t.Helper()
+	grpcAddr, authAddr, stop := startGRPCServer(t)
+	t.Cleanup(stop)
+	return &suiteFixture{
+		grpcAddr: grpcAddr,
+		authAddr: authAddr,
+	}
+}
+
+func (f *suiteFixture) newUserID(t *testing.T, username string) string {
+	t.Helper()
+	return createAuthUser(t, f.authAddr, username)
+}
+
+func (f *suiteFixture) newMCPClientSession(t *testing.T) *mcp.ClientSession {
+	t.Helper()
+	clientSession, closeClient := startMCPClient(t, f.grpcAddr)
+	t.Cleanup(closeClient)
+	return clientSession
+}
+
 var (
 	joinGrantIssuer     = "test-issuer"
 	joinGrantAudience   = "game-service"
 	joinGrantKeyOnce    sync.Once
 	joinGrantPrivateKey ed25519.PrivateKey
 	joinGrantPublicKey  ed25519.PublicKey
+
+	contentSeedTemplateOnce sync.Once
+	contentSeedTemplatePath string
+	contentSeedTemplateErr  error
+
+	sharedFixtureOnce sync.Once
+	sharedFixtureData suiteFixture
 )
 
 // integrationTimeout returns the default timeout for integration calls.
@@ -57,6 +94,10 @@ func integrationTimeout() time.Duration {
 // startGRPCServer boots the game server and returns its address and shutdown function.
 func startGRPCServer(t *testing.T) (string, string, func()) {
 	t.Helper()
+	if integrationSharedFixtureEnabled() {
+		shared := sharedSuiteFixture(t)
+		return shared.grpcAddr, shared.authAddr, func() {}
+	}
 
 	setTempDBPath(t)
 	setTempAuthDBPath(t)
@@ -96,6 +137,64 @@ func startGRPCServer(t *testing.T) (string, string, func()) {
 	return addr, authAddr, stop
 }
 
+func sharedSuiteFixture(t *testing.T) suiteFixture {
+	t.Helper()
+	sharedFixtureOnce.Do(func() {
+		base, err := os.MkdirTemp("", "integration-shared-fixture-*")
+		if err != nil {
+			t.Fatalf("create shared fixture temp dir: %v", err)
+		}
+
+		if err := os.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", filepath.Join(base, "game-events.db")); err != nil {
+			t.Fatalf("set shared events db path: %v", err)
+		}
+		if err := os.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", filepath.Join(base, "game-projections.db")); err != nil {
+			t.Fatalf("set shared projections db path: %v", err)
+		}
+		if err := os.Setenv("FRACTURING_SPACE_GAME_CONTENT_DB_PATH", filepath.Join(base, "game-content.db")); err != nil {
+			t.Fatalf("set shared content db path: %v", err)
+		}
+		if err := os.Setenv("FRACTURING_SPACE_AUTH_DB_PATH", filepath.Join(base, "auth.db")); err != nil {
+			t.Fatalf("set shared auth db path: %v", err)
+		}
+		if err := os.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key"); err != nil {
+			t.Fatalf("set shared event hmac key: %v", err)
+		}
+
+		seedDaggerheartContent(t)
+		setJoinGrantProcessEnv(t)
+
+		authAddr, _ := startAuthServer(t)
+		if err := os.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr); err != nil {
+			t.Fatalf("set shared auth addr env: %v", err)
+		}
+
+		ctx := context.Background()
+		grpcServer, err := server.NewWithAddr("127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("new shared game server: %v", err)
+		}
+		go func() {
+			if serveErr := grpcServer.Serve(ctx); serveErr != nil {
+				fmt.Fprintf(os.Stderr, "shared integration game server error: %v\n", serveErr)
+			}
+		}()
+
+		grpcAddr := grpcServer.Addr()
+		waitForGRPCHealth(t, grpcAddr)
+
+		sharedFixtureData = suiteFixture{
+			grpcAddr: grpcAddr,
+			authAddr: authAddr,
+		}
+	})
+
+	if strings.TrimSpace(sharedFixtureData.grpcAddr) == "" || strings.TrimSpace(sharedFixtureData.authAddr) == "" {
+		t.Fatal("shared integration fixture failed to initialize")
+	}
+	return sharedFixtureData
+}
+
 func setJoinGrantEnv(t *testing.T) {
 	t.Helper()
 
@@ -112,6 +211,32 @@ func setJoinGrantEnv(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", joinGrantAudience)
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPublicKey))
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPrivateKey))
+}
+
+func setJoinGrantProcessEnv(t *testing.T) {
+	t.Helper()
+
+	joinGrantKeyOnce.Do(func() {
+		publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			t.Fatalf("generate join grant key: %v", err)
+		}
+		joinGrantPublicKey = publicKey
+		joinGrantPrivateKey = privateKey
+	})
+
+	if err := os.Setenv("FRACTURING_SPACE_JOIN_GRANT_ISSUER", joinGrantIssuer); err != nil {
+		t.Fatalf("set join grant issuer: %v", err)
+	}
+	if err := os.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", joinGrantAudience); err != nil {
+		t.Fatalf("set join grant audience: %v", err)
+	}
+	if err := os.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPublicKey)); err != nil {
+		t.Fatalf("set join grant public key: %v", err)
+	}
+	if err := os.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPrivateKey)); err != nil {
+		t.Fatalf("set join grant private key: %v", err)
+	}
 }
 
 func startAuthServer(t *testing.T) (string, func()) {
@@ -146,8 +271,77 @@ func startAuthServer(t *testing.T) (string, func()) {
 	return authAddr, stop
 }
 
-// startMCPClient boots the MCP stdio process and returns a client session and shutdown function.
+const (
+	integrationMCPTransportEnv    = "INTEGRATION_MCP_TRANSPORT"
+	integrationMCPTransportStdIO  = "stdio"
+	integrationMCPTransportMemory = "inmemory"
+	integrationSharedFixtureEnv   = "INTEGRATION_SHARED_FIXTURE"
+)
+
+func integrationSharedFixtureEnabled() bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(integrationSharedFixtureEnv)))
+	return value == "1" || value == "true" || value == "yes" || value == "on"
+}
+
+// startMCPClient connects a test MCP client. Default transport is in-memory for
+// speed; set INTEGRATION_MCP_TRANSPORT=stdio to exercise process boundaries.
 func startMCPClient(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
+	t.Helper()
+
+	transport := strings.ToLower(strings.TrimSpace(os.Getenv(integrationMCPTransportEnv)))
+	if transport == "" || transport == integrationMCPTransportMemory {
+		return startMCPClientInMemory(t, grpcAddr)
+	}
+	if transport == integrationMCPTransportStdIO {
+		return startMCPClientStdio(t, grpcAddr)
+	}
+	t.Fatalf("unsupported %s %q", integrationMCPTransportEnv, transport)
+	return nil, nil
+}
+
+func startMCPClientInMemory(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
+	t.Helper()
+
+	serverInstance, err := mcpservice.New(grpcAddr)
+	if err != nil {
+		t.Fatalf("new MCP server: %v", err)
+	}
+
+	serverTransport, clientTransport := mcp.NewInMemoryTransports()
+	serveCtx, serveCancel := context.WithCancel(context.Background())
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- serverInstance.ServeWithTransport(serveCtx, serverTransport)
+	}()
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "integration-client", Version: "dev"}, nil)
+	connectCtx, connectCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer connectCancel()
+	clientSession, err := client.Connect(connectCtx, clientTransport, nil)
+	if err != nil {
+		serveCancel()
+		t.Fatalf("connect MCP in-memory client: %v", err)
+	}
+
+	closeClient := func() {
+		if closeErr := clientSession.Close(); closeErr != nil {
+			t.Fatalf("close MCP client: %v", closeErr)
+		}
+		serveCancel()
+		select {
+		case err := <-serveErr:
+			if err != nil {
+				t.Fatalf("MCP in-memory server error: %v", err)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatal("timed out waiting for MCP in-memory server to stop")
+		}
+	}
+
+	return clientSession, closeClient
+}
+
+func startMCPClientStdio(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
 	t.Helper()
 
 	cmd := exec.Command("go", "run", "./cmd/mcp")
@@ -693,14 +887,47 @@ func seedDaggerheartContent(t *testing.T) {
 		t.Fatal("content DB path env is required")
 	}
 
-	store, err := storagesqlite.OpenContent(contentPath)
-	if err != nil {
-		t.Fatalf("open content store: %v", err)
+	templatePath := ensureContentSeedTemplate(t)
+	if err := copyFile(templatePath, contentPath); err != nil {
+		t.Fatalf("copy content seed template: %v", err)
 	}
-	defer store.Close()
+}
 
+func ensureContentSeedTemplate(t *testing.T) string {
+	t.Helper()
+
+	contentSeedTemplateOnce.Do(func() {
+		tmpDir, err := os.MkdirTemp("", "integration-content-seed-*")
+		if err != nil {
+			contentSeedTemplateErr = fmt.Errorf("create content seed temp dir: %w", err)
+			return
+		}
+		templatePath := filepath.Join(tmpDir, "game-content-template.db")
+		store, err := storagesqlite.OpenContent(templatePath)
+		if err != nil {
+			contentSeedTemplateErr = fmt.Errorf("open content seed template store: %w", err)
+			return
+		}
+		if err := writeDaggerheartSeedData(store, time.Now().UTC()); err != nil {
+			_ = store.Close()
+			contentSeedTemplateErr = err
+			return
+		}
+		if err := store.Close(); err != nil {
+			contentSeedTemplateErr = fmt.Errorf("close content seed template store: %w", err)
+			return
+		}
+		contentSeedTemplatePath = templatePath
+	})
+
+	if contentSeedTemplateErr != nil {
+		t.Fatalf("initialize content seed template: %v", contentSeedTemplateErr)
+	}
+	return contentSeedTemplatePath
+}
+
+func writeDaggerheartSeedData(store *storagesqlite.Store, now time.Time) error {
 	ctx := context.Background()
-	now := time.Now().UTC()
 
 	if err := store.PutDaggerheartClass(ctx, storage.DaggerheartClass{
 		ID:              "class.guardian",
@@ -711,7 +938,7 @@ func seedDaggerheartContent(t *testing.T) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}); err != nil {
-		t.Fatalf("seed class: %v", err)
+		return fmt.Errorf("seed class: %w", err)
 	}
 
 	if err := store.PutDaggerheartSubclass(ctx, storage.DaggerheartSubclass{
@@ -721,7 +948,7 @@ func seedDaggerheartContent(t *testing.T) {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}); err != nil {
-		t.Fatalf("seed subclass: %v", err)
+		return fmt.Errorf("seed subclass: %w", err)
 	}
 
 	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
@@ -731,7 +958,7 @@ func seedDaggerheartContent(t *testing.T) {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}); err != nil {
-		t.Fatalf("seed ancestry heritage: %v", err)
+		return fmt.Errorf("seed ancestry heritage: %w", err)
 	}
 
 	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
@@ -741,7 +968,7 @@ func seedDaggerheartContent(t *testing.T) {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}); err != nil {
-		t.Fatalf("seed community heritage: %v", err)
+		return fmt.Errorf("seed community heritage: %w", err)
 	}
 
 	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
@@ -755,7 +982,7 @@ func seedDaggerheartContent(t *testing.T) {
 		CreatedAt:   now,
 		UpdatedAt:   now,
 	}); err != nil {
-		t.Fatalf("seed domain card: %v", err)
+		return fmt.Errorf("seed domain card: %w", err)
 	}
 
 	if err := store.PutDaggerheartWeapon(ctx, storage.DaggerheartWeapon{
@@ -772,7 +999,7 @@ func seedDaggerheartContent(t *testing.T) {
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}); err != nil {
-		t.Fatalf("seed weapon: %v", err)
+		return fmt.Errorf("seed weapon: %w", err)
 	}
 
 	if err := store.PutDaggerheartArmor(ctx, storage.DaggerheartArmor{
@@ -786,7 +1013,7 @@ func seedDaggerheartContent(t *testing.T) {
 		CreatedAt:           now,
 		UpdatedAt:           now,
 	}); err != nil {
-		t.Fatalf("seed armor: %v", err)
+		return fmt.Errorf("seed armor: %w", err)
 	}
 
 	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
@@ -798,7 +1025,7 @@ func seedDaggerheartContent(t *testing.T) {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}); err != nil {
-		t.Fatalf("seed health potion: %v", err)
+		return fmt.Errorf("seed health potion: %w", err)
 	}
 
 	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
@@ -810,8 +1037,31 @@ func seedDaggerheartContent(t *testing.T) {
 		CreatedAt: now,
 		UpdatedAt: now,
 	}); err != nil {
-		t.Fatalf("seed stamina potion: %v", err)
+		return fmt.Errorf("seed stamina potion: %w", err)
 	}
+
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	input, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+
+	output, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = output.Close()
+	}()
+
+	if _, err := io.Copy(output, input); err != nil {
+		return err
+	}
+	return output.Sync()
 }
 
 func setTempAuthDBPath(t *testing.T) {

@@ -6,8 +6,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
+	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -26,8 +30,14 @@ import (
 
 const scenarioLuaGlob = "internal/test/game/scenarios/*.lua"
 
+type scenarioPath struct {
+	absolute string
+	relative string
+}
+
 type scenarioEnv struct {
 	campaignClient    gamev1.CampaignServiceClient
+	participantClient gamev1.ParticipantServiceClient
 	sessionClient     gamev1.SessionServiceClient
 	characterClient   gamev1.CharacterServiceClient
 	snapshotClient    gamev1.SnapshotServiceClient
@@ -39,6 +49,8 @@ type scenarioEnv struct {
 type scenarioState struct {
 	campaignID           string
 	sessionID            string
+	participantID        string
+	participants         map[string]string
 	actors               map[string]string
 	adversaries          map[string]string
 	countdowns           map[string]string
@@ -50,9 +62,59 @@ type scenarioState struct {
 }
 
 func TestScenarioScripts(t *testing.T) {
+	paths := scenarioLuaPaths(t)
+	parallelism := scenarioParallelism(t)
+
+	if parallelism > 1 {
+		envPool := make(chan scenarioEnv, parallelism)
+		for worker := 0; worker < parallelism; worker++ {
+			envPool <- newScenarioEnv(t, fmt.Sprintf("scenario-gm-%d@example.com", worker+1))
+		}
+		for _, path := range paths {
+			path := path
+			scenario, err := loadScenarioFromFile(path.absolute)
+			if err != nil {
+				t.Fatalf("load scenario %s: %v", path.relative, err)
+			}
+			name := scenario.Name
+			if name == "" {
+				name = filepath.Base(path.relative)
+			}
+			t.Run(name, func(t *testing.T) {
+				t.Parallel()
+				env := <-envPool
+				defer func() {
+					envPool <- env
+				}()
+				runScenario(t, env, scenario)
+			})
+		}
+		return
+	}
+
+	env := newScenarioEnv(t, "scenario-gm@example.com")
+	for _, path := range paths {
+		path := path
+		scenario, err := loadScenarioFromFile(path.absolute)
+		if err != nil {
+			t.Fatalf("load scenario %s: %v", path.relative, err)
+		}
+		name := scenario.Name
+		if name == "" {
+			name = filepath.Base(path.relative)
+		}
+		t.Run(name, func(t *testing.T) {
+			runScenario(t, env, scenario)
+		})
+	}
+}
+
+func newScenarioEnv(t *testing.T, userEmail string) scenarioEnv {
+	t.Helper()
+
 	grpcAddr, authAddr, stopServer := startGRPCServer(t)
-	defer stopServer()
-	userID := createAuthUser(t, authAddr, "scenario-gm@example.com")
+	t.Cleanup(stopServer)
+	userID := createAuthUser(t, authAddr, userEmail)
 
 	conn, err := grpc.NewClient(
 		grpcAddr,
@@ -62,10 +124,15 @@ func TestScenarioScripts(t *testing.T) {
 	if err != nil {
 		t.Fatalf("dial gRPC: %v", err)
 	}
-	defer conn.Close()
+	t.Cleanup(func() {
+		if closeErr := conn.Close(); closeErr != nil {
+			t.Fatalf("close gRPC: %v", closeErr)
+		}
+	})
 
-	env := scenarioEnv{
+	return scenarioEnv{
 		campaignClient:    gamev1.NewCampaignServiceClient(conn),
+		participantClient: gamev1.NewParticipantServiceClient(conn),
 		sessionClient:     gamev1.NewSessionServiceClient(conn),
 		characterClient:   gamev1.NewCharacterServiceClient(conn),
 		snapshotClient:    gamev1.NewSnapshotServiceClient(conn),
@@ -73,28 +140,95 @@ func TestScenarioScripts(t *testing.T) {
 		daggerheartClient: daggerheartv1.NewDaggerheartServiceClient(conn),
 		userID:            userID,
 	}
+}
 
-	paths := scenarioLuaPaths(t)
-	for _, path := range paths {
-		path := path
-		scenario, err := loadScenarioFromFile(path)
-		if err != nil {
-			t.Fatalf("load scenario %s: %v", path, err)
-		}
-		name := scenario.Name
-		if name == "" {
-			name = filepath.Base(path)
-		}
-		t.Run(name, func(t *testing.T) {
-			runScenario(t, env, scenario)
+func scenarioLuaPaths(t *testing.T) []scenarioPath {
+	t.Helper()
+
+	repo, allPaths := discoverScenarioLuaPaths(t)
+	selected := allPaths
+
+	manifest := scenarioManifestEntries(t, repo)
+	if len(manifest) > 0 {
+		selected = filterScenarioPaths(selected, func(path scenarioPath) bool {
+			if _, ok := manifest[path.relative]; ok {
+				return true
+			}
+			_, ok := manifest[filepath.Base(path.relative)]
+			return ok
 		})
+	}
+
+	if only := scenarioOnlyEntries(); len(only) > 0 {
+		selected = filterScenarioPaths(selected, func(path scenarioPath) bool {
+			if _, ok := only[path.relative]; ok {
+				return true
+			}
+			_, ok := only[filepath.Base(path.relative)]
+			return ok
+		})
+	}
+
+	if filterExpr := strings.TrimSpace(os.Getenv("SCENARIO_FILTER")); filterExpr != "" {
+		matcher, err := regexp.Compile(filterExpr)
+		if err != nil {
+			t.Fatalf("compile SCENARIO_FILTER %q: %v", filterExpr, err)
+		}
+		selected = filterScenarioPaths(selected, func(path scenarioPath) bool {
+			return matcher.MatchString(path.relative) || matcher.MatchString(filepath.Base(path.relative))
+		})
+	}
+
+	total, index := scenarioShardConfig(t)
+	if total > 1 {
+		selected = filterScenarioPaths(selected, func(path scenarioPath) bool {
+			return scenarioShardForPath(path.relative, total) == index
+		})
+	}
+
+	if len(selected) == 0 {
+		t.Skip("no scenario files selected")
+	}
+
+	return selected
+}
+
+func TestScenarioShardCoverage(t *testing.T) {
+	raw := strings.TrimSpace(os.Getenv("SCENARIO_VERIFY_SHARDS_TOTAL"))
+	if raw == "" {
+		t.Skip("set SCENARIO_VERIFY_SHARDS_TOTAL to run shard coverage check")
+	}
+	total, err := strconv.Atoi(raw)
+	if err != nil || total <= 0 {
+		t.Fatalf("invalid SCENARIO_VERIFY_SHARDS_TOTAL %q", raw)
+	}
+
+	_, allPaths := discoverScenarioLuaPaths(t)
+	seen := make(map[string]int, len(allPaths))
+	for index := 0; index < total; index++ {
+		for _, path := range allPaths {
+			if scenarioShardForPath(path.relative, total) != index {
+				continue
+			}
+			seen[path.relative]++
+		}
+	}
+	for _, path := range allPaths {
+		count := seen[path.relative]
+		if count == 0 {
+			t.Fatalf("scenario %s was not assigned to any shard", path.relative)
+		}
+		if count > 1 {
+			t.Fatalf("scenario %s was assigned to %d shards", path.relative, count)
+		}
 	}
 }
 
-func scenarioLuaPaths(t *testing.T) []string {
+func discoverScenarioLuaPaths(t *testing.T) (string, []scenarioPath) {
 	t.Helper()
 
-	pattern := filepath.Join(repoRoot(t), scenarioLuaGlob)
+	repo := repoRoot(t)
+	pattern := filepath.Join(repo, scenarioLuaGlob)
 	paths, err := filepath.Glob(pattern)
 	if err != nil {
 		t.Fatalf("glob scenarios: %v", err)
@@ -103,17 +237,130 @@ func scenarioLuaPaths(t *testing.T) []string {
 		t.Fatalf("no scenarios found for %s", pattern)
 	}
 	sort.Strings(paths)
-	return paths
+	selected := make([]scenarioPath, 0, len(paths))
+	for _, absolute := range paths {
+		relative, err := filepath.Rel(repo, absolute)
+		if err != nil {
+			t.Fatalf("rel path for %s: %v", absolute, err)
+		}
+		relative = filepath.ToSlash(relative)
+		selected = append(selected, scenarioPath{absolute: absolute, relative: relative})
+	}
+	return repo, selected
+}
+
+func scenarioParallelism(t *testing.T) int {
+	t.Helper()
+	raw := strings.TrimSpace(os.Getenv("SCENARIO_PARALLELISM"))
+	if raw == "" {
+		return 1
+	}
+	value, err := strconv.Atoi(raw)
+	if err != nil || value <= 0 {
+		t.Fatalf("invalid SCENARIO_PARALLELISM %q", raw)
+	}
+	return value
+}
+
+func scenarioShardConfig(t *testing.T) (int, int) {
+	t.Helper()
+
+	total := 1
+	if raw := strings.TrimSpace(os.Getenv("SCENARIO_SHARD_TOTAL")); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value <= 0 {
+			t.Fatalf("invalid SCENARIO_SHARD_TOTAL %q", raw)
+		}
+		total = value
+	}
+
+	index := 0
+	if raw := strings.TrimSpace(os.Getenv("SCENARIO_SHARD_INDEX")); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 0 {
+			t.Fatalf("invalid SCENARIO_SHARD_INDEX %q", raw)
+		}
+		index = value
+	}
+	if index >= total {
+		t.Fatalf("SCENARIO_SHARD_INDEX=%d out of range for SCENARIO_SHARD_TOTAL=%d", index, total)
+	}
+	return total, index
+}
+
+func scenarioShardForPath(relativePath string, total int) int {
+	hasher := fnv.New32a()
+	_, _ = hasher.Write([]byte(filepath.ToSlash(relativePath)))
+	return int(hasher.Sum32() % uint32(total))
+}
+
+func scenarioManifestEntries(t *testing.T, repo string) map[string]struct{} {
+	t.Helper()
+
+	manifestPath := strings.TrimSpace(os.Getenv("SCENARIO_MANIFEST"))
+	if manifestPath == "" {
+		return nil
+	}
+	if !filepath.IsAbs(manifestPath) {
+		manifestPath = filepath.Join(repo, manifestPath)
+	}
+	content, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatalf("read SCENARIO_MANIFEST %s: %v", manifestPath, err)
+	}
+
+	entries := make(map[string]struct{})
+	for _, line := range strings.Split(string(content), "\n") {
+		value := strings.TrimSpace(line)
+		if value == "" || strings.HasPrefix(value, "#") {
+			continue
+		}
+		value = filepath.ToSlash(filepath.Clean(value))
+		entries[value] = struct{}{}
+		entries[filepath.Base(value)] = struct{}{}
+	}
+	return entries
+}
+
+func scenarioOnlyEntries() map[string]struct{} {
+	raw := strings.TrimSpace(os.Getenv("SCENARIO_ONLY"))
+	if raw == "" {
+		return nil
+	}
+	entries := make(map[string]struct{})
+	for _, value := range strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '\n' || r == '\t' || r == ' '
+	}) {
+		candidate := strings.TrimSpace(value)
+		if candidate == "" {
+			continue
+		}
+		candidate = filepath.ToSlash(filepath.Clean(candidate))
+		entries[candidate] = struct{}{}
+		entries[filepath.Base(candidate)] = struct{}{}
+	}
+	return entries
+}
+
+func filterScenarioPaths(paths []scenarioPath, keep func(path scenarioPath) bool) []scenarioPath {
+	selected := make([]scenarioPath, 0, len(paths))
+	for _, path := range paths {
+		if keep(path) {
+			selected = append(selected, path)
+		}
+	}
+	return selected
 }
 
 func runScenario(t *testing.T, env scenarioEnv, scenario *Scenario) {
 	t.Helper()
 
 	state := &scenarioState{
-		actors:      map[string]string{},
-		adversaries: map[string]string{},
-		countdowns:  map[string]string{},
-		userID:      env.userID,
+		participants: map[string]string{},
+		actors:       map[string]string{},
+		adversaries:  map[string]string{},
+		countdowns:   map[string]string{},
+		userID:       env.userID,
 	}
 	for index, step := range scenario.Steps {
 		step := step
@@ -128,6 +375,10 @@ func runStep(t *testing.T, env scenarioEnv, state *scenarioState, step Step) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), scenarioTimeout())
 	defer cancel()
+	ctx = withUserID(ctx, state.userID)
+	ctx = withCampaignID(ctx, state.campaignID)
+	ctx = withSessionID(ctx, state.sessionID)
+	ctx = withParticipantID(ctx, state.participantID)
 
 	switch step.Kind {
 	case "campaign":
@@ -242,6 +493,7 @@ func runCampaignStep(t *testing.T, ctx context.Context, env scenarioEnv, state *
 		t.Fatal("expected campaign response")
 	}
 	state.campaignID = response.GetCampaign().GetId()
+	setScenarioActorParticipant(t, ctx, env, state)
 	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeCampaignCreated)
 }
 
@@ -251,17 +503,43 @@ func runParticipantStep(t *testing.T, ctx context.Context, env scenarioEnv, stat
 	if name == "" {
 		t.Fatal("participant name is required")
 	}
+	role := parseParticipantRole(t, optionalString(step.Args, "role", "PLAYER"))
+	controller := parseController(t, optionalString(step.Args, "controller", "HUMAN"))
+	request := &gamev1.CreateParticipantRequest{
+		CampaignId: state.campaignID,
+		Name:       name,
+		Role:       role,
+		Controller: controller,
+	}
+	before := latestSeq(t, ctx, env, state)
+	response, err := env.participantClient.CreateParticipant(withParticipantID(ctx, state.participantID), request)
+	if err != nil {
+		t.Fatalf("create participant: %v", err)
+	}
+	if response.GetParticipant() == nil {
+		t.Fatal("expected participant")
+	}
+	participantID := strings.TrimSpace(response.GetParticipant().GetId())
+	if participantID == "" {
+		t.Fatal("create participant returned empty id")
+	}
+	state.participants[name] = participantID
+	if state.participantID == "" {
+		state.participantID = participantID
+	}
+	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeParticipantJoined)
 }
 
 func runStartSessionStep(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState, step Step) {
 	if state.campaignID == "" {
 		t.Fatal("campaign is required before session")
 	}
+	ensureSessionStartReadiness(t, ctx, env, state)
 	name := optionalString(step.Args, "name", "Scenario Session")
 	request := &gamev1.StartSessionRequest{CampaignId: state.campaignID, Name: name}
 
 	before := latestSeq(t, ctx, env, state)
-	response, err := env.sessionClient.StartSession(ctx, request)
+	response, err := env.sessionClient.StartSession(withParticipantID(ctx, state.participantID), request)
 	if err != nil {
 		t.Fatalf("start session: %v", err)
 	}
@@ -313,6 +591,7 @@ func runCharacterStep(t *testing.T, ctx context.Context, env scenarioEnv, state 
 	characterID := response.GetCharacter().GetId()
 	state.actors[name] = characterID
 
+	ensureScenarioCharacterReadiness(t, ctx, env, state, characterID)
 	applyDefaultDaggerheartProfile(t, ctx, env, state, characterID, step.Args)
 	applyOptionalCharacterState(t, ctx, env, state, characterID, step.Args)
 	requireEventTypesAfterSeq(t, ctx, env, state, before, event.TypeCharacterCreated)
@@ -1887,7 +2166,8 @@ func ensureSession(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 	if state.sessionID != "" {
 		return
 	}
-	response, err := env.sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
+	ensureSessionStartReadiness(t, ctx, env, state)
+	response, err := env.sessionClient.StartSession(withParticipantID(ctx, state.participantID), &gamev1.StartSessionRequest{
 		CampaignId: state.campaignID,
 		Name:       "Scenario Session",
 	})
@@ -1898,6 +2178,249 @@ func ensureSession(t *testing.T, ctx context.Context, env scenarioEnv, state *sc
 		t.Fatal("expected session")
 	}
 	state.sessionID = response.GetSession().GetId()
+}
+
+func ensureSessionStartReadiness(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState) {
+	t.Helper()
+	ensureCampaign(t, state)
+	setScenarioActorParticipant(t, ctx, env, state)
+
+	participantCtx := withParticipantID(ctx, state.participantID)
+	participantsResp, err := env.participantClient.ListParticipants(participantCtx, &gamev1.ListParticipantsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   200,
+	})
+	if err != nil {
+		t.Fatalf("list participants: %v", err)
+	}
+
+	playerParticipantIDs := make([]string, 0, len(participantsResp.GetParticipants()))
+	for _, participant := range participantsResp.GetParticipants() {
+		if participant.GetRole() != gamev1.ParticipantRole_PLAYER {
+			continue
+		}
+		id := strings.TrimSpace(participant.GetId())
+		if id != "" {
+			playerParticipantIDs = append(playerParticipantIDs, id)
+		}
+	}
+	if len(playerParticipantIDs) == 0 {
+		response, createErr := env.participantClient.CreateParticipant(participantCtx, &gamev1.CreateParticipantRequest{
+			CampaignId: state.campaignID,
+			Name:       "Scenario Player",
+			Role:       gamev1.ParticipantRole_PLAYER,
+			Controller: gamev1.Controller_CONTROLLER_HUMAN,
+		})
+		if createErr != nil {
+			t.Fatalf("create readiness participant: %v", createErr)
+		}
+		if response.GetParticipant() == nil {
+			t.Fatal("create readiness participant returned empty participant")
+		}
+		playerParticipantID := strings.TrimSpace(response.GetParticipant().GetId())
+		if playerParticipantID == "" {
+			t.Fatal("create readiness participant returned empty id")
+		}
+		playerParticipantIDs = append(playerParticipantIDs, playerParticipantID)
+	}
+
+	playerCharacterCounts := make(map[string]int, len(playerParticipantIDs))
+	for _, participantID := range playerParticipantIDs {
+		playerCharacterCounts[participantID] = 0
+	}
+
+	pageToken := ""
+	characterCount := 0
+	for {
+		charactersResp, listErr := env.characterClient.ListCharacters(participantCtx, &gamev1.ListCharactersRequest{
+			CampaignId: state.campaignID,
+			PageSize:   200,
+			PageToken:  pageToken,
+		})
+		if listErr != nil {
+			t.Fatalf("list characters: %v", listErr)
+		}
+		for _, character := range charactersResp.GetCharacters() {
+			characterID := strings.TrimSpace(character.GetId())
+			if characterID == "" {
+				continue
+			}
+			characterCount++
+			characterParticipantID := strings.TrimSpace(character.GetParticipantId().GetValue())
+			if characterParticipantID == "" {
+				targetParticipantID := firstPlayerWithoutCharacter(playerParticipantIDs, playerCharacterCounts)
+				if targetParticipantID == "" {
+					targetParticipantID = playerParticipantIDs[0]
+				}
+				_, setErr := env.characterClient.SetDefaultControl(participantCtx, &gamev1.SetDefaultControlRequest{
+					CampaignId:    state.campaignID,
+					CharacterId:   characterID,
+					ParticipantId: wrapperspb.String(targetParticipantID),
+				})
+				if setErr != nil {
+					t.Fatalf("set readiness character control for %s: %v", characterID, setErr)
+				}
+				characterParticipantID = targetParticipantID
+			}
+			if _, ok := playerCharacterCounts[characterParticipantID]; ok {
+				playerCharacterCounts[characterParticipantID]++
+			}
+			if scenarioCharacterNeedsReadiness(t, participantCtx, env, state, characterID) {
+				ensureScenarioCharacterReadiness(t, participantCtx, env, state, characterID)
+			}
+		}
+		next := strings.TrimSpace(charactersResp.GetNextPageToken())
+		if next == "" {
+			break
+		}
+		pageToken = next
+	}
+
+	missingPlayerIDs := make([]string, 0, len(playerParticipantIDs))
+	for _, participantID := range playerParticipantIDs {
+		if playerCharacterCounts[participantID] == 0 {
+			missingPlayerIDs = append(missingPlayerIDs, participantID)
+		}
+	}
+	if characterCount == 0 || len(missingPlayerIDs) > 0 {
+		if len(missingPlayerIDs) == 0 {
+			missingPlayerIDs = append(missingPlayerIDs, playerParticipantIDs[0])
+		}
+		for index, participantID := range missingPlayerIDs {
+			characterName := "Scenario Readiness Character"
+			if len(missingPlayerIDs) > 1 {
+				characterName = fmt.Sprintf("Scenario Readiness Character %d", index+1)
+			}
+			createResp, createErr := env.characterClient.CreateCharacter(participantCtx, &gamev1.CreateCharacterRequest{
+				CampaignId: state.campaignID,
+				Name:       characterName,
+				Kind:       gamev1.CharacterKind_PC,
+			})
+			if createErr != nil {
+				t.Fatalf("create readiness character: %v", createErr)
+			}
+			if createResp.GetCharacter() == nil {
+				t.Fatal("create readiness character returned empty character")
+			}
+			characterID := strings.TrimSpace(createResp.GetCharacter().GetId())
+			if characterID == "" {
+				t.Fatal("create readiness character returned empty id")
+			}
+			_, setErr := env.characterClient.SetDefaultControl(participantCtx, &gamev1.SetDefaultControlRequest{
+				CampaignId:    state.campaignID,
+				CharacterId:   characterID,
+				ParticipantId: wrapperspb.String(participantID),
+			})
+			if setErr != nil {
+				t.Fatalf("set readiness character control for %s: %v", characterID, setErr)
+			}
+			ensureScenarioCharacterReadiness(t, participantCtx, env, state, characterID)
+		}
+	}
+}
+
+func firstPlayerWithoutCharacter(playerParticipantIDs []string, playerCharacterCounts map[string]int) string {
+	for _, participantID := range playerParticipantIDs {
+		if playerCharacterCounts[participantID] == 0 {
+			return participantID
+		}
+	}
+	return ""
+}
+
+func ensureScenarioCharacterReadiness(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	characterID string,
+) {
+	t.Helper()
+
+	_, err := env.characterClient.ApplyCharacterCreationWorkflow(ctx, &gamev1.ApplyCharacterCreationWorkflowRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: characterID,
+		SystemWorkflow: &gamev1.ApplyCharacterCreationWorkflowRequest_Daggerheart{
+			Daggerheart: &daggerheartv1.DaggerheartCreationWorkflowInput{
+				ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
+					ClassId:    "class.guardian",
+					SubclassId: "subclass.stalwart",
+				},
+				HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
+					AncestryId:  "heritage.human",
+					CommunityId: "heritage.highborne",
+				},
+				TraitsInput: &daggerheartv1.DaggerheartCreationStepTraitsInput{
+					Agility:   2,
+					Strength:  1,
+					Finesse:   1,
+					Instinct:  0,
+					Presence:  0,
+					Knowledge: -1,
+				},
+				DetailsInput:    &daggerheartv1.DaggerheartCreationStepDetailsInput{},
+				EquipmentInput:  &daggerheartv1.DaggerheartCreationStepEquipmentInput{WeaponIds: []string{"weapon.longsword"}, ArmorId: "armor.readiness-light", PotionItemId: "item.minor-health-potion"},
+				BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{Background: "scenario background"},
+				ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{
+					Experiences: []*daggerheartv1.DaggerheartExperience{{
+						Name:     "scenario experience",
+						Modifier: 1,
+					}},
+				},
+				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: []string{"domain_card.valor-bare-bones"}},
+				ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{Connections: "scenario connections"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("apply readiness workflow for %s: %v", characterID, err)
+	}
+}
+
+func scenarioCharacterNeedsReadiness(
+	t *testing.T,
+	ctx context.Context,
+	env scenarioEnv,
+	state *scenarioState,
+	characterID string,
+) bool {
+	t.Helper()
+
+	sheet, err := env.characterClient.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil {
+		t.Fatalf("get character sheet for readiness check: %v", err)
+	}
+	profile := sheet.GetProfile().GetDaggerheart()
+	if profile == nil {
+		return true
+	}
+	return strings.TrimSpace(profile.GetClassId()) == "" ||
+		strings.TrimSpace(profile.GetSubclassId()) == ""
+}
+
+func setScenarioActorParticipant(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState) {
+	t.Helper()
+	if state.campaignID == "" || state.participantID != "" {
+		return
+	}
+	participantsResp, err := env.participantClient.ListParticipants(ctx, &gamev1.ListParticipantsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   10,
+	})
+	if err != nil {
+		t.Fatalf("list actor participants: %v", err)
+	}
+	for _, participant := range participantsResp.GetParticipants() {
+		id := strings.TrimSpace(participant.GetId())
+		if id == "" {
+			continue
+		}
+		state.participantID = id
+		return
+	}
 }
 
 func latestSeq(t *testing.T, ctx context.Context, env scenarioEnv, state *scenarioState) uint64 {
@@ -3079,6 +3602,30 @@ func parseCharacterKind(t *testing.T, value string) gamev1.CharacterKind {
 	}
 }
 
+func parseParticipantRole(t *testing.T, value string) gamev1.ParticipantRole {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "GM":
+		return gamev1.ParticipantRole_GM
+	case "PLAYER":
+		return gamev1.ParticipantRole_PLAYER
+	default:
+		t.Fatalf("unsupported participant role %q", value)
+		return gamev1.ParticipantRole_ROLE_UNSPECIFIED
+	}
+}
+
+func parseController(t *testing.T, value string) gamev1.Controller {
+	switch strings.ToUpper(strings.TrimSpace(value)) {
+	case "HUMAN":
+		return gamev1.Controller_CONTROLLER_HUMAN
+	case "AI":
+		return gamev1.Controller_CONTROLLER_AI
+	default:
+		t.Fatalf("unsupported participant controller %q", value)
+		return gamev1.Controller_CONTROLLER_UNSPECIFIED
+	}
+}
+
 func prefabOptions(name string) map[string]any {
 	switch strings.ToLower(strings.TrimSpace(name)) {
 	case "frodo":
@@ -4209,6 +4756,13 @@ func withUserID(ctx context.Context, userID string) context.Context {
 		return ctx
 	}
 	return metadata.AppendToOutgoingContext(ctx, grpcmeta.UserIDHeader, userID)
+}
+
+func withParticipantID(ctx context.Context, participantID string) context.Context {
+	if participantID == "" {
+		return ctx
+	}
+	return metadata.AppendToOutgoingContext(ctx, grpcmeta.ParticipantIDHeader, participantID)
 }
 
 func withSessionID(ctx context.Context, sessionID string) context.Context {

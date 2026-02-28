@@ -18,6 +18,8 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -39,6 +41,7 @@ func startGRPCServer(t *testing.T) (string, string, func()) {
 	t.Helper()
 
 	setTempDBPath(t)
+	seedScenarioContent(t)
 	setTempAuthDBPath(t)
 	setJoinGrantEnv(t)
 	authAddr, stopAuth := startAuthServer(t)
@@ -130,7 +133,139 @@ func setTempDBPath(t *testing.T) {
 	base := t.TempDir()
 	t.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", filepath.Join(base, "game-events.db"))
 	t.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", filepath.Join(base, "game-projections.db"))
+	t.Setenv("FRACTURING_SPACE_GAME_CONTENT_DB_PATH", filepath.Join(base, "game-content.db"))
 	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
+}
+
+func seedScenarioContent(t *testing.T) {
+	t.Helper()
+
+	contentPath := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_CONTENT_DB_PATH"))
+	if contentPath == "" {
+		t.Fatal("content DB path env is required")
+	}
+
+	store, err := storagesqlite.OpenContent(contentPath)
+	if err != nil {
+		t.Fatalf("open content store: %v", err)
+	}
+	defer store.Close()
+
+	ctx := context.Background()
+	now := time.Now().UTC()
+
+	if err := store.PutDaggerheartClass(ctx, storage.DaggerheartClass{
+		ID:              "class.guardian",
+		Name:            "Guardian",
+		StartingEvasion: 9,
+		StartingHP:      7,
+		DomainIDs:       []string{"domain.valor"},
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}); err != nil {
+		t.Fatalf("seed class: %v", err)
+	}
+
+	if err := store.PutDaggerheartSubclass(ctx, storage.DaggerheartSubclass{
+		ID:        "subclass.stalwart",
+		Name:      "Stalwart",
+		ClassID:   "class.guardian",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed subclass: %v", err)
+	}
+
+	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
+		ID:        "heritage.human",
+		Name:      "Human",
+		Kind:      "ancestry",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed ancestry heritage: %v", err)
+	}
+
+	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
+		ID:        "heritage.highborne",
+		Name:      "Highborne",
+		Kind:      "community",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed community heritage: %v", err)
+	}
+
+	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
+		ID:          "domain_card.valor-bare-bones",
+		Name:        "Bare Bones",
+		DomainID:    "domain.valor",
+		Level:       1,
+		Type:        "ability",
+		UsageLimit:  "None",
+		FeatureText: "Scenario seed card",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		t.Fatalf("seed domain card: %v", err)
+	}
+
+	if err := store.PutDaggerheartWeapon(ctx, storage.DaggerheartWeapon{
+		ID:         "weapon.longsword",
+		Name:       "Longsword",
+		Category:   "primary",
+		Tier:       1,
+		Trait:      "Agility",
+		Range:      "melee",
+		DamageDice: []storage.DaggerheartDamageDie{{Sides: 10, Count: 1}},
+		DamageType: "physical",
+		Burden:     2,
+		Feature:    "Scenario seed weapon",
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}); err != nil {
+		t.Fatalf("seed weapon: %v", err)
+	}
+
+	if err := store.PutDaggerheartArmor(ctx, storage.DaggerheartArmor{
+		ID:                  "armor.gambeson-armor",
+		Name:                "Gambeson Armor",
+		Tier:                1,
+		BaseMajorThreshold:  6,
+		BaseSevereThreshold: 12,
+		ArmorScore:          1,
+		Feature:             "Scenario seed armor",
+		CreatedAt:           now,
+		UpdatedAt:           now,
+	}); err != nil {
+		t.Fatalf("seed armor: %v", err)
+	}
+
+	if err := store.PutDaggerheartArmor(ctx, storage.DaggerheartArmor{
+		ID:                  "armor.readiness-light",
+		Name:                "Readiness Light Armor",
+		Tier:                1,
+		BaseMajorThreshold:  6,
+		BaseSevereThreshold: 12,
+		ArmorScore:          0,
+		Feature:             "Scenario readiness armor",
+		CreatedAt:           now,
+		UpdatedAt:           now,
+	}); err != nil {
+		t.Fatalf("seed readiness armor: %v", err)
+	}
+
+	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
+		ID:        "item.minor-health-potion",
+		Name:      "Minor Health Potion",
+		Rarity:    "common",
+		Kind:      "consumable",
+		StackMax:  99,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("seed health potion: %v", err)
+	}
 }
 
 func setTempAuthDBPath(t *testing.T) {

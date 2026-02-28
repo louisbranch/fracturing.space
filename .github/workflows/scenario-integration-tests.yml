@@ -1,0 +1,157 @@
+name: Scenario + Integration Tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.0"
+      - name: Run integration smoke lane
+        run: make integration-smoke-pr
+      - name: Run scenario smoke lane
+        run: make scenario-smoke
+      - name: Generate smoke runtime report
+        run: |
+          OUT_DIR=.tmp/test-runtime/smoke \
+          RUNTIME_BUDGET_FILE=.github/test-runtime-budgets.json \
+          bash ./scripts/test-runtime-report.sh smoke-pr
+      - name: Upload smoke runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-smoke
+          path: .tmp/test-runtime/smoke
+          if-no-files-found: warn
+
+  integration-shard-check:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.0"
+      - name: Verify integration shard coverage
+        run: INTEGRATION_VERIFY_SHARDS_TOTAL=4 make integration-shard-check
+
+  integration-sharded:
+    if: github.event_name != 'pull_request'
+    needs:
+      - integration-shard-check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard_index: [0, 1, 2, 3]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.0"
+      - name: Run integration shard
+        run: INTEGRATION_SHARD_TOTAL=4 INTEGRATION_SHARD_INDEX=${{ matrix.shard_index }} make integration-shard
+      - name: Generate integration shard runtime report
+        run: |
+          OUT_DIR=.tmp/test-runtime/integration-shard-${{ matrix.shard_index }} \
+          INTEGRATION_SHARD_TOTAL=4 \
+          INTEGRATION_SHARD_INDEX=${{ matrix.shard_index }} \
+          RUNTIME_BUDGET_FILE=.github/test-runtime-budgets.json \
+          bash ./scripts/test-runtime-report.sh integration-shard
+      - name: Upload integration shard runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-integration-shard-${{ matrix.shard_index }}
+          path: .tmp/test-runtime/integration-shard-${{ matrix.shard_index }}
+          if-no-files-found: warn
+
+  scenario-shard-check:
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.0"
+      - name: Verify shard coverage
+        run: SCENARIO_VERIFY_SHARDS_TOTAL=6 make scenario-shard-check
+
+  scenario-sharded:
+    if: github.event_name != 'pull_request'
+    needs:
+      - scenario-shard-check
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard_index: [0, 1, 2, 3, 4, 5]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.0"
+      - name: Run scenario shard
+        run: SCENARIO_SHARD_TOTAL=6 SCENARIO_SHARD_INDEX=${{ matrix.shard_index }} make scenario-shard
+      - name: Generate shard runtime report
+        run: |
+          OUT_DIR=.tmp/test-runtime/scenario-shard-${{ matrix.shard_index }} \
+          SCENARIO_SHARD_TOTAL=6 \
+          SCENARIO_SHARD_INDEX=${{ matrix.shard_index }} \
+          RUNTIME_BUDGET_FILE=.github/test-runtime-budgets.json \
+          bash ./scripts/test-runtime-report.sh scenario-shard
+      - name: Upload shard runtime artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-scenario-shard-${{ matrix.shard_index }}
+          path: .tmp/test-runtime/scenario-shard-${{ matrix.shard_index }}
+          if-no-files-found: warn
+
+  integration-shared-fixture-soak:
+    if: github.event_name == 'schedule'
+    needs:
+      - integration-shard-check
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        shard_index: [0, 1, 2, 3]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.0"
+      - name: Shared fixture soak (non-blocking)
+        run: |
+          INTEGRATION_SHARED_FIXTURE=true \
+          INTEGRATION_SHARD_TOTAL=4 \
+          INTEGRATION_SHARD_INDEX=${{ matrix.shard_index }} \
+          bash ./scripts/integration-shard.sh -count=2

@@ -1,0 +1,19 @@
+# Core smoke scenarios that protect durable gameplay contracts.
+basic_flow.lua
+action_roll_outcomes.lua
+reaction_flow.lua
+condition_lifecycle.lua
+countdown_lifecycle.lua
+group_action.lua
+tag_team.lua
+rest_and_downtime.lua
+temporary_armor_bonus.lua
+death_move.lua
+blaze_of_glory.lua
+multi_target_attack.lua
+gm_move_examples.lua
+progress_countdown_climb.lua
+loadout_swap.lua
+fear_floor.lua
+critical_damage.lua
+full_example_spotlight_sequence.lua
