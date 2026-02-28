@@ -10,18 +10,67 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/public"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/surfaces/authredirect"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/surfaces/passkeys"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/surfaces/shell"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
 
+// Registry builds public/protected module sets from composition inputs.
+type Registry struct{}
+
+// BuildInput carries the dependencies and options needed to compose module sets.
+type BuildInput struct {
+	Dependencies              Dependencies
+	Resolvers                 ModuleResolvers
+	PublicOptions             PublicModuleOptions
+	ProtectedOptions          ProtectedModuleOptions
+	EnableExperimentalModules bool
+}
+
+// BuildOutput contains the composed module sets and derived health metadata.
+type BuildOutput struct {
+	Public    []Module
+	Protected []Module
+	Health    []dashboard.ServiceHealthEntry
+}
+
+// NewRegistry returns the default web module registry.
+func NewRegistry() Registry {
+	return Registry{}
+}
+
+// Build composes module sets for the requested stability mode.
+func (Registry) Build(input BuildInput) BuildOutput {
+	publicModules := DefaultPublicModules(input.Dependencies, input.Resolvers, input.PublicOptions)
+	if input.EnableExperimentalModules {
+		publicModules = append(publicModules, ExperimentalPublicModules()...)
+	}
+
+	protectedModules, health := buildProtectedModules(
+		input.Dependencies,
+		input.Resolvers,
+		input.ProtectedOptions,
+		input.EnableExperimentalModules,
+	)
+
+	return BuildOutput{
+		Public:    publicModules,
+		Protected: protectedModules,
+		Health:    health,
+	}
+}
+
 // DefaultPublicModules returns stable public web modules.
 func DefaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicModuleOptions) []Module {
+	authGateway := publicauth.NewGRPCAuthGateway(deps.AuthClient)
 	return []Module{
-		public.NewShellWithGatewayAndPolicy(public.NewGRPCAuthGateway(deps.AuthClient), opts.RequestSchemePolicy),
-		public.NewPasskeysWithGatewayAndPolicy(public.NewGRPCAuthGateway(deps.AuthClient), opts.RequestSchemePolicy),
-		public.NewAuthRedirectWithGatewayAndPolicy(public.NewGRPCAuthGateway(deps.AuthClient), opts.RequestSchemePolicy),
+		shell.NewWithGatewayAndPolicy(authGateway, opts.RequestSchemePolicy),
+		passkeys.NewWithGatewayAndPolicy(authGateway, opts.RequestSchemePolicy),
+		authredirect.NewWithGatewayAndPolicy(authGateway, opts.RequestSchemePolicy),
 		discovery.New(),
 		profile.NewWithGateway(profile.NewGRPCGateway(deps.SocialClient), deps.AssetBaseURL, res.ResolveSignedIn),
 	}
@@ -46,37 +95,47 @@ type ProtectedModuleOptions struct {
 }
 
 // DefaultProtectedModules returns stable authenticated web modules.
-func DefaultProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions, publicModules []Module) []Module {
-	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
-	campaignMod := NewStableCampaignModule(deps, base, opts.ChatFallbackPort)
-	return buildProtectedModules(deps, base, opts, publicModules, campaignMod)
+func DefaultProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions) []Module {
+	modules, _ := buildProtectedModules(deps, res, opts, false)
+	return modules
 }
 
 // ExperimentalProtectedModules returns protected modules when experimental campaigns are enabled.
-func ExperimentalProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions, publicModules []Module) []Module {
-	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
-	campaignMod := NewExperimentalCampaignModule(deps, base, opts.ChatFallbackPort)
-	return buildProtectedModules(deps, base, opts, publicModules, campaignMod)
+func ExperimentalProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions) []Module {
+	modules, _ := buildProtectedModules(deps, res, opts, true)
+	return modules
 }
 
-// buildProtectedModules constructs the protected module set, deriving service
-// health from all modules that implement HealthReporter.
-func buildProtectedModules(deps Dependencies, base modulehandler.Base, opts ProtectedModuleOptions, publicModules []Module, campaignMod Module) []Module {
+func buildProtectedModules(
+	deps Dependencies,
+	res ModuleResolvers,
+	opts ProtectedModuleOptions,
+	experimentalCampaigns bool,
+) ([]Module, []dashboard.ServiceHealthEntry) {
+	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
+	campaignMod := NewStableCampaignModule(deps, base, opts.ChatFallbackPort)
+	if experimentalCampaigns {
+		campaignMod = NewExperimentalCampaignModule(deps, base, opts.ChatFallbackPort)
+	}
 	settingsMod := settings.New(settings.WithGateway(settings.NewGRPCGateway(deps.SocialClient, deps.AccountClient, deps.CredentialClient)), settings.WithBase(base), settings.WithSchemePolicy(opts.RequestSchemePolicy))
 	notifMod := notifications.NewWithGateway(notifications.NewGRPCGateway(deps.NotificationClient), base)
+	profileProbe := profile.NewWithGateway(profile.NewGRPCGateway(deps.SocialClient), deps.AssetBaseURL, res.ResolveSignedIn)
 
 	// Dashboard's own health is derived from a probe module — the dashboard
 	// module is constructed last because it receives the complete health list.
 	dashGw := dashboard.NewGRPCGateway(deps.UserHubClient)
 	dashProbe := dashboard.NewWithGateway(dashGw, base, nil)
 
-	allModules := make([]Module, 0, len(publicModules)+4)
-	allModules = append(allModules, publicModules...)
-	allModules = append(allModules, settingsMod, notifMod, campaignMod, dashProbe)
-	health := DeriveServiceHealth(allModules)
+	health := DeriveServiceHealth([]Module{
+		profileProbe,
+		settingsMod,
+		notifMod,
+		campaignMod,
+		dashProbe,
+	})
 
 	dashMod := dashboard.NewWithGateway(dashGw, base, health)
-	return []Module{dashMod, settingsMod, notifMod, campaignMod}
+	return []Module{dashMod, settingsMod, notifMod, campaignMod}, health
 }
 
 // DeriveServiceHealth builds health entries from modules that implement

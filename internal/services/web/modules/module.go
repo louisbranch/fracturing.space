@@ -6,7 +6,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/public"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 )
 
@@ -54,7 +54,7 @@ type Dependencies struct {
 	CredentialClient settings.CredentialClient
 
 	// Public auth module client.
-	AuthClient public.AuthClient
+	AuthClient publicauth.AuthClient
 
 	// Notification module client.
 	NotificationClient notifications.NotificationClient

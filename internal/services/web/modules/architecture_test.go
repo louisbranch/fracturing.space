@@ -55,11 +55,11 @@ func TestRoutePrefixesRemainUniqueConstants(t *testing.T) {
 func TestFeatureModulesFollowTemplate(t *testing.T) {
 	t.Parallel()
 
-	protectedModulesWithGateway := map[string]struct{}{
-		"campaigns":     {},
-		"dashboard":     {},
-		"notifications": {},
-		"settings":      {},
+	protectedModuleGatewayUnavailableFiles := map[string]string{
+		"campaigns":     filepath.Join("app", "unavailable_gateway.go"),
+		"dashboard":     "gateway_unavailable.go",
+		"notifications": "gateway_unavailable.go",
+		"settings":      "gateway_unavailable.go",
 	}
 	for _, mod := range discoverModules(t) {
 		for _, file := range []string{"module.go", "routes.go", "routes_test.go"} {
@@ -74,8 +74,7 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 		if len(moduleServiceFiles(mod)) == 0 {
 			t.Fatalf("module %q has no service files matching *service*.go", mod)
 		}
-		if _, ok := protectedModulesWithGateway[mod]; ok {
-			unavailFile := "gateway_unavailable.go"
+		if unavailFile, ok := protectedModuleGatewayUnavailableFiles[mod]; ok {
 			path := filepath.Join(mod, unavailFile)
 			if _, err := os.Stat(path); err != nil {
 				t.Fatalf("protected module %q missing required file %q: %v", mod, unavailFile, err)
@@ -101,7 +100,7 @@ func TestModulesMountDoNotReadGatewayClientsFromDependencies(t *testing.T) {
 	assertMountDoNotReadDependencyFields(t, filepath.Join("notifications", "module.go"), map[string]struct{}{
 		"NotificationClient": {},
 	})
-	assertMountDoNotReadGRPCClient(t, filepath.Join("public", "module.go"))
+	assertMountDoNotReadGRPCClient(t, filepath.Join("publicauth", "module.go"))
 	assertMountDoNotReadGRPCClient(t, filepath.Join("profile", "module.go"))
 }
 
@@ -323,9 +322,18 @@ func moduleServiceFiles(module string) []string {
 func assertNoSiblingModuleImport(t *testing.T, file string, imports []*ast.ImportSpec) {
 	t.Helper()
 
+	moduleName := strings.Split(filepath.ToSlash(file), "/")[0]
+	const modulesPath = "/internal/services/web/modules/"
+
 	for _, imp := range imports {
 		path := strings.Trim(imp.Path.Value, "\"")
-		if strings.Contains(path, "/internal/services/web/modules/") {
+		index := strings.Index(path, modulesPath)
+		if index < 0 {
+			continue
+		}
+		modulePath := path[index+len(modulesPath):]
+		importedModule := strings.Split(modulePath, "/")[0]
+		if importedModule != moduleName {
 			t.Fatalf("file %s imports sibling module path %q", file, path)
 		}
 	}
