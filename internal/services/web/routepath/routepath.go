@@ -27,6 +27,7 @@ const (
 	AppDashboard                        = "/app/dashboard"
 	DashboardPrefix                     = "/app/dashboard/"
 	AppCampaigns                        = "/app/campaigns"
+	AppCampaignsNew                     = "/app/campaigns/new"
 	AppCampaignsCreate                  = "/app/campaigns/create"
 	CampaignsPrefix                     = "/app/campaigns/"
 	AppCampaignPattern                  = CampaignsPrefix + "{campaignID}"

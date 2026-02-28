@@ -184,8 +184,8 @@ func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *
 	if !strings.Contains(body, `data-dashboard-block="campaign-adventure"`) {
 		t.Fatalf("body = %q, want campaign-adventure block", body)
 	}
-	if !strings.Contains(body, routepath.AppCampaignsCreate) {
-		t.Fatalf("body = %q, want campaign create CTA", body)
+	if !strings.Contains(body, routepath.AppCampaignsNew) {
+		t.Fatalf("body = %q, want campaign start-choice CTA", body)
 	}
 }
 

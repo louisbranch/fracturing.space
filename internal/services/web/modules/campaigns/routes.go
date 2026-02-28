@@ -28,6 +28,8 @@ func registerRoutesForSurface(mux *http.ServeMux, h handlers, surface routeSurfa
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaigns, h.handleIndex)
 	mux.HandleFunc(http.MethodGet+" "+routepath.CampaignsPrefix+"{$}", h.handleIndex)
 
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignsNew, h.handleStartNewCampaign)
+
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignsCreate, h.handleCreateCampaign)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignsCreate, h.handleCreateCampaignSubmit)
 

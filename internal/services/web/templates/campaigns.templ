@@ -583,6 +583,35 @@ templ CampaignChatPage(view CampaignChatView, lang string, loc Localizer) {
 	</html>
 }
 
+templ CampaignStartFragment(loc Localizer) {
+	<section class="mx-auto flex min-h-[62vh] w-full max-w-6xl items-center justify-center">
+		<div class="w-full max-w-5xl rounded-box border border-base-300 bg-base-200/70 p-4 shadow-xl md:p-8">
+			<div class="mx-auto flex w-full max-w-4xl flex-col items-stretch justify-center lg:flex-row lg:items-center">
+				<article class="card flex-1 border border-base-300 bg-base-100 shadow-sm" data-campaign-start-option="browse">
+					<div class="card-body gap-3">
+						<h2 class="card-title">{ T(loc, "game.campaigns.new.browse.title") }</h2>
+						<p class="text-sm opacity-80">{ T(loc, "game.campaigns.new.browse.description") }</p>
+						<div class="card-actions mt-2 justify-start">
+							<button class="btn btn-outline w-full sm:w-auto" type="button" disabled aria-disabled="true">{ T(loc, "game.campaigns.new.browse.action") }</button>
+						</div>
+						<p class="text-xs uppercase tracking-[0.14em] opacity-60">{ T(loc, "game.campaigns.new.browse.disabled") }</p>
+					</div>
+				</article>
+				<div class="divider lg:divider-horizontal mx-4 text-xs font-semibold uppercase tracking-[0.28em] opacity-70" data-campaign-start-divider="or">{ T(loc, "game.campaigns.new.divider_or") }</div>
+				<article class="card flex-1 border border-primary/30 bg-base-100 shadow-sm" data-campaign-start-option="scratch">
+					<div class="card-body gap-3">
+						<h2 class="card-title">{ T(loc, "game.campaigns.new.scratch.title") }</h2>
+						<p class="text-sm opacity-80">{ T(loc, "game.campaigns.new.scratch.description") }</p>
+						<div class="card-actions mt-2 justify-start">
+							<a class="btn btn-primary w-full sm:w-auto" href={ routepath.AppCampaignsCreate }>{ T(loc, "game.campaigns.new.scratch.action") }</a>
+						</div>
+					</div>
+				</article>
+			</div>
+		</div>
+	</section>
+}
+
 templ CampaignCreateFragment(form CampaignCreateFormValues, loc Localizer) {
 	<section class="card bg-base-200">
 		<div class="card-body">
