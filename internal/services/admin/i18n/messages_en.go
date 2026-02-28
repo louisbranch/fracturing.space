@@ -58,7 +58,6 @@ func init() {
 		"campaigns.create.system":                   "Game System",
 		"campaigns.create.gm_mode":                  "GM Mode",
 		"campaigns.create.theme_prompt":             "Theme Prompt",
-		"campaigns.create.creator_display_name":     "Creator Display Name",
 		"campaigns.create.submit":                   "Create Campaign",
 		"systems.heading":                           "Systems",
 		"systems.loading":                           "Loading systems...",

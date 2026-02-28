@@ -1167,7 +1167,6 @@ func TestMountCampaignCreateGetRendersCreateForm(t *testing.T) {
 		`name="name"`,
 		`name="system"`,
 		`name="gm_mode"`,
-		`name="creator_display_name"`,
 		`name="theme_prompt"`,
 		`<option value="daggerheart" selected>`,
 		`<option value="human" selected>`,
@@ -1190,11 +1189,10 @@ func TestMountCampaignCreatePostCreatesCampaignAndRedirects(t *testing.T) {
 	}
 
 	form := url.Values{
-		"name":                 {"New Campaign"},
-		"system":               {"daggerheart"},
-		"gm_mode":              {"ai"},
-		"creator_display_name": {"Game Owner"},
-		"theme_prompt":         {"Misty marshes"},
+		"name":         {"New Campaign"},
+		"system":       {"daggerheart"},
+		"gm_mode":      {"ai"},
+		"theme_prompt": {"Misty marshes"},
 	}
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignsCreate, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -1234,14 +1232,12 @@ func TestMountCampaignCreatePostUsesHTMXRedirect(t *testing.T) {
 	}
 }
 
-func TestMountCampaignCreatePostFallsBackToViewerDisplayNameAndDefaults(t *testing.T) {
+func TestMountCampaignCreatePostAppliesDefaults(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{createCampaignResult: CreateCampaignResult{CampaignID: "camp-1"}}
 	m := NewWithGateway(gateway)
-	mount, err := m.Mount(module.Dependencies{ResolveViewer: func(*http.Request) module.Viewer {
-		return module.Viewer{DisplayName: "Viewer Name"}
-	}})
+	mount, err := m.Mount(module.Dependencies{})
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -1254,9 +1250,6 @@ func TestMountCampaignCreatePostFallsBackToViewerDisplayNameAndDefaults(t *testi
 
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
-	}
-	if got := gateway.lastCreateInput.CreatorDisplayName; got != "Viewer Name" {
-		t.Fatalf("CreatorDisplayName = %q, want %q", got, "Viewer Name")
 	}
 	if got := gateway.lastCreateInput.System; got != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
 		t.Fatalf("System = %v, want %v", got, commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)

@@ -41,11 +41,10 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{
-		Name:               "Rest Consequences Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "rest",
-		CreatorDisplayName: "Rest GM",
+		Name:        "Rest Consequences Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "rest",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)

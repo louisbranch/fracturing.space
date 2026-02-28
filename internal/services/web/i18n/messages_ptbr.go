@@ -350,10 +350,8 @@ func init() {
 	message.SetString(lang, "game.create.field_gm_mode_ai", "IA")
 	message.SetString(lang, "game.create.field_gm_mode_hybrid", "Híbrido")
 	message.SetString(lang, "game.campaign.gm_mode_unspecified", "Não especificado")
-	message.SetString(lang, "game.create.field_participant_name", "Nome do participante")
 	message.SetString(lang, "game.create.field_theme_prompt", "Tema")
 	message.SetString(lang, "game.create.placeholder_name", "Ex.: Outono do Crepúsculo")
-	message.SetString(lang, "game.create.placeholder_participant_name", "Ex.: Tracy")
 	message.SetString(lang, "game.create.placeholder_theme_prompt", "Ex.: A luta entre o bem e o mal em meio à redescoberta da fé e da esperança em um mundo caído na escuridão.")
 	message.SetString(lang, "game.create.submit", "Criar campanha")
 

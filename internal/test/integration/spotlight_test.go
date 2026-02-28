@@ -54,11 +54,10 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{
-		Name:               "Spotlight Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "spotlight",
-		CreatorDisplayName: "Spotlight GM",
+		Name:        "Spotlight Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "spotlight",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)
@@ -164,11 +163,10 @@ func TestGmConsequenceOpensGateAndSpotlight(t *testing.T) {
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{
-		Name:               "GM Consequence Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "consequence",
-		CreatorDisplayName: "Consequence GM",
+		Name:        "GM Consequence Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "consequence",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)

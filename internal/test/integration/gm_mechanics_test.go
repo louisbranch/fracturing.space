@@ -64,11 +64,10 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
-		Name:               "GM Move Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "gm move",
-		CreatorDisplayName: "GM",
+		Name:        "GM Move Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "gm move",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)
@@ -159,11 +158,10 @@ func TestDaggerheartCountdownLifecycle(t *testing.T) {
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
-		Name:               "Countdown Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "countdown",
-		CreatorDisplayName: "GM",
+		Name:        "Countdown Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "countdown",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)
@@ -266,11 +264,10 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
-		Name:               "Adversary Roll Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "adversary",
-		CreatorDisplayName: "GM",
+		Name:        "Adversary Roll Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "adversary",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)

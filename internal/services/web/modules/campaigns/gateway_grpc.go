@@ -376,12 +376,11 @@ func (g grpcGateway) CreateCampaign(ctx context.Context, input CreateCampaignInp
 		locale = commonv1.Locale_LOCALE_EN_US
 	}
 	resp, err := g.client.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
-		Name:               input.Name,
-		Locale:             locale,
-		System:             input.System,
-		GmMode:             input.GMMode,
-		ThemePrompt:        input.ThemePrompt,
-		CreatorDisplayName: input.CreatorDisplayName,
+		Name:        input.Name,
+		Locale:      locale,
+		System:      input.System,
+		GmMode:      input.GMMode,
+		ThemePrompt: input.ThemePrompt,
 	})
 	if err != nil {
 		return CreateCampaignResult{}, err

@@ -903,11 +903,10 @@ func TestCreateCampaignForwardsInputToGateway(t *testing.T) {
 	svc := newService(gateway)
 
 	input := CreateCampaignInput{
-		Name:               "The Guild",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GMMode:             statev1.GmMode_AI,
-		ThemePrompt:        "Storm coast",
-		CreatorDisplayName: "Rhea",
+		Name:        "The Guild",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GMMode:      statev1.GmMode_AI,
+		ThemePrompt: "Storm coast",
 	}
 
 	if _, err := svc.createCampaign(context.Background(), input); err != nil {
@@ -925,8 +924,5 @@ func TestCreateCampaignForwardsInputToGateway(t *testing.T) {
 	}
 	if gateway.lastCreateInput.ThemePrompt != input.ThemePrompt {
 		t.Fatalf("ThemePrompt = %q, want %q", gateway.lastCreateInput.ThemePrompt, input.ThemePrompt)
-	}
-	if gateway.lastCreateInput.CreatorDisplayName != input.CreatorDisplayName {
-		t.Fatalf("CreatorDisplayName = %q, want %q", gateway.lastCreateInput.CreatorDisplayName, input.CreatorDisplayName)
 	}
 }

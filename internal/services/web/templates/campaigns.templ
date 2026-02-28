@@ -269,11 +269,10 @@ func campaignCharacterByID(view CampaignDetailView) CampaignCharacterView {
 }
 
 type CampaignCreateFormValues struct {
-	Name               string
-	System             string
-	GMMode             string
-	CreatorDisplayName string
-	ThemePrompt        string
+	Name        string
+	System      string
+	GMMode      string
+	ThemePrompt string
 }
 
 func campaignCreateSystemValue(form CampaignCreateFormValues) string {
@@ -627,12 +626,6 @@ templ CampaignCreateFragment(form CampaignCreateFormValues, loc Localizer) {
 							<option value="hybrid">{ T(loc, "game.create.field_gm_mode_hybrid") }</option>
 						}
 					</select>
-				</div>
-				<div class="form-control">
-					<label class="label">
-						<span class="label-text">{ T(loc, "game.create.field_participant_name") }</span>
-					</label>
-					<input type="text" name="creator_display_name" value={ form.CreatorDisplayName } placeholder={ T(loc, "game.create.placeholder_participant_name") } class="input input-bordered w-full"/>
 				</div>
 				<div class="form-control">
 					<label class="label">

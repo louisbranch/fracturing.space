@@ -7,7 +7,6 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -45,7 +44,17 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, err
 	}
 
+	userID := strings.TrimSpace(in.GetUserId())
+	profile := loadSocialProfileSnapshot(ctx, c.stores.Social, userID)
+
 	name := strings.TrimSpace(in.GetName())
+	if name == "" {
+		if profile.Name != "" {
+			name = profile.Name
+		} else if userID != "" {
+			name = userID
+		}
+	}
 	if name == "" {
 		return storage.ParticipantRecord{}, apperrors.New(apperrors.CodeParticipantEmptyDisplayName, "name is required")
 	}
@@ -63,13 +72,15 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if err != nil {
 		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
 	}
-	userID := strings.TrimSpace(in.GetUserId())
+	avatarSetID := strings.TrimSpace(in.GetAvatarSetId())
+	avatarAssetID := strings.TrimSpace(in.GetAvatarAssetId())
+	if avatarSetID == "" && avatarAssetID == "" {
+		avatarSetID = profile.AvatarSetID
+		avatarAssetID = profile.AvatarAssetID
+	}
 	pronouns := strings.TrimSpace(in.GetPronouns())
-	if pronouns == "" && userID != "" && c.stores.Social != nil {
-		resp, err := c.stores.Social.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: userID})
-		if err == nil && resp != nil && resp.GetUserProfile() != nil {
-			pronouns = strings.TrimSpace(resp.GetUserProfile().GetPronouns())
-		}
+	if pronouns == "" {
+		pronouns = profile.Pronouns
 	}
 
 	applier := c.stores.Applier()
@@ -83,8 +94,8 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		Role:           string(role),
 		Controller:     string(controller),
 		CampaignAccess: string(access),
-		AvatarSetID:    strings.TrimSpace(in.GetAvatarSetId()),
-		AvatarAssetID:  strings.TrimSpace(in.GetAvatarAssetId()),
+		AvatarSetID:    avatarSetID,
+		AvatarAssetID:  avatarAssetID,
 		Pronouns:       pronouns,
 	}
 	payloadJSON, err := json.Marshal(payload)

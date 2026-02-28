@@ -87,7 +87,6 @@ func init() {
 		"campaigns.create.system":                   "Sistema",
 		"campaigns.create.gm_mode":                  "Modo do GM",
 		"campaigns.create.theme_prompt":             "Tema",
-		"campaigns.create.creator_display_name":     "Nome do criador",
 		"campaigns.create.submit":                   "Criar campanha",
 		"systems.heading":                           "Sistemas",
 		"systems.loading":                           "Carregando sistemas...",
