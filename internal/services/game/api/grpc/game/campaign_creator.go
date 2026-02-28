@@ -127,43 +127,69 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		creatorDisplayName = userID
 	}
 
-	participantPayload := participant.JoinPayload{
-		ParticipantID:  creatorID,
-		UserID:         userID,
-		Name:           creatorDisplayName,
-		Role:           "GM",
-		Controller:     "HUMAN",
-		CampaignAccess: "OWNER",
-		AvatarSetID:    profile.AvatarSetID,
-		AvatarAssetID:  profile.AvatarAssetID,
-		Pronouns:       profile.Pronouns,
-	}
-	participantPayloadJSON, err := json.Marshal(participantPayload)
-	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode participant payload: %v", err)
+	creatorRole := "GM"
+	if normalized.GmMode == campaign.GmModeAI {
+		creatorRole = "PLAYER"
 	}
 
-	_, err = executeAndApplyDomainCommand(
-		ctx,
-		c.stores.Domain,
-		applier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeParticipantJoin,
-			ActorType:    command.ActorTypeSystem,
-			ActorID:      "",
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "participant",
-			EntityID:     creatorID,
-			PayloadJSON:  participantPayloadJSON,
-		}),
-		domainCommandApplyOptions{
-			applyErrMessage: "apply participant event",
+	participantPayloads := []participant.JoinPayload{
+		{
+			ParticipantID:  creatorID,
+			UserID:         userID,
+			Name:           creatorDisplayName,
+			Role:           creatorRole,
+			Controller:     "HUMAN",
+			CampaignAccess: "OWNER",
+			AvatarSetID:    profile.AvatarSetID,
+			AvatarAssetID:  profile.AvatarAssetID,
+			Pronouns:       profile.Pronouns,
 		},
-	)
-	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
+	}
+	if normalized.GmMode == campaign.GmModeAI || normalized.GmMode == campaign.GmModeHybrid {
+		aiParticipantID, err := c.idGenerator()
+		if err != nil {
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate ai participant id: %v", err)
+		}
+		participantPayloads = append(participantPayloads, participant.JoinPayload{
+			ParticipantID:  aiParticipantID,
+			UserID:         "",
+			Name:           "Game Master",
+			Role:           "GM",
+			Controller:     "AI",
+			CampaignAccess: "MEMBER",
+		})
+	}
+
+	requestID := grpcmeta.RequestIDFromContext(ctx)
+	invocationID := grpcmeta.InvocationIDFromContext(ctx)
+	for _, participantPayload := range participantPayloads {
+		participantPayloadJSON, err := json.Marshal(participantPayload)
+		if err != nil {
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode participant payload: %v", err)
+		}
+
+		_, err = executeAndApplyDomainCommand(
+			ctx,
+			c.stores.Domain,
+			applier,
+			commandbuild.Core(commandbuild.CoreInput{
+				CampaignID:   campaignID,
+				Type:         commandTypeParticipantJoin,
+				ActorType:    command.ActorTypeSystem,
+				ActorID:      "",
+				RequestID:    requestID,
+				InvocationID: invocationID,
+				EntityType:   "participant",
+				EntityID:     participantPayload.ParticipantID,
+				PayloadJSON:  participantPayloadJSON,
+			}),
+			domainCommandApplyOptions{
+				applyErrMessage: "apply participant event",
+			},
+		)
+		if err != nil {
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
+		}
 	}
 
 	ownerParticipant, err := c.stores.Participant.GetParticipant(ctx, campaignID, creatorID)
