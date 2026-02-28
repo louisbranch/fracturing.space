@@ -132,25 +132,28 @@ func (f *fakeParticipantClient) GetParticipant(_ context.Context, _ *statev1.Get
 type fakeCharacterClient struct {
 	statev1.CharacterServiceClient
 
-	createResp  *statev1.CreateCharacterResponse
-	createErr   error
-	createCtx   context.Context
-	updateResp  *statev1.UpdateCharacterResponse
-	updateErr   error
-	updateCtx   context.Context
-	deleteResp  *statev1.DeleteCharacterResponse
-	deleteErr   error
-	deleteCtx   context.Context
-	listResp    *statev1.ListCharactersResponse
-	listErr     error
-	controlResp *statev1.SetDefaultControlResponse
-	controlErr  error
-	controlCtx  context.Context
-	sheetResp   *statev1.GetCharacterSheetResponse
-	sheetErr    error
-	profileResp *statev1.PatchCharacterProfileResponse
-	profileErr  error
-	profileCtx  context.Context
+	createResp   *statev1.CreateCharacterResponse
+	createErr    error
+	createCtx    context.Context
+	updateResp   *statev1.UpdateCharacterResponse
+	updateErr    error
+	updateCtx    context.Context
+	deleteResp   *statev1.DeleteCharacterResponse
+	deleteErr    error
+	deleteCtx    context.Context
+	listResp     *statev1.ListCharactersResponse
+	listErr      error
+	controlResp  *statev1.SetDefaultControlResponse
+	controlErr   error
+	controlCtx   context.Context
+	sheetResp    *statev1.GetCharacterSheetResponse
+	sheetErr     error
+	profileResp  *statev1.PatchCharacterProfileResponse
+	profileErr   error
+	profileCtx   context.Context
+	workflowResp *statev1.ApplyCharacterCreationWorkflowResponse
+	workflowErr  error
+	workflowCtx  context.Context
 }
 
 func (f *fakeCharacterClient) CreateCharacter(ctx context.Context, _ *statev1.CreateCharacterRequest, _ ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
@@ -184,6 +187,11 @@ func (f *fakeCharacterClient) GetCharacterSheet(_ context.Context, _ *statev1.Ge
 func (f *fakeCharacterClient) PatchCharacterProfile(ctx context.Context, _ *statev1.PatchCharacterProfileRequest, _ ...grpc.CallOption) (*statev1.PatchCharacterProfileResponse, error) {
 	f.profileCtx = ctx
 	return f.profileResp, f.profileErr
+}
+
+func (f *fakeCharacterClient) ApplyCharacterCreationWorkflow(ctx context.Context, _ *statev1.ApplyCharacterCreationWorkflowRequest, _ ...grpc.CallOption) (*statev1.ApplyCharacterCreationWorkflowResponse, error) {
+	f.workflowCtx = ctx
+	return f.workflowResp, f.workflowErr
 }
 
 // fakeSnapshotClient implements statev1.SnapshotServiceClient for testing.

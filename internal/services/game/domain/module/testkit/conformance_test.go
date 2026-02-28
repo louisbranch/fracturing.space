@@ -64,6 +64,13 @@ func (m *memDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, 
 	return p, nil
 }
 
+func (m *memDaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.profiles, campaignID+"/"+characterID)
+	return nil
+}
+
 func (m *memDaggerheartStore) PutDaggerheartCharacterState(_ context.Context, s storage.DaggerheartCharacterState) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

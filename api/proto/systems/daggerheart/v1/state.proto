@@ -53,6 +53,127 @@ message DaggerheartProfile {
 
   // Character experiences.
   repeated DaggerheartExperience experiences = 16;
+
+  // Step 1: selected class content id.
+  string class_id = 17;
+
+  // Step 1: selected subclass content id.
+  string subclass_id = 18;
+
+  // Step 2: selected ancestry heritage id.
+  string ancestry_id = 19;
+
+  // Step 2: selected community heritage id.
+  string community_id = 20;
+
+  // Step 3: whether traits were explicitly assigned during creation.
+  google.protobuf.BoolValue traits_assigned = 21;
+
+  // Step 6: free-form background text.
+  string background = 22;
+
+  // Step 8: selected domain card ids.
+  repeated string domain_card_ids = 23;
+
+  // Step 9: free-form character connections text.
+  string connections = 24;
+
+  // Step 4: whether additional character details were explicitly recorded.
+  google.protobuf.BoolValue details_recorded = 25;
+
+  // Step 5: selected starting weapon ids.
+  repeated string starting_weapon_ids = 26;
+
+  // Step 5: selected starting armor id.
+  string starting_armor_id = 27;
+
+  // Step 5: selected starting potion item id.
+  string starting_potion_item_id = 28;
+}
+
+// DaggerheartCreationStepClassSubclassInput applies creation step 1
+// (class and subclass selection).
+message DaggerheartCreationStepClassSubclassInput {
+  string class_id = 1;
+  string subclass_id = 2;
+}
+
+// DaggerheartCreationStepHeritageInput applies creation step 2
+// (ancestry and community selection).
+message DaggerheartCreationStepHeritageInput {
+  string ancestry_id = 1;
+  string community_id = 2;
+}
+
+// DaggerheartCreationStepTraitsInput applies creation step 3 (trait assignment).
+message DaggerheartCreationStepTraitsInput {
+  int32 agility = 1;
+  int32 strength = 2;
+  int32 finesse = 3;
+  int32 instinct = 4;
+  int32 presence = 5;
+  int32 knowledge = 6;
+}
+
+// DaggerheartCreationStepDetailsInput applies creation step 4
+// (record additional character details).
+message DaggerheartCreationStepDetailsInput {}
+
+// DaggerheartCreationStepEquipmentInput applies creation step 5
+// (choose starting equipment).
+message DaggerheartCreationStepEquipmentInput {
+  repeated string weapon_ids = 1;
+  string armor_id = 2;
+  string potion_item_id = 3;
+}
+
+// DaggerheartCreationStepBackgroundInput applies creation step 6 (background).
+message DaggerheartCreationStepBackgroundInput {
+  string background = 1;
+}
+
+// DaggerheartCreationStepExperiencesInput applies creation step 7 (experiences).
+message DaggerheartCreationStepExperiencesInput {
+  repeated DaggerheartExperience experiences = 1;
+}
+
+// DaggerheartCreationStepDomainCardsInput applies creation step 8 (domain cards).
+message DaggerheartCreationStepDomainCardsInput {
+  repeated string domain_card_ids = 1;
+}
+
+// DaggerheartCreationStepConnectionsInput applies creation step 9 (connections).
+message DaggerheartCreationStepConnectionsInput {
+  string connections = 1;
+}
+
+// DaggerheartCreationStepInput carries exactly one Daggerheart creation step payload.
+message DaggerheartCreationStepInput {
+  oneof step {
+    DaggerheartCreationStepClassSubclassInput class_subclass_input = 1;
+    DaggerheartCreationStepHeritageInput heritage_input = 2;
+    DaggerheartCreationStepTraitsInput traits_input = 3;
+    DaggerheartCreationStepDetailsInput details_input = 4;
+    DaggerheartCreationStepEquipmentInput equipment_input = 5;
+    DaggerheartCreationStepBackgroundInput background_input = 6;
+    DaggerheartCreationStepExperiencesInput experiences_input = 7;
+    DaggerheartCreationStepDomainCardsInput domain_cards_input = 8;
+    DaggerheartCreationStepConnectionsInput connections_input = 9;
+  }
+}
+
+// DaggerheartCreationWorkflowInput carries all nine creation step payloads.
+// Servers apply these in canonical step order as one atomic workflow update.
+message DaggerheartCreationWorkflowInput {
+  DaggerheartCreationStepClassSubclassInput class_subclass_input = 1;
+  DaggerheartCreationStepHeritageInput heritage_input = 2;
+  DaggerheartCreationStepTraitsInput traits_input = 3;
+  DaggerheartCreationStepDetailsInput details_input = 4;
+  DaggerheartCreationStepEquipmentInput equipment_input = 5;
+  DaggerheartCreationStepBackgroundInput background_input = 6;
+  DaggerheartCreationStepExperiencesInput experiences_input = 7;
+  DaggerheartCreationStepDomainCardsInput domain_cards_input = 8;
+  DaggerheartCreationStepConnectionsInput connections_input = 9;
 }
 
 // DaggerheartCondition enumerates supported character conditions.

@@ -66,6 +66,18 @@ service CharacterService {
 
   // Patch a character profile (all fields optional).
   rpc PatchCharacterProfile(PatchCharacterProfileRequest) returns (PatchCharacterProfileResponse);
+
+  // Get character creation workflow progress.
+  rpc GetCharacterCreationProgress(GetCharacterCreationProgressRequest) returns (GetCharacterCreationProgressResponse);
+
+  // Apply one character creation workflow step.
+  rpc ApplyCharacterCreationStep(ApplyCharacterCreationStepRequest) returns (ApplyCharacterCreationStepResponse);
+
+  // Apply all character creation workflow steps atomically.
+  rpc ApplyCharacterCreationWorkflow(ApplyCharacterCreationWorkflowRequest) returns (ApplyCharacterCreationWorkflowResponse);
+
+  // Reset character creation workflow data.
+  rpc ResetCharacterCreationWorkflow(ResetCharacterCreationWorkflowRequest) returns (ResetCharacterCreationWorkflowResponse);
 }
 
 message CreateCharacterRequest {
@@ -217,6 +229,72 @@ message PatchCharacterProfileRequest {
 
 message PatchCharacterProfileResponse {
   CharacterProfile profile = 1;
+}
+
+message CharacterCreationStepProgress {
+  // 1-based step index.
+  int32 step = 1;
+
+  // Stable step key.
+  string key = 2;
+
+  // Whether this step is complete.
+  bool complete = 3;
+}
+
+message CharacterCreationProgress {
+  string campaign_id = 1;
+  string character_id = 2;
+  repeated CharacterCreationStepProgress steps = 3;
+  int32 next_step = 4;
+  bool ready = 5;
+  repeated string unmet_reasons = 6;
+}
+
+message GetCharacterCreationProgressRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+}
+
+message GetCharacterCreationProgressResponse {
+  CharacterCreationProgress progress = 1;
+}
+
+message ApplyCharacterCreationStepRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+
+  oneof system_step {
+    systems.daggerheart.v1.DaggerheartCreationStepInput daggerheart = 3;
+  }
+}
+
+message ApplyCharacterCreationStepResponse {
+  CharacterProfile profile = 1;
+  CharacterCreationProgress progress = 2;
+}
+
+message ApplyCharacterCreationWorkflowRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+
+  oneof system_workflow {
+    systems.daggerheart.v1.DaggerheartCreationWorkflowInput daggerheart = 3;
+  }
+}
+
+message ApplyCharacterCreationWorkflowResponse {
+  CharacterProfile profile = 1;
+  CharacterCreationProgress progress = 2;
+}
+
+message ResetCharacterCreationWorkflowRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+}
+
+message ResetCharacterCreationWorkflowResponse {
+  CharacterCreationProgress progress = 1;
 }
 
 // CharacterState represents the current mutable state of a character as a materialized projection.

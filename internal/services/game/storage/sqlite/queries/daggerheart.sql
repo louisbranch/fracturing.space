@@ -10,8 +10,10 @@ WHERE campaign_id = ? AND character_id = ?;
 INSERT INTO daggerheart_character_profiles (
     campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold,
     agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max,
-    experiences_json
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    experiences_json, class_id, subclass_id, ancestry_id, community_id, traits_assigned,
+    background, details_recorded, starting_weapon_ids_json, starting_armor_id, starting_potion_item_id,
+    domain_card_ids_json, connections
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     level = excluded.level,
     hp_max = excluded.hp_max,
@@ -28,7 +30,19 @@ ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     proficiency = excluded.proficiency,
     armor_score = excluded.armor_score,
     armor_max = excluded.armor_max,
-    experiences_json = excluded.experiences_json;
+    experiences_json = excluded.experiences_json,
+    class_id = excluded.class_id,
+    subclass_id = excluded.subclass_id,
+    ancestry_id = excluded.ancestry_id,
+    community_id = excluded.community_id,
+    traits_assigned = excluded.traits_assigned,
+    background = excluded.background,
+    details_recorded = excluded.details_recorded,
+    starting_weapon_ids_json = excluded.starting_weapon_ids_json,
+    starting_armor_id = excluded.starting_armor_id,
+    starting_potion_item_id = excluded.starting_potion_item_id,
+    domain_card_ids_json = excluded.domain_card_ids_json,
+    connections = excluded.connections;
 
 -- name: DeleteDaggerheartCharacterProfile :exec
 DELETE FROM daggerheart_character_profiles
@@ -190,11 +204,12 @@ SELECT * FROM daggerheart_subclasses ORDER BY name ASC, id ASC;
 
 -- name: PutDaggerheartSubclass :exec
 INSERT INTO daggerheart_subclasses (
-    id, name, spellcast_trait, foundation_features_json, specialization_features_json, mastery_features_json,
+    id, name, class_id, spellcast_trait, foundation_features_json, specialization_features_json, mastery_features_json,
     created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
+    class_id = excluded.class_id,
     spellcast_trait = excluded.spellcast_trait,
     foundation_features_json = excluded.foundation_features_json,
     specialization_features_json = excluded.specialization_features_json,
@@ -552,6 +567,18 @@ SELECT
     dcp.armor_score,
     dcp.armor_max,
     dcp.experiences_json,
+    dcp.class_id,
+    dcp.subclass_id,
+    dcp.ancestry_id,
+    dcp.community_id,
+    dcp.traits_assigned,
+    dcp.background,
+    dcp.details_recorded,
+    dcp.starting_weapon_ids_json,
+    dcp.starting_armor_id,
+    dcp.starting_potion_item_id,
+    dcp.domain_card_ids_json,
+    dcp.connections,
     dcs.hp,
     dcs.hope,
     dcs.hope_max,

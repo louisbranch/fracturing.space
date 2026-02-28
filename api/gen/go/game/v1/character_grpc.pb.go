@@ -20,13 +20,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CharacterService_CreateCharacter_FullMethodName       = "/game.v1.CharacterService/CreateCharacter"
-	CharacterService_UpdateCharacter_FullMethodName       = "/game.v1.CharacterService/UpdateCharacter"
-	CharacterService_DeleteCharacter_FullMethodName       = "/game.v1.CharacterService/DeleteCharacter"
-	CharacterService_ListCharacters_FullMethodName        = "/game.v1.CharacterService/ListCharacters"
-	CharacterService_SetDefaultControl_FullMethodName     = "/game.v1.CharacterService/SetDefaultControl"
-	CharacterService_GetCharacterSheet_FullMethodName     = "/game.v1.CharacterService/GetCharacterSheet"
-	CharacterService_PatchCharacterProfile_FullMethodName = "/game.v1.CharacterService/PatchCharacterProfile"
+	CharacterService_CreateCharacter_FullMethodName                = "/game.v1.CharacterService/CreateCharacter"
+	CharacterService_UpdateCharacter_FullMethodName                = "/game.v1.CharacterService/UpdateCharacter"
+	CharacterService_DeleteCharacter_FullMethodName                = "/game.v1.CharacterService/DeleteCharacter"
+	CharacterService_ListCharacters_FullMethodName                 = "/game.v1.CharacterService/ListCharacters"
+	CharacterService_SetDefaultControl_FullMethodName              = "/game.v1.CharacterService/SetDefaultControl"
+	CharacterService_GetCharacterSheet_FullMethodName              = "/game.v1.CharacterService/GetCharacterSheet"
+	CharacterService_PatchCharacterProfile_FullMethodName          = "/game.v1.CharacterService/PatchCharacterProfile"
+	CharacterService_GetCharacterCreationProgress_FullMethodName   = "/game.v1.CharacterService/GetCharacterCreationProgress"
+	CharacterService_ApplyCharacterCreationStep_FullMethodName     = "/game.v1.CharacterService/ApplyCharacterCreationStep"
+	CharacterService_ApplyCharacterCreationWorkflow_FullMethodName = "/game.v1.CharacterService/ApplyCharacterCreationWorkflow"
+	CharacterService_ResetCharacterCreationWorkflow_FullMethodName = "/game.v1.CharacterService/ResetCharacterCreationWorkflow"
 )
 
 // CharacterServiceClient is the client API for CharacterService service.
@@ -49,6 +53,14 @@ type CharacterServiceClient interface {
 	GetCharacterSheet(ctx context.Context, in *GetCharacterSheetRequest, opts ...grpc.CallOption) (*GetCharacterSheetResponse, error)
 	// Patch a character profile (all fields optional).
 	PatchCharacterProfile(ctx context.Context, in *PatchCharacterProfileRequest, opts ...grpc.CallOption) (*PatchCharacterProfileResponse, error)
+	// Get character creation workflow progress.
+	GetCharacterCreationProgress(ctx context.Context, in *GetCharacterCreationProgressRequest, opts ...grpc.CallOption) (*GetCharacterCreationProgressResponse, error)
+	// Apply one character creation workflow step.
+	ApplyCharacterCreationStep(ctx context.Context, in *ApplyCharacterCreationStepRequest, opts ...grpc.CallOption) (*ApplyCharacterCreationStepResponse, error)
+	// Apply all character creation workflow steps atomically.
+	ApplyCharacterCreationWorkflow(ctx context.Context, in *ApplyCharacterCreationWorkflowRequest, opts ...grpc.CallOption) (*ApplyCharacterCreationWorkflowResponse, error)
+	// Reset character creation workflow data.
+	ResetCharacterCreationWorkflow(ctx context.Context, in *ResetCharacterCreationWorkflowRequest, opts ...grpc.CallOption) (*ResetCharacterCreationWorkflowResponse, error)
 }
 
 type characterServiceClient struct {
@@ -129,6 +141,46 @@ func (c *characterServiceClient) PatchCharacterProfile(ctx context.Context, in *
 	return out, nil
 }
 
+func (c *characterServiceClient) GetCharacterCreationProgress(ctx context.Context, in *GetCharacterCreationProgressRequest, opts ...grpc.CallOption) (*GetCharacterCreationProgressResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCharacterCreationProgressResponse)
+	err := c.cc.Invoke(ctx, CharacterService_GetCharacterCreationProgress_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *characterServiceClient) ApplyCharacterCreationStep(ctx context.Context, in *ApplyCharacterCreationStepRequest, opts ...grpc.CallOption) (*ApplyCharacterCreationStepResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApplyCharacterCreationStepResponse)
+	err := c.cc.Invoke(ctx, CharacterService_ApplyCharacterCreationStep_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *characterServiceClient) ApplyCharacterCreationWorkflow(ctx context.Context, in *ApplyCharacterCreationWorkflowRequest, opts ...grpc.CallOption) (*ApplyCharacterCreationWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ApplyCharacterCreationWorkflowResponse)
+	err := c.cc.Invoke(ctx, CharacterService_ApplyCharacterCreationWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *characterServiceClient) ResetCharacterCreationWorkflow(ctx context.Context, in *ResetCharacterCreationWorkflowRequest, opts ...grpc.CallOption) (*ResetCharacterCreationWorkflowResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ResetCharacterCreationWorkflowResponse)
+	err := c.cc.Invoke(ctx, CharacterService_ResetCharacterCreationWorkflow_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CharacterServiceServer is the server API for CharacterService service.
 // All implementations must embed UnimplementedCharacterServiceServer
 // for forward compatibility.
@@ -149,6 +201,14 @@ type CharacterServiceServer interface {
 	GetCharacterSheet(context.Context, *GetCharacterSheetRequest) (*GetCharacterSheetResponse, error)
 	// Patch a character profile (all fields optional).
 	PatchCharacterProfile(context.Context, *PatchCharacterProfileRequest) (*PatchCharacterProfileResponse, error)
+	// Get character creation workflow progress.
+	GetCharacterCreationProgress(context.Context, *GetCharacterCreationProgressRequest) (*GetCharacterCreationProgressResponse, error)
+	// Apply one character creation workflow step.
+	ApplyCharacterCreationStep(context.Context, *ApplyCharacterCreationStepRequest) (*ApplyCharacterCreationStepResponse, error)
+	// Apply all character creation workflow steps atomically.
+	ApplyCharacterCreationWorkflow(context.Context, *ApplyCharacterCreationWorkflowRequest) (*ApplyCharacterCreationWorkflowResponse, error)
+	// Reset character creation workflow data.
+	ResetCharacterCreationWorkflow(context.Context, *ResetCharacterCreationWorkflowRequest) (*ResetCharacterCreationWorkflowResponse, error)
 	mustEmbedUnimplementedCharacterServiceServer()
 }
 
@@ -179,6 +239,18 @@ func (UnimplementedCharacterServiceServer) GetCharacterSheet(context.Context, *G
 }
 func (UnimplementedCharacterServiceServer) PatchCharacterProfile(context.Context, *PatchCharacterProfileRequest) (*PatchCharacterProfileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PatchCharacterProfile not implemented")
+}
+func (UnimplementedCharacterServiceServer) GetCharacterCreationProgress(context.Context, *GetCharacterCreationProgressRequest) (*GetCharacterCreationProgressResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCharacterCreationProgress not implemented")
+}
+func (UnimplementedCharacterServiceServer) ApplyCharacterCreationStep(context.Context, *ApplyCharacterCreationStepRequest) (*ApplyCharacterCreationStepResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyCharacterCreationStep not implemented")
+}
+func (UnimplementedCharacterServiceServer) ApplyCharacterCreationWorkflow(context.Context, *ApplyCharacterCreationWorkflowRequest) (*ApplyCharacterCreationWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyCharacterCreationWorkflow not implemented")
+}
+func (UnimplementedCharacterServiceServer) ResetCharacterCreationWorkflow(context.Context, *ResetCharacterCreationWorkflowRequest) (*ResetCharacterCreationWorkflowResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ResetCharacterCreationWorkflow not implemented")
 }
 func (UnimplementedCharacterServiceServer) mustEmbedUnimplementedCharacterServiceServer() {}
 func (UnimplementedCharacterServiceServer) testEmbeddedByValue()                          {}
@@ -327,6 +399,78 @@ func _CharacterService_PatchCharacterProfile_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CharacterService_GetCharacterCreationProgress_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCharacterCreationProgressRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CharacterServiceServer).GetCharacterCreationProgress(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CharacterService_GetCharacterCreationProgress_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CharacterServiceServer).GetCharacterCreationProgress(ctx, req.(*GetCharacterCreationProgressRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CharacterService_ApplyCharacterCreationStep_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApplyCharacterCreationStepRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CharacterServiceServer).ApplyCharacterCreationStep(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CharacterService_ApplyCharacterCreationStep_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CharacterServiceServer).ApplyCharacterCreationStep(ctx, req.(*ApplyCharacterCreationStepRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CharacterService_ApplyCharacterCreationWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ApplyCharacterCreationWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CharacterServiceServer).ApplyCharacterCreationWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CharacterService_ApplyCharacterCreationWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CharacterServiceServer).ApplyCharacterCreationWorkflow(ctx, req.(*ApplyCharacterCreationWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CharacterService_ResetCharacterCreationWorkflow_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ResetCharacterCreationWorkflowRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CharacterServiceServer).ResetCharacterCreationWorkflow(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CharacterService_ResetCharacterCreationWorkflow_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CharacterServiceServer).ResetCharacterCreationWorkflow(ctx, req.(*ResetCharacterCreationWorkflowRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CharacterService_ServiceDesc is the grpc.ServiceDesc for CharacterService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -361,6 +505,22 @@ var CharacterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "PatchCharacterProfile",
 			Handler:    _CharacterService_PatchCharacterProfile_Handler,
+		},
+		{
+			MethodName: "GetCharacterCreationProgress",
+			Handler:    _CharacterService_GetCharacterCreationProgress_Handler,
+		},
+		{
+			MethodName: "ApplyCharacterCreationStep",
+			Handler:    _CharacterService_ApplyCharacterCreationStep_Handler,
+		},
+		{
+			MethodName: "ApplyCharacterCreationWorkflow",
+			Handler:    _CharacterService_ApplyCharacterCreationWorkflow_Handler,
+		},
+		{
+			MethodName: "ResetCharacterCreationWorkflow",
+			Handler:    _CharacterService_ResetCharacterCreationWorkflow_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

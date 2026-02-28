@@ -141,10 +141,8 @@ func (m *Module) StateFactory() module.StateFactory {
 
 // CharacterReady evaluates Daggerheart-specific character readiness gates used
 // by session.start.
-func (m *Module) CharacterReady(_ map[string]any) (bool, string) {
-	// TODO: Replace this placeholder with concrete Daggerheart character
-	// readiness invariants once the system contract is defined.
-	return true, ""
+func (m *Module) CharacterReady(systemProfile map[string]any) (bool, string) {
+	return EvaluateCreationReadinessFromSystemProfile(systemProfile)
 }
 
 func validateGMFearSetPayload(raw json.RawMessage) error {

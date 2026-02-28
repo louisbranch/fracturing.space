@@ -7,6 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
@@ -74,6 +75,120 @@ type CampaignInvite struct {
 	Status          string `json:"status"`
 }
 
+// CampaignCharacterCreationStep stores one workflow step status.
+type CampaignCharacterCreationStep struct {
+	Step     int32  `json:"step"`
+	Key      string `json:"key"`
+	Complete bool   `json:"complete"`
+}
+
+// CampaignCharacterCreationProgress stores workflow progress metadata.
+type CampaignCharacterCreationProgress struct {
+	Steps        []CampaignCharacterCreationStep `json:"steps"`
+	NextStep     int32                           `json:"nextStep"`
+	Ready        bool                            `json:"ready"`
+	UnmetReasons []string                        `json:"unmetReasons"`
+}
+
+// DaggerheartCreationClass stores class catalog data used by workflow forms.
+type DaggerheartCreationClass struct {
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	DomainIDs []string `json:"domainIds"`
+}
+
+// DaggerheartCreationSubclass stores subclass catalog data used by workflow forms.
+type DaggerheartCreationSubclass struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	ClassID string `json:"classId"`
+}
+
+// DaggerheartCreationHeritage stores ancestry/community catalog data.
+type DaggerheartCreationHeritage struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Kind string `json:"kind"`
+}
+
+// DaggerheartCreationWeapon stores weapon catalog data used by equipment forms.
+type DaggerheartCreationWeapon struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Category string `json:"category"`
+	Tier     int32  `json:"tier"`
+}
+
+// DaggerheartCreationArmor stores armor catalog data used by equipment forms.
+type DaggerheartCreationArmor struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Tier int32  `json:"tier"`
+}
+
+// DaggerheartCreationItem stores item catalog data used by equipment forms.
+type DaggerheartCreationItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// DaggerheartCreationDomainCard stores domain card catalog data used by forms.
+type DaggerheartCreationDomainCard struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	DomainID string `json:"domainId"`
+	Level    int32  `json:"level"`
+}
+
+// CampaignCharacterCreationCatalog stores Daggerheart catalog subsets used by workflow forms.
+type CampaignCharacterCreationCatalog struct {
+	Classes     []DaggerheartCreationClass      `json:"classes"`
+	Subclasses  []DaggerheartCreationSubclass   `json:"subclasses"`
+	Heritages   []DaggerheartCreationHeritage   `json:"heritages"`
+	Weapons     []DaggerheartCreationWeapon     `json:"weapons"`
+	Armor       []DaggerheartCreationArmor      `json:"armor"`
+	Items       []DaggerheartCreationItem       `json:"items"`
+	DomainCards []DaggerheartCreationDomainCard `json:"domainCards"`
+}
+
+// CampaignCharacterCreationProfile stores selected workflow fields used for filtering options.
+type CampaignCharacterCreationProfile struct {
+	ClassID            string   `json:"classId"`
+	SubclassID         string   `json:"subclassId"`
+	AncestryID         string   `json:"ancestryId"`
+	CommunityID        string   `json:"communityId"`
+	Agility            string   `json:"agility"`
+	Strength           string   `json:"strength"`
+	Finesse            string   `json:"finesse"`
+	Instinct           string   `json:"instinct"`
+	Presence           string   `json:"presence"`
+	Knowledge          string   `json:"knowledge"`
+	PrimaryWeaponID    string   `json:"primaryWeaponId"`
+	SecondaryWeaponID  string   `json:"secondaryWeaponId"`
+	ArmorID            string   `json:"armorId"`
+	PotionItemID       string   `json:"potionItemId"`
+	Background         string   `json:"background"`
+	ExperienceName     string   `json:"experienceName"`
+	ExperienceModifier string   `json:"experienceModifier"`
+	DomainCardIDs      []string `json:"domainCardIds"`
+	Connections        string   `json:"connections"`
+}
+
+// CampaignCharacterCreation stores character-detail workflow UI data.
+type CampaignCharacterCreation struct {
+	Progress         CampaignCharacterCreationProgress `json:"progress"`
+	Profile          CampaignCharacterCreationProfile  `json:"profile"`
+	Classes          []DaggerheartCreationClass        `json:"classes"`
+	Subclasses       []DaggerheartCreationSubclass     `json:"subclasses"`
+	Ancestries       []DaggerheartCreationHeritage     `json:"ancestries"`
+	Communities      []DaggerheartCreationHeritage     `json:"communities"`
+	PrimaryWeapons   []DaggerheartCreationWeapon       `json:"primaryWeapons"`
+	SecondaryWeapons []DaggerheartCreationWeapon       `json:"secondaryWeapons"`
+	Armor            []DaggerheartCreationArmor        `json:"armor"`
+	PotionItems      []DaggerheartCreationItem         `json:"potionItems"`
+	DomainCards      []DaggerheartCreationDomainCard   `json:"domainCards"`
+}
+
 // CreateCampaignInput stores create-campaign form values.
 type CreateCampaignInput struct {
 	Name        string
@@ -88,6 +203,17 @@ type CreateCampaignResult struct {
 	CampaignID string
 }
 
+// CreateCharacterInput stores create-character form values.
+type CreateCharacterInput struct {
+	Name string
+	Kind statev1.CharacterKind
+}
+
+// CreateCharacterResult stores create-character response values.
+type CreateCharacterResult struct {
+	CharacterID string
+}
+
 type campaignReadGateway interface {
 	ListCampaigns(context.Context) ([]CampaignSummary, error)
 	CampaignName(context.Context, string) (string, error)
@@ -96,6 +222,9 @@ type campaignReadGateway interface {
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
+	CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error)
+	CharacterCreationCatalog(context.Context, commonv1.Locale) (CampaignCharacterCreationCatalog, error)
+	CharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error)
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
 }
 
@@ -103,11 +232,13 @@ type campaignMutationGateway interface {
 	StartSession(context.Context, string) error
 	EndSession(context.Context, string) error
 	UpdateParticipants(context.Context, string) error
-	CreateCharacter(context.Context, string) error
+	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
 	UpdateCharacter(context.Context, string) error
 	ControlCharacter(context.Context, string) error
 	CreateInvite(context.Context, string) error
 	RevokeInvite(context.Context, string) error
+	ApplyCharacterCreationStep(context.Context, string, string, *daggerheartv1.DaggerheartCreationStepInput) error
+	ResetCharacterCreationWorkflow(context.Context, string, string) error
 }
 
 type campaignAuthorizationDecision struct {
@@ -173,6 +304,18 @@ func (unavailableGateway) CampaignInvites(context.Context, string) ([]CampaignIn
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+func (unavailableGateway) CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error) {
+	return CampaignCharacterCreationProgress{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+func (unavailableGateway) CharacterCreationCatalog(context.Context, commonv1.Locale) (CampaignCharacterCreationCatalog, error) {
+	return CampaignCharacterCreationCatalog{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+func (unavailableGateway) CharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error) {
+	return CampaignCharacterCreationProfile{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
 func (unavailableGateway) CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error) {
 	return CreateCampaignResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
@@ -189,8 +332,8 @@ func (unavailableGateway) UpdateParticipants(context.Context, string) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
-func (unavailableGateway) CreateCharacter(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+func (unavailableGateway) CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error) {
+	return CreateCharacterResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
 func (unavailableGateway) UpdateCharacter(context.Context, string) error {
@@ -206,6 +349,14 @@ func (unavailableGateway) CreateInvite(context.Context, string) error {
 }
 
 func (unavailableGateway) RevokeInvite(context.Context, string) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+func (unavailableGateway) ApplyCharacterCreationStep(context.Context, string, string, *daggerheartv1.DaggerheartCreationStepInput) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+func (unavailableGateway) ResetCharacterCreationWorkflow(context.Context, string, string) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
@@ -558,6 +709,367 @@ func (s service) campaignInvites(ctx context.Context, campaignID string) ([]Camp
 	return normalized, nil
 }
 
+func (s service) campaignCharacterCreation(ctx context.Context, campaignID string, characterID string, locale commonv1.Locale) (CampaignCharacterCreation, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return CampaignCharacterCreation{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	characterID = strings.TrimSpace(characterID)
+	if characterID == "" {
+		return CampaignCharacterCreation{}, apperrors.E(apperrors.KindInvalidInput, "character id is required")
+	}
+
+	progress, err := s.readGateway.CharacterCreationProgress(ctx, campaignID, characterID)
+	if err != nil {
+		return CampaignCharacterCreation{}, err
+	}
+
+	catalog, err := s.readGateway.CharacterCreationCatalog(ctx, locale)
+	if err != nil {
+		return CampaignCharacterCreation{}, err
+	}
+
+	profile, err := s.readGateway.CharacterCreationProfile(ctx, campaignID, characterID)
+	if err != nil {
+		return CampaignCharacterCreation{}, err
+	}
+
+	selectedDomainCardIDs := make([]string, 0, len(profile.DomainCardIDs))
+	for _, domainCardID := range profile.DomainCardIDs {
+		trimmedDomainCardID := strings.TrimSpace(domainCardID)
+		if trimmedDomainCardID == "" {
+			continue
+		}
+		selectedDomainCardIDs = append(selectedDomainCardIDs, trimmedDomainCardID)
+	}
+
+	creation := CampaignCharacterCreation{
+		Progress: CampaignCharacterCreationProgress{
+			Steps:        append([]CampaignCharacterCreationStep(nil), progress.Steps...),
+			NextStep:     progress.NextStep,
+			Ready:        progress.Ready,
+			UnmetReasons: append([]string(nil), progress.UnmetReasons...),
+		},
+		Profile: CampaignCharacterCreationProfile{
+			ClassID:            strings.TrimSpace(profile.ClassID),
+			SubclassID:         strings.TrimSpace(profile.SubclassID),
+			AncestryID:         strings.TrimSpace(profile.AncestryID),
+			CommunityID:        strings.TrimSpace(profile.CommunityID),
+			Agility:            strings.TrimSpace(profile.Agility),
+			Strength:           strings.TrimSpace(profile.Strength),
+			Finesse:            strings.TrimSpace(profile.Finesse),
+			Instinct:           strings.TrimSpace(profile.Instinct),
+			Presence:           strings.TrimSpace(profile.Presence),
+			Knowledge:          strings.TrimSpace(profile.Knowledge),
+			PrimaryWeaponID:    strings.TrimSpace(profile.PrimaryWeaponID),
+			SecondaryWeaponID:  strings.TrimSpace(profile.SecondaryWeaponID),
+			ArmorID:            strings.TrimSpace(profile.ArmorID),
+			PotionItemID:       strings.TrimSpace(profile.PotionItemID),
+			Background:         strings.TrimSpace(profile.Background),
+			ExperienceName:     strings.TrimSpace(profile.ExperienceName),
+			ExperienceModifier: strings.TrimSpace(profile.ExperienceModifier),
+			DomainCardIDs:      selectedDomainCardIDs,
+			Connections:        strings.TrimSpace(profile.Connections),
+		},
+		Classes:          []DaggerheartCreationClass{},
+		Subclasses:       []DaggerheartCreationSubclass{},
+		Ancestries:       []DaggerheartCreationHeritage{},
+		Communities:      []DaggerheartCreationHeritage{},
+		PrimaryWeapons:   []DaggerheartCreationWeapon{},
+		SecondaryWeapons: []DaggerheartCreationWeapon{},
+		Armor:            []DaggerheartCreationArmor{},
+		PotionItems:      []DaggerheartCreationItem{},
+		DomainCards:      []DaggerheartCreationDomainCard{},
+	}
+
+	classDomainsByID := make(map[string]map[string]struct{}, len(catalog.Classes))
+	for _, class := range catalog.Classes {
+		classID := strings.TrimSpace(class.ID)
+		if classID == "" {
+			continue
+		}
+		className := strings.TrimSpace(class.Name)
+		if className == "" {
+			className = classID
+		}
+		domainIDs := make([]string, 0, len(class.DomainIDs))
+		domains := make(map[string]struct{}, len(class.DomainIDs))
+		for _, domainID := range class.DomainIDs {
+			trimmedDomainID := strings.TrimSpace(domainID)
+			if trimmedDomainID == "" {
+				continue
+			}
+			domainIDs = append(domainIDs, trimmedDomainID)
+			domains[trimmedDomainID] = struct{}{}
+		}
+		classDomainsByID[classID] = domains
+		creation.Classes = append(creation.Classes, DaggerheartCreationClass{
+			ID:        classID,
+			Name:      className,
+			DomainIDs: domainIDs,
+		})
+	}
+	sort.SliceStable(creation.Classes, func(i, j int) bool {
+		leftName := strings.ToLower(strings.TrimSpace(creation.Classes[i].Name))
+		rightName := strings.ToLower(strings.TrimSpace(creation.Classes[j].Name))
+		if leftName == rightName {
+			return strings.TrimSpace(creation.Classes[i].ID) < strings.TrimSpace(creation.Classes[j].ID)
+		}
+		return leftName < rightName
+	})
+
+	selectedClassID := strings.TrimSpace(creation.Profile.ClassID)
+	for _, subclass := range catalog.Subclasses {
+		subclassID := strings.TrimSpace(subclass.ID)
+		if subclassID == "" {
+			continue
+		}
+		subclassClassID := strings.TrimSpace(subclass.ClassID)
+		if selectedClassID != "" && subclassClassID != selectedClassID {
+			continue
+		}
+		subclassName := strings.TrimSpace(subclass.Name)
+		if subclassName == "" {
+			subclassName = subclassID
+		}
+		creation.Subclasses = append(creation.Subclasses, DaggerheartCreationSubclass{
+			ID:      subclassID,
+			Name:    subclassName,
+			ClassID: subclassClassID,
+		})
+	}
+	sort.SliceStable(creation.Subclasses, func(i, j int) bool {
+		leftName := strings.ToLower(strings.TrimSpace(creation.Subclasses[i].Name))
+		rightName := strings.ToLower(strings.TrimSpace(creation.Subclasses[j].Name))
+		if leftName == rightName {
+			return strings.TrimSpace(creation.Subclasses[i].ID) < strings.TrimSpace(creation.Subclasses[j].ID)
+		}
+		return leftName < rightName
+	})
+
+	for _, heritage := range catalog.Heritages {
+		heritageID := strings.TrimSpace(heritage.ID)
+		if heritageID == "" {
+			continue
+		}
+		heritageName := strings.TrimSpace(heritage.Name)
+		if heritageName == "" {
+			heritageName = heritageID
+		}
+		entry := DaggerheartCreationHeritage{
+			ID:   heritageID,
+			Name: heritageName,
+			Kind: strings.TrimSpace(heritage.Kind),
+		}
+		switch strings.ToLower(strings.TrimSpace(heritage.Kind)) {
+		case "ancestry":
+			creation.Ancestries = append(creation.Ancestries, entry)
+		case "community":
+			creation.Communities = append(creation.Communities, entry)
+		}
+	}
+	sort.SliceStable(creation.Ancestries, func(i, j int) bool {
+		leftName := strings.ToLower(strings.TrimSpace(creation.Ancestries[i].Name))
+		rightName := strings.ToLower(strings.TrimSpace(creation.Ancestries[j].Name))
+		if leftName == rightName {
+			return strings.TrimSpace(creation.Ancestries[i].ID) < strings.TrimSpace(creation.Ancestries[j].ID)
+		}
+		return leftName < rightName
+	})
+	sort.SliceStable(creation.Communities, func(i, j int) bool {
+		leftName := strings.ToLower(strings.TrimSpace(creation.Communities[i].Name))
+		rightName := strings.ToLower(strings.TrimSpace(creation.Communities[j].Name))
+		if leftName == rightName {
+			return strings.TrimSpace(creation.Communities[i].ID) < strings.TrimSpace(creation.Communities[j].ID)
+		}
+		return leftName < rightName
+	})
+
+	for _, weapon := range catalog.Weapons {
+		weaponID := strings.TrimSpace(weapon.ID)
+		if weaponID == "" || weapon.Tier != 1 {
+			continue
+		}
+		weaponName := strings.TrimSpace(weapon.Name)
+		if weaponName == "" {
+			weaponName = weaponID
+		}
+		entry := DaggerheartCreationWeapon{
+			ID:       weaponID,
+			Name:     weaponName,
+			Category: strings.TrimSpace(weapon.Category),
+			Tier:     weapon.Tier,
+		}
+		switch strings.ToLower(strings.TrimSpace(weapon.Category)) {
+		case "primary":
+			creation.PrimaryWeapons = append(creation.PrimaryWeapons, entry)
+		case "secondary":
+			creation.SecondaryWeapons = append(creation.SecondaryWeapons, entry)
+		}
+	}
+	sort.SliceStable(creation.PrimaryWeapons, func(i, j int) bool {
+		leftName := strings.ToLower(strings.TrimSpace(creation.PrimaryWeapons[i].Name))
+		rightName := strings.ToLower(strings.TrimSpace(creation.PrimaryWeapons[j].Name))
+		if leftName == rightName {
+			return strings.TrimSpace(creation.PrimaryWeapons[i].ID) < strings.TrimSpace(creation.PrimaryWeapons[j].ID)
+		}
+		return leftName < rightName
+	})
+	sort.SliceStable(creation.SecondaryWeapons, func(i, j int) bool {
+		leftName := strings.ToLower(strings.TrimSpace(creation.SecondaryWeapons[i].Name))
+		rightName := strings.ToLower(strings.TrimSpace(creation.SecondaryWeapons[j].Name))
+		if leftName == rightName {
+			return strings.TrimSpace(creation.SecondaryWeapons[i].ID) < strings.TrimSpace(creation.SecondaryWeapons[j].ID)
+		}
+		return leftName < rightName
+	})
+
+	for _, armor := range catalog.Armor {
+		armorID := strings.TrimSpace(armor.ID)
+		if armorID == "" || armor.Tier != 1 {
+			continue
+		}
+		armorName := strings.TrimSpace(armor.Name)
+		if armorName == "" {
+			armorName = armorID
+		}
+		creation.Armor = append(creation.Armor, DaggerheartCreationArmor{
+			ID:   armorID,
+			Name: armorName,
+			Tier: armor.Tier,
+		})
+	}
+	sort.SliceStable(creation.Armor, func(i, j int) bool {
+		leftName := strings.ToLower(strings.TrimSpace(creation.Armor[i].Name))
+		rightName := strings.ToLower(strings.TrimSpace(creation.Armor[j].Name))
+		if leftName == rightName {
+			return strings.TrimSpace(creation.Armor[i].ID) < strings.TrimSpace(creation.Armor[j].ID)
+		}
+		return leftName < rightName
+	})
+
+	allowedPotionIDs := map[string]struct{}{
+		"item.minor-health-potion":  {},
+		"item.minor-stamina-potion": {},
+	}
+	for _, item := range catalog.Items {
+		itemID := strings.TrimSpace(item.ID)
+		if itemID == "" {
+			continue
+		}
+		if _, ok := allowedPotionIDs[itemID]; !ok {
+			continue
+		}
+		itemName := strings.TrimSpace(item.Name)
+		if itemName == "" {
+			itemName = itemID
+		}
+		creation.PotionItems = append(creation.PotionItems, DaggerheartCreationItem{ID: itemID, Name: itemName})
+	}
+	sort.SliceStable(creation.PotionItems, func(i, j int) bool {
+		leftName := strings.ToLower(strings.TrimSpace(creation.PotionItems[i].Name))
+		rightName := strings.ToLower(strings.TrimSpace(creation.PotionItems[j].Name))
+		if leftName == rightName {
+			return strings.TrimSpace(creation.PotionItems[i].ID) < strings.TrimSpace(creation.PotionItems[j].ID)
+		}
+		return leftName < rightName
+	})
+
+	allowedDomains := classDomainsByID[selectedClassID]
+	for _, domainCard := range catalog.DomainCards {
+		domainCardID := strings.TrimSpace(domainCard.ID)
+		if domainCardID == "" {
+			continue
+		}
+		domainID := strings.TrimSpace(domainCard.DomainID)
+		if selectedClassID != "" && len(allowedDomains) > 0 {
+			if _, ok := allowedDomains[domainID]; !ok {
+				continue
+			}
+		}
+		domainCardName := strings.TrimSpace(domainCard.Name)
+		if domainCardName == "" {
+			domainCardName = domainCardID
+		}
+		creation.DomainCards = append(creation.DomainCards, DaggerheartCreationDomainCard{
+			ID:       domainCardID,
+			Name:     domainCardName,
+			DomainID: domainID,
+			Level:    domainCard.Level,
+		})
+	}
+	sort.SliceStable(creation.DomainCards, func(i, j int) bool {
+		leftLevel := creation.DomainCards[i].Level
+		rightLevel := creation.DomainCards[j].Level
+		if leftLevel == rightLevel {
+			leftName := strings.ToLower(strings.TrimSpace(creation.DomainCards[i].Name))
+			rightName := strings.ToLower(strings.TrimSpace(creation.DomainCards[j].Name))
+			if leftName == rightName {
+				return strings.TrimSpace(creation.DomainCards[i].ID) < strings.TrimSpace(creation.DomainCards[j].ID)
+			}
+			return leftName < rightName
+		}
+		return leftLevel < rightLevel
+	})
+
+	return creation, nil
+}
+
+func (s service) campaignCharacterCreationProgress(ctx context.Context, campaignID string, characterID string) (CampaignCharacterCreationProgress, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return CampaignCharacterCreationProgress{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	characterID = strings.TrimSpace(characterID)
+	if characterID == "" {
+		return CampaignCharacterCreationProgress{}, apperrors.E(apperrors.KindInvalidInput, "character id is required")
+	}
+	return s.readGateway.CharacterCreationProgress(ctx, campaignID, characterID)
+}
+
+func (s service) applyCharacterCreationStep(ctx context.Context, campaignID string, characterID string, step *daggerheartv1.DaggerheartCreationStepInput) error {
+	characterID = strings.TrimSpace(characterID)
+	if characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "character id is required")
+	}
+	if step == nil {
+		return apperrors.E(apperrors.KindInvalidInput, "character creation step is required")
+	}
+	target := &statev1.AuthorizationTarget{ResourceId: characterID}
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+		target,
+		"error.web.message.campaign_membership_required_for_character_action",
+		"campaign membership required for character action",
+	); err != nil {
+		return err
+	}
+	return s.mutationGateway.ApplyCharacterCreationStep(ctx, campaignID, characterID, step)
+}
+
+func (s service) resetCharacterCreationWorkflow(ctx context.Context, campaignID string, characterID string) error {
+	characterID = strings.TrimSpace(characterID)
+	if characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "character id is required")
+	}
+	target := &statev1.AuthorizationTarget{ResourceId: characterID}
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
+		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+		target,
+		"error.web.message.campaign_membership_required_for_character_action",
+		"campaign membership required for character action",
+	); err != nil {
+		return err
+	}
+	return s.mutationGateway.ResetCharacterCreationWorkflow(ctx, campaignID, characterID)
+}
+
 func (s service) startSession(ctx context.Context, campaignID string) error {
 	if err := s.requireCampaignActionAccess(
 		ctx,
@@ -603,7 +1115,13 @@ func (s service) updateParticipants(ctx context.Context, campaignID string) erro
 	return s.mutationGateway.UpdateParticipants(ctx, campaignID)
 }
 
-func (s service) createCharacter(ctx context.Context, campaignID string) error {
+func (s service) createCharacter(ctx context.Context, campaignID string, input CreateCharacterInput) (CreateCharacterResult, error) {
+	if strings.TrimSpace(input.Name) == "" {
+		return CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_name_is_required", "character name is required")
+	}
+	if input.Kind == statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED {
+		return CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_kind_value_is_invalid", "character kind value is invalid")
+	}
 	if err := s.requireCampaignActionAccess(
 		ctx,
 		campaignID,
@@ -613,9 +1131,16 @@ func (s service) createCharacter(ctx context.Context, campaignID string) error {
 		"error.web.message.campaign_membership_required_for_character_action",
 		"campaign membership required for character action",
 	); err != nil {
-		return err
+		return CreateCharacterResult{}, err
 	}
-	return s.mutationGateway.CreateCharacter(ctx, campaignID)
+	created, err := s.mutationGateway.CreateCharacter(ctx, campaignID, input)
+	if err != nil {
+		return CreateCharacterResult{}, err
+	}
+	if strings.TrimSpace(created.CharacterID) == "" {
+		return CreateCharacterResult{}, apperrors.EK(apperrors.KindUnknown, "error.web.message.created_character_id_was_empty", "created character id was empty")
+	}
+	return created, nil
 }
 
 func (s service) updateCharacter(ctx context.Context, campaignID string) error {

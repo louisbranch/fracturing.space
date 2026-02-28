@@ -174,6 +174,18 @@ CREATE TABLE daggerheart_character_profiles (
     armor_score INTEGER NOT NULL DEFAULT 0,
     armor_max INTEGER NOT NULL DEFAULT 0,
     experiences_json TEXT NOT NULL DEFAULT '[]',
+    class_id TEXT NOT NULL DEFAULT '',
+    subclass_id TEXT NOT NULL DEFAULT '',
+    ancestry_id TEXT NOT NULL DEFAULT '',
+    community_id TEXT NOT NULL DEFAULT '',
+    traits_assigned INTEGER NOT NULL DEFAULT 0,
+    details_recorded INTEGER NOT NULL DEFAULT 0,
+    starting_weapon_ids_json TEXT NOT NULL DEFAULT '[]',
+    starting_armor_id TEXT NOT NULL DEFAULT '',
+    starting_potion_item_id TEXT NOT NULL DEFAULT '',
+    background TEXT NOT NULL DEFAULT '',
+    domain_card_ids_json TEXT NOT NULL DEFAULT '[]',
+    connections TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (campaign_id, character_id),
     FOREIGN KEY (campaign_id, character_id)
         REFERENCES characters(campaign_id, id) ON DELETE CASCADE

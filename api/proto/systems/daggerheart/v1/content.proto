@@ -122,7 +122,7 @@ message ListDaggerheartSubclassesRequest {
   string order_by = 3;
 
   // AIP-160 filter expression.
-  // Filterable fields: id, name, spellcast_trait.
+  // Filterable fields: id, name, class_id, spellcast_trait.
   string filter = 4;
 
   // Optional locale for localized text fields.
@@ -625,6 +625,7 @@ message DaggerheartSubclass {
   repeated DaggerheartFeature foundation_features = 4;
   repeated DaggerheartFeature specialization_features = 5;
   repeated DaggerheartFeature mastery_features = 6;
+  string class_id = 7;
 }
 
 enum DaggerheartHeritageKind {

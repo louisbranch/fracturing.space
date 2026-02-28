@@ -25,10 +25,12 @@ type CampaignDetailView struct {
 	Theme       string
 	System      string
 	GMMode      string
-	Participants []CampaignParticipantView
-	Characters   []CampaignCharacterView
-	Sessions     []CampaignSessionView
-	Invites      []CampaignInviteView
+	Participants            []CampaignParticipantView
+	Characters              []CampaignCharacterView
+	Sessions                []CampaignSessionView
+	Invites                 []CampaignInviteView
+	CharacterCreationEnabled bool
+	CharacterCreation       CampaignCharacterCreationView
 }
 
 type CampaignChatView struct {
@@ -60,6 +62,19 @@ type CampaignCharacterView struct {
 	EditReasonCode string
 }
 
+func campaignCharacterDetailURL(view CampaignDetailView, character CampaignCharacterView) string {
+	campaignID := strings.TrimSpace(view.CampaignID)
+	characterID := strings.TrimSpace(character.ID)
+	if campaignID == "" || characterID == "" {
+		return ""
+	}
+	return routepath.AppCampaignCharacter(campaignID, characterID)
+}
+
+func campaignSupportsCharacterCreation(view CampaignDetailView) bool {
+	return strings.EqualFold(strings.TrimSpace(view.System), "Daggerheart")
+}
+
 func campaignCharacterAliases(value []string) string {
 	if len(value) == 0 {
 		return ""
@@ -88,6 +103,85 @@ type CampaignInviteView struct {
 	ParticipantID   string
 	RecipientUserID string
 	Status          string
+}
+
+type CampaignCharacterCreationStepView struct {
+	Step     int32
+	Key      string
+	Complete bool
+}
+
+type CampaignCreationClassView struct {
+	ID   string
+	Name string
+}
+
+type CampaignCreationSubclassView struct {
+	ID      string
+	Name    string
+	ClassID string
+}
+
+type CampaignCreationHeritageView struct {
+	ID   string
+	Name string
+}
+
+type CampaignCreationWeaponView struct {
+	ID   string
+	Name string
+}
+
+type CampaignCreationArmorView struct {
+	ID   string
+	Name string
+}
+
+type CampaignCreationItemView struct {
+	ID   string
+	Name string
+}
+
+type CampaignCreationDomainCardView struct {
+	ID       string
+	Name     string
+	DomainID string
+	Level    int32
+}
+
+type CampaignCharacterCreationView struct {
+	Ready            bool
+	NextStep         int32
+	UnmetReasons     []string
+	ClassID          string
+	SubclassID       string
+	AncestryID       string
+	CommunityID      string
+	Agility          string
+	Strength         string
+	Finesse          string
+	Instinct         string
+	Presence         string
+	Knowledge        string
+	PrimaryWeaponID  string
+	SecondaryWeaponID string
+	ArmorID          string
+	PotionItemID     string
+	Background       string
+	ExperienceName   string
+	ExperienceModifier string
+	DomainCardIDs    []string
+	Connections      string
+	Steps            []CampaignCharacterCreationStepView
+	Classes          []CampaignCreationClassView
+	Subclasses       []CampaignCreationSubclassView
+	Ancestries       []CampaignCreationHeritageView
+	Communities      []CampaignCreationHeritageView
+	PrimaryWeapons   []CampaignCreationWeaponView
+	SecondaryWeapons []CampaignCreationWeaponView
+	Armor            []CampaignCreationArmorView
+	PotionItems      []CampaignCreationItemView
+	DomainCards      []CampaignCreationDomainCardView
 }
 
 func campaignOverviewName(view CampaignDetailView) string {
@@ -268,6 +362,71 @@ func campaignCharacterByID(view CampaignDetailView) CampaignCharacterView {
 	return CampaignCharacterView{ID: characterID, Name: characterID, Kind: "Unspecified", Controller: "Unassigned"}
 }
 
+func campaignCreationStepLabel(loc Localizer, stepKey string) string {
+	switch strings.TrimSpace(stepKey) {
+	case "class_subclass":
+		return T(loc, "game.character_creation.step.class_subclass")
+	case "heritage":
+		return T(loc, "game.character_creation.step.heritage")
+	case "traits":
+		return T(loc, "game.character_creation.step.traits")
+	case "details":
+		return T(loc, "game.character_creation.step.details")
+	case "equipment":
+		return T(loc, "game.character_creation.step.equipment")
+	case "background":
+		return T(loc, "game.character_creation.step.background")
+	case "experiences":
+		return T(loc, "game.character_creation.step.experiences")
+	case "domain_cards":
+		return T(loc, "game.character_creation.step.domain_cards")
+	case "connections":
+		return T(loc, "game.character_creation.step.connections")
+	default:
+		return strings.TrimSpace(stepKey)
+	}
+}
+
+func campaignCreationOptionSelected(value string, selected string) bool {
+	return strings.TrimSpace(value) != "" && strings.TrimSpace(value) == strings.TrimSpace(selected)
+}
+
+func campaignCreationOptionInSet(value string, selected []string) bool {
+	trimmedValue := strings.TrimSpace(value)
+	if trimmedValue == "" {
+		return false
+	}
+	for _, selectedValue := range selected {
+		if trimmedValue == strings.TrimSpace(selectedValue) {
+			return true
+		}
+	}
+	return false
+}
+
+func campaignCreationNumericValue(raw string) string {
+	trimmedRaw := strings.TrimSpace(raw)
+	if trimmedRaw == "" {
+		return "0"
+	}
+	return trimmedRaw
+}
+
+func campaignCreationIsStep(view CampaignCharacterCreationView, step int32) bool {
+	return !view.Ready && view.NextStep == step
+}
+
+func campaignCreationUnmetReason(loc Localizer, reason string) string {
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return ""
+	}
+	if strings.HasPrefix(reason, "game.") || strings.HasPrefix(reason, "error.") {
+		return T(loc, reason)
+	}
+	return reason
+}
+
 type CampaignCreateFormValues struct {
 	Name        string
 	System      string
@@ -391,6 +550,16 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 				}
 			</div>
 		} else if view.Marker == "campaign-characters" {
+			<div class="mb-4 rounded border border-base-300 bg-base-100 p-4" data-campaign-character-create-entry="true">
+				<form method="post" action={ routepath.AppCampaignCharacterCreate(view.CampaignID) } class="flex flex-col gap-3 md:flex-row md:items-end" data-campaign-character-create-form="true">
+					<label class="form-control w-full" for="campaign-character-name">
+						<span class="label-text">{ T(loc, "game.characters.field_name") }</span>
+						<input id="campaign-character-name" type="text" name="name" required placeholder={ T(loc, "game.characters.placeholder_name") } class="input input-bordered w-full" data-campaign-character-create-name="true"/>
+					</label>
+					<input type="hidden" name="kind" value="pc"/>
+					<button class="btn btn-primary" type="submit">{ T(loc, "game.characters.submit_create") }</button>
+				</form>
+			</div>
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				if len(view.Characters) == 0 {
 					<p>{ T(loc, "game.characters.empty") }</p>
@@ -401,7 +570,13 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 							<img src={ character.AvatarURL } alt={ character.Name + " avatar" } class="h-full w-full object-cover"/>
 						</figure>
 						<div class="card-body gap-2 p-4">
-							<h2 class="card-title" data-campaign-character-name={ character.Name }>{ character.Name }</h2>
+							<h2 class="card-title" data-campaign-character-name={ character.Name }>
+								if campaignCharacterDetailURL(view, character) != "" {
+									<a href={ campaignCharacterDetailURL(view, character) } data-campaign-character-detail-link="true">{ character.Name }</a>
+								} else {
+									{ character.Name }
+								}
+							</h2>
 							<dl class="space-y-1 text-sm">
 								<div class="flex gap-2">
 									<dt class="opacity-70">{ T(loc, "game.characters.field_kind") }:</dt>
@@ -432,6 +607,15 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 									</dd>
 								</div>
 							</dl>
+							if campaignCharacterDetailURL(view, character) != "" {
+								<div class="card-actions justify-end">
+									if campaignSupportsCharacterCreation(view) && character.CanEdit {
+										<a class="btn btn-primary btn-sm" href={ campaignCharacterDetailURL(view, character) } data-campaign-character-creation-entry="true">{ T(loc, "game.characters.action_open_creation") }</a>
+									} else {
+										<a class="btn btn-outline btn-sm" href={ campaignCharacterDetailURL(view, character) } data-campaign-character-creation-entry="false">{ T(loc, "game.characters.action_view_details") }</a>
+									}
+								</div>
+							}
 						</div>
 					</div>
 				}
@@ -461,13 +645,266 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 				</div>
 			</div>
 		} else if view.Marker == "campaign-character-detail" {
-			<div class="card bg-base-200">
-				<div class="card-body">
-					<h2 class="card-title" data-campaign-character-detail-id={ campaignCharacterByID(view).ID }>{ campaignCharacterByID(view).ID }</h2>
-					<p data-campaign-character-detail-name={ campaignCharacterByID(view).Name }>{ campaignCharacterByID(view).Name }</p>
-					<p data-campaign-character-detail-kind={ campaignCharacterKindLabel(loc, campaignCharacterByID(view).Kind) }>{ campaignCharacterKindLabel(loc, campaignCharacterByID(view).Kind) }</p>
-					<p data-campaign-character-detail-controller={ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }>{ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }</p>
+			<div class="space-y-4">
+				<div class="card bg-base-200">
+					<div class="card-body">
+						<h2 class="card-title" data-campaign-character-detail-id={ campaignCharacterByID(view).ID }>{ campaignCharacterByID(view).ID }</h2>
+						<p data-campaign-character-detail-name={ campaignCharacterByID(view).Name }>{ campaignCharacterByID(view).Name }</p>
+						<p data-campaign-character-detail-kind={ campaignCharacterKindLabel(loc, campaignCharacterByID(view).Kind) }>{ campaignCharacterKindLabel(loc, campaignCharacterByID(view).Kind) }</p>
+						<p data-campaign-character-detail-controller={ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }>{ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }</p>
+					</div>
 				</div>
+				if view.CharacterCreationEnabled {
+					<div class="card bg-base-100 border border-base-300 shadow-sm" data-character-creation-workflow="true" data-character-creation-next-step={ view.CharacterCreation.NextStep }>
+						<div class="card-body space-y-4">
+							<div class="flex items-center justify-between gap-3">
+								<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.title") }</h3>
+								if view.CharacterCreation.Ready {
+									<span class="badge badge-success badge-outline">{ T(loc, "game.character_creation.ready") }</span>
+								} else {
+									<span class="badge badge-warning badge-outline">{ T(loc, "game.character_creation.current_step") } { view.CharacterCreation.NextStep }</span>
+								}
+							</div>
+						<ol class="grid gap-2 md:grid-cols-3">
+							for _, step := range view.CharacterCreation.Steps {
+								<li class="rounded border border-base-300 px-3 py-2 text-sm" data-character-creation-step={ step.Key } data-character-creation-step-complete={ step.Complete }>
+									<div class="flex items-center justify-between gap-2">
+										<span>{ campaignCreationStepLabel(loc, step.Key) }</span>
+										if step.Complete {
+											<span class="badge badge-success badge-outline">{ T(loc, "game.character_creation.step_done") }</span>
+										} else {
+											<span class="badge badge-ghost badge-outline">{ T(loc, "game.character_creation.step_pending") }</span>
+										}
+									</div>
+								</li>
+							}
+						</ol>
+						if len(view.CharacterCreation.UnmetReasons) > 0 {
+							<ul class="list-disc ps-5 text-sm opacity-80" data-character-creation-unmet="true">
+								for _, reason := range view.CharacterCreation.UnmetReasons {
+									<li>{ campaignCreationUnmetReason(loc, reason) }</li>
+								}
+							</ul>
+						}
+						if campaignCreationIsStep(view.CharacterCreation, 1) {
+							<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-3" data-character-creation-form-step="1">
+								<div class="form-control">
+									<label class="label"><span class="label-text">{ T(loc, "game.character_creation.field.class") }</span></label>
+									<select name="class_id" required class="select select-bordered w-full">
+										<option value="" disabled selected={ strings.TrimSpace(view.CharacterCreation.ClassID) == "" }>{ T(loc, "game.character_creation.select.class") }</option>
+										for _, class := range view.CharacterCreation.Classes {
+											if campaignCreationOptionSelected(class.ID, view.CharacterCreation.ClassID) {
+												<option value={ class.ID } selected>{ class.Name }</option>
+											} else {
+												<option value={ class.ID }>{ class.Name }</option>
+											}
+										}
+									</select>
+								</div>
+								<div class="form-control">
+									<label class="label"><span class="label-text">{ T(loc, "game.character_creation.field.subclass") }</span></label>
+									<select name="subclass_id" required class="select select-bordered w-full">
+										<option value="" disabled selected={ strings.TrimSpace(view.CharacterCreation.SubclassID) == "" }>{ T(loc, "game.character_creation.select.subclass") }</option>
+										for _, subclass := range view.CharacterCreation.Subclasses {
+											if campaignCreationOptionSelected(subclass.ID, view.CharacterCreation.SubclassID) {
+												<option value={ subclass.ID } selected>{ subclass.Name }</option>
+											} else {
+												<option value={ subclass.ID }>{ subclass.Name }</option>
+											}
+										}
+									</select>
+								</div>
+								<div class="card-actions justify-end">
+									<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.submit_apply_step") }</button>
+								</div>
+							</form>
+						} else if campaignCreationIsStep(view.CharacterCreation, 2) {
+							<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-3" data-character-creation-form-step="2">
+								<div class="form-control">
+									<label class="label"><span class="label-text">{ T(loc, "game.character_creation.field.ancestry") }</span></label>
+									<select name="ancestry_id" required class="select select-bordered w-full">
+										<option value="" disabled selected={ strings.TrimSpace(view.CharacterCreation.AncestryID) == "" }>{ T(loc, "game.character_creation.select.ancestry") }</option>
+										for _, ancestry := range view.CharacterCreation.Ancestries {
+											if campaignCreationOptionSelected(ancestry.ID, view.CharacterCreation.AncestryID) {
+												<option value={ ancestry.ID } selected>{ ancestry.Name }</option>
+											} else {
+												<option value={ ancestry.ID }>{ ancestry.Name }</option>
+											}
+										}
+									</select>
+								</div>
+								<div class="form-control">
+									<label class="label"><span class="label-text">{ T(loc, "game.character_creation.field.community") }</span></label>
+									<select name="community_id" required class="select select-bordered w-full">
+										<option value="" disabled selected={ strings.TrimSpace(view.CharacterCreation.CommunityID) == "" }>{ T(loc, "game.character_creation.select.community") }</option>
+										for _, community := range view.CharacterCreation.Communities {
+											if campaignCreationOptionSelected(community.ID, view.CharacterCreation.CommunityID) {
+												<option value={ community.ID } selected>{ community.Name }</option>
+											} else {
+												<option value={ community.ID }>{ community.Name }</option>
+											}
+										}
+									</select>
+								</div>
+								<div class="card-actions justify-end">
+									<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.submit_apply_step") }</button>
+								</div>
+							</form>
+						} else if campaignCreationIsStep(view.CharacterCreation, 3) {
+							<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="grid gap-3 md:grid-cols-2" data-character-creation-form-step="3">
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.agility") }</span>
+									<input type="number" name="agility" min="-1" max="2" required class="input input-bordered" value={ campaignCreationNumericValue(view.CharacterCreation.Agility) }/>
+								</label>
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.strength") }</span>
+									<input type="number" name="strength" min="-1" max="2" required class="input input-bordered" value={ campaignCreationNumericValue(view.CharacterCreation.Strength) }/>
+								</label>
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.finesse") }</span>
+									<input type="number" name="finesse" min="-1" max="2" required class="input input-bordered" value={ campaignCreationNumericValue(view.CharacterCreation.Finesse) }/>
+								</label>
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.instinct") }</span>
+									<input type="number" name="instinct" min="-1" max="2" required class="input input-bordered" value={ campaignCreationNumericValue(view.CharacterCreation.Instinct) }/>
+								</label>
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.presence") }</span>
+									<input type="number" name="presence" min="-1" max="2" required class="input input-bordered" value={ campaignCreationNumericValue(view.CharacterCreation.Presence) }/>
+								</label>
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.knowledge") }</span>
+									<input type="number" name="knowledge" min="-1" max="2" required class="input input-bordered" value={ campaignCreationNumericValue(view.CharacterCreation.Knowledge) }/>
+								</label>
+								<div class="md:col-span-2 card-actions justify-end">
+									<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.submit_apply_step") }</button>
+								</div>
+							</form>
+						} else if campaignCreationIsStep(view.CharacterCreation, 4) {
+							<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } data-character-creation-form-step="4">
+								<div class="card-actions justify-end">
+									<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.submit_record_details") }</button>
+								</div>
+							</form>
+						} else if campaignCreationIsStep(view.CharacterCreation, 5) {
+							<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-3" data-character-creation-form-step="5">
+								<div class="form-control">
+									<label class="label"><span class="label-text">{ T(loc, "game.character_creation.field.primary_weapon") }</span></label>
+									<select name="weapon_primary_id" required class="select select-bordered w-full">
+										<option value="" disabled selected={ strings.TrimSpace(view.CharacterCreation.PrimaryWeaponID) == "" }>{ T(loc, "game.character_creation.select.primary_weapon") }</option>
+										for _, weapon := range view.CharacterCreation.PrimaryWeapons {
+											if campaignCreationOptionSelected(weapon.ID, view.CharacterCreation.PrimaryWeaponID) {
+												<option value={ weapon.ID } selected>{ weapon.Name }</option>
+											} else {
+												<option value={ weapon.ID }>{ weapon.Name }</option>
+											}
+										}
+									</select>
+								</div>
+								<div class="form-control">
+									<label class="label"><span class="label-text">{ T(loc, "game.character_creation.field.secondary_weapon") }</span></label>
+									<select name="weapon_secondary_id" class="select select-bordered w-full">
+										<option value="" selected={ strings.TrimSpace(view.CharacterCreation.SecondaryWeaponID) == "" }>{ T(loc, "game.character_creation.value.none") }</option>
+										for _, weapon := range view.CharacterCreation.SecondaryWeapons {
+											if campaignCreationOptionSelected(weapon.ID, view.CharacterCreation.SecondaryWeaponID) {
+												<option value={ weapon.ID } selected>{ weapon.Name }</option>
+											} else {
+												<option value={ weapon.ID }>{ weapon.Name }</option>
+											}
+										}
+									</select>
+								</div>
+								<div class="form-control">
+									<label class="label"><span class="label-text">{ T(loc, "game.character_creation.field.armor") }</span></label>
+									<select name="armor_id" required class="select select-bordered w-full">
+										<option value="" disabled selected={ strings.TrimSpace(view.CharacterCreation.ArmorID) == "" }>{ T(loc, "game.character_creation.select.armor") }</option>
+										for _, armor := range view.CharacterCreation.Armor {
+											if campaignCreationOptionSelected(armor.ID, view.CharacterCreation.ArmorID) {
+												<option value={ armor.ID } selected>{ armor.Name }</option>
+											} else {
+												<option value={ armor.ID }>{ armor.Name }</option>
+											}
+										}
+									</select>
+								</div>
+								<div class="form-control">
+									<label class="label"><span class="label-text">{ T(loc, "game.character_creation.field.potion") }</span></label>
+									<select name="potion_item_id" required class="select select-bordered w-full">
+										<option value="" disabled selected={ strings.TrimSpace(view.CharacterCreation.PotionItemID) == "" }>{ T(loc, "game.character_creation.select.potion") }</option>
+										for _, item := range view.CharacterCreation.PotionItems {
+											if campaignCreationOptionSelected(item.ID, view.CharacterCreation.PotionItemID) {
+												<option value={ item.ID } selected>{ item.Name }</option>
+											} else {
+												<option value={ item.ID }>{ item.Name }</option>
+											}
+										}
+									</select>
+								</div>
+								<div class="card-actions justify-end">
+									<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.submit_apply_step") }</button>
+								</div>
+							</form>
+						} else if campaignCreationIsStep(view.CharacterCreation, 6) {
+							<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-3" data-character-creation-form-step="6">
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.background") }</span>
+									<textarea name="background" rows="4" required class="textarea textarea-bordered w-full">{ view.CharacterCreation.Background }</textarea>
+								</label>
+								<div class="card-actions justify-end">
+									<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.submit_apply_step") }</button>
+								</div>
+							</form>
+						} else if campaignCreationIsStep(view.CharacterCreation, 7) {
+							<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-3" data-character-creation-form-step="7">
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.experience_name") }</span>
+									<input type="text" name="experience_name" required class="input input-bordered" value={ view.CharacterCreation.ExperienceName }/>
+								</label>
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.modifier") }</span>
+									<input type="number" name="experience_modifier" class="input input-bordered" value={ campaignCreationNumericValue(view.CharacterCreation.ExperienceModifier) }/>
+								</label>
+								<div class="card-actions justify-end">
+									<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.submit_apply_step") }</button>
+								</div>
+							</form>
+						} else if campaignCreationIsStep(view.CharacterCreation, 8) {
+							<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-3" data-character-creation-form-step="8">
+								<div class="grid gap-2 md:grid-cols-2">
+									for _, card := range view.CharacterCreation.DomainCards {
+										<label class="flex items-center gap-2 rounded border border-base-300 px-3 py-2 text-sm">
+											if campaignCreationOptionInSet(card.ID, view.CharacterCreation.DomainCardIDs) {
+												<input type="checkbox" name="domain_card_id" value={ card.ID } class="checkbox checkbox-sm" checked/>
+											} else {
+												<input type="checkbox" name="domain_card_id" value={ card.ID } class="checkbox checkbox-sm"/>
+											}
+											<span>{ card.Name } ({ T(loc, "game.character_creation.label_level") }{ card.Level })</span>
+										</label>
+									}
+								</div>
+								<div class="card-actions justify-end">
+									<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.submit_apply_step") }</button>
+								</div>
+							</form>
+						} else if campaignCreationIsStep(view.CharacterCreation, 9) {
+							<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-3" data-character-creation-form-step="9">
+								<label class="form-control">
+									<span class="label-text">{ T(loc, "game.character_creation.field.connections") }</span>
+									<textarea name="connections" rows="4" required class="textarea textarea-bordered w-full">{ view.CharacterCreation.Connections }</textarea>
+								</label>
+								<div class="card-actions justify-end">
+									<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.submit_apply_step") }</button>
+								</div>
+							</form>
+						}
+						<div class="border-t border-base-300 pt-4">
+							<form method="post" action={ routepath.AppCampaignCharacterCreationReset(view.CampaignID, view.CharacterID) } data-character-creation-reset="true">
+								<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.character_creation.submit_reset_workflow") }</button>
+							</form>
+						</div>
+						</div>
+					</div>
+				}
 			</div>
 		} else if view.Marker == "campaign-invites" {
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">

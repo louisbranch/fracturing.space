@@ -7,6 +7,7 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
@@ -144,22 +145,34 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 
 	systemProfile := map[string]any{
 		"daggerheart": map[string]any{
-			"level":            dhDefaults.Level,
-			"hp_max":           dhDefaults.HpMax,
-			"stress_max":       dhDefaults.StressMax,
-			"evasion":          dhDefaults.Evasion,
-			"major_threshold":  dhDefaults.MajorThreshold,
-			"severe_threshold": dhDefaults.SevereThreshold,
-			"proficiency":      dhDefaults.Proficiency,
-			"armor_score":      dhDefaults.ArmorScore,
-			"armor_max":        dhDefaults.ArmorMax,
-			"agility":          dhDefaults.Traits.Agility,
-			"strength":         dhDefaults.Traits.Strength,
-			"finesse":          dhDefaults.Traits.Finesse,
-			"instinct":         dhDefaults.Traits.Instinct,
-			"presence":         dhDefaults.Traits.Presence,
-			"knowledge":        dhDefaults.Traits.Knowledge,
-			"experiences":      experiencesPayload,
+			"level":                   dhDefaults.Level,
+			"hp_max":                  dhDefaults.HpMax,
+			"stress_max":              dhDefaults.StressMax,
+			"evasion":                 dhDefaults.Evasion,
+			"major_threshold":         dhDefaults.MajorThreshold,
+			"severe_threshold":        dhDefaults.SevereThreshold,
+			"proficiency":             dhDefaults.Proficiency,
+			"armor_score":             dhDefaults.ArmorScore,
+			"armor_max":               dhDefaults.ArmorMax,
+			"agility":                 dhDefaults.Traits.Agility,
+			"strength":                dhDefaults.Traits.Strength,
+			"finesse":                 dhDefaults.Traits.Finesse,
+			"instinct":                dhDefaults.Traits.Instinct,
+			"presence":                dhDefaults.Traits.Presence,
+			"knowledge":               dhDefaults.Traits.Knowledge,
+			"experiences":             experiencesPayload,
+			"class_id":                "",
+			"subclass_id":             "",
+			"ancestry_id":             "",
+			"community_id":            "",
+			"traits_assigned":         false,
+			"details_recorded":        false,
+			"starting_weapon_ids":     []string{},
+			"starting_armor_id":       "",
+			"starting_potion_item_id": "",
+			"background":              "",
+			"domain_card_ids":         []string{},
+			"connections":             "",
 		},
 	}
 	projectionApplier := c.stores.Applier()
@@ -586,6 +599,10 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 
 	// Apply Daggerheart-specific patches (including hp_max)
 	if dhPatch := in.GetDaggerheart(); dhPatch != nil {
+		if err := rejectDaggerheartCreationWorkflowPatchFields(dhPatch); err != nil {
+			return "", storage.DaggerheartCharacterProfile{}, err
+		}
+
 		// Validate level (plain int32: 0 is not valid)
 		if dhPatch.Level < 0 {
 			return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.InvalidArgument, "level must be non-negative")
@@ -674,44 +691,6 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 			dhProfile.ArmorMax = val
 		}
 
-		// Validate and apply traits (wrapper types allow nil-checking)
-		if dhPatch.GetAgility() != nil {
-			if err := daggerheart.ValidateTrait("agility", int(dhPatch.GetAgility().GetValue())); err != nil {
-				return "", storage.DaggerheartCharacterProfile{}, err
-			}
-			dhProfile.Agility = int(dhPatch.GetAgility().GetValue())
-		}
-		if dhPatch.GetStrength() != nil {
-			if err := daggerheart.ValidateTrait("strength", int(dhPatch.GetStrength().GetValue())); err != nil {
-				return "", storage.DaggerheartCharacterProfile{}, err
-			}
-			dhProfile.Strength = int(dhPatch.GetStrength().GetValue())
-		}
-		if dhPatch.GetFinesse() != nil {
-			if err := daggerheart.ValidateTrait("finesse", int(dhPatch.GetFinesse().GetValue())); err != nil {
-				return "", storage.DaggerheartCharacterProfile{}, err
-			}
-			dhProfile.Finesse = int(dhPatch.GetFinesse().GetValue())
-		}
-		if dhPatch.GetInstinct() != nil {
-			if err := daggerheart.ValidateTrait("instinct", int(dhPatch.GetInstinct().GetValue())); err != nil {
-				return "", storage.DaggerheartCharacterProfile{}, err
-			}
-			dhProfile.Instinct = int(dhPatch.GetInstinct().GetValue())
-		}
-		if dhPatch.GetPresence() != nil {
-			if err := daggerheart.ValidateTrait("presence", int(dhPatch.GetPresence().GetValue())); err != nil {
-				return "", storage.DaggerheartCharacterProfile{}, err
-			}
-			dhProfile.Presence = int(dhPatch.GetPresence().GetValue())
-		}
-		if dhPatch.GetKnowledge() != nil {
-			if err := daggerheart.ValidateTrait("knowledge", int(dhPatch.GetKnowledge().GetValue())); err != nil {
-				return "", storage.DaggerheartCharacterProfile{}, err
-			}
-			dhProfile.Knowledge = int(dhPatch.GetKnowledge().GetValue())
-		}
-
 		if len(dhPatch.GetExperiences()) > 0 {
 			experiences := make([]storage.DaggerheartExperience, 0, len(dhPatch.GetExperiences()))
 			for _, experience := range dhPatch.GetExperiences() {
@@ -776,22 +755,34 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 
 	systemProfile := map[string]any{
 		"daggerheart": map[string]any{
-			"level":            dhProfile.Level,
-			"hp_max":           dhProfile.HpMax,
-			"stress_max":       dhProfile.StressMax,
-			"evasion":          dhProfile.Evasion,
-			"major_threshold":  dhProfile.MajorThreshold,
-			"severe_threshold": dhProfile.SevereThreshold,
-			"proficiency":      dhProfile.Proficiency,
-			"armor_score":      dhProfile.ArmorScore,
-			"armor_max":        dhProfile.ArmorMax,
-			"agility":          dhProfile.Agility,
-			"strength":         dhProfile.Strength,
-			"finesse":          dhProfile.Finesse,
-			"instinct":         dhProfile.Instinct,
-			"presence":         dhProfile.Presence,
-			"knowledge":        dhProfile.Knowledge,
-			"experiences":      experiencesPayload,
+			"level":                   dhProfile.Level,
+			"hp_max":                  dhProfile.HpMax,
+			"stress_max":              dhProfile.StressMax,
+			"evasion":                 dhProfile.Evasion,
+			"major_threshold":         dhProfile.MajorThreshold,
+			"severe_threshold":        dhProfile.SevereThreshold,
+			"proficiency":             dhProfile.Proficiency,
+			"armor_score":             dhProfile.ArmorScore,
+			"armor_max":               dhProfile.ArmorMax,
+			"agility":                 dhProfile.Agility,
+			"strength":                dhProfile.Strength,
+			"finesse":                 dhProfile.Finesse,
+			"instinct":                dhProfile.Instinct,
+			"presence":                dhProfile.Presence,
+			"knowledge":               dhProfile.Knowledge,
+			"experiences":             experiencesPayload,
+			"class_id":                dhProfile.ClassID,
+			"subclass_id":             dhProfile.SubclassID,
+			"ancestry_id":             dhProfile.AncestryID,
+			"community_id":            dhProfile.CommunityID,
+			"traits_assigned":         dhProfile.TraitsAssigned,
+			"details_recorded":        dhProfile.DetailsRecorded,
+			"starting_weapon_ids":     append([]string(nil), dhProfile.StartingWeaponIDs...),
+			"starting_armor_id":       dhProfile.StartingArmorID,
+			"starting_potion_item_id": dhProfile.StartingPotionItemID,
+			"background":              dhProfile.Background,
+			"domain_card_ids":         append([]string(nil), dhProfile.DomainCardIDs...),
+			"connections":             dhProfile.Connections,
 		},
 	}
 	policyActor, err := requireCharacterMutationPolicy(
@@ -846,4 +837,25 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 	}
 
 	return characterID, dhProfile, nil
+}
+
+// rejectDaggerheartCreationWorkflowPatchFields enforces the single creation
+// pipeline policy by preventing workflow-field mutation through profile patch.
+func rejectDaggerheartCreationWorkflowPatchFields(patch *daggerheartv1.DaggerheartProfile) error {
+	if patch == nil {
+		return nil
+	}
+	if patch.GetAgility() == nil && patch.GetStrength() == nil && patch.GetFinesse() == nil &&
+		patch.GetInstinct() == nil && patch.GetPresence() == nil && patch.GetKnowledge() == nil &&
+		strings.TrimSpace(patch.GetClassId()) == "" && strings.TrimSpace(patch.GetSubclassId()) == "" &&
+		strings.TrimSpace(patch.GetAncestryId()) == "" && strings.TrimSpace(patch.GetCommunityId()) == "" &&
+		patch.GetTraitsAssigned() == nil && patch.GetDetailsRecorded() == nil &&
+		len(patch.GetStartingWeaponIds()) == 0 && strings.TrimSpace(patch.GetStartingArmorId()) == "" &&
+		strings.TrimSpace(patch.GetStartingPotionItemId()) == "" &&
+		strings.TrimSpace(patch.GetBackground()) == "" &&
+		len(patch.GetExperiences()) == 0 && len(patch.GetDomainCardIds()) == 0 &&
+		strings.TrimSpace(patch.GetConnections()) == "" {
+		return nil
+	}
+	return status.Error(codes.InvalidArgument, "daggerheart creation workflow fields must be updated via ApplyCharacterCreationStep or ApplyCharacterCreationWorkflow")
 }

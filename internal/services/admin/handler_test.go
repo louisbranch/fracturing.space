@@ -1335,6 +1335,22 @@ func (c *testCharacterClient) PatchCharacterProfile(ctx context.Context, in *sta
 	return &statev1.PatchCharacterProfileResponse{}, nil
 }
 
+func (c *testCharacterClient) GetCharacterCreationProgress(ctx context.Context, in *statev1.GetCharacterCreationProgressRequest, opts ...grpc.CallOption) (*statev1.GetCharacterCreationProgressResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "GetCharacterCreationProgress not implemented")
+}
+
+func (c *testCharacterClient) ApplyCharacterCreationStep(ctx context.Context, in *statev1.ApplyCharacterCreationStepRequest, opts ...grpc.CallOption) (*statev1.ApplyCharacterCreationStepResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "ApplyCharacterCreationStep not implemented")
+}
+
+func (c *testCharacterClient) ApplyCharacterCreationWorkflow(ctx context.Context, in *statev1.ApplyCharacterCreationWorkflowRequest, opts ...grpc.CallOption) (*statev1.ApplyCharacterCreationWorkflowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "ApplyCharacterCreationWorkflow not implemented")
+}
+
+func (c *testCharacterClient) ResetCharacterCreationWorkflow(ctx context.Context, in *statev1.ResetCharacterCreationWorkflowRequest, opts ...grpc.CallOption) (*statev1.ResetCharacterCreationWorkflowResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "ResetCharacterCreationWorkflow not implemented")
+}
+
 type testEventClient struct {
 	listResponse     *statev1.ListEventsResponse
 	listErr          error

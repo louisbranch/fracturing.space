@@ -65,10 +65,14 @@ func upsertSubclasses(ctx context.Context, store storage.DaggerheartContentStore
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("subclass id is required")
 		}
+		if isBase && strings.TrimSpace(item.ClassID) == "" {
+			return fmt.Errorf("subclass class_id is required")
+		}
 		if isBase {
 			subclass := storage.DaggerheartSubclass{
 				ID:                     item.ID,
 				Name:                   item.Name,
+				ClassID:                item.ClassID,
 				SpellcastTrait:         item.SpellcastTrait,
 				FoundationFeatures:     toStorageFeatures(item.FoundationFeatures),
 				SpecializationFeatures: toStorageFeatures(item.SpecializationFeatures),

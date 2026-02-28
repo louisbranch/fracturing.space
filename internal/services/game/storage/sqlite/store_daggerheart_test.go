@@ -33,12 +33,24 @@ func TestDaggerheartCharacterProfilePutGet(t *testing.T) {
 			{Name: "Stealth", Modifier: 2},
 			{Name: "Perception", Modifier: 1},
 		},
-		Agility:   3,
-		Strength:  1,
-		Finesse:   4,
-		Instinct:  2,
-		Presence:  0,
-		Knowledge: -1,
+		ClassID:              "class.guardian",
+		SubclassID:           "subclass.stalwart",
+		AncestryID:           "heritage.clank",
+		CommunityID:          "heritage.farmer",
+		TraitsAssigned:       true,
+		DetailsRecorded:      true,
+		StartingWeaponIDs:    []string{"weapon.longsword", "weapon.dagger"},
+		StartingArmorID:      "armor.gambeson-armor",
+		StartingPotionItemID: "item.minor-health-potion",
+		Background:           "Former city guard",
+		DomainCardIDs:        []string{"domain-card.ward", "domain-card.valor"},
+		Connections:          "Served alongside Captain Arlen",
+		Agility:              3,
+		Strength:             1,
+		Finesse:              4,
+		Instinct:             2,
+		Presence:             0,
+		Knowledge:            -1,
 	}
 
 	if err := store.PutDaggerheartCharacterProfile(context.Background(), expected); err != nil {
@@ -75,6 +87,33 @@ func TestDaggerheartCharacterProfilePutGet(t *testing.T) {
 	if got.Experiences[0].Name != "Stealth" || got.Experiences[0].Modifier != 2 {
 		t.Fatalf("expected first experience to match")
 	}
+	if got.ClassID != expected.ClassID || got.SubclassID != expected.SubclassID {
+		t.Fatalf("expected class and subclass ids to match")
+	}
+	if got.AncestryID != expected.AncestryID || got.CommunityID != expected.CommunityID {
+		t.Fatalf("expected ancestry and community ids to match")
+	}
+	if got.TraitsAssigned != expected.TraitsAssigned {
+		t.Fatalf("expected traits_assigned to match")
+	}
+	if got.DetailsRecorded != expected.DetailsRecorded {
+		t.Fatalf("expected details_recorded to match")
+	}
+	if len(got.StartingWeaponIDs) != len(expected.StartingWeaponIDs) {
+		t.Fatalf("expected starting weapon ids to match, got %v", got.StartingWeaponIDs)
+	}
+	if got.StartingWeaponIDs[0] != expected.StartingWeaponIDs[0] || got.StartingWeaponIDs[1] != expected.StartingWeaponIDs[1] {
+		t.Fatalf("expected starting weapon ids to match order, got %v", got.StartingWeaponIDs)
+	}
+	if got.StartingArmorID != expected.StartingArmorID || got.StartingPotionItemID != expected.StartingPotionItemID {
+		t.Fatalf("expected starting armor and potion to match")
+	}
+	if got.Background != expected.Background || got.Connections != expected.Connections {
+		t.Fatalf("expected background and connections to match")
+	}
+	if len(got.DomainCardIDs) != 2 || got.DomainCardIDs[0] != "domain-card.ward" {
+		t.Fatalf("expected domain card ids to match, got %v", got.DomainCardIDs)
+	}
 }
 
 func TestDaggerheartCharacterProfileNotFound(t *testing.T) {
@@ -85,6 +124,34 @@ func TestDaggerheartCharacterProfileNotFound(t *testing.T) {
 	_, err := store.GetDaggerheartCharacterProfile(context.Background(), "camp-dhp-nf", "no-char")
 	if err == nil || !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestDaggerheartCharacterProfileDelete(t *testing.T) {
+	store := openTestStore(t)
+	now := time.Date(2026, 2, 3, 11, 0, 0, 0, time.UTC)
+	seedCampaign(t, store, "camp-dhp-del", now)
+	seedCharacter(t, store, "camp-dhp-del", "char-1", "Aria", character.KindPC, now)
+
+	if err := store.PutDaggerheartCharacterProfile(context.Background(), storage.DaggerheartCharacterProfile{
+		CampaignID:  "camp-dhp-del",
+		CharacterID: "char-1",
+		Level:       1,
+		HpMax:       6,
+		StressMax:   6,
+		Evasion:     10,
+		Experiences: []storage.DaggerheartExperience{{Name: "Guard Duty", Modifier: 2}},
+	}); err != nil {
+		t.Fatalf("put profile: %v", err)
+	}
+
+	if err := store.DeleteDaggerheartCharacterProfile(context.Background(), "camp-dhp-del", "char-1"); err != nil {
+		t.Fatalf("delete profile: %v", err)
+	}
+
+	_, err := store.GetDaggerheartCharacterProfile(context.Background(), "camp-dhp-del", "char-1")
+	if err == nil || !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound after delete, got %v", err)
 	}
 }
 

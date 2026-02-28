@@ -2,11 +2,13 @@ package campaigns
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/a-h/templ"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
@@ -198,6 +200,14 @@ func (h handlers) routeCampaignID(r *http.Request) (string, bool) {
 	return campaignID, true
 }
 
+func (h handlers) routeCharacterID(r *http.Request) (string, bool) {
+	characterID := strings.TrimSpace(r.PathValue("characterID"))
+	if characterID == "" {
+		return "", false
+	}
+	return characterID, true
+}
+
 func (h handlers) handleOverviewRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
@@ -293,13 +303,101 @@ func (h handlers) handleCharacterDetailRoute(w http.ResponseWriter, r *http.Requ
 	h.handleDetail(w, r, detailRoute{campaignID: campaignID, kind: detailCharacter, characterID: characterID})
 }
 
+func (h handlers) handleCharacterCreationStepRoute(w http.ResponseWriter, r *http.Request) {
+	campaignID, ok := h.routeCampaignID(r)
+	if !ok {
+		h.handleNotFound(w, r)
+		return
+	}
+	characterID, ok := h.routeCharacterID(r)
+	if !ok {
+		h.handleNotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		h.writeError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_character_creation_form", "failed to parse character creation form"))
+		return
+	}
+
+	ctx := webctx.WithResolvedUserID(r, h.deps.resolveUserID)
+	progress, err := h.service.campaignCharacterCreationProgress(ctx, campaignID, characterID)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+	if progress.Ready {
+		h.writeError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_already_complete", "character creation workflow is already complete"))
+		return
+	}
+
+	stepInput, err := daggerheartStepInputFromForm(r, progress.NextStep)
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+	if err := h.service.applyCharacterCreationStep(ctx, campaignID, characterID, stepInput); err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+
+	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacter(campaignID, characterID))
+}
+
+func (h handlers) handleCharacterCreationResetRoute(w http.ResponseWriter, r *http.Request) {
+	campaignID, ok := h.routeCampaignID(r)
+	if !ok {
+		h.handleNotFound(w, r)
+		return
+	}
+	characterID, ok := h.routeCharacterID(r)
+	if !ok {
+		h.handleNotFound(w, r)
+		return
+	}
+	if err := h.service.resetCharacterCreationWorkflow(webctx.WithResolvedUserID(r, h.deps.resolveUserID), campaignID, characterID); err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacter(campaignID, characterID))
+}
+
 func (h handlers) handleCharacterCreateRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
 		h.handleNotFound(w, r)
 		return
 	}
-	h.handleMutation(w, r, detailRoute{campaignID: campaignID, kind: detailCharacterCreate})
+	if err := r.ParseForm(); err != nil {
+		h.writeError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_character_create_form", "failed to parse character create form"))
+		return
+	}
+
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		h.writeError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_name_is_required", "character name is required"))
+		return
+	}
+
+	kindValue := strings.TrimSpace(r.FormValue("kind"))
+	if kindValue == "" {
+		kindValue = "pc"
+	}
+	kind, ok := parseAppCharacterKind(kindValue)
+	if !ok {
+		h.writeError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_kind_value_is_invalid", "character kind value is invalid"))
+		return
+	}
+
+	created, err := h.service.createCharacter(webctx.WithResolvedUserID(r, h.deps.resolveUserID), campaignID, CreateCharacterInput{
+		Name: name,
+		Kind: kind,
+	})
+	if err != nil {
+		h.writeError(w, r, err)
+		return
+	}
+
+	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacter(campaignID, created.CharacterID))
 }
 
 func (h handlers) handleCharacterUpdateRoute(w http.ResponseWriter, r *http.Request) {
@@ -462,6 +560,7 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 
 func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, route detailRoute) {
 	loc, lang := h.pageLocalizer(w, r)
+	resolvedLocale := platformi18n.LocaleForTag(webi18n.ResolveTag(r, h.deps.resolveLanguage))
 	ctx := webctx.WithResolvedUserID(r, h.deps.resolveUserID)
 	workspace, err := h.service.campaignWorkspace(ctx, route.campaignID)
 	if err != nil {
@@ -476,6 +575,8 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, route det
 	characters := []webtemplates.CampaignCharacterView{}
 	sessions := []webtemplates.CampaignSessionView{}
 	invites := []webtemplates.CampaignInviteView{}
+	characterCreation := webtemplates.CampaignCharacterCreationView{}
+	characterCreationEnabled := false
 	if route.kind == detailParticipants {
 		participantItems, participantsErr := h.service.campaignParticipants(ctx, route.campaignID)
 		if participantsErr != nil {
@@ -514,6 +615,17 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, route det
 				CanEdit:        character.CanEdit,
 				EditReasonCode: character.EditReasonCode,
 			})
+		}
+	}
+	if route.kind == detailCharacter {
+		characterCreationEnabled = isDaggerheartCampaignSystem(workspace.System)
+		if characterCreationEnabled {
+			creation, creationErr := h.service.campaignCharacterCreation(ctx, route.campaignID, route.characterID, resolvedLocale)
+			if creationErr != nil {
+				h.writeError(w, r, creationErr)
+				return
+			}
+			characterCreation = campaignCharacterCreationView(creation)
 		}
 	}
 	if route.kind == detailSessions || route.kind == detailSession {
@@ -556,18 +668,20 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, route det
 		MainClass: campaignMainClass(workspace.CoverImageURL),
 	}
 	h.writeCampaignHTML(w, r, webtemplates.T(loc, "game.campaign.title"), campaignDetailHeader(route, workspace.Name, loc), layout, webtemplates.CampaignDetailFragment(webtemplates.CampaignDetailView{
-		Marker:       route.kind.marker(),
-		CampaignID:   route.campaignID,
-		SessionID:    route.sessionID,
-		CharacterID:  route.characterID,
-		Name:         workspace.Name,
-		Theme:        workspace.Theme,
-		System:       workspace.System,
-		GMMode:       workspace.GMMode,
-		Participants: participants,
-		Characters:   characters,
-		Sessions:     sessions,
-		Invites:      invites,
+		Marker:                   route.kind.marker(),
+		CampaignID:               route.campaignID,
+		SessionID:                route.sessionID,
+		CharacterID:              route.characterID,
+		Name:                     workspace.Name,
+		Theme:                    workspace.Theme,
+		System:                   workspace.System,
+		GMMode:                   workspace.GMMode,
+		Participants:             participants,
+		Characters:               characters,
+		Sessions:                 sessions,
+		Invites:                  invites,
+		CharacterCreationEnabled: characterCreationEnabled,
+		CharacterCreation:        characterCreation,
 	}, loc))
 }
 
@@ -585,9 +699,6 @@ func (h handlers) handleMutation(w http.ResponseWriter, r *http.Request, route d
 	case detailParticipantUpdate:
 		err = h.service.updateParticipants(ctx, route.campaignID)
 		redirect = routepath.AppCampaignParticipants(route.campaignID)
-	case detailCharacterCreate:
-		err = h.service.createCharacter(ctx, route.campaignID)
-		redirect = routepath.AppCampaignCharacters(route.campaignID)
 	case detailCharacterUpdate:
 		err = h.service.updateCharacter(ctx, route.campaignID)
 		redirect = routepath.AppCampaignCharacters(route.campaignID)
@@ -654,6 +765,235 @@ func (h handlers) writeError(w http.ResponseWriter, r *http.Request, err error) 
 	weberror.WriteModuleError(w, r, err, h.deps.moduleDependencies())
 }
 
+func campaignCharacterCreationView(creation CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
+	view := webtemplates.CampaignCharacterCreationView{
+		Ready:              creation.Progress.Ready,
+		NextStep:           creation.Progress.NextStep,
+		UnmetReasons:       append([]string(nil), creation.Progress.UnmetReasons...),
+		ClassID:            strings.TrimSpace(creation.Profile.ClassID),
+		SubclassID:         strings.TrimSpace(creation.Profile.SubclassID),
+		AncestryID:         strings.TrimSpace(creation.Profile.AncestryID),
+		CommunityID:        strings.TrimSpace(creation.Profile.CommunityID),
+		Agility:            strings.TrimSpace(creation.Profile.Agility),
+		Strength:           strings.TrimSpace(creation.Profile.Strength),
+		Finesse:            strings.TrimSpace(creation.Profile.Finesse),
+		Instinct:           strings.TrimSpace(creation.Profile.Instinct),
+		Presence:           strings.TrimSpace(creation.Profile.Presence),
+		Knowledge:          strings.TrimSpace(creation.Profile.Knowledge),
+		PrimaryWeaponID:    strings.TrimSpace(creation.Profile.PrimaryWeaponID),
+		SecondaryWeaponID:  strings.TrimSpace(creation.Profile.SecondaryWeaponID),
+		ArmorID:            strings.TrimSpace(creation.Profile.ArmorID),
+		PotionItemID:       strings.TrimSpace(creation.Profile.PotionItemID),
+		Background:         strings.TrimSpace(creation.Profile.Background),
+		ExperienceName:     strings.TrimSpace(creation.Profile.ExperienceName),
+		ExperienceModifier: strings.TrimSpace(creation.Profile.ExperienceModifier),
+		DomainCardIDs:      append([]string(nil), creation.Profile.DomainCardIDs...),
+		Connections:        strings.TrimSpace(creation.Profile.Connections),
+		Steps:              []webtemplates.CampaignCharacterCreationStepView{},
+		Classes:            []webtemplates.CampaignCreationClassView{},
+		Subclasses:         []webtemplates.CampaignCreationSubclassView{},
+		Ancestries:         []webtemplates.CampaignCreationHeritageView{},
+		Communities:        []webtemplates.CampaignCreationHeritageView{},
+		PrimaryWeapons:     []webtemplates.CampaignCreationWeaponView{},
+		SecondaryWeapons:   []webtemplates.CampaignCreationWeaponView{},
+		Armor:              []webtemplates.CampaignCreationArmorView{},
+		PotionItems:        []webtemplates.CampaignCreationItemView{},
+		DomainCards:        []webtemplates.CampaignCreationDomainCardView{},
+	}
+	for _, step := range creation.Progress.Steps {
+		view.Steps = append(view.Steps, webtemplates.CampaignCharacterCreationStepView{
+			Step:     step.Step,
+			Key:      strings.TrimSpace(step.Key),
+			Complete: step.Complete,
+		})
+	}
+	for _, class := range creation.Classes {
+		view.Classes = append(view.Classes, webtemplates.CampaignCreationClassView{
+			ID:   strings.TrimSpace(class.ID),
+			Name: strings.TrimSpace(class.Name),
+		})
+	}
+	for _, subclass := range creation.Subclasses {
+		view.Subclasses = append(view.Subclasses, webtemplates.CampaignCreationSubclassView{
+			ID:      strings.TrimSpace(subclass.ID),
+			Name:    strings.TrimSpace(subclass.Name),
+			ClassID: strings.TrimSpace(subclass.ClassID),
+		})
+	}
+	for _, ancestry := range creation.Ancestries {
+		view.Ancestries = append(view.Ancestries, webtemplates.CampaignCreationHeritageView{
+			ID:   strings.TrimSpace(ancestry.ID),
+			Name: strings.TrimSpace(ancestry.Name),
+		})
+	}
+	for _, community := range creation.Communities {
+		view.Communities = append(view.Communities, webtemplates.CampaignCreationHeritageView{
+			ID:   strings.TrimSpace(community.ID),
+			Name: strings.TrimSpace(community.Name),
+		})
+	}
+	for _, weapon := range creation.PrimaryWeapons {
+		view.PrimaryWeapons = append(view.PrimaryWeapons, webtemplates.CampaignCreationWeaponView{
+			ID:   strings.TrimSpace(weapon.ID),
+			Name: strings.TrimSpace(weapon.Name),
+		})
+	}
+	for _, weapon := range creation.SecondaryWeapons {
+		view.SecondaryWeapons = append(view.SecondaryWeapons, webtemplates.CampaignCreationWeaponView{
+			ID:   strings.TrimSpace(weapon.ID),
+			Name: strings.TrimSpace(weapon.Name),
+		})
+	}
+	for _, armor := range creation.Armor {
+		view.Armor = append(view.Armor, webtemplates.CampaignCreationArmorView{
+			ID:   strings.TrimSpace(armor.ID),
+			Name: strings.TrimSpace(armor.Name),
+		})
+	}
+	for _, item := range creation.PotionItems {
+		view.PotionItems = append(view.PotionItems, webtemplates.CampaignCreationItemView{
+			ID:   strings.TrimSpace(item.ID),
+			Name: strings.TrimSpace(item.Name),
+		})
+	}
+	for _, card := range creation.DomainCards {
+		view.DomainCards = append(view.DomainCards, webtemplates.CampaignCreationDomainCardView{
+			ID:       strings.TrimSpace(card.ID),
+			Name:     strings.TrimSpace(card.Name),
+			DomainID: strings.TrimSpace(card.DomainID),
+			Level:    card.Level,
+		})
+	}
+	return view
+}
+
+func daggerheartStepInputFromForm(r *http.Request, nextStep int32) (*daggerheartv1.DaggerheartCreationStepInput, error) {
+	switch nextStep {
+	case 1:
+		classID := strings.TrimSpace(r.FormValue("class_id"))
+		subclassID := strings.TrimSpace(r.FormValue("subclass_id"))
+		if classID == "" || subclassID == "" {
+			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_class_and_subclass_are_required", "class and subclass are required")
+		}
+		return &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_ClassSubclassInput{ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{ClassId: classID, SubclassId: subclassID}}}, nil
+	case 2:
+		ancestryID := strings.TrimSpace(r.FormValue("ancestry_id"))
+		communityID := strings.TrimSpace(r.FormValue("community_id"))
+		if ancestryID == "" || communityID == "" {
+			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_ancestry_and_community_are_required", "ancestry and community are required")
+		}
+		return &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_HeritageInput{HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{AncestryId: ancestryID, CommunityId: communityID}}}, nil
+	case 3:
+		agility, err := parseRequiredInt32(r.FormValue("agility"), "agility")
+		if err != nil {
+			return nil, err
+		}
+		strength, err := parseRequiredInt32(r.FormValue("strength"), "strength")
+		if err != nil {
+			return nil, err
+		}
+		finesse, err := parseRequiredInt32(r.FormValue("finesse"), "finesse")
+		if err != nil {
+			return nil, err
+		}
+		instinct, err := parseRequiredInt32(r.FormValue("instinct"), "instinct")
+		if err != nil {
+			return nil, err
+		}
+		presence, err := parseRequiredInt32(r.FormValue("presence"), "presence")
+		if err != nil {
+			return nil, err
+		}
+		knowledge, err := parseRequiredInt32(r.FormValue("knowledge"), "knowledge")
+		if err != nil {
+			return nil, err
+		}
+		return &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_TraitsInput{TraitsInput: &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: agility, Strength: strength, Finesse: finesse, Instinct: instinct, Presence: presence, Knowledge: knowledge}}}, nil
+	case 4:
+		return &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{}}}, nil
+	case 5:
+		primaryWeaponID := strings.TrimSpace(r.FormValue("weapon_primary_id"))
+		secondaryWeaponID := strings.TrimSpace(r.FormValue("weapon_secondary_id"))
+		armorID := strings.TrimSpace(r.FormValue("armor_id"))
+		potionItemID := strings.TrimSpace(r.FormValue("potion_item_id"))
+		if primaryWeaponID == "" || armorID == "" || potionItemID == "" {
+			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_primary_weapon_armor_and_potion_are_required", "primary weapon, armor, and potion are required")
+		}
+		weaponIDs := []string{primaryWeaponID}
+		if secondaryWeaponID != "" {
+			weaponIDs = append(weaponIDs, secondaryWeaponID)
+		}
+		return &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_EquipmentInput{EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{WeaponIds: weaponIDs, ArmorId: armorID, PotionItemId: potionItemID}}}, nil
+	case 6:
+		background := strings.TrimSpace(r.FormValue("background"))
+		if background == "" {
+			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_background_is_required", "background is required")
+		}
+		return &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_BackgroundInput{BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{Background: background}}}, nil
+	case 7:
+		experienceName := strings.TrimSpace(r.FormValue("experience_name"))
+		if experienceName == "" {
+			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_experience_name_is_required", "experience name is required")
+		}
+		experienceModifier, err := parseOptionalInt32(r.FormValue("experience_modifier"))
+		if err != nil {
+			return nil, err
+		}
+		return &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_ExperiencesInput{ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{Experiences: []*daggerheartv1.DaggerheartExperience{{Name: experienceName, Modifier: experienceModifier}}}}}, nil
+	case 8:
+		rawDomainCardIDs := r.Form["domain_card_id"]
+		domainCardIDs := make([]string, 0, len(rawDomainCardIDs))
+		seen := map[string]struct{}{}
+		for _, rawDomainCardID := range rawDomainCardIDs {
+			trimmedDomainCardID := strings.TrimSpace(rawDomainCardID)
+			if trimmedDomainCardID == "" {
+				continue
+			}
+			if _, ok := seen[trimmedDomainCardID]; ok {
+				continue
+			}
+			seen[trimmedDomainCardID] = struct{}{}
+			domainCardIDs = append(domainCardIDs, trimmedDomainCardID)
+		}
+		if len(domainCardIDs) == 0 {
+			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_at_least_one_domain_card_is_required", "at least one domain card is required")
+		}
+		return &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_DomainCardsInput{DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: domainCardIDs}}}, nil
+	case 9:
+		connections := strings.TrimSpace(r.FormValue("connections"))
+		if connections == "" {
+			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_connections_are_required", "connections are required")
+		}
+		return &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_ConnectionsInput{ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{Connections: connections}}}, nil
+	default:
+		return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_step_is_not_available", "character creation step is not available")
+	}
+}
+
+func parseRequiredInt32(raw string, field string) (int32, error) {
+	trimmedRaw := strings.TrimSpace(raw)
+	if trimmedRaw == "" {
+		return 0, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_numeric_field_is_required", field+" is required")
+	}
+	value, err := strconv.Atoi(trimmedRaw)
+	if err != nil {
+		return 0, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_numeric_field_must_be_valid_integer", field+" must be a valid integer")
+	}
+	return int32(value), nil
+}
+
+func parseOptionalInt32(raw string) (int32, error) {
+	trimmedRaw := strings.TrimSpace(raw)
+	if trimmedRaw == "" {
+		return 0, nil
+	}
+	value, err := strconv.Atoi(trimmedRaw)
+	if err != nil {
+		return 0, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_modifier_must_be_valid_integer", "modifier must be a valid integer")
+	}
+	return int32(value), nil
+}
+
 func parseAppGameSystem(value string) (commonv1.GameSystem, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "daggerheart", "game_system_daggerheart":
@@ -674,4 +1014,19 @@ func parseAppGmMode(value string) (statev1.GmMode, bool) {
 	default:
 		return statev1.GmMode_GM_MODE_UNSPECIFIED, false
 	}
+}
+
+func parseAppCharacterKind(value string) (statev1.CharacterKind, bool) {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "pc", "character_kind_pc":
+		return statev1.CharacterKind_PC, true
+	case "npc", "character_kind_npc":
+		return statev1.CharacterKind_NPC, true
+	default:
+		return statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED, false
+	}
+}
+
+func isDaggerheartCampaignSystem(system string) bool {
+	return strings.EqualFold(strings.TrimSpace(system), "Daggerheart")
 }

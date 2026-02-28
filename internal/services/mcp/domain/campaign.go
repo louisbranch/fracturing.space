@@ -284,12 +284,31 @@ type CharacterProfileResult struct {
 	MajorThreshold  int    `json:"major_threshold" jsonschema:"major damage threshold"`
 	SevereThreshold int    `json:"severe_threshold" jsonschema:"severe damage threshold"`
 	// Daggerheart traits
-	Agility   int `json:"agility" jsonschema:"agility trait (-2 to +4)"`
-	Strength  int `json:"strength" jsonschema:"strength trait (-2 to +4)"`
-	Finesse   int `json:"finesse" jsonschema:"finesse trait (-2 to +4)"`
-	Instinct  int `json:"instinct" jsonschema:"instinct trait (-2 to +4)"`
-	Presence  int `json:"presence" jsonschema:"presence trait (-2 to +4)"`
-	Knowledge int `json:"knowledge" jsonschema:"knowledge trait (-2 to +4)"`
+	Agility              int                        `json:"agility" jsonschema:"agility trait (-2 to +4)"`
+	Strength             int                        `json:"strength" jsonschema:"strength trait (-2 to +4)"`
+	Finesse              int                        `json:"finesse" jsonschema:"finesse trait (-2 to +4)"`
+	Instinct             int                        `json:"instinct" jsonschema:"instinct trait (-2 to +4)"`
+	Presence             int                        `json:"presence" jsonschema:"presence trait (-2 to +4)"`
+	Knowledge            int                        `json:"knowledge" jsonschema:"knowledge trait (-2 to +4)"`
+	ClassID              string                     `json:"class_id" jsonschema:"selected class content id"`
+	SubclassID           string                     `json:"subclass_id" jsonschema:"selected subclass content id"`
+	AncestryID           string                     `json:"ancestry_id" jsonschema:"selected ancestry heritage id"`
+	CommunityID          string                     `json:"community_id" jsonschema:"selected community heritage id"`
+	TraitsAssigned       bool                       `json:"traits_assigned" jsonschema:"whether traits were assigned in creation"`
+	DetailsRecorded      bool                       `json:"details_recorded" jsonschema:"whether details were recorded in creation"`
+	StartingWeaponIDs    []string                   `json:"starting_weapon_ids" jsonschema:"selected starting weapon ids"`
+	StartingArmorID      string                     `json:"starting_armor_id" jsonschema:"selected starting armor id"`
+	StartingPotionItemID string                     `json:"starting_potion_item_id" jsonschema:"selected starting potion item id"`
+	Background           string                     `json:"background" jsonschema:"free-form character background"`
+	Experiences          []CharacterExperienceInput `json:"experiences" jsonschema:"character experiences"`
+	DomainCardIDs        []string                   `json:"domain_card_ids" jsonschema:"selected domain card ids"`
+	Connections          string                     `json:"connections" jsonschema:"free-form character connections"`
+}
+
+// CharacterExperienceInput represents a Daggerheart experience entry.
+type CharacterExperienceInput struct {
+	Name     string `json:"name" jsonschema:"experience name"`
+	Modifier int    `json:"modifier" jsonschema:"experience modifier"`
 }
 
 // CharacterStateResult represents character state data in MCP responses.
@@ -308,18 +327,55 @@ type CharacterProfilePatchInput struct {
 	Evasion         *int   `json:"evasion,omitempty" jsonschema:"optional evasion"`
 	MajorThreshold  *int   `json:"major_threshold,omitempty" jsonschema:"optional major_threshold"`
 	SevereThreshold *int   `json:"severe_threshold,omitempty" jsonschema:"optional severe_threshold"`
-	// Daggerheart traits (optional, -2 to +4)
-	Agility   *int `json:"agility,omitempty" jsonschema:"optional agility trait"`
-	Strength  *int `json:"strength,omitempty" jsonschema:"optional strength trait"`
-	Finesse   *int `json:"finesse,omitempty" jsonschema:"optional finesse trait"`
-	Instinct  *int `json:"instinct,omitempty" jsonschema:"optional instinct trait"`
-	Presence  *int `json:"presence,omitempty" jsonschema:"optional presence trait"`
-	Knowledge *int `json:"knowledge,omitempty" jsonschema:"optional knowledge trait"`
 }
 
 // CharacterProfilePatchResult represents the MCP tool output for patching a character profile.
 type CharacterProfilePatchResult struct {
 	Profile CharacterProfileResult `json:"profile" jsonschema:"updated character profile"`
+}
+
+// CharacterCreationWorkflowApplyInput represents MCP bulk creation input.
+type CharacterCreationWorkflowApplyInput struct {
+	CharacterID   string                     `json:"character_id" jsonschema:"character identifier"`
+	ClassID       string                     `json:"class_id" jsonschema:"class content id"`
+	SubclassID    string                     `json:"subclass_id" jsonschema:"subclass content id"`
+	AncestryID    string                     `json:"ancestry_id" jsonschema:"ancestry heritage id"`
+	CommunityID   string                     `json:"community_id" jsonschema:"community heritage id"`
+	Agility       int                        `json:"agility" jsonschema:"agility trait (-2 to +4)"`
+	Strength      int                        `json:"strength" jsonschema:"strength trait (-2 to +4)"`
+	Finesse       int                        `json:"finesse" jsonschema:"finesse trait (-2 to +4)"`
+	Instinct      int                        `json:"instinct" jsonschema:"instinct trait (-2 to +4)"`
+	Presence      int                        `json:"presence" jsonschema:"presence trait (-2 to +4)"`
+	Knowledge     int                        `json:"knowledge" jsonschema:"knowledge trait (-2 to +4)"`
+	WeaponIDs     []string                   `json:"weapon_ids" jsonschema:"starting weapon ids (one or two)"`
+	ArmorID       string                     `json:"armor_id" jsonschema:"starting armor id"`
+	PotionItemID  string                     `json:"potion_item_id" jsonschema:"starting potion item id"`
+	Background    string                     `json:"background" jsonschema:"background text"`
+	Experiences   []CharacterExperienceInput `json:"experiences" jsonschema:"experiences list"`
+	DomainCardIDs []string                   `json:"domain_card_ids" jsonschema:"selected domain card ids"`
+	Connections   string                     `json:"connections" jsonschema:"connections text"`
+}
+
+// CharacterCreationStepProgressResult represents one step completion entry.
+type CharacterCreationStepProgressResult struct {
+	Step     int    `json:"step" jsonschema:"1-based step index"`
+	Key      string `json:"key" jsonschema:"stable step key"`
+	Complete bool   `json:"complete" jsonschema:"step completion flag"`
+}
+
+// CharacterCreationProgressResult represents workflow progress data in MCP.
+type CharacterCreationProgressResult struct {
+	CharacterID  string                                `json:"character_id" jsonschema:"character identifier"`
+	Ready        bool                                  `json:"ready" jsonschema:"workflow ready flag"`
+	NextStep     int                                   `json:"next_step" jsonschema:"next required step (0 when ready)"`
+	UnmetReasons []string                              `json:"unmet_reasons" jsonschema:"workflow unmet reasons"`
+	Steps        []CharacterCreationStepProgressResult `json:"steps" jsonschema:"ordered step progress"`
+}
+
+// CharacterCreationWorkflowApplyResult represents MCP bulk creation output.
+type CharacterCreationWorkflowApplyResult struct {
+	Profile  CharacterProfileResult          `json:"profile" jsonschema:"updated character profile"`
+	Progress CharacterCreationProgressResult `json:"progress" jsonschema:"updated creation workflow progress"`
 }
 
 // CharacterStatePatchInput represents the MCP tool input for patching a character state.

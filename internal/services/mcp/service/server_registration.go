@@ -97,6 +97,7 @@ var mcpToolRegistrars = []mcpToolRegistrar{
 	newMCPToolRegistrar[domain.CharacterControlSetInput, domain.CharacterControlSetResult](),
 	newMCPToolRegistrar[domain.CharacterSheetGetInput, domain.CharacterSheetGetResult](),
 	newMCPToolRegistrar[domain.CharacterProfilePatchInput, domain.CharacterProfilePatchResult](),
+	newMCPToolRegistrar[domain.CharacterCreationWorkflowApplyInput, domain.CharacterCreationWorkflowApplyResult](),
 	newMCPToolRegistrar[domain.CharacterStatePatchInput, domain.CharacterStatePatchResult](),
 	newMCPToolRegistrar[domain.SessionStartInput, domain.SessionStartResult](),
 	newMCPToolRegistrar[domain.SessionEndInput, domain.SessionEndResult](),

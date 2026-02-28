@@ -81,6 +81,7 @@ func maybeEnsureSessionStartReadinessForBlackbox(
 		if isError == true {
 			t.Fatalf("%s readiness set control for %s returned tool error (response=%s)", stepName, characterID, string(setRaw))
 		}
+		patchBlackboxCharacterReadiness(t, stepName, campaignID, characterID, invoke)
 	}
 
 	readResp, readRaw, err = invoke(readReq)
@@ -175,6 +176,65 @@ func maybeEnsureSessionStartReadinessForBlackbox(
 		if isError == true {
 			t.Fatalf("%s readiness set control for player %s character %s returned tool error (response=%s)", stepName, playerID, characterID, string(setRaw))
 		}
+		patchBlackboxCharacterReadiness(t, stepName, campaignID, characterID, invoke)
+	}
+}
+
+func patchBlackboxCharacterReadiness(
+	t *testing.T,
+	stepName string,
+	campaignID string,
+	characterID string,
+	invoke blackboxInvoker,
+) {
+	t.Helper()
+
+	background := "integration background"
+	connections := "integration connections"
+	classID := "class.guardian"
+	subclassID := "subclass.stalwart"
+	ancestryID := "heritage.human"
+	communityID := "heritage.highborne"
+
+	patchReq := map[string]any{
+		"jsonrpc": "2.0",
+		"id":      fmt.Sprintf("%s-readiness-patch-%s", stepName, characterID),
+		"method":  "tools/call",
+		"params": map[string]any{
+			"name": "character_creation_workflow_apply",
+			"arguments": map[string]any{
+				"character_id":    characterID,
+				"class_id":        classID,
+				"subclass_id":     subclassID,
+				"ancestry_id":     ancestryID,
+				"community_id":    communityID,
+				"agility":         2,
+				"strength":        1,
+				"finesse":         1,
+				"instinct":        0,
+				"presence":        0,
+				"knowledge":       -1,
+				"weapon_ids":      []string{"weapon.longsword"},
+				"armor_id":        "armor.gambeson-armor",
+				"potion_item_id":  "item.minor-health-potion",
+				"background":      background,
+				"experiences":     []map[string]any{{"name": "integration experience", "modifier": 1}},
+				"domain_card_ids": []string{"domain_card.valor-bare-bones"},
+				"connections":     connections,
+			},
+		},
+	}
+
+	patchResp, patchRaw, patchErr := invoke(patchReq)
+	if patchErr != nil {
+		t.Fatalf("%s readiness workflow apply for %s: %v", stepName, characterID, patchErr)
+	}
+	if toolErr := seed.FormatJSONRPCError(patchResp); toolErr != "" {
+		t.Fatalf("%s readiness workflow apply for %s error: %s (response=%s)", stepName, characterID, toolErr, string(patchRaw))
+	}
+	isError, _ := seed.LookupJSONPath(patchResp, "result.isError")
+	if isError == true {
+		t.Fatalf("%s readiness workflow apply for %s returned tool error (response=%s)", stepName, characterID, string(patchRaw))
 	}
 }
 

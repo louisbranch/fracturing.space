@@ -25,6 +25,7 @@ Durable architecture, domain, and policy documentation.
 - [Quick start: system developer](quick-start-system-developer.md)
 - [System developer checklist](system-developer-checklist.md)
 - [Daggerheart event timeline contract](daggerheart-event-timeline-contract.md)
+- [Daggerheart creation workflow](daggerheart-creation-workflow.md)
 
 ## Runtime boundaries and policy
 

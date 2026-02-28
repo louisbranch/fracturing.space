@@ -33,6 +33,7 @@ CREATE TABLE daggerheart_classes (
 CREATE TABLE daggerheart_subclasses (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    class_id TEXT NOT NULL,
     spellcast_trait TEXT NOT NULL DEFAULT '',
     foundation_features_json TEXT NOT NULL DEFAULT '[]',
     specialization_features_json TEXT NOT NULL DEFAULT '[]',

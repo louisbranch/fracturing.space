@@ -10,6 +10,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc/metadata"
@@ -76,7 +77,10 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 		{name: "start session", run: func() error { return svc.startSession(ctx, "c1") }},
 		{name: "end session", run: func() error { return svc.endSession(ctx, "c1") }},
 		{name: "update participants", run: func() error { return svc.updateParticipants(ctx, "c1") }},
-		{name: "create character", run: func() error { return svc.createCharacter(ctx, "c1") }},
+		{name: "create character", run: func() error {
+			_, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC})
+			return err
+		}},
 		{name: "update character", run: func() error { return svc.updateCharacter(ctx, "c1") }},
 		{name: "control character", run: func() error { return svc.controlCharacter(ctx, "c1") }},
 		{name: "create invite", run: func() error { return svc.createInvite(ctx, "c1") }},
@@ -436,7 +440,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	if err := svc.updateParticipants(ctx, "c1"); err != nil {
 		t.Fatalf("updateParticipants() error = %v", err)
 	}
-	if err := svc.createCharacter(ctx, "c1"); err != nil {
+	if _, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC}); err != nil {
 		t.Fatalf("createCharacter() error = %v", err)
 	}
 	if err := svc.updateCharacter(ctx, "c1"); err != nil {
@@ -606,7 +610,8 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		{
 			name: "create character",
 			run: func(s service) error {
-				return s.createCharacter(contextWithResolvedUserID("user-1"), "c1")
+				_, err := s.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC})
+				return err
 			},
 			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
 			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
@@ -677,7 +682,7 @@ func TestCharacterMutationMethodsAllowMemberCampaignAccess(t *testing.T) {
 		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 	}
 	svc := newService(gateway)
-	if err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1"); err != nil {
+	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC}); err != nil {
 		t.Fatalf("createCharacter() error = %v", err)
 	}
 	if err := svc.updateCharacter(contextWithResolvedUserID("user-1"), "c1"); err != nil {
@@ -685,6 +690,38 @@ func TestCharacterMutationMethodsAllowMemberCampaignAccess(t *testing.T) {
 	}
 	if len(gateway.calls) != 2 || gateway.calls[0] != "create-character" || gateway.calls[1] != "update-character" {
 		t.Fatalf("mutation gateway calls = %v, want [create-character update-character]", gateway.calls)
+	}
+}
+
+func TestCreateCharacterValidatesRequiredFields(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true}})
+
+	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "", Kind: statev1.CharacterKind_PC}); err == nil {
+		t.Fatalf("expected validation error for empty name")
+	}
+	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED}); err == nil {
+		t.Fatalf("expected validation error for unspecified kind")
+	}
+}
+
+func TestServiceCreateCharacterRejectsEmptyCreatedCharacterID(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision:    campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		createCharacterResult:    CreateCharacterResult{CharacterID: "   "},
+		createCharacterResultSet: true,
+	}
+	svc := newService(gateway)
+
+	_, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC})
+	if err == nil {
+		t.Fatalf("expected empty character id error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusInternalServerError {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusInternalServerError)
 	}
 }
 
@@ -722,37 +759,155 @@ func TestMutationMethodsDenyWhenAuthorizationGatewayErrors(t *testing.T) {
 	}
 }
 
+func TestCampaignCharacterCreationBuildsFilteredWorkflowView(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		characterCreationProgress: CampaignCharacterCreationProgress{
+			Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: true}, {Step: 2, Key: "heritage", Complete: false}},
+			NextStep: 2,
+			Ready:    false,
+		},
+		characterCreationProfile: CampaignCharacterCreationProfile{ClassID: "warrior", SubclassID: "guardian"},
+		characterCreationCatalog: CampaignCharacterCreationCatalog{
+			Classes: []DaggerheartCreationClass{
+				{ID: "warrior", Name: "Warrior", DomainIDs: []string{"valor"}},
+				{ID: "rogue", Name: "Rogue", DomainIDs: []string{"midnight"}},
+			},
+			Subclasses: []DaggerheartCreationSubclass{
+				{ID: "guardian", Name: "Guardian", ClassID: "warrior"},
+				{ID: "shadow", Name: "Shadow", ClassID: "rogue"},
+			},
+			Heritages: []DaggerheartCreationHeritage{
+				{ID: "human", Name: "Human", Kind: "ancestry"},
+				{ID: "ridgeborne", Name: "Ridgeborne", Kind: "community"},
+			},
+			Weapons: []DaggerheartCreationWeapon{
+				{ID: "weapon.longsword", Name: "Longsword", Category: "primary", Tier: 1},
+				{ID: "weapon.dagger", Name: "Dagger", Category: "secondary", Tier: 1},
+				{ID: "weapon.rare", Name: "Rare", Category: "primary", Tier: 2},
+			},
+			Armor: []DaggerheartCreationArmor{{ID: "armor.chain", Name: "Chain", Tier: 1}, {ID: "armor.rare", Name: "Rare", Tier: 2}},
+			Items: []DaggerheartCreationItem{{ID: "item.minor-health-potion", Name: "Minor Health Potion"}, {ID: "item.other", Name: "Other"}},
+			DomainCards: []DaggerheartCreationDomainCard{
+				{ID: "card.guard", Name: "Guard", DomainID: "valor", Level: 1},
+				{ID: "card.shadow", Name: "Shadow", DomainID: "midnight", Level: 1},
+			},
+		},
+	})
+
+	creation, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", commonv1.Locale_LOCALE_EN_US)
+	if err != nil {
+		t.Fatalf("campaignCharacterCreation() error = %v", err)
+	}
+	if creation.Progress.NextStep != 2 {
+		t.Fatalf("NextStep = %d, want 2", creation.Progress.NextStep)
+	}
+	if creation.Profile.ClassID != "warrior" {
+		t.Fatalf("ClassID = %q, want %q", creation.Profile.ClassID, "warrior")
+	}
+	if len(creation.Subclasses) != 1 || creation.Subclasses[0].ID != "guardian" {
+		t.Fatalf("Subclasses = %#v, want only warrior subclasses", creation.Subclasses)
+	}
+	if len(creation.Ancestries) != 1 || len(creation.Communities) != 1 {
+		t.Fatalf("heritages split = ancestries:%d communities:%d", len(creation.Ancestries), len(creation.Communities))
+	}
+	if len(creation.PrimaryWeapons) != 1 || creation.PrimaryWeapons[0].ID != "weapon.longsword" {
+		t.Fatalf("PrimaryWeapons = %#v", creation.PrimaryWeapons)
+	}
+	if len(creation.SecondaryWeapons) != 1 || creation.SecondaryWeapons[0].ID != "weapon.dagger" {
+		t.Fatalf("SecondaryWeapons = %#v", creation.SecondaryWeapons)
+	}
+	if len(creation.Armor) != 1 || creation.Armor[0].ID != "armor.chain" {
+		t.Fatalf("Armor = %#v", creation.Armor)
+	}
+	if len(creation.PotionItems) != 1 || creation.PotionItems[0].ID != "item.minor-health-potion" {
+		t.Fatalf("PotionItems = %#v", creation.PotionItems)
+	}
+	if len(creation.DomainCards) != 1 || creation.DomainCards[0].ID != "card.guard" {
+		t.Fatalf("DomainCards = %#v", creation.DomainCards)
+	}
+}
+
+func TestCampaignCharacterCreationForwardsCatalogLocale(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{}
+	svc := newService(gateway)
+
+	_, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", commonv1.Locale_LOCALE_PT_BR)
+	if err != nil {
+		t.Fatalf("campaignCharacterCreation() error = %v", err)
+	}
+	if gateway.characterCreationCatalogLocale != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("catalog locale = %v, want %v", gateway.characterCreationCatalogLocale, commonv1.Locale_LOCALE_PT_BR)
+	}
+}
+
+func TestCharacterCreationMutationMethodsDelegateToGateway(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true}}
+	svc := newService(gateway)
+	ctx := contextWithResolvedUserID("user-1")
+
+	if err := svc.applyCharacterCreationStep(ctx, "c1", "char-1", &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{}}}); err != nil {
+		t.Fatalf("applyCharacterCreationStep() error = %v", err)
+	}
+	if err := svc.resetCharacterCreationWorkflow(ctx, "c1", "char-1"); err != nil {
+		t.Fatalf("resetCharacterCreationWorkflow() error = %v", err)
+	}
+	if len(gateway.calls) != 2 {
+		t.Fatalf("calls = %v, want two workflow mutation calls", gateway.calls)
+	}
+	if gateway.calls[0] != "apply-character-creation-step" || gateway.calls[1] != "reset-character-creation-workflow" {
+		t.Fatalf("calls = %v", gateway.calls)
+	}
+}
+
 func contextWithResolvedUserID(userID string) context.Context {
 	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, userID))
 }
 
 type campaignGatewayStub struct {
-	items                       []CampaignSummary
-	listErr                     error
-	campaignName                string
-	campaignNameErr             error
-	campaignWorkspace           CampaignWorkspace
-	campaignWorkspaceErr        error
-	campaignParticipants        []CampaignParticipant
-	campaignParticipantsErr     error
-	campaignCharacters          []CampaignCharacter
-	campaignCharactersErr       error
-	campaignSessions            []CampaignSession
-	campaignSessionsErr         error
-	campaignInvites             []CampaignInvite
-	campaignInvitesErr          error
-	createCampaignResult        CreateCampaignResult
-	createCampaignErr           error
-	lastCreateInput             CreateCampaignInput
-	authorizationDecision       campaignAuthorizationDecision
-	authorizationErr            error
-	authorizationCalls          int
-	authorizationRequests       []campaignAuthorizationRequest
-	batchAuthorizationDecisions []campaignAuthorizationDecision
-	batchAuthorizationErr       error
-	batchAuthorizationCalls     int
-	batchAuthorizationRequests  []campaignAuthorizationCheck
-	calls                       []string
+	items                             []CampaignSummary
+	listErr                           error
+	campaignName                      string
+	campaignNameErr                   error
+	campaignWorkspace                 CampaignWorkspace
+	campaignWorkspaceErr              error
+	campaignParticipants              []CampaignParticipant
+	campaignParticipantsErr           error
+	campaignCharacters                []CampaignCharacter
+	campaignCharactersErr             error
+	campaignSessions                  []CampaignSession
+	campaignSessionsErr               error
+	campaignInvites                   []CampaignInvite
+	campaignInvitesErr                error
+	createCampaignResult              CreateCampaignResult
+	createCampaignErr                 error
+	lastCreateInput                   CreateCampaignInput
+	authorizationDecision             campaignAuthorizationDecision
+	authorizationErr                  error
+	authorizationCalls                int
+	authorizationRequests             []campaignAuthorizationRequest
+	batchAuthorizationDecisions       []campaignAuthorizationDecision
+	batchAuthorizationErr             error
+	batchAuthorizationCalls           int
+	batchAuthorizationRequests        []campaignAuthorizationCheck
+	characterCreationProgress         CampaignCharacterCreationProgress
+	characterCreationProgressErr      error
+	characterCreationCatalog          CampaignCharacterCreationCatalog
+	characterCreationCatalogErr       error
+	characterCreationCatalogLocale    commonv1.Locale
+	characterCreationProfile          CampaignCharacterCreationProfile
+	characterCreationProfileErr       error
+	createCharacterResult             CreateCharacterResult
+	createCharacterResultSet          bool
+	createCharacterErr                error
+	applyCharacterCreationStepErr     error
+	resetCharacterCreationWorkflowErr error
+	calls                             []string
 }
 
 type campaignAuthorizationRequest struct {
@@ -814,6 +969,28 @@ func (f *campaignGatewayStub) CampaignInvites(context.Context, string) ([]Campai
 	return f.campaignInvites, nil
 }
 
+func (f *campaignGatewayStub) CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error) {
+	if f.characterCreationProgressErr != nil {
+		return CampaignCharacterCreationProgress{}, f.characterCreationProgressErr
+	}
+	return f.characterCreationProgress, nil
+}
+
+func (f *campaignGatewayStub) CharacterCreationCatalog(_ context.Context, locale commonv1.Locale) (CampaignCharacterCreationCatalog, error) {
+	f.characterCreationCatalogLocale = locale
+	if f.characterCreationCatalogErr != nil {
+		return CampaignCharacterCreationCatalog{}, f.characterCreationCatalogErr
+	}
+	return f.characterCreationCatalog, nil
+}
+
+func (f *campaignGatewayStub) CharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error) {
+	if f.characterCreationProfileErr != nil {
+		return CampaignCharacterCreationProfile{}, f.characterCreationProfileErr
+	}
+	return f.characterCreationProfile, nil
+}
+
 func (f *campaignGatewayStub) CreateCampaign(_ context.Context, input CreateCampaignInput) (CreateCampaignResult, error) {
 	if f != nil {
 		// capture input for behavior assertions
@@ -843,9 +1020,15 @@ func (f *campaignGatewayStub) UpdateParticipants(context.Context, string) error 
 	return nil
 }
 
-func (f *campaignGatewayStub) CreateCharacter(context.Context, string) error {
+func (f *campaignGatewayStub) CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error) {
 	f.calls = append(f.calls, "create-character")
-	return nil
+	if f.createCharacterErr != nil {
+		return CreateCharacterResult{}, f.createCharacterErr
+	}
+	if !f.createCharacterResultSet {
+		return CreateCharacterResult{CharacterID: "char-created"}, nil
+	}
+	return f.createCharacterResult, nil
 }
 
 func (f *campaignGatewayStub) UpdateCharacter(context.Context, string) error {
@@ -866,6 +1049,16 @@ func (f *campaignGatewayStub) CreateInvite(context.Context, string) error {
 func (f *campaignGatewayStub) RevokeInvite(context.Context, string) error {
 	f.calls = append(f.calls, "revoke-invite")
 	return nil
+}
+
+func (f *campaignGatewayStub) ApplyCharacterCreationStep(context.Context, string, string, *daggerheartv1.DaggerheartCreationStepInput) error {
+	f.calls = append(f.calls, "apply-character-creation-step")
+	return f.applyCharacterCreationStepErr
+}
+
+func (f *campaignGatewayStub) ResetCharacterCreationWorkflow(context.Context, string, string) error {
+	f.calls = append(f.calls, "reset-character-creation-workflow")
+	return f.resetCharacterCreationWorkflowErr
 }
 
 func (f *campaignGatewayStub) CanCampaignAction(

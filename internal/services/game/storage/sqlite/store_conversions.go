@@ -661,6 +661,7 @@ func dbDaggerheartSubclassToStorage(row db.DaggerheartSubclass) (storage.Daggerh
 	subclass := storage.DaggerheartSubclass{
 		ID:             row.ID,
 		Name:           row.Name,
+		ClassID:        row.ClassID,
 		SpellcastTrait: row.SpellcastTrait,
 		CreatedAt:      fromMillis(row.CreatedAt),
 		UpdatedAt:      fromMillis(row.UpdatedAt),

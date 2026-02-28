@@ -67,6 +67,11 @@ func (s *DaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, cam
 	return p, nil
 }
 
+func (s *DaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {
+	delete(s.Profiles, campaignID+":"+characterID)
+	return nil
+}
+
 func (s *DaggerheartStore) PutDaggerheartCharacterState(_ context.Context, st storage.DaggerheartCharacterState) error {
 	s.States[st.CampaignID+":"+st.CharacterID] = st
 	return nil

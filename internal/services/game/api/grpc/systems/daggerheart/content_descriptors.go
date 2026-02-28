@@ -153,6 +153,7 @@ var subclassDescriptor = contentDescriptor[storage.DaggerheartSubclass, pb.Dagge
 		FilterFields: contentfilter.Fields{
 			"id":              contentfilter.FieldString,
 			"name":            contentfilter.FieldString,
+			"class_id":        contentfilter.FieldString,
 			"spellcast_trait": contentfilter.FieldString,
 		},
 		KeySpec: []contentKeySpec{
@@ -171,6 +172,8 @@ var subclassDescriptor = contentDescriptor[storage.DaggerheartSubclass, pb.Dagge
 				return item.ID, true
 			case "name":
 				return item.Name, true
+			case "class_id":
+				return item.ClassID, true
 			case "spellcast_trait":
 				return item.SpellcastTrait, true
 			default:

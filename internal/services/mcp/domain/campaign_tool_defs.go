@@ -23,6 +23,24 @@ func characterProfileResultFromProto(profile *statev1.CharacterProfile) Characte
 		result.Instinct = int(dh.GetInstinct().GetValue())
 		result.Presence = int(dh.GetPresence().GetValue())
 		result.Knowledge = int(dh.GetKnowledge().GetValue())
+		result.ClassID = dh.GetClassId()
+		result.SubclassID = dh.GetSubclassId()
+		result.AncestryID = dh.GetAncestryId()
+		result.CommunityID = dh.GetCommunityId()
+		result.TraitsAssigned = dh.GetTraitsAssigned().GetValue()
+		result.DetailsRecorded = dh.GetDetailsRecorded().GetValue()
+		result.StartingWeaponIDs = append([]string(nil), dh.GetStartingWeaponIds()...)
+		result.StartingArmorID = dh.GetStartingArmorId()
+		result.StartingPotionItemID = dh.GetStartingPotionItemId()
+		result.Background = dh.GetBackground()
+		for _, experience := range dh.GetExperiences() {
+			result.Experiences = append(result.Experiences, CharacterExperienceInput{
+				Name:     experience.GetName(),
+				Modifier: int(experience.GetModifier()),
+			})
+		}
+		result.DomainCardIDs = append([]string(nil), dh.GetDomainCardIds()...)
+		result.Connections = dh.GetConnections()
 	}
 
 	return result
@@ -145,7 +163,16 @@ func CharacterSheetGetTool() *mcp.Tool {
 func CharacterProfilePatchTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "character_profile_patch",
-		Description: "Patches a character profile (all fields optional)",
+		Description: "Patches non-workflow character profile fields",
+	}
+}
+
+// CharacterCreationWorkflowApplyTool defines the MCP tool schema for atomic
+// creation workflow application.
+func CharacterCreationWorkflowApplyTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "character_creation_workflow_apply",
+		Description: "Applies all Daggerheart creation steps atomically",
 	}
 }
 

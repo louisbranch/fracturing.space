@@ -79,6 +79,12 @@ func TestCampaignRouteBuilders(t *testing.T) {
 	if got := AppCampaignCharacter("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1" {
 		t.Fatalf("AppCampaignCharacter() = %q", got)
 	}
+	if got := AppCampaignCharacterCreationStep("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/creation/step" {
+		t.Fatalf("AppCampaignCharacterCreationStep() = %q", got)
+	}
+	if got := AppCampaignCharacterCreationReset("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/creation/reset" {
+		t.Fatalf("AppCampaignCharacterCreationReset() = %q", got)
+	}
 	if got := AppCampaignCharacterCreate("camp-1"); got != "/app/campaigns/camp-1/characters/create" {
 		t.Fatalf("AppCampaignCharacterCreate() = %q", got)
 	}
@@ -119,6 +125,12 @@ func TestServeMuxPatternConstants(t *testing.T) {
 	}
 	if AppCampaignCharacterPattern != "/app/campaigns/{campaignID}/characters/{characterID}" {
 		t.Fatalf("AppCampaignCharacterPattern = %q", AppCampaignCharacterPattern)
+	}
+	if AppCampaignCharacterCreationStepPattern != "/app/campaigns/{campaignID}/characters/{characterID}/creation/step" {
+		t.Fatalf("AppCampaignCharacterCreationStepPattern = %q", AppCampaignCharacterCreationStepPattern)
+	}
+	if AppCampaignCharacterCreationResetPattern != "/app/campaigns/{campaignID}/characters/{characterID}/creation/reset" {
+		t.Fatalf("AppCampaignCharacterCreationResetPattern = %q", AppCampaignCharacterCreationResetPattern)
 	}
 	if AppCampaignInvitesPattern != "/app/campaigns/{campaignID}/invites" {
 		t.Fatalf("AppCampaignInvitesPattern = %q", AppCampaignInvitesPattern)
@@ -189,6 +201,12 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	}
 	if got := AppCampaignCharacter("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1" {
 		t.Fatalf("AppCampaignCharacter() escaped = %q", got)
+	}
+	if got := AppCampaignCharacterCreationStep("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/creation/step" {
+		t.Fatalf("AppCampaignCharacterCreationStep() escaped = %q", got)
+	}
+	if got := AppCampaignCharacterCreationReset("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/creation/reset" {
+		t.Fatalf("AppCampaignCharacterCreationReset() escaped = %q", got)
 	}
 	if got := AppSettingsAIKeyRevoke("cred/1"); got != "/app/settings/ai-keys/cred%2F1/revoke" {
 		t.Fatalf("AppSettingsAIKeyRevoke() escaped = %q", got)

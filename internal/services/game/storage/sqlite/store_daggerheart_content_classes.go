@@ -116,6 +116,9 @@ func (s *Store) PutDaggerheartSubclass(ctx context.Context, subclass storage.Dag
 	if err := requireCatalogEntryID(subclass.ID, "subclass"); err != nil {
 		return err
 	}
+	if err := requireCatalogEntryID(subclass.ClassID, "subclass class"); err != nil {
+		return err
+	}
 
 	foundationJSON, err := json.Marshal(subclass.FoundationFeatures)
 	if err != nil {
@@ -133,6 +136,7 @@ func (s *Store) PutDaggerheartSubclass(ctx context.Context, subclass storage.Dag
 	return s.q.PutDaggerheartSubclass(ctx, db.PutDaggerheartSubclassParams{
 		ID:                         subclass.ID,
 		Name:                       subclass.Name,
+		ClassID:                    subclass.ClassID,
 		SpellcastTrait:             subclass.SpellcastTrait,
 		FoundationFeaturesJson:     string(foundationJSON),
 		SpecializationFeaturesJson: string(specializationJSON),
