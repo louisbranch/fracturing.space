@@ -30,6 +30,7 @@ func TestDaggerheartGroupActionFlow(t *testing.T) {
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
@@ -51,6 +52,7 @@ func TestDaggerheartGroupActionFlow(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
 
 	leader := createCharacter(t, ctx, characterClient, campaignID, "Group Leader")
 	supporterOne := createCharacter(t, ctx, characterClient, campaignID, "Support One")
@@ -59,6 +61,7 @@ func TestDaggerheartGroupActionFlow(t *testing.T) {
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, leader)
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, supporterOne)
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, supporterTwo)
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, leader, supporterOne, supporterTwo)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -124,6 +127,7 @@ func TestDaggerheartTagTeamFlow(t *testing.T) {
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
@@ -145,12 +149,14 @@ func TestDaggerheartTagTeamFlow(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
 
 	first := createCharacter(t, ctx, characterClient, campaignID, "Tag One")
 	second := createCharacter(t, ctx, characterClient, campaignID, "Tag Two")
 
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, first)
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, second)
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, first, second)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,

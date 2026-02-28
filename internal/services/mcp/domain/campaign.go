@@ -26,6 +26,7 @@ type CampaignCreateResult struct {
 	AccessPolicy       string `json:"access_policy" jsonschema:"campaign access policy"`
 	ParticipantCount   int    `json:"participant_count" jsonschema:"number of all participants (GM + PLAYER + future roles)"`
 	CharacterCount     int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
+	CanStartSession    bool   `json:"can_start_session" jsonschema:"whether the campaign can start a session now"`
 	GmFear             int    `json:"gm_fear" jsonschema:"campaign-scoped GM fear"`
 	ThemePrompt        string `json:"theme_prompt" jsonschema:"theme prompt"`
 	Status             string `json:"status" jsonschema:"campaign status"`
@@ -44,6 +45,7 @@ type CampaignStatusResult struct {
 	AccessPolicy     string `json:"access_policy" jsonschema:"campaign access policy"`
 	ParticipantCount int    `json:"participant_count" jsonschema:"number of all participants (GM + PLAYER + future roles)"`
 	CharacterCount   int    `json:"character_count" jsonschema:"number of all characters (PC + NPC + future kinds)"`
+	CanStartSession  bool   `json:"can_start_session" jsonschema:"whether the campaign can start a session now"`
 	GmFear           int    `json:"gm_fear" jsonschema:"campaign-scoped GM fear"`
 	ThemePrompt      string `json:"theme_prompt" jsonschema:"theme prompt"`
 	Status           string `json:"status" jsonschema:"campaign status"`
@@ -63,6 +65,7 @@ type CampaignListEntry struct {
 	AccessPolicy     string `json:"access_policy"`
 	ParticipantCount int    `json:"participant_count"`
 	CharacterCount   int    `json:"character_count"`
+	CanStartSession  bool   `json:"can_start_session"`
 	GmFear           int    `json:"gm_fear"`
 	ThemePrompt      string `json:"theme_prompt"`
 	CreatedAt        string `json:"created_at"`

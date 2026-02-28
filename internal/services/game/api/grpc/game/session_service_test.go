@@ -116,9 +116,9 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: campaign.GmModeHuman,
 	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("campaign.update"): {
-			Decision: command.Accept(event.Event{
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(
+			event.Event{
 				CampaignID:  "c1",
 				Type:        event.Type("campaign.updated"),
 				Timestamp:   now,
@@ -126,10 +126,8 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 				EntityType:  "campaign",
 				EntityID:    "c1",
 				PayloadJSON: []byte(`{"fields":{"status":"active"}}`),
-			}),
-		},
-		command.Type("session.start"): {
-			Decision: command.Accept(event.Event{
+			},
+			event.Event{
 				CampaignID:  "c1",
 				Type:        event.Type("session.started"),
 				Timestamp:   now,
@@ -138,8 +136,8 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 				EntityType:  "session",
 				EntityID:    "session-123",
 				PayloadJSON: []byte(`{"session_id":"session-123","session_name":"First Session"}`),
-			}),
-		},
+			},
+		),
 	}}
 
 	svc := &SessionService{
@@ -163,6 +161,9 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	}
 	if resp.Session.Status != statev1.SessionStatus_SESSION_ACTIVE {
 		t.Errorf("Session Status = %v, want %v", resp.Session.Status, statev1.SessionStatus_SESSION_ACTIVE)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
 	}
 	if got := len(eventStore.events["c1"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)

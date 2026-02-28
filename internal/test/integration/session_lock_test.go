@@ -31,6 +31,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 	defer conn.Close()
 
 	campaignClient := statev1.NewCampaignServiceClient(conn)
+	characterClient := statev1.NewCharacterServiceClient(conn)
 	sessionClient := statev1.NewSessionServiceClient(conn)
 	participantClient := statev1.NewParticipantServiceClient(conn)
 
@@ -60,6 +61,7 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 		t.Fatal("expected owner participant")
 	}
 	ownerID := participantsResp.Participants[0].Id
+	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, createResp.Campaign.Id, ownerID)
 	participantCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerID))
 	startResp, err := sessionClient.StartSession(participantCtx, &statev1.StartSessionRequest{
 		CampaignId: createResp.Campaign.Id,

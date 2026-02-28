@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
@@ -31,6 +32,32 @@ func validateEmittableEventTypes(mod module.Module, events *event.Registry) erro
 			mod.ID(), strings.Join(missing, ", "))
 	}
 	return nil
+}
+
+// ValidateSystemReadinessCheckerCoverage verifies that every registered system
+// module participates in session-start readiness by implementing
+// module.CharacterReadinessChecker.
+func ValidateSystemReadinessCheckerCoverage(modules *module.Registry) error {
+	if modules == nil {
+		return fmt.Errorf("module registry is required")
+	}
+
+	missing := make([]string, 0)
+	for _, mod := range modules.List() {
+		if _, ok := mod.(module.CharacterReadinessChecker); ok {
+			continue
+		}
+		missing = append(missing, fmt.Sprintf("%s@%s", mod.ID(), mod.Version()))
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+
+	sort.Strings(missing)
+	return fmt.Errorf(
+		"system modules missing CharacterReadinessChecker: %s",
+		strings.Join(missing, ", "),
+	)
 }
 
 // ValidateSystemFoldCoverage verifies that every system module's emittable

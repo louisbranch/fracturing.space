@@ -29,6 +29,8 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 	defer conn.Close()
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
+	characterClient := gamev1.NewCharacterServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	snapshotClient := gamev1.NewSnapshotServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
@@ -53,6 +55,18 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	participantsResp, err := participantClient.ListParticipants(ctxWithUser, &gamev1.ListParticipantsRequest{
+		CampaignId: campaignID,
+		PageSize:   200,
+	})
+	if err != nil {
+		t.Fatalf("list participants: %v", err)
+	}
+	if len(participantsResp.GetParticipants()) == 0 {
+		t.Fatal("expected owner participant")
+	}
+	ownerParticipantID := participantsResp.GetParticipants()[0].GetId()
+	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
 	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,

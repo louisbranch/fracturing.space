@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	domainmodule "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 type commandValidationCase struct {
@@ -157,6 +158,22 @@ func TestModuleMetadata(t *testing.T) {
 	}
 	if module.StateFactory() == nil {
 		t.Fatal("expected state factory")
+	}
+}
+
+func TestModule_ImplementsCharacterReadinessChecker(t *testing.T) {
+	systemModule := NewModule()
+	checker, ok := any(systemModule).(domainmodule.CharacterReadinessChecker)
+	if !ok {
+		t.Fatal("expected daggerheart module to implement CharacterReadinessChecker")
+	}
+
+	ready, reason := checker.CharacterReady(map[string]any{"daggerheart": map[string]any{"class": "guardian"}})
+	if !ready {
+		t.Fatal("character readiness = false, want true")
+	}
+	if reason != "" {
+		t.Fatalf("character readiness reason = %q, want empty", reason)
 	}
 }
 

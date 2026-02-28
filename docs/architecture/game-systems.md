@@ -84,6 +84,7 @@ Used by the domain engine to:
 - register system-owned command and event definitions
 - route system commands to module deciders
 - route system events to module folders during replay/fold
+- optionally enforce system-specific character session-start readiness
 
 Module interface:
 
@@ -98,6 +99,18 @@ type Module interface {
     Folder() Folder
     StateFactory() StateFactory
 }
+
+// Optional extension implemented by modules that need system-specific
+// character readiness validation before session start.
+type CharacterReadinessChecker interface {
+    CharacterReady(systemProfile map[string]any) (ready bool, reason string)
+}
+
+`CharacterReadinessChecker` is evaluated after core session-start readiness
+checks pass. Core readiness handles participant/controller invariants; this
+optional hook lets systems enforce profile completeness or similar mechanics
+requirements without leaking system rules into core packages. Startup validation
+requires every registered system module to implement this interface.
 ```
 
 ### System bridge and projection adapters

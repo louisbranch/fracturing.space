@@ -71,36 +71,6 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		return storage.SessionRecord{}, status.Error(codes.Internal, "domain engine is not configured")
 	}
 	actorID, actorType := resolveCommandActor(ctx)
-	if c.Status == campaign.StatusDraft {
-		payload := campaign.UpdatePayload{Fields: map[string]string{"status": "active"}}
-		payloadJSON, err := json.Marshal(payload)
-		if err != nil {
-			return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
-		}
-		_, err = executeAndApplyDomainCommand(
-			ctx,
-			a.stores.Domain,
-			applier,
-			commandbuild.Core(commandbuild.CoreInput{
-				CampaignID:   campaignID,
-				Type:         commandTypeCampaignUpdate,
-				ActorType:    actorType,
-				ActorID:      actorID,
-				RequestID:    grpcmeta.RequestIDFromContext(ctx),
-				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-				EntityType:   "campaign",
-				EntityID:     campaignID,
-				PayloadJSON:  payloadJSON,
-			}),
-			domainCommandApplyOptions{
-				requireEvents:   true,
-				missingEventMsg: "campaign.update did not emit an event",
-			},
-		)
-		if err != nil {
-			return storage.SessionRecord{}, err
-		}
-	}
 
 	payload := session.StartPayload{
 		SessionID:   sessionID,

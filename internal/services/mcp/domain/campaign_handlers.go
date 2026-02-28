@@ -273,6 +273,7 @@ func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.Resou
 				AccessPolicy:     campaignAccessPolicyToString(campaign.GetAccessPolicy()),
 				ParticipantCount: int(campaign.GetParticipantCount()),
 				CharacterCount:   int(campaign.GetCharacterCount()),
+				CanStartSession:  campaign.GetCanStartSession(),
 				GmFear:           0, // GM Fear is now in Snapshot, not Campaign
 				ThemePrompt:      campaign.GetThemePrompt(),
 				CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),
@@ -430,6 +431,7 @@ func campaignStatusResultFromProto(campaign *statev1.Campaign) CampaignStatusRes
 		AccessPolicy:     campaignAccessPolicyToString(campaign.GetAccessPolicy()),
 		ParticipantCount: int(campaign.GetParticipantCount()),
 		CharacterCount:   int(campaign.GetCharacterCount()),
+		CanStartSession:  campaign.GetCanStartSession(),
 		GmFear:           0, // GM Fear is now in Snapshot, not Campaign
 		ThemePrompt:      campaign.GetThemePrompt(),
 		Status:           campaignStatusToString(campaign.GetStatus()),

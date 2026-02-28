@@ -238,6 +238,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
+		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
+		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
 		_, err = sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
@@ -331,6 +333,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
+		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
+		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
 		_, err = sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
@@ -362,6 +366,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
+		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
+		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
 		sessionResp, err := sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
@@ -411,6 +417,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
+		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
+		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 		sessionResp, err := sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
 			Name:       "HTMX Session Detail",
@@ -444,6 +452,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
+		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
+		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
 		sessionResp, err := sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{
 			CampaignId: campaignID,
@@ -867,6 +877,8 @@ func TestAdminHTMXIntegration(t *testing.T) {
 			t.Fatalf("create campaign: %v", err)
 		}
 		campaignID := createResp.Campaign.Id
+		ownerParticipantID := createResp.GetOwnerParticipant().GetId()
+		ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
 
 		// Start a session to generate events
 		_, err = sessionClient.StartSession(ctxWithUser, &statev1.StartSessionRequest{

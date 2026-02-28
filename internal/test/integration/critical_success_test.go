@@ -32,6 +32,7 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	snapshotClient := gamev1.NewSnapshotServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
@@ -55,9 +56,11 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
 
 	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Critical Hero")
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, characterID)
+	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, characterID)
 
 	_, err = snapshotClient.PatchCharacterState(ctxWithUser, &gamev1.PatchCharacterStateRequest{
 		CampaignId:  campaignID,
@@ -145,6 +148,7 @@ func TestDaggerheartAttackFlowCriticalDamageBonus(t *testing.T) {
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
@@ -167,12 +171,14 @@ func TestDaggerheartAttackFlowCriticalDamageBonus(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
 
 	attacker := createCharacter(t, ctxWithUser, characterClient, campaignID, "Critical Attacker")
 	target := createCharacter(t, ctxWithUser, characterClient, campaignID, "Critical Target")
 
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, attacker)
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, target)
+	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, attacker, target)
 
 	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,

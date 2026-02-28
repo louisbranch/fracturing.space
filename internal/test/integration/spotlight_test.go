@@ -45,6 +45,7 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
@@ -66,8 +67,10 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
 
 	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Spotlight Hero")
+	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, characterID)
 
 	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -152,6 +155,7 @@ func TestGmConsequenceOpensGateAndSpotlight(t *testing.T) {
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
@@ -175,9 +179,11 @@ func TestGmConsequenceOpensGateAndSpotlight(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
 
 	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Consequence Hero")
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, characterID)
+	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, characterID)
 
 	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,

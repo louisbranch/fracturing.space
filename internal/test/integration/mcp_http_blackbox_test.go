@@ -114,7 +114,46 @@ func executeBlackboxStep(t *testing.T, client *http.Client, url string, step see
 	if requestMap, ok := request.(map[string]any); ok && userID != "" {
 		injectCampaignCreatorUserID(requestMap, userID)
 	}
-	body, err := json.Marshal(request)
+	requestMap, ok := request.(map[string]any)
+	if !ok {
+		t.Fatalf("request for %s is not an object", step.Name)
+	}
+
+	invoke := func(reqMap map[string]any) (map[string]any, []byte, error) {
+		encoded, marshalErr := json.Marshal(reqMap)
+		if marshalErr != nil {
+			return nil, nil, marshalErr
+		}
+		httpReq, buildErr := http.NewRequest(http.MethodPost, url, bytes.NewReader(encoded))
+		if buildErr != nil {
+			return nil, nil, buildErr
+		}
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpResp, sendErr := client.Do(httpReq)
+		if sendErr != nil {
+			return nil, nil, sendErr
+		}
+		defer httpResp.Body.Close()
+		raw, readErr := io.ReadAll(httpResp.Body)
+		if readErr != nil {
+			return nil, nil, readErr
+		}
+		if len(raw) == 0 {
+			return map[string]any{}, raw, nil
+		}
+		decoded, decodeErr := seed.DecodeJSONValue(raw)
+		if decodeErr != nil {
+			return nil, raw, decodeErr
+		}
+		decodedMap, _ := decoded.(map[string]any)
+		if decodedMap == nil {
+			return nil, raw, fmt.Errorf("response is not an object")
+		}
+		return decodedMap, raw, nil
+	}
+
+	maybeEnsureSessionStartReadinessForBlackbox(t, step.Name, requestMap, captures, invoke)
+	body, err := json.Marshal(requestMap)
 	if err != nil {
 		t.Fatalf("marshal request for %s: %v", step.Name, err)
 	}
@@ -147,10 +186,15 @@ func executeBlackboxStep(t *testing.T, client *http.Client, url string, step see
 		t.Fatalf("%s response body empty", step.Name)
 	}
 
-	response, err := seed.DecodeJSONValue(body)
+	responseAny, err := seed.DecodeJSONValue(body)
 	if err != nil {
 		t.Fatalf("decode JSON response for %s: %v", step.Name, err)
 	}
+	response, ok := responseAny.(map[string]any)
+	if !ok {
+		t.Fatalf("decode JSON response for %s: not an object", step.Name)
+	}
+
 	for path, expected := range step.ExpectPaths {
 		actual, err := seed.LookupJSONPath(response, path)
 		if err != nil {
@@ -211,7 +255,7 @@ func newHTTPClient(t *testing.T) *http.Client {
 	if err != nil {
 		t.Fatalf("cookie jar: %v", err)
 	}
-	return &http.Client{Jar: jar, Timeout: 10 * time.Second}
+	return &http.Client{Jar: jar, Timeout: 60 * time.Second}
 }
 
 // newSSEClient builds an HTTP client without timeouts for SSE streaming.

@@ -57,6 +57,10 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 		}
 	}
 
+	if err := ValidateSystemReadinessCheckerCoverage(systemRegistry); err != nil {
+		return Registries{}, err
+	}
+
 	if err := ValidateSystemFoldCoverage(systemRegistry, eventRegistry); err != nil {
 		return Registries{}, err
 	}

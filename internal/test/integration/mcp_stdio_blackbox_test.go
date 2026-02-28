@@ -4,6 +4,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -49,16 +50,28 @@ func executeStdioBlackboxStep(t *testing.T, ctx context.Context, client *seed.St
 	if userID != "" {
 		injectCampaignCreatorUserID(requestMap, userID)
 	}
-	requestID, hasID := requestMap["id"]
-
-	if err := client.WriteMessage(request); err != nil {
-		t.Fatalf("write request %s: %v", step.Name, err)
+	invoke := func(reqMap map[string]any) (map[string]any, []byte, error) {
+		requestID, hasID := reqMap["id"]
+		if err := client.WriteMessage(reqMap); err != nil {
+			return nil, nil, err
+		}
+		if !hasID {
+			return map[string]any{}, nil, nil
+		}
+		responseAny, responseBytes, err := client.ReadResponseForID(ctx, requestID, 30*time.Second)
+		if err != nil {
+			return nil, responseBytes, err
+		}
+		responseMap, _ := responseAny.(map[string]any)
+		if responseMap == nil {
+			return nil, responseBytes, fmt.Errorf("response is not an object")
+		}
+		return responseMap, responseBytes, nil
 	}
-	if !hasID {
-		return
-	}
 
-	responseAny, responseBytes, err := client.ReadResponseForID(ctx, requestID, 5*time.Second)
+	maybeEnsureSessionStartReadinessForBlackbox(t, step.Name, requestMap, captures, invoke)
+
+	responseAny, responseBytes, err := invoke(requestMap)
 	if err != nil {
 		t.Fatalf("read response %s: %v", step.Name, err)
 	}

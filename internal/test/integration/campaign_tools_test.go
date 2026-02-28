@@ -317,6 +317,54 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
 		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
+		participantResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
+			Name: "participant_create",
+			Arguments: map[string]any{
+				"campaign_id": campaignOutput.ID,
+				"name":        "Lifecycle Player",
+				"role":        "PLAYER",
+				"controller":  "HUMAN",
+			},
+		})
+		if err != nil {
+			t.Fatalf("call participant_create: %v", err)
+		}
+		if participantResult == nil || participantResult.IsError {
+			t.Fatalf("participant_create failed: %+v", participantResult)
+		}
+		participantOutput := decodeStructuredContent[domain.ParticipantCreateResult](t, participantResult.StructuredContent)
+
+		characterResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
+			Name: "character_create",
+			Arguments: map[string]any{
+				"campaign_id": campaignOutput.ID,
+				"name":        "Lifecycle Character",
+				"kind":        "PC",
+			},
+		})
+		if err != nil {
+			t.Fatalf("call character_create: %v", err)
+		}
+		if characterResult == nil || characterResult.IsError {
+			t.Fatalf("character_create failed: %+v", characterResult)
+		}
+		characterOutput := decodeStructuredContent[domain.CharacterCreateResult](t, characterResult.StructuredContent)
+
+		controlResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
+			Name: "character_control_set",
+			Arguments: map[string]any{
+				"campaign_id":    campaignOutput.ID,
+				"character_id":   characterOutput.ID,
+				"participant_id": participantOutput.ID,
+			},
+		})
+		if err != nil {
+			t.Fatalf("call character_control_set: %v", err)
+		}
+		if controlResult == nil || controlResult.IsError {
+			t.Fatalf("character_control_set failed: %+v", controlResult)
+		}
+
 		startSessionParams := &mcp.CallToolParams{
 			Name: "session_start",
 			Arguments: map[string]any{

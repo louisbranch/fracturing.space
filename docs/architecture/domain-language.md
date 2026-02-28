@@ -55,6 +55,29 @@ A session gate is a decision checkpoint that temporarily blocks session action
 events. Gates open when the table needs to resolve a spotlight handoff or other
 decision; they are resolved or abandoned before action events can continue.
 
+### Session Start Readiness
+
+Session start readiness is the write-path invariant checked before `session.start`
+is accepted. A campaign is ready when:
+
+- at least one active GM participant exists,
+- at least one active player participant exists,
+- each active player controls at least one active character,
+- every active character has a controller,
+- every active character satisfies system-specific readiness checks.
+
+In other words, readiness is true iff both core readiness and system readiness
+are true.
+
+Readiness is evaluated from aggregate replay state in the core domain route, so
+session activation and session start are accepted or rejected atomically.
+
+Campaign projection reads expose this as `can_start_session` on campaign
+get/list payloads. The projected value represents readiness now, including
+status gating (`draft`/`active`) and active-session blocking; after a session
+ends, `can_start_session` returns to true when the remaining readiness
+invariants still hold.
+
 ### Event Journal (Commit History)
 
 The event journal is the immutable, append-only log of everything that happens
