@@ -357,6 +357,147 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 	}
 }
 
+func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
+	tests := []struct {
+		name               string
+		gmMode             statev1.GmMode
+		wantOwnerRole      string
+		wantOwnerProtoRole statev1.ParticipantRole
+	}{
+		{
+			name:               "AI mode creates owner player and AI gm member",
+			gmMode:             statev1.GmMode_AI,
+			wantOwnerRole:      "PLAYER",
+			wantOwnerProtoRole: statev1.ParticipantRole_PLAYER,
+		},
+		{
+			name:               "HYBRID mode creates owner gm and AI gm member",
+			gmMode:             statev1.GmMode_HYBRID,
+			wantOwnerRole:      "GM",
+			wantOwnerProtoRole: statev1.ParticipantRole_GM,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			campaignStore := newFakeCampaignStore()
+			eventStore := newFakeEventStore()
+			participantStore := newFakeParticipantStore()
+			now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+			campaignPayload := fmt.Sprintf(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"%s","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`,
+				tc.gmMode.String())
+			ownerJoinResultPayload := fmt.Sprintf(`{"participant_id":"participant-owner","user_id":"user-123","name":"Owner","role":"%s","controller":"HUMAN","campaign_access":"OWNER"}`,
+				tc.wantOwnerRole)
+			domain := &fakeDomainEngine{
+				store: eventStore,
+				resultsByType: map[command.Type]engine.Result{
+					command.Type("campaign.create"): {
+						Decision: command.Accept(event.Event{
+							CampaignID:  "campaign-123",
+							Type:        event.Type("campaign.created"),
+							Timestamp:   now,
+							ActorType:   event.ActorTypeSystem,
+							EntityType:  "campaign",
+							EntityID:    "campaign-123",
+							PayloadJSON: []byte(campaignPayload),
+						}),
+					},
+					command.Type("participant.join"): {
+						Decision: command.Accept(event.Event{
+							CampaignID:  "campaign-123",
+							Type:        event.Type("participant.joined"),
+							Timestamp:   now,
+							ActorType:   event.ActorTypeSystem,
+							EntityType:  "participant",
+							EntityID:    "participant-owner",
+							PayloadJSON: []byte(ownerJoinResultPayload),
+						}),
+					},
+				},
+			}
+			svc := &CampaignService{
+				stores:      Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore, Domain: domain},
+				clock:       fixedClock(now),
+				idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+			}
+
+			ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
+			resp, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+				Name:        "Test Campaign",
+				System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+				GmMode:      tc.gmMode,
+				ThemePrompt: "A dark fantasy adventure",
+			})
+			if err != nil {
+				t.Fatalf("CreateCampaign returned error: %v", err)
+			}
+			if resp.OwnerParticipant == nil {
+				t.Fatal("CreateCampaign response has nil owner participant")
+			}
+			if resp.OwnerParticipant.Id != "participant-owner" {
+				t.Fatalf("OwnerParticipant Id = %q, want %q", resp.OwnerParticipant.Id, "participant-owner")
+			}
+			if resp.OwnerParticipant.Role != tc.wantOwnerProtoRole {
+				t.Fatalf("OwnerParticipant Role = %v, want %v", resp.OwnerParticipant.Role, tc.wantOwnerProtoRole)
+			}
+			if resp.OwnerParticipant.CampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER {
+				t.Fatalf("OwnerParticipant CampaignAccess = %v, want OWNER", resp.OwnerParticipant.CampaignAccess)
+			}
+
+			if len(domain.commands) != 3 {
+				t.Fatalf("domain command count = %d, want %d", len(domain.commands), 3)
+			}
+			if domain.commands[1].Type != command.Type("participant.join") {
+				t.Fatalf("second command type = %s, want participant.join", domain.commands[1].Type)
+			}
+			if domain.commands[2].Type != command.Type("participant.join") {
+				t.Fatalf("third command type = %s, want participant.join", domain.commands[2].Type)
+			}
+
+			var ownerPayload participant.JoinPayload
+			if err := json.Unmarshal(domain.commands[1].PayloadJSON, &ownerPayload); err != nil {
+				t.Fatalf("decode owner join payload: %v", err)
+			}
+			if ownerPayload.ParticipantID != "participant-owner" {
+				t.Fatalf("owner payload participant_id = %q, want %q", ownerPayload.ParticipantID, "participant-owner")
+			}
+			if ownerPayload.Role != tc.wantOwnerRole {
+				t.Fatalf("owner payload role = %q, want %q", ownerPayload.Role, tc.wantOwnerRole)
+			}
+			if ownerPayload.Controller != "HUMAN" {
+				t.Fatalf("owner payload controller = %q, want %q", ownerPayload.Controller, "HUMAN")
+			}
+			if ownerPayload.CampaignAccess != "OWNER" {
+				t.Fatalf("owner payload campaign_access = %q, want %q", ownerPayload.CampaignAccess, "OWNER")
+			}
+
+			var aiPayload participant.JoinPayload
+			if err := json.Unmarshal(domain.commands[2].PayloadJSON, &aiPayload); err != nil {
+				t.Fatalf("decode ai join payload: %v", err)
+			}
+			if aiPayload.ParticipantID != "participant-ai" {
+				t.Fatalf("ai payload participant_id = %q, want %q", aiPayload.ParticipantID, "participant-ai")
+			}
+			if aiPayload.UserID != "" {
+				t.Fatalf("ai payload user_id = %q, want empty", aiPayload.UserID)
+			}
+			if aiPayload.Name != "Game Master" {
+				t.Fatalf("ai payload name = %q, want %q", aiPayload.Name, "Game Master")
+			}
+			if aiPayload.Role != "GM" {
+				t.Fatalf("ai payload role = %q, want %q", aiPayload.Role, "GM")
+			}
+			if aiPayload.Controller != "AI" {
+				t.Fatalf("ai payload controller = %q, want %q", aiPayload.Controller, "AI")
+			}
+			if aiPayload.CampaignAccess != "MEMBER" {
+				t.Fatalf("ai payload campaign_access = %q, want %q", aiPayload.CampaignAccess, "MEMBER")
+			}
+		})
+	}
+}
+
 func TestCreateCampaign_OwnerParticipantHydratesFromSocialProfile(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	eventStore := newFakeEventStore()

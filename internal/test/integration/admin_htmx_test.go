@@ -762,14 +762,13 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		listResp, err := participantClient.ListParticipants(ctxWithUser, &statev1.ListParticipantsRequest{CampaignId: campaignID})
-		if err != nil {
-			t.Fatalf("list participants: %v", err)
+		if createResp.OwnerParticipant == nil {
+			t.Fatal("expected owner participant in create campaign response")
 		}
-		if len(listResp.Participants) == 0 {
-			t.Fatal("expected owner participant")
+		ownerID := createResp.OwnerParticipant.Id
+		if ownerID == "" {
+			t.Fatal("expected owner participant id in create campaign response")
 		}
-		ownerID := listResp.Participants[0].Id
 		participantCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerID))
 
 		_, err = participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
