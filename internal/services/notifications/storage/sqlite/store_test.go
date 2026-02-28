@@ -28,7 +28,7 @@ func TestPutGetListNotificationsAndMarkRead(t *testing.T) {
 		{
 			ID:              "notif-1",
 			RecipientUserID: "user-1",
-			Topic:           "campaign.invite",
+			MessageType:     "campaign.invite",
 			PayloadJSON:     `{"invite_id":"inv-1"}`,
 			DedupeKey:       "invite:inv-1",
 			Source:          "game",
@@ -38,7 +38,7 @@ func TestPutGetListNotificationsAndMarkRead(t *testing.T) {
 		{
 			ID:              "notif-2",
 			RecipientUserID: "user-1",
-			Topic:           "session.update",
+			MessageType:     "session.update",
 			PayloadJSON:     `{"session_id":"sess-1"}`,
 			DedupeKey:       "session:sess-1",
 			Source:          "game",
@@ -46,9 +46,19 @@ func TestPutGetListNotificationsAndMarkRead(t *testing.T) {
 			UpdatedAt:       now.Add(2 * time.Minute),
 		},
 		{
+			ID:              "notif-hidden",
+			RecipientUserID: "user-1",
+			MessageType:     "auth.onboarding.welcome",
+			PayloadJSON:     `{"signup_method":"passkey"}`,
+			DedupeKey:       "welcome:user:user-1:v1",
+			Source:          "system",
+			CreatedAt:       now.Add(4 * time.Minute),
+			UpdatedAt:       now.Add(4 * time.Minute),
+		},
+		{
 			ID:              "notif-3",
 			RecipientUserID: "user-2",
-			Topic:           "campaign.invite",
+			MessageType:     "campaign.invite",
 			PayloadJSON:     `{"invite_id":"inv-2"}`,
 			DedupeKey:       "invite:inv-2",
 			Source:          "game",
@@ -59,6 +69,51 @@ func TestPutGetListNotificationsAndMarkRead(t *testing.T) {
 	for _, input := range inputs {
 		if err := store.PutNotification(context.Background(), input); err != nil {
 			t.Fatalf("put notification %s: %v", input.ID, err)
+		}
+	}
+	for _, delivery := range []storage.DeliveryRecord{
+		{
+			NotificationID: "notif-1",
+			Channel:        storage.DeliveryChannelInApp,
+			Status:         storage.DeliveryStatusDelivered,
+			AttemptCount:   1,
+			NextAttemptAt:  now,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+			DeliveredAt:    ptrTime(now),
+		},
+		{
+			NotificationID: "notif-2",
+			Channel:        storage.DeliveryChannelInApp,
+			Status:         storage.DeliveryStatusDelivered,
+			AttemptCount:   1,
+			NextAttemptAt:  now.Add(2 * time.Minute),
+			CreatedAt:      now.Add(2 * time.Minute),
+			UpdatedAt:      now.Add(2 * time.Minute),
+			DeliveredAt:    ptrTime(now.Add(2 * time.Minute)),
+		},
+		{
+			NotificationID: "notif-hidden",
+			Channel:        storage.DeliveryChannelEmail,
+			Status:         storage.DeliveryStatusPending,
+			AttemptCount:   0,
+			NextAttemptAt:  now.Add(4 * time.Minute),
+			CreatedAt:      now.Add(4 * time.Minute),
+			UpdatedAt:      now.Add(4 * time.Minute),
+		},
+		{
+			NotificationID: "notif-3",
+			Channel:        storage.DeliveryChannelInApp,
+			Status:         storage.DeliveryStatusDelivered,
+			AttemptCount:   1,
+			NextAttemptAt:  now.Add(3 * time.Minute),
+			CreatedAt:      now.Add(3 * time.Minute),
+			UpdatedAt:      now.Add(3 * time.Minute),
+			DeliveredAt:    ptrTime(now.Add(3 * time.Minute)),
+		},
+	} {
+		if err := store.PutDelivery(context.Background(), delivery); err != nil {
+			t.Fatalf("put delivery %s/%s: %v", delivery.NotificationID, delivery.Channel, err)
 		}
 	}
 
@@ -94,6 +149,9 @@ func TestPutGetListNotificationsAndMarkRead(t *testing.T) {
 	if pageTwo.Notifications[0].ID != "notif-1" {
 		t.Fatalf("page two id = %q, want %q", pageTwo.Notifications[0].ID, "notif-1")
 	}
+	if pageTwo.NextPageToken != "" {
+		t.Fatalf("page two next page token = %q, want empty", pageTwo.NextPageToken)
+	}
 
 	readAt := now.Add(5 * time.Minute)
 	read, err := store.MarkNotificationRead(context.Background(), "user-1", "notif-1", readAt)
@@ -115,7 +173,7 @@ func TestCountUnreadNotificationsByRecipient(t *testing.T) {
 		{
 			ID:              "notif-1",
 			RecipientUserID: "user-1",
-			Topic:           "campaign.invite",
+			MessageType:     "campaign.invite",
 			PayloadJSON:     "{}",
 			DedupeKey:       "invite:1",
 			Source:          "game",
@@ -125,7 +183,7 @@ func TestCountUnreadNotificationsByRecipient(t *testing.T) {
 		{
 			ID:              "notif-2",
 			RecipientUserID: "user-1",
-			Topic:           "session.update",
+			MessageType:     "session.update",
 			PayloadJSON:     "{}",
 			DedupeKey:       "session:1",
 			Source:          "game",
@@ -135,16 +193,71 @@ func TestCountUnreadNotificationsByRecipient(t *testing.T) {
 		{
 			ID:              "notif-3",
 			RecipientUserID: "user-2",
-			Topic:           "campaign.invite",
+			MessageType:     "campaign.invite",
 			PayloadJSON:     "{}",
 			DedupeKey:       "invite:2",
 			Source:          "game",
 			CreatedAt:       now.Add(2 * time.Minute),
 			UpdatedAt:       now.Add(2 * time.Minute),
 		},
+		{
+			ID:              "notif-4",
+			RecipientUserID: "user-1",
+			MessageType:     "auth.onboarding.welcome.v1",
+			PayloadJSON:     "{}",
+			DedupeKey:       "welcome:user:user-1:v1",
+			Source:          "system",
+			CreatedAt:       now.Add(3 * time.Minute),
+			UpdatedAt:       now.Add(3 * time.Minute),
+		},
 	} {
 		if err := store.PutNotification(context.Background(), input); err != nil {
 			t.Fatalf("put notification %s: %v", input.ID, err)
+		}
+	}
+	for _, delivery := range []storage.DeliveryRecord{
+		{
+			NotificationID: "notif-1",
+			Channel:        storage.DeliveryChannelInApp,
+			Status:         storage.DeliveryStatusDelivered,
+			AttemptCount:   1,
+			NextAttemptAt:  now,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+			DeliveredAt:    ptrTime(now),
+		},
+		{
+			NotificationID: "notif-2",
+			Channel:        storage.DeliveryChannelInApp,
+			Status:         storage.DeliveryStatusDelivered,
+			AttemptCount:   1,
+			NextAttemptAt:  now.Add(time.Minute),
+			CreatedAt:      now.Add(time.Minute),
+			UpdatedAt:      now.Add(time.Minute),
+			DeliveredAt:    ptrTime(now.Add(time.Minute)),
+		},
+		{
+			NotificationID: "notif-3",
+			Channel:        storage.DeliveryChannelInApp,
+			Status:         storage.DeliveryStatusDelivered,
+			AttemptCount:   1,
+			NextAttemptAt:  now.Add(2 * time.Minute),
+			CreatedAt:      now.Add(2 * time.Minute),
+			UpdatedAt:      now.Add(2 * time.Minute),
+			DeliveredAt:    ptrTime(now.Add(2 * time.Minute)),
+		},
+		{
+			NotificationID: "notif-4",
+			Channel:        storage.DeliveryChannelEmail,
+			Status:         storage.DeliveryStatusPending,
+			AttemptCount:   0,
+			NextAttemptAt:  now.Add(3 * time.Minute),
+			CreatedAt:      now.Add(3 * time.Minute),
+			UpdatedAt:      now.Add(3 * time.Minute),
+		},
+	} {
+		if err := store.PutDelivery(context.Background(), delivery); err != nil {
+			t.Fatalf("put delivery %s/%s: %v", delivery.NotificationID, delivery.Channel, err)
 		}
 	}
 	if _, err := store.MarkNotificationRead(context.Background(), "user-1", "notif-2", now.Add(3*time.Minute)); err != nil {
@@ -176,6 +289,42 @@ func TestCountUnreadNotificationsByRecipient(t *testing.T) {
 	}
 }
 
+func TestMarkNotificationRead_EmailOnlyNotificationReturnsNotFound(t *testing.T) {
+	t.Parallel()
+
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 21, 21, 9, 0, 0, time.UTC)
+
+	if err := store.PutNotification(context.Background(), storage.NotificationRecord{
+		ID:              "notif-email-only",
+		RecipientUserID: "user-1",
+		MessageType:     "auth.onboarding.welcome",
+		PayloadJSON:     "{}",
+		DedupeKey:       "welcome:user:user-1:v1",
+		Source:          "system",
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}); err != nil {
+		t.Fatalf("put notification: %v", err)
+	}
+	if err := store.PutDelivery(context.Background(), storage.DeliveryRecord{
+		NotificationID: "notif-email-only",
+		Channel:        storage.DeliveryChannelEmail,
+		Status:         storage.DeliveryStatusPending,
+		AttemptCount:   0,
+		NextAttemptAt:  now,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}); err != nil {
+		t.Fatalf("put email delivery: %v", err)
+	}
+
+	_, err := store.MarkNotificationRead(context.Background(), "user-1", "notif-email-only", now.Add(time.Minute))
+	if !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("mark read err = %v, want %v", err, storage.ErrNotFound)
+	}
+}
+
 func TestPutNotificationRejectsRecipientDedupeConflicts(t *testing.T) {
 	t.Parallel()
 
@@ -185,7 +334,7 @@ func TestPutNotificationRejectsRecipientDedupeConflicts(t *testing.T) {
 	if err := store.PutNotification(context.Background(), storage.NotificationRecord{
 		ID:              "notif-1",
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJSON:     "{}",
 		DedupeKey:       "invite:dup",
 		Source:          "game",
@@ -198,7 +347,7 @@ func TestPutNotificationRejectsRecipientDedupeConflicts(t *testing.T) {
 	err := store.PutNotification(context.Background(), storage.NotificationRecord{
 		ID:              "notif-2",
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJSON:     "{}",
 		DedupeKey:       "invite:dup",
 		Source:          "game",
@@ -239,7 +388,7 @@ func TestPutNotificationWithDeliveries_RollsBackOnDeliveryConflict(t *testing.T)
 	err := store.PutNotificationWithDeliveries(context.Background(), storage.NotificationRecord{
 		ID:              "notif-rollback",
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJSON:     "{}",
 		DedupeKey:       "invite:rollback",
 		Source:          "game",
@@ -296,7 +445,7 @@ func TestDeliveryQueueRetryAndSuccess(t *testing.T) {
 	if err := store.PutNotification(context.Background(), storage.NotificationRecord{
 		ID:              "notif-1",
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJSON:     "{}",
 		DedupeKey:       "invite:inv-1",
 		Source:          "game",
@@ -350,6 +499,11 @@ func TestDeliveryQueueRetryAndSuccess(t *testing.T) {
 	if len(pending) != 0 {
 		t.Fatalf("pending deliveries after success = %d, want 0", len(pending))
 	}
+}
+
+func ptrTime(value time.Time) *time.Time {
+	v := value.UTC()
+	return &v
 }
 
 func openTempStore(t *testing.T) *Store {

@@ -22,7 +22,7 @@ func TestOnboardingWelcomeHandler_HandleSuccess(t *testing.T) {
 	err := handler.Handle(context.Background(), &authv1.IntegrationOutboxEvent{
 		Id:          "evt-1",
 		EventType:   "auth.signup_completed",
-		PayloadJson: `{"user_id":"user-1","signup_method":"passkey"}`,
+		PayloadJson: `{"user_id":"user-1","email":"user-1@example.com","signup_method":"passkey"}`,
 	})
 	if err != nil {
 		t.Fatalf("handle onboarding welcome: %v", err)
@@ -33,8 +33,8 @@ func TestOnboardingWelcomeHandler_HandleSuccess(t *testing.T) {
 	if notif.lastCreateReq.GetRecipientUserId() != "user-1" {
 		t.Fatalf("recipient user id = %q, want %q", notif.lastCreateReq.GetRecipientUserId(), "user-1")
 	}
-	if notif.lastCreateReq.GetTopic() != "auth.onboarding.welcome" {
-		t.Fatalf("topic = %q, want %q", notif.lastCreateReq.GetTopic(), "auth.onboarding.welcome")
+	if notif.lastCreateReq.GetMessageType() != "auth.onboarding.welcome" {
+		t.Fatalf("message_type = %q, want %q", notif.lastCreateReq.GetMessageType(), "auth.onboarding.welcome")
 	}
 	if got := notif.lastCreateReq.GetSource(); got != notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM {
 		t.Fatalf("source = %v, want %v", got, notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM)
@@ -60,6 +60,23 @@ func TestOnboardingWelcomeHandler_MissingUserIDPermanent(t *testing.T) {
 	}
 }
 
+func TestOnboardingWelcomeHandler_MissingEmailSkipsWelcomeIntent(t *testing.T) {
+	notif := &fakeNotificationsClient{}
+	handler := NewOnboardingWelcomeHandler(notif, nil)
+
+	err := handler.Handle(context.Background(), &authv1.IntegrationOutboxEvent{
+		Id:          "evt-1",
+		EventType:   "auth.signup_completed",
+		PayloadJson: `{"user_id":"user-1","signup_method":"passkey"}`,
+	})
+	if err != nil {
+		t.Fatalf("handle onboarding welcome: %v", err)
+	}
+	if notif.lastCreateReq != nil {
+		t.Fatal("expected no notification intent when signup payload has no email")
+	}
+}
+
 func TestOnboardingWelcomeHandler_InvalidArgumentFromNotificationsPermanent(t *testing.T) {
 	notif := &fakeNotificationsClient{
 		createErr: status.Error(codes.InvalidArgument, "bad request"),
@@ -69,7 +86,7 @@ func TestOnboardingWelcomeHandler_InvalidArgumentFromNotificationsPermanent(t *t
 	err := handler.Handle(context.Background(), &authv1.IntegrationOutboxEvent{
 		Id:          "evt-1",
 		EventType:   "auth.signup_completed",
-		PayloadJson: `{"user_id":"user-1"}`,
+		PayloadJson: `{"user_id":"user-1","email":"user-1@example.com"}`,
 	})
 	if err == nil {
 		t.Fatal("expected error")
@@ -88,7 +105,7 @@ func TestOnboardingWelcomeHandler_UnavailableRetryable(t *testing.T) {
 	err := handler.Handle(context.Background(), &authv1.IntegrationOutboxEvent{
 		Id:          "evt-1",
 		EventType:   "auth.signup_completed",
-		PayloadJson: `{"user_id":"user-1"}`,
+		PayloadJson: `{"user_id":"user-1","email":"user-1@example.com"}`,
 	})
 	if err == nil {
 		t.Fatal("expected error")

@@ -4,14 +4,15 @@ import (
 	"encoding/json"
 	"strings"
 
+	notificationsdomain "github.com/louisbranch/fracturing.space/internal/services/notifications/domain"
 	"golang.org/x/text/message"
 )
 
 const (
-	// TopicOnboardingWelcome aliases the canonical onboarding welcome template id.
-	TopicOnboardingWelcome = "auth.onboarding.welcome"
-	// TopicOnboardingWelcomeV1 is the versioned onboarding welcome template id.
-	TopicOnboardingWelcomeV1 = "auth.onboarding.welcome.v1"
+	// MessageTypeOnboardingWelcome aliases the canonical onboarding welcome template id.
+	MessageTypeOnboardingWelcome = notificationsdomain.MessageTypeOnboardingWelcome
+	// MessageTypeOnboardingWelcomeV1 is the versioned onboarding welcome template id.
+	MessageTypeOnboardingWelcomeV1 = notificationsdomain.MessageTypeOnboardingWelcomeV1
 
 	defaultGenericTitle        = "Notification"
 	defaultGenericBody         = "You have a new notification."
@@ -31,7 +32,7 @@ const (
 
 // Input is one channel render request for a stored notification artifact.
 type Input struct {
-	Topic       string
+	MessageType string
 	PayloadJSON string
 	Channel     Channel
 }
@@ -54,8 +55,8 @@ type onboardingPayload struct {
 
 // Render returns localized copy for one notification artifact.
 func Render(loc Localizer, input Input) Output {
-	switch normalizeToken(input.Topic) {
-	case TopicOnboardingWelcome, TopicOnboardingWelcomeV1:
+	switch normalizeToken(input.MessageType) {
+	case MessageTypeOnboardingWelcome, MessageTypeOnboardingWelcomeV1:
 		return renderOnboardingWelcome(loc, input)
 	default:
 		return genericOutput(loc)

@@ -48,29 +48,40 @@ func (a *domainStoreAdapter) PutNotification(ctx context.Context, notification d
 		baseTime = time.Now().UTC()
 	}
 
-	deliveries := []storage.DeliveryRecord{{
-		NotificationID: notification.ID,
-		Channel:        storage.DeliveryChannelInApp,
-		Status:         storage.DeliveryStatusDelivered,
-		AttemptCount:   1,
-		NextAttemptAt:  baseTime,
-		LastError:      "",
-		CreatedAt:      baseTime,
-		UpdatedAt:      baseTime,
-		DeliveredAt:    &baseTime,
-	}}
-	if a.emailDeliveryEnabled {
-		// Email is queued for optional background worker processing.
+	policy := domain.ResolveDeliveryPolicy(notification.MessageType)
+	deliveries := make([]storage.DeliveryRecord, 0, 2)
+	if policy.InApp {
 		deliveries = append(deliveries, storage.DeliveryRecord{
 			NotificationID: notification.ID,
-			Channel:        storage.DeliveryChannelEmail,
-			Status:         storage.DeliveryStatusPending,
-			AttemptCount:   0,
+			Channel:        storage.DeliveryChannelInApp,
+			Status:         storage.DeliveryStatusDelivered,
+			AttemptCount:   1,
 			NextAttemptAt:  baseTime,
 			LastError:      "",
 			CreatedAt:      baseTime,
 			UpdatedAt:      baseTime,
-			DeliveredAt:    nil,
+			DeliveredAt:    &baseTime,
+		})
+	}
+	if policy.Email {
+		emailStatus := storage.DeliveryStatusPending
+		emailDeliveredAt := (*time.Time)(nil)
+		emailLastError := ""
+		if !a.emailDeliveryEnabled {
+			emailStatus = storage.DeliveryStatusSkipped
+			emailDeliveredAt = &baseTime
+			emailLastError = "email delivery disabled"
+		}
+		deliveries = append(deliveries, storage.DeliveryRecord{
+			NotificationID: notification.ID,
+			Channel:        storage.DeliveryChannelEmail,
+			Status:         emailStatus,
+			AttemptCount:   0,
+			NextAttemptAt:  baseTime,
+			LastError:      emailLastError,
+			CreatedAt:      baseTime,
+			UpdatedAt:      baseTime,
+			DeliveredAt:    emailDeliveredAt,
 		})
 	}
 
@@ -137,7 +148,7 @@ func toStorageNotification(notification domain.Notification) storage.Notificatio
 	return storage.NotificationRecord{
 		ID:              notification.ID,
 		RecipientUserID: notification.RecipientUserID,
-		Topic:           notification.Topic,
+		MessageType:     notification.MessageType,
 		PayloadJSON:     notification.PayloadJSON,
 		DedupeKey:       notification.DedupeKey,
 		Source:          notification.Source,
@@ -151,7 +162,7 @@ func toDomainNotification(record storage.NotificationRecord) domain.Notification
 	return domain.Notification{
 		ID:              record.ID,
 		RecipientUserID: record.RecipientUserID,
-		Topic:           record.Topic,
+		MessageType:     record.MessageType,
 		PayloadJSON:     record.PayloadJSON,
 		DedupeKey:       record.DedupeKey,
 		Source:          record.Source,

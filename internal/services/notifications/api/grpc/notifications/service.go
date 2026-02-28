@@ -44,7 +44,7 @@ func (s *Service) CreateNotificationIntent(ctx context.Context, in *notification
 
 	created, err := s.domain.CreateIntent(ctx, domain.CreateIntentInput{
 		RecipientUserID: in.GetRecipientUserId(),
-		Topic:           in.GetTopic(),
+		MessageType:     in.GetMessageType(),
 		PayloadJSON:     in.GetPayloadJson(),
 		DedupeKey:       in.GetDedupeKey(),
 		Source:          sourceFromProto(in.GetSource()),
@@ -146,7 +146,7 @@ func notificationToProto(notification domain.Notification) *notificationsv1.Noti
 	result := &notificationsv1.Notification{
 		Id:              notification.ID,
 		RecipientUserId: notification.RecipientUserID,
-		Topic:           notification.Topic,
+		MessageType:     notification.MessageType,
 		PayloadJson:     notification.PayloadJSON,
 		DedupeKey:       notification.DedupeKey,
 		Source:          sourceToProto(notification.Source),
@@ -185,8 +185,8 @@ func mapDomainError(err error) error {
 		return status.Error(codes.NotFound, "notification not found")
 	case errors.Is(err, domain.ErrRecipientUserIDRequired):
 		return status.Error(codes.InvalidArgument, domain.ErrRecipientUserIDRequired.Error())
-	case errors.Is(err, domain.ErrTopicRequired):
-		return status.Error(codes.InvalidArgument, domain.ErrTopicRequired.Error())
+	case errors.Is(err, domain.ErrMessageTypeRequired):
+		return status.Error(codes.InvalidArgument, domain.ErrMessageTypeRequired.Error())
 	case errors.Is(err, domain.ErrNotificationIDRequired):
 		return status.Error(codes.InvalidArgument, domain.ErrNotificationIDRequired.Error())
 	case errors.Is(err, domain.ErrConflict):

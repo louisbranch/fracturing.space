@@ -130,7 +130,7 @@ func (f notificationGatewayStub) ListNotifications(context.Context, string) ([]N
 		return nil, f.listErr
 	}
 	if f.items == nil {
-		return []NotificationSummary{{ID: "n-1", Topic: "auth.onboarding.welcome"}}, nil
+		return []NotificationSummary{{ID: "n-1", MessageType: "auth.onboarding.welcome"}}, nil
 	}
 	return f.items, nil
 }
@@ -140,7 +140,7 @@ func (f notificationGatewayStub) GetNotification(context.Context, string, string
 		return NotificationSummary{}, f.getErr
 	}
 	if f.getItem == (NotificationSummary{}) {
-		return NotificationSummary{ID: "n-1", Topic: "auth.onboarding.welcome"}, nil
+		return NotificationSummary{ID: "n-1", MessageType: "auth.onboarding.welcome"}, nil
 	}
 	return f.getItem, nil
 }
@@ -150,7 +150,7 @@ func (f notificationGatewayStub) OpenNotification(context.Context, string, strin
 		return NotificationSummary{}, f.openErr
 	}
 	if f.openItem == (NotificationSummary{}) {
-		return NotificationSummary{ID: "n-1", Topic: "auth.onboarding.welcome", Read: true}, nil
+		return NotificationSummary{ID: "n-1", MessageType: "auth.onboarding.welcome", Read: true}, nil
 	}
 	return f.openItem, nil
 }

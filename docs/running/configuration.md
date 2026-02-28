@@ -71,6 +71,10 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_ENABLED`: enable background observation of pending email deliveries. Default: `false`.
 - `FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_POLL_INTERVAL`: poll cadence for pending email delivery checks. Default: `5s`.
 
+Notifications channel routing is service-owned by `message_type`; callers only create intents.
+The onboarding welcome message type (`auth.onboarding.welcome`) is email-only and does not surface in in-app inbox reads.
+User-configurable per-message-type delivery preferences are planned but not yet available.
+
 ### User hub
 
 - `FRACTURING_SPACE_USERHUB_PORT`: gRPC port for userhub service. Default: `8092`.

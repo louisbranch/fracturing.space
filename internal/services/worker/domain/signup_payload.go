@@ -11,6 +11,7 @@ import (
 // signupCompletedEventPayload captures the durable fields consumed by worker handlers.
 type signupCompletedEventPayload struct {
 	UserID       string `json:"user_id"`
+	Email        string `json:"email"`
 	SignupMethod string `json:"signup_method"`
 }
 
@@ -29,6 +30,7 @@ func decodeSignupCompletedPayload(event *authv1.IntegrationOutboxEvent) (signupC
 	if payload.UserID == "" {
 		return signupCompletedEventPayload{}, fmt.Errorf("user_id is required in signup payload")
 	}
+	payload.Email = strings.TrimSpace(payload.Email)
 	payload.SignupMethod = strings.TrimSpace(payload.SignupMethod)
 	return payload, nil
 }

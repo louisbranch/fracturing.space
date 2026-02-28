@@ -19,7 +19,7 @@ func TestCreateIntent_IdempotentByDedupeKey(t *testing.T) {
 
 	first, err := svc.CreateIntent(context.Background(), CreateIntentInput{
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJSON:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "campaign.invite:inv-1",
 		Source:          "game",
@@ -30,7 +30,7 @@ func TestCreateIntent_IdempotentByDedupeKey(t *testing.T) {
 
 	second, err := svc.CreateIntent(context.Background(), CreateIntentInput{
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJSON:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "campaign.invite:inv-1",
 		Source:          "game",
@@ -59,7 +59,7 @@ func TestListInbox_FiltersRecipientAndPaginatesNewestFirst(t *testing.T) {
 		svc.clock = fixedClock(at)
 		if _, err := svc.CreateIntent(context.Background(), CreateIntentInput{
 			RecipientUserID: recipient,
-			Topic:           "session.update",
+			MessageType:     "session.update",
 			PayloadJSON:     `{"status":"active"}`,
 			DedupeKey:       dedupe,
 			Source:          "game",
@@ -115,7 +115,7 @@ func TestMarkRead_PersistsReadTimestamp(t *testing.T) {
 
 	created, err := svc.CreateIntent(context.Background(), CreateIntentInput{
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJSON:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "campaign.invite:inv-1",
 		Source:          "game",
@@ -150,7 +150,7 @@ func TestGetUnreadStatus_ReportsUnreadCount(t *testing.T) {
 
 	first, err := svc.CreateIntent(context.Background(), CreateIntentInput{
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		DedupeKey:       "invite:1",
 	})
 	if err != nil {
@@ -158,7 +158,7 @@ func TestGetUnreadStatus_ReportsUnreadCount(t *testing.T) {
 	}
 	if _, err := svc.CreateIntent(context.Background(), CreateIntentInput{
 		RecipientUserID: "user-1",
-		Topic:           "session.update",
+		MessageType:     "session.update",
 		DedupeKey:       "session:1",
 	}); err != nil {
 		t.Fatalf("create second intent: %v", err)
@@ -198,7 +198,7 @@ func TestCreateIntent_ConcurrentDedupeReturnsSingleNotification(t *testing.T) {
 	results := make(chan createResult, 2)
 	input := CreateIntentInput{
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJSON:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "campaign.invite:inv-1",
 		Source:          "game",

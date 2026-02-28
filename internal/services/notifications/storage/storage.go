@@ -41,7 +41,7 @@ const (
 type NotificationRecord struct {
 	ID              string
 	RecipientUserID string
-	Topic           string
+	MessageType     string
 	PayloadJSON     string
 	DedupeKey       string
 	Source          string

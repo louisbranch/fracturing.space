@@ -18,8 +18,8 @@ var (
 	ErrStoreNotConfigured = errors.New("notification store is not configured")
 	// ErrRecipientUserIDRequired indicates recipient identity is required.
 	ErrRecipientUserIDRequired = errors.New("recipient user id is required")
-	// ErrTopicRequired indicates a topic is required.
-	ErrTopicRequired = errors.New("notification topic is required")
+	// ErrMessageTypeRequired indicates a message type is required.
+	ErrMessageTypeRequired = errors.New("notification message type is required")
 	// ErrNotificationIDRequired indicates notification ID is required.
 	ErrNotificationIDRequired = errors.New("notification id is required")
 	// ErrIDGeneratorNotConfigured indicates an ID generator is required.
@@ -37,7 +37,7 @@ const (
 type Notification struct {
 	ID              string
 	RecipientUserID string
-	Topic           string
+	MessageType     string
 	PayloadJSON     string
 	DedupeKey       string
 	Source          string
@@ -61,7 +61,7 @@ type UnreadStatus struct {
 // CreateIntentInput describes one producer notification request.
 type CreateIntentInput struct {
 	RecipientUserID string
-	Topic           string
+	MessageType     string
 	PayloadJSON     string
 	DedupeKey       string
 	Source          string
@@ -128,9 +128,9 @@ func (s *Service) CreateIntent(ctx context.Context, input CreateIntentInput) (No
 	if recipientUserID == "" {
 		return Notification{}, ErrRecipientUserIDRequired
 	}
-	topic := strings.TrimSpace(input.Topic)
-	if topic == "" {
-		return Notification{}, ErrTopicRequired
+	messageType := NormalizeMessageType(input.MessageType)
+	if messageType == "" {
+		return Notification{}, ErrMessageTypeRequired
 	}
 	dedupeKey := strings.TrimSpace(input.DedupeKey)
 	if dedupeKey != "" {
@@ -151,7 +151,7 @@ func (s *Service) CreateIntent(ctx context.Context, input CreateIntentInput) (No
 	notification := Notification{
 		ID:              notificationID,
 		RecipientUserID: recipientUserID,
-		Topic:           topic,
+		MessageType:     messageType,
 		PayloadJSON:     strings.TrimSpace(input.PayloadJSON),
 		DedupeKey:       dedupeKey,
 		Source:          strings.TrimSpace(input.Source),

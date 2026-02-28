@@ -22,7 +22,7 @@ func TestCreateNotificationIntent_Success(t *testing.T) {
 		createResult: domain.Notification{
 			ID:              "notif-1",
 			RecipientUserID: "user-1",
-			Topic:           "campaign.invite",
+			MessageType:     "campaign.invite",
 			PayloadJSON:     `{"invite_id":"inv-1"}`,
 			DedupeKey:       "invite:inv-1",
 			Source:          "system",
@@ -34,7 +34,7 @@ func TestCreateNotificationIntent_Success(t *testing.T) {
 
 	resp, err := svc.CreateNotificationIntent(context.Background(), &notificationsv1.CreateNotificationIntentRequest{
 		RecipientUserId: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJson:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "invite:inv-1",
 		Source:          notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
@@ -70,7 +70,7 @@ func TestListNotifications_UsesCallerIdentity(t *testing.T) {
 				{
 					ID:              "notif-2",
 					RecipientUserID: "user-1",
-					Topic:           "session.update",
+					MessageType:     "session.update",
 					PayloadJSON:     `{"session_id":"sess-1"}`,
 					DedupeKey:       "session:sess-1",
 					Source:          "system",
