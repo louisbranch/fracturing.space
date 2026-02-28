@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
@@ -15,7 +14,7 @@ func TestWriteModuleErrorRendersAppErrorPageForNotFound(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/missing", nil)
 	rr := httptest.NewRecorder()
-	WriteModuleError(rr, req, apperrors.E(apperrors.KindNotFound, "missing"), module.Dependencies{})
+	WriteModuleError(rr, req, apperrors.E(apperrors.KindNotFound, "missing"), nil)
 	if rr.Code != http.StatusNotFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
 	}
@@ -29,7 +28,7 @@ func TestWriteModuleErrorWritesPlainTextForBadRequest(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
 	rr := httptest.NewRecorder()
-	WriteModuleError(rr, req, apperrors.E(apperrors.KindInvalidInput, "bad form"), module.Dependencies{})
+	WriteModuleError(rr, req, apperrors.E(apperrors.KindInvalidInput, "bad form"), nil)
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}

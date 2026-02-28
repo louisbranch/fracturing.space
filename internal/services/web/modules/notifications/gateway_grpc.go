@@ -7,12 +7,19 @@ import (
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/grpcpaging"
+	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
+
+// NotificationClient exposes notification inbox listing and acknowledgement operations.
+type NotificationClient interface {
+	ListNotifications(context.Context, *notificationsv1.ListNotificationsRequest, ...grpc.CallOption) (*notificationsv1.ListNotificationsResponse, error)
+	GetUnreadNotificationStatus(context.Context, *notificationsv1.GetUnreadNotificationStatusRequest, ...grpc.CallOption) (*notificationsv1.GetUnreadNotificationStatusResponse, error)
+	GetNotification(context.Context, *notificationsv1.GetNotificationRequest, ...grpc.CallOption) (*notificationsv1.GetNotificationResponse, error)
+	MarkNotificationRead(context.Context, *notificationsv1.MarkNotificationReadRequest, ...grpc.CallOption) (*notificationsv1.MarkNotificationReadResponse, error)
+}
 
 const (
 	notificationSourceSystem  = "system"
@@ -21,110 +28,83 @@ const (
 	notificationMaxPages      = 20
 )
 
-// NewGRPCGateway builds the production notifications gateway from shared dependencies.
-func NewGRPCGateway(deps module.Dependencies) NotificationGateway {
-	if deps.NotificationClient == nil {
+// NewGRPCGateway builds the production notifications gateway from the notification client.
+func NewGRPCGateway(client NotificationClient) NotificationGateway {
+	if client == nil {
 		return unavailableGateway{}
 	}
-	return grpcGateway{client: deps.NotificationClient}
+	return grpcGateway{client: client}
 }
 
 type grpcGateway struct {
-	client module.NotificationClient
+	client NotificationClient
 }
 
 func (g grpcGateway) ListNotifications(ctx context.Context, userID string) ([]NotificationSummary, error) {
-	if g.client == nil {
-		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.notification_service_client_is_not_configured", "notification service client is not configured")
-	}
-	resolvedUserID, err := requireUserID(userID)
-	if err != nil {
-		return nil, err
-	}
-	items, err := g.listAllNotifications(ctx, resolvedUserID)
-	if err != nil {
-		return nil, err
-	}
-	return items, nil
+	return g.listAllNotifications(ctx, userID)
 }
 
 func (g grpcGateway) GetNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
-	resolvedUserID, err := requireUserID(userID)
+	resp, err := g.client.GetNotification(
+		grpcauthctx.WithUserID(ctx, userID),
+		&notificationsv1.GetNotificationRequest{NotificationId: notificationID},
+	)
 	if err != nil {
-		return NotificationSummary{}, err
+		return NotificationSummary{}, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnavailable,
+			FallbackKey:     "error.web.message.failed_to_get_notification",
+			FallbackMessage: "failed to get notification",
+		})
 	}
-	resolvedNotificationID := strings.TrimSpace(notificationID)
-	if resolvedNotificationID == "" {
-		return NotificationSummary{}, apperrors.E(apperrors.KindNotFound, "notification not found")
+	if resp == nil {
+		return NotificationSummary{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.failed_to_get_notification", "failed to get notification")
 	}
-	items, err := g.listAllNotifications(ctx, resolvedUserID)
-	if err != nil {
-		return NotificationSummary{}, err
-	}
-	for _, item := range items {
-		if strings.TrimSpace(item.ID) == resolvedNotificationID {
-			return item, nil
-		}
-	}
-	return NotificationSummary{}, apperrors.E(apperrors.KindNotFound, "notification not found")
+	return mapNotification(resp.GetNotification()), nil
 }
 
 func (g grpcGateway) OpenNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
-	if g.client == nil {
-		return NotificationSummary{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.notification_service_client_is_not_configured", "notification service client is not configured")
-	}
-	resolvedUserID, err := requireUserID(userID)
-	if err != nil {
-		return NotificationSummary{}, err
-	}
-	resolvedNotificationID := strings.TrimSpace(notificationID)
-	if resolvedNotificationID == "" {
-		return NotificationSummary{}, apperrors.E(apperrors.KindNotFound, "notification not found")
-	}
 	resp, err := g.client.MarkNotificationRead(
-		grpcauthctx.WithUserID(ctx, resolvedUserID),
-		&notificationsv1.MarkNotificationReadRequest{NotificationId: resolvedNotificationID},
+		grpcauthctx.WithUserID(ctx, userID),
+		&notificationsv1.MarkNotificationReadRequest{NotificationId: notificationID},
 	)
 	if err != nil {
-		return NotificationSummary{}, mapOpenNotificationError(err)
+		return NotificationSummary{}, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnavailable,
+			FallbackKey:     "error.web.message.failed_to_mark_notification_read",
+			FallbackMessage: "failed to mark notification read",
+		})
 	}
-	item := mapNotification(resp.GetNotification())
-	if strings.TrimSpace(item.ID) == "" {
-		return NotificationSummary{}, apperrors.E(apperrors.KindNotFound, "notification not found")
-	}
-	return item, nil
+	return mapNotification(resp.GetNotification()), nil
 }
 
 func (g grpcGateway) listAllNotifications(ctx context.Context, userID string) ([]NotificationSummary, error) {
-	if g.client == nil {
-		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.notification_service_client_is_not_configured", "notification service client is not configured")
-	}
-	pageToken := ""
-	items := make([]NotificationSummary, 0, notificationPageSize)
-	for page := 0; page < notificationMaxPages; page++ {
-		resp, err := g.client.ListNotifications(
-			grpcauthctx.WithUserID(ctx, userID),
-			&notificationsv1.ListNotificationsRequest{PageSize: notificationPageSize, PageToken: pageToken},
-		)
-		if err != nil {
-			return nil, mapListNotificationsError(err)
-		}
-		if resp == nil {
-			break
-		}
-		for _, notification := range resp.GetNotifications() {
-			if notification == nil {
-				continue
+	authCtx := grpcauthctx.WithUserID(ctx, userID)
+	return grpcpaging.CollectPagesMax[NotificationSummary, *notificationsv1.Notification](
+		authCtx, notificationPageSize, notificationMaxPages,
+		func(ctx context.Context, pageToken string) ([]*notificationsv1.Notification, string, error) {
+			resp, err := g.client.ListNotifications(
+				ctx,
+				&notificationsv1.ListNotificationsRequest{PageSize: notificationPageSize, PageToken: pageToken},
+			)
+			if err != nil {
+				return nil, "", apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+					FallbackKind:    apperrors.KindUnavailable,
+					FallbackKey:     "error.web.message.failed_to_list_notifications",
+					FallbackMessage: "failed to list notifications",
+				})
 			}
-			items = append(items, mapNotification(notification))
-		}
-		nextPageToken := strings.TrimSpace(resp.GetNextPageToken())
-		if nextPageToken == "" || nextPageToken == pageToken {
-			break
-		}
-		pageToken = nextPageToken
-	}
-	return items, nil
+			if resp == nil {
+				return nil, "", nil
+			}
+			return resp.GetNotifications(), resp.GetNextPageToken(), nil
+		},
+		func(notification *notificationsv1.Notification) (NotificationSummary, bool) {
+			if notification == nil {
+				return NotificationSummary{}, false
+			}
+			return mapNotification(notification), true
+		},
+	)
 }
 
 func mapNotification(notification *notificationsv1.Notification) NotificationSummary {
@@ -170,38 +150,4 @@ func protoTimestamp(value *timestamppb.Timestamp) *time.Time {
 	}
 	timestamp := value.AsTime().UTC()
 	return &timestamp
-}
-
-func mapListNotificationsError(err error) error {
-	if err == nil {
-		return nil
-	}
-	switch status.Code(err) {
-	case codes.Unauthenticated:
-		return apperrors.E(apperrors.KindUnauthorized, "authentication required")
-	case codes.PermissionDenied:
-		return apperrors.E(apperrors.KindForbidden, "access denied")
-	case codes.InvalidArgument:
-		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_list_notifications", "failed to list notifications")
-	default:
-		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.failed_to_list_notifications", "failed to list notifications")
-	}
-}
-
-func mapOpenNotificationError(err error) error {
-	if err == nil {
-		return nil
-	}
-	switch status.Code(err) {
-	case codes.NotFound:
-		return apperrors.E(apperrors.KindNotFound, "notification not found")
-	case codes.Unauthenticated:
-		return apperrors.E(apperrors.KindUnauthorized, "authentication required")
-	case codes.PermissionDenied:
-		return apperrors.E(apperrors.KindForbidden, "access denied")
-	case codes.InvalidArgument:
-		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_mark_notification_read", "failed to mark notification read")
-	default:
-		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.failed_to_mark_notification_read", "failed to mark notification read")
-	}
 }

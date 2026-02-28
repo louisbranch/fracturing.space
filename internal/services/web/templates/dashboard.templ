@@ -10,9 +10,16 @@ type DashboardAdventureBlock struct {
 	Visible bool
 }
 
+// DashboardServiceHealthEntry represents a backend service group's availability for template rendering.
+type DashboardServiceHealthEntry struct {
+	Label     string
+	Available bool
+}
+
 type DashboardPageView struct {
 	ProfilePending DashboardProfilePendingBlock
 	Adventure      DashboardAdventureBlock
+	ServiceHealth  []DashboardServiceHealthEntry
 }
 
 func dashboardProfilePendingVisible(view DashboardPageView) bool {
@@ -21,6 +28,19 @@ func dashboardProfilePendingVisible(view DashboardPageView) bool {
 
 func dashboardAdventureVisible(view DashboardPageView) bool {
 	return view.Adventure.Visible
+}
+
+func dashboardServiceHealthVisible(view DashboardPageView) bool {
+	return len(view.ServiceHealth) > 0
+}
+
+func dashboardAllServicesOperational(view DashboardPageView) bool {
+	for _, e := range view.ServiceHealth {
+		if !e.Available {
+			return false
+		}
+	}
+	return true
 }
 
 templ DashboardFragment(view DashboardPageView, loc Localizer) {
@@ -44,6 +64,32 @@ templ DashboardFragment(view DashboardPageView, loc Localizer) {
 					<div class="card-actions justify-end">
 						<a href={ routepath.AppCampaignsNew } hx-get={ routepath.AppCampaignsNew } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary">{ T(loc, "web.dashboard.campaign_adventure.cta") }</a>
 					</div>
+				</div>
+			</section>
+		}
+		if dashboardServiceHealthVisible(view) {
+			<section id="dashboard-service-health" data-dashboard-block="service-health" class="card bg-base-200 border border-base-300 shadow-sm lg:col-span-1 lg:col-start-3">
+				<div class="card-body gap-2">
+					<h2 class="card-title text-sm">{ T(loc, "web.dashboard.service_health.title") }</h2>
+					if dashboardAllServicesOperational(view) {
+						<p class="text-sm text-success">{ T(loc, "web.dashboard.service_health.all_operational") }</p>
+					} else {
+						<ul class="list-none space-y-1">
+							for _, entry := range view.ServiceHealth {
+								<li class="flex items-center gap-2 text-sm">
+									if entry.Available {
+										<span class="badge badge-success badge-xs"></span>
+									} else {
+										<span class="badge badge-error badge-xs"></span>
+									}
+									<span>{ entry.Label }</span>
+									if !entry.Available {
+										<span class="opacity-60">{ T(loc, "web.dashboard.service_health.degraded") }</span>
+									}
+								</li>
+							}
+						</ul>
+					}
 				</div>
 			</section>
 		}

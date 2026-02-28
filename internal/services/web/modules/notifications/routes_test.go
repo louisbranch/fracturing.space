@@ -1,25 +1,29 @@
 package notifications
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(newService(staticGateway{}), routeTestDependencies()))
+	registerRoutes(nil, newHandlers(newService(staticGateway{}), routeTestBase()))
 }
 
 func TestRegisterRoutesNotificationsPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(newService(staticGateway{}), routeTestDependencies()))
+	registerRoutes(mux, newHandlers(newService(staticGateway{}), routeTestBase()))
 
 	tests := []struct {
 		name       string
@@ -57,6 +61,48 @@ func TestRegisterRoutesNotificationsPathAndMethodContracts(t *testing.T) {
 	}
 }
 
-func routeTestDependencies() module.Dependencies {
-	return module.Dependencies{ResolveUserID: func(*http.Request) string { return "user-1" }}
+func routeTestBase() modulehandler.Base {
+	return modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil)
+}
+
+// staticGateway returns canned notification data for route-level tests.
+type staticGateway struct{}
+
+var staticGatewayFixedTime = time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
+
+func (staticGateway) ListNotifications(context.Context, string) ([]NotificationSummary, error) {
+	return []NotificationSummary{{
+		ID:          "notification-1",
+		MessageType: "auth.onboarding.welcome",
+		PayloadJSON: `{"signup_method":"passkey"}`,
+		Source:      "system",
+		Read:        false,
+		CreatedAt:   staticGatewayFixedTime,
+		UpdatedAt:   staticGatewayFixedTime,
+	}}, nil
+}
+
+func (g staticGateway) GetNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
+	items, err := g.ListNotifications(ctx, userID)
+	if err != nil {
+		return NotificationSummary{}, err
+	}
+	for _, item := range items {
+		if strings.TrimSpace(item.ID) == strings.TrimSpace(notificationID) {
+			return item, nil
+		}
+	}
+	return NotificationSummary{}, apperrors.E(apperrors.KindNotFound, "notification not found")
+}
+
+func (g staticGateway) OpenNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
+	item, err := g.GetNotification(ctx, userID, notificationID)
+	if err != nil {
+		return NotificationSummary{}, err
+	}
+	readAt := staticGatewayFixedTime
+	item.Read = true
+	item.ReadAt = &readAt
+	item.UpdatedAt = staticGatewayFixedTime
+	return item, nil
 }

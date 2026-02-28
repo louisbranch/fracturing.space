@@ -234,6 +234,57 @@ func TestCreateIntent_ConcurrentDedupeReturnsSingleNotification(t *testing.T) {
 	}
 }
 
+func TestGetNotification_ReturnsRecipientOwnedNotification(t *testing.T) {
+	t.Parallel()
+
+	store := newFakeStore()
+	svc := NewService(store, fixedClock(time.Date(2026, 2, 21, 20, 55, 0, 0, time.UTC)), sequentialIDGenerator("notif-1"))
+
+	created, err := svc.CreateIntent(context.Background(), CreateIntentInput{
+		RecipientUserID: "user-1",
+		MessageType:     "campaign.invite",
+		DedupeKey:       "invite:1",
+	})
+	if err != nil {
+		t.Fatalf("create intent: %v", err)
+	}
+
+	got, err := svc.GetNotification(context.Background(), GetNotificationInput{
+		RecipientUserID: "user-1",
+		NotificationID:  created.ID,
+	})
+	if err != nil {
+		t.Fatalf("get notification: %v", err)
+	}
+	if got.ID != created.ID {
+		t.Fatalf("notification id = %q, want %q", got.ID, created.ID)
+	}
+}
+
+func TestGetNotification_RequiresRecipientOwnership(t *testing.T) {
+	t.Parallel()
+
+	store := newFakeStore()
+	svc := NewService(store, fixedClock(time.Date(2026, 2, 21, 20, 56, 0, 0, time.UTC)), sequentialIDGenerator("notif-1"))
+
+	created, err := svc.CreateIntent(context.Background(), CreateIntentInput{
+		RecipientUserID: "user-1",
+		MessageType:     "campaign.invite",
+		DedupeKey:       "invite:1",
+	})
+	if err != nil {
+		t.Fatalf("create intent: %v", err)
+	}
+
+	_, err = svc.GetNotification(context.Background(), GetNotificationInput{
+		RecipientUserID: "user-2",
+		NotificationID:  created.ID,
+	})
+	if !errors.Is(err, ErrNotFound) {
+		t.Fatalf("get notification error = %v, want %v", err, ErrNotFound)
+	}
+}
+
 func fixedClock(at time.Time) func() time.Time {
 	return func() time.Time { return at }
 }
@@ -367,6 +418,16 @@ func (s *concurrentConflictStore) CountUnreadNotificationsByRecipient(_ context.
 	return unreadCount, nil
 }
 
+func (s *concurrentConflictStore) GetNotificationByRecipientAndID(_ context.Context, recipientUserID string, notificationID string) (Notification, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	notification, ok := s.notifications[notificationID]
+	if !ok || strings.TrimSpace(notification.RecipientUserID) != strings.TrimSpace(recipientUserID) {
+		return Notification{}, ErrNotFound
+	}
+	return notification, nil
+}
+
 func (s *concurrentConflictStore) MarkNotificationRead(_ context.Context, recipientUserID string, notificationID string, readAt time.Time) (Notification, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -400,6 +461,14 @@ func (s *fakeStore) GetNotificationByRecipientAndDedupeKey(_ context.Context, re
 	}
 	notification, ok := s.notifications[notificationID]
 	if !ok {
+		return Notification{}, ErrNotFound
+	}
+	return notification, nil
+}
+
+func (s *fakeStore) GetNotificationByRecipientAndID(_ context.Context, recipientUserID string, notificationID string) (Notification, error) {
+	notification, ok := s.notifications[notificationID]
+	if !ok || strings.TrimSpace(notification.RecipientUserID) != strings.TrimSpace(recipientUserID) {
 		return Notification{}, ErrNotFound
 	}
 	return notification, nil

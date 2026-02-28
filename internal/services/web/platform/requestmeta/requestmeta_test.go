@@ -7,6 +7,52 @@ import (
 	"testing"
 )
 
+func TestHasSameOriginProofWithPolicy(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		req    *http.Request
+		policy SchemePolicy
+		want   bool
+	}{
+		{
+			name: "untrusted forwarded proto is ignored",
+			req: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, "https://app.example.test/campaigns/123", nil)
+				req.Host = "app.example.test"
+				req.Header.Set("Origin", "http://app.example.test")
+				req.Header.Set("X-Forwarded-Proto", "http")
+				return req
+			}(),
+			policy: SchemePolicy{},
+			want:   false,
+		},
+		{
+			name: "trusted forwarded proto is used",
+			req: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, "https://app.example.test/campaigns/123", nil)
+				req.Host = "app.example.test"
+				req.Header.Set("Origin", "http://app.example.test")
+				req.Header.Set("X-Forwarded-Proto", "http")
+				return req
+			}(),
+			policy: SchemePolicy{TrustForwardedProto: true},
+			want:   true,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := HasSameOriginProofWithPolicy(tc.req, tc.policy); got != tc.want {
+				t.Fatalf("HasSameOriginProofWithPolicy() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestHasSameOriginProof(t *testing.T) {
 	t.Parallel()
 
@@ -96,8 +142,12 @@ func TestIsHTTPS(t *testing.T) {
 
 	req = httptest.NewRequest(http.MethodGet, "http://example.com", nil)
 	req.Header.Set("X-Forwarded-Proto", "https")
-	if !IsHTTPS(req) {
-		t.Fatalf("expected forwarded https request")
+	if IsHTTPS(req) {
+		t.Fatalf("expected forwarded header to be ignored by default")
+	}
+
+	if got := IsHTTPSWithPolicy(req, SchemePolicy{TrustForwardedProto: true}); !got {
+		t.Fatalf("IsHTTPSWithPolicy() = %v, want true", got)
 	}
 
 	req = httptest.NewRequest(http.MethodGet, "/", nil)

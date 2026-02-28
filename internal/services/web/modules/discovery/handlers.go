@@ -1,17 +1,30 @@
 package discovery
 
-import "net/http"
+import (
+	"net/http"
+
+	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
 type handlers struct {
-	service service
+	publichandler.Base
 }
 
-func newHandlers(s service) handlers {
-	return handlers{service: s}
+func newHandlers(base publichandler.Base) handlers {
+	return handlers{Base: base}
 }
 
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
-	// TODO(web-parity): replace raw text scaffold response with shared pagerender/weberror app shell flow.
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write([]byte(h.service.body()))
+	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
+	h.WritePublicPage(
+		w,
+		r,
+		webtemplates.T(loc, "web.discovery.title"),
+		webtemplates.T(loc, "layout.meta_description"),
+		lang,
+		http.StatusOK,
+		webtemplates.DiscoveryFragment(loc),
+	)
 }

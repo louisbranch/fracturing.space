@@ -23,6 +23,8 @@ service NotificationService {
   rpc GetUnreadNotificationStatus(GetUnreadNotificationStatusRequest) returns (GetUnreadNotificationStatusResponse);
   // MarkNotificationRead acknowledges one notification for the caller.
   rpc MarkNotificationRead(MarkNotificationReadRequest) returns (MarkNotificationReadResponse);
+  // GetNotification fetches one notification for the caller by ID.
+  rpc GetNotification(GetNotificationRequest) returns (GetNotificationResponse);
 }
 
 // Notification stores one user notification artifact.
@@ -72,5 +74,13 @@ message MarkNotificationReadRequest {
 }
 
 message MarkNotificationReadResponse {
+  Notification notification = 1;
+}
+
+message GetNotificationRequest {
+  string notification_id = 1;
+}
+
+message GetNotificationResponse {
   Notification notification = 1;
 }

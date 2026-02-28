@@ -9,15 +9,16 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestNewServiceFailsClosedWhenAuthClientMissing(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(module.Dependencies{})
+	svc := newServiceWithGateway(nil)
 	_, err := svc.passkeyLoginStart(context.Background())
 	if err == nil {
 		t.Fatalf("expected unavailable error when auth client is missing")
@@ -33,13 +34,13 @@ func TestNewServiceFailsClosedWhenAuthClientMissing(t *testing.T) {
 func TestNewServiceUsesConfiguredAuthClient(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(module.Dependencies{AuthClient: fakeAuthClient{}})
+	svc := newServiceWithGateway(NewGRPCAuthGateway(fakeAuthClient{}))
 	start, err := svc.passkeyLoginStart(context.Background())
 	if err != nil {
 		t.Fatalf("passkeyLoginStart() error = %v", err)
 	}
-	if start.sessionID != "login-session" {
-		t.Fatalf("sessionID = %q, want %q", start.sessionID, "login-session")
+	if start.SessionID != "login-session" {
+		t.Fatalf("SessionID = %q, want %q", start.SessionID, "login-session")
 	}
 }
 
@@ -60,32 +61,23 @@ func TestPasskeyLoginFinishValidatesInput(t *testing.T) {
 	}
 }
 
-func TestPasskeyLoginFinishRequiresUserIDAndSessionID(t *testing.T) {
+func TestPasskeyLoginFinishPropagatesGatewayErrors(t *testing.T) {
 	t.Parallel()
 
-	svcMissingUser := service{auth: &authGatewayStub{finishPasskeyLoginResp: &authv1.FinishPasskeyLoginResponse{}}}
-	_, err := svcMissingUser.passkeyLoginFinish(context.Background(), "session-1", json.RawMessage(`{"id":"cred-1"}`))
+	svcLoginFail := service{auth: &authGatewayStub{finishPasskeyLoginErr: errors.New("auth failed")}}
+	_, err := svcLoginFail.passkeyLoginFinish(context.Background(), "session-1", json.RawMessage(`{"id":"cred-1"}`))
 	if err == nil {
-		t.Fatalf("expected missing user id error")
-	}
-	if got := apperrors.HTTPStatus(err); got != http.StatusInternalServerError {
-		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusInternalServerError)
+		t.Fatalf("expected finish passkey login error")
 	}
 
-	svcMissingSession := service{auth: &authGatewayStub{
-		finishPasskeyLoginResp: &authv1.FinishPasskeyLoginResponse{User: &authv1.User{Id: "user-1"}},
-		createWebSessionResp:   &authv1.CreateWebSessionResponse{Session: &authv1.WebSession{}},
-	}}
-	_, err = svcMissingSession.passkeyLoginFinish(context.Background(), "session-1", json.RawMessage(`{"id":"cred-1"}`))
+	svcSessionFail := service{auth: &authGatewayStub{createWebSessionErr: errors.New("session failed")}}
+	_, err = svcSessionFail.passkeyLoginFinish(context.Background(), "session-1", json.RawMessage(`{"id":"cred-1"}`))
 	if err == nil {
-		t.Fatalf("expected missing web session id error")
-	}
-	if got := apperrors.HTTPStatus(err); got != http.StatusInternalServerError {
-		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusInternalServerError)
+		t.Fatalf("expected create web session error")
 	}
 }
 
-func TestPasskeyRegisterStartValidatesEmailAndAuthResponses(t *testing.T) {
+func TestPasskeyRegisterStartValidatesEmailAndGatewayErrors(t *testing.T) {
 	t.Parallel()
 
 	svc := service{auth: &authGatewayStub{}}
@@ -93,17 +85,14 @@ func TestPasskeyRegisterStartValidatesEmailAndAuthResponses(t *testing.T) {
 		t.Fatalf("expected email validation error")
 	}
 
-	missingUser := service{auth: &authGatewayStub{createUserResp: &authv1.CreateUserResponse{}}}
-	if _, err := missingUser.passkeyRegisterStart(context.Background(), "user@example.com"); err == nil {
-		t.Fatalf("expected missing user id error")
+	svcCreateUserFail := service{auth: &authGatewayStub{createUserErr: errors.New("boom")}}
+	if _, err := svcCreateUserFail.passkeyRegisterStart(context.Background(), "user@example.com"); err == nil {
+		t.Fatalf("expected create user error")
 	}
 
-	missingSession := service{auth: &authGatewayStub{
-		createUserResp:               &authv1.CreateUserResponse{User: &authv1.User{Id: "user-1"}},
-		beginPasskeyRegistrationResp: &authv1.BeginPasskeyRegistrationResponse{},
-	}}
-	if _, err := missingSession.passkeyRegisterStart(context.Background(), "user@example.com"); err == nil {
-		t.Fatalf("expected missing registration session error")
+	svcRegisterFail := service{auth: &authGatewayStub{beginPasskeyRegistrationErr: errors.New("boom")}}
+	if _, err := svcRegisterFail.passkeyRegisterStart(context.Background(), "user@example.com"); err == nil {
+		t.Fatalf("expected begin registration error")
 	}
 }
 
@@ -119,16 +108,13 @@ func TestPasskeyRegisterFinishValidatesInput(t *testing.T) {
 	}
 }
 
-func TestPasskeyRegisterFinishRequiresUserID(t *testing.T) {
+func TestPasskeyRegisterFinishPropagatesGatewayError(t *testing.T) {
 	t.Parallel()
 
-	svc := service{auth: &authGatewayStub{finishPasskeyRegistrationResp: &authv1.FinishPasskeyRegistrationResponse{}}}
+	svc := service{auth: &authGatewayStub{finishPasskeyRegistrationErr: errors.New("boom")}}
 	_, err := svc.passkeyRegisterFinish(context.Background(), "session-1", json.RawMessage(`{"id":"cred-1"}`))
 	if err == nil {
-		t.Fatalf("expected missing user id error")
-	}
-	if got := apperrors.HTTPStatus(err); got != http.StatusInternalServerError {
-		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusInternalServerError)
+		t.Fatalf("expected finish registration error")
 	}
 }
 
@@ -149,124 +135,98 @@ func TestRevokeWebSessionHandlesEmptyAndGatewayError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected revoke failure")
 	}
-	if got := apperrors.HTTPStatus(err); got != http.StatusInternalServerError {
-		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusInternalServerError)
-	}
 }
+
+// --- Gateway stub (domain-typed) ---
 
 type authGatewayStub struct {
-	createUserResp                *authv1.CreateUserResponse
-	createUserErr                 error
-	beginPasskeyRegistrationResp  *authv1.BeginPasskeyRegistrationResponse
-	beginPasskeyRegistrationErr   error
-	finishPasskeyRegistrationResp *authv1.FinishPasskeyRegistrationResponse
-	finishPasskeyRegistrationErr  error
-	beginPasskeyLoginResp         *authv1.BeginPasskeyLoginResponse
-	beginPasskeyLoginErr          error
-	finishPasskeyLoginResp        *authv1.FinishPasskeyLoginResponse
-	finishPasskeyLoginErr         error
-	createWebSessionResp          *authv1.CreateWebSessionResponse
-	createWebSessionErr           error
-	getWebSessionResp             *authv1.GetWebSessionResponse
-	getWebSessionErr              error
-	revokeWebSessionErr           error
-	revokeCalled                  bool
+	createUserResult                string
+	createUserErr                   error
+	beginPasskeyRegistrationResult  passkeyChallenge
+	beginPasskeyRegistrationErr     error
+	finishPasskeyRegistrationResult string
+	finishPasskeyRegistrationErr    error
+	beginPasskeyLoginResult         passkeyChallenge
+	beginPasskeyLoginErr            error
+	finishPasskeyLoginResult        string
+	finishPasskeyLoginErr           error
+	createWebSessionResult          string
+	createWebSessionErr             error
+	hasValidWebSessionResult        bool
+	revokeWebSessionErr             error
+	revokeCalled                    bool
 }
 
-func (f *authGatewayStub) CreateUser(context.Context, *authv1.CreateUserRequest) (*authv1.CreateUserResponse, error) {
+func (f *authGatewayStub) CreateUser(context.Context, string) (string, error) {
 	if f.createUserErr != nil {
-		return nil, f.createUserErr
+		return "", f.createUserErr
 	}
-	if f.createUserResp != nil {
-		return f.createUserResp, nil
+	if f.createUserResult != "" {
+		return f.createUserResult, nil
 	}
-	return &authv1.CreateUserResponse{User: &authv1.User{Id: "user-1"}}, nil
+	return "user-1", nil
 }
 
-func (f *authGatewayStub) BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest) (*authv1.BeginPasskeyRegistrationResponse, error) {
+func (f *authGatewayStub) BeginPasskeyRegistration(context.Context, string) (passkeyChallenge, error) {
 	if f.beginPasskeyRegistrationErr != nil {
-		return nil, f.beginPasskeyRegistrationErr
+		return passkeyChallenge{}, f.beginPasskeyRegistrationErr
 	}
-	if f.beginPasskeyRegistrationResp != nil {
-		return f.beginPasskeyRegistrationResp, nil
+	if f.beginPasskeyRegistrationResult.SessionID != "" {
+		return f.beginPasskeyRegistrationResult, nil
 	}
-	return &authv1.BeginPasskeyRegistrationResponse{SessionId: "register-session", CredentialCreationOptionsJson: []byte(`{"publicKey":{}}`)}, nil
+	return passkeyChallenge{SessionID: "register-session", PublicKey: json.RawMessage(`{"publicKey":{}}`)}, nil
 }
 
-func (f *authGatewayStub) FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest) (*authv1.FinishPasskeyRegistrationResponse, error) {
+func (f *authGatewayStub) FinishPasskeyRegistration(context.Context, string, json.RawMessage) (string, error) {
 	if f.finishPasskeyRegistrationErr != nil {
-		return nil, f.finishPasskeyRegistrationErr
+		return "", f.finishPasskeyRegistrationErr
 	}
-	if f.finishPasskeyRegistrationResp != nil {
-		return f.finishPasskeyRegistrationResp, nil
+	if f.finishPasskeyRegistrationResult != "" {
+		return f.finishPasskeyRegistrationResult, nil
 	}
-	return &authv1.FinishPasskeyRegistrationResponse{User: &authv1.User{Id: "user-1"}}, nil
+	return "user-1", nil
 }
 
-func (f *authGatewayStub) BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest) (*authv1.BeginPasskeyLoginResponse, error) {
+func (f *authGatewayStub) BeginPasskeyLogin(context.Context) (passkeyChallenge, error) {
 	if f.beginPasskeyLoginErr != nil {
-		return nil, f.beginPasskeyLoginErr
+		return passkeyChallenge{}, f.beginPasskeyLoginErr
 	}
-	if f.beginPasskeyLoginResp != nil {
-		return f.beginPasskeyLoginResp, nil
+	if f.beginPasskeyLoginResult.SessionID != "" {
+		return f.beginPasskeyLoginResult, nil
 	}
-	return &authv1.BeginPasskeyLoginResponse{SessionId: "login-session", CredentialRequestOptionsJson: []byte(`{"publicKey":{}}`)}, nil
+	return passkeyChallenge{SessionID: "login-session", PublicKey: json.RawMessage(`{"publicKey":{}}`)}, nil
 }
 
-func (f *authGatewayStub) FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest) (*authv1.FinishPasskeyLoginResponse, error) {
+func (f *authGatewayStub) FinishPasskeyLogin(context.Context, string, json.RawMessage) (string, error) {
 	if f.finishPasskeyLoginErr != nil {
-		return nil, f.finishPasskeyLoginErr
+		return "", f.finishPasskeyLoginErr
 	}
-	if f.finishPasskeyLoginResp != nil {
-		return f.finishPasskeyLoginResp, nil
+	if f.finishPasskeyLoginResult != "" {
+		return f.finishPasskeyLoginResult, nil
 	}
-	return &authv1.FinishPasskeyLoginResponse{User: &authv1.User{Id: "user-1"}}, nil
+	return "user-1", nil
 }
 
-func (f *authGatewayStub) CreateWebSession(context.Context, *authv1.CreateWebSessionRequest) (*authv1.CreateWebSessionResponse, error) {
+func (f *authGatewayStub) CreateWebSession(context.Context, string) (string, error) {
 	if f.createWebSessionErr != nil {
-		return nil, f.createWebSessionErr
+		return "", f.createWebSessionErr
 	}
-	if f.createWebSessionResp != nil {
-		return f.createWebSessionResp, nil
+	if f.createWebSessionResult != "" {
+		return f.createWebSessionResult, nil
 	}
-	return &authv1.CreateWebSessionResponse{Session: &authv1.WebSession{Id: "ws-1", UserId: "user-1"}}, nil
+	return "ws-1", nil
 }
 
-func (f *authGatewayStub) GetWebSession(context.Context, *authv1.GetWebSessionRequest) (*authv1.GetWebSessionResponse, error) {
-	if f.getWebSessionErr != nil {
-		return nil, f.getWebSessionErr
-	}
-	if f.getWebSessionResp != nil {
-		return f.getWebSessionResp, nil
-	}
-	return &authv1.GetWebSessionResponse{Session: &authv1.WebSession{Id: "ws-1", UserId: "user-1"}, User: &authv1.User{Id: "user-1"}}, nil
+func (f *authGatewayStub) HasValidWebSession(context.Context, string) bool {
+	return f.hasValidWebSessionResult
 }
 
-func (f *authGatewayStub) RevokeWebSession(context.Context, *authv1.RevokeWebSessionRequest) (*authv1.RevokeWebSessionResponse, error) {
+func (f *authGatewayStub) RevokeWebSession(context.Context, string) error {
 	f.revokeCalled = true
-	if f.revokeWebSessionErr != nil {
-		return nil, f.revokeWebSessionErr
-	}
-	return &authv1.RevokeWebSessionResponse{}, nil
+	return f.revokeWebSessionErr
 }
 
-func TestPasskeyRegisterStartUsesEnglishLocale(t *testing.T) {
-	t.Parallel()
-
-	stub := &createUserCaptureAuthGateway{}
-	svc := service{auth: stub}
-	_, err := svc.passkeyRegisterStart(context.Background(), "captured@example.com")
-	if err != nil {
-		t.Fatalf("passkeyRegisterStart() error = %v", err)
-	}
-	if stub.lastCreateUserReq == nil {
-		t.Fatalf("expected CreateUser request")
-	}
-	if stub.lastCreateUserReq.GetLocale() != commonv1.Locale_LOCALE_EN_US {
-		t.Fatalf("locale = %v, want %v", stub.lastCreateUserReq.GetLocale(), commonv1.Locale_LOCALE_EN_US)
-	}
-}
+// --- Gateway tests ---
 
 func TestUnavailableAuthGatewayReturnsUnavailableErrors(t *testing.T) {
 	t.Parallel()
@@ -278,36 +238,31 @@ func TestUnavailableAuthGatewayReturnsUnavailableErrors(t *testing.T) {
 		run  func() error
 	}{
 		{name: "create user", run: func() error {
-			_, err := g.CreateUser(ctx, &authv1.CreateUserRequest{Email: "user@example.com"})
+			_, err := g.CreateUser(ctx, "user@example.com")
 			return err
 		}},
 		{name: "begin register", run: func() error {
-			_, err := g.BeginPasskeyRegistration(ctx, &authv1.BeginPasskeyRegistrationRequest{UserId: "user-1"})
+			_, err := g.BeginPasskeyRegistration(ctx, "user-1")
 			return err
 		}},
 		{name: "finish register", run: func() error {
-			_, err := g.FinishPasskeyRegistration(ctx, &authv1.FinishPasskeyRegistrationRequest{SessionId: "session-1"})
+			_, err := g.FinishPasskeyRegistration(ctx, "session-1", json.RawMessage(`{}`))
 			return err
 		}},
 		{name: "begin login", run: func() error {
-			_, err := g.BeginPasskeyLogin(ctx, &authv1.BeginPasskeyLoginRequest{})
+			_, err := g.BeginPasskeyLogin(ctx)
 			return err
 		}},
 		{name: "finish login", run: func() error {
-			_, err := g.FinishPasskeyLogin(ctx, &authv1.FinishPasskeyLoginRequest{SessionId: "session-1"})
+			_, err := g.FinishPasskeyLogin(ctx, "session-1", json.RawMessage(`{}`))
 			return err
 		}},
 		{name: "create web session", run: func() error {
-			_, err := g.CreateWebSession(ctx, &authv1.CreateWebSessionRequest{UserId: "user-1"})
-			return err
-		}},
-		{name: "get web session", run: func() error {
-			_, err := g.GetWebSession(ctx, &authv1.GetWebSessionRequest{SessionId: "session-1"})
+			_, err := g.CreateWebSession(ctx, "user-1")
 			return err
 		}},
 		{name: "revoke web session", run: func() error {
-			_, err := g.RevokeWebSession(ctx, &authv1.RevokeWebSessionRequest{SessionId: "session-1"})
-			return err
+			return g.RevokeWebSession(ctx, "session-1")
 		}},
 	}
 
@@ -324,115 +279,266 @@ func TestUnavailableAuthGatewayReturnsUnavailableErrors(t *testing.T) {
 			}
 		})
 	}
+
+	if g.HasValidWebSession(ctx, "session-1") {
+		t.Fatalf("expected unavailable gateway to reject sessions")
+	}
 }
 
-func TestGRPCAuthGatewayForwardsClientCalls(t *testing.T) {
+func TestGRPCAuthGatewayMapsProtoToDomainTypes(t *testing.T) {
 	t.Parallel()
 
 	client := &recordingAuthClient{
 		createUserResp:                &authv1.CreateUserResponse{User: &authv1.User{Id: "user-1"}},
-		beginPasskeyRegistrationResp:  &authv1.BeginPasskeyRegistrationResponse{SessionId: "reg-1"},
+		beginPasskeyRegistrationResp:  &authv1.BeginPasskeyRegistrationResponse{SessionId: "reg-1", CredentialCreationOptionsJson: []byte(`{"publicKey":{}}`)},
 		finishPasskeyRegistrationResp: &authv1.FinishPasskeyRegistrationResponse{User: &authv1.User{Id: "user-1"}},
-		beginPasskeyLoginResp:         &authv1.BeginPasskeyLoginResponse{SessionId: "login-1"},
+		beginPasskeyLoginResp:         &authv1.BeginPasskeyLoginResponse{SessionId: "login-1", CredentialRequestOptionsJson: []byte(`{"publicKey":{}}`)},
 		finishPasskeyLoginResp:        &authv1.FinishPasskeyLoginResponse{User: &authv1.User{Id: "user-1"}},
 		createWebSessionResp:          &authv1.CreateWebSessionResponse{Session: &authv1.WebSession{Id: "ws-1", UserId: "user-1"}},
 		revokeWebSessionResp:          &authv1.RevokeWebSessionResponse{},
 	}
-	g := grpcAuthGateway{client: client}
+	g := newGRPCAuthGateway(client)
 
 	ctx := context.Background()
-	createReq := &authv1.CreateUserRequest{Email: "user@example.com"}
-	if resp, err := g.CreateUser(ctx, createReq); err != nil || resp != client.createUserResp {
-		t.Fatalf("CreateUser() = (%v, %v), want (%v, nil)", resp, err, client.createUserResp)
+
+	userID, err := g.CreateUser(ctx, "user@example.com")
+	if err != nil {
+		t.Fatalf("CreateUser() error = %v", err)
 	}
-	if client.lastCreateUserReq != createReq {
-		t.Fatalf("CreateUser request was not forwarded")
+	if userID != "user-1" {
+		t.Fatalf("CreateUser() userID = %q, want %q", userID, "user-1")
+	}
+	if client.lastCreateUserReq == nil || client.lastCreateUserReq.GetEmail() != "user@example.com" {
+		t.Fatalf("CreateUser request email not forwarded")
+	}
+	if client.lastCreateUserReq.GetLocale() != commonv1.Locale_LOCALE_EN_US {
+		t.Fatalf("CreateUser locale = %v, want %v", client.lastCreateUserReq.GetLocale(), commonv1.Locale_LOCALE_EN_US)
 	}
 
-	beginRegReq := &authv1.BeginPasskeyRegistrationRequest{UserId: "user-1"}
-	if resp, err := g.BeginPasskeyRegistration(ctx, beginRegReq); err != nil || resp != client.beginPasskeyRegistrationResp {
-		t.Fatalf("BeginPasskeyRegistration() = (%v, %v)", resp, err)
+	regChallenge, err := g.BeginPasskeyRegistration(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("BeginPasskeyRegistration() error = %v", err)
+	}
+	if regChallenge.SessionID != "reg-1" {
+		t.Fatalf("BeginPasskeyRegistration() SessionID = %q, want %q", regChallenge.SessionID, "reg-1")
 	}
 
-	finishRegReq := &authv1.FinishPasskeyRegistrationRequest{SessionId: "reg-1"}
-	if resp, err := g.FinishPasskeyRegistration(ctx, finishRegReq); err != nil || resp != client.finishPasskeyRegistrationResp {
-		t.Fatalf("FinishPasskeyRegistration() = (%v, %v)", resp, err)
+	finishRegUserID, err := g.FinishPasskeyRegistration(ctx, "reg-1", json.RawMessage(`{}`))
+	if err != nil {
+		t.Fatalf("FinishPasskeyRegistration() error = %v", err)
+	}
+	if finishRegUserID != "user-1" {
+		t.Fatalf("FinishPasskeyRegistration() = %q, want %q", finishRegUserID, "user-1")
 	}
 
-	beginLoginReq := &authv1.BeginPasskeyLoginRequest{}
-	if resp, err := g.BeginPasskeyLogin(ctx, beginLoginReq); err != nil || resp != client.beginPasskeyLoginResp {
-		t.Fatalf("BeginPasskeyLogin() = (%v, %v)", resp, err)
+	loginChallenge, err := g.BeginPasskeyLogin(ctx)
+	if err != nil {
+		t.Fatalf("BeginPasskeyLogin() error = %v", err)
+	}
+	if loginChallenge.SessionID != "login-1" {
+		t.Fatalf("BeginPasskeyLogin() SessionID = %q, want %q", loginChallenge.SessionID, "login-1")
 	}
 
-	finishLoginReq := &authv1.FinishPasskeyLoginRequest{SessionId: "login-1"}
-	if resp, err := g.FinishPasskeyLogin(ctx, finishLoginReq); err != nil || resp != client.finishPasskeyLoginResp {
-		t.Fatalf("FinishPasskeyLogin() = (%v, %v)", resp, err)
+	finishLoginUserID, err := g.FinishPasskeyLogin(ctx, "login-1", json.RawMessage(`{}`))
+	if err != nil {
+		t.Fatalf("FinishPasskeyLogin() error = %v", err)
+	}
+	if finishLoginUserID != "user-1" {
+		t.Fatalf("FinishPasskeyLogin() = %q, want %q", finishLoginUserID, "user-1")
 	}
 
-	createSessionReq := &authv1.CreateWebSessionRequest{UserId: "user-1"}
-	if resp, err := g.CreateWebSession(ctx, createSessionReq); err != nil || resp != client.createWebSessionResp {
-		t.Fatalf("CreateWebSession() = (%v, %v)", resp, err)
+	sessionID, err := g.CreateWebSession(ctx, "user-1")
+	if err != nil {
+		t.Fatalf("CreateWebSession() error = %v", err)
+	}
+	if sessionID != "ws-1" {
+		t.Fatalf("CreateWebSession() = %q, want %q", sessionID, "ws-1")
 	}
 
-	getSessionReq := &authv1.GetWebSessionRequest{SessionId: "ws-1"}
-	if _, err := g.GetWebSession(ctx, getSessionReq); err != nil {
-		t.Fatalf("GetWebSession() error = %v", err)
+	if err := g.RevokeWebSession(ctx, "ws-1"); err != nil {
+		t.Fatalf("RevokeWebSession() error = %v", err)
 	}
-
-	revokeReq := &authv1.RevokeWebSessionRequest{SessionId: "ws-1"}
-	if resp, err := g.RevokeWebSession(ctx, revokeReq); err != nil || resp != client.revokeWebSessionResp {
-		t.Fatalf("RevokeWebSession() = (%v, %v)", resp, err)
-	}
-	if client.lastRevokeWebSessionReq != revokeReq {
+	if client.lastRevokeWebSessionReq == nil || client.lastRevokeWebSessionReq.GetSessionId() != "ws-1" {
 		t.Fatalf("RevokeWebSession request was not forwarded")
 	}
 }
 
-type createUserCaptureAuthGateway struct {
-	authGatewayStub
-	lastCreateUserReq *authv1.CreateUserRequest
+func TestGRPCAuthGatewayRejectsMissingProtoFields(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	t.Run("CreateUser empty user id", func(t *testing.T) {
+		g := newGRPCAuthGateway(&recordingAuthClient{createUserResp: &authv1.CreateUserResponse{}})
+		_, err := g.CreateUser(ctx, "user@example.com")
+		if err == nil {
+			t.Fatalf("expected missing user id error")
+		}
+	})
+
+	t.Run("BeginPasskeyLogin empty session id", func(t *testing.T) {
+		g := newGRPCAuthGateway(&recordingAuthClient{beginPasskeyLoginResp: &authv1.BeginPasskeyLoginResponse{}})
+		_, err := g.BeginPasskeyLogin(ctx)
+		if err == nil {
+			t.Fatalf("expected missing session id error")
+		}
+	})
+
+	t.Run("FinishPasskeyLogin empty user id", func(t *testing.T) {
+		g := newGRPCAuthGateway(&recordingAuthClient{finishPasskeyLoginResp: &authv1.FinishPasskeyLoginResponse{}})
+		_, err := g.FinishPasskeyLogin(ctx, "s1", json.RawMessage(`{}`))
+		if err == nil {
+			t.Fatalf("expected missing user id error")
+		}
+	})
+
+	t.Run("CreateWebSession empty session id", func(t *testing.T) {
+		g := newGRPCAuthGateway(&recordingAuthClient{createWebSessionResp: &authv1.CreateWebSessionResponse{Session: &authv1.WebSession{}}})
+		_, err := g.CreateWebSession(ctx, "user-1")
+		if err == nil {
+			t.Fatalf("expected missing session id error")
+		}
+	})
+
+	t.Run("BeginPasskeyRegistration empty session id", func(t *testing.T) {
+		g := newGRPCAuthGateway(&recordingAuthClient{beginPasskeyRegistrationResp: &authv1.BeginPasskeyRegistrationResponse{}})
+		_, err := g.BeginPasskeyRegistration(ctx, "user-1")
+		if err == nil {
+			t.Fatalf("expected missing session id error")
+		}
+	})
+
+	t.Run("FinishPasskeyRegistration empty user id", func(t *testing.T) {
+		g := newGRPCAuthGateway(&recordingAuthClient{finishPasskeyRegistrationResp: &authv1.FinishPasskeyRegistrationResponse{}})
+		_, err := g.FinishPasskeyRegistration(ctx, "s1", json.RawMessage(`{}`))
+		if err == nil {
+			t.Fatalf("expected missing user id error")
+		}
+	})
 }
 
-func (f *createUserCaptureAuthGateway) CreateUser(_ context.Context, req *authv1.CreateUserRequest) (*authv1.CreateUserResponse, error) {
-	f.lastCreateUserReq = req
-	return &authv1.CreateUserResponse{User: &authv1.User{Id: "user-1"}}, nil
+func TestGRPCAuthGatewayMapsGrpcErrorsToDomainKinds(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	client := &recordingAuthClient{
+		createUserErr:               status.Error(codes.InvalidArgument, "bad email"),
+		finishPasskeyLoginErr:       status.Error(codes.Unauthenticated, "session expired"),
+		beginPasskeyRegistrationErr: status.Error(codes.PermissionDenied, "forbidden"),
+		beginPasskeyLoginErr:        status.Error(codes.Unavailable, "down"),
+	}
+	g := newGRPCAuthGateway(client)
+
+	t.Run("create user invalid argument maps to bad input", func(t *testing.T) {
+		t.Parallel()
+		_, err := g.CreateUser(ctx, "user@example.com")
+		if err == nil {
+			t.Fatalf("CreateUser() error = nil")
+		}
+		if got := apperrors.HTTPStatus(err); got != http.StatusBadRequest {
+			t.Fatalf("create user status = %d, want %d", got, http.StatusBadRequest)
+		}
+		if got := apperrors.LocalizationKey(err); got != "error.http.failed_to_create_user" {
+			t.Fatalf("create user localization key = %q, want %q", got, "error.http.failed_to_create_user")
+		}
+	})
+
+	t.Run("login finish unauthenticated maps to unauthorized", func(t *testing.T) {
+		t.Parallel()
+		_, err := g.FinishPasskeyLogin(ctx, "session-id", json.RawMessage(`{}`))
+		if err == nil {
+			t.Fatalf("FinishPasskeyLogin() error = nil")
+		}
+		if got := apperrors.HTTPStatus(err); got != http.StatusUnauthorized {
+			t.Fatalf("login finish status = %d, want %d", got, http.StatusUnauthorized)
+		}
+	})
+
+	t.Run("registration start permission denied maps to forbidden", func(t *testing.T) {
+		t.Parallel()
+		_, err := g.BeginPasskeyRegistration(ctx, "user-id")
+		if err == nil {
+			t.Fatalf("BeginPasskeyRegistration() error = nil")
+		}
+		if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+			t.Fatalf("register start status = %d, want %d", got, http.StatusForbidden)
+		}
+	})
+
+	t.Run("login start unavailable maps to service unavailable", func(t *testing.T) {
+		t.Parallel()
+		_, err := g.BeginPasskeyLogin(ctx)
+		if err == nil {
+			t.Fatalf("BeginPasskeyLogin() error = nil")
+		}
+		if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+			t.Fatalf("login start status = %d, want %d", got, http.StatusServiceUnavailable)
+		}
+	})
 }
+
+// --- Recording gRPC client (for gateway tests) ---
 
 type recordingAuthClient struct {
 	createUserResp                *authv1.CreateUserResponse
+	createUserErr                 error
 	beginPasskeyRegistrationResp  *authv1.BeginPasskeyRegistrationResponse
+	beginPasskeyRegistrationErr   error
 	finishPasskeyRegistrationResp *authv1.FinishPasskeyRegistrationResponse
+	finishPasskeyRegistrationErr  error
 	beginPasskeyLoginResp         *authv1.BeginPasskeyLoginResponse
+	beginPasskeyLoginErr          error
 	finishPasskeyLoginResp        *authv1.FinishPasskeyLoginResponse
+	finishPasskeyLoginErr         error
 	createWebSessionResp          *authv1.CreateWebSessionResponse
+	createWebSessionErr           error
 	revokeWebSessionResp          *authv1.RevokeWebSessionResponse
+	revokeWebSessionErr           error
 
 	lastCreateUserReq       *authv1.CreateUserRequest
 	lastRevokeWebSessionReq *authv1.RevokeWebSessionRequest
 }
 
 func (f *recordingAuthClient) CreateUser(_ context.Context, req *authv1.CreateUserRequest, _ ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
+	if f.createUserErr != nil {
+		return nil, f.createUserErr
+	}
 	f.lastCreateUserReq = req
 	return f.createUserResp, nil
 }
 
 func (f *recordingAuthClient) BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
+	if f.beginPasskeyRegistrationErr != nil {
+		return nil, f.beginPasskeyRegistrationErr
+	}
 	return f.beginPasskeyRegistrationResp, nil
 }
 
 func (f *recordingAuthClient) FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
+	if f.finishPasskeyRegistrationErr != nil {
+		return nil, f.finishPasskeyRegistrationErr
+	}
 	return f.finishPasskeyRegistrationResp, nil
 }
 
 func (f *recordingAuthClient) BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest, ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error) {
+	if f.beginPasskeyLoginErr != nil {
+		return nil, f.beginPasskeyLoginErr
+	}
 	return f.beginPasskeyLoginResp, nil
 }
 
 func (f *recordingAuthClient) FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest, ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error) {
+	if f.finishPasskeyLoginErr != nil {
+		return nil, f.finishPasskeyLoginErr
+	}
 	return f.finishPasskeyLoginResp, nil
 }
 
 func (f *recordingAuthClient) CreateWebSession(context.Context, *authv1.CreateWebSessionRequest, ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error) {
+	if f.createWebSessionErr != nil {
+		return nil, f.createWebSessionErr
+	}
 	return f.createWebSessionResp, nil
 }
 
@@ -441,6 +547,9 @@ func (f *recordingAuthClient) GetWebSession(context.Context, *authv1.GetWebSessi
 }
 
 func (f *recordingAuthClient) RevokeWebSession(_ context.Context, req *authv1.RevokeWebSessionRequest, _ ...grpc.CallOption) (*authv1.RevokeWebSessionResponse, error) {
+	if f.revokeWebSessionErr != nil {
+		return nil, f.revokeWebSessionErr
+	}
 	f.lastRevokeWebSessionReq = req
 	return f.revokeWebSessionResp, nil
 }

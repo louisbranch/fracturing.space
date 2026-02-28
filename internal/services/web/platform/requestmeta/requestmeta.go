@@ -7,17 +7,37 @@ import (
 	"strings"
 )
 
+// SchemePolicy controls how request metadata resolves request scheme.
+//
+// TrustForwardedProto must be explicitly enabled for X-Forwarded-Proto to be
+// considered. Keeping this explicit avoids trusting headers from untrusted clients.
+type SchemePolicy struct {
+	TrustForwardedProto bool
+}
+
 // IsHTTPS reports whether a request should be treated as HTTPS.
 func IsHTTPS(r *http.Request) bool {
-	return requestScheme(r) == "https"
+	return IsHTTPSWithPolicy(r, SchemePolicy{})
+}
+
+// IsHTTPSWithPolicy reports whether a request should be treated as HTTPS using
+// the provided scheme policy.
+func IsHTTPSWithPolicy(r *http.Request, policy SchemePolicy) bool {
+	return requestScheme(r, policy) == "https"
 }
 
 // HasSameOriginProof reports whether Origin or Referer proves same-origin.
 func HasSameOriginProof(r *http.Request) bool {
+	return HasSameOriginProofWithPolicy(r, SchemePolicy{})
+}
+
+// HasSameOriginProofWithPolicy reports whether Origin or Referer proves same-origin
+// under the provided scheme policy.
+func HasSameOriginProofWithPolicy(r *http.Request, policy SchemePolicy) bool {
 	if r == nil {
 		return false
 	}
-	requestScheme, requestHost, requestPort := requestOriginParts(r)
+	requestScheme, requestHost, requestPort := requestOriginParts(r, policy)
 	if requestHost == "" {
 		return false
 	}
@@ -59,11 +79,11 @@ func sameOriginHostPort(raw string, requestScheme string, requestHost string, re
 	return originPort == requestPort
 }
 
-func requestOriginParts(r *http.Request) (string, string, string) {
+func requestOriginParts(r *http.Request, policy SchemePolicy) (string, string, string) {
 	if r == nil {
 		return "", "", ""
 	}
-	scheme := requestScheme(r)
+	scheme := requestScheme(r, policy)
 	host, port := requestHostParts(r.Host)
 	if host == "" && r.URL != nil {
 		host, port = requestHostParts(r.URL.Host)
@@ -74,13 +94,14 @@ func requestOriginParts(r *http.Request) (string, string, string) {
 	return scheme, host, port
 }
 
-func requestScheme(r *http.Request) string {
+func requestScheme(r *http.Request, policy SchemePolicy) string {
 	if r == nil {
 		return ""
 	}
-	// FIXME(web-security): trust forwarded proto only when requests are known to come from trusted proxy infrastructure.
-	if forwarded := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto"))); forwarded == "http" || forwarded == "https" {
-		return forwarded
+	if policy.TrustForwardedProto {
+		if forwarded := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto"))); forwarded == "http" || forwarded == "https" {
+			return forwarded
+		}
 	}
 	if r.URL != nil {
 		if scheme := strings.ToLower(strings.TrimSpace(r.URL.Scheme)); scheme == "http" || scheme == "https" {

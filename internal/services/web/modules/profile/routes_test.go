@@ -6,15 +6,14 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(newService(&routeGatewayStub{}, ""), module.Dependencies{}))
+	registerRoutes(nil, newHandlers(newService(&routeGatewayStub{}, ""), publichandler.Base{}))
 }
 
 func TestRegisterRoutesProfileMethodContract(t *testing.T) {
@@ -22,8 +21,8 @@ func TestRegisterRoutesProfileMethodContract(t *testing.T) {
 
 	mux := http.NewServeMux()
 	registerRoutes(mux, newHandlers(newService(&routeGatewayStub{
-		lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "adventurer"}},
-	}, ""), module.Dependencies{}))
+		lookupResp: LookupUserProfileResponse{Username: "adventurer"},
+	}, ""), publichandler.Base{}))
 
 	getReq := httptest.NewRequest(http.MethodGet, routepath.UserProfile("adventurer"), nil)
 	getRR := httptest.NewRecorder()
@@ -58,12 +57,12 @@ func TestRegisterRoutesProfileMethodContract(t *testing.T) {
 }
 
 type routeGatewayStub struct {
-	lookupResp *socialv1.LookupUserProfileResponse
+	lookupResp LookupUserProfileResponse
 }
 
-func (s *routeGatewayStub) LookupUserProfile(_ context.Context, _ *socialv1.LookupUserProfileRequest) (*socialv1.LookupUserProfileResponse, error) {
-	if s.lookupResp != nil {
-		return s.lookupResp, nil
+func (s *routeGatewayStub) LookupUserProfile(_ context.Context, _ LookupUserProfileRequest) (LookupUserProfileResponse, error) {
+	if s.lookupResp.Username == "" {
+		return LookupUserProfileResponse{Username: "adventurer"}, nil
 	}
-	return &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "adventurer"}}, nil
+	return s.lookupResp, nil
 }

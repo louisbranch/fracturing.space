@@ -5,214 +5,9 @@ import (
 	"sort"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"golang.org/x/text/language"
 )
-
-// CampaignSummary is a transport-safe summary for campaign listings.
-type CampaignSummary struct {
-	ID                string `json:"id"`
-	Name              string `json:"name"`
-	Theme             string `json:"theme"`
-	CoverImageURL     string `json:"coverImageUrl"`
-	ParticipantCount  string `json:"participantCount"`
-	CharacterCount    string `json:"characterCount"`
-	CreatedAtUnixNano int64  `json:"createdAtUnixNano"`
-}
-
-// CampaignWorkspace stores campaign details used by campaign workspace routes.
-type CampaignWorkspace struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Theme         string `json:"theme"`
-	System        string `json:"system"`
-	GMMode        string `json:"gmMode"`
-	CoverImageURL string `json:"coverImageUrl"`
-}
-
-// CampaignParticipant stores participant details used by campaign participants pages.
-type CampaignParticipant struct {
-	ID             string `json:"id"`
-	UserID         string `json:"userId"`
-	Name           string `json:"name"`
-	Role           string `json:"role"`
-	CampaignAccess string `json:"campaignAccess"`
-	Controller     string `json:"controller"`
-	Pronouns       string `json:"pronouns"`
-	AvatarURL      string `json:"avatarUrl"`
-}
-
-// CampaignCharacter stores character details used by campaign characters pages.
-type CampaignCharacter struct {
-	ID             string   `json:"id"`
-	Name           string   `json:"name"`
-	Kind           string   `json:"kind"`
-	Controller     string   `json:"controller"`
-	Pronouns       string   `json:"pronouns"`
-	Aliases        []string `json:"aliases"`
-	AvatarURL      string   `json:"avatarUrl"`
-	CanEdit        bool     `json:"canEdit"`
-	EditReasonCode string   `json:"editReasonCode"`
-}
-
-// CampaignSession stores session details used by campaign sessions pages.
-type CampaignSession struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	Status    string `json:"status"`
-	StartedAt string `json:"startedAt"`
-	UpdatedAt string `json:"updatedAt"`
-	EndedAt   string `json:"endedAt"`
-}
-
-// CampaignInvite stores invite details used by campaign invites pages.
-type CampaignInvite struct {
-	ID              string `json:"id"`
-	ParticipantID   string `json:"participantId"`
-	RecipientUserID string `json:"recipientUserId"`
-	Status          string `json:"status"`
-}
-
-// CampaignCharacterCreationStep stores one workflow step status.
-type CampaignCharacterCreationStep struct {
-	Step     int32  `json:"step"`
-	Key      string `json:"key"`
-	Complete bool   `json:"complete"`
-}
-
-// CampaignCharacterCreationProgress stores workflow progress metadata.
-type CampaignCharacterCreationProgress struct {
-	Steps        []CampaignCharacterCreationStep `json:"steps"`
-	NextStep     int32                           `json:"nextStep"`
-	Ready        bool                            `json:"ready"`
-	UnmetReasons []string                        `json:"unmetReasons"`
-}
-
-// DaggerheartCreationClass stores class catalog data used by workflow forms.
-type DaggerheartCreationClass struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	DomainIDs []string `json:"domainIds"`
-}
-
-// DaggerheartCreationSubclass stores subclass catalog data used by workflow forms.
-type DaggerheartCreationSubclass struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	ClassID string `json:"classId"`
-}
-
-// DaggerheartCreationHeritage stores ancestry/community catalog data.
-type DaggerheartCreationHeritage struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Kind string `json:"kind"`
-}
-
-// DaggerheartCreationWeapon stores weapon catalog data used by equipment forms.
-type DaggerheartCreationWeapon struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Category string `json:"category"`
-	Tier     int32  `json:"tier"`
-}
-
-// DaggerheartCreationArmor stores armor catalog data used by equipment forms.
-type DaggerheartCreationArmor struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Tier int32  `json:"tier"`
-}
-
-// DaggerheartCreationItem stores item catalog data used by equipment forms.
-type DaggerheartCreationItem struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
-// DaggerheartCreationDomainCard stores domain card catalog data used by forms.
-type DaggerheartCreationDomainCard struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	DomainID string `json:"domainId"`
-	Level    int32  `json:"level"`
-}
-
-// CampaignCharacterCreationCatalog stores Daggerheart catalog subsets used by workflow forms.
-type CampaignCharacterCreationCatalog struct {
-	Classes     []DaggerheartCreationClass      `json:"classes"`
-	Subclasses  []DaggerheartCreationSubclass   `json:"subclasses"`
-	Heritages   []DaggerheartCreationHeritage   `json:"heritages"`
-	Weapons     []DaggerheartCreationWeapon     `json:"weapons"`
-	Armor       []DaggerheartCreationArmor      `json:"armor"`
-	Items       []DaggerheartCreationItem       `json:"items"`
-	DomainCards []DaggerheartCreationDomainCard `json:"domainCards"`
-}
-
-// CampaignCharacterCreationProfile stores selected workflow fields used for filtering options.
-type CampaignCharacterCreationProfile struct {
-	ClassID            string   `json:"classId"`
-	SubclassID         string   `json:"subclassId"`
-	AncestryID         string   `json:"ancestryId"`
-	CommunityID        string   `json:"communityId"`
-	Agility            string   `json:"agility"`
-	Strength           string   `json:"strength"`
-	Finesse            string   `json:"finesse"`
-	Instinct           string   `json:"instinct"`
-	Presence           string   `json:"presence"`
-	Knowledge          string   `json:"knowledge"`
-	PrimaryWeaponID    string   `json:"primaryWeaponId"`
-	SecondaryWeaponID  string   `json:"secondaryWeaponId"`
-	ArmorID            string   `json:"armorId"`
-	PotionItemID       string   `json:"potionItemId"`
-	Background         string   `json:"background"`
-	ExperienceName     string   `json:"experienceName"`
-	ExperienceModifier string   `json:"experienceModifier"`
-	DomainCardIDs      []string `json:"domainCardIds"`
-	Connections        string   `json:"connections"`
-}
-
-// CampaignCharacterCreation stores character-detail workflow UI data.
-type CampaignCharacterCreation struct {
-	Progress         CampaignCharacterCreationProgress `json:"progress"`
-	Profile          CampaignCharacterCreationProfile  `json:"profile"`
-	Classes          []DaggerheartCreationClass        `json:"classes"`
-	Subclasses       []DaggerheartCreationSubclass     `json:"subclasses"`
-	Ancestries       []DaggerheartCreationHeritage     `json:"ancestries"`
-	Communities      []DaggerheartCreationHeritage     `json:"communities"`
-	PrimaryWeapons   []DaggerheartCreationWeapon       `json:"primaryWeapons"`
-	SecondaryWeapons []DaggerheartCreationWeapon       `json:"secondaryWeapons"`
-	Armor            []DaggerheartCreationArmor        `json:"armor"`
-	PotionItems      []DaggerheartCreationItem         `json:"potionItems"`
-	DomainCards      []DaggerheartCreationDomainCard   `json:"domainCards"`
-}
-
-// CreateCampaignInput stores create-campaign form values.
-type CreateCampaignInput struct {
-	Name        string
-	Locale      commonv1.Locale
-	System      commonv1.GameSystem
-	GMMode      statev1.GmMode
-	ThemePrompt string
-}
-
-// CreateCampaignResult stores create-campaign response values.
-type CreateCampaignResult struct {
-	CampaignID string
-}
-
-// CreateCharacterInput stores create-character form values.
-type CreateCharacterInput struct {
-	Name string
-	Kind statev1.CharacterKind
-}
-
-// CreateCharacterResult stores create-character response values.
-type CreateCharacterResult struct {
-	CharacterID string
-}
 
 type campaignReadGateway interface {
 	ListCampaigns(context.Context) ([]CampaignSummary, error)
@@ -223,44 +18,22 @@ type campaignReadGateway interface {
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
 	CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error)
-	CharacterCreationCatalog(context.Context, commonv1.Locale) (CampaignCharacterCreationCatalog, error)
+	CharacterCreationCatalog(context.Context, language.Tag) (CampaignCharacterCreationCatalog, error)
 	CharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error)
-	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
 }
 
 type campaignMutationGateway interface {
+	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
+	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
 	StartSession(context.Context, string) error
 	EndSession(context.Context, string) error
 	UpdateParticipants(context.Context, string) error
-	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
 	UpdateCharacter(context.Context, string) error
 	ControlCharacter(context.Context, string) error
 	CreateInvite(context.Context, string) error
 	RevokeInvite(context.Context, string) error
-	ApplyCharacterCreationStep(context.Context, string, string, *daggerheartv1.DaggerheartCreationStepInput) error
+	ApplyCharacterCreationStep(context.Context, string, string, *CampaignCharacterCreationStepInput) error
 	ResetCharacterCreationWorkflow(context.Context, string, string) error
-}
-
-type campaignAuthorizationDecision struct {
-	CheckID    string
-	Evaluated  bool
-	Allowed    bool
-	ReasonCode string
-}
-
-type campaignAuthorizationCheck struct {
-	CheckID  string
-	Action   statev1.AuthorizationAction
-	Resource statev1.AuthorizationResource
-	Target   *statev1.AuthorizationTarget
-}
-
-type campaignAuthorizationGateway interface {
-	CanCampaignAction(context.Context, string, statev1.AuthorizationAction, statev1.AuthorizationResource, *statev1.AuthorizationTarget) (campaignAuthorizationDecision, error)
-}
-
-type campaignBatchAuthorizationGateway interface {
-	BatchCanCampaignAction(context.Context, string, []campaignAuthorizationCheck) ([]campaignAuthorizationDecision, error)
 }
 
 // CampaignGateway loads campaign summaries and applies workspace mutations.
@@ -272,99 +45,36 @@ type CampaignGateway interface {
 type service struct {
 	readGateway     campaignReadGateway
 	mutationGateway campaignMutationGateway
-}
-
-type unavailableGateway struct{}
-
-func (unavailableGateway) ListCampaigns(context.Context) ([]CampaignSummary, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CampaignName(context.Context, string) (string, error) {
-	return "", apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CampaignWorkspace(context.Context, string) (CampaignWorkspace, error) {
-	return CampaignWorkspace{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CampaignParticipants(context.Context, string) ([]CampaignParticipant, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CampaignCharacters(context.Context, string) ([]CampaignCharacter, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CampaignSessions(context.Context, string) ([]CampaignSession, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CampaignInvites(context.Context, string) ([]CampaignInvite, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error) {
-	return CampaignCharacterCreationProgress{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CharacterCreationCatalog(context.Context, commonv1.Locale) (CampaignCharacterCreationCatalog, error) {
-	return CampaignCharacterCreationCatalog{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error) {
-	return CampaignCharacterCreationProfile{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error) {
-	return CreateCampaignResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) StartSession(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) EndSession(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) UpdateParticipants(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error) {
-	return CreateCharacterResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) UpdateCharacter(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) ControlCharacter(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CreateInvite(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) RevokeInvite(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) ApplyCharacterCreationStep(context.Context, string, string, *daggerheartv1.DaggerheartCreationStepInput) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) ResetCharacterCreationWorkflow(context.Context, string, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+	authzGateway    campaignAuthzGateway
+	workflows       map[string]CharacterCreationWorkflow
 }
 
 func newService(gateway CampaignGateway) service {
+	return newServiceWithWorkflows(gateway, nil)
+}
+
+func newServiceWithWorkflows(gateway CampaignGateway, workflows map[string]CharacterCreationWorkflow) service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
-	return service{readGateway: gateway, mutationGateway: gateway}
+	var authz campaignAuthzGateway
+	if checker, ok := gateway.(campaignAuthzGateway); ok {
+		authz = checker
+	}
+	return service{
+		readGateway:     gateway,
+		mutationGateway: gateway,
+		authzGateway:    authz,
+		workflows:       workflows,
+	}
+}
+
+// resolveWorkflow returns the workflow implementation for the given system, or nil.
+func (s service) resolveWorkflow(system string) CharacterCreationWorkflow {
+	if s.workflows == nil {
+		return nil
+	}
+	return s.workflows[strings.ToLower(strings.TrimSpace(system))]
 }
 
 func (s service) listCampaigns(ctx context.Context) ([]CampaignSummary, error) {
@@ -386,7 +96,7 @@ func (s service) createCampaign(ctx context.Context, input CreateCampaignInput) 
 	if strings.TrimSpace(input.Name) == "" {
 		return CreateCampaignResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_name_is_required", "campaign name is required")
 	}
-	created, err := s.readGateway.CreateCampaign(ctx, input)
+	created, err := s.mutationGateway.CreateCampaign(ctx, input)
 	if err != nil {
 		return CreateCampaignResult{}, err
 	}
@@ -442,695 +152,63 @@ func (s service) campaignWorkspace(ctx context.Context, campaignID string) (Camp
 	return workspace, nil
 }
 
-func (s service) campaignParticipants(ctx context.Context, campaignID string) ([]CampaignParticipant, error) {
-	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
-		return []CampaignParticipant{}, nil
-	}
-
-	participants, err := s.readGateway.CampaignParticipants(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if len(participants) == 0 {
-		return []CampaignParticipant{}, nil
-	}
-
-	normalized := make([]CampaignParticipant, 0, len(participants))
-	for _, participant := range participants {
-		participantID := strings.TrimSpace(participant.ID)
-		participantUserID := strings.TrimSpace(participant.UserID)
-		participantName := strings.TrimSpace(participant.Name)
-		if participantName == "" {
-			if participantID != "" {
-				participantName = participantID
-			} else {
-				participantName = "Unknown participant"
-			}
-		}
-		role := strings.TrimSpace(participant.Role)
-		if role == "" {
-			role = "Unspecified"
-		}
-		campaignAccess := strings.TrimSpace(participant.CampaignAccess)
-		if campaignAccess == "" {
-			campaignAccess = "Unspecified"
-		}
-		controller := strings.TrimSpace(participant.Controller)
-		if controller == "" {
-			controller = "Unspecified"
-		}
-		normalized = append(normalized, CampaignParticipant{
-			ID:             participantID,
-			UserID:         participantUserID,
-			Name:           participantName,
-			Role:           role,
-			CampaignAccess: campaignAccess,
-			Controller:     controller,
-			Pronouns:       strings.TrimSpace(participant.Pronouns),
-			AvatarURL:      strings.TrimSpace(participant.AvatarURL),
-		})
-	}
-
-	sort.SliceStable(normalized, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(normalized[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(normalized[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(normalized[i].ID) < strings.TrimSpace(normalized[j].ID)
-		}
-		return leftName < rightName
-	})
-
-	return normalized, nil
-}
-
-func (s service) campaignCharacters(ctx context.Context, campaignID string) ([]CampaignCharacter, error) {
-	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
-		return []CampaignCharacter{}, nil
-	}
-
-	characters, err := s.readGateway.CampaignCharacters(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if len(characters) == 0 {
-		return []CampaignCharacter{}, nil
-	}
-
-	normalized := make([]CampaignCharacter, 0, len(characters))
-	for _, character := range characters {
-		characterID := strings.TrimSpace(character.ID)
-		characterName := strings.TrimSpace(character.Name)
-		if characterName == "" {
-			if characterID != "" {
-				characterName = characterID
-			} else {
-				characterName = "Unknown character"
-			}
-		}
-		kind := strings.TrimSpace(character.Kind)
-		if kind == "" {
-			kind = "Unspecified"
-		}
-		controller := strings.TrimSpace(character.Controller)
-		if controller == "" {
-			controller = "Unassigned"
-		}
-		normalized = append(normalized, CampaignCharacter{
-			ID:         characterID,
-			Name:       characterName,
-			Kind:       kind,
-			Controller: controller,
-			Pronouns:   strings.TrimSpace(character.Pronouns),
-			Aliases:    append([]string(nil), character.Aliases...),
-			AvatarURL:  strings.TrimSpace(character.AvatarURL),
-		})
-	}
-
-	sort.SliceStable(normalized, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(normalized[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(normalized[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(normalized[i].ID) < strings.TrimSpace(normalized[j].ID)
-		}
-		return leftName < rightName
-	})
-
-	s.hydrateCharacterEditability(ctx, campaignID, normalized)
-
-	return normalized, nil
-}
-
-func (s service) hydrateCharacterEditability(ctx context.Context, campaignID string, characters []CampaignCharacter) {
-	if len(characters) == 0 {
-		return
-	}
-	checker, ok := s.readGateway.(campaignBatchAuthorizationGateway)
-	if !ok {
-		return
-	}
-
-	checks := make([]campaignAuthorizationCheck, 0, len(characters))
-	indexesByCheckID := make(map[string][]int, len(characters))
-	for idx := range characters {
-		characterID := strings.TrimSpace(characters[idx].ID)
-		if characterID == "" {
-			continue
-		}
-		indexesByCheckID[characterID] = append(indexesByCheckID[characterID], idx)
-		if len(indexesByCheckID[characterID]) > 1 {
-			continue
-		}
-		checks = append(checks, campaignAuthorizationCheck{
-			CheckID:  characterID,
-			Action:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-			Resource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
-			Target: &statev1.AuthorizationTarget{
-				ResourceId: characterID,
-			},
-		})
-	}
-	if len(checks) == 0 {
-		return
-	}
-
-	decisions, err := checker.BatchCanCampaignAction(ctx, campaignID, checks)
-	if err != nil {
-		return
-	}
-
-	for idx, decision := range decisions {
-		checkID := strings.TrimSpace(decision.CheckID)
-		if checkID == "" && idx < len(checks) {
-			checkID = strings.TrimSpace(checks[idx].CheckID)
-		}
-		if checkID == "" {
-			continue
-		}
-		characterIndexes, found := indexesByCheckID[checkID]
-		if !found {
-			continue
-		}
-		for _, characterIndex := range characterIndexes {
-			characters[characterIndex].EditReasonCode = strings.TrimSpace(decision.ReasonCode)
-			if decision.Evaluated && decision.Allowed {
-				characters[characterIndex].CanEdit = true
-			}
-		}
-	}
-}
-
-func (s service) campaignSessions(ctx context.Context, campaignID string) ([]CampaignSession, error) {
-	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
-		return []CampaignSession{}, nil
-	}
-
-	sessions, err := s.readGateway.CampaignSessions(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if len(sessions) == 0 {
-		return []CampaignSession{}, nil
-	}
-
-	normalized := make([]CampaignSession, 0, len(sessions))
-	for _, session := range sessions {
-		sessionID := strings.TrimSpace(session.ID)
-		sessionName := strings.TrimSpace(session.Name)
-		if sessionName == "" {
-			if sessionID != "" {
-				sessionName = sessionID
-			} else {
-				sessionName = "Unnamed session"
-			}
-		}
-		status := strings.TrimSpace(session.Status)
-		if status == "" {
-			status = "Unspecified"
-		}
-		normalized = append(normalized, CampaignSession{
-			ID:        sessionID,
-			Name:      sessionName,
-			Status:    status,
-			StartedAt: strings.TrimSpace(session.StartedAt),
-			UpdatedAt: strings.TrimSpace(session.UpdatedAt),
-			EndedAt:   strings.TrimSpace(session.EndedAt),
-		})
-	}
-
-	sort.SliceStable(normalized, func(i, j int) bool {
-		leftUpdated := strings.TrimSpace(normalized[i].UpdatedAt)
-		rightUpdated := strings.TrimSpace(normalized[j].UpdatedAt)
-		if leftUpdated == rightUpdated {
-			return strings.TrimSpace(normalized[i].ID) < strings.TrimSpace(normalized[j].ID)
-		}
-		return leftUpdated > rightUpdated
-	})
-
-	return normalized, nil
-}
-
-func (s service) campaignInvites(ctx context.Context, campaignID string) ([]CampaignInvite, error) {
-	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
-		return []CampaignInvite{}, nil
-	}
-
-	invites, err := s.readGateway.CampaignInvites(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if len(invites) == 0 {
-		return []CampaignInvite{}, nil
-	}
-
-	normalized := make([]CampaignInvite, 0, len(invites))
-	for _, invite := range invites {
-		status := strings.TrimSpace(invite.Status)
-		if status == "" {
-			status = "Unspecified"
-		}
-		normalized = append(normalized, CampaignInvite{
-			ID:              strings.TrimSpace(invite.ID),
-			ParticipantID:   strings.TrimSpace(invite.ParticipantID),
-			RecipientUserID: strings.TrimSpace(invite.RecipientUserID),
-			Status:          status,
-		})
-	}
-
-	sort.SliceStable(normalized, func(i, j int) bool {
-		leftID := strings.TrimSpace(normalized[i].ID)
-		rightID := strings.TrimSpace(normalized[j].ID)
-		return leftID < rightID
-	})
-
-	return normalized, nil
-}
-
-func (s service) campaignCharacterCreation(ctx context.Context, campaignID string, characterID string, locale commonv1.Locale) (CampaignCharacterCreation, error) {
-	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
-		return CampaignCharacterCreation{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
-	}
-	characterID = strings.TrimSpace(characterID)
-	if characterID == "" {
-		return CampaignCharacterCreation{}, apperrors.E(apperrors.KindInvalidInput, "character id is required")
-	}
-
-	progress, err := s.readGateway.CharacterCreationProgress(ctx, campaignID, characterID)
-	if err != nil {
-		return CampaignCharacterCreation{}, err
-	}
-
-	catalog, err := s.readGateway.CharacterCreationCatalog(ctx, locale)
-	if err != nil {
-		return CampaignCharacterCreation{}, err
-	}
-
-	profile, err := s.readGateway.CharacterCreationProfile(ctx, campaignID, characterID)
-	if err != nil {
-		return CampaignCharacterCreation{}, err
-	}
-
-	selectedDomainCardIDs := make([]string, 0, len(profile.DomainCardIDs))
-	for _, domainCardID := range profile.DomainCardIDs {
-		trimmedDomainCardID := strings.TrimSpace(domainCardID)
-		if trimmedDomainCardID == "" {
-			continue
-		}
-		selectedDomainCardIDs = append(selectedDomainCardIDs, trimmedDomainCardID)
-	}
-
-	creation := CampaignCharacterCreation{
-		Progress: CampaignCharacterCreationProgress{
-			Steps:        append([]CampaignCharacterCreationStep(nil), progress.Steps...),
-			NextStep:     progress.NextStep,
-			Ready:        progress.Ready,
-			UnmetReasons: append([]string(nil), progress.UnmetReasons...),
-		},
-		Profile: CampaignCharacterCreationProfile{
-			ClassID:            strings.TrimSpace(profile.ClassID),
-			SubclassID:         strings.TrimSpace(profile.SubclassID),
-			AncestryID:         strings.TrimSpace(profile.AncestryID),
-			CommunityID:        strings.TrimSpace(profile.CommunityID),
-			Agility:            strings.TrimSpace(profile.Agility),
-			Strength:           strings.TrimSpace(profile.Strength),
-			Finesse:            strings.TrimSpace(profile.Finesse),
-			Instinct:           strings.TrimSpace(profile.Instinct),
-			Presence:           strings.TrimSpace(profile.Presence),
-			Knowledge:          strings.TrimSpace(profile.Knowledge),
-			PrimaryWeaponID:    strings.TrimSpace(profile.PrimaryWeaponID),
-			SecondaryWeaponID:  strings.TrimSpace(profile.SecondaryWeaponID),
-			ArmorID:            strings.TrimSpace(profile.ArmorID),
-			PotionItemID:       strings.TrimSpace(profile.PotionItemID),
-			Background:         strings.TrimSpace(profile.Background),
-			ExperienceName:     strings.TrimSpace(profile.ExperienceName),
-			ExperienceModifier: strings.TrimSpace(profile.ExperienceModifier),
-			DomainCardIDs:      selectedDomainCardIDs,
-			Connections:        strings.TrimSpace(profile.Connections),
-		},
-		Classes:          []DaggerheartCreationClass{},
-		Subclasses:       []DaggerheartCreationSubclass{},
-		Ancestries:       []DaggerheartCreationHeritage{},
-		Communities:      []DaggerheartCreationHeritage{},
-		PrimaryWeapons:   []DaggerheartCreationWeapon{},
-		SecondaryWeapons: []DaggerheartCreationWeapon{},
-		Armor:            []DaggerheartCreationArmor{},
-		PotionItems:      []DaggerheartCreationItem{},
-		DomainCards:      []DaggerheartCreationDomainCard{},
-	}
-
-	classDomainsByID := make(map[string]map[string]struct{}, len(catalog.Classes))
-	for _, class := range catalog.Classes {
-		classID := strings.TrimSpace(class.ID)
-		if classID == "" {
-			continue
-		}
-		className := strings.TrimSpace(class.Name)
-		if className == "" {
-			className = classID
-		}
-		domainIDs := make([]string, 0, len(class.DomainIDs))
-		domains := make(map[string]struct{}, len(class.DomainIDs))
-		for _, domainID := range class.DomainIDs {
-			trimmedDomainID := strings.TrimSpace(domainID)
-			if trimmedDomainID == "" {
-				continue
-			}
-			domainIDs = append(domainIDs, trimmedDomainID)
-			domains[trimmedDomainID] = struct{}{}
-		}
-		classDomainsByID[classID] = domains
-		creation.Classes = append(creation.Classes, DaggerheartCreationClass{
-			ID:        classID,
-			Name:      className,
-			DomainIDs: domainIDs,
-		})
-	}
-	sort.SliceStable(creation.Classes, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(creation.Classes[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(creation.Classes[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(creation.Classes[i].ID) < strings.TrimSpace(creation.Classes[j].ID)
-		}
-		return leftName < rightName
-	})
-
-	selectedClassID := strings.TrimSpace(creation.Profile.ClassID)
-	for _, subclass := range catalog.Subclasses {
-		subclassID := strings.TrimSpace(subclass.ID)
-		if subclassID == "" {
-			continue
-		}
-		subclassClassID := strings.TrimSpace(subclass.ClassID)
-		if selectedClassID != "" && subclassClassID != selectedClassID {
-			continue
-		}
-		subclassName := strings.TrimSpace(subclass.Name)
-		if subclassName == "" {
-			subclassName = subclassID
-		}
-		creation.Subclasses = append(creation.Subclasses, DaggerheartCreationSubclass{
-			ID:      subclassID,
-			Name:    subclassName,
-			ClassID: subclassClassID,
-		})
-	}
-	sort.SliceStable(creation.Subclasses, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(creation.Subclasses[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(creation.Subclasses[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(creation.Subclasses[i].ID) < strings.TrimSpace(creation.Subclasses[j].ID)
-		}
-		return leftName < rightName
-	})
-
-	for _, heritage := range catalog.Heritages {
-		heritageID := strings.TrimSpace(heritage.ID)
-		if heritageID == "" {
-			continue
-		}
-		heritageName := strings.TrimSpace(heritage.Name)
-		if heritageName == "" {
-			heritageName = heritageID
-		}
-		entry := DaggerheartCreationHeritage{
-			ID:   heritageID,
-			Name: heritageName,
-			Kind: strings.TrimSpace(heritage.Kind),
-		}
-		switch strings.ToLower(strings.TrimSpace(heritage.Kind)) {
-		case "ancestry":
-			creation.Ancestries = append(creation.Ancestries, entry)
-		case "community":
-			creation.Communities = append(creation.Communities, entry)
-		}
-	}
-	sort.SliceStable(creation.Ancestries, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(creation.Ancestries[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(creation.Ancestries[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(creation.Ancestries[i].ID) < strings.TrimSpace(creation.Ancestries[j].ID)
-		}
-		return leftName < rightName
-	})
-	sort.SliceStable(creation.Communities, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(creation.Communities[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(creation.Communities[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(creation.Communities[i].ID) < strings.TrimSpace(creation.Communities[j].ID)
-		}
-		return leftName < rightName
-	})
-
-	for _, weapon := range catalog.Weapons {
-		weaponID := strings.TrimSpace(weapon.ID)
-		if weaponID == "" || weapon.Tier != 1 {
-			continue
-		}
-		weaponName := strings.TrimSpace(weapon.Name)
-		if weaponName == "" {
-			weaponName = weaponID
-		}
-		entry := DaggerheartCreationWeapon{
-			ID:       weaponID,
-			Name:     weaponName,
-			Category: strings.TrimSpace(weapon.Category),
-			Tier:     weapon.Tier,
-		}
-		switch strings.ToLower(strings.TrimSpace(weapon.Category)) {
-		case "primary":
-			creation.PrimaryWeapons = append(creation.PrimaryWeapons, entry)
-		case "secondary":
-			creation.SecondaryWeapons = append(creation.SecondaryWeapons, entry)
-		}
-	}
-	sort.SliceStable(creation.PrimaryWeapons, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(creation.PrimaryWeapons[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(creation.PrimaryWeapons[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(creation.PrimaryWeapons[i].ID) < strings.TrimSpace(creation.PrimaryWeapons[j].ID)
-		}
-		return leftName < rightName
-	})
-	sort.SliceStable(creation.SecondaryWeapons, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(creation.SecondaryWeapons[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(creation.SecondaryWeapons[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(creation.SecondaryWeapons[i].ID) < strings.TrimSpace(creation.SecondaryWeapons[j].ID)
-		}
-		return leftName < rightName
-	})
-
-	for _, armor := range catalog.Armor {
-		armorID := strings.TrimSpace(armor.ID)
-		if armorID == "" || armor.Tier != 1 {
-			continue
-		}
-		armorName := strings.TrimSpace(armor.Name)
-		if armorName == "" {
-			armorName = armorID
-		}
-		creation.Armor = append(creation.Armor, DaggerheartCreationArmor{
-			ID:   armorID,
-			Name: armorName,
-			Tier: armor.Tier,
-		})
-	}
-	sort.SliceStable(creation.Armor, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(creation.Armor[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(creation.Armor[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(creation.Armor[i].ID) < strings.TrimSpace(creation.Armor[j].ID)
-		}
-		return leftName < rightName
-	})
-
-	allowedPotionIDs := map[string]struct{}{
-		"item.minor-health-potion":  {},
-		"item.minor-stamina-potion": {},
-	}
-	for _, item := range catalog.Items {
-		itemID := strings.TrimSpace(item.ID)
-		if itemID == "" {
-			continue
-		}
-		if _, ok := allowedPotionIDs[itemID]; !ok {
-			continue
-		}
-		itemName := strings.TrimSpace(item.Name)
-		if itemName == "" {
-			itemName = itemID
-		}
-		creation.PotionItems = append(creation.PotionItems, DaggerheartCreationItem{ID: itemID, Name: itemName})
-	}
-	sort.SliceStable(creation.PotionItems, func(i, j int) bool {
-		leftName := strings.ToLower(strings.TrimSpace(creation.PotionItems[i].Name))
-		rightName := strings.ToLower(strings.TrimSpace(creation.PotionItems[j].Name))
-		if leftName == rightName {
-			return strings.TrimSpace(creation.PotionItems[i].ID) < strings.TrimSpace(creation.PotionItems[j].ID)
-		}
-		return leftName < rightName
-	})
-
-	allowedDomains := classDomainsByID[selectedClassID]
-	for _, domainCard := range catalog.DomainCards {
-		domainCardID := strings.TrimSpace(domainCard.ID)
-		if domainCardID == "" {
-			continue
-		}
-		domainID := strings.TrimSpace(domainCard.DomainID)
-		if selectedClassID != "" && len(allowedDomains) > 0 {
-			if _, ok := allowedDomains[domainID]; !ok {
-				continue
-			}
-		}
-		domainCardName := strings.TrimSpace(domainCard.Name)
-		if domainCardName == "" {
-			domainCardName = domainCardID
-		}
-		creation.DomainCards = append(creation.DomainCards, DaggerheartCreationDomainCard{
-			ID:       domainCardID,
-			Name:     domainCardName,
-			DomainID: domainID,
-			Level:    domainCard.Level,
-		})
-	}
-	sort.SliceStable(creation.DomainCards, func(i, j int) bool {
-		leftLevel := creation.DomainCards[i].Level
-		rightLevel := creation.DomainCards[j].Level
-		if leftLevel == rightLevel {
-			leftName := strings.ToLower(strings.TrimSpace(creation.DomainCards[i].Name))
-			rightName := strings.ToLower(strings.TrimSpace(creation.DomainCards[j].Name))
-			if leftName == rightName {
-				return strings.TrimSpace(creation.DomainCards[i].ID) < strings.TrimSpace(creation.DomainCards[j].ID)
-			}
-			return leftName < rightName
-		}
-		return leftLevel < rightLevel
-	})
-
-	return creation, nil
-}
-
-func (s service) campaignCharacterCreationProgress(ctx context.Context, campaignID string, characterID string) (CampaignCharacterCreationProgress, error) {
-	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
-		return CampaignCharacterCreationProgress{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
-	}
-	characterID = strings.TrimSpace(characterID)
-	if characterID == "" {
-		return CampaignCharacterCreationProgress{}, apperrors.E(apperrors.KindInvalidInput, "character id is required")
-	}
-	return s.readGateway.CharacterCreationProgress(ctx, campaignID, characterID)
-}
-
-func (s service) applyCharacterCreationStep(ctx context.Context, campaignID string, characterID string, step *daggerheartv1.DaggerheartCreationStepInput) error {
-	characterID = strings.TrimSpace(characterID)
-	if characterID == "" {
-		return apperrors.E(apperrors.KindInvalidInput, "character id is required")
-	}
-	if step == nil {
-		return apperrors.E(apperrors.KindInvalidInput, "character creation step is required")
-	}
-	target := &statev1.AuthorizationTarget{ResourceId: characterID}
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
-		target,
-		"error.web.message.campaign_membership_required_for_character_action",
-		"campaign membership required for character action",
-	); err != nil {
-		return err
-	}
-	return s.mutationGateway.ApplyCharacterCreationStep(ctx, campaignID, characterID, step)
-}
-
-func (s service) resetCharacterCreationWorkflow(ctx context.Context, campaignID string, characterID string) error {
-	characterID = strings.TrimSpace(characterID)
-	if characterID == "" {
-		return apperrors.E(apperrors.KindInvalidInput, "character id is required")
-	}
-	target := &statev1.AuthorizationTarget{ResourceId: characterID}
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
-		target,
-		"error.web.message.campaign_membership_required_for_character_action",
-		"campaign membership required for character action",
-	); err != nil {
-		return err
-	}
-	return s.mutationGateway.ResetCharacterCreationWorkflow(ctx, campaignID, characterID)
-}
-
 func (s service) startSession(ctx context.Context, campaignID string) error {
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION,
-		nil,
-		"error.web.message.manager_or_owner_access_required_for_session_action",
-		"manager or owner access required for session action",
-	); err != nil {
+	if err := s.requirePolicy(ctx, campaignID, policyManageSession); err != nil {
 		return err
 	}
 	return s.mutationGateway.StartSession(ctx, campaignID)
 }
 
 func (s service) endSession(ctx context.Context, campaignID string) error {
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION,
-		nil,
-		"error.web.message.manager_or_owner_access_required_for_session_action",
-		"manager or owner access required for session action",
-	); err != nil {
+	if err := s.requirePolicy(ctx, campaignID, policyManageSession); err != nil {
 		return err
 	}
 	return s.mutationGateway.EndSession(ctx, campaignID)
 }
 
 func (s service) updateParticipants(ctx context.Context, campaignID string) error {
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_PARTICIPANT,
-		nil,
-		"error.web.message.manager_or_owner_access_required_for_participant_action",
-		"manager or owner access required for participant action",
-	); err != nil {
+	if err := s.requirePolicy(ctx, campaignID, policyManageParticipant); err != nil {
 		return err
 	}
 	return s.mutationGateway.UpdateParticipants(ctx, campaignID)
+}
+
+func (s service) updateCharacter(ctx context.Context, campaignID string) error {
+	if err := s.requirePolicy(ctx, campaignID, policyMutateCharacter); err != nil {
+		return err
+	}
+	return s.mutationGateway.UpdateCharacter(ctx, campaignID)
+}
+
+func (s service) controlCharacter(ctx context.Context, campaignID string) error {
+	if err := s.requirePolicy(ctx, campaignID, policyManageCharacter); err != nil {
+		return err
+	}
+	return s.mutationGateway.ControlCharacter(ctx, campaignID)
+}
+
+func (s service) createInvite(ctx context.Context, campaignID string) error {
+	if err := s.requirePolicy(ctx, campaignID, policyManageInvite); err != nil {
+		return err
+	}
+	return s.mutationGateway.CreateInvite(ctx, campaignID)
+}
+
+func (s service) revokeInvite(ctx context.Context, campaignID string) error {
+	if err := s.requirePolicy(ctx, campaignID, policyManageInvite); err != nil {
+		return err
+	}
+	return s.mutationGateway.RevokeInvite(ctx, campaignID)
 }
 
 func (s service) createCharacter(ctx context.Context, campaignID string, input CreateCharacterInput) (CreateCharacterResult, error) {
 	if strings.TrimSpace(input.Name) == "" {
 		return CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_name_is_required", "character name is required")
 	}
-	if input.Kind == statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED {
+	if input.Kind == CharacterKindUnspecified {
 		return CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_kind_value_is_invalid", "character kind value is invalid")
 	}
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
-		nil,
-		"error.web.message.campaign_membership_required_for_character_action",
-		"campaign membership required for character action",
-	); err != nil {
+	if err := s.requirePolicy(ctx, campaignID, policyMutateCharacter); err != nil {
 		return CreateCharacterResult{}, err
 	}
 	created, err := s.mutationGateway.CreateCharacter(ctx, campaignID, input)
@@ -1141,97 +219,4 @@ func (s service) createCharacter(ctx context.Context, campaignID string, input C
 		return CreateCharacterResult{}, apperrors.EK(apperrors.KindUnknown, "error.web.message.created_character_id_was_empty", "created character id was empty")
 	}
 	return created, nil
-}
-
-func (s service) updateCharacter(ctx context.Context, campaignID string) error {
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
-		nil,
-		"error.web.message.campaign_membership_required_for_character_action",
-		"campaign membership required for character action",
-	); err != nil {
-		return err
-	}
-	return s.mutationGateway.UpdateCharacter(ctx, campaignID)
-}
-
-func (s service) controlCharacter(ctx context.Context, campaignID string) error {
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
-		nil,
-		"error.web.message.manager_or_owner_access_required_for_character_action",
-		"manager or owner access required for character action",
-	); err != nil {
-		return err
-	}
-	return s.mutationGateway.ControlCharacter(ctx, campaignID)
-}
-
-func (s service) createInvite(ctx context.Context, campaignID string) error {
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_INVITE,
-		nil,
-		"error.web.message.manager_or_owner_access_required_for_invite_action",
-		"manager or owner access required for invite action",
-	); err != nil {
-		return err
-	}
-	return s.mutationGateway.CreateInvite(ctx, campaignID)
-}
-
-func (s service) revokeInvite(ctx context.Context, campaignID string) error {
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		campaignID,
-		statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-		statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_INVITE,
-		nil,
-		"error.web.message.manager_or_owner_access_required_for_invite_action",
-		"manager or owner access required for invite action",
-	); err != nil {
-		return err
-	}
-	return s.mutationGateway.RevokeInvite(ctx, campaignID)
-}
-
-func (s service) requireCampaignActionAccess(
-	ctx context.Context,
-	campaignID string,
-	action statev1.AuthorizationAction,
-	resource statev1.AuthorizationResource,
-	target *statev1.AuthorizationTarget,
-	denyMessageKey string,
-	denyMessage string,
-) error {
-	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
-		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
-	}
-	checker, ok := s.readGateway.(campaignAuthorizationGateway)
-	if !ok {
-		return apperrors.EK(apperrors.KindForbidden, denyMessageKey, denyMessage)
-	}
-	decision, err := checker.CanCampaignAction(
-		ctx,
-		campaignID,
-		action,
-		resource,
-		target,
-	)
-	if err != nil {
-		return apperrors.EK(apperrors.KindForbidden, denyMessageKey, denyMessage)
-	}
-	if !decision.Evaluated || !decision.Allowed {
-		return apperrors.EK(apperrors.KindForbidden, denyMessageKey, denyMessage)
-	}
-	return nil
 }

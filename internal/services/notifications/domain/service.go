@@ -85,9 +85,16 @@ type MarkReadInput struct {
 	NotificationID  string
 }
 
+// GetNotificationInput identifies one recipient notification lookup.
+type GetNotificationInput struct {
+	RecipientUserID string
+	NotificationID  string
+}
+
 // Store is the domain persistence boundary for notification lifecycle behavior.
 type Store interface {
 	GetNotificationByRecipientAndDedupeKey(ctx context.Context, recipientUserID string, dedupeKey string) (Notification, error)
+	GetNotificationByRecipientAndID(ctx context.Context, recipientUserID string, notificationID string) (Notification, error)
 	PutNotification(ctx context.Context, notification Notification) error
 	ListNotificationsByRecipient(ctx context.Context, recipientUserID string, pageSize int, pageToken string) (NotificationPage, error)
 	CountUnreadNotificationsByRecipient(ctx context.Context, recipientUserID string) (int, error)
@@ -191,6 +198,22 @@ func (s *Service) ListInbox(ctx context.Context, input ListInboxInput) (Notifica
 		pageSize = maxPageSize
 	}
 	return s.store.ListNotificationsByRecipient(ctx, recipientUserID, pageSize, strings.TrimSpace(input.PageToken))
+}
+
+// GetNotification returns one recipient notification visible in the inbox.
+func (s *Service) GetNotification(ctx context.Context, input GetNotificationInput) (Notification, error) {
+	if s == nil || s.store == nil {
+		return Notification{}, ErrStoreNotConfigured
+	}
+	recipientUserID := strings.TrimSpace(input.RecipientUserID)
+	if recipientUserID == "" {
+		return Notification{}, ErrRecipientUserIDRequired
+	}
+	notificationID := strings.TrimSpace(input.NotificationID)
+	if notificationID == "" {
+		return Notification{}, ErrNotificationIDRequired
+	}
+	return s.store.GetNotificationByRecipientAndID(ctx, recipientUserID, notificationID)
 }
 
 // GetUnreadStatus returns unread-inbox status for one recipient.

@@ -5,15 +5,15 @@ import (
 	"errors"
 	"testing"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"golang.org/x/text/language"
 )
 
 func TestLoadDashboardShowsPendingProfileBlock(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(gatewayStub{snapshot: DashboardSnapshot{NeedsProfileCompletion: true}})
+	svc := newService(&fakeGateway{snapshot: DashboardSnapshot{NeedsProfileCompletion: true}}, nil, nil)
 
-	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("loadDashboard() error = %v", err)
 	}
@@ -25,9 +25,9 @@ func TestLoadDashboardShowsPendingProfileBlock(t *testing.T) {
 func TestLoadDashboardHidesPendingProfileBlockWhenComplete(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(gatewayStub{snapshot: DashboardSnapshot{NeedsProfileCompletion: false}})
+	svc := newService(&fakeGateway{snapshot: DashboardSnapshot{NeedsProfileCompletion: false}}, nil, nil)
 
-	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("loadDashboard() error = %v", err)
 	}
@@ -39,12 +39,12 @@ func TestLoadDashboardHidesPendingProfileBlockWhenComplete(t *testing.T) {
 func TestLoadDashboardHidesPendingProfileBlockWhenSocialDependencyIsDegraded(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(gatewayStub{snapshot: DashboardSnapshot{
+	svc := newService(&fakeGateway{snapshot: DashboardSnapshot{
 		NeedsProfileCompletion: true,
 		DegradedDependencies:   []string{"social.profile"},
-	}})
+	}}, nil, nil)
 
-	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("loadDashboard() error = %v", err)
 	}
@@ -56,9 +56,9 @@ func TestLoadDashboardHidesPendingProfileBlockWhenSocialDependencyIsDegraded(t *
 func TestLoadDashboardReturnsEmptyViewWhenGatewayFails(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(gatewayStub{err: errors.New("dependency unavailable")})
+	svc := newService(&fakeGateway{err: errors.New("dependency unavailable")}, nil, nil)
 
-	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("loadDashboard() error = %v", err)
 	}
@@ -73,10 +73,10 @@ func TestLoadDashboardReturnsEmptyViewWhenGatewayFails(t *testing.T) {
 func TestLoadDashboardSkipsGatewayWithoutUserID(t *testing.T) {
 	t.Parallel()
 
-	gateway := &gatewayRecorder{}
-	svc := newService(gateway)
+	gateway := &fakeGateway{}
+	svc := newService(gateway, nil, nil)
 
-	view, err := svc.loadDashboard(context.Background(), "  ", commonv1.Locale_LOCALE_EN_US)
+	view, err := svc.loadDashboard(context.Background(), "  ", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("loadDashboard() error = %v", err)
 	}
@@ -94,12 +94,12 @@ func TestLoadDashboardSkipsGatewayWithoutUserID(t *testing.T) {
 func TestLoadDashboardShowsAdventureBlockWhenNoDraftOrActiveCampaignExists(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(gatewayStub{snapshot: DashboardSnapshot{
+	svc := newService(&fakeGateway{snapshot: DashboardSnapshot{
 		HasDraftOrActiveCampaign: false,
 		CampaignsHasMore:         false,
-	}})
+	}}, nil, nil)
 
-	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("loadDashboard() error = %v", err)
 	}
@@ -111,9 +111,9 @@ func TestLoadDashboardShowsAdventureBlockWhenNoDraftOrActiveCampaignExists(t *te
 func TestLoadDashboardHidesAdventureBlockWhenDraftOrActiveCampaignExists(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(gatewayStub{snapshot: DashboardSnapshot{HasDraftOrActiveCampaign: true}})
+	svc := newService(&fakeGateway{snapshot: DashboardSnapshot{HasDraftOrActiveCampaign: true}}, nil, nil)
 
-	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("loadDashboard() error = %v", err)
 	}
@@ -125,12 +125,12 @@ func TestLoadDashboardHidesAdventureBlockWhenDraftOrActiveCampaignExists(t *test
 func TestLoadDashboardHidesAdventureBlockWhenCampaignStateIsTruncated(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(gatewayStub{snapshot: DashboardSnapshot{
+	svc := newService(&fakeGateway{snapshot: DashboardSnapshot{
 		HasDraftOrActiveCampaign: false,
 		CampaignsHasMore:         true,
-	}})
+	}}, nil, nil)
 
-	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("loadDashboard() error = %v", err)
 	}
@@ -142,13 +142,13 @@ func TestLoadDashboardHidesAdventureBlockWhenCampaignStateIsTruncated(t *testing
 func TestLoadDashboardHidesAdventureBlockWhenCampaignDependencyIsDegraded(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(gatewayStub{snapshot: DashboardSnapshot{
+	svc := newService(&fakeGateway{snapshot: DashboardSnapshot{
 		HasDraftOrActiveCampaign: false,
 		CampaignsHasMore:         false,
 		DegradedDependencies:     []string{"game.campaigns"},
-	}})
+	}}, nil, nil)
 
-	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("loadDashboard() error = %v", err)
 	}
@@ -157,23 +157,40 @@ func TestLoadDashboardHidesAdventureBlockWhenCampaignDependencyIsDegraded(t *tes
 	}
 }
 
-type gatewayStub struct {
-	snapshot DashboardSnapshot
-	err      error
-}
+func TestLoadDashboardIncludesServiceHealthEntries(t *testing.T) {
+	t.Parallel()
 
-func (g gatewayStub) LoadDashboard(context.Context, string, commonv1.Locale) (DashboardSnapshot, error) {
-	if g.err != nil {
-		return DashboardSnapshot{}, g.err
+	health := []ServiceHealthEntry{
+		{Label: "Campaigns", Available: true},
+		{Label: "Dashboard", Available: false},
 	}
-	return g.snapshot, nil
+	svc := newService(&fakeGateway{snapshot: DashboardSnapshot{}}, nil, health)
+
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("loadDashboard() error = %v", err)
+	}
+	if len(view.ServiceHealth) != 2 {
+		t.Fatalf("ServiceHealth count = %d, want 2", len(view.ServiceHealth))
+	}
+	if view.ServiceHealth[0].Label != "Campaigns" || !view.ServiceHealth[0].Available {
+		t.Fatalf("ServiceHealth[0] = %+v, want {Campaigns, true}", view.ServiceHealth[0])
+	}
+	if view.ServiceHealth[1].Label != "Dashboard" || view.ServiceHealth[1].Available {
+		t.Fatalf("ServiceHealth[1] = %+v, want {Dashboard, false}", view.ServiceHealth[1])
+	}
 }
 
-type gatewayRecorder struct {
-	calls int
-}
+func TestLoadDashboardReturnsNilServiceHealthWhenNotSet(t *testing.T) {
+	t.Parallel()
 
-func (g *gatewayRecorder) LoadDashboard(context.Context, string, commonv1.Locale) (DashboardSnapshot, error) {
-	g.calls++
-	return DashboardSnapshot{}, nil
+	svc := newService(&fakeGateway{snapshot: DashboardSnapshot{}}, nil, nil)
+
+	view, err := svc.loadDashboard(context.Background(), "user-1", language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("loadDashboard() error = %v", err)
+	}
+	if view.ServiceHealth != nil {
+		t.Fatalf("ServiceHealth = %v, want nil", view.ServiceHealth)
+	}
 }

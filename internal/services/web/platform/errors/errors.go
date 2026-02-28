@@ -18,9 +18,58 @@ const (
 	KindInvalidInput Kind = "invalid_input"
 	KindUnauthorized Kind = "unauthorized"
 	KindForbidden    Kind = "forbidden"
+	KindConflict     Kind = "conflict"
 	KindUnavailable  Kind = "unavailable"
 	KindNotFound     Kind = "not_found"
 )
+
+// GRPCStatusMapping describes how a gRPC transport failure should
+// downgrade into web error classification when a service-specific fallback exists.
+type GRPCStatusMapping struct {
+	FallbackKind    Kind
+	FallbackKey     string
+	FallbackMessage string
+}
+
+// MapGRPCTransportError converts gRPC transport errors into typed web errors with
+// a stable, policy-driven fallback.
+func MapGRPCTransportError(err error, mapping GRPCStatusMapping) error {
+	if err == nil {
+		return nil
+	}
+	var appErr Error
+	if stderrors.As(err, &appErr) {
+		return appErr
+	}
+
+	st, ok := status.FromError(err)
+	if !ok {
+		return mapWithFallback(mapping)
+	}
+	switch st.Code() {
+	case codes.InvalidArgument, codes.OutOfRange, codes.FailedPrecondition, codes.AlreadyExists:
+		return mapWithFallback(mapping)
+	case codes.Unauthenticated:
+		return E(KindUnauthorized, "authentication required")
+	case codes.PermissionDenied:
+		return E(KindForbidden, "access denied")
+	case codes.NotFound:
+		return E(KindNotFound, "resource not found")
+	case codes.Unavailable, codes.DeadlineExceeded, codes.ResourceExhausted, codes.Canceled:
+		return E(KindUnavailable, "dependency is temporarily unavailable")
+	case codes.Aborted:
+		return E(KindConflict, st.Message())
+	default:
+		return mapWithFallback(mapping)
+	}
+}
+
+func mapWithFallback(mapping GRPCStatusMapping) error {
+	if strings.TrimSpace(mapping.FallbackKey) != "" {
+		return EK(mapping.FallbackKind, mapping.FallbackKey, strings.TrimSpace(mapping.FallbackMessage))
+	}
+	return E(mapping.FallbackKind, strings.TrimSpace(mapping.FallbackMessage))
+}
 
 // Error is a typed web application failure.
 type Error struct {
@@ -71,6 +120,8 @@ func HTTPStatus(err error) int {
 	switch appErr.Kind {
 	case KindInvalidInput:
 		return http.StatusBadRequest
+	case KindConflict:
+		return http.StatusConflict
 	case KindUnauthorized:
 		return http.StatusUnauthorized
 	case KindForbidden:

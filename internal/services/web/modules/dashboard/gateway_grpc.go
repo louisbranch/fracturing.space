@@ -4,28 +4,34 @@ import (
 	"context"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"google.golang.org/grpc"
+
+	"golang.org/x/text/language"
 )
+
+// UserHubClient exposes user-dashboard aggregation operations.
+type UserHubClient interface {
+	GetDashboard(context.Context, *userhubv1.GetDashboardRequest, ...grpc.CallOption) (*userhubv1.GetDashboardResponse, error)
+}
 
 const maxDashboardCampaignPreviewLimit = 10
 
-// NewGRPCGateway builds the production dashboard gateway from shared dependencies.
-func NewGRPCGateway(deps module.Dependencies) DashboardGateway {
-	if deps.UserHubClient == nil {
+// NewGRPCGateway builds the production dashboard gateway from the UserHub client.
+func NewGRPCGateway(client UserHubClient) DashboardGateway {
+	if client == nil {
 		return unavailableGateway{}
 	}
-	return grpcGateway{client: deps.UserHubClient}
+	return grpcGateway{client: client}
 }
 
 type grpcGateway struct {
-	client module.UserHubClient
+	client UserHubClient
 }
 
-func (g grpcGateway) LoadDashboard(ctx context.Context, userID string, locale commonv1.Locale) (DashboardSnapshot, error) {
+func (g grpcGateway) LoadDashboard(ctx context.Context, userID string, localeTag language.Tag) (DashboardSnapshot, error) {
 	if g.client == nil {
 		return DashboardSnapshot{}, nil
 	}
@@ -36,7 +42,7 @@ func (g grpcGateway) LoadDashboard(ctx context.Context, userID string, locale co
 	resp, err := g.client.GetDashboard(
 		grpcauthctx.WithUserID(ctx, userID),
 		&userhubv1.GetDashboardRequest{
-			Locale:               platformi18n.NormalizeLocale(locale),
+			Locale:               platformi18n.LocaleForTag(localeTag),
 			CampaignPreviewLimit: maxDashboardCampaignPreviewLimit,
 		},
 	)

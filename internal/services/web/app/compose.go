@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -15,17 +16,14 @@ const defaultLoginPath = routepath.Login
 
 // ComposeInput carries module groups and shared composition contracts.
 type ComposeInput struct {
-	Dependencies     module.Dependencies
-	AuthRequired     func(*http.Request) bool
-	PublicModules    []module.Module
-	ProtectedModules []module.Module
+	AuthRequired        func(*http.Request) bool
+	PublicModules       []module.Module
+	ProtectedModules    []module.Module
+	RequestSchemePolicy requestmeta.SchemePolicy
 }
 
-// Composer wires root mux mounts and route-group auth behavior.
-type Composer struct{}
-
 // Compose builds a root HTTP handler from module groups.
-func (Composer) Compose(input ComposeInput) (http.Handler, error) {
+func Compose(input ComposeInput) (http.Handler, error) {
 	root := http.NewServeMux()
 	if input.AuthRequired == nil {
 		input.AuthRequired = func(*http.Request) bool { return false }
@@ -36,7 +34,7 @@ func (Composer) Compose(input ComposeInput) (http.Handler, error) {
 		if feature == nil {
 			return nil, fmt.Errorf("public module is nil")
 		}
-		if err := mountPublicModule(root, feature, input.Dependencies, seen); err != nil {
+		if err := mountPublicModule(root, feature, seen); err != nil {
 			return nil, err
 		}
 	}
@@ -45,7 +43,7 @@ func (Composer) Compose(input ComposeInput) (http.Handler, error) {
 		if feature == nil {
 			return nil, fmt.Errorf("protected module is nil")
 		}
-		if err := mountProtectedModule(root, feature, input.Dependencies, seen, wrapProtectedModule(input.AuthRequired)); err != nil {
+		if err := mountProtectedModule(root, feature, seen, wrapProtectedModule(input.AuthRequired, input.RequestSchemePolicy)); err != nil {
 			return nil, err
 		}
 	}
@@ -77,8 +75,8 @@ func mountModule(
 	return nil
 }
 
-func mountPublicModule(root *http.ServeMux, feature module.Module, deps module.Dependencies, seen map[string]string) error {
-	mount, prefix, err := resolveMount(feature, deps)
+func mountPublicModule(root *http.ServeMux, feature module.Module, seen map[string]string) error {
+	mount, prefix, err := resolveMount(feature)
 	if err != nil {
 		return err
 	}
@@ -88,8 +86,8 @@ func mountPublicModule(root *http.ServeMux, feature module.Module, deps module.D
 	return mountModule(root, feature, mount, prefix, seen, nil)
 }
 
-func mountProtectedModule(root *http.ServeMux, feature module.Module, deps module.Dependencies, seen map[string]string, wrap func(http.Handler) http.Handler) error {
-	mount, prefix, err := resolveMount(feature, deps)
+func mountProtectedModule(root *http.ServeMux, feature module.Module, seen map[string]string, wrap func(http.Handler) http.Handler) error {
+	mount, prefix, err := resolveMount(feature)
 	if err != nil {
 		return err
 	}
@@ -111,15 +109,18 @@ func isProtectedPrefix(prefix string) bool {
 	return strings.HasPrefix(prefix, routepath.AppPrefix)
 }
 
-func resolveMount(feature module.Module, deps module.Dependencies) (module.Mount, string, error) {
+func resolveMount(feature module.Module) (module.Mount, string, error) {
 	if feature == nil {
 		return module.Mount{}, "", fmt.Errorf("module is nil")
 	}
-	mount, err := feature.Mount(deps)
+	mount, err := feature.Mount()
 	if err != nil {
 		return module.Mount{}, "", fmt.Errorf("mount module %q: %w", feature.ID(), err)
 	}
-	prefix := normalizePrefix(mount.Prefix)
+	prefix := strings.TrimSpace(mount.Prefix)
+	if err := validatePrefix(prefix); err != nil {
+		return module.Mount{}, "", fmt.Errorf("mount module %q has invalid prefix %q: %w", feature.ID(), mount.Prefix, err)
+	}
 	if prefix == "" {
 		return module.Mount{}, "", fmt.Errorf("mount module %q: prefix is required", feature.ID())
 	}
@@ -129,19 +130,20 @@ func resolveMount(feature module.Module, deps module.Dependencies) (module.Mount
 	return mount, prefix, nil
 }
 
-func normalizePrefix(prefix string) string {
-	// TODO(web-composition): consider rejecting non-canonical prefixes instead of silently normalizing them.
-	prefix = strings.TrimSpace(prefix)
+func validatePrefix(prefix string) error {
 	if prefix == "" {
-		return ""
+		return fmt.Errorf("prefix is required")
+	}
+	if strings.TrimSpace(prefix) != prefix {
+		return fmt.Errorf("prefix must not include surrounding whitespace")
 	}
 	if !strings.HasPrefix(prefix, "/") {
-		prefix = "/" + prefix
+		return fmt.Errorf("prefix must begin with /")
 	}
 	if !strings.HasSuffix(prefix, "/") {
-		prefix += "/"
+		return fmt.Errorf("prefix must end with /")
 	}
-	return prefix
+	return nil
 }
 
 func protectedSlashlessPrefixAlias(prefix string) string {
@@ -163,7 +165,7 @@ func requireAuth(authenticated func(*http.Request) bool) func(http.Handler) http
 		}
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !authenticated(r) {
-				http.Redirect(w, r, defaultLoginPath, http.StatusFound)
+				httpx.WriteRedirect(w, r, defaultLoginPath)
 				return
 			}
 			next.ServeHTTP(w, r)
@@ -171,15 +173,15 @@ func requireAuth(authenticated func(*http.Request) bool) func(http.Handler) http
 	}
 }
 
-func wrapProtectedModule(authenticated func(*http.Request) bool) func(http.Handler) http.Handler {
+func wrapProtectedModule(authenticated func(*http.Request) bool, policy requestmeta.SchemePolicy) func(http.Handler) http.Handler {
 	authWrap := requireAuth(authenticated)
-	csrfWrap := requireCookieSessionSameOrigin()
+	csrfWrap := requireCookieSessionSameOrigin(policy)
 	return func(next http.Handler) http.Handler {
 		return authWrap(csrfWrap(next))
 	}
 }
 
-func requireCookieSessionSameOrigin() func(http.Handler) http.Handler {
+func requireCookieSessionSameOrigin(policy requestmeta.SchemePolicy) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if next == nil {
 			next = http.NotFoundHandler()
@@ -189,7 +191,7 @@ func requireCookieSessionSameOrigin() func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
-			if !hasSameOriginProof(r) {
+			if !hasSameOriginProof(r, policy) {
 				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 				return
 			}
@@ -215,6 +217,6 @@ func hasSessionCookie(r *http.Request) bool {
 	return ok
 }
 
-func hasSameOriginProof(r *http.Request) bool {
-	return requestmeta.HasSameOriginProof(r)
+func hasSameOriginProof(r *http.Request, policy requestmeta.SchemePolicy) bool {
+	return requestmeta.HasSameOriginProofWithPolicy(r, policy)
 }

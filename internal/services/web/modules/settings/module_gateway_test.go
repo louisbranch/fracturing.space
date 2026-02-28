@@ -85,11 +85,11 @@ func TestGRPCGatewayLoadAndSaveLocale(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadLocale() error = %v", err)
 	}
-	if locale != commonv1.Locale_LOCALE_PT_BR {
-		t.Fatalf("locale = %v, want %v", locale, commonv1.Locale_LOCALE_PT_BR)
+	if locale != "pt-BR" {
+		t.Fatalf("locale = %v, want %v", locale, "pt-BR")
 	}
 
-	err = gateway.SaveLocale(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	err = gateway.SaveLocale(context.Background(), "user-1", "en-US")
 	if err != nil {
 		t.Fatalf("SaveLocale() error = %v", err)
 	}
@@ -97,7 +97,7 @@ func TestGRPCGatewayLoadAndSaveLocale(t *testing.T) {
 		t.Fatalf("UpdateProfile user id = %q, want %q", account.lastUpdateReq.GetUserId(), "user-1")
 	}
 	if account.lastUpdateReq.GetLocale() != commonv1.Locale_LOCALE_EN_US {
-		t.Fatalf("UpdateProfile locale = %v, want %v", account.lastUpdateReq.GetLocale(), commonv1.Locale_LOCALE_EN_US)
+		t.Fatalf("UpdateProfile locale = %v, want %v", account.lastUpdateReq.GetLocale(), "en-US")
 	}
 }
 
@@ -180,20 +180,6 @@ func TestGRPCGatewayListCreateAndRevokeAIKeys(t *testing.T) {
 	}
 }
 
-func TestGRPCGatewayRequiresExplicitUserID(t *testing.T) {
-	t.Parallel()
-
-	gateway := grpcGateway{socialClient: &socialClientStub{}}
-
-	_, err := gateway.LoadProfile(context.Background(), "   ")
-	if err == nil {
-		t.Fatalf("expected user-id error")
-	}
-	if got := apperrors.HTTPStatus(err); got != http.StatusUnauthorized {
-		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusUnauthorized)
-	}
-}
-
 func TestGRPCGatewayMissingClientBehavior(t *testing.T) {
 	t.Parallel()
 
@@ -206,7 +192,7 @@ func TestGRPCGatewayMissingClientBehavior(t *testing.T) {
 		{name: "load profile", run: func() error { _, err := gateway.LoadProfile(context.Background(), "user-1"); return err }},
 		{name: "save profile", run: func() error { return gateway.SaveProfile(context.Background(), "user-1", SettingsProfile{}) }},
 		{name: "load locale", run: func() error { _, err := gateway.LoadLocale(context.Background(), "user-1"); return err }},
-		{name: "save locale", run: func() error { return gateway.SaveLocale(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US) }},
+		{name: "save locale", run: func() error { return gateway.SaveLocale(context.Background(), "user-1", "en-US") }},
 		{name: "list ai keys", run: func() error { _, err := gateway.ListAIKeys(context.Background(), "user-1"); return err }},
 		{name: "create ai key", run: func() error { return gateway.CreateAIKey(context.Background(), "user-1", "label", "secret") }},
 		{name: "revoke ai key", run: func() error { return gateway.RevokeAIKey(context.Background(), "user-1", "cred-1") }},

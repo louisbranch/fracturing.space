@@ -101,9 +101,20 @@ type AppMainHeaderAction struct {
 }
 
 type AppMainHeader struct {
-	Title  string
-	Action *AppMainHeaderAction
+	Title       string
+	Action      *AppMainHeaderAction
 	Breadcrumbs []sharedtemplates.BreadcrumbItem
+}
+
+type AppRouteArea string
+
+const (
+	RouteAreaDefault           AppRouteArea = "default"
+	RouteAreaCampaignWorkspace AppRouteArea = "campaign-workspace"
+)
+
+type AppMainLayoutMetadata struct {
+	RouteArea AppRouteArea
 }
 
 type AppSideMenuItem struct {
@@ -123,6 +134,7 @@ type AppMainLayoutOptions struct {
 	MainStyle string
 	MainClass string
 	SideMenu  *AppSideMenu
+	Metadata  AppMainLayoutMetadata
 }
 
 type AppToast struct {
@@ -138,6 +150,18 @@ func appMainLayoutMainStyle(layout AppMainLayoutOptions) string {
 
 func appMainLayoutMainClass(layout AppMainLayoutOptions) string {
 	return strings.TrimSpace(layout.MainClass)
+}
+
+func appMainLayoutMetadata(layout AppMainLayoutOptions) AppMainLayoutMetadata {
+	metadata := layout.Metadata
+	if strings.TrimSpace(string(metadata.RouteArea)) == "" {
+		metadata.RouteArea = RouteAreaDefault
+	}
+	return metadata
+}
+
+func appMainRouteArea(layout AppMainLayoutOptions) string {
+	return strings.TrimSpace(string(appMainLayoutMetadata(layout).RouteArea))
 }
 
 func appMainContainerClass(mainStyle, mainClass string) string {
@@ -360,6 +384,7 @@ templ AppMainContentWithLayout(header *AppMainHeader, layout AppMainLayoutOption
 	<div
 		data-app-main-style={ appMainLayoutMainStyle(layout) }
 		data-app-main-extra-class={ appMainLayoutMainClass(layout) }
+		data-app-route-area={ appMainRouteArea(layout) }
 		class="sr-only"
 		aria-hidden="true"
 	></div>
@@ -470,13 +495,14 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 				</nav>
 			</header>
 			@AppToastComponent(toast)
-			<main
-				id="main"
-				class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }
-				style={ appMainLayoutMainStyle(layout) }
-				data-default-style={ appMainLayoutMainStyle(layout) }
-				data-default-class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }
-				data-fallback-class={ appMainContainerClass("", "") }
+		<main
+			id="main"
+			class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }
+			style={ appMainLayoutMainStyle(layout) }
+			data-app-route-area={ appMainRouteArea(layout) }
+			data-default-style={ appMainLayoutMainStyle(layout) }
+			data-default-class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }
+			data-fallback-class={ appMainContainerClass("", "") }
 		aria-label={ T(loc, "layout.main_content_aria_label") }
 	>
 			@AppMainContentWithLayout(header, layout) {

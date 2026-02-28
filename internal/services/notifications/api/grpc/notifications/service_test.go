@@ -97,6 +97,39 @@ func TestListNotifications_UsesCallerIdentity(t *testing.T) {
 	}
 }
 
+func TestGetNotification_UsesCallerIdentity(t *testing.T) {
+	t.Parallel()
+
+	fake := &fakeDomainService{
+		getNotificationResult: domain.Notification{
+			ID:              "notif-3",
+			RecipientUserID: "user-1",
+			MessageType:     "session.update",
+			PayloadJSON:     `{"session_id":"sess-1"}`,
+			DedupeKey:       "session:sess-1",
+			Source:          "system",
+			CreatedAt:       time.Date(2026, 2, 21, 21, 45, 0, 0, time.UTC),
+			UpdatedAt:       time.Date(2026, 2, 21, 21, 45, 0, 0, time.UTC),
+		},
+	}
+	svc := NewService(fake)
+
+	ctx := grpcmetadata.NewIncomingContext(context.Background(), grpcmetadata.Pairs(metadata.UserIDHeader, "user-1"))
+	resp, err := svc.GetNotification(ctx, &notificationsv1.GetNotificationRequest{NotificationId: "notif-3"})
+	if err != nil {
+		t.Fatalf("GetNotification() error = %v", err)
+	}
+	if fake.lastGetNotificationInput.RecipientUserID != "user-1" {
+		t.Fatalf("recipient_user_id = %q, want %q", fake.lastGetNotificationInput.RecipientUserID, "user-1")
+	}
+	if fake.lastGetNotificationInput.NotificationID != "notif-3" {
+		t.Fatalf("notification_id = %q, want %q", fake.lastGetNotificationInput.NotificationID, "notif-3")
+	}
+	if resp.GetNotification().GetId() != "notif-3" {
+		t.Fatalf("notification.id = %q, want %q", resp.GetNotification().GetId(), "notif-3")
+	}
+}
+
 func TestMarkNotificationRead_NotFound(t *testing.T) {
 	t.Parallel()
 
@@ -162,6 +195,10 @@ type fakeDomainService struct {
 	markReadErr    error
 	lastMarkRead   domain.MarkReadInput
 
+	getNotificationResult    domain.Notification
+	getNotificationErr       error
+	lastGetNotificationInput domain.GetNotificationInput
+
 	unreadStatusResult    domain.UnreadStatus
 	unreadStatusErr       error
 	lastUnreadStatusInput domain.GetUnreadStatusInput
@@ -189,6 +226,14 @@ func (f *fakeDomainService) MarkRead(_ context.Context, input domain.MarkReadInp
 		return domain.Notification{}, f.markReadErr
 	}
 	return f.markReadResult, nil
+}
+
+func (f *fakeDomainService) GetNotification(_ context.Context, input domain.GetNotificationInput) (domain.Notification, error) {
+	f.lastGetNotificationInput = input
+	if f.getNotificationErr != nil {
+		return domain.Notification{}, f.getNotificationErr
+	}
+	return f.getNotificationResult, nil
 }
 
 func (f *fakeDomainService) GetUnreadStatus(_ context.Context, input domain.GetUnreadStatusInput) (domain.UnreadStatus, error) {

@@ -175,6 +175,15 @@ func (s *atomicCapableStore) GetNotificationByRecipientAndDedupeKey(_ context.Co
 	return storage.NotificationRecord{}, storage.ErrNotFound
 }
 
+func (s *atomicCapableStore) GetNotificationByRecipientAndID(_ context.Context, recipientUserID string, notificationID string) (storage.NotificationRecord, error) {
+	for _, notification := range s.notifications {
+		if notification.ID == notificationID && notification.RecipientUserID == recipientUserID {
+			return notification, nil
+		}
+	}
+	return storage.NotificationRecord{}, storage.ErrNotFound
+}
+
 func (s *atomicCapableStore) ListNotificationsByRecipient(_ context.Context, _ string, _ int, _ string) (storage.NotificationPage, error) {
 	return storage.NotificationPage{}, nil
 }

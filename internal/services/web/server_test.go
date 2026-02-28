@@ -19,6 +19,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"google.golang.org/grpc"
 )
 
@@ -200,22 +201,27 @@ func TestExperimentalCampaignSurfaceExposesDetailRoutes(t *testing.T) {
 	}
 }
 
-func TestExperimentalCampaignMutationRouteRejectsMemberAccess(t *testing.T) {
+func TestExperimentalCampaignMutationRoutesAreHidden(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
 		EnableExperimentalModules: true,
-		AuthClient:                auth,
-		CampaignClient:            defaultCampaignClient(),
-		ParticipantClient: fakeWebParticipantClient{response: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{{
-			Id:             "p-member",
-			CampaignId:     "c1",
-			UserId:         "user-1",
-			CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
-		}}}},
-		SocialClient:     defaultSocialClient(),
-		CredentialClient: fakeCredentialClient{},
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{SessionClient: auth},
+			modules.Dependencies{
+				AuthClient:     auth,
+				CampaignClient: defaultCampaignClient(),
+				ParticipantClient: fakeWebParticipantClient{response: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{{
+					Id:             "p-member",
+					CampaignId:     "c1",
+					UserId:         "user-1",
+					CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
+				}}}},
+				SocialClient:     defaultSocialClient(),
+				CredentialClient: fakeCredentialClient{},
+			},
+		),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -226,8 +232,8 @@ func TestExperimentalCampaignMutationRouteRejectsMemberAccess(t *testing.T) {
 	attachSessionCookie(t, req, auth, "user-1")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusForbidden)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
 	}
 }
 
@@ -269,7 +275,21 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{EnableExperimentalModules: true, AuthClient: auth, CampaignClient: fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}}})
+	h, err := NewHandler(Config{
+		EnableExperimentalModules: true,
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{SessionClient: auth},
+			modules.Dependencies{
+				AuthClient:          auth,
+				CampaignClient:      fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
+				ParticipantClient:   defaultParticipantClient(),
+				CharacterClient:     defaultCharacterClient(),
+				SessionClient:       defaultSessionClient(),
+				InviteClient:        defaultInviteClient(),
+				AuthorizationClient: defaultAuthorizationClient(),
+			},
+		),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -351,7 +371,18 @@ func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing
 
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{AuthClient: auth, AccountClient: account, CampaignClient: defaultCampaignClient(), SocialClient: defaultSocialClient(), CredentialClient: fakeCredentialClient{}})
+	h, err := NewHandler(Config{
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{SessionClient: auth, AccountClient: account},
+			modules.Dependencies{
+				AuthClient:       auth,
+				AccountClient:    account,
+				CampaignClient:   defaultCampaignClient(),
+				SocialClient:     defaultSocialClient(),
+				CredentialClient: fakeCredentialClient{},
+			},
+		),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -385,7 +416,18 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{AuthClient: auth, AccountClient: account, CampaignClient: defaultCampaignClient(), SocialClient: defaultSocialClient(), CredentialClient: fakeCredentialClient{}})
+	h, err := NewHandler(Config{
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{SessionClient: auth, AccountClient: account},
+			modules.Dependencies{
+				AuthClient:       auth,
+				AccountClient:    account,
+				CampaignClient:   defaultCampaignClient(),
+				SocialClient:     defaultSocialClient(),
+				CredentialClient: fakeCredentialClient{},
+			},
+		),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -533,9 +575,11 @@ func TestPrimaryNavigationUsesUnreadNotificationIconWhenUserHasUnread(t *testing
 
 	auth := newFakeWebAuthClient()
 	cfg := defaultProtectedConfig(auth)
-	cfg.NotificationClient = fakeWebNotificationClient{
+	notifClient := fakeWebNotificationClient{
 		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{HasUnread: true, UnreadCount: 2},
 	}
+	cfg.Dependencies.Principal.NotificationClient = notifClient
+	cfg.Dependencies.Modules.NotificationClient = notifClient
 	h, err := NewHandler(cfg)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -563,7 +607,9 @@ func TestPrimaryNavigationFallsBackToReadNotificationIconWhenUnreadLookupFails(t
 
 	auth := newFakeWebAuthClient()
 	cfg := defaultProtectedConfig(auth)
-	cfg.NotificationClient = fakeWebNotificationClient{unreadErr: context.Canceled}
+	notifClient := fakeWebNotificationClient{unreadErr: context.Canceled}
+	cfg.Dependencies.Principal.NotificationClient = notifClient
+	cfg.Dependencies.Modules.NotificationClient = notifClient
 	h, err := NewHandler(cfg)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -648,7 +694,9 @@ func TestInvitesRouteReturnsNotFoundWhileScaffoldDisabled(t *testing.T) {
 func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDependencyBundle(PrincipalDependencies{}, modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -676,7 +724,9 @@ func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
 func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDependencyBundle(PrincipalDependencies{}, modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -704,7 +754,9 @@ func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 func TestLoginPageLocaleMenuUsesConsistentLabels(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDependencyBundle(PrincipalDependencies{}, modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -790,6 +842,27 @@ func TestAppPageUsesWebStyleChromeMarkers(t *testing.T) {
 	assertPrimaryNavLinks(t, body)
 }
 
+func TestAppPageIncludesRouteMetadataAttribute(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `data-app-route-area="default"`) {
+		t.Fatalf("body = %q, want default route area metadata", body)
+	}
+}
+
 func TestAppLayoutIncludesHTMXErrorSwapContract(t *testing.T) {
 	t.Parallel()
 
@@ -818,7 +891,23 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 
 	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "rhea", Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "001"}}}
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{AuthClient: auth, SocialClient: social, AssetBaseURL: "https://cdn.example.com/avatars", AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{
+				SessionClient: auth,
+				SocialClient:  social,
+				AssetBaseURL:  "https://cdn.example.com/avatars",
+			},
+			modules.Dependencies{
+				AuthClient:       auth,
+				SocialClient:     social,
+				AssetBaseURL:     "https://cdn.example.com/avatars",
+				AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+				CampaignClient:   defaultCampaignClient(),
+				CredentialClient: fakeCredentialClient{},
+			},
+		),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -854,7 +943,23 @@ func TestAppPageUserDropdownProfileFallsBackToSettingsNoticeWhenUsernameMissing(
 
 	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale"}}}
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{AuthClient: auth, SocialClient: social, AssetBaseURL: "https://cdn.example.com/avatars", AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{
+				SessionClient: auth,
+				SocialClient:  social,
+				AssetBaseURL:  "https://cdn.example.com/avatars",
+			},
+			modules.Dependencies{
+				AuthClient:       auth,
+				SocialClient:     social,
+				AssetBaseURL:     "https://cdn.example.com/avatars",
+				AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+				CampaignClient:   defaultCampaignClient(),
+				CredentialClient: fakeCredentialClient{},
+			},
+		),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -878,7 +983,23 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 	assetBaseURL := "https://cdn.example.com/avatars"
 	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "", "")
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{AuthClient: auth, SocialClient: social, AssetBaseURL: assetBaseURL, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, CampaignClient: defaultCampaignClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{
+				SessionClient: auth,
+				SocialClient:  social,
+				AssetBaseURL:  assetBaseURL,
+			},
+			modules.Dependencies{
+				AuthClient:       auth,
+				SocialClient:     social,
+				AssetBaseURL:     assetBaseURL,
+				AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+				CampaignClient:   defaultCampaignClient(),
+				CredentialClient: fakeCredentialClient{},
+			},
+		),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -984,7 +1105,17 @@ func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
 
 	auth := newCountingWebAuthClient()
 	_, _ = auth.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: "user-1"})
-	h, err := NewHandler(Config{AuthClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, SocialClient: defaultSocialClient(), CredentialClient: fakeCredentialClient{}})
+	h, err := NewHandler(Config{
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{SessionClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}},
+			modules.Dependencies{
+				AuthClient:       auth,
+				AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+				SocialClient:     defaultSocialClient(),
+				CredentialClient: fakeCredentialClient{},
+			},
+		),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -1003,7 +1134,13 @@ func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
 func TestNewServerBuildsHTTPServer(t *testing.T) {
 	t.Parallel()
 
-	srv, err := NewServer(context.Background(), Config{HTTPAddr: "127.0.0.1:0", AuthClient: newFakeWebAuthClient()})
+	srv, err := NewServer(context.Background(), Config{
+		HTTPAddr: "127.0.0.1:0",
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{},
+			modules.Dependencies{AuthClient: newFakeWebAuthClient()},
+		),
+	})
 	if err != nil {
 		t.Fatalf("NewServer() error = %v", err)
 	}
@@ -1124,33 +1261,73 @@ func attachSessionCookie(t *testing.T, req *http.Request, auth *fakeWebAuthClien
 }
 
 func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
+	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
+		Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
+	}}
+	social := defaultSocialClient()
 	return Config{
 		EnableExperimentalModules: true,
-		AuthClient:                auth,
-		CampaignClient:            defaultCampaignClient(),
-		ParticipantClient:         defaultParticipantClient(),
-		CharacterClient:           defaultCharacterClient(),
-		DaggerheartContentClient:  defaultDaggerheartContentClient(),
-		SessionClient:             defaultSessionClient(),
-		InviteClient:              defaultInviteClient(),
-		AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
-			Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
-		}},
-		SocialClient:     defaultSocialClient(),
-		CredentialClient: fakeCredentialClient{},
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{
+				SessionClient: auth,
+				AccountClient: account,
+				SocialClient:  social,
+			},
+			modules.Dependencies{
+				AuthClient:               auth,
+				CampaignClient:           defaultCampaignClient(),
+				ParticipantClient:        defaultParticipantClient(),
+				CharacterClient:          defaultCharacterClient(),
+				DaggerheartContentClient: defaultDaggerheartContentClient(),
+				SessionClient:            defaultSessionClient(),
+				InviteClient:             defaultInviteClient(),
+				AuthorizationClient:      defaultAuthorizationClient(),
+				AccountClient:            account,
+				SocialClient:             social,
+				CredentialClient:         fakeCredentialClient{},
+			},
+		),
 	}
 }
 
+func newDependencyBundle(principal PrincipalDependencies, moduleDeps modules.Dependencies) *DependencyBundle {
+	return &DependencyBundle{
+		Principal: principal,
+		Modules:   moduleDeps,
+	}
+}
+
+func newDefaultDependencyBundle(moduleDeps modules.Dependencies) *DependencyBundle {
+	return newDependencyBundle(PrincipalDependencies{}, moduleDeps)
+}
+
 func defaultStableProtectedConfig(auth *fakeWebAuthClient) Config {
+	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
+		Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
+	}}
+	social := defaultSocialClient()
 	return Config{
 		EnableExperimentalModules: false,
-		AuthClient:                auth,
-		CampaignClient:            defaultCampaignClient(),
-		AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
-			Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
-		}},
-		SocialClient:     defaultSocialClient(),
-		CredentialClient: fakeCredentialClient{},
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{
+				SessionClient: auth,
+				AccountClient: account,
+				SocialClient:  social,
+			},
+			modules.Dependencies{
+				AuthClient:               auth,
+				CampaignClient:           defaultCampaignClient(),
+				ParticipantClient:        defaultParticipantClient(),
+				CharacterClient:          defaultCharacterClient(),
+				DaggerheartContentClient: defaultDaggerheartContentClient(),
+				SessionClient:            defaultSessionClient(),
+				InviteClient:             defaultInviteClient(),
+				AuthorizationClient:      defaultAuthorizationClient(),
+				AccountClient:            account,
+				SocialClient:             social,
+				CredentialClient:         fakeCredentialClient{},
+			},
+		),
 	}
 }
 
@@ -1200,6 +1377,10 @@ func defaultInviteClient() fakeWebInviteClient {
 
 func defaultDaggerheartContentClient() fakeWebDaggerheartContentClient {
 	return fakeWebDaggerheartContentClient{response: &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{}}}
+}
+
+func defaultAuthorizationClient() fakeWebAuthorizationClient {
+	return fakeWebAuthorizationClient{}
 }
 
 type fakeCampaignClient struct {
@@ -1321,9 +1502,21 @@ func (f fakeWebDaggerheartContentClient) GetContentCatalog(context.Context, *dag
 	return &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{}}, nil
 }
 
+type fakeWebAuthorizationClient struct{}
+
+func (fakeWebAuthorizationClient) Can(context.Context, *statev1.CanRequest, ...grpc.CallOption) (*statev1.CanResponse, error) {
+	return &statev1.CanResponse{Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil
+}
+
+func (fakeWebAuthorizationClient) BatchCan(context.Context, *statev1.BatchCanRequest, ...grpc.CallOption) (*statev1.BatchCanResponse, error) {
+	return &statev1.BatchCanResponse{}, nil
+}
+
 type fakeWebNotificationClient struct {
 	listResp   *notificationsv1.ListNotificationsResponse
 	listErr    error
+	getResp    *notificationsv1.GetNotificationResponse
+	getErr     error
 	markResp   *notificationsv1.MarkNotificationReadResponse
 	markErr    error
 	unreadResp *notificationsv1.GetUnreadNotificationStatusResponse
@@ -1338,6 +1531,16 @@ func (f fakeWebNotificationClient) ListNotifications(context.Context, *notificat
 		return f.listResp, nil
 	}
 	return &notificationsv1.ListNotificationsResponse{}, nil
+}
+
+func (f fakeWebNotificationClient) GetNotification(_ context.Context, req *notificationsv1.GetNotificationRequest, _ ...grpc.CallOption) (*notificationsv1.GetNotificationResponse, error) {
+	if f.getErr != nil {
+		return nil, f.getErr
+	}
+	if f.getResp != nil {
+		return f.getResp, nil
+	}
+	return &notificationsv1.GetNotificationResponse{Notification: &notificationsv1.Notification{Id: req.GetNotificationId()}}, nil
 }
 
 func (f fakeWebNotificationClient) GetUnreadNotificationStatus(context.Context, *notificationsv1.GetUnreadNotificationStatusRequest, ...grpc.CallOption) (*notificationsv1.GetUnreadNotificationStatusResponse, error) {

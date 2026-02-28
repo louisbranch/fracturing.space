@@ -4,7 +4,6 @@ import (
 	"net/url"
 	"strings"
 
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/imagecdn"
 )
@@ -24,14 +23,6 @@ func truncateCampaignTheme(themePrompt string) string {
 		return string(runes)
 	}
 	return string(runes[:campaignThemePromptLimit]) + "..."
-}
-
-// campaignCreatedAtUnixNano normalizes protobuf timestamps for deterministic sort order.
-func campaignCreatedAtUnixNano(campaign *statev1.Campaign) int64 {
-	if campaign == nil || campaign.GetCreatedAt() == nil {
-		return 0
-	}
-	return campaign.GetCreatedAt().AsTime().UTC().UnixNano()
 }
 
 // campaignCoverImageURL resolves the final card image URL with a deterministic fallback.

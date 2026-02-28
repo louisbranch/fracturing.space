@@ -21,12 +21,16 @@ import (
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	grpc "google.golang.org/grpc"
 )
 
 // Config holds command inputs for web startup.
 type Config struct {
 	HTTPAddr                  string        `env:"FRACTURING_SPACE_WEB_HTTP_ADDR" envDefault:"localhost:8080"`
 	ChatHTTPAddr              string        `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR" envDefault:"localhost:8086"`
+	TrustForwardedProto       bool          `env:"FRACTURING_SPACE_WEB_TRUST_FORWARDED_PROTO" envDefault:"false"`
 	EnableExperimentalModules bool          `env:"FRACTURING_SPACE_WEB_ENABLE_EXPERIMENTAL_MODULES" envDefault:"false"`
 	AuthAddr                  string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
 	SocialAddr                string        `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
@@ -63,11 +67,127 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "Notifications service gRPC address")
 	fs.StringVar(&cfg.UserHubAddr, "userhub-addr", cfg.UserHubAddr, "Userhub service gRPC address")
 	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "Asset base URL for image delivery")
+	fs.BoolVar(&cfg.TrustForwardedProto, "trust-forwarded-proto", cfg.TrustForwardedProto, "Trust X-Forwarded-Proto when resolving request scheme")
 	fs.BoolVar(&cfg.EnableExperimentalModules, "enable-experimental-modules", cfg.EnableExperimentalModules, "Enable experimental web module surfaces")
 	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
+}
+
+type grpcDialer func(context.Context, string, time.Duration) (*grpc.ClientConn, error)
+
+type dependencyRequirement struct {
+	name     string
+	address  string
+	setInput func(*web.PrincipalDependencies, *modules.Dependencies, *grpc.ClientConn)
+}
+
+func bootstrapDependencies(
+	ctx context.Context,
+	cfg Config,
+	dialer grpcDialer,
+) (web.DependencyBundle, []*grpc.ClientConn, []string, error) {
+	var principal web.PrincipalDependencies
+	principal.AssetBaseURL = cfg.AssetBaseURL
+	var modDeps modules.Dependencies
+	modDeps.AssetBaseURL = cfg.AssetBaseURL
+	conns := []*grpc.ClientConn{}
+	warnings := []string{}
+
+	deps := []dependencyRequirement{
+		{
+			name:    "auth",
+			address: cfg.AuthAddr,
+			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+				authClient := authv1.NewAuthServiceClient(conn)
+				accountClient := authv1.NewAccountServiceClient(conn)
+				p.SessionClient = authClient
+				p.AccountClient = accountClient
+				m.AuthClient = authClient
+				m.AccountClient = accountClient
+			},
+		},
+		{
+			name:    "social",
+			address: cfg.SocialAddr,
+			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+				socialClient := socialv1.NewSocialServiceClient(conn)
+				p.SocialClient = socialClient
+				m.SocialClient = socialClient
+			},
+		},
+		{
+			name:    "game",
+			address: cfg.GameAddr,
+			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+				m.CampaignClient = statev1.NewCampaignServiceClient(conn)
+				m.ParticipantClient = statev1.NewParticipantServiceClient(conn)
+				m.CharacterClient = statev1.NewCharacterServiceClient(conn)
+				m.DaggerheartContentClient = daggerheartv1.NewDaggerheartContentServiceClient(conn)
+				m.SessionClient = statev1.NewSessionServiceClient(conn)
+				m.InviteClient = statev1.NewInviteServiceClient(conn)
+				m.AuthorizationClient = statev1.NewAuthorizationServiceClient(conn)
+			},
+		},
+		{
+			name:    "ai",
+			address: cfg.AIAddr,
+			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+				m.CredentialClient = aiv1.NewCredentialServiceClient(conn)
+			},
+		},
+		{
+			name:    "userhub",
+			address: cfg.UserHubAddr,
+			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+				m.UserHubClient = userhubv1.NewUserHubServiceClient(conn)
+			},
+		},
+		{
+			name:    "notifications",
+			address: cfg.NotificationsAddr,
+			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+				notificationClient := notificationsv1.NewNotificationServiceClient(conn)
+				p.NotificationClient = notificationClient
+				m.NotificationClient = notificationClient
+			},
+		},
+	}
+
+	for _, dep := range deps {
+		conn, err := dialer(ctx, dep.address, cfg.GRPCDialTimeout)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable: %v", dep.name, dep.address, err))
+			continue
+		}
+		if conn == nil {
+			warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable", dep.name, dep.address))
+			continue
+		}
+		dep.setInput(&principal, &modDeps, conn)
+		conns = append(conns, conn)
+	}
+
+	bundle := web.DependencyBundle{Principal: principal, Modules: modDeps}
+	return bundle, conns, warnings, nil
+}
+
+func closeDependencyConnections(conns []*grpc.ClientConn) {
+	for _, conn := range conns {
+		if conn == nil {
+			continue
+		}
+		_ = conn.Close()
+	}
+}
+
+func dialDependency(
+	ctx context.Context,
+	address string,
+	timeout time.Duration,
+) (*grpc.ClientConn, error) {
+	return platformgrpc.DialWithHealth(ctx, nil, address, timeout, log.Printf, platformgrpc.DefaultClientDialOptions()...)
 }
 
 // Run starts the web service process.
@@ -76,43 +196,22 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceWeb, func(context.Context) error {
-		authConn, err := platformgrpc.DialWithHealth(ctx, nil, cfg.AuthAddr, cfg.GRPCDialTimeout, log.Printf, platformgrpc.DefaultClientDialOptions()...)
+		dependencies, dependencyConns, warnings, err := bootstrapDependencies(ctx, cfg, dialDependency)
 		if err != nil {
-			return fmt.Errorf("dial auth gRPC %s: %w", cfg.AuthAddr, err)
+			return fmt.Errorf("init web dependency graph: %w", err)
 		}
-		defer authConn.Close()
-
-		socialConn, err := platformgrpc.DialWithHealth(ctx, nil, cfg.SocialAddr, cfg.GRPCDialTimeout, log.Printf, platformgrpc.DefaultClientDialOptions()...)
-		if err != nil {
-			return fmt.Errorf("dial social gRPC %s: %w", cfg.SocialAddr, err)
+		defer closeDependencyConnections(dependencyConns)
+		for _, warning := range warnings {
+			log.Printf("web startup: %s", warning)
 		}
-		defer socialConn.Close()
 
-		gameConn, err := platformgrpc.DialWithHealth(ctx, nil, cfg.GameAddr, cfg.GRPCDialTimeout, log.Printf, platformgrpc.DefaultClientDialOptions()...)
-		if err != nil {
-			return fmt.Errorf("dial game gRPC %s: %w", cfg.GameAddr, err)
-		}
-		defer gameConn.Close()
-
-		aiConn, err := platformgrpc.DialWithHealth(ctx, nil, cfg.AIAddr, cfg.GRPCDialTimeout, log.Printf, platformgrpc.DefaultClientDialOptions()...)
-		if err != nil {
-			return fmt.Errorf("dial ai gRPC %s: %w", cfg.AIAddr, err)
-		}
-		defer aiConn.Close()
-
-		userHubConn, err := platformgrpc.DialWithHealth(ctx, nil, cfg.UserHubAddr, cfg.GRPCDialTimeout, log.Printf, platformgrpc.DefaultClientDialOptions()...)
-		if err != nil {
-			return fmt.Errorf("dial userhub gRPC %s: %w", cfg.UserHubAddr, err)
-		}
-		defer userHubConn.Close()
-
-		notificationsConn, err := platformgrpc.DialWithHealth(ctx, nil, cfg.NotificationsAddr, cfg.GRPCDialTimeout, log.Printf, platformgrpc.DefaultClientDialOptions()...)
-		if err != nil {
-			return fmt.Errorf("dial notifications gRPC %s: %w", cfg.NotificationsAddr, err)
-		}
-		defer notificationsConn.Close()
-
-		server, err := web.NewServer(ctx, web.Config{HTTPAddr: cfg.HTTPAddr, AssetBaseURL: cfg.AssetBaseURL, ChatHTTPAddr: cfg.ChatHTTPAddr, EnableExperimentalModules: cfg.EnableExperimentalModules, CampaignClient: statev1.NewCampaignServiceClient(gameConn), ParticipantClient: statev1.NewParticipantServiceClient(gameConn), CharacterClient: statev1.NewCharacterServiceClient(gameConn), DaggerheartContentClient: daggerheartv1.NewDaggerheartContentServiceClient(gameConn), SessionClient: statev1.NewSessionServiceClient(gameConn), InviteClient: statev1.NewInviteServiceClient(gameConn), AuthorizationClient: statev1.NewAuthorizationServiceClient(gameConn), AuthClient: authv1.NewAuthServiceClient(authConn), AccountClient: authv1.NewAccountServiceClient(authConn), SocialClient: socialv1.NewSocialServiceClient(socialConn), CredentialClient: aiv1.NewCredentialServiceClient(aiConn), UserHubClient: userhubv1.NewUserHubServiceClient(userHubConn), NotificationClient: notificationsv1.NewNotificationServiceClient(notificationsConn)})
+		server, err := web.NewServer(ctx, web.Config{
+			HTTPAddr:                  cfg.HTTPAddr,
+			ChatHTTPAddr:              cfg.ChatHTTPAddr,
+			EnableExperimentalModules: cfg.EnableExperimentalModules,
+			RequestSchemePolicy:       requestmeta.SchemePolicy{TrustForwardedProto: cfg.TrustForwardedProto},
+			Dependencies:              &dependencies,
+		})
 		if err != nil {
 			return fmt.Errorf("init web server: %w", err)
 		}

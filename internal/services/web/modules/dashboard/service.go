@@ -2,18 +2,26 @@ package dashboard
 
 import (
 	"context"
+	"log"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"golang.org/x/text/language"
 )
 
 const degradedDependencySocialProfile = "social.profile"
 const degradedDependencyGameCampaigns = "game.campaigns"
 
+// ServiceHealthEntry represents the availability status of a backend service group.
+type ServiceHealthEntry struct {
+	Label     string
+	Available bool
+}
+
 // DashboardView is the web-dashboard view model derived from userhub state.
 type DashboardView struct {
 	ShowPendingProfileBlock bool
 	ShowAdventureBlock      bool
+	ServiceHealth           []ServiceHealthEntry
 }
 
 // DashboardSnapshot contains userhub dashboard fields used by web rendering logic.
@@ -26,36 +34,37 @@ type DashboardSnapshot struct {
 
 // DashboardGateway loads dashboard snapshot data for one user.
 type DashboardGateway interface {
-	LoadDashboard(context.Context, string, commonv1.Locale) (DashboardSnapshot, error)
+	LoadDashboard(context.Context, string, language.Tag) (DashboardSnapshot, error)
 }
 
 type service struct {
-	readGateway DashboardGateway
+	readGateway   DashboardGateway
+	logger        *log.Logger
+	serviceHealth []ServiceHealthEntry
 }
 
-type unavailableGateway struct{}
-
-func (unavailableGateway) LoadDashboard(context.Context, string, commonv1.Locale) (DashboardSnapshot, error) {
-	return DashboardSnapshot{}, nil
-}
-
-func newService(gateway DashboardGateway) service {
+func newService(gateway DashboardGateway, logger *log.Logger, health []ServiceHealthEntry) service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
-	return service{readGateway: gateway}
+	if logger == nil {
+		logger = log.Default()
+	}
+	return service{readGateway: gateway, logger: logger, serviceHealth: health}
 }
 
-func (s service) loadDashboard(ctx context.Context, userID string, locale commonv1.Locale) (DashboardView, error) {
+func (s service) loadDashboard(ctx context.Context, userID string, locale language.Tag) (DashboardView, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
 		return DashboardView{}, nil
 	}
 	snapshot, err := s.readGateway.LoadDashboard(ctx, userID, locale)
 	if err != nil {
+		s.logger.Printf("dashboard: load failed for user %s: %v", userID, err)
 		return DashboardView{}, nil
 	}
 	if hasDegradedDependency(snapshot.DegradedDependencies, degradedDependencySocialProfile) {
+		s.logger.Printf("dashboard: degraded dependency %s for user %s", degradedDependencySocialProfile, userID)
 		return DashboardView{}, nil
 	}
 	showAdventureBlock := false
@@ -65,6 +74,7 @@ func (s service) loadDashboard(ctx context.Context, userID string, locale common
 	return DashboardView{
 		ShowPendingProfileBlock: snapshot.NeedsProfileCompletion,
 		ShowAdventureBlock:      showAdventureBlock,
+		ServiceHealth:           s.serviceHealth,
 	}, nil
 }
 

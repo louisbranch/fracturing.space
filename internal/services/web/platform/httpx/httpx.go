@@ -2,6 +2,7 @@
 package httpx
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -124,9 +125,14 @@ func WriteJSON(w http.ResponseWriter, status int, payload any) error {
 	if w == nil {
 		return fmt.Errorf("response writer is required")
 	}
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
 	return json.NewEncoder(w).Encode(payload)
+}
+
+// WriteJSONError writes a JSON error response with the given status code and message.
+func WriteJSONError(w http.ResponseWriter, statusCode int, message string) error {
+	return WriteJSON(w, statusCode, map[string]any{"error": message})
 }
 
 // WriteError writes an error response using typed web status mapping.
@@ -139,6 +145,14 @@ func WriteError(w http.ResponseWriter, err error) {
 		return
 	}
 	http.Error(w, err.Error(), apperrors.HTTPStatus(err))
+}
+
+// RequestContext returns r.Context() with a nil-safe fallback to context.Background().
+func RequestContext(r *http.Request) context.Context {
+	if r == nil {
+		return context.Background()
+	}
+	return r.Context()
 }
 
 // IsHTMXRequest reports whether the current request came from HTMX.

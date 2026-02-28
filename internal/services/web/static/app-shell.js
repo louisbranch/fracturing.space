@@ -54,8 +54,7 @@ function syncAppNavActiveLinks(currentPath) {
 	});
 }
 
-// TODO(web-routepath): source this from server route metadata so app-shell behavior stays aligned with routepath ownership.
-var campaignWorkspaceRoutePattern = /^\/app\/campaigns\/(?!create(?:\/|$))[^/]+(?:\/|$)/;
+var campaignWorkspaceRouteArea = "campaign-workspace";
 var campaignMainCoverClass = "w-full max-w-none px-0 pt-20 flex-1";
 var fallbackMainClass = "w-full max-w-none px-4 pt-20 flex-1";
 
@@ -81,8 +80,20 @@ function mainDefaultClass(main) {
 	return mainFallbackClass(main);
 }
 
-function isCampaignWorkspaceRoute(pathname) {
-	return campaignWorkspaceRoutePattern.test(appCurrentPath(pathname));
+function appMainRouteArea(main) {
+	if (!main) {
+		return "";
+	}
+	var routeArea = main.getAttribute("data-app-route-area");
+	return routeArea ? String(routeArea).trim() : "";
+}
+
+function isCampaignWorkspaceArea(routeArea) {
+	return routeArea === campaignWorkspaceRouteArea;
+}
+
+function isCampaignWorkspaceMetadata(metadata) {
+	return metadata && metadata.routeArea && isCampaignWorkspaceArea(metadata.routeArea);
 }
 
 function appMainContainerClass(mainStyle, extraClass, defaultClass, main) {
@@ -97,14 +108,17 @@ function appMainContainerClass(mainStyle, extraClass, defaultClass, main) {
 }
 
 function appMainMetadata(main) {
+	var routeArea = appMainRouteArea(main);
 	var metadata = main.querySelector("[data-app-main-style]");
 	if (!metadata) {
-		return null;
+		return routeArea ? { routeArea: routeArea } : null;
 	}
 
+	var metadataRouteArea = metadata.getAttribute("data-app-route-area");
 	return {
 		style: metadata.getAttribute("data-app-main-style") || "",
 		extraClass: metadata.getAttribute("data-app-main-extra-class") || "",
+		routeArea: metadataRouteArea ? String(metadataRouteArea).trim() : routeArea,
 	};
 }
 
@@ -115,8 +129,18 @@ function isCampaignMainStyle(style) {
 	);
 }
 
-function syncCampaignMainState(main) {
-	var metadata = appMainMetadata(main);
+function shouldUseCampaignWorkspaceStyle(metadata) {
+	if (!metadata) {
+		return false;
+	}
+	if (isCampaignWorkspaceMetadata(metadata)) {
+		return true;
+	}
+	return isCampaignMainStyle(metadata.style);
+}
+
+function syncCampaignMainState(main, metadata) {
+	metadata = metadata || appMainMetadata(main);
 	var style = "";
 	var extraClass = "";
 	var defaultClass = mainDefaultClass(main);
@@ -133,14 +157,15 @@ function syncCampaignMainState(main) {
 	main.className = appMainContainerClass(style, extraClass, defaultClass, main);
 }
 
-function syncMainStateForRoute(currentPath) {
+function syncMainStateForRoute() {
 	var main = document.getElementById("main");
 	if (!main) {
 		return;
 	}
+	var metadata = appMainMetadata(main);
 
-	if (isCampaignWorkspaceRoute(currentPath)) {
-		syncCampaignMainState(main);
+	if (shouldUseCampaignWorkspaceStyle(metadata)) {
+		syncCampaignMainState(main, metadata);
 		return;
 	}
 
@@ -262,11 +287,6 @@ document.addEventListener("htmx:beforeSwap", function(event) {
 		event.detail.isError = false;
 		window.scrollTo({top: 0, behavior: "instant"});
 	}
-	var nextPath = appPathFromHtmxDetail(event && event.detail);
-	if (isCampaignWorkspaceRoute(nextPath)) {
-		return;
-	}
-	syncAppChromeState(nextPath);
 });
 document.addEventListener("htmx:afterSwap", function(event) {
 	syncAppChromeState(appPathFromHtmxDetail(event && event.detail));

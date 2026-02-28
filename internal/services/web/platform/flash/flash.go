@@ -36,6 +36,11 @@ func NoticeSuccess(key string) Notice {
 
 // Write stores a flash notice cookie for the next page render.
 func Write(w http.ResponseWriter, r *http.Request, notice Notice) {
+	WriteWithPolicy(w, r, notice, requestmeta.SchemePolicy{})
+}
+
+// WriteWithPolicy stores a flash notice cookie for the next page render.
+func WriteWithPolicy(w http.ResponseWriter, r *http.Request, notice Notice, policy requestmeta.SchemePolicy) {
 	if w == nil {
 		return
 	}
@@ -52,7 +57,7 @@ func Write(w http.ResponseWriter, r *http.Request, notice Notice) {
 		Value:    base64.RawURLEncoding.EncodeToString(payload),
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   requestmeta.IsHTTPS(r),
+		Secure:   requestmeta.IsHTTPSWithPolicy(r, policy),
 		SameSite: http.SameSiteLaxMode,
 	})
 }
@@ -78,6 +83,11 @@ func ReadAndClear(w http.ResponseWriter, r *http.Request) (Notice, bool) {
 
 // Clear expires any flash notice cookie.
 func Clear(w http.ResponseWriter, r *http.Request) {
+	ClearWithPolicy(w, r, requestmeta.SchemePolicy{})
+}
+
+// ClearWithPolicy expires any flash notice cookie.
+func ClearWithPolicy(w http.ResponseWriter, r *http.Request, policy requestmeta.SchemePolicy) {
 	if w == nil {
 		return
 	}
@@ -86,7 +96,7 @@ func Clear(w http.ResponseWriter, r *http.Request) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   requestmeta.IsHTTPS(r),
+		Secure:   requestmeta.IsHTTPSWithPolicy(r, policy),
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})

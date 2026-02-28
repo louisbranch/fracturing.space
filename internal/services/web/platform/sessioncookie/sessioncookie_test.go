@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
 
 func TestRead(t *testing.T) {
@@ -57,6 +59,18 @@ func TestWrite(t *testing.T) {
 	}
 	if httpCookie.Secure {
 		t.Fatalf("expected non-secure cookie for http request")
+	}
+
+	policyReq := httptest.NewRequest(http.MethodGet, "http://app.example.test", nil)
+	policyReq.Header.Set("X-Forwarded-Proto", "https")
+	policyRR := httptest.NewRecorder()
+	WriteWithPolicy(policyRR, policyReq, "ws-1", requestmeta.SchemePolicy{TrustForwardedProto: true})
+	policyCookie, err := http.ParseSetCookie(policyRR.Header().Get("Set-Cookie"))
+	if err != nil {
+		t.Fatalf("ParseSetCookie() error = %v", err)
+	}
+	if !policyCookie.Secure {
+		t.Fatalf("expected secure cookie when trusted policy is enabled")
 	}
 }
 

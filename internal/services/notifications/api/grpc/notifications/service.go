@@ -16,6 +16,7 @@ import (
 type domainService interface {
 	CreateIntent(ctx context.Context, input domain.CreateIntentInput) (domain.Notification, error)
 	ListInbox(ctx context.Context, input domain.ListInboxInput) (domain.NotificationPage, error)
+	GetNotification(ctx context.Context, input domain.GetNotificationInput) (domain.Notification, error)
 	GetUnreadStatus(ctx context.Context, input domain.GetUnreadStatusInput) (domain.UnreadStatus, error)
 	MarkRead(ctx context.Context, input domain.MarkReadInput) (domain.Notification, error)
 }
@@ -88,6 +89,35 @@ func (s *Service) ListNotifications(ctx context.Context, in *notificationsv1.Lis
 		resp.Notifications = append(resp.Notifications, notificationToProto(notification))
 	}
 	return resp, nil
+}
+
+// GetNotification fetches one notification visible to the caller.
+func (s *Service) GetNotification(ctx context.Context, in *notificationsv1.GetNotificationRequest) (*notificationsv1.GetNotificationResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "get notification request is required")
+	}
+	if s == nil || s.domain == nil {
+		return nil, status.Error(codes.Internal, "notifications domain service is not configured")
+	}
+
+	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
+	if userID == "" {
+		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	}
+
+	notification, err := s.domain.GetNotification(ctx, domain.GetNotificationInput{
+		RecipientUserID: userID,
+		NotificationID:  in.GetNotificationId(),
+	})
+	if err != nil {
+		return nil, mapDomainError(err)
+	}
+	if strings.TrimSpace(notification.ID) == "" {
+		return nil, status.Error(codes.NotFound, "notification not found")
+	}
+	return &notificationsv1.GetNotificationResponse{
+		Notification: notificationToProto(notification),
+	}, nil
 }
 
 // GetUnreadNotificationStatus returns unread-inbox status for the caller.
