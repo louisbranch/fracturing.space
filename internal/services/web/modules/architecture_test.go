@@ -44,7 +44,6 @@ func TestRoutePrefixesRemainUniqueConstants(t *testing.T) {
 		routepath.DashboardPrefix,
 		routepath.CampaignsPrefix,
 		routepath.Notifications,
-		routepath.ProfilePrefix,
 		routepath.SettingsPrefix,
 	}
 	seen := map[string]struct{}{}
@@ -64,7 +63,6 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 		"dashboard",
 		"campaigns",
 		"discovery",
-		"publicprofile",
 		"notifications",
 		"profile",
 		"settings",

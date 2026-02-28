@@ -105,7 +105,7 @@ func TestAppChromeLayoutRendersAvatarDropdownWhenAvatarURLProvided(t *testing.T)
 	if !strings.Contains(got, `class="dropdown dropdown-end"`) {
 		t.Fatalf("expected avatar dropdown wrapper, got %q", got)
 	}
-	if !strings.Contains(got, `href="/app/profile"`) {
+	if !strings.Contains(got, `href="/app/settings/profile"`) {
 		t.Fatalf("expected profile link in avatar dropdown, got %q", got)
 	}
 	if !strings.Contains(got, `src="https://example.com/avatar.png"`) {
