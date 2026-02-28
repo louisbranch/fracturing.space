@@ -21,7 +21,7 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	t.Parallel()
 
 	public := DefaultPublicModules(Dependencies{}, ModuleResolvers{}, PublicModuleOptions{})
-	protected := DefaultProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{}, public)
+	protected := DefaultProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{})
 	if len(public) != 5 {
 		t.Fatalf("public module count = %d, want %d", len(public), 5)
 	}
@@ -62,7 +62,7 @@ func TestExperimentalModulesAvailableWhenEnabled(t *testing.T) {
 	t.Parallel()
 
 	public := ExperimentalPublicModules()
-	protected := ExperimentalProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{}, nil)
+	protected := ExperimentalProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{})
 	if len(public) != 0 {
 		t.Fatalf("experimental public module count = %d, want %d", len(public), 0)
 	}
@@ -75,7 +75,7 @@ func TestStableModulesHaveUniquePrefixes(t *testing.T) {
 	t.Parallel()
 
 	public := DefaultPublicModules(Dependencies{}, ModuleResolvers{}, PublicModuleOptions{})
-	protected := DefaultProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{}, public)
+	protected := DefaultProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{})
 	seen := map[string]struct{}{}
 	for _, module := range append(public, protected...) {
 		mount, err := module.Mount()
@@ -95,7 +95,7 @@ func TestStableModulesHaveUniquePrefixes(t *testing.T) {
 func TestExperimentalModulesHaveUniquePrefixes(t *testing.T) {
 	t.Parallel()
 
-	protected := ExperimentalProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{}, nil)
+	protected := ExperimentalProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{})
 	seen := map[string]struct{}{}
 	for _, module := range protected {
 		mount, err := module.Mount()
@@ -209,6 +209,81 @@ func TestModuleHealthyReturnsFalseForUnavailableGateway(t *testing.T) {
 	nm := notifications.New()
 	if nm.Healthy() {
 		t.Fatalf("notifications.New() Healthy = true, want false for zero-value module")
+	}
+}
+
+func TestRegistryBuildStableAndExperimental(t *testing.T) {
+	t.Parallel()
+
+	reg := NewRegistry()
+
+	stable := reg.Build(BuildInput{
+		Dependencies:     Dependencies{},
+		Resolvers:        ModuleResolvers{},
+		PublicOptions:    PublicModuleOptions{},
+		ProtectedOptions: ProtectedModuleOptions{},
+	})
+	if len(stable.Public) != 5 {
+		t.Fatalf("stable public module count = %d, want 5", len(stable.Public))
+	}
+	if len(stable.Protected) != 4 {
+		t.Fatalf("stable protected module count = %d, want 4", len(stable.Protected))
+	}
+	if len(stable.Health) != 5 {
+		t.Fatalf("stable health entry count = %d, want 5", len(stable.Health))
+	}
+
+	experimental := reg.Build(BuildInput{
+		Dependencies:              Dependencies{},
+		Resolvers:                 ModuleResolvers{},
+		PublicOptions:             PublicModuleOptions{},
+		ProtectedOptions:          ProtectedModuleOptions{},
+		EnableExperimentalModules: true,
+	})
+	if len(experimental.Public) != 5 {
+		t.Fatalf("experimental public module count = %d, want 5", len(experimental.Public))
+	}
+	if len(experimental.Protected) != 4 {
+		t.Fatalf("experimental protected module count = %d, want 4", len(experimental.Protected))
+	}
+	if len(experimental.Health) != 5 {
+		t.Fatalf("experimental health entry count = %d, want 5", len(experimental.Health))
+	}
+}
+
+func TestRegistryBuildMatchesCompatibilityWrappers(t *testing.T) {
+	t.Parallel()
+
+	deps := Dependencies{}
+	res := ModuleResolvers{}
+	publicOpts := PublicModuleOptions{}
+	protectedOpts := ProtectedModuleOptions{}
+
+	reg := NewRegistry()
+	built := reg.Build(BuildInput{
+		Dependencies:     deps,
+		Resolvers:        res,
+		PublicOptions:    publicOpts,
+		ProtectedOptions: protectedOpts,
+	})
+
+	wrappedPublic := DefaultPublicModules(deps, res, publicOpts)
+	wrappedProtected := DefaultProtectedModules(deps, res, protectedOpts)
+
+	assertModuleIDsEqual(t, built.Public, wrappedPublic, "public")
+	assertModuleIDsEqual(t, built.Protected, wrappedProtected, "protected")
+}
+
+func assertModuleIDsEqual(t *testing.T, got []Module, want []Module, label string) {
+	t.Helper()
+
+	if len(got) != len(want) {
+		t.Fatalf("%s module count = %d, want %d", label, len(got), len(want))
+	}
+	for i := range got {
+		if got[i].ID() != want[i].ID() {
+			t.Fatalf("%s module[%d] id = %q, want %q", label, i, got[i].ID(), want[i].ID())
+		}
 	}
 }
 

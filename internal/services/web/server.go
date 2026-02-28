@@ -10,9 +10,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
-	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
-	webapp "github.com/louisbranch/fracturing.space/internal/services/web/app"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/composition"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/observability"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
@@ -49,32 +47,18 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	session := newSessionResolver(deps.Principal.SessionClient)
 	viewer := newViewerResolver(deps.Principal.SocialClient, deps.Principal.NotificationClient, deps.Principal.AssetBaseURL, session.resolveRequestUserID)
 	lang := newLanguageResolver(deps.Principal.AccountClient, session.resolveRequestUserID)
-	resolvers := modules.ModuleResolvers{
-		ResolveViewer:   viewer.resolveViewer,
-		ResolveSignedIn: session.resolveRequestSignedIn,
-		ResolveUserID:   session.resolveRequestUserID,
-		ResolveLanguage: lang.resolveRequestLanguage,
-	}
-	publicModules := modules.DefaultPublicModules(deps.Modules, resolvers, modules.PublicModuleOptions{
-		RequestSchemePolicy: cfg.RequestSchemePolicy,
-	})
-	protectedOpts := modules.ProtectedModuleOptions{
-		ChatFallbackPort:    websupport.ResolveChatFallbackPort(cfg.ChatHTTPAddr),
-		RequestSchemePolicy: cfg.RequestSchemePolicy,
-	}
-	var protectedModules []modules.Module
-	if cfg.EnableExperimentalModules {
-		experimentalPublic := modules.ExperimentalPublicModules()
-		protectedModules = modules.ExperimentalProtectedModules(deps.Modules, resolvers, protectedOpts, append(publicModules, experimentalPublic...))
-		publicModules = append(publicModules, experimentalPublic...)
-	} else {
-		protectedModules = modules.DefaultProtectedModules(deps.Modules, resolvers, protectedOpts, publicModules)
-	}
-	h, err := webapp.Compose(webapp.ComposeInput{
-		AuthRequired:        session.authRequired(),
-		PublicModules:       publicModules,
-		ProtectedModules:    protectedModules,
-		RequestSchemePolicy: cfg.RequestSchemePolicy,
+	h, err := composition.ComposeAppHandler(composition.ComposeInput{
+		Principal: composition.PrincipalResolvers{
+			AuthRequired:    session.authRequired(),
+			ResolveViewer:   viewer.resolveViewer,
+			ResolveSignedIn: session.resolveRequestSignedIn,
+			ResolveUserID:   session.resolveRequestUserID,
+			ResolveLanguage: lang.resolveRequestLanguage,
+		},
+		ModuleDependencies:        deps.Modules,
+		EnableExperimentalModules: cfg.EnableExperimentalModules,
+		ChatHTTPAddr:              cfg.ChatHTTPAddr,
+		RequestSchemePolicy:       cfg.RequestSchemePolicy,
 	})
 	if err != nil {
 		return nil, err

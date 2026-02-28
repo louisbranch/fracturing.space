@@ -4,7 +4,7 @@ parent: "Architecture"
 nav_order: 16
 status: canonical
 owner: engineering
-last_reviewed: "2026-02-26"
+last_reviewed: "2026-02-28"
 ---
 
 # Web Architecture
@@ -30,10 +30,21 @@ Current implementation note:
 
 Current package layout is organized into four layers:
 
-- `internal/services/web/app/`: startup and composition root.
+- `internal/services/web/composition/`: module-set assembly contract and app
+  composition input wiring.
+- `internal/services/web/app/`: transport composition primitives
+  (mounting/auth wrappers/prefix validation).
 - `internal/services/web/platform/`: middleware and cross-cutting helpers.
-- `internal/services/web/modules/`: area modules (`public`, `campaigns`,
-  `settings`, etc.).
+- `internal/services/web/modules/`: area modules (`campaigns`, `dashboard`,
+  `discovery`, `notifications`, `profile`, `settings`).
+- `internal/services/web/modules/campaigns/app/`: campaigns domain contracts
+  and orchestration service logic.
+- `internal/services/web/modules/campaigns/gateway/`: campaigns gRPC adapter
+  mapping and client integrations.
+- `internal/services/web/modules/publicauth/`: shared unauthenticated auth flow
+  transport + service wiring.
+- `internal/services/web/modules/publicauth/surfaces/*`: explicit public/auth
+  route-owner modules (`shell`, `passkeys`, `authredirect`).
 - `internal/services/web/routepath/`: canonical route constants.
 
 ## Module Model
@@ -51,13 +62,16 @@ Composition mounts modules in two groups:
 Module registration also has stability tiers:
 
 - Stable defaults are mounted through `modules.DefaultPublicModules(deps, res)`
-  and `modules.DefaultProtectedModules(deps, res, opts)`.  The registry
+  and `modules.DefaultProtectedModules(deps, res, opts)`. The registry
   decomposes `modules.Dependencies` (gRPC clients) and `modules.ModuleResolvers`
   (request-scoped resolver functions derived from the principal resolver) into
   per-module constructor arguments so individual modules receive only the narrow
   dependencies they need. Each client field is typed as the narrow interface
   defined by the consuming module, so modules physically cannot access clients
   they were not given.
+- Runtime composition uses `modules.Registry.Build(modules.BuildInput)` to
+  produce both public/protected module sets and derived service health metadata
+  from a single contract.
 - Runtime startup wiring derives both principal and module inputs from a single
   `web.DependencyBundle`.
 - Incomplete/scaffold surfaces stay opt-in through
@@ -94,7 +108,9 @@ This keeps route ownership explicit and avoids framework lock-in.
 
 ## Boundary Rules
 
-- Modules must not import sibling modules.
+- Modules must not import sibling modules. Module-local subpackages are allowed
+  when they stay inside one area boundary (for example
+  `modules/campaigns/app` and `modules/campaigns/gateway`).
 - Cross-cutting code belongs in `platform/*`.
 - Path constants belong in `routepath` and nowhere else.
 - Module composition prefixes must be canonical (`/` prefix and `/` suffix), and non-canonical prefixes are rejected at compose time.
@@ -114,8 +130,14 @@ This keeps route ownership explicit and avoids framework lock-in.
 - Route-level method rejections should use `platform/httpx.MethodNotAllowed` so
   `405` responses keep consistent `Allow` headers.
 - App composition may wire modules, but not contain feature logic.
+- `composition.ComposeAppHandler` is the runtime boundary that converts
+  principal resolvers + module dependencies into `app.ComposeInput`; avoid
+  duplicating this wiring in `server.NewHandler`.
 - Campaign/settings service gateways are composition-owned wiring; modules
   receive pre-built gateways through constructors, not raw client bags.
+- Campaigns root package (`modules/campaigns`) is transport-only
+  (module mount/routes/handlers/view mapping). Domain orchestration lives in
+  `modules/campaigns/app`; gRPC mapping lives in `modules/campaigns/gateway`.
 - User-scoped gateways/services should accept explicit `userID` parameters;
   avoid hidden transport-metadata extraction inside gateway internals.
 - Session cookie and same-origin request proofs are shared platform primitives
@@ -172,6 +194,8 @@ Architecture guardrails live in tests:
 - Auth wrapping checks for protected module mounts.
 - Composition-owned gateway wiring checks for campaigns/settings mount methods.
 - Stable vs experimental registry behavior checks.
+- Registry build contract checks (stable vs experimental module sets and health
+  metadata).
 - Shared redirect/method helper checks for HTMX and non-HTMX behavior parity.
 - Routepath constant contract checks for module registration patterns.
 - Explicit user-id boundary checks for settings gateway/service contracts.

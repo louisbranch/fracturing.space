@@ -334,7 +334,7 @@ func TestWriteCampaignHTMLHandlesRenderFailure(t *testing.T) {
 func TestGRPCGatewayCampaignNameReturnsEmptyWhenCampaignMissing(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{client: fakeCampaignClient{getResp: &statev1.GetCampaignResponse{Campaign: nil}}}
+	g := grpcGateway{Client: fakeCampaignClient{getResp: &statev1.GetCampaignResponse{Campaign: nil}}}
 	name, err := g.CampaignName(context.Background(), "camp-1")
 	if err != nil {
 		t.Fatalf("CampaignName() error = %v", err)
@@ -347,7 +347,7 @@ func TestGRPCGatewayCampaignNameReturnsEmptyWhenCampaignMissing(t *testing.T) {
 func TestGRPCGatewayCreateCampaignRejectsEmptyCampaignID(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{client: fakeCampaignClient{createResp: &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{}}}}
+	g := grpcGateway{Client: fakeCampaignClient{createResp: &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{}}}}
 	_, err := g.CreateCampaign(context.Background(), CreateCampaignInput{Name: "New", System: GameSystemDaggerheart, GMMode: GmModeHuman})
 	if err == nil {
 		t.Fatalf("expected empty campaign id error")
@@ -396,7 +396,7 @@ func TestGRPCGatewayMutationMethodsReturnUnavailable(t *testing.T) {
 func TestGRPCGatewayCampaignSessionsMapsSessionRows(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{sessionClient: fakeSessionClient{response: &statev1.ListSessionsResponse{Sessions: []*statev1.Session{{
+	g := grpcGateway{SessionClient: fakeSessionClient{response: &statev1.ListSessionsResponse{Sessions: []*statev1.Session{{
 		Id:         "s1",
 		CampaignId: "c1",
 		Name:       "First Light",
@@ -422,7 +422,7 @@ func TestGRPCGatewayCampaignSessionsMapsSessionRows(t *testing.T) {
 func TestGRPCGatewayCampaignInvitesMapsInviteRows(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{inviteClient: fakeInviteClient{response: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
+	g := grpcGateway{InviteClient: fakeInviteClient{response: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
 		Id:              "inv-1",
 		CampaignId:      "c1",
 		ParticipantId:   "p1",

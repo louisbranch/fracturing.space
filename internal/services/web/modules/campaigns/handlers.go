@@ -39,7 +39,7 @@ type handlers struct {
 	nowFunc          func() time.Time
 }
 
-func newHandlers(s service, base modulehandler.Base, chatFallbackPort string) handlers {
+func newHandlers(s campaignService, base modulehandler.Base, chatFallbackPort string) handlers {
 	return handlers{
 		Base:             base,
 		service:          s,

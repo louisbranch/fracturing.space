@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/module"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -37,11 +38,7 @@ func (Module) ID() string { return "campaigns" }
 
 // Healthy reports whether the campaigns module has an operational gateway.
 func (m Module) Healthy() bool {
-	if m.gateway == nil {
-		return false
-	}
-	_, unavailable := m.gateway.(unavailableGateway)
-	return !unavailable
+	return campaignapp.IsGatewayHealthy(m.gateway)
 }
 
 // Mount wires campaign route handlers.
