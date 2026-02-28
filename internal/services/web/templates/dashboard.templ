@@ -42,7 +42,7 @@ templ DashboardFragment(view DashboardPageView, loc Localizer) {
 					<h2 class="card-title">{ T(loc, "web.dashboard.campaign_adventure.title") }</h2>
 					<p class="text-sm opacity-80">{ T(loc, "web.dashboard.campaign_adventure.body") }</p>
 					<div class="card-actions justify-end">
-						<a href={ routepath.AppCampaignsCreate } hx-get={ routepath.AppCampaignsCreate } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary">{ T(loc, "web.dashboard.campaign_adventure.cta") }</a>
+						<a href={ routepath.AppCampaignsNew } hx-get={ routepath.AppCampaignsNew } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary">{ T(loc, "web.dashboard.campaign_adventure.cta") }</a>
 					</div>
 				</div>
 			</section>

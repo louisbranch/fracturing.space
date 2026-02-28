@@ -23,6 +23,9 @@ func TestTopLevelRouteConstants(t *testing.T) {
 	if DashboardPrefix != "/app/dashboard/" {
 		t.Fatalf("DashboardPrefix = %q", DashboardPrefix)
 	}
+	if AppCampaignsNew != "/app/campaigns/new" {
+		t.Fatalf("AppCampaignsNew = %q", AppCampaignsNew)
+	}
 	if UserProfilePrefix != "/u/" {
 		t.Fatalf("UserProfilePrefix = %q", UserProfilePrefix)
 	}

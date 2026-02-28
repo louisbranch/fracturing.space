@@ -53,7 +53,17 @@ func campaignsListHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader
 		Title: webtemplates.T(loc, "game.campaigns.title"),
 		Action: &webtemplates.AppMainHeaderAction{
 			Label: webtemplates.T(loc, "game.campaigns.start_new"),
-			URL:   routepath.AppCampaignsCreate,
+			URL:   routepath.AppCampaignsNew,
+		},
+	}
+}
+
+func campaignStartHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader {
+	return &webtemplates.AppMainHeader{
+		Title: webtemplates.T(loc, "game.campaigns.new.title"),
+		Breadcrumbs: []sharedtemplates.BreadcrumbItem{
+			{Label: webtemplates.T(loc, "game.campaigns.title"), URL: routepath.AppCampaigns},
+			{Label: webtemplates.T(loc, "game.campaigns.new.title")},
 		},
 	}
 }
@@ -348,6 +358,18 @@ func (h handlers) handleInviteRevokeRoute(w http.ResponseWriter, r *http.Request
 
 func (h handlers) handleNotFound(w http.ResponseWriter, r *http.Request) {
 	weberror.WriteAppError(w, r, http.StatusNotFound, h.deps.moduleDependencies())
+}
+
+func (h handlers) handleStartNewCampaign(w http.ResponseWriter, r *http.Request) {
+	loc, _ := h.pageLocalizer(w, r)
+	h.writeCampaignHTML(
+		w,
+		r,
+		webtemplates.T(loc, "game.campaigns.new.title"),
+		campaignStartHeader(loc),
+		webtemplates.AppMainLayoutOptions{},
+		webtemplates.CampaignStartFragment(loc),
+	)
 }
 
 func (h handlers) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {

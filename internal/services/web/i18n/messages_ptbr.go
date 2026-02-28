@@ -341,6 +341,15 @@ func init() {
 	message.SetString(lang, "game.campaign.menu.overview", "Visão geral")
 	message.SetString(lang, "game.campaign.overview.theme_empty", "Sem tema definido")
 	message.SetString(lang, "game.campaign.overview.label_campaign_id", "ID da campanha")
+	message.SetString(lang, "game.campaigns.new.title", "Nova campanha")
+	message.SetString(lang, "game.campaigns.new.browse.title", "Explorar campanhas iniciais")
+	message.SetString(lang, "game.campaigns.new.browse.description", "Escolha entre uma seleção curada de campanhas prontas para começar a jogar rapidamente.")
+	message.SetString(lang, "game.campaigns.new.browse.action", "Explorar campanhas iniciais")
+	message.SetString(lang, "game.campaigns.new.browse.disabled", "Em breve")
+	message.SetString(lang, "game.campaigns.new.divider_or", "ou")
+	message.SetString(lang, "game.campaigns.new.scratch.title", "Começar do zero")
+	message.SetString(lang, "game.campaigns.new.scratch.description", "Defina cada detalhe por conta própria e tenha controle total da sua experiência de campanha.")
+	message.SetString(lang, "game.campaigns.new.scratch.action", "Nova campanha")
 
 	// Campaign create page
 	message.SetString(lang, "game.create.title", "Criar campanha")

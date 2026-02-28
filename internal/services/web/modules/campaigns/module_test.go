@@ -417,7 +417,7 @@ func TestMountServesCampaignsGetWithEmptyList(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`<h1 class="mb-0">Campaigns</h1>`,
-		`href="/app/campaigns/create"`,
+		`href="/app/campaigns/new"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing marker %q: %q", marker, body)
@@ -1065,7 +1065,7 @@ func TestMountUsesWebLayoutForNonHTMX(t *testing.T) {
 	}
 }
 
-func TestMountCampaignsPageRendersHeadingWithCreateLink(t *testing.T) {
+func TestMountCampaignsPageRendersHeadingWithStartLink(t *testing.T) {
 	t.Parallel()
 
 	m := NewWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}})
@@ -1082,7 +1082,7 @@ func TestMountCampaignsPageRendersHeadingWithCreateLink(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`<h1 class="mb-0">Campaigns</h1>`,
-		`href="/app/campaigns/create"`,
+		`href="/app/campaigns/new"`,
 		`>Start a new Campaign</a>`,
 		`data-campaign-id="c1"`,
 	} {
@@ -1114,7 +1114,7 @@ func TestMountCampaignsPageOmitsBreadcrumbsAtRoot(t *testing.T) {
 	}
 }
 
-func TestMountCampaignsHTMXRendersHeadingWithCreateLink(t *testing.T) {
+func TestMountCampaignsHTMXRendersHeadingWithStartLink(t *testing.T) {
 	t.Parallel()
 
 	m := NewWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}})
@@ -1132,7 +1132,7 @@ func TestMountCampaignsHTMXRendersHeadingWithCreateLink(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`<h1 class="mb-0">Campaigns</h1>`,
-		`href="/app/campaigns/create"`,
+		`href="/app/campaigns/new"`,
 		`data-campaign-id="c1"`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -1142,6 +1142,36 @@ func TestMountCampaignsHTMXRendersHeadingWithCreateLink(t *testing.T) {
 	// Invariant: HTMX requests must return a fragment, not a full HTML document envelope.
 	if strings.Contains(strings.ToLower(body), "<!doctype html") || strings.Contains(strings.ToLower(body), "<html") {
 		t.Fatalf("expected htmx fragment body without document wrapper")
+	}
+}
+
+func TestMountCampaignStartNewGetRendersChoiceCards(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}})
+	mount, err := m.Mount(module.Dependencies{})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignsNew, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`<h1 class="mb-0">New Campaign</h1>`,
+		`data-campaign-start-option="browse"`,
+		`data-campaign-start-divider="or"`,
+		`class="divider lg:divider-horizontal`,
+		`disabled aria-disabled="true"`,
+		`data-campaign-start-option="scratch"`,
+		`href="/app/campaigns/create"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing start-choice marker %q: %q", marker, body)
+		}
 	}
 }
 
