@@ -7,6 +7,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -33,7 +34,7 @@ func CharacterCreateHandler(client statev1.CharacterServiceClient, getContext fu
 			Name:       input.Name,
 			Kind:       characterKindFromString(input.Kind),
 			Notes:      input.Notes,
-			Pronouns:   input.Pronouns,
+			Pronouns:   sharedpronouns.ToProto(input.Pronouns),
 			Aliases:    append([]string(nil), input.Aliases...),
 		}
 
@@ -51,7 +52,7 @@ func CharacterCreateHandler(client statev1.CharacterServiceClient, getContext fu
 			Name:       response.Character.GetName(),
 			Kind:       characterKindToString(response.Character.GetKind()),
 			Notes:      response.Character.GetNotes(),
-			Pronouns:   response.Character.GetPronouns(),
+			Pronouns:   sharedpronouns.FromProto(response.Character.GetPronouns()),
 			Aliases:    mcpAliases(response.Character.GetAliases()),
 			CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
@@ -107,8 +108,8 @@ func CharacterUpdateHandler(client statev1.CharacterServiceClient, getContext fu
 		if input.Notes != nil {
 			req.Notes = wrapperspb.String(*input.Notes)
 		}
-		if input.Pronouns != nil {
-			req.Pronouns = wrapperspb.String(*input.Pronouns)
+		if pronouns, provided := pronounsUpdateField(input.Pronouns); provided {
+			req.Pronouns = pronouns
 		}
 		if input.Aliases != nil {
 			req.Aliases = mcpAliases(*input.Aliases)
@@ -132,7 +133,7 @@ func CharacterUpdateHandler(client statev1.CharacterServiceClient, getContext fu
 			Name:       response.Character.GetName(),
 			Kind:       characterKindToString(response.Character.GetKind()),
 			Notes:      response.Character.GetNotes(),
-			Pronouns:   response.Character.GetPronouns(),
+			Pronouns:   sharedpronouns.FromProto(response.Character.GetPronouns()),
 			Aliases:    mcpAliases(response.Character.GetAliases()),
 			CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
@@ -190,7 +191,7 @@ func CharacterDeleteHandler(client statev1.CharacterServiceClient, getContext fu
 			Name:       response.Character.GetName(),
 			Kind:       characterKindToString(response.Character.GetKind()),
 			Notes:      response.Character.GetNotes(),
-			Pronouns:   response.Character.GetPronouns(),
+			Pronouns:   sharedpronouns.FromProto(response.Character.GetPronouns()),
 			Aliases:    mcpAliases(response.Character.GetAliases()),
 			CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),
@@ -321,7 +322,7 @@ func CharacterSheetGetHandler(client statev1.CharacterServiceClient, getContext 
 				Name:       response.Character.GetName(),
 				Kind:       characterKindToString(response.Character.GetKind()),
 				Notes:      response.Character.GetNotes(),
-				Pronouns:   response.Character.GetPronouns(),
+				Pronouns:   sharedpronouns.FromProto(response.Character.GetPronouns()),
 				Aliases:    mcpAliases(response.Character.GetAliases()),
 				CreatedAt:  formatTimestamp(response.Character.GetCreatedAt()),
 				UpdatedAt:  formatTimestamp(response.Character.GetUpdatedAt()),

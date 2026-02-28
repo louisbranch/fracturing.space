@@ -123,6 +123,7 @@ type AppSideMenuItem struct {
 	MatchPrefix string
 	MatchExact  bool
 	IconID      commonv1.IconId
+	Badge       string
 }
 
 type AppSideMenu struct {
@@ -234,6 +235,10 @@ func appSideMenuLinkClass(menu *AppSideMenu, item AppSideMenuItem) string {
 
 func appSideMenuItemIconID(item AppSideMenuItem) commonv1.IconId {
 	return item.IconID
+}
+
+func appSideMenuItemBadge(item AppSideMenuItem) string {
+	return strings.TrimSpace(item.Badge)
 }
 
 func appMainHeaderTitle(header *AppMainHeader) string {
@@ -353,6 +358,9 @@ templ AppSideMenuComponent(menu *AppSideMenu) {
 								@sharedtemplates.LucideIconID(appSideMenuItemIconID(item), "size-4 me-2")
 							}
 							{ appSideMenuItemLabel(item) }
+							if appSideMenuItemBadge(item) != "" {
+								<div class="badge badge-sm badge-soft badge-primary">{ appSideMenuItemBadge(item) }</div>
+							}
 						</a>
 					</li>
 				}

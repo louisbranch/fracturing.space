@@ -100,6 +100,7 @@ type fakeParticipantClient struct {
 	createErr  error
 	updateResp *statev1.UpdateParticipantResponse
 	updateErr  error
+	lastUpdate *statev1.UpdateParticipantRequest
 	deleteResp *statev1.DeleteParticipantResponse
 	deleteErr  error
 	listResp   *statev1.ListParticipantsResponse
@@ -112,7 +113,8 @@ func (f *fakeParticipantClient) CreateParticipant(_ context.Context, _ *statev1.
 	return f.createResp, f.createErr
 }
 
-func (f *fakeParticipantClient) UpdateParticipant(_ context.Context, _ *statev1.UpdateParticipantRequest, _ ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
+func (f *fakeParticipantClient) UpdateParticipant(_ context.Context, req *statev1.UpdateParticipantRequest, _ ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
+	f.lastUpdate = req
 	return f.updateResp, f.updateErr
 }
 
@@ -138,6 +140,7 @@ type fakeCharacterClient struct {
 	updateResp   *statev1.UpdateCharacterResponse
 	updateErr    error
 	updateCtx    context.Context
+	lastUpdate   *statev1.UpdateCharacterRequest
 	deleteResp   *statev1.DeleteCharacterResponse
 	deleteErr    error
 	deleteCtx    context.Context
@@ -161,8 +164,9 @@ func (f *fakeCharacterClient) CreateCharacter(ctx context.Context, _ *statev1.Cr
 	return f.createResp, f.createErr
 }
 
-func (f *fakeCharacterClient) UpdateCharacter(ctx context.Context, _ *statev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+func (f *fakeCharacterClient) UpdateCharacter(ctx context.Context, req *statev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
 	f.updateCtx = ctx
+	f.lastUpdate = req
 	return f.updateResp, f.updateErr
 }
 

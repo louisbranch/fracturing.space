@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -15,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -360,7 +362,7 @@ func TestCreateParticipant_UserLinkedRequestFieldsTakePrecedenceOverSocial(t *te
 	socialClient := &fakeSocialClient{profile: &socialv1.UserProfile{
 		UserId:        "user-123",
 		Name:          "Social Name",
-		Pronouns:      "social-pronouns",
+		Pronouns:      sharedpronouns.ToProto("social-pronouns"),
 		AvatarSetId:   "creatures-v1",
 		AvatarAssetId: "social-avatar",
 	}}
@@ -385,7 +387,7 @@ func TestCreateParticipant_UserLinkedRequestFieldsTakePrecedenceOverSocial(t *te
 		Controller:    statev1.Controller_CONTROLLER_HUMAN,
 		AvatarSetId:   "people-v1",
 		AvatarAssetId: "request-avatar",
-		Pronouns:      "request-pronouns",
+		Pronouns:      sharedpronouns.ToProto("request-pronouns"),
 	})
 	if err != nil {
 		t.Fatalf("CreateParticipant returned error: %v", err)
@@ -442,7 +444,7 @@ func TestCreateParticipant_UserLinkedMissingFieldsHydrateFromSocial(t *testing.T
 	socialClient := &fakeSocialClient{profile: &socialv1.UserProfile{
 		UserId:        "user-123",
 		Name:          "Social Name",
-		Pronouns:      "social-pronouns",
+		Pronouns:      sharedpronouns.ToProto("social-pronouns"),
 		AvatarSetId:   "creatures-v1",
 		AvatarAssetId: "social-avatar",
 	}}
@@ -487,7 +489,7 @@ func TestCreateParticipant_UserLinkedMissingFieldsHydrateFromSocial(t *testing.T
 	}
 }
 
-func TestCreateParticipant_UserLinkedMissingNameFallsBackToUserID(t *testing.T) {
+func TestCreateParticipant_UserLinkedMissingNameFallsBackToMysteriousPerson(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
@@ -507,7 +509,7 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToUserID(t *testing.T) 
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"user-123","role":"player","controller":"human","campaign_access":"member"}`),
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Mysterious Person","role":"player","controller":"human","campaign_access":"member"}`),
 			}),
 		},
 	}}
@@ -537,8 +539,8 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToUserID(t *testing.T) 
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
-	if payload.Name != "user-123" {
-		t.Fatalf("payload name = %q, want %q", payload.Name, "user-123")
+	if payload.Name != "Mysterious Person" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "Mysterious Person")
 	}
 	if payload.AvatarSetID != "" {
 		t.Fatalf("payload avatar_set_id = %q, want empty", payload.AvatarSetID)
@@ -546,8 +548,141 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToUserID(t *testing.T) 
 	if payload.AvatarAssetID != "" {
 		t.Fatalf("payload avatar_asset_id = %q, want empty", payload.AvatarAssetID)
 	}
-	if payload.Pronouns != "" {
-		t.Fatalf("payload pronouns = %q, want empty", payload.Pronouns)
+	if payload.Pronouns != "they/them" {
+		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	}
+}
+
+func TestCreateParticipant_UserLinkedMissingPronounsFallsBackToTheyThem(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Player One","role":"player","controller":"human","campaign_access":"member","pronouns":"they/them"}`),
+			}),
+		},
+	}}
+	socialClient := &fakeSocialClient{profile: &socialv1.UserProfile{
+		UserId:        "user-123",
+		AvatarSetId:   "creatures-v1",
+		AvatarAssetId: "social-avatar",
+	}}
+
+	svc := &ParticipantService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Event:       eventStore,
+			Domain:      domain,
+			Social:      socialClient,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("participant-123"),
+	}
+
+	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		UserId:     "user-123",
+		Name:       "Player One",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+
+	var payload participant.JoinPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.Pronouns != "they/them" {
+		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	}
+	if payload.Name != "Player One" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "Player One")
+	}
+	if payload.AvatarSetID != "creatures-v1" {
+		t.Fatalf("payload avatar_set_id = %q, want %q", payload.AvatarSetID, "creatures-v1")
+	}
+	if payload.AvatarAssetID != "social-avatar" {
+		t.Fatalf("payload avatar_asset_id = %q, want %q", payload.AvatarAssetID, "social-avatar")
+	}
+}
+
+func TestCreateParticipant_UserLinkedMissingNameFallsBackToLocalizedNameForLocale(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+		Locale: commonv1.Locale_LOCALE_PT_BR,
+	}
+
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Pessoa Misteriosa","role":"player","controller":"human","campaign_access":"member"}`),
+			}),
+		},
+	}}
+
+	svc := &ParticipantService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("participant-123"),
+	}
+
+	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		UserId:     "user-123",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+
+	var payload participant.JoinPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.Name != "Pessoa Misteriosa" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "Pessoa Misteriosa")
+	}
+	if payload.Pronouns != "they/them" {
+		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
 	}
 }
 

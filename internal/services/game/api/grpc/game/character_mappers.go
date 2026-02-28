@@ -6,6 +6,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -20,7 +21,7 @@ func characterToProto(ch storage.CharacterRecord) *campaignv1.Character {
 		Notes:         ch.Notes,
 		AvatarSetId:   ch.AvatarSetID,
 		AvatarAssetId: ch.AvatarAssetID,
-		Pronouns:      ch.Pronouns,
+		Pronouns:      sharedpronouns.ToProto(ch.Pronouns),
 		Aliases:       append([]string(nil), ch.Aliases...),
 		CreatedAt:     timestamppb.New(ch.CreatedAt),
 		UpdatedAt:     timestamppb.New(ch.UpdatedAt),

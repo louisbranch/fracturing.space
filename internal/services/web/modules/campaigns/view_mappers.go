@@ -2,6 +2,7 @@ package campaigns
 
 import (
 	"strings"
+	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -9,10 +10,18 @@ import (
 )
 
 // campaignWorkspaceMenu builds the side navigation menu for a campaign workspace page.
-func campaignWorkspaceMenu(campaignID string, currentPath string, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
-	campaignID = strings.TrimSpace(campaignID)
+func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
+	campaignID := strings.TrimSpace(workspace.ID)
 	if campaignID == "" {
 		return nil
+	}
+	participantCount := strings.TrimSpace(workspace.ParticipantCount)
+	if participantCount == "" {
+		participantCount = "0"
+	}
+	characterCount := strings.TrimSpace(workspace.CharacterCount)
+	if characterCount == "" {
+		characterCount = "0"
 	}
 	overviewURL := routepath.AppCampaign(campaignID)
 	participantsURL := routepath.AppCampaignParticipants(campaignID)
@@ -31,12 +40,14 @@ func campaignWorkspaceMenu(campaignID string, currentPath string, loc webtemplat
 				Label:       webtemplates.T(loc, "game.participants.title"),
 				URL:         participantsURL,
 				MatchPrefix: participantsURL,
+				Badge:       participantCount,
 				IconID:      commonv1.IconId_ICON_ID_PARTICIPANT,
 			},
 			{
 				Label:       webtemplates.T(loc, "game.characters.title"),
 				URL:         charactersURL,
 				MatchPrefix: charactersURL,
+				Badge:       characterCount,
 				IconID:      commonv1.IconId_ICON_ID_CHARACTER,
 			},
 		},
@@ -44,7 +55,7 @@ func campaignWorkspaceMenu(campaignID string, currentPath string, loc webtemplat
 }
 
 // mapCampaignListItems converts domain summaries to template list items.
-func mapCampaignListItems(items []CampaignSummary) []webtemplates.CampaignListItem {
+func mapCampaignListItems(items []CampaignSummary, now time.Time, loc webtemplates.Localizer) []webtemplates.CampaignListItem {
 	result := make([]webtemplates.CampaignListItem, 0, len(items))
 	for _, item := range items {
 		result = append(result, webtemplates.CampaignListItem{
@@ -54,9 +65,58 @@ func mapCampaignListItems(items []CampaignSummary) []webtemplates.CampaignListIt
 			CoverImageURL:    item.CoverImageURL,
 			ParticipantCount: item.ParticipantCount,
 			CharacterCount:   item.CharacterCount,
+			UpdatedAt:        campaignListItemUpdatedAt(item.UpdatedAtUnixNano, now, loc),
 		})
 	}
 	return result
+}
+
+func campaignListItemUpdatedAt(updatedAtUnixNano int64, now time.Time, loc webtemplates.Localizer) string {
+	if now.IsZero() {
+		now = time.Now().UTC()
+	} else {
+		now = now.UTC()
+	}
+	updatedAt := time.Unix(0, updatedAtUnixNano).UTC()
+	if updatedAtUnixNano <= 0 {
+		return webtemplates.T(loc, "game.campaigns.updated_at", webtemplates.T(loc, "game.notifications.time.just_now"))
+	}
+	if updatedAt.IsZero() {
+		return webtemplates.T(loc, "game.campaigns.updated_at", webtemplates.T(loc, "game.notifications.time.just_now"))
+	}
+
+	delta := now.Sub(updatedAt)
+	if delta < 0 {
+		delta = 0
+	}
+
+	var updatedLabel string
+	switch {
+	case delta < time.Minute:
+		updatedLabel = webtemplates.T(loc, "game.notifications.time.just_now")
+	case delta < time.Hour:
+		minutes := int(delta / time.Minute)
+		if minutes <= 1 {
+			updatedLabel = webtemplates.T(loc, "game.notifications.time.minute_ago")
+		} else {
+			updatedLabel = webtemplates.T(loc, "game.notifications.time.minutes_ago", minutes)
+		}
+	case delta < 24*time.Hour:
+		hours := int(delta / time.Hour)
+		if hours <= 1 {
+			updatedLabel = webtemplates.T(loc, "game.notifications.time.hour_ago")
+		} else {
+			updatedLabel = webtemplates.T(loc, "game.notifications.time.hours_ago", hours)
+		}
+	default:
+		days := int(delta / (24 * time.Hour))
+		if days <= 1 {
+			updatedLabel = webtemplates.T(loc, "game.notifications.time.day_ago")
+		} else {
+			updatedLabel = webtemplates.T(loc, "game.notifications.time.days_ago", days)
+		}
+	}
+	return webtemplates.T(loc, "game.campaigns.updated_at", updatedLabel)
 }
 
 // mapParticipantsView converts domain participants to template view items.

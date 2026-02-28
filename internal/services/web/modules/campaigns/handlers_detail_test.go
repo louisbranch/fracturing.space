@@ -411,11 +411,16 @@ func TestMountCampaignOverviewRendersWorkspaceDetailsAndMenu(t *testing.T) {
 		`class="menu bg-base-200 rounded-box w-full"`,
 		`href="/app/campaigns/c1"`,
 		`hx-get="/app/campaigns/c1"`,
-		`>Overview</a>`,
+		`>Overview`,
 		`data-campaign-overview-name="The Guildhouse"`,
+		`data-campaign-overview-campaign-id="c1"`,
 		`data-campaign-overview-theme="Stormbound intrigue"`,
-		`data-campaign-overview-system=`,
-		`data-campaign-overview-gm-mode=`,
+		`data-campaign-overview-system="Daggerheart"`,
+		`data-campaign-overview-gm-mode="Human"`,
+		`data-campaign-overview-status="Active"`,
+		`data-campaign-overview-locale="English (US)"`,
+		`data-campaign-overview-intent="Standard"`,
+		`data-campaign-overview-access-policy="Public"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing campaign workspace marker %q: %q", marker, body)
@@ -449,9 +454,10 @@ func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 
 	m := NewStableWithGateway(fakeGateway{
 		items: []CampaignSummary{{
-			ID:            "c1",
-			Name:          "The Guildhouse",
-			CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
+			ID:               "c1",
+			Name:             "The Guildhouse",
+			ParticipantCount: "2",
+			CoverImageURL:    "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
 		participants: []CampaignParticipant{
 			{
@@ -498,6 +504,13 @@ func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 			t.Fatalf("body missing participants gallery marker %q: %q", marker, body)
 		}
 	}
+	sideMenuParticipants := strings.Index(body, `href="/app/campaigns/c1/participants"`)
+	if sideMenuParticipants == -1 {
+		t.Fatalf("expected participants side-menu item in output: %q", body)
+	}
+	if !strings.Contains(body[sideMenuParticipants:], `class="badge badge-sm badge-soft badge-primary">2</div>`) {
+		t.Fatalf("expected participants count badge in side-menu: %q", body)
+	}
 	ariaIdx := strings.Index(body, `data-campaign-participant-card-id="p-a"`)
 	zaraIdx := strings.Index(body, `data-campaign-participant-card-id="p-z"`)
 	if ariaIdx == -1 || zaraIdx == -1 {
@@ -528,9 +541,10 @@ func TestMountCampaignParticipantsFailsWhenGatewayReturnsError(t *testing.T) {
 
 	m := NewStableWithGateway(fakeGateway{
 		items: []CampaignSummary{{
-			ID:            "c1",
-			Name:          "The Guildhouse",
-			CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
+			ID:             "c1",
+			Name:           "The Guildhouse",
+			CharacterCount: "2",
+			CoverImageURL:  "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
 		participantsErr: apperrors.E(apperrors.KindUnavailable, "participants unavailable"),
 	}, modulehandler.NewTestBase(), "", nil)
@@ -571,9 +585,10 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 
 	m := NewStableWithGateway(fakeGateway{
 		items: []CampaignSummary{{
-			ID:            "c1",
-			Name:          "The Guildhouse",
-			CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
+			ID:             "c1",
+			Name:           "The Guildhouse",
+			CharacterCount: "2",
+			CoverImageURL:  "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
 		characters: []CampaignCharacter{
 			{
@@ -624,6 +639,13 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing characters gallery marker %q: %q", marker, body)
 		}
+	}
+	sideMenuCharacters := strings.Index(body, `href="/app/campaigns/c1/characters"`)
+	if sideMenuCharacters == -1 {
+		t.Fatalf("expected characters side-menu item in output: %q", body)
+	}
+	if !strings.Contains(body[sideMenuCharacters:], `class="badge badge-sm badge-soft badge-primary">2</div>`) {
+		t.Fatalf("expected characters count badge in side-menu: %q", body)
 	}
 	ariaIdx := strings.Index(body, `data-campaign-character-card-id="ch-a"`)
 	zaraIdx := strings.Index(body, `data-campaign-character-card-id="ch-z"`)
@@ -855,7 +877,7 @@ func TestMountCampaignRoutesRenderWorkspaceOverviewMenu(t *testing.T) {
 				`class="menu bg-base-200 rounded-box w-full"`,
 				`href="/app/campaigns/c1"`,
 				`hx-get="/app/campaigns/c1"`,
-				`>Overview</a>`,
+				`>Overview </a>`,
 			} {
 				if !strings.Contains(body, marker) {
 					t.Fatalf("path %q body missing campaign menu marker %q: %q", path, marker, body)

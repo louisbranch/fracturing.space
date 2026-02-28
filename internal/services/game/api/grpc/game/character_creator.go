@@ -17,7 +17,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -74,6 +76,13 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		avatarSetID = assetcatalog.AvatarSetBlankV1
 		avatarAssetID = ""
 	}
+	defaultParticipantID := ""
+	switch {
+	case policyActor.Role == participant.RolePlayer && kind == character.KindPC:
+		defaultParticipantID = strings.TrimSpace(policyActor.ID)
+	case policyActor.Role == participant.RoleGM && kind == character.KindNPC:
+		defaultParticipantID = strings.TrimSpace(policyActor.ID)
+	}
 
 	applier := c.stores.Applier()
 	if c.stores.Domain == nil {
@@ -87,7 +96,8 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		Notes:              notes,
 		AvatarSetID:        avatarSetID,
 		AvatarAssetID:      avatarAssetID,
-		Pronouns:           strings.TrimSpace(in.GetPronouns()),
+		ParticipantID:      defaultParticipantID,
+		Pronouns:           sharedpronouns.FromProto(in.GetPronouns()),
 		Aliases:            append([]string(nil), in.GetAliases()...),
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -313,9 +323,8 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		fields["avatar_asset_id"] = trimmed
 	}
 	if pronouns := in.GetPronouns(); pronouns != nil {
-		trimmed := strings.TrimSpace(pronouns.GetValue())
-		ch.Pronouns = trimmed
-		fields["pronouns"] = trimmed
+		ch.Pronouns = sharedpronouns.FromProto(pronouns)
+		fields["pronouns"] = ch.Pronouns
 	}
 	if in.Aliases != nil {
 		aliasesJSON, err := json.Marshal(in.GetAliases())

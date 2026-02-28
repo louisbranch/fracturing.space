@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -56,7 +57,7 @@ func ParticipantListResourceHandler(client statev1.ParticipantServiceClient) mcp
 				Name:       participant.GetName(),
 				Role:       participantRoleToString(participant.GetRole()),
 				Controller: controllerToString(participant.GetController()),
-				Pronouns:   participant.GetPronouns(),
+				Pronouns:   sharedpronouns.FromProto(participant.GetPronouns()),
 				CreatedAt:  formatTimestamp(participant.GetCreatedAt()),
 				UpdatedAt:  formatTimestamp(participant.GetUpdatedAt()),
 			})
@@ -130,7 +131,7 @@ func CharacterListResourceHandler(client statev1.CharacterServiceClient) mcp.Res
 				Name:       character.GetName(),
 				Kind:       characterKindToString(character.GetKind()),
 				Notes:      character.GetNotes(),
-				Pronouns:   character.GetPronouns(),
+				Pronouns:   sharedpronouns.FromProto(character.GetPronouns()),
 				Aliases:    mcpAliases(character.GetAliases()),
 				CreatedAt:  formatTimestamp(character.GetCreatedAt()),
 				UpdatedAt:  formatTimestamp(character.GetUpdatedAt()),

@@ -5,6 +5,7 @@ package game.v1;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "systems/daggerheart/v1/state.proto";
+import "common/v1/pronoun.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
 
@@ -15,7 +16,7 @@ message Character {
   google.protobuf.StringValue participant_id = 3;
   string name = 4;
   repeated string aliases = 5;
-  string pronouns = 6;
+  common.v1.Pronouns pronouns = 6;
   CharacterKind kind = 7;
   string notes = 8;
   string avatar_set_id = 9;
@@ -91,7 +92,7 @@ message CreateCharacterRequest {
   repeated string aliases = 3;
 
   // Optional free-form character pronouns.
-  string pronouns = 4;
+  common.v1.Pronouns pronouns = 4;
 
   // The kind of character (PC or NPC).
   CharacterKind kind = 5;
@@ -124,7 +125,7 @@ message UpdateCharacterRequest {
   repeated string aliases = 4;
 
   // Optional updated character pronouns.
-  google.protobuf.StringValue pronouns = 5;
+  common.v1.Pronouns pronouns = 5;
 
   // Optional updated kind.
   CharacterKind kind = 6;

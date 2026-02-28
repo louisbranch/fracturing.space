@@ -46,6 +46,7 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event, pay
 		Notes:              strings.TrimSpace(payload.Notes),
 		AvatarSetID:        strings.TrimSpace(payload.AvatarSetID),
 		AvatarAssetID:      strings.TrimSpace(payload.AvatarAssetID),
+		ParticipantID:      strings.TrimSpace(payload.ParticipantID),
 		Pronouns:           strings.TrimSpace(payload.Pronouns),
 		Aliases:            normalizeProjectionAliases(payload.Aliases),
 		CreatedAt:          createdAt,

@@ -164,12 +164,18 @@ func TestCampaignWorkspaceReturnsGatewayValues(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{campaignWorkspace: CampaignWorkspace{
-		ID:            "c-1",
-		Name:          "The Guild",
-		Theme:         "Storm coast",
-		System:        "Daggerheart",
-		GMMode:        "AI",
-		CoverImageURL: "https://cdn.example.com/covers/the-guild.png",
+		ID:               "c-1",
+		Name:             "The Guild",
+		Theme:            "Storm coast",
+		System:           "Daggerheart",
+		GMMode:           "AI",
+		Status:           "Active",
+		Locale:           "English (US)",
+		Intent:           "Standard",
+		AccessPolicy:     "Public",
+		ParticipantCount: "4",
+		CharacterCount:   "1",
+		CoverImageURL:    "https://cdn.example.com/covers/the-guild.png",
 	}})
 
 	workspace, err := svc.campaignWorkspace(context.Background(), "c-1")
@@ -187,6 +193,24 @@ func TestCampaignWorkspaceReturnsGatewayValues(t *testing.T) {
 	}
 	if workspace.GMMode != "AI" {
 		t.Fatalf("workspace.GMMode = %q, want %q", workspace.GMMode, "AI")
+	}
+	if workspace.Status != "Active" {
+		t.Fatalf("workspace.Status = %q, want %q", workspace.Status, "Active")
+	}
+	if workspace.Locale != "English (US)" {
+		t.Fatalf("workspace.Locale = %q, want %q", workspace.Locale, "English (US)")
+	}
+	if workspace.Intent != "Standard" {
+		t.Fatalf("workspace.Intent = %q, want %q", workspace.Intent, "Standard")
+	}
+	if workspace.AccessPolicy != "Public" {
+		t.Fatalf("workspace.AccessPolicy = %q, want %q", workspace.AccessPolicy, "Public")
+	}
+	if workspace.ParticipantCount != "4" {
+		t.Fatalf("workspace.ParticipantCount = %q, want %q", workspace.ParticipantCount, "4")
+	}
+	if workspace.CharacterCount != "1" {
+		t.Fatalf("workspace.CharacterCount = %q, want %q", workspace.CharacterCount, "1")
 	}
 	if workspace.CoverImageURL != "https://cdn.example.com/covers/the-guild.png" {
 		t.Fatalf("workspace.CoverImageURL = %q, want %q", workspace.CoverImageURL, "https://cdn.example.com/covers/the-guild.png")

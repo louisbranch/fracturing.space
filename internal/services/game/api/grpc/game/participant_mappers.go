@@ -4,6 +4,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -19,7 +20,7 @@ func participantToProto(p storage.ParticipantRecord) *campaignv1.Participant {
 		Controller:     controllerToProto(p.Controller),
 		AvatarSetId:    p.AvatarSetID,
 		AvatarAssetId:  p.AvatarAssetID,
-		Pronouns:       p.Pronouns,
+		Pronouns:       sharedpronouns.ToProto(p.Pronouns),
 		CreatedAt:      timestamppb.New(p.CreatedAt),
 		UpdatedAt:      timestamppb.New(p.UpdatedAt),
 	}

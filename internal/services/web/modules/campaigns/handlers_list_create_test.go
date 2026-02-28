@@ -62,6 +62,7 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 		`/static/campaign-covers/abandoned_castle_courtyard.png`,
 		`Participants: 12`,
 		`Characters: 7`,
+		`Updated`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing marker %q: %q", marker, body)
@@ -286,6 +287,36 @@ func TestMountCampaignCreateGetRendersCreateForm(t *testing.T) {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing marker %q: %q", marker, body)
 		}
+	}
+}
+
+func TestMountCampaignCreateGetRendersPTBRCopy(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil), "", nil)
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignsCreate, nil)
+	req.Header.Set("Accept-Language", "pt-BR")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`<h1 class="mb-0">Criar campanha</h1>`,
+		`<span class="label-text">Modo de MJ</span>`,
+		`placeholder="Ex.: Crepúsculo de Outono"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing pt-BR create marker %q: %q", marker, body)
+		}
+	}
+	if strings.Contains(body, `placeholder="Ex.: Outono do Crepúsculo"`) {
+		t.Fatalf("body contains obsolete pt-BR campaign name placeholder: %q", body)
 	}
 }
 

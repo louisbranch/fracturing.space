@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -32,7 +33,7 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContex
 			UserId:     input.UserID,
 			Name:       input.Name,
 			Role:       participantRoleFromString(input.Role),
-			Pronouns:   input.Pronouns,
+			Pronouns:   sharedpronouns.ToProto(input.Pronouns),
 		}
 
 		// Controller is optional; only set if provided
@@ -54,7 +55,7 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContex
 			Name:       response.Participant.GetName(),
 			Role:       participantRoleToString(response.Participant.GetRole()),
 			Controller: controllerToString(response.Participant.GetController()),
-			Pronouns:   response.Participant.GetPronouns(),
+			Pronouns:   sharedpronouns.FromProto(response.Participant.GetPronouns()),
 			CreatedAt:  formatTimestamp(response.Participant.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
@@ -113,8 +114,8 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContex
 			}
 			req.Controller = controller
 		}
-		if input.Pronouns != nil {
-			req.Pronouns = wrapperspb.String(*input.Pronouns)
+		if pronouns, provided := pronounsUpdateField(input.Pronouns); provided {
+			req.Pronouns = pronouns
 		}
 		if req.Name == nil && req.Role == statev1.ParticipantRole_ROLE_UNSPECIFIED && req.Controller == statev1.Controller_CONTROLLER_UNSPECIFIED && req.Pronouns == nil {
 			return nil, ParticipantUpdateResult{}, fmt.Errorf("at least one field must be provided")
@@ -135,7 +136,7 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContex
 			Name:       response.Participant.GetName(),
 			Role:       participantRoleToString(response.Participant.GetRole()),
 			Controller: controllerToString(response.Participant.GetController()),
-			Pronouns:   response.Participant.GetPronouns(),
+			Pronouns:   sharedpronouns.FromProto(response.Participant.GetPronouns()),
 			CreatedAt:  formatTimestamp(response.Participant.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
@@ -192,7 +193,7 @@ func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, getContex
 			Name:       response.Participant.GetName(),
 			Role:       participantRoleToString(response.Participant.GetRole()),
 			Controller: controllerToString(response.Participant.GetController()),
-			Pronouns:   response.Participant.GetPronouns(),
+			Pronouns:   sharedpronouns.FromProto(response.Participant.GetPronouns()),
 			CreatedAt:  formatTimestamp(response.Participant.GetCreatedAt()),
 			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}

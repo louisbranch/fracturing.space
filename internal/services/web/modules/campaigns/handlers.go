@@ -2,6 +2,7 @@ package campaigns
 
 import (
 	"context"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"golang.org/x/text/language"
@@ -35,6 +36,7 @@ type handlers struct {
 	modulehandler.Base
 	service          campaignService
 	chatFallbackPort string
+	nowFunc          func() time.Time
 }
 
 func newHandlers(s service, base modulehandler.Base, chatFallbackPort string) handlers {
@@ -42,5 +44,13 @@ func newHandlers(s service, base modulehandler.Base, chatFallbackPort string) ha
 		Base:             base,
 		service:          s,
 		chatFallbackPort: chatFallbackPort,
+		nowFunc:          time.Now,
 	}
+}
+
+func (h handlers) now() time.Time {
+	if h.nowFunc != nil {
+		return h.nowFunc()
+	}
+	return time.Now()
 }

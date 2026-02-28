@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc"
@@ -22,7 +23,7 @@ func TestMountServesProfilePage(t *testing.T) {
 		UserId:        "user-1",
 		Username:      "louis",
 		Name:          "Louis",
-		Pronouns:      "they/them",
+		Pronouns:      sharedpronouns.ToProto("they/them"),
 		AvatarSetId:   "avatar_set_v1",
 		AvatarAssetId: "001",
 		Bio:           "Building Fracturing.Space.",

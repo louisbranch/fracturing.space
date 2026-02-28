@@ -3,6 +3,7 @@ syntax = "proto3";
 package social.v1;
 
 import "google/protobuf/timestamp.proto";
+import "common/v1/pronoun.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/social/v1;socialv1";
 
@@ -19,7 +20,7 @@ message UserProfile {
   string user_id = 1;
   string username = 2;
   string name = 3;
-  string pronouns = 4;
+  common.v1.Pronouns pronouns = 4;
   string bio = 5;
   string avatar_set_id = 6;
   string avatar_asset_id = 7;
@@ -63,7 +64,7 @@ message SetUserProfileRequest {
   string user_id = 1;
   string username = 2;
   string name = 3;
-  string pronouns = 4;
+  common.v1.Pronouns pronouns = 4;
   string bio = 5;
   string avatar_set_id = 6;
   string avatar_asset_id = 7;

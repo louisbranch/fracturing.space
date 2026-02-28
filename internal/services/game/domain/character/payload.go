@@ -4,6 +4,7 @@ package character
 type CreatePayload struct {
 	CharacterID        string   `json:"character_id"`
 	OwnerParticipantID string   `json:"owner_participant_id,omitempty"`
+	ParticipantID      string   `json:"participant_id,omitempty"`
 	Name               string   `json:"name"`
 	Kind               string   `json:"kind"`
 	Notes              string   `json:"notes,omitempty"`

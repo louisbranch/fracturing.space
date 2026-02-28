@@ -39,16 +39,23 @@ type CampaignSummary struct {
 	ParticipantCount  string `json:"participantCount"`
 	CharacterCount    string `json:"characterCount"`
 	CreatedAtUnixNano int64  `json:"createdAtUnixNano"`
+	UpdatedAtUnixNano int64  `json:"updatedAtUnixNano"`
 }
 
 // CampaignWorkspace stores campaign details used by campaign workspace routes.
 type CampaignWorkspace struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Theme         string `json:"theme"`
-	System        string `json:"system"`
-	GMMode        string `json:"gmMode"`
-	CoverImageURL string `json:"coverImageUrl"`
+	ID               string `json:"id"`
+	Name             string `json:"name"`
+	Theme            string `json:"theme"`
+	System           string `json:"system"`
+	GMMode           string `json:"gmMode"`
+	Status           string `json:"status"`
+	Locale           string `json:"locale"`
+	Intent           string `json:"intent"`
+	AccessPolicy     string `json:"accessPolicy"`
+	ParticipantCount string `json:"participantCount"`
+	CharacterCount   string `json:"characterCount"`
+	CoverImageURL    string `json:"coverImageUrl"`
 }
 
 // CampaignParticipant stores participant details used by campaign participants pages.
