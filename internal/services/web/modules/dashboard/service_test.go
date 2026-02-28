@@ -65,6 +65,9 @@ func TestLoadDashboardReturnsEmptyViewWhenGatewayFails(t *testing.T) {
 	if view.ShowPendingProfileBlock {
 		t.Fatalf("ShowPendingProfileBlock = true, want false")
 	}
+	if view.ShowAdventureBlock {
+		t.Fatalf("ShowAdventureBlock = true, want false")
+	}
 }
 
 func TestLoadDashboardSkipsGatewayWithoutUserID(t *testing.T) {
@@ -80,8 +83,77 @@ func TestLoadDashboardSkipsGatewayWithoutUserID(t *testing.T) {
 	if view.ShowPendingProfileBlock {
 		t.Fatalf("ShowPendingProfileBlock = true, want false")
 	}
+	if view.ShowAdventureBlock {
+		t.Fatalf("ShowAdventureBlock = true, want false")
+	}
 	if gateway.calls != 0 {
 		t.Fatalf("gateway calls = %d, want 0", gateway.calls)
+	}
+}
+
+func TestLoadDashboardShowsAdventureBlockWhenNoDraftOrActiveCampaignExists(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(gatewayStub{snapshot: DashboardSnapshot{
+		HasDraftOrActiveCampaign: false,
+		CampaignsHasMore:         false,
+	}})
+
+	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	if err != nil {
+		t.Fatalf("loadDashboard() error = %v", err)
+	}
+	if !view.ShowAdventureBlock {
+		t.Fatalf("ShowAdventureBlock = false, want true")
+	}
+}
+
+func TestLoadDashboardHidesAdventureBlockWhenDraftOrActiveCampaignExists(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(gatewayStub{snapshot: DashboardSnapshot{HasDraftOrActiveCampaign: true}})
+
+	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	if err != nil {
+		t.Fatalf("loadDashboard() error = %v", err)
+	}
+	if view.ShowAdventureBlock {
+		t.Fatalf("ShowAdventureBlock = true, want false")
+	}
+}
+
+func TestLoadDashboardHidesAdventureBlockWhenCampaignStateIsTruncated(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(gatewayStub{snapshot: DashboardSnapshot{
+		HasDraftOrActiveCampaign: false,
+		CampaignsHasMore:         true,
+	}})
+
+	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	if err != nil {
+		t.Fatalf("loadDashboard() error = %v", err)
+	}
+	if view.ShowAdventureBlock {
+		t.Fatalf("ShowAdventureBlock = true, want false")
+	}
+}
+
+func TestLoadDashboardHidesAdventureBlockWhenCampaignDependencyIsDegraded(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(gatewayStub{snapshot: DashboardSnapshot{
+		HasDraftOrActiveCampaign: false,
+		CampaignsHasMore:         false,
+		DegradedDependencies:     []string{"game.campaigns"},
+	}})
+
+	view, err := svc.loadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
+	if err != nil {
+		t.Fatalf("loadDashboard() error = %v", err)
+	}
+	if view.ShowAdventureBlock {
+		t.Fatalf("ShowAdventureBlock = true, want false")
 	}
 }
 

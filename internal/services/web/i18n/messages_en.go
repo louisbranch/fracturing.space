@@ -307,6 +307,9 @@ func init() {
 	message.SetString(lang, "web.dashboard.profile_pending.title", "Finish your public profile")
 	message.SetString(lang, "web.dashboard.profile_pending.body", "Set a username to make your profile discoverable across campaigns and invites.")
 	message.SetString(lang, "web.dashboard.profile_pending.cta", "Finish profile")
+	message.SetString(lang, "web.dashboard.campaign_adventure.title", "Start a new adventure")
+	message.SetString(lang, "web.dashboard.campaign_adventure.body", "Embark on a new adventure in Fracturing.Space by creating a campaign.")
+	message.SetString(lang, "web.dashboard.campaign_adventure.cta", "Start adventure")
 	message.SetString(lang, "game.aria_label", "Game")
 
 	// Shared campaign shell

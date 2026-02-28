@@ -8,16 +8,20 @@ import (
 )
 
 const degradedDependencySocialProfile = "social.profile"
+const degradedDependencyGameCampaigns = "game.campaigns"
 
 // DashboardView is the web-dashboard view model derived from userhub state.
 type DashboardView struct {
 	ShowPendingProfileBlock bool
+	ShowAdventureBlock      bool
 }
 
 // DashboardSnapshot contains userhub dashboard fields used by web rendering logic.
 type DashboardSnapshot struct {
-	NeedsProfileCompletion bool
-	DegradedDependencies   []string
+	NeedsProfileCompletion   bool
+	HasDraftOrActiveCampaign bool
+	CampaignsHasMore         bool
+	DegradedDependencies     []string
 }
 
 // DashboardGateway loads dashboard snapshot data for one user.
@@ -54,7 +58,14 @@ func (s service) loadDashboard(ctx context.Context, userID string, locale common
 	if hasDegradedDependency(snapshot.DegradedDependencies, degradedDependencySocialProfile) {
 		return DashboardView{}, nil
 	}
-	return DashboardView{ShowPendingProfileBlock: snapshot.NeedsProfileCompletion}, nil
+	showAdventureBlock := false
+	if !hasDegradedDependency(snapshot.DegradedDependencies, degradedDependencyGameCampaigns) {
+		showAdventureBlock = !snapshot.HasDraftOrActiveCampaign && !snapshot.CampaignsHasMore
+	}
+	return DashboardView{
+		ShowPendingProfileBlock: snapshot.NeedsProfileCompletion,
+		ShowAdventureBlock:      showAdventureBlock,
+	}, nil
 }
 
 func hasDegradedDependency(values []string, want string) bool {

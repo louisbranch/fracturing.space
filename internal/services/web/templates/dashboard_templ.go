@@ -15,12 +15,21 @@ type DashboardProfilePendingBlock struct {
 	Visible bool
 }
 
+type DashboardAdventureBlock struct {
+	Visible bool
+}
+
 type DashboardPageView struct {
 	ProfilePending DashboardProfilePendingBlock
+	Adventure      DashboardAdventureBlock
 }
 
 func dashboardProfilePendingVisible(view DashboardPageView) bool {
 	return view.ProfilePending.Visible
+}
+
+func dashboardAdventureVisible(view DashboardPageView) bool {
+	return view.Adventure.Visible
 }
 
 func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
@@ -56,7 +65,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.profile_pending.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 22, Col: 75}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 31, Col: 75}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
@@ -69,7 +78,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.profile_pending.body"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 23, Col: 81}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 32, Col: 81}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -82,7 +91,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var4 templ.SafeURL
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppSettingsProfile)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 25, Col: 44}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 34, Col: 44}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -95,7 +104,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppSettingsProfile)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 25, Col: 84}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 34, Col: 84}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -108,7 +117,7 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 			var templ_7745c5c3_Var6 string
 			templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.profile_pending.cta"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 25, Col: 213}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 34, Col: 213}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 			if templ_7745c5c3_Err != nil {
@@ -119,7 +128,78 @@ func DashboardFragment(view DashboardPageView, loc Localizer) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</section>")
+		if dashboardAdventureVisible(view) {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<section id=\"dashboard-campaign-adventure\" data-dashboard-block=\"campaign-adventure\" class=\"card bg-base-200 border border-base-300 shadow-sm lg:col-span-1\"><div class=\"card-body gap-4\"><h2 class=\"card-title\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var7 string
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.campaign_adventure.title"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 42, Col: 78}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</h2><p class=\"text-sm opacity-80\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var8 string
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.campaign_adventure.body"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 43, Col: 84}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</p><div class=\"card-actions justify-end\"><a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var9 templ.SafeURL
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaignsCreate)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 45, Col: 44}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" hx-get=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var10 string
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(routepath.AppCampaignsCreate)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 45, Col: 84}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "\" hx-target=\"#main\" hx-swap=\"innerHTML\" hx-push-url=\"true\" class=\"btn btn-primary\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var11 string
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "web.dashboard.campaign_adventure.cta"))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/dashboard.templ`, Line: 45, Col: 216}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</a></div></div></section>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "</section>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
