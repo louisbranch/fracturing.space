@@ -33,6 +33,7 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
@@ -55,9 +56,21 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	participantsResp, err := participantClient.ListParticipants(ctxWithUser, &gamev1.ListParticipantsRequest{
+		CampaignId: campaignID,
+		PageSize:   200,
+	})
+	if err != nil {
+		t.Fatalf("list participants: %v", err)
+	}
+	if len(participantsResp.GetParticipants()) == 0 {
+		t.Fatal("expected owner participant")
+	}
+	ownerParticipantID := participantsResp.GetParticipants()[0].GetId()
 
 	characterID := createCharacter(t, ctxWithUser, characterClient, campaignID, "Gate Hero")
 	patchDaggerheartProfile(t, ctxWithUser, characterClient, campaignID, characterID)
+	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID, characterID)
 
 	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,

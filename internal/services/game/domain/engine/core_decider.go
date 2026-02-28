@@ -11,9 +11,11 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -96,6 +98,61 @@ func sessionRoute(_ CoreDecider, current aggregate.State, cmd command.Command, n
 	return session.Decide(current.Session, cmd, now)
 }
 
+// sessionStartRoute handles session.start with campaign-level readiness checks.
+//
+// For draft campaigns, this route emits campaign.updated(status=active) and
+// session.started in one decision so append remains atomic and avoids partial
+// state transitions.
+func sessionStartRoute(d CoreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	if now == nil {
+		now = time.Now
+	}
+	decisionTime := now().UTC()
+	fixedNow := func() time.Time { return decisionTime }
+
+	startDecision := session.Decide(current.Session, cmd, fixedNow)
+	if len(startDecision.Rejections) > 0 {
+		return startDecision
+	}
+
+	var systemReadiness readiness.CharacterSystemReadiness
+	if d.Systems != nil {
+		systemID := strings.TrimSpace(current.Campaign.GameSystem)
+		if mod := d.Systems.Get(systemID, ""); mod != nil {
+			if checker, ok := mod.(module.CharacterReadinessChecker); ok {
+				systemReadiness = checker.CharacterReady
+			}
+		}
+	}
+
+	if rejection := readiness.EvaluateSessionStart(current, systemReadiness); rejection != nil {
+		return command.Reject(command.Rejection{Code: rejection.Code, Message: rejection.Message})
+	}
+
+	campaignStatus := current.Campaign.Status
+	if campaignStatus == "" {
+		campaignStatus = campaign.StatusDraft
+	}
+	if campaignStatus != campaign.StatusDraft {
+		return startDecision
+	}
+
+	campaignPayloadJSON, _ := json.Marshal(campaign.UpdatePayload{Fields: map[string]string{"status": string(campaign.StatusActive)}})
+	campaignActivated := command.NewEvent(
+		cmd,
+		campaign.EventTypeUpdated,
+		"campaign",
+		cmd.CampaignID,
+		campaignPayloadJSON,
+		decisionTime,
+	)
+
+	events := make([]event.Event, 0, len(startDecision.Events)+1)
+	events = append(events, campaignActivated)
+	events = append(events, startDecision.Events...)
+	return command.Accept(events...)
+}
+
 // participantRoute resolves the target participant snapshot and routes accordingly.
 func participantRoute(_ CoreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return participant.Decide(participantStateFor(cmd, current), cmd, now)
@@ -126,7 +183,7 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		action.CommandTypeOutcomeApply:            actionRoute,
 		action.CommandTypeOutcomeReject:           actionRoute,
 		action.CommandTypeNoteAdd:                 actionRoute,
-		session.CommandTypeStart:                  sessionRoute,
+		session.CommandTypeStart:                  sessionStartRoute,
 		session.CommandTypeEnd:                    sessionRoute,
 		session.CommandTypeGateOpen:               sessionRoute,
 		session.CommandTypeGateResolve:            sessionRoute,

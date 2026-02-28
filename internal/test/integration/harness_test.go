@@ -29,6 +29,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // integrationSuite shares resources across integration subtests.
@@ -376,6 +377,181 @@ func parseRFC3339(t *testing.T, value string) time.Time {
 		t.Fatalf("parse timestamp %q: %v", value, err)
 	}
 	return parsed
+}
+
+func ensureSessionStartReadiness(
+	t *testing.T,
+	ctx context.Context,
+	participantClient statev1.ParticipantServiceClient,
+	characterClient statev1.CharacterServiceClient,
+	campaignID string,
+	ownerParticipantID string,
+	controlledCharacterIDs ...string,
+) string {
+	t.Helper()
+
+	if participantClient == nil {
+		t.Fatal("participant client is required")
+	}
+	if characterClient == nil {
+		t.Fatal("character client is required")
+	}
+	ownerParticipantID = strings.TrimSpace(ownerParticipantID)
+	if ownerParticipantID == "" {
+		t.Fatal("owner participant id is required")
+	}
+
+	participantsResp, err := participantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+		CampaignId: campaignID,
+		PageSize:   200,
+	})
+	if err != nil {
+		t.Fatalf("list participants: %v", err)
+	}
+	playerParticipantIDs := make([]string, 0)
+	for _, p := range participantsResp.GetParticipants() {
+		if p.GetRole() != statev1.ParticipantRole_PLAYER {
+			continue
+		}
+		pid := strings.TrimSpace(p.GetId())
+		if pid == "" {
+			continue
+		}
+		playerParticipantIDs = append(playerParticipantIDs, pid)
+	}
+	if len(playerParticipantIDs) == 0 {
+		participantResp, createErr := participantClient.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+			CampaignId: campaignID,
+			Name:       "Readiness Player",
+			Role:       statev1.ParticipantRole_PLAYER,
+			Controller: statev1.Controller_CONTROLLER_HUMAN,
+		})
+		if createErr != nil {
+			t.Fatalf("create readiness player participant: %v", createErr)
+		}
+		if participantResp == nil || participantResp.GetParticipant() == nil {
+			t.Fatal("create readiness player participant returned empty participant")
+		}
+		playerParticipantID := strings.TrimSpace(participantResp.GetParticipant().GetId())
+		if playerParticipantID == "" {
+			t.Fatal("create readiness player participant returned empty id")
+		}
+		playerParticipantIDs = append(playerParticipantIDs, playerParticipantID)
+	}
+
+	seenCharacters := make(map[string]struct{}, len(controlledCharacterIDs))
+	for _, characterID := range controlledCharacterIDs {
+		characterID = strings.TrimSpace(characterID)
+		if characterID == "" {
+			continue
+		}
+		if _, exists := seenCharacters[characterID]; exists {
+			continue
+		}
+		seenCharacters[characterID] = struct{}{}
+		setCharacterController(t, ctx, characterClient, campaignID, characterID, ownerParticipantID)
+	}
+
+	characters := listAllCharactersForReadiness(t, ctx, characterClient, campaignID)
+	fallbackController := ownerParticipantID
+	if fallbackController == "" {
+		fallbackController = playerParticipantIDs[0]
+	}
+	for _, ch := range characters {
+		characterID := strings.TrimSpace(ch.GetId())
+		if characterID == "" {
+			continue
+		}
+		if strings.TrimSpace(ch.GetParticipantId().GetValue()) != "" {
+			continue
+		}
+		setCharacterController(t, ctx, characterClient, campaignID, characterID, fallbackController)
+	}
+
+	playerCharacterCounts := make(map[string]int, len(playerParticipantIDs))
+	for _, pid := range playerParticipantIDs {
+		playerCharacterCounts[pid] = 0
+	}
+	characters = listAllCharactersForReadiness(t, ctx, characterClient, campaignID)
+	for _, ch := range characters {
+		pid := strings.TrimSpace(ch.GetParticipantId().GetValue())
+		if _, ok := playerCharacterCounts[pid]; ok {
+			playerCharacterCounts[pid]++
+		}
+	}
+
+	for idx, pid := range playerParticipantIDs {
+		if playerCharacterCounts[pid] > 0 {
+			continue
+		}
+		createResp, createErr := characterClient.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
+			CampaignId: campaignID,
+			Name:       fmt.Sprintf("Readiness Character %d", idx+1),
+			Kind:       statev1.CharacterKind_PC,
+		})
+		if createErr != nil {
+			t.Fatalf("create readiness character: %v", createErr)
+		}
+		if createResp == nil || createResp.GetCharacter() == nil {
+			t.Fatal("create readiness character returned empty character")
+		}
+		characterID := strings.TrimSpace(createResp.GetCharacter().GetId())
+		if characterID == "" {
+			t.Fatal("create readiness character returned empty id")
+		}
+		setCharacterController(t, ctx, characterClient, campaignID, characterID, pid)
+	}
+
+	return playerParticipantIDs[0]
+}
+
+func listAllCharactersForReadiness(
+	t *testing.T,
+	ctx context.Context,
+	characterClient statev1.CharacterServiceClient,
+	campaignID string,
+) []*statev1.Character {
+	t.Helper()
+
+	pageToken := ""
+	characters := make([]*statev1.Character, 0)
+	for {
+		resp, err := characterClient.ListCharacters(ctx, &statev1.ListCharactersRequest{
+			CampaignId: campaignID,
+			PageSize:   200,
+			PageToken:  pageToken,
+		})
+		if err != nil {
+			t.Fatalf("list characters: %v", err)
+		}
+		characters = append(characters, resp.GetCharacters()...)
+		next := strings.TrimSpace(resp.GetNextPageToken())
+		if next == "" {
+			break
+		}
+		pageToken = next
+	}
+	return characters
+}
+
+func setCharacterController(
+	t *testing.T,
+	ctx context.Context,
+	characterClient statev1.CharacterServiceClient,
+	campaignID string,
+	characterID string,
+	participantID string,
+) {
+	t.Helper()
+
+	_, err := characterClient.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
+		CampaignId:    campaignID,
+		CharacterId:   strings.TrimSpace(characterID),
+		ParticipantId: wrapperspb.String(strings.TrimSpace(participantID)),
+	})
+	if err != nil {
+		t.Fatalf("set default control for %s: %v", characterID, err)
+	}
 }
 
 func newEventClient(t *testing.T, grpcAddr string) (statev1.EventServiceClient, func()) {

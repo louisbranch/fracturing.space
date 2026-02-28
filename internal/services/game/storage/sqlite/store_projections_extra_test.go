@@ -3,10 +3,13 @@ package sqlite
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -17,6 +20,255 @@ func TestCampaignGetNotFound(t *testing.T) {
 	_, err := store.Get(context.Background(), "no-such-campaign")
 	if err == nil || !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
+	}
+}
+
+func TestCampaignCanStartSessionComputed(t *testing.T) {
+	now := time.Date(2026, 2, 27, 11, 0, 0, 0, time.UTC)
+
+	putParticipant := func(t *testing.T, store *Store, campaignID, participantID string, role participant.Role) {
+		t.Helper()
+		record := storage.ParticipantRecord{
+			CampaignID:     campaignID,
+			ID:             participantID,
+			Name:           participantID,
+			Role:           role,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		}
+		if err := store.PutParticipant(context.Background(), record); err != nil {
+			t.Fatalf("put participant %s: %v", participantID, err)
+		}
+	}
+
+	putCharacter := func(t *testing.T, store *Store, campaignID, characterID, ownerParticipantID, controllerParticipantID string) {
+		t.Helper()
+		record := storage.CharacterRecord{
+			CampaignID:         campaignID,
+			ID:                 characterID,
+			OwnerParticipantID: ownerParticipantID,
+			ParticipantID:      controllerParticipantID,
+			Name:               characterID,
+			Kind:               character.KindPC,
+			CreatedAt:          now,
+			UpdatedAt:          now,
+		}
+		if err := store.PutCharacter(context.Background(), record); err != nil {
+			t.Fatalf("put character %s: %v", characterID, err)
+		}
+	}
+
+	assertReadiness := func(t *testing.T, store *Store, campaignID string, want bool) {
+		t.Helper()
+		got, err := store.Get(context.Background(), campaignID)
+		if err != nil {
+			t.Fatalf("get campaign %s: %v", campaignID, err)
+		}
+		if got.CanStartSession != want {
+			t.Fatalf("campaign %s can_start_session = %t, want %t", campaignID, got.CanStartSession, want)
+		}
+
+		page, err := store.List(context.Background(), 20, "")
+		if err != nil {
+			t.Fatalf("list campaigns: %v", err)
+		}
+		found := false
+		for _, campaignRecord := range page.Campaigns {
+			if campaignRecord.ID != campaignID {
+				continue
+			}
+			found = true
+			if campaignRecord.CanStartSession != want {
+				t.Fatalf("list campaign %s can_start_session = %t, want %t", campaignID, campaignRecord.CanStartSession, want)
+			}
+			break
+		}
+		if !found {
+			t.Fatalf("campaign %s not found in list", campaignID)
+		}
+	}
+
+	testCases := []struct {
+		name  string
+		want  bool
+		setup func(t *testing.T, store *Store, campaignID string)
+	}{
+		{
+			name: "ready when full prerequisites satisfied",
+			want: true,
+			setup: func(t *testing.T, store *Store, campaignID string) {
+				putParticipant(t, store, campaignID, "gm-1", participant.RoleGM)
+				putParticipant(t, store, campaignID, "player-1", participant.RolePlayer)
+				putCharacter(t, store, campaignID, "char-1", "player-1", "player-1")
+			},
+		},
+		{
+			name: "not ready without gm",
+			want: false,
+			setup: func(t *testing.T, store *Store, campaignID string) {
+				putParticipant(t, store, campaignID, "player-1", participant.RolePlayer)
+				putCharacter(t, store, campaignID, "char-1", "player-1", "player-1")
+			},
+		},
+		{
+			name: "not ready without player",
+			want: false,
+			setup: func(t *testing.T, store *Store, campaignID string) {
+				putParticipant(t, store, campaignID, "gm-1", participant.RoleGM)
+				putCharacter(t, store, campaignID, "char-1", "gm-1", "gm-1")
+			},
+		},
+		{
+			name: "not ready when any character lacks controller",
+			want: false,
+			setup: func(t *testing.T, store *Store, campaignID string) {
+				putParticipant(t, store, campaignID, "gm-1", participant.RoleGM)
+				putParticipant(t, store, campaignID, "player-1", participant.RolePlayer)
+				putCharacter(t, store, campaignID, "char-1", "player-1", "")
+			},
+		},
+		{
+			name: "not ready when a player controls no characters",
+			want: false,
+			setup: func(t *testing.T, store *Store, campaignID string) {
+				putParticipant(t, store, campaignID, "gm-1", participant.RoleGM)
+				putParticipant(t, store, campaignID, "player-1", participant.RolePlayer)
+				putParticipant(t, store, campaignID, "player-2", participant.RolePlayer)
+				putCharacter(t, store, campaignID, "char-1", "player-1", "player-1")
+			},
+		},
+		{
+			name: "not ready while session active",
+			want: false,
+			setup: func(t *testing.T, store *Store, campaignID string) {
+				putParticipant(t, store, campaignID, "gm-1", participant.RoleGM)
+				putParticipant(t, store, campaignID, "player-1", participant.RolePlayer)
+				putCharacter(t, store, campaignID, "char-1", "player-1", "player-1")
+				if err := store.PutSession(context.Background(), storage.SessionRecord{
+					ID:         "session-1",
+					CampaignID: campaignID,
+					Name:       "Session",
+					Status:     session.StatusActive,
+					StartedAt:  now,
+					UpdatedAt:  now,
+				}); err != nil {
+					t.Fatalf("put active session: %v", err)
+				}
+			},
+		},
+		{
+			name: "not ready when status disallows start",
+			want: false,
+			setup: func(t *testing.T, store *Store, campaignID string) {
+				putParticipant(t, store, campaignID, "gm-1", participant.RoleGM)
+				putParticipant(t, store, campaignID, "player-1", participant.RolePlayer)
+				putCharacter(t, store, campaignID, "char-1", "player-1", "player-1")
+				record, err := store.Get(context.Background(), campaignID)
+				if err != nil {
+					t.Fatalf("get campaign for status update: %v", err)
+				}
+				record.Status = campaign.StatusCompleted
+				record.UpdatedAt = now.Add(time.Minute)
+				if err := store.Put(context.Background(), record); err != nil {
+					t.Fatalf("put completed campaign: %v", err)
+				}
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			store := openTestStore(t)
+			campaignID := "camp-" + strings.ReplaceAll(strings.ReplaceAll(tc.name, " ", "-"), "_", "-")
+			seedCampaign(t, store, campaignID, now)
+			tc.setup(t, store, campaignID)
+			assertReadiness(t, store, campaignID, tc.want)
+		})
+	}
+}
+
+func TestCampaignCanStartSessionAfterSessionEnds(t *testing.T) {
+	store := openTestStore(t)
+	now := time.Date(2026, 2, 27, 12, 0, 0, 0, time.UTC)
+	campaignID := "camp-session-end-readiness"
+
+	seedCampaign(t, store, campaignID, now)
+	if err := store.PutParticipant(context.Background(), storage.ParticipantRecord{
+		CampaignID:     campaignID,
+		ID:             "gm-1",
+		Name:           "GM",
+		Role:           participant.RoleGM,
+		Controller:     participant.ControllerHuman,
+		CampaignAccess: participant.CampaignAccessMember,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}); err != nil {
+		t.Fatalf("put gm participant: %v", err)
+	}
+	if err := store.PutParticipant(context.Background(), storage.ParticipantRecord{
+		CampaignID:     campaignID,
+		ID:             "player-1",
+		Name:           "Player",
+		Role:           participant.RolePlayer,
+		Controller:     participant.ControllerHuman,
+		CampaignAccess: participant.CampaignAccessMember,
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}); err != nil {
+		t.Fatalf("put player participant: %v", err)
+	}
+	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
+		CampaignID:         campaignID,
+		ID:                 "char-1",
+		OwnerParticipantID: "player-1",
+		ParticipantID:      "player-1",
+		Name:               "Hero",
+		Kind:               character.KindPC,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}); err != nil {
+		t.Fatalf("put character: %v", err)
+	}
+
+	campaignRecord, err := store.Get(context.Background(), campaignID)
+	if err != nil {
+		t.Fatalf("get campaign before session: %v", err)
+	}
+	if !campaignRecord.CanStartSession {
+		t.Fatalf("campaign can_start_session = %t, want true before session start", campaignRecord.CanStartSession)
+	}
+
+	if err := store.PutSession(context.Background(), storage.SessionRecord{
+		ID:         "session-1",
+		CampaignID: campaignID,
+		Name:       "Session",
+		Status:     session.StatusActive,
+		StartedAt:  now,
+		UpdatedAt:  now,
+	}); err != nil {
+		t.Fatalf("put active session: %v", err)
+	}
+
+	campaignRecord, err = store.Get(context.Background(), campaignID)
+	if err != nil {
+		t.Fatalf("get campaign during active session: %v", err)
+	}
+	if campaignRecord.CanStartSession {
+		t.Fatalf("campaign can_start_session = %t, want false while session active", campaignRecord.CanStartSession)
+	}
+
+	if _, _, err := store.EndSession(context.Background(), campaignID, "session-1", now.Add(time.Hour)); err != nil {
+		t.Fatalf("end session: %v", err)
+	}
+
+	campaignRecord, err = store.Get(context.Background(), campaignID)
+	if err != nil {
+		t.Fatalf("get campaign after session end: %v", err)
+	}
+	if !campaignRecord.CanStartSession {
+		t.Fatalf("campaign can_start_session = %t, want true after session end", campaignRecord.CanStartSession)
 	}
 }
 

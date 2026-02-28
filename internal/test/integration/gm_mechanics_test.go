@@ -53,6 +53,8 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 	defer conn.Close()
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
+	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	snapshotClient := gamev1.NewSnapshotServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
@@ -76,6 +78,8 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -148,6 +152,8 @@ func TestDaggerheartCountdownLifecycle(t *testing.T) {
 	defer conn.Close()
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
+	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
@@ -170,6 +176,8 @@ func TestDaggerheartCountdownLifecycle(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -254,6 +262,8 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 	defer conn.Close()
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
+	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
@@ -276,6 +286,8 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,

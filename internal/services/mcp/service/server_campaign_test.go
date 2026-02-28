@@ -502,6 +502,7 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 			GmMode:           statev1.GmMode_HUMAN,
 			ParticipantCount: 4,
 			CharacterCount:   2,
+			CanStartSession:  true,
 			ThemePrompt:      "desert skies",
 			CreatedAt:        timestamppb.New(now),
 			UpdatedAt:        timestamppb.New(now.Add(time.Hour)),
@@ -537,6 +538,7 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 			GmMode           string `json:"gm_mode"`
 			ParticipantCount int    `json:"participant_count"`
 			CharacterCount   int    `json:"character_count"`
+			CanStartSession  bool   `json:"can_start_session"`
 			ThemePrompt      string `json:"theme_prompt"`
 			CreatedAt        string `json:"created_at"`
 			UpdatedAt        string `json:"updated_at"`
@@ -553,6 +555,9 @@ func TestCampaignListResourceHandlerMapsResponse(t *testing.T) {
 	}
 	if payload.Campaigns[0].GmMode != "HUMAN" {
 		t.Fatalf("expected gm mode HUMAN, got %q", payload.Campaigns[0].GmMode)
+	}
+	if !payload.Campaigns[0].CanStartSession {
+		t.Fatalf("expected can_start_session true, got %t", payload.Campaigns[0].CanStartSession)
 	}
 	if payload.Campaigns[0].CreatedAt != now.Format(time.RFC3339) {
 		t.Fatalf("expected created_at %q, got %q", now.Format(time.RFC3339), payload.Campaigns[0].CreatedAt)
@@ -572,6 +577,7 @@ func TestCampaignResourceHandlerMapsResponse(t *testing.T) {
 			GmMode:           statev1.GmMode_HUMAN,
 			ParticipantCount: 4,
 			CharacterCount:   2,
+			CanStartSession:  true,
 			ThemePrompt:      "desert skies",
 			CreatedAt:        timestamppb.New(now),
 			UpdatedAt:        timestamppb.New(now.Add(time.Hour)),
@@ -604,6 +610,7 @@ func TestCampaignResourceHandlerMapsResponse(t *testing.T) {
 			GmMode           string `json:"gm_mode"`
 			ParticipantCount int    `json:"participant_count"`
 			CharacterCount   int    `json:"character_count"`
+			CanStartSession  bool   `json:"can_start_session"`
 			ThemePrompt      string `json:"theme_prompt"`
 			CreatedAt        string `json:"created_at"`
 			UpdatedAt        string `json:"updated_at"`
@@ -626,6 +633,9 @@ func TestCampaignResourceHandlerMapsResponse(t *testing.T) {
 	}
 	if payload.Campaign.CharacterCount != 2 {
 		t.Fatalf("expected character_count 2, got %d", payload.Campaign.CharacterCount)
+	}
+	if !payload.Campaign.CanStartSession {
+		t.Fatalf("expected can_start_session true, got %t", payload.Campaign.CanStartSession)
 	}
 	if payload.Campaign.CreatedAt != now.Format(time.RFC3339) {
 		t.Fatalf("expected created_at %q, got %q", now.Format(time.RFC3339), payload.Campaign.CreatedAt)

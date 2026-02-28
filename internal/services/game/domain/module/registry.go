@@ -45,6 +45,19 @@ type Folder interface {
 	FoldHandledTypes() []event.Type
 }
 
+// CharacterReadinessChecker is an optional module extension point used by
+// session-start readiness evaluation.
+//
+// Implementations validate system-specific character readiness from the
+// character's system profile projection payload. Returning false blocks
+// session.start and the reason is surfaced in the command rejection message.
+//
+// Modules that do not implement this interface fall back to core readiness
+// rules only (for example, controller assignment).
+type CharacterReadinessChecker interface {
+	CharacterReady(systemProfile map[string]any) (ready bool, reason string)
+}
+
 // CommandTyper must be implemented by deciders whose modules register system
 // commands. ValidateDeciderCommandCoverage verifies at startup that every
 // registered system command has a corresponding decider case, failing loudly

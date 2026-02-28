@@ -30,6 +30,7 @@ type CampaignRecord struct {
 	Locale           commonv1.Locale
 	System           commonv1.GameSystem
 	Status           campaign.Status
+	CanStartSession  bool
 	GmMode           campaign.GmMode
 	Intent           campaign.Intent
 	AccessPolicy     campaign.AccessPolicy

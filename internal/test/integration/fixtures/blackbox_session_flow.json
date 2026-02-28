@@ -42,6 +42,103 @@
       "expect": "none"
     },
     {
+      "name": "participant_create_player",
+      "action": "tool_call",
+      "tool": "participant_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "name": "Scenario Player",
+        "role": "PLAYER",
+        "controller": "HUMAN"
+      },
+      "capture": {
+        "player_id": "participant"
+      }
+    },
+    {
+      "name": "character_create_player",
+      "action": "tool_call",
+      "tool": "character_create",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "name": "Scenario Hero",
+        "kind": "PC"
+      },
+      "capture": {
+        "character_id": "character"
+      }
+    },
+    {
+      "name": "character_control_set_player",
+      "action": "tool_call",
+      "tool": "character_control_set",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "character_id": {"ref": "character_id"},
+        "participant_id": {"ref": "player_id"}
+      }
+    },
+    {
+      "name": "character_list_read_before_session",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}/characters",
+      "capture": {
+        "character_0_id": "result.contents[0].text|json.characters[0].id",
+        "character_1_id": [
+          "result.contents[0].text|json.characters[1].id",
+          "result.contents[0].text|json.characters[0].id"
+        ],
+        "character_2_id": [
+          "result.contents[0].text|json.characters[2].id",
+          "result.contents[0].text|json.characters[0].id"
+        ],
+        "character_3_id": [
+          "result.contents[0].text|json.characters[3].id",
+          "result.contents[0].text|json.characters[0].id"
+        ]
+      }
+    },
+    {
+      "name": "character_control_set_0",
+      "action": "tool_call",
+      "tool": "character_control_set",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "character_id": {"ref": "character_0_id"},
+        "participant_id": {"ref": "owner_id"}
+      }
+    },
+    {
+      "name": "character_control_set_1",
+      "action": "tool_call",
+      "tool": "character_control_set",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "character_id": {"ref": "character_1_id"},
+        "participant_id": {"ref": "owner_id"}
+      }
+    },
+    {
+      "name": "character_control_set_2",
+      "action": "tool_call",
+      "tool": "character_control_set",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "character_id": {"ref": "character_2_id"},
+        "participant_id": {"ref": "owner_id"}
+      }
+    },
+    {
+      "name": "character_control_set_3",
+      "action": "tool_call",
+      "tool": "character_control_set",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "character_id": {"ref": "character_3_id"},
+        "participant_id": {"ref": "owner_id"}
+      }
+    },
+    {
       "name": "session_start",
       "action": "tool_call",
       "tool": "session_start",

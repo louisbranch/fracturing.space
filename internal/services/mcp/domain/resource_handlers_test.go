@@ -50,7 +50,7 @@ func TestCampaignListResourceHandler(t *testing.T) {
 		client := &fakeCampaignClient{
 			listResp: &statev1.ListCampaignsResponse{
 				Campaigns: []*statev1.Campaign{
-					{Id: "c1", Name: "First", Status: statev1.CampaignStatus_ACTIVE, GmMode: statev1.GmMode_HUMAN, CreatedAt: now},
+					{Id: "c1", Name: "First", Status: statev1.CampaignStatus_ACTIVE, CanStartSession: true, GmMode: statev1.GmMode_HUMAN, CreatedAt: now},
 					{Id: "c2", Name: "Second", Status: statev1.CampaignStatus_DRAFT, GmMode: statev1.GmMode_AI},
 				},
 			},
@@ -70,6 +70,9 @@ func TestCampaignListResourceHandler(t *testing.T) {
 		}
 		if payload.Campaigns[0].ID != "c1" || payload.Campaigns[0].Status != "ACTIVE" {
 			t.Errorf("unexpected first campaign: %+v", payload.Campaigns[0])
+		}
+		if !payload.Campaigns[0].CanStartSession {
+			t.Errorf("campaign c1 can_start_session = %t, want true", payload.Campaigns[0].CanStartSession)
 		}
 	})
 
@@ -120,6 +123,9 @@ func TestCampaignResourceHandler(t *testing.T) {
 		}
 		if payload.Campaign.ID != "c1" {
 			t.Errorf("expected id %q, got %q", "c1", payload.Campaign.ID)
+		}
+		if payload.Campaign.CanStartSession {
+			t.Errorf("campaign can_start_session = %t, want false", payload.Campaign.CanStartSession)
 		}
 	})
 

@@ -37,6 +37,7 @@ func TestDaggerheartAttackFlow(t *testing.T) {
 
 	campaignClient := gamev1.NewCampaignServiceClient(conn)
 	characterClient := gamev1.NewCharacterServiceClient(conn)
+	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
@@ -59,12 +60,14 @@ func TestDaggerheartAttackFlow(t *testing.T) {
 		t.Fatal("expected campaign")
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
+	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
 
 	attacker := createCharacter(t, ctx, characterClient, campaignID, "Attack Hero")
 	target := createCharacter(t, ctx, characterClient, campaignID, "Attack Target")
 
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, attacker)
 	patchDaggerheartProfile(t, ctx, characterClient, campaignID, target)
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, attacker, target)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
