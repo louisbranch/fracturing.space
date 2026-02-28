@@ -13,7 +13,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/userhub/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration scenario templ-generate event-catalog-check topology-generate topology-check docs-check docs-path-check docs-link-check docs-index-check docs-lifecycle-check negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration scenario templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-lifecycle-check negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -130,6 +130,15 @@ topology-generate:
 
 topology-check:
 	go run ./internal/tools/topologygen -check
+
+i18n-check:
+	go run ./internal/tools/i18ncheck
+
+i18n-status:
+	go run ./internal/tools/i18nstatus
+
+i18n-status-check:
+	@bash -euo pipefail -c 'go run ./internal/tools/i18nstatus >/dev/null 2>&1; git diff --exit-code -- docs/reference/i18n-status.md docs/reference/i18n-status.json'
 
 seed: ## Seed local database with local-dev manifest
 	go run ./cmd/seed -manifest=internal/tools/seed/manifests/local-dev.json -v

@@ -31,6 +31,7 @@ Durable architecture, domain, and policy documentation.
 
 - [Web architecture](web-architecture.md)
 - [Web module playbook](web-module-playbook.md)
+- [I18n and l10n architecture](i18n-l10n-architecture.md)
 - [Identity and recovery](identity.md)
 - [OAuth system](oauth.md)
 - [Campaign authorization model](campaign-authorization-model.md)

@@ -1,6 +1,12 @@
 package i18n
 
-import "golang.org/x/text/language"
+import (
+	"fmt"
+	"strings"
+
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
+)
 
 // AuthCopy holds translatable copy for web public auth pages.
 type AuthCopy struct {
@@ -28,65 +34,71 @@ type AuthCopy struct {
 	JSRegisterFailed    string
 }
 
-var authCopyEN = AuthCopy{
-	MetaDescription:     "Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters.",
-	LandingTitle:        "Open source AI GM engine | Fracturing.Space",
-	LandingTagline:      "Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters.",
-	LandingSignIn:       "Sign in",
-	LandingDocs:         "Docs",
-	LandingGitHub:       "GitHub",
-	LoginTitle:          "Sign In | Fracturing.Space",
-	LoginHeading:        "Sign in to Fracturing.Space",
-	LoginCardTitle:      "Account Access",
-	LoginCardSubtitle:   "Create an account or sign in with a passkey.",
-	LoginEmail:          "Email",
-	LoginCreatePasskey:  "Create Account With Passkey",
-	LoginDivider:        "returning?",
-	LoginSignInPasskey:  "Sign In With Passkey",
-	JSLoginStartError:   "failed to start passkey login",
-	JSLoginFinishError:  "failed to finish passkey login",
-	JSRegisterStartErr:  "failed to start passkey registration",
-	JSRegisterFinishErr: "failed to finish passkey registration",
-	JSPasskeyFailed:     "failed to sign in with passkey",
-	JSEmailRequired:     "email is required",
-	JSPasskeyCreated:    "Passkey created; signing you in",
-	JSRegisterFailed:    "failed to create passkey",
-}
-
-var authCopyPTBR = AuthCopy{
-	MetaDescription:     "Motor de código aberto, autoritativo no servidor, para campanhas de RPG de mesa determinísticas e mestres de jogo com IA.",
-	LandingTitle:        "Motor de IA para RPG de código aberto | Fracturing.Space",
-	LandingTagline:      "Motor de código aberto, autoritativo no servidor, para campanhas de RPG de mesa determinísticas e mestres de jogo com IA.",
-	LandingSignIn:       "Entrar",
-	LandingDocs:         "Docs",
-	LandingGitHub:       "GitHub",
-	LoginTitle:          "Entrar | Fracturing.Space",
-	LoginHeading:        "Faça login em Fracturing.Space",
-	LoginCardTitle:      "Acesso à Conta",
-	LoginCardSubtitle:   "Crie uma conta ou entre com uma chave de acesso.",
-	LoginEmail:          "Email principal",
-	LoginCreatePasskey:  "Criar Conta Com Chave de Acesso",
-	LoginDivider:        "já tem conta?",
-	LoginSignInPasskey:  "Entrar Com Chave de Acesso",
-	JSLoginStartError:   "Não foi possível iniciar o login com chave de acesso.",
-	JSLoginFinishError:  "Não foi possível concluir o login com chave de acesso.",
-	JSRegisterStartErr:  "Não foi possível iniciar o registro da chave de acesso.",
-	JSRegisterFinishErr: "Não foi possível concluir o registro da chave de acesso.",
-	JSPasskeyFailed:     "Falha no login com chave de acesso.",
-	JSEmailRequired:     "Email principal é obrigatório.",
-	JSPasskeyCreated:    "Chave de acesso criada; fazendo login.",
-	JSRegisterFailed:    "Falha no registro da chave de acesso.",
-}
+const authAppDisplayName = "Fracturing.Space"
 
 // Auth returns localized auth copy for the provided language tag.
 func Auth(tag language.Tag) AuthCopy {
+	localizedTag := normalizeAuthTag(tag)
+	loc := message.NewPrinter(localizedTag)
+
+	landingTitle := localizeWithFallback(loc, "title.landing", "Open source AI GM engine")
+	loginTitle := localizeWithFallback(loc, "title.login", "Sign In")
+
+	return AuthCopy{
+		MetaDescription:     localizeWithFallback(loc, "meta.description", "Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters."),
+		LandingTitle:        withProductSuffix(landingTitle),
+		LandingTagline:      localizeWithFallback(loc, "landing.tagline", "Open-source, server-authoritative engine for deterministic tabletop RPG campaigns and AI game masters."),
+		LandingSignIn:       localizeWithFallback(loc, "landing.sign_in", "Sign in"),
+		LandingDocs:         localizeWithFallback(loc, "landing.docs", "Docs"),
+		LandingGitHub:       localizeWithFallback(loc, "landing.github", "GitHub"),
+		LoginTitle:          withProductSuffix(loginTitle),
+		LoginHeading:        localizeWithFallback(loc, "login.heading", "Sign in to %s", authAppDisplayName),
+		LoginCardTitle:      localizeWithFallback(loc, "login.card_title", "Account Access"),
+		LoginCardSubtitle:   localizeWithFallback(loc, "login.card_subtitle", "Create an account or sign in with a passkey."),
+		LoginEmail:          localizeWithFallback(loc, "login.email", "Email"),
+		LoginCreatePasskey:  localizeWithFallback(loc, "login.create_passkey", "Create Account With Passkey"),
+		LoginDivider:        localizeWithFallback(loc, "login.divider", "returning?"),
+		LoginSignInPasskey:  localizeWithFallback(loc, "login.sign_in_passkey", "Sign In With Passkey"),
+		JSLoginStartError:   localizeWithFallback(loc, "login.js.login_start_error", "failed to start passkey login"),
+		JSLoginFinishError:  localizeWithFallback(loc, "login.js.login_finish_error", "failed to finish passkey login"),
+		JSRegisterStartErr:  localizeWithFallback(loc, "login.js.register_start_error", "failed to start passkey registration"),
+		JSRegisterFinishErr: localizeWithFallback(loc, "login.js.register_finish_error", "failed to finish passkey registration"),
+		JSPasskeyFailed:     localizeWithFallback(loc, "login.js.passkey_failed", "failed to sign in with passkey"),
+		JSEmailRequired:     localizeWithFallback(loc, "login.js.email_required", "email is required"),
+		JSPasskeyCreated:    localizeWithFallback(loc, "login.js.passkey_created", "Passkey created; signing you in"),
+		JSRegisterFailed:    localizeWithFallback(loc, "login.js.register_failed", "failed to create passkey"),
+	}
+}
+
+func normalizeAuthTag(tag language.Tag) language.Tag {
 	if tag == language.MustParse("pt-BR") {
-		return authCopyPTBR
+		return language.MustParse("pt-BR")
 	}
 	base, _ := tag.Base()
 	portugueseBase, _ := language.Portuguese.Base()
 	if base == portugueseBase {
-		return authCopyPTBR
+		return language.MustParse("pt-BR")
 	}
-	return authCopyEN
+	return language.MustParse("en-US")
+}
+
+func withProductSuffix(value string) string {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return authAppDisplayName
+	}
+	return fmt.Sprintf("%s | %s", trimmed, authAppDisplayName)
+}
+
+func localizeWithFallback(loc *message.Printer, key string, fallback string, args ...any) string {
+	if loc != nil {
+		value := strings.TrimSpace(loc.Sprintf(key, args...))
+		if value != "" && value != key {
+			return value
+		}
+	}
+	if len(args) > 0 {
+		return fmt.Sprintf(fallback, args...)
+	}
+	return fallback
 }

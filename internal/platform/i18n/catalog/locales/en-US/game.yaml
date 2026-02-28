@@ -1,0 +1,5 @@
+locale: "en-US"
+namespace: "game"
+messages:
+  "game.participant.default_ai_name": "Oracle"
+  "game.participant.default_unknown_name": "Mysterious Person"

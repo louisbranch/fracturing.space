@@ -8,6 +8,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	_ "github.com/louisbranch/fracturing.space/internal/services/shared/i18nmessages"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )

@@ -1,0 +1,13 @@
+locale: "pt-BR"
+namespace: "notifications"
+messages:
+  "notification.generic.body": "Você tem uma nova notificação."
+  "notification.generic.email_subject": "Notificação do Fracturing Space"
+  "notification.generic.title": "Notificação"
+  "notification.onboarding_welcome.body": "Sua conta está pronta. Método de entrada: %s."
+  "notification.onboarding_welcome.email_body": "Sua conta está pronta. Método de entrada: %s."
+  "notification.onboarding_welcome.email_subject": "Boas-vindas ao Fracturing Space"
+  "notification.onboarding_welcome.title": "Boas-vindas ao Fracturing Space"
+  "notification.signup_method.magic_link": "link mágico"
+  "notification.signup_method.passkey": "chave de acesso"
+  "notification.signup_method.unknown": "outro método"

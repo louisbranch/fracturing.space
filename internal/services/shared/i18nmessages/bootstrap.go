@@ -2,5 +2,5 @@
 package i18nmessages
 
 import (
-	_ "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
+	_ "github.com/louisbranch/fracturing.space/internal/platform/i18n/catalog"
 )

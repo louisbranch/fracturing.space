@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	_ "github.com/louisbranch/fracturing.space/internal/platform/i18n/catalog"
 	notificationsdomain "github.com/louisbranch/fracturing.space/internal/services/notifications/domain"
 	"golang.org/x/text/message"
 )
