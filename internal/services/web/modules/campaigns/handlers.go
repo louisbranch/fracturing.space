@@ -175,7 +175,7 @@ func campaignMainStyle(coverImageURL string) string {
 	}
 	// TODO(web-hardening): move cover image styling to template attributes or CSS classes so URL handling is not composed into inline style strings.
 	safeCoverImageURL := strings.ReplaceAll(coverImageURL, "\"", "\\\"")
-	return "background-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.55)), url(\"" + safeCoverImageURL + "\"); background-size: cover; background-position: center; background-repeat: no-repeat;"
+	return "background-image: url(\"" + safeCoverImageURL + "\"); background-size: cover; background-position: center; background-repeat: no-repeat;"
 }
 
 func campaignMainClass(coverImageURL string) string {

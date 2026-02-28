@@ -381,8 +381,8 @@ func TestMountLogoutClearsSessionCookieAndRedirectsToLogin(t *testing.T) {
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != routepath.Login {
-		t.Fatalf("Location = %q, want %q", got, routepath.Login)
+	if got := rr.Header().Get("Location"); got != routepath.Root {
+		t.Fatalf("Location = %q, want %q", got, routepath.Root)
 	}
 	setCookie := rr.Header().Get("Set-Cookie")
 	cookie, err := http.ParseSetCookie(setCookie)

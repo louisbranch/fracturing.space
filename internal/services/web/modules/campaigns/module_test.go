@@ -1029,8 +1029,12 @@ func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 	if nonHTMXRR.Code != http.StatusOK {
 		t.Fatalf("non-htmx status = %d, want %d", nonHTMXRR.Code, http.StatusOK)
 	}
-	if body := nonHTMXRR.Body.String(); !strings.Contains(body, `style="background-image: linear-gradient(to bottom`) {
+	body := nonHTMXRR.Body.String()
+	if !strings.Contains(body, `style="background-image: url(`) {
 		t.Fatalf("non-htmx body = %q, want campaign cover main style", body)
+	}
+	if strings.Contains(body, `linear-gradient(to bottom`) {
+		t.Fatalf("non-htmx body unexpectedly contains overlay gradient: %q", body)
 	}
 
 	htmxReq := httptest.NewRequest(http.MethodGet, routepath.AppCampaign("c1"), nil)
@@ -1040,9 +1044,12 @@ func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 	if htmxRR.Code != http.StatusOK {
 		t.Fatalf("htmx status = %d, want %d", htmxRR.Code, http.StatusOK)
 	}
-	body := htmxRR.Body.String()
-	if !strings.Contains(body, `data-app-main-style="background-image: linear-gradient(to bottom`) {
+	body = htmxRR.Body.String()
+	if !strings.Contains(body, `data-app-main-style="background-image: url(`) {
 		t.Fatalf("htmx body = %q, want campaign main style metadata", body)
+	}
+	if strings.Contains(body, `linear-gradient(to bottom`) {
+		t.Fatalf("htmx body unexpectedly contains overlay gradient: %q", body)
 	}
 }
 
