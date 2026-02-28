@@ -71,7 +71,7 @@ func WriteAppError(w http.ResponseWriter, r *http.Request, statusCode int, deps 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(statusCode)
 	title := webtemplates.AppErrorPageTitle(statusCode, loc)
-	if err := webtemplates.AppLayoutWithMainHeaderAndLayout(title, viewer, nil, webtemplates.AppMainLayoutOptions{}, lang, loc).Render(templ.WithChildren(requestContext(r), fragment), w); err != nil {
+	if err := webtemplates.AppLayoutWithMainHeaderAndLayout(title, viewer, nil, webtemplates.AppMainLayoutOptions{}, nil, lang, loc).Render(templ.WithChildren(requestContext(r), fragment), w); err != nil {
 		http.Error(w, PublicMessage(loc, err), statusCode)
 	}
 }

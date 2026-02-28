@@ -5,9 +5,11 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/a-h/templ"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -55,9 +57,29 @@ func WriteModulePage(w http.ResponseWriter, r *http.Request, deps module.Depende
 		return main.Render(templ.WithChildren(ctx, fragment), w)
 	}
 
+	toast := resolveFlashToast(w, r, loc)
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(statusCode)
-	return webtemplates.AppLayoutWithMainHeaderAndLayout(page.Title, viewer, page.Header, page.Layout, lang, loc).Render(templ.WithChildren(ctx, fragment), w)
+	return webtemplates.AppLayoutWithMainHeaderAndLayout(page.Title, viewer, page.Header, page.Layout, toast, lang, loc).Render(templ.WithChildren(ctx, fragment), w)
+}
+
+func resolveFlashToast(w http.ResponseWriter, r *http.Request, loc webi18n.Localizer) *webtemplates.AppToast {
+	notice, ok := flashnotice.ReadAndClear(w, r)
+	if !ok {
+		return nil
+	}
+	message := strings.TrimSpace(loc.Sprintf(notice.Key))
+	if message == "" {
+		message = strings.TrimSpace(notice.Key)
+	}
+	if message == "" {
+		return nil
+	}
+	return &webtemplates.AppToast{
+		Kind:    string(notice.Kind),
+		Message: message,
+	}
 }
 
 func requestContext(r *http.Request) context.Context {

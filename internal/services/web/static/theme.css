@@ -22,6 +22,36 @@ h4 {
   font-size: 1rem;
 }
 
+@keyframes app-toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes app-toast-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+[data-app-toast="true"] {
+  animation: app-toast-enter 180ms ease-out;
+}
+
+[data-app-toast="true"].app-toast-exit {
+  animation: app-toast-exit 200ms ease-in forwards;
+}
+
 /* Campaign chat drawer */
 
 .campaign-chat-drawer .chat-drawer-shell {

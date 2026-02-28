@@ -125,6 +125,11 @@ type AppMainLayoutOptions struct {
 	SideMenu  *AppSideMenu
 }
 
+type AppToast struct {
+	Kind    string
+	Message string
+}
+
 const breadcrumbLabelMaxChars = 32
 
 func appMainLayoutMainStyle(layout AppMainLayoutOptions) string {
@@ -259,6 +264,53 @@ func truncateBreadcrumbLabel(label string) string {
 	return string(runes[:breadcrumbLabelMaxChars-3]) + "..."
 }
 
+func appToastMessage(toast *AppToast) string {
+	if toast == nil {
+		return ""
+	}
+	return strings.TrimSpace(toast.Message)
+}
+
+func appToastKind(toast *AppToast) string {
+	if toast == nil {
+		return ""
+	}
+	kind := strings.ToLower(strings.TrimSpace(toast.Kind))
+	switch kind {
+	case "success", "info", "warning", "error":
+		return kind
+	default:
+		return "info"
+	}
+}
+
+func appToastAlertClass(toast *AppToast) string {
+	switch appToastKind(toast) {
+	case "success":
+		return "alert-success"
+	case "warning":
+		return "alert-warning"
+	case "error":
+		return "alert-error"
+	default:
+		return "alert-info"
+	}
+}
+
+func appToastRole(toast *AppToast) string {
+	if appToastKind(toast) == "error" {
+		return "alert"
+	}
+	return "status"
+}
+
+func appToastAriaLive(toast *AppToast) string {
+	if appToastKind(toast) == "error" {
+		return "assertive"
+	}
+	return "polite"
+}
+
 templ AppSideMenuComponent(menu *AppSideMenu) {
 	if appSideMenuHasItems(menu) {
 		<ul class="menu bg-base-200 rounded-box w-full">
@@ -327,15 +379,32 @@ templ AppMainContentWithLayout(header *AppMainHeader, layout AppMainLayoutOption
 	}
 }
 
+templ AppToastComponent(toast *AppToast) {
+	if appToastMessage(toast) != "" {
+		<div id="app-toast-stack" class="toast toast-top toast-end z-[60]">
+			<div
+				id="app-toast"
+				class={ "alert shadow-lg " + appToastAlertClass(toast) }
+				role={ appToastRole(toast) }
+				aria-live={ appToastAriaLive(toast) }
+				data-app-toast="true"
+				data-app-toast-hide-after-ms="4500"
+			>
+				<span>{ appToastMessage(toast) }</span>
+			</div>
+		</div>
+	}
+}
+
 templ AppLayout(title string, viewer module.Viewer, lang string, loc Localizer) {
-	@AppLayoutWithMainHeaderAndLayout(title, viewer, nil, AppMainLayoutOptions{}, lang, loc)
+	@AppLayoutWithMainHeaderAndLayout(title, viewer, nil, AppMainLayoutOptions{}, nil, lang, loc)
 }
 
 templ AppLayoutWithMainHeader(title string, viewer module.Viewer, header *AppMainHeader, lang string, loc Localizer) {
-	@AppLayoutWithMainHeaderAndLayout(title, viewer, header, AppMainLayoutOptions{}, lang, loc)
+	@AppLayoutWithMainHeaderAndLayout(title, viewer, header, AppMainLayoutOptions{}, nil, lang, loc)
 }
 
-templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, header *AppMainHeader, layout AppMainLayoutOptions, lang string, loc Localizer) {
+templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, header *AppMainHeader, layout AppMainLayoutOptions, toast *AppToast, lang string, loc Localizer) {
 	<!doctype html>
 	<html lang={ appLayoutLang(lang) } data-theme={ daisyTheme }>
 		<head>
@@ -393,6 +462,7 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 					</div>
 				</nav>
 			</header>
+			@AppToastComponent(toast)
 			<main
 				id="main"
 				class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }

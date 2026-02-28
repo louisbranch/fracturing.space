@@ -188,6 +188,56 @@ function appPathFromHtmxDetail(detail) {
 function syncAppChromeState(currentPath) {
 	syncAppNavActiveLinks(currentPath);
 	syncMainStateForRoute(currentPath);
+	initAppToasts();
+}
+
+var defaultToastHideAfterMs = 4500;
+
+function toastHideAfterMs(toast) {
+	if (!toast || typeof toast.getAttribute !== "function") {
+		return defaultToastHideAfterMs;
+	}
+	var raw = Number.parseInt(toast.getAttribute("data-app-toast-hide-after-ms"), 10);
+	if (!Number.isFinite(raw) || raw < 0) {
+		return defaultToastHideAfterMs;
+	}
+	return raw;
+}
+
+function dismissAppToast(toast) {
+	if (!toast) {
+		return;
+	}
+	if (toast.getAttribute("data-app-toast-dismissed") === "true") {
+		return;
+	}
+	toast.setAttribute("data-app-toast-dismissed", "true");
+	toast.classList.add("app-toast-exit");
+	window.setTimeout(function() {
+		if (toast.parentNode) {
+			toast.parentNode.removeChild(toast);
+		}
+		var stack = document.getElementById("app-toast-stack");
+		if (stack && stack.children.length === 0 && stack.parentNode) {
+			stack.parentNode.removeChild(stack);
+		}
+	}, 220);
+}
+
+function initAppToasts() {
+	var toasts = document.querySelectorAll("[data-app-toast='true']");
+	if (!toasts.length) {
+		return;
+	}
+	toasts.forEach(function(toast) {
+		if (toast.getAttribute("data-app-toast-initialized") === "true") {
+			return;
+		}
+		toast.setAttribute("data-app-toast-initialized", "true");
+		window.setTimeout(function() {
+			dismissAppToast(toast);
+		}, toastHideAfterMs(toast));
+	});
 }
 
 syncAppChromeState();
