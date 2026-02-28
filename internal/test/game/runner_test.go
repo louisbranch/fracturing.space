@@ -232,9 +232,6 @@ func runCampaignStep(t *testing.T, ctx context.Context, env scenarioEnv, state *
 	if theme := optionalString(step.Args, "theme", ""); theme != "" {
 		request.ThemePrompt = theme
 	}
-	if creator := optionalString(step.Args, "creator_display_name", ""); creator != "" {
-		request.CreatorDisplayName = creator
-	}
 
 	before := latestSeq(t, ctx, env, state)
 	response, err := env.campaignClient.CreateCampaign(withUserID(ctx, state.userID), request)

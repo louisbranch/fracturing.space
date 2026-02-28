@@ -39,11 +39,10 @@ func TestDaggerheartGroupActionFlow(t *testing.T) {
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
-		Name:               "Group Action Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "group action",
-		CreatorDisplayName: "Group GM",
+		Name:        "Group Action Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "group action",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)
@@ -134,11 +133,10 @@ func TestDaggerheartTagTeamFlow(t *testing.T) {
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
-		Name:               "Tag Team Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "tag team",
-		CreatorDisplayName: "Tag Team GM",
+		Name:        "Tag Team Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "tag team",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)

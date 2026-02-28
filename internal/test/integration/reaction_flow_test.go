@@ -39,11 +39,10 @@ func TestDaggerheartReactionFlow(t *testing.T) {
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
-		Name:               "Reaction Flow Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "reaction flow",
-		CreatorDisplayName: "Reaction GM",
+		Name:        "Reaction Flow Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "reaction flow",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)

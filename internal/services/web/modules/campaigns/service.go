@@ -76,12 +76,11 @@ type CampaignInvite struct {
 
 // CreateCampaignInput stores create-campaign form values.
 type CreateCampaignInput struct {
-	Name               string
-	Locale             commonv1.Locale
-	System             commonv1.GameSystem
-	GMMode             statev1.GmMode
-	ThemePrompt        string
-	CreatorDisplayName string
+	Name        string
+	Locale      commonv1.Locale
+	System      commonv1.GameSystem
+	GMMode      statev1.GmMode
+	ThemePrompt string
 }
 
 // CreateCampaignResult stores create-campaign response values.

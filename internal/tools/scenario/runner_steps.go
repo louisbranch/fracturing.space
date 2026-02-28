@@ -174,17 +174,12 @@ func (r *Runner) runCampaignStep(ctx context.Context, state *scenarioState, step
 		return err
 	}
 
-	creator := optionalString(step.Args, "creator_display_name", "")
-	if creator == "" {
-		creator = "Scenario GM"
-	}
 	request := &gamev1.CreateCampaignRequest{
-		Name:               name,
-		System:             systemValue,
-		GmMode:             gmModeValue,
-		Intent:             intentValue,
-		AccessPolicy:       accessPolicyValue,
-		CreatorDisplayName: creator,
+		Name:         name,
+		System:       systemValue,
+		GmMode:       gmModeValue,
+		Intent:       intentValue,
+		AccessPolicy: accessPolicyValue,
 	}
 	if theme := optionalString(step.Args, "theme", ""); theme != "" {
 		request.ThemePrompt = theme

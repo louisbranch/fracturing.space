@@ -43,11 +43,10 @@ func TestDaggerheartActionRollCriticalEffects(t *testing.T) {
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{
-		Name:               "Critical Roll Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "critical roll",
-		CreatorDisplayName: "Critical GM",
+		Name:        "Critical Roll Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "critical roll",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)
@@ -156,11 +155,10 @@ func TestDaggerheartAttackFlowCriticalDamageBonus(t *testing.T) {
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{
-		Name:               "Critical Attack Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "critical attack",
-		CreatorDisplayName: "Critical Attack GM",
+		Name:        "Critical Attack Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "critical attack",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)

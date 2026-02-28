@@ -65,11 +65,10 @@ type CampaignSessionRow struct {
 
 // CampaignCreatePageView provides data for the campaign create page.
 type CampaignCreatePageView struct {
-	Message            string
-	UserID             string
-	Name               string
-	System             string
-	GmMode             string
-	ThemePrompt        string
-	CreatorDisplayName string
+	Message     string
+	UserID      string
+	Name        string
+	System      string
+	GmMode      string
+	ThemePrompt string
 }

@@ -54,11 +54,10 @@ func TestDaggerheartApplyConditions(t *testing.T) {
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
-		Name:               "Conditions Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "conditions",
-		CreatorDisplayName: "Condition GM",
+		Name:        "Conditions Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "conditions",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)
@@ -150,11 +149,10 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
-		Name:               "Adversary Conditions Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "conditions",
-		CreatorDisplayName: "Condition GM",
+		Name:        "Adversary Conditions Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "conditions",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)

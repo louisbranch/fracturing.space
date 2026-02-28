@@ -395,19 +395,14 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 	}
 
 	themePrompt := strings.TrimSpace(r.FormValue("theme_prompt"))
-	creatorDisplayName := strings.TrimSpace(r.FormValue("creator_display_name"))
 	resolvedLocale := platformi18n.LocaleForTag(webi18n.ResolveTag(r, h.deps.resolveLanguage))
-	if creatorDisplayName == "" && h.deps.resolveViewer != nil {
-		creatorDisplayName = strings.TrimSpace(h.deps.resolveViewer(r).DisplayName)
-	}
 
 	created, err := h.service.createCampaign(webctx.WithResolvedUserID(r, h.deps.resolveUserID), CreateCampaignInput{
-		Name:               name,
-		System:             system,
-		GMMode:             gmMode,
-		ThemePrompt:        themePrompt,
-		CreatorDisplayName: creatorDisplayName,
-		Locale:             resolvedLocale,
+		Name:        name,
+		System:      system,
+		GMMode:      gmMode,
+		ThemePrompt: themePrompt,
+		Locale:      resolvedLocale,
 	})
 	if err != nil {
 		h.writeError(w, r, err)

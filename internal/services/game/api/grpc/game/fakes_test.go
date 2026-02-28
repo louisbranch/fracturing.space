@@ -12,6 +12,7 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -1056,6 +1057,13 @@ type fakeAuthClient struct {
 	lastGetUserRequest *authv1.GetUserRequest
 }
 
+type fakeSocialClient struct {
+	profile               *socialv1.UserProfile
+	getUserProfileErr     error
+	lastGetUserProfileReq *socialv1.GetUserProfileRequest
+	getUserProfileCalls   int
+}
+
 func (f *fakeAuthClient) CreateUser(ctx context.Context, req *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
@@ -1122,6 +1130,38 @@ func (f *fakeAuthClient) ConsumeMagicLink(ctx context.Context, req *authv1.Consu
 
 func (f *fakeAuthClient) ListUserEmails(ctx context.Context, req *authv1.ListUserEmailsRequest, opts ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeSocialClient) AddContact(context.Context, *socialv1.AddContactRequest, ...grpc.CallOption) (*socialv1.AddContactResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake social client")
+}
+
+func (f *fakeSocialClient) RemoveContact(context.Context, *socialv1.RemoveContactRequest, ...grpc.CallOption) (*socialv1.RemoveContactResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake social client")
+}
+
+func (f *fakeSocialClient) ListContacts(context.Context, *socialv1.ListContactsRequest, ...grpc.CallOption) (*socialv1.ListContactsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake social client")
+}
+
+func (f *fakeSocialClient) SetUserProfile(context.Context, *socialv1.SetUserProfileRequest, ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake social client")
+}
+
+func (f *fakeSocialClient) GetUserProfile(_ context.Context, req *socialv1.GetUserProfileRequest, _ ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error) {
+	f.getUserProfileCalls++
+	f.lastGetUserProfileReq = req
+	if f.getUserProfileErr != nil {
+		return nil, f.getUserProfileErr
+	}
+	if f.profile == nil {
+		return &socialv1.GetUserProfileResponse{}, nil
+	}
+	return &socialv1.GetUserProfileResponse{UserProfile: f.profile}, nil
+}
+
+func (f *fakeSocialClient) LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest, ...grpc.CallOption) (*socialv1.LookupUserProfileResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake social client")
 }
 
 type fakeStatisticsStore struct {

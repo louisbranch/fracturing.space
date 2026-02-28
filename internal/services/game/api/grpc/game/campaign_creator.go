@@ -115,31 +115,16 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
 	}
 
-	creatorDisplayName := strings.TrimSpace(in.GetCreatorDisplayName())
-	if creatorDisplayName == "" {
-		if c.authClient == nil {
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "auth client is not configured")
-		}
+	profile := loadSocialProfileSnapshot(ctx, c.stores.Social, userID)
+	creatorDisplayName := profile.Name
+	if creatorDisplayName == "" && c.authClient != nil {
 		userResponse, err := c.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
-		if err != nil {
-			if statusErr, ok := status.FromError(err); ok && statusErr.Code() == codes.NotFound {
-				return storage.CampaignRecord{}, storage.ParticipantRecord{}, apperrors.New(
-					apperrors.CodeCampaignCreatorUserMissing,
-					"creator user not found",
-				)
-			}
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "get auth user: %v", err)
+		if err == nil && userResponse != nil && userResponse.GetUser() != nil {
+			creatorDisplayName = strings.TrimSpace(userResponse.GetUser().GetEmail())
 		}
-		if userResponse == nil || userResponse.GetUser() == nil {
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "auth user response is missing")
-		}
-		creatorDisplayName = strings.TrimSpace(userResponse.GetUser().GetEmail())
-		if creatorDisplayName == "" {
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, apperrors.New(
-				apperrors.CodeCampaignCreatorUserMissing,
-				"creator user display name is required",
-			)
-		}
+	}
+	if creatorDisplayName == "" {
+		creatorDisplayName = userID
 	}
 
 	participantPayload := participant.JoinPayload{
@@ -149,6 +134,9 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		Role:           "GM",
 		Controller:     "HUMAN",
 		CampaignAccess: "OWNER",
+		AvatarSetID:    profile.AvatarSetID,
+		AvatarAssetID:  profile.AvatarAssetID,
+		Pronouns:       profile.Pronouns,
 	}
 	participantPayloadJSON, err := json.Marshal(participantPayload)
 	if err != nil {

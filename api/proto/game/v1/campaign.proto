@@ -95,26 +95,23 @@ message CreateCampaignRequest {
   // Display name for the campaign.
   string name = 1;
 
-  // Preferred locale for the campaign.
-  common.v1.Locale locale = 2;
-
   // The game system for this campaign. Required.
-  common.v1.GameSystem system = 3;
+  common.v1.GameSystem system = 2;
 
   // The mode of GM participation.
-  GmMode gm_mode = 4;
+  GmMode gm_mode = 3;
 
   // Intent for the campaign (e.g. standard, starter, sandbox).
-  CampaignIntent intent = 5;
+  CampaignIntent intent = 4;
 
   // Visibility/access policy for the campaign.
-  CampaignAccessPolicy access_policy = 6;
+  CampaignAccessPolicy access_policy = 5;
 
   // Optional free-form theme prompt for assistants.
-  string theme_prompt = 7;
+  string theme_prompt = 6;
 
-  // Optional display name for the creator's participant seat.
-  string creator_display_name = 8;
+  // Preferred locale for the campaign.
+  common.v1.Locale locale = 7;
 }
 
 message CreateCampaignResponse {

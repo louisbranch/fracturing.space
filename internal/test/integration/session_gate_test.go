@@ -43,11 +43,10 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 	ctxWithUser := withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctxWithUser, &gamev1.CreateCampaignRequest{
-		Name:               "Gate Actions Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "gate",
-		CreatorDisplayName: "Gate GM",
+		Name:        "Gate Actions Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "gate",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)

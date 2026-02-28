@@ -47,11 +47,10 @@ func TestDaggerheartAttackFlow(t *testing.T) {
 	ctx = withUserID(ctx, userID)
 
 	createCampaign, err := campaignClient.CreateCampaign(ctx, &gamev1.CreateCampaignRequest{
-		Name:               "Attack Flow Campaign",
-		System:             commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:             gamev1.GmMode_HUMAN,
-		ThemePrompt:        "attack flow",
-		CreatorDisplayName: "Attack GM",
+		Name:        "Attack Flow Campaign",
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      gamev1.GmMode_HUMAN,
+		ThemePrompt: "attack flow",
 	})
 	if err != nil {
 		t.Fatalf("create campaign: %v", err)
