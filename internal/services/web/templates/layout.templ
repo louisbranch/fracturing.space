@@ -431,6 +431,13 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 						@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CAMPAIGN, "size-4 me-1")
 						{ T(loc, "game.campaigns.title") }
 					</a>
+					<a href={ routepath.AppNotifications } hx-get={ routepath.AppNotifications } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" data-nav-item="true" aria-label={ T(loc, "game.notifications.title") } title={ T(loc, "game.notifications.title") } class="btn btn-ghost btn-circle btn-sm">
+						if viewer.HasUnreadNotifications {
+							@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD, "size-4")
+						} else {
+							@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_NOTIFICATION, "size-4")
+						}
+					</a>
 					<div class="dropdown dropdown-end">
 						<button type="button" class="btn btn-ghost btn-circle avatar">
 							if strings.TrimSpace(viewer.AvatarURL) != "" {

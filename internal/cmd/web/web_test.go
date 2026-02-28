@@ -31,6 +31,9 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.AIAddr != "ai:8087" {
 		t.Fatalf("AIAddr = %q, want %q", cfg.AIAddr, "ai:8087")
 	}
+	if cfg.NotificationsAddr != "notifications:8088" {
+		t.Fatalf("NotificationsAddr = %q, want %q", cfg.NotificationsAddr, "notifications:8088")
+	}
 	if cfg.UserHubAddr != "userhub:8092" {
 		t.Fatalf("UserHubAddr = %q, want %q", cfg.UserHubAddr, "userhub:8092")
 	}
@@ -104,5 +107,18 @@ func TestParseConfigOverrideUserHubAddr(t *testing.T) {
 	}
 	if cfg.UserHubAddr != "127.0.0.1:18092" {
 		t.Fatalf("UserHubAddr = %q, want %q", cfg.UserHubAddr, "127.0.0.1:18092")
+	}
+}
+
+func TestParseConfigOverrideNotificationsAddr(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("web", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, []string{"-notifications-addr", "127.0.0.1:18088"})
+	if err != nil {
+		t.Fatalf("ParseConfig() error = %v", err)
+	}
+	if cfg.NotificationsAddr != "127.0.0.1:18088" {
+		t.Fatalf("NotificationsAddr = %q, want %q", cfg.NotificationsAddr, "127.0.0.1:18088")
 	}
 }

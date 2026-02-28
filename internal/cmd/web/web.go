@@ -11,6 +11,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
@@ -30,6 +31,7 @@ type Config struct {
 	SocialAddr                string        `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
 	GameAddr                  string        `env:"FRACTURING_SPACE_GAME_ADDR"`
 	AIAddr                    string        `env:"FRACTURING_SPACE_AI_ADDR"`
+	NotificationsAddr         string        `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`
 	UserHubAddr               string        `env:"FRACTURING_SPACE_USERHUB_ADDR"`
 	AssetBaseURL              string        `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
 	GRPCDialTimeout           time.Duration `env:"FRACTURING_SPACE_WEB_DIAL_TIMEOUT" envDefault:"2s"`
@@ -48,6 +50,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	cfg.SocialAddr = discovery.OrDefaultGRPCAddr(cfg.SocialAddr, discovery.ServiceSocial)
 	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
 	cfg.AIAddr = discovery.OrDefaultGRPCAddr(cfg.AIAddr, discovery.ServiceAI)
+	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
 	cfg.UserHubAddr = discovery.OrDefaultGRPCAddr(cfg.UserHubAddr, discovery.ServiceUserHub)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
@@ -56,6 +59,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "Social service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
 	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "AI service gRPC address")
+	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "Notifications service gRPC address")
 	fs.StringVar(&cfg.UserHubAddr, "userhub-addr", cfg.UserHubAddr, "Userhub service gRPC address")
 	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "Asset base URL for image delivery")
 	fs.BoolVar(&cfg.EnableExperimentalModules, "enable-experimental-modules", cfg.EnableExperimentalModules, "Enable experimental web module surfaces")
@@ -101,7 +105,13 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		defer userHubConn.Close()
 
-		server, err := web.NewServer(ctx, web.Config{HTTPAddr: cfg.HTTPAddr, AssetBaseURL: cfg.AssetBaseURL, ChatHTTPAddr: cfg.ChatHTTPAddr, EnableExperimentalModules: cfg.EnableExperimentalModules, CampaignClient: statev1.NewCampaignServiceClient(gameConn), ParticipantClient: statev1.NewParticipantServiceClient(gameConn), CharacterClient: statev1.NewCharacterServiceClient(gameConn), SessionClient: statev1.NewSessionServiceClient(gameConn), InviteClient: statev1.NewInviteServiceClient(gameConn), AuthorizationClient: statev1.NewAuthorizationServiceClient(gameConn), AuthClient: authv1.NewAuthServiceClient(authConn), AccountClient: authv1.NewAccountServiceClient(authConn), SocialClient: socialv1.NewSocialServiceClient(socialConn), CredentialClient: aiv1.NewCredentialServiceClient(aiConn), UserHubClient: userhubv1.NewUserHubServiceClient(userHubConn)})
+		notificationsConn, err := platformgrpc.DialWithHealth(ctx, nil, cfg.NotificationsAddr, cfg.GRPCDialTimeout, log.Printf, platformgrpc.DefaultClientDialOptions()...)
+		if err != nil {
+			return fmt.Errorf("dial notifications gRPC %s: %w", cfg.NotificationsAddr, err)
+		}
+		defer notificationsConn.Close()
+
+		server, err := web.NewServer(ctx, web.Config{HTTPAddr: cfg.HTTPAddr, AssetBaseURL: cfg.AssetBaseURL, ChatHTTPAddr: cfg.ChatHTTPAddr, EnableExperimentalModules: cfg.EnableExperimentalModules, CampaignClient: statev1.NewCampaignServiceClient(gameConn), ParticipantClient: statev1.NewParticipantServiceClient(gameConn), CharacterClient: statev1.NewCharacterServiceClient(gameConn), SessionClient: statev1.NewSessionServiceClient(gameConn), InviteClient: statev1.NewInviteServiceClient(gameConn), AuthorizationClient: statev1.NewAuthorizationServiceClient(gameConn), AuthClient: authv1.NewAuthServiceClient(authConn), AccountClient: authv1.NewAccountServiceClient(authConn), SocialClient: socialv1.NewSocialServiceClient(socialConn), CredentialClient: aiv1.NewCredentialServiceClient(aiConn), UserHubClient: userhubv1.NewUserHubServiceClient(userHubConn), NotificationClient: notificationsv1.NewNotificationServiceClient(notificationsConn)})
 		if err != nil {
 			return fmt.Errorf("init web server: %w", err)
 		}

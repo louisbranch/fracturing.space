@@ -8,6 +8,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
@@ -33,18 +34,20 @@ type requestPrincipalState struct {
 type requestPrincipalStateKey struct{}
 
 type principalResolver struct {
-	authClient    module.AuthClient
-	accountClient module.AccountClient
-	socialClient  socialv1.SocialServiceClient
-	assetBaseURL  string
+	authClient         module.AuthClient
+	accountClient      module.AccountClient
+	notificationClient module.NotificationClient
+	socialClient       socialv1.SocialServiceClient
+	assetBaseURL       string
 }
 
 func newPrincipalResolver(cfg Config) principalResolver {
 	return principalResolver{
-		authClient:    cfg.AuthClient,
-		accountClient: cfg.AccountClient,
-		socialClient:  cfg.SocialClient,
-		assetBaseURL:  cfg.AssetBaseURL,
+		authClient:         cfg.AuthClient,
+		accountClient:      cfg.AccountClient,
+		notificationClient: cfg.NotificationClient,
+		socialClient:       cfg.SocialClient,
+		assetBaseURL:       cfg.AssetBaseURL,
 	}
 }
 
@@ -98,9 +101,10 @@ func (r principalResolver) resolveViewerUncached(request *http.Request) module.V
 		return module.Viewer{}
 	}
 	viewer := module.Viewer{
-		DisplayName: "Adventurer",
-		AvatarURL:   websupport.AvatarImageURL(r.assetBaseURL, "user", userID, "", ""),
-		ProfileURL:  routepath.AppSettingsProfile,
+		DisplayName:            "Adventurer",
+		AvatarURL:              websupport.AvatarImageURL(r.assetBaseURL, "user", userID, "", ""),
+		ProfileURL:             routepath.AppSettingsProfile,
+		HasUnreadNotifications: r.resolveHasUnreadNotifications(contextFromRequest(request), userID),
 	}
 	if r.socialClient == nil {
 		return viewer
@@ -137,6 +141,34 @@ func (r principalResolver) resolveViewerUncached(request *http.Request) module.V
 		)
 	}
 	return viewer
+}
+
+func (r principalResolver) resolveHasUnreadNotifications(ctx context.Context, userID string) bool {
+	if r.notificationClient == nil {
+		return false
+	}
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return false
+	}
+	resp, err := r.notificationClient.GetUnreadNotificationStatus(
+		grpcauthctx.WithUserID(ctx, userID),
+		&notificationsv1.GetUnreadNotificationStatusRequest{},
+	)
+	if err != nil || resp == nil {
+		return false
+	}
+	if resp.GetHasUnread() {
+		return true
+	}
+	return resp.GetUnreadCount() > 0
+}
+
+func contextFromRequest(request *http.Request) context.Context {
+	if request == nil {
+		return context.Background()
+	}
+	return request.Context()
 }
 
 func (r principalResolver) resolveViewer(request *http.Request) module.Viewer {

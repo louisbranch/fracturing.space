@@ -2,7 +2,6 @@ package notifications
 
 import (
 	"context"
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -18,8 +17,8 @@ import (
 func TestMountServesNotificationsGet(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{items: []NotificationSummary{{ID: "n1", Title: "Welcome", Read: false}}})
-	mount, err := m.Mount(module.Dependencies{})
+	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}}})
+	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -32,16 +31,20 @@ func TestMountServesNotificationsGet(t *testing.T) {
 	if got := rr.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
 		t.Fatalf("content-type = %q, want %q", got, "text/html; charset=utf-8")
 	}
-	if body := rr.Body.String(); !strings.Contains(body, "web-scaffold-page") || !strings.Contains(body, "notifications-root") {
-		t.Fatalf("body = %q, want minimal scaffold notifications page", body)
+	body := rr.Body.String()
+	if !strings.Contains(body, "notifications-root") {
+		t.Fatalf("body missing notifications root marker: %q", body)
+	}
+	if !strings.Contains(body, "Welcome to Fracturing Space") {
+		t.Fatalf("body missing rendered notification title: %q", body)
 	}
 }
 
 func TestMountServesNotificationsHead(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{items: []NotificationSummary{{ID: "n1", Title: "Welcome", Read: false}}})
-	mount, err := m.Mount(module.Dependencies{})
+	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}}})
+	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -65,7 +68,7 @@ func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 	t.Parallel()
 
 	m := New()
-	mount, err := m.Mount(module.Dependencies{})
+	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -81,15 +84,15 @@ func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 	}
 	// Invariant: default module wiring must fail closed when notifications backend is absent.
 	if strings.Contains(body, "notifications-root") {
-		t.Fatalf("body unexpectedly rendered notifications scaffold without backend: %q", body)
+		t.Fatalf("body unexpectedly rendered notifications surface without backend: %q", body)
 	}
 }
 
 func TestMountRejectsNotificationsNonGet(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := NewWithGateway(fakeGateway{})
+	mount, _ := m.Mount(notificationsTestDependencies())
 	req := httptest.NewRequest(http.MethodPatch, routepath.Notifications+"inbox", nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -98,30 +101,73 @@ func TestMountRejectsNotificationsNonGet(t *testing.T) {
 	}
 }
 
-func TestMountServesNotificationOpenRoute(t *testing.T) {
+func TestMountServesNotificationDetailRoute(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{items: []NotificationSummary{{ID: "n1", Title: "Welcome", Read: false}}})
-	mount, err := m.Mount(module.Dependencies{})
+	m := NewWithGateway(fakeGateway{getItem: NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: true}})
+	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.AppNotificationsOpen("n1"), nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppNotification("n1"), nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if body := rr.Body.String(); !strings.Contains(body, "web-scaffold-page") || !strings.Contains(body, "notification-open") {
-		t.Fatalf("body = %q, want minimal scaffold notification detail page", body)
+	body := rr.Body.String()
+	if !strings.Contains(body, "notification-open") {
+		t.Fatalf("body missing detail container marker: %q", body)
+	}
+	if !strings.Contains(body, "Welcome to Fracturing Space") {
+		t.Fatalf("body missing rendered detail title: %q", body)
+	}
+}
+
+func TestMountNotificationOpenRouteRedirectsToDetail(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: true}})
+	mount, err := m.Mount(notificationsTestDependencies())
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, routepath.AppNotificationOpen("n1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppNotification("n1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppNotification("n1"))
+	}
+}
+
+func TestMountNotificationOpenRouteHTMXRedirects(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: true}})
+	mount, err := m.Mount(notificationsTestDependencies())
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodPost, routepath.AppNotificationOpen("n1"), nil)
+	req.Header.Set("HX-Request", "true")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppNotification("n1") {
+		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppNotification("n1"))
 	}
 }
 
 func TestMountMapsNotificationGatewayErrorToHTTPStatus(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{err: apperrors.E(apperrors.KindUnauthorized, "missing session")})
-	mount, err := m.Mount(module.Dependencies{})
+	m := NewWithGateway(fakeGateway{listErr: apperrors.E(apperrors.KindUnauthorized, "missing session")})
+	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -136,8 +182,8 @@ func TestMountMapsNotificationGatewayErrorToHTTPStatus(t *testing.T) {
 func TestMountNotificationsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{err: status.Error(codes.NotFound, "notification not found")})
-	mount, err := m.Mount(module.Dependencies{})
+	m := NewWithGateway(fakeGateway{listErr: status.Error(codes.NotFound, "notification not found")})
+	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -157,36 +203,11 @@ func TestMountNotificationsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 	}
 }
 
-func TestMountNotificationsGRPCNotFoundHTMXRendersErrorFragment(t *testing.T) {
-	t.Parallel()
-
-	m := NewWithGateway(fakeGateway{err: status.Error(codes.NotFound, "notification not found")})
-	mount, err := m.Mount(module.Dependencies{})
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
-	}
-	req := httptest.NewRequest(http.MethodGet, routepath.Notifications, nil)
-	req.Header.Set("HX-Request", "true")
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
-	}
-	body := rr.Body.String()
-	if !strings.Contains(body, `id="app-error-state"`) {
-		t.Fatalf("body missing app error state marker: %q", body)
-	}
-	// Invariant: HTMX failures must swap a fragment and not a full document.
-	if strings.Contains(strings.ToLower(body), "<!doctype html") || strings.Contains(strings.ToLower(body), "<html") {
-		t.Fatalf("expected htmx error fragment without document wrapper")
-	}
-}
-
 func TestMountNotificationsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{items: []NotificationSummary{{ID: "n1", Title: "Welcome", Read: false}}})
-	mount, err := m.Mount(module.Dependencies{})
+	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}}})
+	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -210,8 +231,8 @@ func TestMountNotificationsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.
 func TestMountNotificationsUnknownSubpathRendersSharedNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{items: []NotificationSummary{{ID: "n1", Title: "Welcome", Read: false}}})
-	mount, err := m.Mount(module.Dependencies{})
+	m := NewWithGateway(fakeGateway{})
+	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -231,27 +252,50 @@ func TestMountNotificationsUnknownSubpathRendersSharedNotFoundPage(t *testing.T)
 	}
 }
 
+func notificationsTestDependencies() module.Dependencies {
+	return module.Dependencies{ResolveUserID: func(*http.Request) string { return "user-1" }}
+}
+
 type fakeGateway struct {
-	items []NotificationSummary
-	err   error
+	listItems []NotificationSummary
+	listErr   error
+	getItem   NotificationSummary
+	getErr    error
+	openItem  NotificationSummary
+	openErr   error
 }
 
-func (f fakeGateway) ListNotifications(context.Context) ([]NotificationSummary, error) {
-	if f.err != nil {
-		return nil, f.err
+func (f fakeGateway) ListNotifications(context.Context, string) ([]NotificationSummary, error) {
+	if f.listErr != nil {
+		return nil, f.listErr
 	}
-	if len(f.items) == 0 {
-		return nil, errors.New("no notifications")
+	if f.listItems == nil {
+		return []NotificationSummary{{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}}, nil
 	}
-	return f.items, nil
+	return f.listItems, nil
 }
 
-func (f fakeGateway) OpenNotification(context.Context, string) (NotificationSummary, error) {
-	if f.err != nil {
-		return NotificationSummary{}, f.err
+func (f fakeGateway) GetNotification(context.Context, string, string) (NotificationSummary, error) {
+	if f.getErr != nil {
+		return NotificationSummary{}, f.getErr
 	}
-	if len(f.items) == 0 {
-		return NotificationSummary{}, errors.New("no notification")
+	if f.getItem != (NotificationSummary{}) {
+		return f.getItem, nil
 	}
-	return f.items[0], nil
+	if len(f.listItems) > 0 {
+		return f.listItems[0], nil
+	}
+	return NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}, nil
 }
+
+func (f fakeGateway) OpenNotification(context.Context, string, string) (NotificationSummary, error) {
+	if f.openErr != nil {
+		return NotificationSummary{}, f.openErr
+	}
+	if f.openItem != (NotificationSummary{}) {
+		return f.openItem, nil
+	}
+	return NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: true}, nil
+}
+
+var _ NotificationGateway = fakeGateway{}

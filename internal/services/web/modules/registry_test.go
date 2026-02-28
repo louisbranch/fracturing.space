@@ -10,8 +10,8 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	if len(public) != 3 {
 		t.Fatalf("public module count = %d, want %d", len(public), 3)
 	}
-	if len(protected) != 3 {
-		t.Fatalf("protected module count = %d, want %d", len(protected), 3)
+	if len(protected) != 4 {
+		t.Fatalf("protected module count = %d, want %d", len(protected), 4)
 	}
 
 	if got := public[0].ID(); got != "public" {
@@ -32,6 +32,9 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	if got := protected[2].ID(); got != "campaigns" {
 		t.Fatalf("default protected module[2] id = %q, want %q", got, "campaigns")
 	}
+	if got := protected[3].ID(); got != "notifications" {
+		t.Fatalf("default protected module[3] id = %q, want %q", got, "notifications")
+	}
 }
 
 func TestExperimentalModulesExposeIncompleteAreas(t *testing.T) {
@@ -42,15 +45,12 @@ func TestExperimentalModulesExposeIncompleteAreas(t *testing.T) {
 	if len(public) != 0 {
 		t.Fatalf("experimental public module count = %d, want %d", len(public), 0)
 	}
-	if len(protected) != 2 {
-		t.Fatalf("experimental protected module count = %d, want %d", len(protected), 2)
+	if len(protected) != 1 {
+		t.Fatalf("experimental protected module count = %d, want %d", len(protected), 1)
 	}
 
-	if got := protected[0].ID(); got != "notifications" {
-		t.Fatalf("experimental protected module[0] id = %q, want %q", got, "notifications")
-	}
-	if got := protected[1].ID(); got != "profile" {
-		t.Fatalf("experimental protected module[1] id = %q, want %q", got, "profile")
+	if got := protected[0].ID(); got != "profile" {
+		t.Fatalf("experimental protected module[0] id = %q, want %q", got, "profile")
 	}
 }
 

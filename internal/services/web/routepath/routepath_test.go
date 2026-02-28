@@ -132,6 +132,12 @@ func TestServeMuxPatternConstants(t *testing.T) {
 	if AppSettingsAIKeyRevokePattern != "/app/settings/ai-keys/{credentialID}/revoke" {
 		t.Fatalf("AppSettingsAIKeyRevokePattern = %q", AppSettingsAIKeyRevokePattern)
 	}
+	if AppNotificationPattern != "/app/notifications/{notificationID}" {
+		t.Fatalf("AppNotificationPattern = %q", AppNotificationPattern)
+	}
+	if AppNotificationOpenPattern != "/app/notifications/{notificationID}/open" {
+		t.Fatalf("AppNotificationOpenPattern = %q", AppNotificationOpenPattern)
+	}
 }
 
 func TestNotificationAndSettingsRouteBuilders(t *testing.T) {
@@ -139,6 +145,12 @@ func TestNotificationAndSettingsRouteBuilders(t *testing.T) {
 
 	if got := AppNotificationsOpen("n1"); got != "/app/notifications/n1" {
 		t.Fatalf("AppNotificationsOpen() = %q", got)
+	}
+	if got := AppNotification("n1"); got != "/app/notifications/n1" {
+		t.Fatalf("AppNotification() = %q", got)
+	}
+	if got := AppNotificationOpen("n1"); got != "/app/notifications/n1/open" {
+		t.Fatalf("AppNotificationOpen() = %q", got)
 	}
 	if got := UserProfile("louis"); got != "/u/louis" {
 		t.Fatalf("UserProfile() = %q", got)
@@ -180,6 +192,9 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	}
 	if got := AppNotificationsOpen("note/1"); got != "/app/notifications/note%2F1" {
 		t.Fatalf("AppNotificationsOpen() escaped = %q", got)
+	}
+	if got := AppNotificationOpen("note/1"); got != "/app/notifications/note%2F1/open" {
+		t.Fatalf("AppNotificationOpen() escaped = %q", got)
 	}
 	if got := UserProfile("name/with/slash"); got != "/u/name%2Fwith%2Fslash" {
 		t.Fatalf("UserProfile() escaped = %q", got)
