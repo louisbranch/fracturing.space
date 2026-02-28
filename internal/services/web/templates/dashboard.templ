@@ -6,12 +6,21 @@ type DashboardProfilePendingBlock struct {
 	Visible bool
 }
 
+type DashboardAdventureBlock struct {
+	Visible bool
+}
+
 type DashboardPageView struct {
 	ProfilePending DashboardProfilePendingBlock
+	Adventure      DashboardAdventureBlock
 }
 
 func dashboardProfilePendingVisible(view DashboardPageView) bool {
 	return view.ProfilePending.Visible
+}
+
+func dashboardAdventureVisible(view DashboardPageView) bool {
+	return view.Adventure.Visible
 }
 
 templ DashboardFragment(view DashboardPageView, loc Localizer) {
@@ -23,6 +32,17 @@ templ DashboardFragment(view DashboardPageView, loc Localizer) {
 					<p class="text-sm opacity-80">{ T(loc, "web.dashboard.profile_pending.body") }</p>
 					<div class="card-actions justify-end">
 						<a href={ routepath.AppSettingsProfile } hx-get={ routepath.AppSettingsProfile } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary">{ T(loc, "web.dashboard.profile_pending.cta") }</a>
+					</div>
+				</div>
+			</section>
+		}
+		if dashboardAdventureVisible(view) {
+			<section id="dashboard-campaign-adventure" data-dashboard-block="campaign-adventure" class="card bg-base-200 border border-base-300 shadow-sm lg:col-span-1">
+				<div class="card-body gap-4">
+					<h2 class="card-title">{ T(loc, "web.dashboard.campaign_adventure.title") }</h2>
+					<p class="text-sm opacity-80">{ T(loc, "web.dashboard.campaign_adventure.body") }</p>
+					<div class="card-actions justify-end">
+						<a href={ routepath.AppCampaignsCreate } hx-get={ routepath.AppCampaignsCreate } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary">{ T(loc, "web.dashboard.campaign_adventure.cta") }</a>
 					</div>
 				</div>
 			</section>

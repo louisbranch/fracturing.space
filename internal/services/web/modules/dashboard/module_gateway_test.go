@@ -23,14 +23,27 @@ func TestNewGRPCGatewayWithoutClientFallsBackToUnavailableGateway(t *testing.T) 
 	if snapshot.NeedsProfileCompletion {
 		t.Fatalf("NeedsProfileCompletion = true, want false")
 	}
+	if snapshot.HasDraftOrActiveCampaign {
+		t.Fatalf("HasDraftOrActiveCampaign = true, want false")
+	}
+	if snapshot.CampaignsHasMore {
+		t.Fatalf("CampaignsHasMore = true, want false")
+	}
 }
 
-func TestGRPCGatewayMapsDashboardResponseAndAuthMetadata(t *testing.T) {
+func TestGRPCGatewayMapsDashboardResponseAuthMetadataAndCampaignState(t *testing.T) {
 	t.Parallel()
 
 	client := &dashboardUserHubClientRecorder{resp: &userhubv1.GetDashboardResponse{
 		User:     &userhubv1.UserSummary{NeedsProfileCompletion: true},
 		Metadata: &userhubv1.DashboardMetadata{DegradedDependencies: []string{" social.profile ", ""}},
+		Campaigns: &userhubv1.CampaignSummary{
+			HasMore: true,
+			Campaigns: []*userhubv1.CampaignPreview{
+				{CampaignId: "camp-completed", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
+				{CampaignId: "camp-active", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_ACTIVE},
+			},
+		},
 	}}
 	gateway := NewGRPCGateway(module.Dependencies{UserHubClient: client})
 
@@ -44,14 +57,70 @@ func TestGRPCGatewayMapsDashboardResponseAndAuthMetadata(t *testing.T) {
 	if len(snapshot.DegradedDependencies) != 1 || snapshot.DegradedDependencies[0] != "social.profile" {
 		t.Fatalf("DegradedDependencies = %v, want [social.profile]", snapshot.DegradedDependencies)
 	}
+	if !snapshot.HasDraftOrActiveCampaign {
+		t.Fatalf("HasDraftOrActiveCampaign = false, want true")
+	}
+	if !snapshot.CampaignsHasMore {
+		t.Fatalf("CampaignsHasMore = false, want true")
+	}
 	if client.lastReq == nil {
 		t.Fatalf("expected dashboard request")
 	}
 	if client.lastReq.GetLocale() != commonv1.Locale_LOCALE_EN_US {
 		t.Fatalf("request locale = %v, want %v", client.lastReq.GetLocale(), commonv1.Locale_LOCALE_EN_US)
 	}
+	if client.lastReq.GetCampaignPreviewLimit() != 10 {
+		t.Fatalf("campaign preview limit = %d, want %d", client.lastReq.GetCampaignPreviewLimit(), 10)
+	}
 	if client.lastUserID != "user-1" {
 		t.Fatalf("metadata user-id = %q, want %q", client.lastUserID, "user-1")
+	}
+}
+
+func TestHasDraftOrActiveCampaign(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		campaigns []*userhubv1.CampaignPreview
+		want      bool
+	}{
+		{
+			name: "draft present",
+			campaigns: []*userhubv1.CampaignPreview{
+				{Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_DRAFT},
+			},
+			want: true,
+		},
+		{
+			name: "active present",
+			campaigns: []*userhubv1.CampaignPreview{
+				{Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_ACTIVE},
+			},
+			want: true,
+		},
+		{
+			name: "completed only",
+			campaigns: []*userhubv1.CampaignPreview{
+				{Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
+			},
+			want: false,
+		},
+		{
+			name:      "empty",
+			campaigns: nil,
+			want:      false,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := hasDraftOrActiveCampaign(tc.campaigns); got != tc.want {
+				t.Fatalf("hasDraftOrActiveCampaign() = %t, want %t", got, tc.want)
+			}
+		})
 	}
 }
 

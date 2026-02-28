@@ -65,6 +65,7 @@ func dashboardMainHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader
 func mapDashboardTemplateView(view DashboardView) webtemplates.DashboardPageView {
 	return webtemplates.DashboardPageView{
 		ProfilePending: webtemplates.DashboardProfilePendingBlock{Visible: view.ShowPendingProfileBlock},
+		Adventure:      webtemplates.DashboardAdventureBlock{Visible: view.ShowAdventureBlock},
 	}
 }
 

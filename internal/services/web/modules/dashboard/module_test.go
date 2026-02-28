@@ -46,6 +46,10 @@ func TestMountServesDashboardGet(t *testing.T) {
 	if strings.Contains(body, `data-dashboard-block="profile-pending"`) {
 		t.Fatalf("body = %q, want no pending-profile block", body)
 	}
+	// Invariant: default dashboard should not render campaign-adventure block when userhub state is absent.
+	if strings.Contains(body, `data-dashboard-block="campaign-adventure"`) {
+		t.Fatalf("body = %q, want no campaign-adventure block", body)
+	}
 }
 
 func TestMountServesDashboardHead(t *testing.T) {
@@ -143,6 +147,110 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 	// Invariant: degraded social profile state must suppress the pending-profile block.
 	if strings.Contains(rr.Body.String(), `data-dashboard-block="profile-pending"`) {
 		t.Fatalf("body = %q, want no pending-profile block when social profile is degraded", rr.Body.String())
+	}
+	// Invariant: degraded social profile state suppresses dashboard nudges derived from userhub state.
+	if strings.Contains(rr.Body.String(), `data-dashboard-block="campaign-adventure"`) {
+		t.Fatalf("body = %q, want no campaign-adventure block when social profile is degraded", rr.Body.String())
+	}
+}
+
+func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+	mount, err := m.Mount(module.Dependencies{
+		ResolveUserID:   func(*http.Request) string { return "user-1" },
+		ResolveLanguage: func(*http.Request) string { return "en-US" },
+		UserHubClient: dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+			Campaigns: &userhubv1.CampaignSummary{
+				HasMore: false,
+				Campaigns: []*userhubv1.CampaignPreview{
+					{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
+				},
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `data-dashboard-block="campaign-adventure"`) {
+		t.Fatalf("body = %q, want campaign-adventure block", body)
+	}
+	if !strings.Contains(body, routepath.AppCampaignsCreate) {
+		t.Fatalf("body = %q, want campaign create CTA", body)
+	}
+}
+
+func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+	mount, err := m.Mount(module.Dependencies{
+		ResolveUserID:   func(*http.Request) string { return "user-1" },
+		ResolveLanguage: func(*http.Request) string { return "en-US" },
+		UserHubClient: dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+			Campaigns: &userhubv1.CampaignSummary{
+				HasMore: false,
+				Campaigns: []*userhubv1.CampaignPreview{
+					{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_DRAFT},
+				},
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	// Invariant: campaign-adventure prompt must be hidden when at least one draft/active campaign exists.
+	if strings.Contains(rr.Body.String(), `data-dashboard-block="campaign-adventure"`) {
+		t.Fatalf("body = %q, want no campaign-adventure block", rr.Body.String())
+	}
+}
+
+func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+	mount, err := m.Mount(module.Dependencies{
+		ResolveUserID:   func(*http.Request) string { return "user-1" },
+		ResolveLanguage: func(*http.Request) string { return "en-US" },
+		UserHubClient: dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+			Metadata: &userhubv1.DashboardMetadata{DegradedDependencies: []string{"game.campaigns"}},
+			Campaigns: &userhubv1.CampaignSummary{
+				HasMore: false,
+				Campaigns: []*userhubv1.CampaignPreview{
+					{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
+				},
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	// Invariant: degraded campaign dependency must suppress campaign-adventure block.
+	if strings.Contains(rr.Body.String(), `data-dashboard-block="campaign-adventure"`) {
+		t.Fatalf("body = %q, want no campaign-adventure block when campaign state is degraded", rr.Body.String())
 	}
 }
 

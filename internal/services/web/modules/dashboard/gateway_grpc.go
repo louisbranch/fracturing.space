@@ -11,6 +11,8 @@ import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 )
 
+const maxDashboardCampaignPreviewLimit = 10
+
 // NewGRPCGateway builds the production dashboard gateway from shared dependencies.
 func NewGRPCGateway(deps module.Dependencies) DashboardGateway {
 	if deps.UserHubClient == nil {
@@ -33,7 +35,10 @@ func (g grpcGateway) LoadDashboard(ctx context.Context, userID string, locale co
 	}
 	resp, err := g.client.GetDashboard(
 		grpcauthctx.WithUserID(ctx, userID),
-		&userhubv1.GetDashboardRequest{Locale: platformi18n.NormalizeLocale(locale)},
+		&userhubv1.GetDashboardRequest{
+			Locale:               platformi18n.NormalizeLocale(locale),
+			CampaignPreviewLimit: maxDashboardCampaignPreviewLimit,
+		},
 	)
 	if err != nil {
 		return DashboardSnapshot{}, err
@@ -42,9 +47,25 @@ func (g grpcGateway) LoadDashboard(ctx context.Context, userID string, locale co
 		return DashboardSnapshot{}, nil
 	}
 	return DashboardSnapshot{
-		NeedsProfileCompletion: resp.GetUser().GetNeedsProfileCompletion(),
-		DegradedDependencies:   normalizedDependencies(resp.GetMetadata().GetDegradedDependencies()),
+		NeedsProfileCompletion:   resp.GetUser().GetNeedsProfileCompletion(),
+		HasDraftOrActiveCampaign: hasDraftOrActiveCampaign(resp.GetCampaigns().GetCampaigns()),
+		CampaignsHasMore:         resp.GetCampaigns().GetHasMore(),
+		DegradedDependencies:     normalizedDependencies(resp.GetMetadata().GetDegradedDependencies()),
 	}, nil
+}
+
+func hasDraftOrActiveCampaign(campaigns []*userhubv1.CampaignPreview) bool {
+	for _, campaign := range campaigns {
+		if campaign == nil {
+			continue
+		}
+		switch campaign.GetStatus() {
+		case userhubv1.CampaignStatus_CAMPAIGN_STATUS_DRAFT,
+			userhubv1.CampaignStatus_CAMPAIGN_STATUS_ACTIVE:
+			return true
+		}
+	}
+	return false
 }
 
 func normalizedDependencies(values []string) []string {
