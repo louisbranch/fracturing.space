@@ -48,6 +48,9 @@ const (
 	AppCampaignInviteRevokePattern      = CampaignsPrefix + "{campaignID}/invites/revoke"
 	AppNotifications                    = "/app/notifications"
 	Notifications                       = "/app/notifications/"
+	AppNotificationPattern              = Notifications + "{notificationID}"
+	AppNotificationOpenPattern          = Notifications + "{notificationID}/open"
+	AppNotificationRestPattern          = Notifications + "{notificationID}/{rest...}"
 	AppProfile                          = "/app/profile"
 	ProfilePrefix                       = "/app/profile/"
 	AppSettings                         = "/app/settings"
@@ -148,9 +151,19 @@ func AppCampaignInviteRevoke(campaignID string) string {
 	return AppCampaignInvites(campaignID) + "/revoke"
 }
 
-// AppNotificationsOpen returns the notification-open route.
-func AppNotificationsOpen(notificationID string) string {
+// AppNotification returns the notification detail route.
+func AppNotification(notificationID string) string {
 	return Notifications + escapeSegment(notificationID)
+}
+
+// AppNotificationsOpen returns the notification detail route.
+func AppNotificationsOpen(notificationID string) string {
+	return AppNotification(notificationID)
+}
+
+// AppNotificationOpen returns the notification open-and-acknowledge route.
+func AppNotificationOpen(notificationID string) string {
+	return AppNotification(notificationID) + "/open"
 }
 
 // AppSettingsProfile returns the public profile settings route.

@@ -32,6 +32,7 @@ func DefaultProtectedModules(deps module.Dependencies) []Module {
 		dashboard.NewWithGateway(dashboard.NewGRPCGateway(deps)),
 		settings.NewWithGateway(settings.NewGRPCGateway(deps)),
 		campaigns.NewStableWithGateway(campaigns.NewGRPCGateway(deps)),
+		notifications.NewWithGateway(notifications.NewGRPCGateway(deps)),
 	}
 }
 
@@ -41,13 +42,13 @@ func DefaultProtectedModulesWithExperimentalCampaignRoutes(deps module.Dependenc
 		dashboard.NewWithGateway(dashboard.NewGRPCGateway(deps)),
 		settings.NewWithGateway(settings.NewGRPCGateway(deps)),
 		campaigns.NewWithGateway(campaigns.NewGRPCGateway(deps)),
+		notifications.NewWithGateway(notifications.NewGRPCGateway(deps)),
 	}
 }
 
 // ExperimentalProtectedModules returns opt-in authenticated modules that are still scaffolded.
-func ExperimentalProtectedModules(deps module.Dependencies) []Module {
+func ExperimentalProtectedModules(_ module.Dependencies) []Module {
 	return []Module{
-		notifications.New(),
 		profile.New(),
 	}
 }

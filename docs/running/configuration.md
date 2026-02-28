@@ -137,6 +137,7 @@ Internal gRPC dependencies default to Compose service DNS names (`service:port`)
 - `FRACTURING_SPACE_CHAT_HTTP_ADDR`: chat HTTP bind address used for campaign chat fallback host candidates. Default: `localhost:8086`.
 - `FRACTURING_SPACE_WEB_AUTH_BASE_URL`: external auth base URL for login redirects.
 - `FRACTURING_SPACE_WEB_AUTH_ADDR`: auth gRPC address used by the web login server. Default: `auth:8083`.
+- `FRACTURING_SPACE_NOTIFICATIONS_ADDR`: notifications gRPC address used by the web login server. Default: `notifications:8088`.
 - `FRACTURING_SPACE_WEB_DIAL_TIMEOUT`: gRPC dial timeout for the web login server. Default: `2s`.
 - `FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID`: first-party OAuth client ID used by the web server. Default: `fracturing-space`.
 - `FRACTURING_SPACE_WEB_CALLBACK_URL`: public OAuth callback URL (e.g., `http://localhost:8080/auth/callback`).
@@ -214,6 +215,7 @@ The web server (`cmd/web`) accepts the following flags:
 - `-social-addr`: social gRPC dependency address. Default: `social:8090`
 - `-game-addr`: game gRPC dependency address. Default: `game:8082`
 - `-ai-addr`: AI gRPC dependency address. Default: `ai:8087`
+- `-notifications-addr`: notifications gRPC dependency address. Default: `notifications:8088`
 - `-userhub-addr`: userhub gRPC dependency address. Default: `userhub:8092`
 - `-asset-base-url`: external base URL used for image asset delivery.
 - `-enable-experimental-modules`: enables experimental module surfaces.
@@ -223,9 +225,9 @@ The web server (`cmd/web`) accepts the following flags:
 The web server accepts flags for HTTP and upstream dependency addresses. If
 `FRACTURING_SPACE_WEB_HTTP_ADDR`, `FRACTURING_SPACE_CHAT_HTTP_ADDR`,
 `FRACTURING_SPACE_AUTH_ADDR`, `FRACTURING_SPACE_SOCIAL_ADDR`,
-`FRACTURING_SPACE_GAME_ADDR`, `FRACTURING_SPACE_AI_ADDR`, or
-`FRACTURING_SPACE_USERHUB_ADDR` are set, they provide defaults when matching
-flags are omitted. Asset URL defaults come from
+`FRACTURING_SPACE_GAME_ADDR`, `FRACTURING_SPACE_AI_ADDR`,
+`FRACTURING_SPACE_NOTIFICATIONS_ADDR`, or `FRACTURING_SPACE_USERHUB_ADDR` are
+set, they provide defaults when matching flags are omitted. Asset URL defaults come from
 `FRACTURING_SPACE_ASSET_BASE_URL`. Command-line flags take precedence over env
 values.
 

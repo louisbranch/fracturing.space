@@ -95,6 +95,9 @@ func TestCampaignsAndSettingsMountDoNotReadGatewayClientsFromDependencies(t *tes
 		"AccountClient":    {},
 		"CredentialClient": {},
 	})
+	assertMountDoesNotReadDependencyFields(t, filepath.Join("notifications", "module.go"), map[string]struct{}{
+		"NotificationClient": {},
+	})
 }
 
 func assertMountDoesNotReadDependencyFields(t *testing.T, moduleFile string, forbidden map[string]struct{}) {

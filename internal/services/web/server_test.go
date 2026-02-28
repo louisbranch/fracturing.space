@@ -14,6 +14,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
@@ -88,11 +89,14 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 		t.Fatalf("dashboard (no slash) redirect = %q, want %q", got, "/login")
 	}
 
-	experimentalProtectedReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
-	experimentalProtectedRR := httptest.NewRecorder()
-	h.ServeHTTP(experimentalProtectedRR, experimentalProtectedReq)
-	if experimentalProtectedRR.Code != http.StatusNotFound {
-		t.Fatalf("experimental protected status = %d, want %d", experimentalProtectedRR.Code, http.StatusNotFound)
+	notificationsReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
+	notificationsRR := httptest.NewRecorder()
+	h.ServeHTTP(notificationsRR, notificationsReq)
+	if notificationsRR.Code != http.StatusFound {
+		t.Fatalf("notifications status = %d, want %d", notificationsRR.Code, http.StatusFound)
+	}
+	if got := notificationsRR.Header().Get("Location"); got != "/login" {
+		t.Fatalf("notifications redirect = %q, want %q", got, "/login")
 	}
 }
 
@@ -454,8 +458,8 @@ func TestPrimaryNavigationOmitsExperimentalLinksByDefault(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if strings.Contains(body, `href="/app/notifications"`) {
-		t.Fatalf("body unexpectedly includes experimental notifications link: %q", body)
+	if !strings.Contains(body, `href="/app/notifications"`) {
+		t.Fatalf("body missing stable notifications link: %q", body)
 	}
 	if strings.Contains(body, `href="/app/profile"`) {
 		t.Fatalf("body unexpectedly includes experimental profile link: %q", body)
@@ -495,6 +499,72 @@ func TestPrimaryNavigationUsesDashboardAndCampaignIcons(t *testing.T) {
 	campaignIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_CAMPAIGN)) + `"`
 	if !strings.Contains(body, campaignIconHref) {
 		t.Fatalf("body missing campaigns icon %q", campaignIconHref)
+	}
+	notificationReadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION)) + `"`
+	if !strings.Contains(body, notificationReadIconHref) {
+		t.Fatalf("body missing read notifications icon %q", notificationReadIconHref)
+	}
+	notificationUnreadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD)) + `"`
+	if strings.Contains(body, notificationUnreadIconHref) {
+		t.Fatalf("body unexpectedly contains unread notifications icon %q", notificationUnreadIconHref)
+	}
+}
+
+func TestPrimaryNavigationUsesUnreadNotificationIconWhenUserHasUnread(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	cfg := defaultProtectedConfig(auth)
+	cfg.NotificationClient = fakeWebNotificationClient{
+		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{HasUnread: true, UnreadCount: 2},
+	}
+	h, err := NewHandler(cfg)
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	notificationUnreadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD)) + `"`
+	if !strings.Contains(body, notificationUnreadIconHref) {
+		t.Fatalf("body missing unread notifications icon %q", notificationUnreadIconHref)
+	}
+	notificationReadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION)) + `"`
+	if strings.Contains(body, notificationReadIconHref) {
+		t.Fatalf("body unexpectedly contains read notifications icon %q", notificationReadIconHref)
+	}
+}
+
+func TestPrimaryNavigationFallsBackToReadNotificationIconWhenUnreadLookupFails(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	cfg := defaultProtectedConfig(auth)
+	cfg.NotificationClient = fakeWebNotificationClient{unreadErr: context.Canceled}
+	h, err := NewHandler(cfg)
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	notificationReadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION)) + `"`
+	if !strings.Contains(body, notificationReadIconHref) {
+		t.Fatalf("body missing read notifications icon %q", notificationReadIconHref)
+	}
+	notificationUnreadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD)) + `"`
+	if strings.Contains(body, notificationUnreadIconHref) {
+		t.Fatalf("body unexpectedly contains unread notifications icon %q", notificationUnreadIconHref)
 	}
 }
 
@@ -1003,7 +1073,7 @@ func TestCloseHandlesNilServerAndNilHTTPServer(t *testing.T) {
 
 func assertPrimaryNavLinks(t *testing.T, body string) {
 	t.Helper()
-	for _, href := range []string{"/app/dashboard", "/app/campaigns", "/app/settings"} {
+	for _, href := range []string{"/app/dashboard", "/app/campaigns", "/app/notifications", "/app/settings"} {
 		if !strings.Contains(body, "href=\""+href+"\"") {
 			t.Fatalf("body missing nav href %q", href)
 		}
@@ -1176,6 +1246,45 @@ func (f fakeWebInviteClient) ListInvites(context.Context, *statev1.ListInvitesRe
 		return f.response, nil
 	}
 	return &statev1.ListInvitesResponse{}, nil
+}
+
+type fakeWebNotificationClient struct {
+	listResp   *notificationsv1.ListNotificationsResponse
+	listErr    error
+	markResp   *notificationsv1.MarkNotificationReadResponse
+	markErr    error
+	unreadResp *notificationsv1.GetUnreadNotificationStatusResponse
+	unreadErr  error
+}
+
+func (f fakeWebNotificationClient) ListNotifications(context.Context, *notificationsv1.ListNotificationsRequest, ...grpc.CallOption) (*notificationsv1.ListNotificationsResponse, error) {
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
+	if f.listResp != nil {
+		return f.listResp, nil
+	}
+	return &notificationsv1.ListNotificationsResponse{}, nil
+}
+
+func (f fakeWebNotificationClient) GetUnreadNotificationStatus(context.Context, *notificationsv1.GetUnreadNotificationStatusRequest, ...grpc.CallOption) (*notificationsv1.GetUnreadNotificationStatusResponse, error) {
+	if f.unreadErr != nil {
+		return nil, f.unreadErr
+	}
+	if f.unreadResp != nil {
+		return f.unreadResp, nil
+	}
+	return &notificationsv1.GetUnreadNotificationStatusResponse{}, nil
+}
+
+func (f fakeWebNotificationClient) MarkNotificationRead(_ context.Context, req *notificationsv1.MarkNotificationReadRequest, _ ...grpc.CallOption) (*notificationsv1.MarkNotificationReadResponse, error) {
+	if f.markErr != nil {
+		return nil, f.markErr
+	}
+	if f.markResp != nil {
+		return f.markResp, nil
+	}
+	return &notificationsv1.MarkNotificationReadResponse{Notification: &notificationsv1.Notification{Id: req.GetNotificationId()}}, nil
 }
 
 type fakeWebAuthClient struct {

@@ -8,6 +8,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	"google.golang.org/grpc"
@@ -15,9 +16,10 @@ import (
 
 // Viewer contains user-facing chrome data for authenticated app pages.
 type Viewer struct {
-	DisplayName string
-	AvatarURL   string
-	ProfileURL  string
+	DisplayName            string
+	AvatarURL              string
+	ProfileURL             string
+	HasUnreadNotifications bool
 }
 
 // ResolveViewer resolves app chrome viewer state for a request.
@@ -99,6 +101,13 @@ type UserHubClient interface {
 	GetDashboard(context.Context, *userhubv1.GetDashboardRequest, ...grpc.CallOption) (*userhubv1.GetDashboardResponse, error)
 }
 
+// NotificationClient exposes notification inbox listing and acknowledgement operations.
+type NotificationClient interface {
+	ListNotifications(context.Context, *notificationsv1.ListNotificationsRequest, ...grpc.CallOption) (*notificationsv1.ListNotificationsResponse, error)
+	GetUnreadNotificationStatus(context.Context, *notificationsv1.GetUnreadNotificationStatusRequest, ...grpc.CallOption) (*notificationsv1.GetUnreadNotificationStatusResponse, error)
+	MarkNotificationRead(context.Context, *notificationsv1.MarkNotificationReadRequest, ...grpc.CallOption) (*notificationsv1.MarkNotificationReadResponse, error)
+}
+
 // Dependencies carries shared runtime contracts to modules.
 type Dependencies struct {
 	ResolveViewer       ResolveViewer
@@ -117,6 +126,7 @@ type Dependencies struct {
 	SocialClient        SocialClient
 	CredentialClient    CredentialClient
 	UserHubClient       UserHubClient
+	NotificationClient  NotificationClient
 }
 
 // Mount describes a module route mount.

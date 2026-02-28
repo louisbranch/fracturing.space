@@ -1,0 +1,109 @@
+package templates
+
+import "strings"
+
+type NotificationListItemView struct {
+	ID           string
+	Title        string
+	Body         string
+	SourceLabel  string
+	CreatedLabel string
+	Read         bool
+	OpenURL      string
+	DetailURL    string
+}
+
+type NotificationDetailView struct {
+	ID           string
+	Title        string
+	Body         string
+	SourceLabel  string
+	CreatedLabel string
+	Read         bool
+	OpenURL      string
+	DetailURL    string
+}
+
+type NotificationsPageView struct {
+	Items    []NotificationListItemView
+	Selected *NotificationDetailView
+}
+
+func notificationListAriaLabel(loc Localizer) string {
+	return T(loc, "game.notifications.list.aria_label")
+}
+
+func notificationHasItems(view NotificationsPageView) bool {
+	return len(view.Items) > 0
+}
+
+func notificationItemTitle(item NotificationListItemView, loc Localizer) string {
+	title := strings.TrimSpace(item.Title)
+	if title == "" {
+		return T(loc, "game.notifications.topic_unknown")
+	}
+	return title
+}
+
+func notificationItemBody(item NotificationListItemView, loc Localizer) string {
+	body := strings.TrimSpace(item.Body)
+	if body == "" {
+		return T(loc, "game.notifications.detail_empty")
+	}
+	return body
+}
+
+func notificationItemMeta(item NotificationListItemView) string {
+	source := strings.TrimSpace(item.SourceLabel)
+	created := strings.TrimSpace(item.CreatedLabel)
+	if source == "" {
+		return created
+	}
+	if created == "" {
+		return source
+	}
+	return source + " - " + created
+}
+
+func notificationDetailAvailable(view NotificationsPageView) bool {
+	return view.Selected != nil && strings.TrimSpace(view.Selected.ID) != ""
+}
+
+templ NotificationsFragment(view NotificationsPageView, loc Localizer) {
+	<section id="notifications-root" class="grid gap-6 lg:grid-cols-[22rem_1fr]">
+		<aside class="space-y-3" aria-label={ notificationListAriaLabel(loc) }>
+			if !notificationHasItems(view) {
+				<div id="notifications-empty" class="card border border-base-300 bg-base-100 shadow-sm">
+					<div class="card-body">
+						<p class="text-sm opacity-80">{ T(loc, "game.notifications.empty") }</p>
+					</div>
+				</div>
+			} else {
+				<ul class="menu bg-base-200 rounded-box gap-1 p-2">
+					for _, item := range view.Items {
+						<li data-notification-id={ item.ID }>
+							<form method="post" action={ item.OpenURL } class="w-full" data-notification-open-form="true">
+								<button type="submit" class="w-full rounded-lg px-3 py-2 text-left hover:bg-base-300/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+									<span class="font-medium">{ notificationItemTitle(item, loc) }</span>
+								</button>
+							</form>
+						</li>
+					}
+				</ul>
+			}
+		</aside>
+		<section id="notification-open" class="card border border-base-300 bg-base-100 shadow-sm">
+			<div class="card-body">
+				if notificationDetailAvailable(view) {
+					<h2 class="card-title">{ notificationItemTitle(NotificationListItemView{Title: view.Selected.Title}, loc) }</h2>
+					<p class="whitespace-pre-wrap text-sm opacity-85">{ notificationItemBody(NotificationListItemView{Body: view.Selected.Body}, loc) }</p>
+					if notificationItemMeta(NotificationListItemView{SourceLabel: view.Selected.SourceLabel, CreatedLabel: view.Selected.CreatedLabel}) != "" {
+						<p class="text-xs opacity-60">{ notificationItemMeta(NotificationListItemView{SourceLabel: view.Selected.SourceLabel, CreatedLabel: view.Selected.CreatedLabel}) }</p>
+					}
+				} else {
+					<p class="text-sm opacity-80">{ T(loc, "game.notifications.no_selection") }</p>
+				}
+			</div>
+		</section>
+	</section>
+}
