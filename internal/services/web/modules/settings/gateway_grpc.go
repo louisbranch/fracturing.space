@@ -8,6 +8,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -73,7 +74,7 @@ func (g grpcGateway) LoadProfile(ctx context.Context, userID string) (SettingsPr
 	return SettingsProfile{
 		Username:      strings.TrimSpace(profile.GetUsername()),
 		Name:          strings.TrimSpace(profile.GetName()),
-		Pronouns:      strings.TrimSpace(profile.GetPronouns()),
+		Pronouns:      pronouns.FromProto(profile.GetPronouns()),
 		Bio:           strings.TrimSpace(profile.GetBio()),
 		AvatarSetID:   strings.TrimSpace(profile.GetAvatarSetId()),
 		AvatarAssetID: strings.TrimSpace(profile.GetAvatarAssetId()),
@@ -88,7 +89,7 @@ func (g grpcGateway) SaveProfile(ctx context.Context, userID string, profile Set
 		UserId:        userID,
 		Username:      profile.Username,
 		Name:          profile.Name,
-		Pronouns:      profile.Pronouns,
+		Pronouns:      pronouns.ToProto(profile.Pronouns),
 		Bio:           profile.Bio,
 		AvatarSetId:   profile.AvatarSetID,
 		AvatarAssetId: profile.AvatarAssetID,

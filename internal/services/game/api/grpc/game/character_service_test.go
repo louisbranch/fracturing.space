@@ -573,6 +573,216 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 	}
 }
 
+func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
+	dhStore := newFakeDaggerheartStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"player-1": {
+			ID:             "player-1",
+			CampaignID:     "c1",
+			Role:           participant.RolePlayer,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("character.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("character.created"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "player-1",
+				EntityType:  "character",
+				EntityID:    "char-123",
+				PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","owner_participant_id":"player-1","participant_id":"player-1"}`),
+			}),
+		},
+		command.Type("character.profile_update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("character.profile_updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "player-1",
+				EntityType:  "character",
+				EntityID:    "char-123",
+				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
+			}),
+		},
+		command.Type("sys.daggerheart.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "c1",
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeParticipant,
+				ActorID:       "player-1",
+				EntityType:    "character",
+				EntityID:      "char-123",
+				SystemID:      "daggerheart",
+				SystemVersion: "1.0.0",
+				PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
+			}),
+		},
+	}}
+
+	svc := &CharacterService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+			Event:        eventStore,
+			Domain:       domain,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("char-123"),
+	}
+
+	resp, err := svc.CreateCharacter(contextWithParticipantID("player-1"), &statev1.CreateCharacterRequest{
+		CampaignId: "c1",
+		Name:       "Hero",
+		Kind:       statev1.CharacterKind_PC,
+	})
+	if err != nil {
+		t.Fatalf("CreateCharacter returned error: %v", err)
+	}
+	if len(domain.commands) == 0 {
+		t.Fatal("expected character.create command")
+	}
+	var payload character.CreatePayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal create payload: %v", err)
+	}
+	if payload.ParticipantID != "player-1" {
+		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "player-1")
+	}
+	participantIDValue := resp.GetCharacter().GetParticipantId()
+	if participantIDValue == nil || participantIDValue.GetValue() != "player-1" {
+		t.Fatalf("response participant_id = %v, want %q", participantIDValue, "player-1")
+	}
+	stored, err := characterStore.GetCharacter(context.Background(), "c1", "char-123")
+	if err != nil {
+		t.Fatalf("Character not persisted: %v", err)
+	}
+	if stored.ParticipantID != "player-1" {
+		t.Fatalf("stored participant_id = %q, want %q", stored.ParticipantID, "player-1")
+	}
+}
+
+func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
+	dhStore := newFakeDaggerheartStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 2, 21, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"gm-1": {
+			ID:             "gm-1",
+			CampaignID:     "c1",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("character.create"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("character.created"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "gm-1",
+				EntityType:  "character",
+				EntityID:    "char-123",
+				PayloadJSON: []byte(`{"character_id":"char-123","name":"Guide","kind":"npc","owner_participant_id":"gm-1","participant_id":"gm-1"}`),
+			}),
+		},
+		command.Type("character.profile_update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("character.profile_updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "gm-1",
+				EntityType:  "character",
+				EntityID:    "char-123",
+				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
+			}),
+		},
+		command.Type("sys.daggerheart.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "c1",
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeParticipant,
+				ActorID:       "gm-1",
+				EntityType:    "character",
+				EntityID:      "char-123",
+				SystemID:      "daggerheart",
+				SystemVersion: "1.0.0",
+				PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
+			}),
+		},
+	}}
+
+	svc := &CharacterService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+			Event:        eventStore,
+			Domain:       domain,
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("char-123"),
+	}
+
+	resp, err := svc.CreateCharacter(contextWithParticipantID("gm-1"), &statev1.CreateCharacterRequest{
+		CampaignId: "c1",
+		Name:       "Guide",
+		Kind:       statev1.CharacterKind_NPC,
+	})
+	if err != nil {
+		t.Fatalf("CreateCharacter returned error: %v", err)
+	}
+	if len(domain.commands) == 0 {
+		t.Fatal("expected character.create command")
+	}
+	var payload character.CreatePayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal create payload: %v", err)
+	}
+	if payload.ParticipantID != "gm-1" {
+		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "gm-1")
+	}
+	participantIDValue := resp.GetCharacter().GetParticipantId()
+	if participantIDValue == nil || participantIDValue.GetValue() != "gm-1" {
+		t.Fatalf("response participant_id = %v, want %q", participantIDValue, "gm-1")
+	}
+	stored, err := characterStore.GetCharacter(context.Background(), "c1", "char-123")
+	if err != nil {
+		t.Fatalf("Character not persisted: %v", err)
+	}
+	if stored.ParticipantID != "gm-1" {
+		t.Fatalf("stored participant_id = %q, want %q", stored.ParticipantID, "gm-1")
+	}
+}
+
 func TestUpdateCharacter_NoFields(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	characterStore := newFakeCharacterStore()

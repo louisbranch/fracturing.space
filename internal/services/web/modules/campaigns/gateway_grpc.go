@@ -122,6 +122,7 @@ func (g grpcGateway) ListCampaigns(ctx context.Context) ([]CampaignSummary, erro
 			ParticipantCount:  strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
 			CharacterCount:    strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
 			CreatedAtUnixNano: campaignCreatedAtUnixNano(campaign),
+			UpdatedAtUnixNano: campaignUpdatedAtUnixNano(campaign),
 		})
 	}
 	return items, nil
@@ -156,12 +157,18 @@ func (g grpcGateway) CampaignWorkspace(ctx context.Context, campaignID string) (
 		name = resolvedCampaignID
 	}
 	return CampaignWorkspace{
-		ID:            resolvedCampaignID,
-		Name:          name,
-		Theme:         strings.TrimSpace(campaign.GetThemePrompt()),
-		System:        campaignSystemLabel(campaign.GetSystem()),
-		GMMode:        campaignGMModeLabel(campaign.GetGmMode()),
-		CoverImageURL: campaignCoverImageURL(g.assetBaseURL, resolvedCampaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId()),
+		ID:               resolvedCampaignID,
+		Name:             name,
+		Theme:            strings.TrimSpace(campaign.GetThemePrompt()),
+		System:           campaignSystemLabel(campaign.GetSystem()),
+		GMMode:           campaignGMModeLabel(campaign.GetGmMode()),
+		Status:           campaignStatusLabel(campaign.GetStatus()),
+		Locale:           campaignLocaleLabel(campaign.GetLocale()),
+		Intent:           campaignIntentLabel(campaign.GetIntent()),
+		AccessPolicy:     campaignAccessPolicyLabel(campaign.GetAccessPolicy()),
+		ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
+		CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
+		CoverImageURL:    campaignCoverImageURL(g.assetBaseURL, resolvedCampaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId()),
 	}, nil
 }
 

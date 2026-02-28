@@ -4,6 +4,7 @@ package game.v1;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
+import "common/v1/pronoun.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
 
@@ -13,7 +14,7 @@ message Participant {
   string campaign_id = 2;
   string user_id = 3;
   string name = 4;
-  string pronouns = 5;
+  common.v1.Pronouns pronouns = 5;
   ParticipantRole role = 6;
   CampaignAccess campaign_access = 7;
   Controller controller = 8;
@@ -71,7 +72,7 @@ message CreateParticipantRequest {
   string name = 3;
 
   // Optional free-form participant pronouns snapshot.
-  string pronouns = 4;
+  common.v1.Pronouns pronouns = 4;
 
   // The role of the participant.
   ParticipantRole role = 5;
@@ -104,7 +105,7 @@ message UpdateParticipantRequest {
   google.protobuf.StringValue name = 4;
 
   // Optional updated participant pronouns.
-  google.protobuf.StringValue pronouns = 5;
+  common.v1.Pronouns pronouns = 5;
 
   // Optional updated role.
   ParticipantRole role = 6;

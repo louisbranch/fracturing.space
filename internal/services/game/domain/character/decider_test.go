@@ -92,6 +92,34 @@ func TestDecideCharacterCreate_NormalizesOwnerParticipantID(t *testing.T) {
 	}
 }
 
+func TestDecideCharacterCreate_NormalizesParticipantID(t *testing.T) {
+	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("character.create"),
+		ActorType:  command.ActorTypeParticipant,
+		PayloadJSON: []byte(
+			`{"character_id":"char-1","owner_participant_id":"part-owner","participant_id":"  p-1  ","name":"Aria","kind":"PC"}`,
+		),
+	}
+
+	decision := Decide(State{}, cmd, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	var payload CreatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.ParticipantID != "p-1" {
+		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "p-1")
+	}
+}
+
 func TestDecideCharacterCreate_MissingCharacterIDRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",

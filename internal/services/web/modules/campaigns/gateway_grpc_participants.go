@@ -6,6 +6,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/grpcpaging"
@@ -55,7 +56,7 @@ func (g grpcGateway) CampaignParticipants(ctx context.Context, campaignID string
 				Role:           participantRoleLabel(participant.GetRole()),
 				CampaignAccess: participantCampaignAccessLabel(participant.GetCampaignAccess()),
 				Controller:     participantControllerLabel(participant.GetController()),
-				Pronouns:       strings.TrimSpace(participant.GetPronouns()),
+				Pronouns:       pronouns.FromProto(participant.GetPronouns()),
 				AvatarURL: websupport.AvatarImageURL(
 					g.assetBaseURL,
 					catalog.AvatarRoleParticipant,

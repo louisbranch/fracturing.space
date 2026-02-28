@@ -611,6 +611,10 @@ func defaultTestWorkflows() map[string]CharacterCreationWorkflow {
 type fakeGateway struct {
 	items                             []CampaignSummary
 	workspaceSystem                   string
+	workspaceStatus                   string
+	workspaceLocale                   string
+	workspaceIntent                   string
+	workspaceAccessPolicy             string
 	participants                      []CampaignParticipant
 	participantsErr                   error
 	characters                        []CampaignCharacter
@@ -688,13 +692,35 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (Ca
 		if system == "" {
 			system = "Daggerheart"
 		}
+		status := strings.TrimSpace(f.workspaceStatus)
+		if status == "" {
+			status = "Active"
+		}
+		locale := strings.TrimSpace(f.workspaceLocale)
+		if locale == "" {
+			locale = "English (US)"
+		}
+		intent := strings.TrimSpace(f.workspaceIntent)
+		if intent == "" {
+			intent = "Standard"
+		}
+		accessPolicy := strings.TrimSpace(f.workspaceAccessPolicy)
+		if accessPolicy == "" {
+			accessPolicy = "Public"
+		}
 		return CampaignWorkspace{
-			ID:            campaignID,
-			Name:          name,
-			Theme:         strings.TrimSpace(item.Theme),
-			System:        system,
-			GMMode:        "Human",
-			CoverImageURL: strings.TrimSpace(item.CoverImageURL),
+			ID:               campaignID,
+			Name:             name,
+			Theme:            strings.TrimSpace(item.Theme),
+			System:           system,
+			GMMode:           "Human",
+			Status:           status,
+			Locale:           locale,
+			Intent:           intent,
+			AccessPolicy:     accessPolicy,
+			ParticipantCount: strings.TrimSpace(item.ParticipantCount),
+			CharacterCount:   strings.TrimSpace(item.CharacterCount),
+			CoverImageURL:    strings.TrimSpace(item.CoverImageURL),
 		}, nil
 	}
 	return CampaignWorkspace{}, apperrors.E(apperrors.KindNotFound, "campaign not found")

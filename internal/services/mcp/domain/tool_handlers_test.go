@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc/metadata"
@@ -469,6 +470,30 @@ func TestParticipantUpdateHandler(t *testing.T) {
 		}
 	})
 
+	t.Run("explicit empty pronouns clears field", func(t *testing.T) {
+		pronouns := "   "
+		client := &fakeParticipantClient{
+			updateResp: &statev1.UpdateParticipantResponse{
+				Participant: testParticipant("p1", "c1", "Bob", statev1.ParticipantRole_PLAYER),
+			},
+		}
+		handler := ParticipantUpdateHandler(client, nil, nil)
+		_, _, err := handler(context.Background(), nil, ParticipantUpdateInput{
+			CampaignID:    "c1",
+			ParticipantID: "p1",
+			Pronouns:      &pronouns,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if client.lastUpdate == nil || client.lastUpdate.GetPronouns() == nil {
+			t.Fatal("expected pronouns field to be present in update request")
+		}
+		if got := client.lastUpdate.GetPronouns().GetKind(); got != commonv1.Pronoun_PRONOUN_UNSPECIFIED {
+			t.Fatalf("pronouns kind = %v, want %v", got, commonv1.Pronoun_PRONOUN_UNSPECIFIED)
+		}
+	})
+
 	t.Run("missing campaign_id", func(t *testing.T) {
 		name := "X"
 		handler := ParticipantUpdateHandler(&fakeParticipantClient{}, nil, nil)
@@ -614,6 +639,30 @@ func TestCharacterUpdateHandler(t *testing.T) {
 		}
 		if result.Name != "Updated" {
 			t.Errorf("expected name %q, got %q", "Updated", result.Name)
+		}
+	})
+
+	t.Run("explicit empty pronouns clears field", func(t *testing.T) {
+		pronouns := " "
+		client := &fakeCharacterClient{
+			updateResp: &statev1.UpdateCharacterResponse{
+				Character: testCharacter("ch1", "c1", "Updated", statev1.CharacterKind_PC),
+			},
+		}
+		handler := CharacterUpdateHandler(client, nil, nil)
+		_, _, err := handler(context.Background(), nil, CharacterUpdateInput{
+			CampaignID:  "c1",
+			CharacterID: "ch1",
+			Pronouns:    &pronouns,
+		})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if client.lastUpdate == nil || client.lastUpdate.GetPronouns() == nil {
+			t.Fatal("expected pronouns field to be present in update request")
+		}
+		if got := client.lastUpdate.GetPronouns().GetKind(); got != commonv1.Pronoun_PRONOUN_UNSPECIFIED {
+			t.Fatalf("pronouns kind = %v, want %v", got, commonv1.Pronoun_PRONOUN_UNSPECIFIED)
 		}
 	})
 

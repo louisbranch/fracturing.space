@@ -10,6 +10,7 @@ import (
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -86,7 +87,7 @@ func TestSetUserProfile_SuccessAndLookup(t *testing.T) {
 			AvatarSetId:   "avatar_set_v1",
 			AvatarAssetId: "001",
 			Bio:           "Campaign manager",
-			Pronouns:      "she/her",
+			Pronouns:      sharedpronouns.ToProto("she/her"),
 		})
 		if err != nil {
 			t.Fatalf("set user profile attempt %d: %v", i+1, err)
@@ -119,7 +120,7 @@ func TestSetUserProfile_SuccessAndLookup(t *testing.T) {
 	if got := lookupResp.GetUserProfile().GetBio(); got != "Campaign manager" {
 		t.Fatalf("bio = %q, want Campaign manager", got)
 	}
-	if got := lookupResp.GetUserProfile().GetPronouns(); got != "she/her" {
+	if got := sharedpronouns.FromProto(lookupResp.GetUserProfile().GetPronouns()); got != "she/her" {
 		t.Fatalf("pronouns = %q, want she/her", got)
 	}
 }
@@ -138,7 +139,7 @@ func TestSetUserProfile_SameCanonicalValueDoesNotChangeTimestamps(t *testing.T) 
 		AvatarSetId:   "avatar_set_v1",
 		AvatarAssetId: "001",
 		Bio:           "Campaign manager",
-		Pronouns:      "she/her",
+		Pronouns:      sharedpronouns.ToProto("she/her"),
 	})
 	if err != nil {
 		t.Fatalf("set initial user profile: %v", err)
@@ -152,7 +153,7 @@ func TestSetUserProfile_SameCanonicalValueDoesNotChangeTimestamps(t *testing.T) 
 		AvatarSetId:   "avatar_set_v1",
 		AvatarAssetId: "001",
 		Bio:           "Campaign manager",
-		Pronouns:      "she/her",
+		Pronouns:      sharedpronouns.ToProto("she/her"),
 	})
 	if err != nil {
 		t.Fatalf("set repeated user profile: %v", err)

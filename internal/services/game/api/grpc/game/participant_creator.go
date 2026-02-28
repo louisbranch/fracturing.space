@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -52,7 +53,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		if profile.Name != "" {
 			name = profile.Name
 		} else if userID != "" {
-			name = userID
+			name = defaultUnknownParticipantName(campaignRecord.Locale)
 		}
 	}
 	if name == "" {
@@ -78,9 +79,12 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		avatarSetID = profile.AvatarSetID
 		avatarAssetID = profile.AvatarAssetID
 	}
-	pronouns := strings.TrimSpace(in.GetPronouns())
+	pronouns := sharedpronouns.FromProto(in.GetPronouns())
 	if pronouns == "" {
 		pronouns = profile.Pronouns
+	}
+	if pronouns == "" && userID != "" {
+		pronouns = defaultUnknownParticipantPronouns()
 	}
 
 	applier := c.stores.Applier()
@@ -253,9 +257,8 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		fields["avatar_asset_id"] = trimmed
 	}
 	if pronouns := in.GetPronouns(); pronouns != nil {
-		trimmed := strings.TrimSpace(pronouns.GetValue())
-		current.Pronouns = trimmed
-		fields["pronouns"] = trimmed
+		current.Pronouns = sharedpronouns.FromProto(pronouns)
+		fields["pronouns"] = current.Pronouns
 	}
 	if len(fields) == 0 {
 		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")

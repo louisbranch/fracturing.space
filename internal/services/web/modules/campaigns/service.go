@@ -145,6 +145,30 @@ func (s service) campaignWorkspace(ctx context.Context, campaignID string) (Camp
 	if workspace.GMMode == "" {
 		workspace.GMMode = "Unspecified"
 	}
+	workspace.Status = strings.TrimSpace(workspace.Status)
+	if workspace.Status == "" {
+		workspace.Status = "Unspecified"
+	}
+	workspace.Locale = strings.TrimSpace(workspace.Locale)
+	if workspace.Locale == "" {
+		workspace.Locale = "Unspecified"
+	}
+	workspace.ParticipantCount = strings.TrimSpace(workspace.ParticipantCount)
+	if workspace.ParticipantCount == "" {
+		workspace.ParticipantCount = "0"
+	}
+	workspace.CharacterCount = strings.TrimSpace(workspace.CharacterCount)
+	if workspace.CharacterCount == "" {
+		workspace.CharacterCount = "0"
+	}
+	workspace.Intent = strings.TrimSpace(workspace.Intent)
+	if workspace.Intent == "" {
+		workspace.Intent = "Unspecified"
+	}
+	workspace.AccessPolicy = strings.TrimSpace(workspace.AccessPolicy)
+	if workspace.AccessPolicy == "" {
+		workspace.AccessPolicy = "Unspecified"
+	}
 	workspace.CoverImageURL = strings.TrimSpace(workspace.CoverImageURL)
 	if workspace.CoverImageURL == "" {
 		workspace.CoverImageURL = campaignCoverImageURL("", campaignID, "", "")

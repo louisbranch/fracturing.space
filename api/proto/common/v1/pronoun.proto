@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/common/v1;commonv1";
+
+// Pronoun captures normalized pronouns with support for known presets and custom values.
+enum Pronoun {
+  // PRONOUN_UNSPECIFIED indicates no pronoun was selected.
+  PRONOUN_UNSPECIFIED = 0;
+  PRONOUN_SHE_HER = 1;
+  PRONOUN_HE_HIM = 2;
+  PRONOUN_THEY_THEM = 3;
+  PRONOUN_IT_ITS = 4;
+}
+
+// Pronouns stores either a known preset or a custom input.
+message Pronouns {
+  oneof value {
+    // Localized enum-backed pronoun preference.
+    Pronoun kind = 1;
+
+    // Custom free-form pronoun text.
+    string custom = 2;
+  }
+}

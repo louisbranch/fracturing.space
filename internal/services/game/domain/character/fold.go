@@ -3,6 +3,7 @@ package character
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
@@ -30,6 +31,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		}
 		state.CharacterID = payload.CharacterID
 		state.OwnerParticipantID = payload.OwnerParticipantID
+		state.ParticipantID = strings.TrimSpace(payload.ParticipantID)
 		state.Name = payload.Name
 		state.Kind = payload.Kind
 		state.Notes = payload.Notes

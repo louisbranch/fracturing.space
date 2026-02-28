@@ -139,3 +139,13 @@ func TestNotificationRendererMessageKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestParticipantRoleLabelPTBR(t *testing.T) {
+	t.Parallel()
+
+	printer := Printer(language.MustParse("pt-BR"))
+	got := printer.Sprintf("game.participants.value.gm")
+	if got != "MJ" {
+		t.Fatalf("game.participants.value.gm = %q, want %q", got, "MJ")
+	}
+}

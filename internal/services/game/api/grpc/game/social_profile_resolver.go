@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 )
 
 // socialProfileSnapshot carries the profile fields create flows can safely
@@ -32,7 +33,7 @@ func loadSocialProfileSnapshot(ctx context.Context, socialClient socialv1.Social
 	profile := resp.GetUserProfile()
 	return socialProfileSnapshot{
 		Name:          strings.TrimSpace(profile.GetName()),
-		Pronouns:      strings.TrimSpace(profile.GetPronouns()),
+		Pronouns:      sharedpronouns.FromProto(profile.GetPronouns()),
 		AvatarSetID:   strings.TrimSpace(profile.GetAvatarSetId()),
 		AvatarAssetID: strings.TrimSpace(profile.GetAvatarAssetId()),
 	}

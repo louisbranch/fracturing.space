@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
@@ -27,11 +26,10 @@ type campaignApplication struct {
 	stores      Stores
 	clock       func() time.Time
 	idGenerator func() (string, error)
-	authClient  authv1.AuthServiceClient
 }
 
 func newCampaignApplication(service *CampaignService) campaignApplication {
-	app := campaignApplication{stores: service.stores, clock: service.clock, idGenerator: service.idGenerator, authClient: service.authClient}
+	app := campaignApplication{stores: service.stores, clock: service.clock, idGenerator: service.idGenerator}
 	if app.clock == nil {
 		app.clock = time.Now
 	}
@@ -116,15 +114,13 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	}
 
 	profile := loadSocialProfileSnapshot(ctx, c.stores.Social, userID)
-	creatorDisplayName := profile.Name
-	if creatorDisplayName == "" && c.authClient != nil {
-		userResponse, err := c.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
-		if err == nil && userResponse != nil && userResponse.GetUser() != nil {
-			creatorDisplayName = strings.TrimSpace(userResponse.GetUser().GetEmail())
-		}
-	}
+	creatorDisplayName := strings.TrimSpace(profile.Name)
 	if creatorDisplayName == "" {
-		creatorDisplayName = userID
+		creatorDisplayName = defaultUnknownParticipantName(normalized.Locale)
+	}
+	creatorPronouns := strings.TrimSpace(profile.Pronouns)
+	if creatorPronouns == "" && userID != "" {
+		creatorPronouns = defaultUnknownParticipantPronouns()
 	}
 
 	creatorRole := "GM"
@@ -142,7 +138,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 			CampaignAccess: "OWNER",
 			AvatarSetID:    profile.AvatarSetID,
 			AvatarAssetID:  profile.AvatarAssetID,
-			Pronouns:       profile.Pronouns,
+			Pronouns:       creatorPronouns,
 		},
 	}
 	if normalized.GmMode == campaign.GmModeAI || normalized.GmMode == campaign.GmModeHybrid {
@@ -153,10 +149,11 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		participantPayloads = append(participantPayloads, participant.JoinPayload{
 			ParticipantID:  aiParticipantID,
 			UserID:         "",
-			Name:           "Game Master",
+			Name:           defaultAIParticipantName(normalized.Locale),
 			Role:           "GM",
 			Controller:     "AI",
 			CampaignAccess: "MEMBER",
+			Pronouns:       defaultAIParticipantPronouns(),
 		})
 	}
 

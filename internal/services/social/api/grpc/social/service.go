@@ -8,6 +8,7 @@ import (
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	profileutil "github.com/louisbranch/fracturing.space/internal/services/social/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
 	usernameutil "github.com/louisbranch/fracturing.space/internal/services/social/username"
@@ -159,7 +160,7 @@ func (s *Service) SetUserProfile(ctx context.Context, in *socialv1.SetUserProfil
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "username is invalid: %v", err)
 	}
-	normalized, err := profileutil.Normalize(userID, in.GetName(), in.GetAvatarSetId(), in.GetAvatarAssetId(), in.GetBio(), in.GetPronouns())
+	normalized, err := profileutil.Normalize(userID, in.GetName(), in.GetAvatarSetId(), in.GetAvatarAssetId(), in.GetBio(), sharedpronouns.FromProto(in.GetPronouns()))
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "user profile is invalid: %v", err)
 	}
@@ -261,7 +262,7 @@ func userProfileToProto(profile storage.UserProfile) *socialv1.UserProfile {
 		AvatarSetId:   profile.AvatarSetID,
 		AvatarAssetId: profile.AvatarAssetID,
 		Bio:           profile.Bio,
-		Pronouns:      profile.Pronouns,
+		Pronouns:      sharedpronouns.ToProto(profile.Pronouns),
 		CreatedAt:     timestamppb.New(profile.CreatedAt),
 		UpdatedAt:     timestamppb.New(profile.UpdatedAt),
 	}

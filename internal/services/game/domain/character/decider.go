@@ -76,6 +76,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 		notes := strings.TrimSpace(payload.Notes)
 		pronouns := strings.TrimSpace(payload.Pronouns)
+		participantID := strings.TrimSpace(payload.ParticipantID)
 		ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID)
 		aliases := normalizeAliases(payload.Aliases)
 		avatarSetID, avatarAssetID, err := resolveCharacterAvatarSelection(
@@ -93,6 +94,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		normalizedPayload := CreatePayload{
 			CharacterID:        characterID,
 			OwnerParticipantID: ownerParticipantID,
+			ParticipantID:      participantID,
 			Name:               name,
 			Kind:               kind,
 			Notes:              notes,

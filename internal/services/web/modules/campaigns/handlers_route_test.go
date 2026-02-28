@@ -105,6 +105,38 @@ func TestHandleOverviewRendersWorkspace(t *testing.T) {
 	if !strings.Contains(body, markerOverview) {
 		t.Fatalf("body missing overview marker %q", markerOverview)
 	}
+	if !strings.Contains(body, `<h1 class="mb-0">Remote</h1>`) {
+		t.Fatalf("body missing campaign h1")
+	}
+	if !strings.Contains(body, "<title>Remote") {
+		t.Fatalf("body missing campaign page title")
+	}
+}
+
+func TestHandleOverviewUsesCampaignIDForTitleWhenNameMissing(t *testing.T) {
+	t.Parallel()
+
+	gw := fakeGateway{
+		items: []CampaignSummary{{ID: "c-2"}},
+	}
+	h := newTestHandlers(gw)
+	mux := http.NewServeMux()
+	registerStableRoutes(mux, h)
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaign("c-2"), nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `<h1 class="mb-0">c-2</h1>`) {
+		t.Fatalf("body missing campaign id h1")
+	}
+	if !strings.Contains(body, "<title>c-2") {
+		t.Fatalf("body missing fallback campaign id title")
+	}
 }
 
 func TestHandleOverviewReturnsNotFoundWhenWorkspaceLookupFails(t *testing.T) {

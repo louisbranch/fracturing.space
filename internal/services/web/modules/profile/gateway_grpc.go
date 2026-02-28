@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 )
@@ -45,7 +46,7 @@ func (g grpcGateway) LookupUserProfile(ctx context.Context, req LookupUserProfil
 		UserID:        strings.TrimSpace(profile.GetUserId()),
 		Username:      strings.TrimSpace(profile.GetUsername()),
 		Name:          strings.TrimSpace(profile.GetName()),
-		Pronouns:      strings.TrimSpace(profile.GetPronouns()),
+		Pronouns:      pronouns.FromProto(profile.GetPronouns()),
 		Bio:           strings.TrimSpace(profile.GetBio()),
 		AvatarSetID:   strings.TrimSpace(profile.GetAvatarSetId()),
 		AvatarAssetID: strings.TrimSpace(profile.GetAvatarAssetId()),

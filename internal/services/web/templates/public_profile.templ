@@ -57,7 +57,7 @@ templ PublicProfilePage(view PublicProfileView, loc Localizer) {
 						if publicProfileValue(view.Pronouns) != "" {
 							<div>
 								<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_pronouns") }</dt>
-								<dd data-public-profile-field="pronouns">{ publicProfileValue(view.Pronouns) }</dd>
+								<dd data-public-profile-field="pronouns">{ participantPronounsLabel(loc, view.Pronouns) }</dd>
 							</div>
 						}
 						if publicProfileValue(view.Bio) != "" {

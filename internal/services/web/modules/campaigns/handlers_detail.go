@@ -89,7 +89,7 @@ func (h handlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campa
 
 func (p *campaignPageContext) layout(campaignID, currentPath string) webtemplates.AppMainLayoutOptions {
 	return webtemplates.AppMainLayoutOptions{
-		SideMenu:  campaignWorkspaceMenu(campaignID, currentPath, p.loc),
+		SideMenu:  campaignWorkspaceMenu(p.workspace, currentPath, p.loc),
 		MainStyle: campaignMainStyle(p.workspace.CoverImageURL),
 		MainClass: campaignMainClass(p.workspace.CoverImageURL),
 		Metadata: webtemplates.AppMainLayoutMetadata{
@@ -102,19 +102,37 @@ func (p *campaignPageContext) layout(campaignID, currentPath string) webtemplate
 // Callers set sub-page-specific fields on the returned value before rendering.
 func (p *campaignPageContext) detailView(campaignID, marker string) webtemplates.CampaignDetailView {
 	return webtemplates.CampaignDetailView{
-		Marker:     marker,
-		CampaignID: campaignID,
-		Name:       p.workspace.Name,
-		Theme:      p.workspace.Theme,
-		System:     p.workspace.System,
-		GMMode:     p.workspace.GMMode,
+		Marker:       marker,
+		CampaignID:   campaignID,
+		Name:         p.workspace.Name,
+		Theme:        p.workspace.Theme,
+		System:       p.workspace.System,
+		GMMode:       p.workspace.GMMode,
+		Status:       p.workspace.Status,
+		Locale:       p.workspace.Locale,
+		Intent:       p.workspace.Intent,
+		AccessPolicy: p.workspace.AccessPolicy,
 	}
 }
 
+func (p *campaignPageContext) title(campaignID string) string {
+	name := strings.TrimSpace(p.workspace.Name)
+	if name != "" {
+		return name
+	}
+	if id := strings.TrimSpace(p.workspace.ID); id != "" {
+		return id
+	}
+	if id := strings.TrimSpace(campaignID); id != "" {
+		return id
+	}
+	return webtemplates.T(p.loc, "game.campaign.title")
+}
+
 // header returns a campaign detail page header with the given breadcrumbs.
-func (p *campaignPageContext) header(breadcrumbs []sharedtemplates.BreadcrumbItem) *webtemplates.AppMainHeader {
+func (p *campaignPageContext) header(campaignID string, breadcrumbs []sharedtemplates.BreadcrumbItem) *webtemplates.AppMainHeader {
 	return &webtemplates.AppMainHeader{
-		Title:       webtemplates.T(p.loc, "game.campaign.title"),
+		Title:       p.title(campaignID),
 		Breadcrumbs: breadcrumbs,
 	}
 }
@@ -214,8 +232,8 @@ func (h handlers) renderCampaignDetail(w http.ResponseWriter, r *http.Request, c
 	} else {
 		crumbs = campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc)
 	}
-	h.WritePage(w, r, webtemplates.T(page.loc, "game.campaign.title"), http.StatusOK,
-		page.header(crumbs),
+	h.WritePage(w, r, page.title(campaignID), http.StatusOK,
+		page.header(campaignID, crumbs),
 		page.layout(campaignID, r.URL.Path),
 		webtemplates.CampaignDetailFragment(view, page.loc))
 }

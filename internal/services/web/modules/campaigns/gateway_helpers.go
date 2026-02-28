@@ -33,6 +33,58 @@ func campaignGMModeLabel(mode statev1.GmMode) string {
 	}
 }
 
+func campaignStatusLabel(status statev1.CampaignStatus) string {
+	switch status {
+	case statev1.CampaignStatus_DRAFT:
+		return "Draft"
+	case statev1.CampaignStatus_ACTIVE:
+		return "Active"
+	case statev1.CampaignStatus_COMPLETED:
+		return "Completed"
+	case statev1.CampaignStatus_ARCHIVED:
+		return "Archived"
+	default:
+		return "Unspecified"
+	}
+}
+
+func campaignLocaleLabel(locale commonv1.Locale) string {
+	switch locale {
+	case commonv1.Locale_LOCALE_EN_US:
+		return "English (US)"
+	case commonv1.Locale_LOCALE_PT_BR:
+		return "Portuguese (Brazil)"
+	default:
+		return "Unspecified"
+	}
+}
+
+func campaignIntentLabel(intent statev1.CampaignIntent) string {
+	switch intent {
+	case statev1.CampaignIntent_STANDARD:
+		return "Standard"
+	case statev1.CampaignIntent_STARTER:
+		return "Starter"
+	case statev1.CampaignIntent_SANDBOX:
+		return "Sandbox"
+	default:
+		return "Unspecified"
+	}
+}
+
+func campaignAccessPolicyLabel(policy statev1.CampaignAccessPolicy) string {
+	switch policy {
+	case statev1.CampaignAccessPolicy_PRIVATE:
+		return "Private"
+	case statev1.CampaignAccessPolicy_RESTRICTED:
+		return "Restricted"
+	case statev1.CampaignAccessPolicy_PUBLIC:
+		return "Public"
+	default:
+		return "Unspecified"
+	}
+}
+
 func participantDisplayName(participant *statev1.Participant) string {
 	if participant == nil {
 		return "Unknown participant"

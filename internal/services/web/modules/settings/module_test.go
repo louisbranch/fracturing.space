@@ -45,10 +45,16 @@ func TestMountServesSettingsProfileGet(t *testing.T) {
 		`name="name"`,
 		`value="Rhea Vale"`,
 		`name="bio"`,
+		`<option value="she/her"></option>`,
+		`<option value="he/him"></option>`,
+		`<option value="they/them"></option>`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing marker %q: %q", marker, body)
 		}
+	}
+	if strings.Contains(body, `<option value="it/its"></option>`) {
+		t.Fatalf("body should hide it/its from pronoun selection: %q", body)
 	}
 	// Invariant: avatar catalog ids are not user-editable until catalog access is available.
 	if strings.Contains(body, `name="avatar_set_id"`) || strings.Contains(body, `name="avatar_asset_id"`) {
@@ -185,7 +191,7 @@ func TestMountSettingsProfileMenuUsesPublicProfileLabelInEnglish(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, `>Public Profile</a>`) {
+	if !strings.Contains(body, `>Public Profile`) {
 		t.Fatalf("body missing English public profile menu label: %q", body)
 	}
 }
@@ -587,6 +593,48 @@ func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *t
 	}
 	if social.lastSetReq.GetAvatarAssetId() != "asset-1" {
 		t.Fatalf("avatar asset id = %q, want %q", social.lastSetReq.GetAvatarAssetId(), "asset-1")
+	}
+}
+
+func TestMountProfilePostBlankPronounsSavesUnspecifiedPronouns(t *testing.T) {
+	t.Parallel()
+
+	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{
+		UserId:        "user-1",
+		Username:      "remote-user",
+		Name:          "Remote Name",
+		AvatarSetId:   "set-a",
+		AvatarAssetId: "asset-1",
+		Bio:           "Before",
+	}}}
+	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
+	m := New(WithGateway(NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	form := url.Values{
+		"username":        {"updated-user"},
+		"name":            {"Updated Name"},
+		"pronouns":        {"   "},
+		"avatar_set_id":   {"catalog-hack-set"},
+		"avatar_asset_id": {"catalog-hack-asset"},
+		"bio":             {"After"},
+	}
+	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsProfile, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if social.lastSetReq == nil {
+		t.Fatalf("expected SetUserProfile to be called")
+	}
+	if social.lastSetReq.GetPronouns() != nil {
+		t.Fatalf("expected pronouns to be unspecified, got %v", social.lastSetReq.GetPronouns())
 	}
 }
 

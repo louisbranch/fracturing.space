@@ -53,7 +53,7 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, err)
 		return
 	}
-	h.WritePage(w, r, webtemplates.T(loc, "game.campaigns.title"), http.StatusOK, campaignsListHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.CampaignListFragment(mapCampaignListItems(items), loc))
+	h.WritePage(w, r, webtemplates.T(loc, "game.campaigns.title"), http.StatusOK, campaignsListHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.CampaignListFragment(mapCampaignListItems(items, h.now(), loc), loc))
 }
 
 func (h handlers) handleStartNewCampaign(w http.ResponseWriter, r *http.Request) {
