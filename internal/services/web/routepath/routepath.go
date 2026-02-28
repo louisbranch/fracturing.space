@@ -51,8 +51,6 @@ const (
 	AppNotificationPattern              = Notifications + "{notificationID}"
 	AppNotificationOpenPattern          = Notifications + "{notificationID}/open"
 	AppNotificationRestPattern          = Notifications + "{notificationID}/{rest...}"
-	AppProfile                          = "/app/profile"
-	ProfilePrefix                       = "/app/profile/"
 	AppSettings                         = "/app/settings"
 	SettingsPrefix                      = "/app/settings/"
 	AppSettingsAIKeyRevokePattern       = SettingsPrefix + "ai-keys/{credentialID}/revoke"

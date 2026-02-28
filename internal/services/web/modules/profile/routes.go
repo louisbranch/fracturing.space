@@ -10,7 +10,7 @@ func registerRoutes(mux *http.ServeMux, h handlers) {
 	if mux == nil {
 		return
 	}
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppProfile, h.handleIndex)
-	mux.HandleFunc(http.MethodGet+" "+routepath.ProfilePrefix+"{$}", h.handleIndex)
-	mux.HandleFunc(http.MethodGet+" "+routepath.ProfilePrefix+"{rest...}", h.handleNotFound)
+	mux.HandleFunc(http.MethodGet+" "+routepath.UserProfilePattern, h.handleProfile)
+	mux.HandleFunc(http.MethodGet+" "+routepath.UserProfilePrefix+"{$}", h.handleNotFound)
+	mux.HandleFunc(http.MethodGet+" "+routepath.UserProfileRestPattern, h.handleNotFound)
 }

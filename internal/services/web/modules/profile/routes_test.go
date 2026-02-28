@@ -1,10 +1,12 @@
 package profile
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -12,50 +14,56 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(newService(staticGateway{}), module.Dependencies{}))
+	registerRoutes(nil, newHandlers(newService(&routeGatewayStub{}, ""), module.Dependencies{}))
 }
 
-func TestRegisterRoutesProfilePathAndMethodContracts(t *testing.T) {
+func TestRegisterRoutesProfileMethodContract(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(newService(staticGateway{}), module.Dependencies{}))
+	registerRoutes(mux, newHandlers(newService(&routeGatewayStub{
+		lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "adventurer"}},
+	}, ""), module.Dependencies{}))
 
-	tests := []struct {
-		name       string
-		method     string
-		path       string
-		wantStatus int
-		wantLoc    string
-		wantAllow  string
-	}{
-		{name: "app profile get", method: http.MethodGet, path: routepath.AppProfile, wantStatus: http.StatusOK},
-		{name: "app profile head", method: http.MethodHead, path: routepath.AppProfile, wantStatus: http.StatusOK},
-		{name: "profile prefix get", method: http.MethodGet, path: routepath.ProfilePrefix, wantStatus: http.StatusOK},
-		{name: "profile unknown subpath", method: http.MethodGet, path: routepath.ProfilePrefix + "other", wantStatus: http.StatusNotFound},
-		{name: "profile prefix post rejected", method: http.MethodPost, path: routepath.ProfilePrefix, wantStatus: http.StatusMethodNotAllowed, wantAllow: "GET, HEAD"},
+	getReq := httptest.NewRequest(http.MethodGet, routepath.UserProfile("adventurer"), nil)
+	getRR := httptest.NewRecorder()
+	mux.ServeHTTP(getRR, getReq)
+	if getRR.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", getRR.Code, http.StatusOK)
 	}
 
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			req := httptest.NewRequest(tc.method, tc.path, nil)
-			rr := httptest.NewRecorder()
-			mux.ServeHTTP(rr, req)
-			if rr.Code != tc.wantStatus {
-				t.Fatalf("status = %d, want %d", rr.Code, tc.wantStatus)
-			}
-			if tc.wantLoc != "" {
-				if got := rr.Header().Get("Location"); got != tc.wantLoc {
-					t.Fatalf("Location = %q, want %q", got, tc.wantLoc)
-				}
-			}
-			if tc.wantAllow != "" {
-				if got := rr.Header().Get("Allow"); got != tc.wantAllow {
-					t.Fatalf("Allow = %q, want %q", got, tc.wantAllow)
-				}
-			}
-		})
+	headReq := httptest.NewRequest(http.MethodHead, routepath.UserProfile("adventurer"), nil)
+	headRR := httptest.NewRecorder()
+	mux.ServeHTTP(headRR, headReq)
+	if headRR.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", headRR.Code, http.StatusOK)
 	}
+
+	postReq := httptest.NewRequest(http.MethodPost, routepath.UserProfile("adventurer"), nil)
+	postRR := httptest.NewRecorder()
+	mux.ServeHTTP(postRR, postReq)
+	if postRR.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("status = %d, want %d", postRR.Code, http.StatusMethodNotAllowed)
+	}
+	if got := postRR.Header().Get("Allow"); got != "GET, HEAD" {
+		t.Fatalf("Allow = %q, want %q", got, "GET, HEAD")
+	}
+
+	nestedReq := httptest.NewRequest(http.MethodGet, routepath.UserProfile("adventurer")+"/details", nil)
+	nestedRR := httptest.NewRecorder()
+	mux.ServeHTTP(nestedRR, nestedReq)
+	if nestedRR.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", nestedRR.Code, http.StatusNotFound)
+	}
+}
+
+type routeGatewayStub struct {
+	lookupResp *socialv1.LookupUserProfileResponse
+}
+
+func (s *routeGatewayStub) LookupUserProfile(_ context.Context, _ *socialv1.LookupUserProfileRequest) (*socialv1.LookupUserProfileResponse, error) {
+	if s.lookupResp != nil {
+		return s.lookupResp, nil
+	}
+	return &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "adventurer"}}, nil
 }

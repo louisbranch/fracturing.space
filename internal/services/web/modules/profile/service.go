@@ -2,51 +2,116 @@ package profile
 
 import (
 	"context"
+	"strings"
 
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
+	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-// ProfileSummary is a transport-safe representation of the current profile.
-type ProfileSummary struct {
-	DisplayName string `json:"displayName"`
-	Username    string `json:"username"`
+// Profile stores one public profile page payload.
+type Profile struct {
+	Username  string
+	Name      string
+	Pronouns  string
+	Bio       string
+	AvatarURL string
 }
 
-// ProfileGateway loads profile data for web handlers.
-type ProfileGateway interface {
-	LoadProfile(context.Context) (ProfileSummary, error)
+type socialGateway interface {
+	LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest) (*socialv1.LookupUserProfileResponse, error)
 }
 
 type service struct {
-	gateway ProfileGateway
+	assetBaseURL string
+	gateway      socialGateway
 }
 
-type staticGateway struct{}
+type grpcGateway struct {
+	client module.SocialClient
+}
 
 type unavailableGateway struct{}
 
-func (staticGateway) LoadProfile(context.Context) (ProfileSummary, error) {
-	return ProfileSummary{DisplayName: "Adventurer", Username: "adventurer"}, nil
-}
+const profileNotFoundMessage = "public profile not found"
 
-func (unavailableGateway) LoadProfile(context.Context) (ProfileSummary, error) {
-	return ProfileSummary{}, apperrors.E(apperrors.KindUnavailable, "profile service is not configured")
-}
-
-func newService(gateway ProfileGateway) service {
+func newService(gateway socialGateway, assetBaseURL string) service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
-	return service{gateway: gateway}
+	return service{gateway: gateway, assetBaseURL: strings.TrimSpace(assetBaseURL)}
 }
 
-func (s service) loadProfile(ctx context.Context) (ProfileSummary, error) {
-	summary, err := s.gateway.LoadProfile(ctx)
+func newGRPCGateway(deps module.Dependencies) socialGateway {
+	if deps.SocialClient == nil {
+		return unavailableGateway{}
+	}
+	return grpcGateway{client: deps.SocialClient}
+}
+
+func (s service) loadProfile(ctx context.Context, username string) (Profile, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return Profile{}, apperrors.E(apperrors.KindNotFound, profileNotFoundMessage)
+	}
+
+	resp, err := s.gateway.LookupUserProfile(ctx, &socialv1.LookupUserProfileRequest{Username: username})
 	if err != nil {
-		return ProfileSummary{}, err
+		if status.Code(err) == codes.InvalidArgument {
+			return Profile{}, apperrors.E(apperrors.KindNotFound, profileNotFoundMessage)
+		}
+		return Profile{}, err
 	}
-	if summary.DisplayName == "" {
-		return ProfileSummary{}, apperrors.E(apperrors.KindNotFound, "profile not found")
+	if resp == nil || resp.GetUserProfile() == nil {
+		return Profile{}, apperrors.E(apperrors.KindNotFound, profileNotFoundMessage)
 	}
-	return summary, nil
+
+	profile := resp.GetUserProfile()
+	resolvedUsername := strings.TrimSpace(profile.GetUsername())
+	if resolvedUsername == "" {
+		return Profile{}, apperrors.E(apperrors.KindNotFound, profileNotFoundMessage)
+	}
+	entityID := strings.TrimSpace(profile.GetUserId())
+	if entityID == "" {
+		entityID = resolvedUsername
+	}
+
+	return Profile{
+		Username: resolvedUsername,
+		Name:     strings.TrimSpace(profile.GetName()),
+		Pronouns: strings.TrimSpace(profile.GetPronouns()),
+		Bio:      strings.TrimSpace(profile.GetBio()),
+		AvatarURL: websupport.AvatarImageURL(
+			s.assetBaseURL,
+			"user",
+			entityID,
+			strings.TrimSpace(profile.GetAvatarSetId()),
+			strings.TrimSpace(profile.GetAvatarAssetId()),
+		),
+	}, nil
+}
+
+func (g grpcGateway) LookupUserProfile(ctx context.Context, req *socialv1.LookupUserProfileRequest) (*socialv1.LookupUserProfileResponse, error) {
+	if g.client == nil {
+		return nil, apperrors.E(apperrors.KindUnavailable, "social service client is not configured")
+	}
+	resp, err := g.client.LookupUserProfile(ctx, req)
+	if err == nil {
+		return resp, nil
+	}
+	switch status.Code(err) {
+	case codes.NotFound:
+		return nil, apperrors.E(apperrors.KindNotFound, profileNotFoundMessage)
+	case codes.Unavailable:
+		return nil, apperrors.E(apperrors.KindUnavailable, "social service is unavailable")
+	default:
+		return nil, err
+	}
+}
+
+func (unavailableGateway) LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest) (*socialv1.LookupUserProfileResponse, error) {
+	return nil, apperrors.E(apperrors.KindUnavailable, "social service client is not configured")
 }

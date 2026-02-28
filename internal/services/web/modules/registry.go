@@ -8,7 +8,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/public"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicprofile"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 )
 
@@ -17,7 +16,7 @@ func DefaultPublicModules() []Module {
 	return []Module{
 		public.New(),
 		discovery.New(),
-		publicprofile.New(),
+		profile.New(),
 	}
 }
 
@@ -48,7 +47,5 @@ func DefaultProtectedModulesWithExperimentalCampaignRoutes(deps module.Dependenc
 
 // ExperimentalProtectedModules returns opt-in authenticated modules that are still scaffolded.
 func ExperimentalProtectedModules(_ module.Dependencies) []Module {
-	return []Module{
-		profile.New(),
-	}
+	return []Module{}
 }
