@@ -111,7 +111,7 @@ function appMainMetadata(main) {
 function isCampaignMainStyle(style) {
 	return (
 		typeof style === "string" &&
-		style.indexOf("background-image: linear-gradient(to bottom") === 0
+		style.indexOf("background-image:") === 0
 	);
 }
 

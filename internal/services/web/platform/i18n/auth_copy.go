@@ -49,7 +49,7 @@ var authCopyEN = AuthCopy{
 	JSRegisterFinishErr: "failed to finish passkey registration",
 	JSPasskeyFailed:     "failed to sign in with passkey",
 	JSEmailRequired:     "email is required",
-	JSPasskeyCreated:    "passkey created; signing you in",
+	JSPasskeyCreated:    "Passkey created; signing you in",
 	JSRegisterFailed:    "failed to create passkey",
 }
 

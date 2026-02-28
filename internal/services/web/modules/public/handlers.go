@@ -63,7 +63,7 @@ func (h handlers) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if hasSession {
 		_ = h.service.revokeWebSession(r.Context(), sessionID)
 	}
-	http.Redirect(w, r, routepath.Login, http.StatusFound)
+	http.Redirect(w, r, routepath.Root, http.StatusFound)
 }
 
 func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request) {

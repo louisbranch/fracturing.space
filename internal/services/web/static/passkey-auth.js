@@ -15,7 +15,7 @@
   var jsRegisterFinishError = i18n.registerFinishError || "failed to finish passkey registration";
   var jsPasskeyFailed = i18n.passkeyFailed || "failed to sign in with passkey";
   var jsEmailRequired = i18n.emailRequired || "email is required";
-  var jsPasskeyCreated = i18n.passkeyCreated || "passkey created; signing you in";
+  var jsPasskeyCreated = i18n.passkeyCreated || "Passkey created; signing you in";
   var jsRegisterFailed = i18n.registerFailed || "failed to create passkey";
 
   var passkeyButton = document.getElementById("passkey-login");
