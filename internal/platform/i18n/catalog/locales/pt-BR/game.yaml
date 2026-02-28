@@ -1,0 +1,5 @@
+locale: "pt-BR"
+namespace: "game"
+messages:
+  "game.participant.default_ai_name": "Oráculo"
+  "game.participant.default_unknown_name": "Pessoa Misteriosa"

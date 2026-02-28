@@ -204,4 +204,5 @@ Non-service utilities live in shared layers:
 - **Request-scoped identity context helpers**: `internal/platform/requestctx/` (transport-agnostic context primitives reused across services).
 - **Cross-service auth introspection client**: `internal/services/shared/authctx/` (shared contract client for auth HTTP token introspection).
 - **Shared HTTP i18n helpers**: `internal/services/shared/i18nhttp/` (language resolution/cookie behavior reused by web and admin).
+- **Shared i18n catalog registry**: `internal/platform/i18n/catalog/` (single source of truth for localized message catalogs and registration).
 - **Seeding CLI**: `cmd/seed` (dev tooling that calls the game service APIs).

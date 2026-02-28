@@ -1,0 +1,6 @@
+locale: "pt-BR"
+namespace: "core"
+messages:
+  "layout.sign_out": "Sair"
+  "nav.lang_en": "EN"
+  "nav.lang_pt_br": "PT-BR"

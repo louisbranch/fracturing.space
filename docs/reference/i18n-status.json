@@ -1,0 +1,125 @@
+{
+  "base_locale": "en-US",
+  "locales": [
+    {
+      "locale": "en-US",
+      "base_keys": 976,
+      "translated": 976,
+      "missing": 0,
+      "extra": 0,
+      "completion": 100,
+      "namespaces": [
+        {
+          "namespace": "admin",
+          "base_keys": 387,
+          "translated": 387,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "core",
+          "base_keys": 3,
+          "translated": 3,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "errors",
+          "base_keys": 56,
+          "translated": 56,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "game",
+          "base_keys": 2,
+          "translated": 2,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "notifications",
+          "base_keys": 10,
+          "translated": 10,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "web",
+          "base_keys": 518,
+          "translated": 518,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        }
+      ],
+      "missing_keys": [],
+      "extra_keys": []
+    },
+    {
+      "locale": "pt-BR",
+      "base_keys": 976,
+      "translated": 976,
+      "missing": 0,
+      "extra": 0,
+      "completion": 100,
+      "namespaces": [
+        {
+          "namespace": "admin",
+          "base_keys": 387,
+          "translated": 387,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "core",
+          "base_keys": 3,
+          "translated": 3,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "errors",
+          "base_keys": 56,
+          "translated": 56,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "game",
+          "base_keys": 2,
+          "translated": 2,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "notifications",
+          "base_keys": 10,
+          "translated": 10,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        },
+        {
+          "namespace": "web",
+          "base_keys": 518,
+          "translated": 518,
+          "missing": 0,
+          "extra": 0,
+          "completion": 100
+        }
+      ],
+      "missing_keys": [],
+      "extra_keys": []
+    }
+  ]
+}

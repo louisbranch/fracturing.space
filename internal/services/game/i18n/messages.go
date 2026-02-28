@@ -1,5 +1,9 @@
 package i18n
 
+import (
+	_ "github.com/louisbranch/fracturing.space/internal/platform/i18n/catalog"
+)
+
 const (
 	// ParticipantDefaultUnknownNameKey is the translated fallback for users with no available name.
 	ParticipantDefaultUnknownNameKey = "game.participant.default_unknown_name"

@@ -24,3 +24,4 @@ Canonical runtime entrypoint.
 - [Integration tests](integration-tests.md)
 - [Seeding](seeding.md)
 - [Scenario scripts](scenario-scripts.md)
+- [Translation workflow](translation-workflow.md)

@@ -10,11 +10,11 @@ func TestAuthReturnsPortugueseCopyForPTBR(t *testing.T) {
 	t.Parallel()
 
 	copy := Auth(language.MustParse("pt-BR"))
-	if copy.LoginHeading != authCopyPTBR.LoginHeading {
-		t.Fatalf("LoginHeading = %q, want %q", copy.LoginHeading, authCopyPTBR.LoginHeading)
+	if copy.LoginHeading != "Faça login em Fracturing.Space" {
+		t.Fatalf("LoginHeading = %q", copy.LoginHeading)
 	}
-	if copy.JSEmailRequired != authCopyPTBR.JSEmailRequired {
-		t.Fatalf("JSEmailRequired = %q, want %q", copy.JSEmailRequired, authCopyPTBR.JSEmailRequired)
+	if copy.JSEmailRequired != "Email principal é obrigatório." {
+		t.Fatalf("JSEmailRequired = %q", copy.JSEmailRequired)
 	}
 }
 
@@ -22,8 +22,8 @@ func TestAuthReturnsPortugueseCopyForPortugueseBaseLanguage(t *testing.T) {
 	t.Parallel()
 
 	copy := Auth(language.MustParse("pt-PT"))
-	if copy.LandingTagline != authCopyPTBR.LandingTagline {
-		t.Fatalf("LandingTagline = %q, want %q", copy.LandingTagline, authCopyPTBR.LandingTagline)
+	if copy.LandingTagline != "Motor de código aberto, autoritativo no servidor, para campanhas de RPG de mesa determinísticas e mestres de jogo com IA." {
+		t.Fatalf("LandingTagline = %q", copy.LandingTagline)
 	}
 }
 
@@ -31,10 +31,10 @@ func TestAuthFallsBackToEnglishForNonPortugueseLanguage(t *testing.T) {
 	t.Parallel()
 
 	copy := Auth(language.MustParse("en-US"))
-	if copy.LoginTitle != authCopyEN.LoginTitle {
-		t.Fatalf("LoginTitle = %q, want %q", copy.LoginTitle, authCopyEN.LoginTitle)
+	if copy.LoginTitle != "Sign In | Fracturing.Space" {
+		t.Fatalf("LoginTitle = %q", copy.LoginTitle)
 	}
-	if copy.JSRegisterFailed != authCopyEN.JSRegisterFailed {
-		t.Fatalf("JSRegisterFailed = %q, want %q", copy.JSRegisterFailed, authCopyEN.JSRegisterFailed)
+	if copy.JSRegisterFailed != "Passkey registration failed." {
+		t.Fatalf("JSRegisterFailed = %q", copy.JSRegisterFailed)
 	}
 }

@@ -1,0 +1,6 @@
+locale: "en-US"
+namespace: "core"
+messages:
+  "layout.sign_out": "Sign out"
+  "nav.lang_en": "EN"
+  "nav.lang_pt_br": "PT-BR"

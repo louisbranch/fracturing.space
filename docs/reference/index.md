@@ -11,6 +11,7 @@ Protocol and API contracts.
 ## Start here
 
 - [MCP tools and resources](mcp.md)
+- [I18n status](i18n-status.md)
 - [Icon rendering](icon-rendering.md)
 - [Icon catalog](icon-catalog.md)
 
