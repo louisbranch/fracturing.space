@@ -163,7 +163,7 @@ func (s *Store) GetNotificationByRecipientAndDedupeKey(ctx context.Context, reci
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
-SELECT id, recipient_user_id, topic, payload_json, dedupe_key, source, created_at, updated_at, read_at
+SELECT id, recipient_user_id, message_type, payload_json, dedupe_key, source, created_at, updated_at, read_at
 FROM notifications
 WHERE recipient_user_id = ? AND dedupe_key = ?
 `, recipientUserID, dedupeKey)
@@ -197,12 +197,15 @@ func (s *Store) ListNotificationsByRecipient(ctx context.Context, recipientUserI
 	limit := pageSize + 1
 	if pageToken == "" {
 		rows, err := s.sqlDB.QueryContext(ctx, `
-SELECT id, recipient_user_id, topic, payload_json, dedupe_key, source, created_at, updated_at, read_at
-FROM notifications
-WHERE recipient_user_id = ?
-ORDER BY created_at DESC, id DESC
+SELECT n.id, n.recipient_user_id, n.message_type, n.payload_json, n.dedupe_key, n.source, n.created_at, n.updated_at, n.read_at
+FROM notifications n
+JOIN notification_deliveries d ON d.notification_id = n.id
+WHERE n.recipient_user_id = ?
+  AND d.channel = ?
+  AND d.status = ?
+ORDER BY n.created_at DESC, n.id DESC
 LIMIT ?
-`, recipientUserID, limit)
+`, recipientUserID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered, limit)
 		if err != nil {
 			return storage.NotificationPage{}, fmt.Errorf("list notifications: %w", err)
 		}
@@ -219,13 +222,16 @@ LIMIT ?
 	}
 
 	rows, err := s.sqlDB.QueryContext(ctx, `
-SELECT id, recipient_user_id, topic, payload_json, dedupe_key, source, created_at, updated_at, read_at
-FROM notifications
-WHERE recipient_user_id = ?
-  AND (created_at < ? OR (created_at = ? AND id < ?))
-ORDER BY created_at DESC, id DESC
+SELECT n.id, n.recipient_user_id, n.message_type, n.payload_json, n.dedupe_key, n.source, n.created_at, n.updated_at, n.read_at
+FROM notifications n
+JOIN notification_deliveries d ON d.notification_id = n.id
+WHERE n.recipient_user_id = ?
+  AND d.channel = ?
+  AND d.status = ?
+  AND (n.created_at < ? OR (n.created_at = ? AND n.id < ?))
+ORDER BY n.created_at DESC, n.id DESC
 LIMIT ?
-`, recipientUserID, toMillis(tokenCreatedAt), toMillis(tokenCreatedAt), pageToken, limit)
+`, recipientUserID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered, toMillis(tokenCreatedAt), toMillis(tokenCreatedAt), pageToken, limit)
 	if err != nil {
 		return storage.NotificationPage{}, fmt.Errorf("list notifications with token: %w", err)
 	}
@@ -249,9 +255,13 @@ func (s *Store) CountUnreadNotificationsByRecipient(ctx context.Context, recipie
 	var unreadCount int
 	if err := s.sqlDB.QueryRowContext(ctx, `
 SELECT COUNT(1)
-FROM notifications
-WHERE recipient_user_id = ? AND read_at IS NULL
-`, recipientUserID).Scan(&unreadCount); err != nil {
+FROM notifications n
+JOIN notification_deliveries d ON d.notification_id = n.id
+WHERE n.recipient_user_id = ?
+  AND n.read_at IS NULL
+  AND d.channel = ?
+  AND d.status = ?
+`, recipientUserID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered).Scan(&unreadCount); err != nil {
 		return 0, fmt.Errorf("count unread notifications: %w", err)
 	}
 	return unreadCount, nil
@@ -278,8 +288,16 @@ func (s *Store) MarkNotificationRead(ctx context.Context, recipientUserID string
 	result, err := s.sqlDB.ExecContext(ctx, `
 UPDATE notifications
 SET read_at = ?, updated_at = ?
-WHERE recipient_user_id = ? AND id = ?
-`, toMillis(now), toMillis(now), recipientUserID, notificationID)
+WHERE recipient_user_id = ?
+  AND id = ?
+  AND EXISTS (
+    SELECT 1
+    FROM notification_deliveries d
+    WHERE d.notification_id = notifications.id
+      AND d.channel = ?
+      AND d.status = ?
+  )
+`, toMillis(now), toMillis(now), recipientUserID, notificationID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered)
 	if err != nil {
 		return storage.NotificationRecord{}, fmt.Errorf("mark notification read: %w", err)
 	}
@@ -439,10 +457,14 @@ WHERE notification_id = ? AND channel = ?
 
 func (s *Store) notificationCreatedAtByID(ctx context.Context, recipientUserID string, notificationID string) (time.Time, error) {
 	row := s.sqlDB.QueryRowContext(ctx, `
-SELECT created_at
-FROM notifications
-WHERE recipient_user_id = ? AND id = ?
-`, recipientUserID, notificationID)
+SELECT n.created_at
+FROM notifications n
+JOIN notification_deliveries d ON d.notification_id = n.id
+WHERE n.recipient_user_id = ?
+  AND n.id = ?
+  AND d.channel = ?
+  AND d.status = ?
+`, recipientUserID, notificationID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered)
 	var createdAtMillis int64
 	if err := row.Scan(&createdAtMillis); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -455,7 +477,7 @@ WHERE recipient_user_id = ? AND id = ?
 
 func (s *Store) getNotificationByRecipientAndID(ctx context.Context, recipientUserID string, notificationID string) (storage.NotificationRecord, error) {
 	row := s.sqlDB.QueryRowContext(ctx, `
-SELECT id, recipient_user_id, topic, payload_json, dedupe_key, source, created_at, updated_at, read_at
+SELECT id, recipient_user_id, message_type, payload_json, dedupe_key, source, created_at, updated_at, read_at
 FROM notifications
 WHERE recipient_user_id = ? AND id = ?
 `, recipientUserID, notificationID)
@@ -478,7 +500,7 @@ type sqlExecer interface {
 func normalizeNotificationRecord(record storage.NotificationRecord) (storage.NotificationRecord, error) {
 	record.ID = strings.TrimSpace(record.ID)
 	record.RecipientUserID = strings.TrimSpace(record.RecipientUserID)
-	record.Topic = strings.TrimSpace(record.Topic)
+	record.MessageType = strings.TrimSpace(record.MessageType)
 	record.DedupeKey = strings.TrimSpace(record.DedupeKey)
 	record.Source = strings.TrimSpace(record.Source)
 	record.PayloadJSON = strings.TrimSpace(record.PayloadJSON)
@@ -491,8 +513,8 @@ func normalizeNotificationRecord(record storage.NotificationRecord) (storage.Not
 	if record.RecipientUserID == "" {
 		return storage.NotificationRecord{}, fmt.Errorf("recipient user id is required")
 	}
-	if record.Topic == "" {
-		return storage.NotificationRecord{}, fmt.Errorf("topic is required")
+	if record.MessageType == "" {
+		return storage.NotificationRecord{}, fmt.Errorf("message type is required")
 	}
 	if record.CreatedAt.IsZero() {
 		return storage.NotificationRecord{}, fmt.Errorf("created_at is required")
@@ -550,11 +572,11 @@ func putNotificationExec(ctx context.Context, execer sqlExecer, record storage.N
 
 	_, err := execer.ExecContext(ctx, `
 	INSERT INTO notifications (
-		id, recipient_user_id, topic, payload_json, dedupe_key, source, created_at, updated_at, read_at
+		id, recipient_user_id, message_type, payload_json, dedupe_key, source, created_at, updated_at, read_at
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 	ON CONFLICT(id) DO UPDATE SET
 		recipient_user_id = excluded.recipient_user_id,
-		topic = excluded.topic,
+		message_type = excluded.message_type,
 		payload_json = excluded.payload_json,
 		dedupe_key = excluded.dedupe_key,
 		source = excluded.source,
@@ -564,7 +586,7 @@ func putNotificationExec(ctx context.Context, execer sqlExecer, record storage.N
 	`,
 		record.ID,
 		record.RecipientUserID,
-		record.Topic,
+		record.MessageType,
 		record.PayloadJSON,
 		record.DedupeKey,
 		record.Source,
@@ -626,7 +648,7 @@ func scanNotification(scan scanner) (storage.NotificationRecord, error) {
 	if err := scan(
 		&record.ID,
 		&record.RecipientUserID,
-		&record.Topic,
+		&record.MessageType,
 		&record.PayloadJSON,
 		&record.DedupeKey,
 		&record.Source,

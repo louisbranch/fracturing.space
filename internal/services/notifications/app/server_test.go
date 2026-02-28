@@ -53,7 +53,7 @@ func TestServer_CreateListAndMarkReadRoundTrip(t *testing.T) {
 
 	createResp, err := client.CreateNotificationIntent(context.Background(), &notificationsv1.CreateNotificationIntentRequest{
 		RecipientUserId: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJson:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "invite:inv-1",
 		Source:          notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
@@ -67,7 +67,7 @@ func TestServer_CreateListAndMarkReadRoundTrip(t *testing.T) {
 
 	dupResp, err := client.CreateNotificationIntent(context.Background(), &notificationsv1.CreateNotificationIntentRequest{
 		RecipientUserId: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJson:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "invite:inv-1",
 		Source:          notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,

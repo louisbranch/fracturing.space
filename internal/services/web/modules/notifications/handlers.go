@@ -127,7 +127,7 @@ func (h handlers) notificationListView(items []NotificationSummary, loc webtempl
 			continue
 		}
 		rendered := notificationsrender.Render(loc, notificationsrender.Input{
-			Topic:       item.Topic,
+			MessageType: item.MessageType,
 			PayloadJSON: item.PayloadJSON,
 			Channel:     notificationsrender.ChannelInApp,
 		})
@@ -151,7 +151,7 @@ func (h handlers) notificationDetailView(item NotificationSummary, loc webtempla
 		return nil
 	}
 	rendered := notificationsrender.Render(loc, notificationsrender.Input{
-		Topic:       item.Topic,
+		MessageType: item.MessageType,
 		PayloadJSON: item.PayloadJSON,
 		Channel:     notificationsrender.ChannelInApp,
 	})

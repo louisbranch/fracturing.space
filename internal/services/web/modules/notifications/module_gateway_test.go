@@ -39,7 +39,7 @@ func TestGRPCGatewayListNotificationsMapsFieldsAndUserMetadata(t *testing.T) {
 		listResponses: []*notificationsv1.ListNotificationsResponse{{
 			Notifications: []*notificationsv1.Notification{{
 				Id:          " note-1 ",
-				Topic:       "auth.onboarding.welcome",
+				MessageType: "auth.onboarding.welcome",
 				PayloadJson: `{"signup_method":"passkey"}`,
 				Source:      notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM,
 				CreatedAt:   createdAt,
@@ -59,6 +59,9 @@ func TestGRPCGatewayListNotificationsMapsFieldsAndUserMetadata(t *testing.T) {
 	}
 	if items[0].ID != "note-1" {
 		t.Fatalf("ID = %q, want %q", items[0].ID, "note-1")
+	}
+	if items[0].MessageType != "auth.onboarding.welcome" {
+		t.Fatalf("MessageType = %q, want %q", items[0].MessageType, "auth.onboarding.welcome")
 	}
 	if !items[0].Read {
 		t.Fatalf("expected read=true when read_at exists")

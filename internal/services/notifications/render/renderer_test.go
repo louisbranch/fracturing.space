@@ -24,7 +24,7 @@ func TestRenderOnboardingWelcomeInAppLocalized(t *testing.T) {
 	}}
 
 	out := Render(loc, Input{
-		Topic:       "auth.onboarding.welcome",
+		MessageType: "auth.onboarding.welcome",
 		PayloadJSON: `{"signup_method":"passkey"}`,
 		Channel:     ChannelInApp,
 	})
@@ -53,7 +53,7 @@ func TestRenderOnboardingWelcomeEmailLocalized(t *testing.T) {
 	}}
 
 	out := Render(loc, Input{
-		Topic:       "auth.onboarding.welcome.v1",
+		MessageType: "auth.onboarding.welcome.v1",
 		PayloadJSON: `{"signup_method":"magic_link"}`,
 		Channel:     ChannelEmail,
 	})
@@ -75,7 +75,7 @@ func TestRenderOnboardingWelcomeMalformedPayloadFallsBack(t *testing.T) {
 	}}
 
 	out := Render(loc, Input{
-		Topic:       "auth.onboarding.welcome",
+		MessageType: "auth.onboarding.welcome",
 		PayloadJSON: `{"signup_method":`,
 		Channel:     ChannelInApp,
 	})
@@ -101,7 +101,7 @@ func TestRenderOnboardingWelcomeUnknownSignupMethodUsesSafeFallbackLabel(t *test
 	}}
 
 	out := Render(loc, Input{
-		Topic:       "auth.onboarding.welcome",
+		MessageType: "auth.onboarding.welcome",
 		PayloadJSON: `{"signup_method":"oauth"}`,
 		Channel:     ChannelInApp,
 	})
@@ -115,7 +115,7 @@ func TestRenderWithNilLocalizerReturnsHumanReadableDefaults(t *testing.T) {
 	t.Parallel()
 
 	out := Render(nil, Input{
-		Topic:       "auth.onboarding.welcome",
+		MessageType: "auth.onboarding.welcome",
 		PayloadJSON: `{"signup_method":"passkey"}`,
 		Channel:     ChannelInApp,
 	})
@@ -140,7 +140,7 @@ func TestRenderUnknownTopicFallsBack(t *testing.T) {
 	}}
 
 	out := Render(loc, Input{
-		Topic:       "unknown.topic",
+		MessageType: "unknown.topic",
 		PayloadJSON: `{}`,
 		Channel:     ChannelInApp,
 	})
@@ -158,7 +158,7 @@ func TestRenderOnboardingWelcomeWithRealPrinterUsesRegisteredCatalog(t *testing.
 
 	printer := message.NewPrinter(language.AmericanEnglish)
 	out := Render(printer, Input{
-		Topic:       TopicOnboardingWelcome,
+		MessageType: MessageTypeOnboardingWelcome,
 		PayloadJSON: `{"signup_method":"passkey"}`,
 		Channel:     ChannelInApp,
 	})

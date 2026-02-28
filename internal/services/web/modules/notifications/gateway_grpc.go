@@ -134,7 +134,7 @@ func mapNotification(notification *notificationsv1.Notification) NotificationSum
 	readAt := protoTimestamp(notification.GetReadAt())
 	return NotificationSummary{
 		ID:          strings.TrimSpace(notification.GetId()),
-		Topic:       strings.TrimSpace(notification.GetTopic()),
+		MessageType: strings.TrimSpace(notification.GetMessageType()),
 		PayloadJSON: strings.TrimSpace(notification.GetPayloadJson()),
 		Source:      sourceFromProto(notification.GetSource()),
 		Read:        readAt != nil,

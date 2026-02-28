@@ -22,7 +22,7 @@ func TestPutNotification_UsesAtomicBootstrapWriteWhenAvailable(t *testing.T) {
 	err := adapter.PutNotification(context.Background(), domain.Notification{
 		ID:              "notif-1",
 		RecipientUserID: "user-1",
-		Topic:           "campaign.invite",
+		MessageType:     "campaign.invite",
 		PayloadJSON:     `{"invite_id":"inv-1"}`,
 		DedupeKey:       "invite:inv-1",
 		Source:          "game",
@@ -43,9 +43,111 @@ func TestPutNotification_UsesAtomicBootstrapWriteWhenAvailable(t *testing.T) {
 	}
 }
 
+func TestPutNotification_GenericMessageTypeCreatesInAppDeliveryOnly(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 2, 21, 22, 5, 0, 0, time.UTC)
+	store := newAtomicCapableStore()
+	adapter := newDomainStoreAdapter(store, store, true)
+
+	err := adapter.PutNotification(context.Background(), domain.Notification{
+		ID:              "notif-generic",
+		RecipientUserID: "user-1",
+		MessageType:     "campaign.invite",
+		PayloadJSON:     `{"invite_id":"inv-1"}`,
+		DedupeKey:       "invite:inv-1",
+		Source:          "game",
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	})
+	if err != nil {
+		t.Fatalf("put generic notification: %v", err)
+	}
+	if store.atomicWriteCalls != 1 {
+		t.Fatalf("atomic write calls = %d, want 1", store.atomicWriteCalls)
+	}
+	if len(store.lastAtomicDeliveries) != 1 {
+		t.Fatalf("delivery rows = %d, want 1", len(store.lastAtomicDeliveries))
+	}
+	delivery := store.lastAtomicDeliveries[0]
+	if delivery.Channel != storage.DeliveryChannelInApp {
+		t.Fatalf("channel = %q, want %q", delivery.Channel, storage.DeliveryChannelInApp)
+	}
+	if delivery.Status != storage.DeliveryStatusDelivered {
+		t.Fatalf("status = %q, want %q", delivery.Status, storage.DeliveryStatusDelivered)
+	}
+}
+
+func TestPutNotification_OnboardingMessageTypeCreatesEmailDeliveryOnly(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 2, 21, 22, 10, 0, 0, time.UTC)
+	store := newAtomicCapableStore()
+	adapter := newDomainStoreAdapter(store, store, true)
+
+	err := adapter.PutNotification(context.Background(), domain.Notification{
+		ID:              "notif-onboarding-email",
+		RecipientUserID: "user-1",
+		MessageType:     domain.MessageTypeOnboardingWelcome,
+		PayloadJSON:     `{"signup_method":"passkey"}`,
+		DedupeKey:       "welcome:user:user-1:v1",
+		Source:          "system",
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	})
+	if err != nil {
+		t.Fatalf("put onboarding notification: %v", err)
+	}
+	if len(store.lastAtomicDeliveries) != 1 {
+		t.Fatalf("delivery rows = %d, want 1", len(store.lastAtomicDeliveries))
+	}
+	delivery := store.lastAtomicDeliveries[0]
+	if delivery.Channel != storage.DeliveryChannelEmail {
+		t.Fatalf("channel = %q, want %q", delivery.Channel, storage.DeliveryChannelEmail)
+	}
+	if delivery.Status != storage.DeliveryStatusPending {
+		t.Fatalf("status = %q, want %q", delivery.Status, storage.DeliveryStatusPending)
+	}
+}
+
+func TestPutNotification_OnboardingMessageTypeSkippedWhenEmailDisabled(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 2, 21, 22, 15, 0, 0, time.UTC)
+	store := newAtomicCapableStore()
+	adapter := newDomainStoreAdapter(store, store, false)
+
+	err := adapter.PutNotification(context.Background(), domain.Notification{
+		ID:              "notif-onboarding-skipped",
+		RecipientUserID: "user-1",
+		MessageType:     domain.MessageTypeOnboardingWelcomeV1,
+		PayloadJSON:     `{"signup_method":"magic_link"}`,
+		DedupeKey:       "welcome:user:user-1:v1",
+		Source:          "system",
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	})
+	if err != nil {
+		t.Fatalf("put onboarding notification with email disabled: %v", err)
+	}
+	if len(store.lastAtomicDeliveries) != 1 {
+		t.Fatalf("delivery rows = %d, want 1", len(store.lastAtomicDeliveries))
+	}
+	delivery := store.lastAtomicDeliveries[0]
+	if delivery.Channel != storage.DeliveryChannelEmail {
+		t.Fatalf("channel = %q, want %q", delivery.Channel, storage.DeliveryChannelEmail)
+	}
+	if delivery.Status != storage.DeliveryStatusSkipped {
+		t.Fatalf("status = %q, want %q", delivery.Status, storage.DeliveryStatusSkipped)
+	}
+}
+
 type atomicCapableStore struct {
 	notifications map[string]storage.NotificationRecord
 	deliveries    []storage.DeliveryRecord
+
+	lastAtomicNotification storage.NotificationRecord
+	lastAtomicDeliveries   []storage.DeliveryRecord
 
 	putDeliveryErr error
 	atomicWriteErr error
@@ -114,8 +216,10 @@ func (s *atomicCapableStore) MarkDeliverySucceeded(_ context.Context, _ string, 
 	return nil
 }
 
-func (s *atomicCapableStore) PutNotificationWithDeliveries(_ context.Context, _ storage.NotificationRecord, _ []storage.DeliveryRecord) error {
+func (s *atomicCapableStore) PutNotificationWithDeliveries(_ context.Context, notification storage.NotificationRecord, deliveries []storage.DeliveryRecord) error {
 	s.atomicWriteCalls++
+	s.lastAtomicNotification = notification
+	s.lastAtomicDeliveries = append(s.lastAtomicDeliveries[:0], deliveries...)
 	if s.atomicWriteErr != nil {
 		return s.atomicWriteErr
 	}

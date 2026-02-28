@@ -25,11 +25,11 @@ service NotificationService {
   rpc MarkNotificationRead(MarkNotificationReadRequest) returns (MarkNotificationReadResponse);
 }
 
-// Notification stores one user notification inbox item.
+// Notification stores one user notification artifact.
 message Notification {
   string id = 1;
   string recipient_user_id = 2;
-  string topic = 3;
+  string message_type = 3;
   string payload_json = 4;
   string dedupe_key = 5;
   NotificationSource source = 6;
@@ -40,7 +40,7 @@ message Notification {
 
 message CreateNotificationIntentRequest {
   string recipient_user_id = 1;
-  string topic = 2;
+  string message_type = 2;
   string payload_json = 3;
   string dedupe_key = 4;
   NotificationSource source = 5;

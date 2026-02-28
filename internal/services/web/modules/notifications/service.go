@@ -11,7 +11,7 @@ import (
 // NotificationSummary is a transport-safe summary for notification listings.
 type NotificationSummary struct {
 	ID          string     `json:"id"`
-	Topic       string     `json:"topic"`
+	MessageType string     `json:"message_type"`
 	PayloadJSON string     `json:"payload_json"`
 	Source      string     `json:"source"`
 	Read        bool       `json:"read"`
@@ -39,7 +39,7 @@ func (staticGateway) ListNotifications(context.Context, string) ([]NotificationS
 	now := time.Now().UTC()
 	return []NotificationSummary{{
 		ID:          "notification-1",
-		Topic:       "auth.onboarding.welcome",
+		MessageType: "auth.onboarding.welcome",
 		PayloadJSON: `{"signup_method":"passkey"}`,
 		Source:      "system",
 		Read:        false,

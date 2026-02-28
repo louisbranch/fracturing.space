@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	// OnboardingWelcomeTopic is the canonical topic for signup welcome notifications.
-	OnboardingWelcomeTopic = "auth.onboarding.welcome"
+	// OnboardingWelcomeMessageType is the canonical message type for signup welcome notifications.
+	OnboardingWelcomeMessageType = "auth.onboarding.welcome"
 	// OnboardingWelcomeSource is the internal catch-all notification source.
 	OnboardingWelcomeSource = notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM
 )
@@ -42,7 +42,7 @@ func NewOnboardingWelcomeHandler(notifications notificationIntentClient, clock f
 	}
 }
 
-// Handle converts signup completed events into notification intents.
+// Handle converts signup completed events into notification intents when email metadata is available.
 func (h *OnboardingWelcomeHandler) Handle(ctx context.Context, event *authv1.IntegrationOutboxEvent) error {
 	if h == nil || h.notifications == nil {
 		return Permanent(fmt.Errorf("notifications client is not configured"))
@@ -50,6 +50,9 @@ func (h *OnboardingWelcomeHandler) Handle(ctx context.Context, event *authv1.Int
 	payload, err := decodeSignupCompletedPayload(event)
 	if err != nil {
 		return Permanent(err)
+	}
+	if payload.Email == "" {
+		return nil
 	}
 	userID := payload.UserID
 
@@ -68,7 +71,7 @@ func (h *OnboardingWelcomeHandler) Handle(ctx context.Context, event *authv1.Int
 
 	_, err = h.notifications.CreateNotificationIntent(ctx, &notificationsv1.CreateNotificationIntentRequest{
 		RecipientUserId: userID,
-		Topic:           OnboardingWelcomeTopic,
+		MessageType:     OnboardingWelcomeMessageType,
 		PayloadJson:     string(notificationPayload),
 		DedupeKey:       onboardingWelcomeDedupeKey(userID),
 		Source:          OnboardingWelcomeSource,

@@ -17,7 +17,7 @@ import (
 func TestMountServesNotificationsGet(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}}})
+	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}})
 	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -43,7 +43,7 @@ func TestMountServesNotificationsGet(t *testing.T) {
 func TestMountServesNotificationsHead(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}}})
+	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}})
 	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -104,7 +104,7 @@ func TestMountRejectsNotificationsNonGet(t *testing.T) {
 func TestMountServesNotificationDetailRoute(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{getItem: NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: true}})
+	m := NewWithGateway(fakeGateway{getItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}})
 	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -127,7 +127,7 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 func TestMountNotificationOpenRouteRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: true}})
+	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}})
 	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -146,7 +146,7 @@ func TestMountNotificationOpenRouteRedirectsToDetail(t *testing.T) {
 func TestMountNotificationOpenRouteHTMXRedirects(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: true}})
+	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}})
 	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -206,7 +206,7 @@ func TestMountNotificationsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 func TestMountNotificationsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}}})
+	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}})
 	mount, err := m.Mount(notificationsTestDependencies())
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -270,7 +270,7 @@ func (f fakeGateway) ListNotifications(context.Context, string) ([]NotificationS
 		return nil, f.listErr
 	}
 	if f.listItems == nil {
-		return []NotificationSummary{{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}}, nil
+		return []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}, nil
 	}
 	return f.listItems, nil
 }
@@ -285,7 +285,7 @@ func (f fakeGateway) GetNotification(context.Context, string, string) (Notificat
 	if len(f.listItems) > 0 {
 		return f.listItems[0], nil
 	}
-	return NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: false}, nil
+	return NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}, nil
 }
 
 func (f fakeGateway) OpenNotification(context.Context, string, string) (NotificationSummary, error) {
@@ -295,7 +295,7 @@ func (f fakeGateway) OpenNotification(context.Context, string, string) (Notifica
 	if f.openItem != (NotificationSummary{}) {
 		return f.openItem, nil
 	}
-	return NotificationSummary{ID: "n1", Topic: "auth.onboarding.welcome", Read: true}, nil
+	return NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}, nil
 }
 
 var _ NotificationGateway = fakeGateway{}

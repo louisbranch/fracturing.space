@@ -1,5 +1,12 @@
 -- +migrate Up
 
+DROP INDEX IF EXISTS notification_deliveries_notification_channel_status_idx;
+DROP INDEX IF EXISTS notification_deliveries_channel_status_next_attempt_idx;
+DROP TABLE IF EXISTS notification_deliveries;
+DROP INDEX IF EXISTS notifications_recipient_created_idx;
+DROP INDEX IF EXISTS notifications_recipient_dedupe_unique_idx;
+DROP TABLE IF EXISTS notifications;
+
 CREATE TABLE notifications (
     id TEXT PRIMARY KEY,
     recipient_user_id TEXT NOT NULL,
