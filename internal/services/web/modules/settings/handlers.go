@@ -10,6 +10,7 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
@@ -99,11 +100,8 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, r, err)
 		return
 	}
-	if httpx.IsHTMXRequest(r) {
-		httpx.WriteHXRedirect(w, routepath.AppSettingsProfile)
-		return
-	}
-	http.Redirect(w, r, routepath.AppSettingsProfile, http.StatusFound)
+	flashnotice.Write(w, r, flashnotice.NoticeSuccess("web.settings.user_profile.notice_saved"))
+	httpx.WriteRedirect(w, r, routepath.AppSettingsProfile)
 }
 
 func (h handlers) handleLocaleGet(w http.ResponseWriter, r *http.Request) {
@@ -132,11 +130,8 @@ func (h handlers) handleLocalePost(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, r, err)
 		return
 	}
-	if httpx.IsHTMXRequest(r) {
-		httpx.WriteHXRedirect(w, routepath.AppSettingsLocale)
-		return
-	}
-	http.Redirect(w, r, routepath.AppSettingsLocale, http.StatusFound)
+	flashnotice.Write(w, r, flashnotice.NoticeSuccess("web.settings.locale.notice_saved"))
+	httpx.WriteRedirect(w, r, routepath.AppSettingsLocale)
 }
 
 func (h handlers) handleAIKeysGet(w http.ResponseWriter, r *http.Request) {
@@ -161,11 +156,8 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 		h.writeError(w, r, err)
 		return
 	}
-	if httpx.IsHTMXRequest(r) {
-		httpx.WriteHXRedirect(w, routepath.AppSettingsAIKeys)
-		return
-	}
-	http.Redirect(w, r, routepath.AppSettingsAIKeys, http.StatusFound)
+	flashnotice.Write(w, r, flashnotice.NoticeSuccess("web.settings.ai_keys.notice_created"))
+	httpx.WriteRedirect(w, r, routepath.AppSettingsAIKeys)
 }
 
 func (h handlers) handleAIKeyRevoke(w http.ResponseWriter, r *http.Request, credentialID string) {
@@ -174,11 +166,8 @@ func (h handlers) handleAIKeyRevoke(w http.ResponseWriter, r *http.Request, cred
 		h.writeError(w, r, err)
 		return
 	}
-	if httpx.IsHTMXRequest(r) {
-		httpx.WriteHXRedirect(w, routepath.AppSettingsAIKeys)
-		return
-	}
-	http.Redirect(w, r, routepath.AppSettingsAIKeys, http.StatusFound)
+	flashnotice.Write(w, r, flashnotice.NoticeSuccess("web.settings.ai_keys.notice_revoked"))
+	httpx.WriteRedirect(w, r, routepath.AppSettingsAIKeys)
 }
 
 func (h handlers) handleAIKeyRevokeRoute(w http.ResponseWriter, r *http.Request) {

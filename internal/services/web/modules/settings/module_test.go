@@ -14,6 +14,7 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -531,6 +532,9 @@ func TestMountProfilePostSavesAndRedirects(t *testing.T) {
 	if got := rr.Header().Get("Location"); got != routepath.AppSettingsProfile {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsProfile)
 	}
+	if !responseHasCookieName(rr, flashnotice.CookieName) {
+		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
+	}
 	if gateway.lastSavedProfile.Username != "rhea" {
 		t.Fatalf("saved username = %q, want %q", gateway.lastSavedProfile.Username, "rhea")
 	}
@@ -578,6 +582,9 @@ func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *t
 	}
 	if got := rr.Header().Get("Location"); got != routepath.AppSettingsProfile {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsProfile)
+	}
+	if !responseHasCookieName(rr, flashnotice.CookieName) {
+		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
 	}
 	if social.lastSetReq == nil {
 		t.Fatalf("expected SetUserProfile to be called")
@@ -663,6 +670,9 @@ func TestMountLocalePostSavesAndRedirects(t *testing.T) {
 	if got := rr.Header().Get("Location"); got != routepath.AppSettingsLocale {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsLocale)
 	}
+	if !responseHasCookieName(rr, flashnotice.CookieName) {
+		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
+	}
 	if gateway.lastSavedLocale != commonv1.Locale_LOCALE_PT_BR {
 		t.Fatalf("saved locale = %v, want %v", gateway.lastSavedLocale, commonv1.Locale_LOCALE_PT_BR)
 	}
@@ -709,6 +719,9 @@ func TestMountAIKeysCreatePostSavesAndRedirects(t *testing.T) {
 	if got := rr.Header().Get("Location"); got != routepath.AppSettingsAIKeys {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsAIKeys)
 	}
+	if !responseHasCookieName(rr, flashnotice.CookieName) {
+		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
+	}
 	if gateway.lastCreatedLabel != "Primary" {
 		t.Fatalf("created label = %q, want %q", gateway.lastCreatedLabel, "Primary")
 	}
@@ -753,6 +766,9 @@ func TestMountAIKeyRevokeUsesHTTPRedirect(t *testing.T) {
 	if got := rr.Header().Get("Location"); got != routepath.AppSettingsAIKeys {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsAIKeys)
 	}
+	if !responseHasCookieName(rr, flashnotice.CookieName) {
+		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
+	}
 	if gateway.lastRevokedCredentialID != "cred-1" {
 		t.Fatalf("revoked id = %q, want %q", gateway.lastRevokedCredentialID, "cred-1")
 	}
@@ -775,6 +791,9 @@ func TestMountAIKeyRevokeHTMXUsesHXRedirect(t *testing.T) {
 	}
 	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppSettingsAIKeys {
 		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppSettingsAIKeys)
+	}
+	if !responseHasCookieName(rr, flashnotice.CookieName) {
+		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
 	}
 }
 
@@ -935,4 +954,16 @@ func (f *moduleGatewayStub) RevokeAIKey(_ context.Context, userID string, creden
 
 func settingsTestDependencies() module.Dependencies {
 	return module.Dependencies{ResolveUserID: func(*http.Request) string { return "user-1" }}
+}
+
+func responseHasCookieName(rr *httptest.ResponseRecorder, name string) bool {
+	if rr == nil {
+		return false
+	}
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie != nil && cookie.Name == name {
+			return true
+		}
+	}
+	return false
 }
