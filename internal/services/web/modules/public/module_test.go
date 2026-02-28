@@ -12,7 +12,8 @@ import (
 	"testing"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -22,16 +23,48 @@ import (
 func TestModuleIDReturnsPublic(t *testing.T) {
 	t.Parallel()
 
-	if got := New().ID(); got != "public" {
+	if got := New(nil).ID(); got != "public" {
 		t.Fatalf("ID() = %q, want %q", got, "public")
+	}
+}
+
+func TestSplitPublicConstructorsExposeStableIDsAndMountPrefixes(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		mod    Module
+		wantID string
+		prefix string
+	}{
+		{name: "shell", mod: NewShellWithGateway(nil), wantID: "public", prefix: routepath.Root},
+		{name: "passkeys", mod: NewPasskeysWithGateway(nil), wantID: "public-passkeys", prefix: routepath.PasskeysPrefix},
+		{name: "auth-redirect", mod: NewAuthRedirectWithGateway(nil), wantID: "public-auth-redirect", prefix: routepath.AuthPrefix},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := tc.mod.ID(); got != tc.wantID {
+				t.Fatalf("ID() = %q, want %q", got, tc.wantID)
+			}
+			mount, err := tc.mod.Mount()
+			if err != nil {
+				t.Fatalf("Mount() error = %v", err)
+			}
+			if mount.Prefix != tc.prefix {
+				t.Fatalf("mount prefix = %q, want %q", mount.Prefix, tc.prefix)
+			}
+		})
 	}
 }
 
 func TestMountServesRootAndLogin(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, err := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -54,8 +87,8 @@ func TestMountServesRootAndLogin(t *testing.T) {
 func TestMountServesHeadForAuthReads(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, err := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -73,8 +106,8 @@ func TestMountServesHeadForAuthReads(t *testing.T) {
 func TestMountAuthLocaleSwitchPersistsCookieAndHighlightsSelection(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?lang=pt-BR", nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -98,8 +131,8 @@ func TestMountAuthLocaleSwitchPersistsCookieAndHighlightsSelection(t *testing.T)
 func TestMountAuthLocaleUsesLanguageCookie(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	req.AddCookie(&http.Cookie{Name: "fs_lang", Value: "pt-BR"})
 	rr := httptest.NewRecorder()
@@ -120,8 +153,8 @@ func TestMountAuthLocaleUsesLanguageCookie(t *testing.T) {
 func TestMountAuthLocaleRendersPortugueseCopy(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 
 	for _, path := range []string{routepath.Root, routepath.Login} {
 		req := httptest.NewRequest(http.MethodGet, path+"?lang=pt-BR", nil)
@@ -147,8 +180,8 @@ func TestMountAuthLocaleRendersPortugueseCopy(t *testing.T) {
 func TestMountAuthLocaleRendersPortuguesePasskeyScriptStrings(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?lang=pt-BR", nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -168,8 +201,8 @@ func TestMountAuthLocaleRendersPortuguesePasskeyScriptStrings(t *testing.T) {
 func TestMountLoginPublishesPasskeyEndpointDataAttributes(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -213,8 +246,8 @@ func assertAuthShellMarkers(t *testing.T, path, body string) {
 func TestMountAuthLoginRedirectsToLogin(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.AuthLogin, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -229,8 +262,8 @@ func TestMountAuthLoginRedirectsToLogin(t *testing.T) {
 func TestMountAuthPagesRedirectAuthenticatedUsersToDashboard(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{AuthClient: validatingAuthClient{validSessionID: "ws-1"}})
+	m := New(validatingAuthClient{validSessionID: "ws-1"})
+	mount, _ := m.Mount()
 
 	for _, path := range []string{routepath.Root, routepath.Login, routepath.AuthLogin} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -249,8 +282,8 @@ func TestMountAuthPagesRedirectAuthenticatedUsersToDashboard(t *testing.T) {
 func TestMountAuthPagesDoNotRedirectUnknownSessionCookie(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{AuthClient: validatingAuthClient{validSessionID: "ws-1"}})
+	m := New(validatingAuthClient{validSessionID: "ws-1"})
+	mount, _ := m.Mount()
 
 	for _, path := range []string{routepath.Root, routepath.Login} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -267,8 +300,8 @@ func TestMountAuthPagesDoNotRedirectUnknownSessionCookie(t *testing.T) {
 func TestMountLoginIgnoresUntrustedUserHeader(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{AuthClient: validatingAuthClient{validSessionID: "ws-1"}})
+	m := New(validatingAuthClient{validSessionID: "ws-1"})
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	req.Header.Set("X-Web-User", "user-1")
 	rr := httptest.NewRecorder()
@@ -283,8 +316,8 @@ func TestMountLoginIgnoresUntrustedUserHeader(t *testing.T) {
 func TestMountPasskeyLoginStartReturnsJSONChallenge(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{AuthClient: fakeAuthClient{}})
+	m := New(fakeAuthClient{})
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.PasskeyLoginStart, strings.NewReader(`{}`))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
@@ -307,8 +340,8 @@ func TestMountPasskeyLoginStartReturnsJSONChallenge(t *testing.T) {
 func TestMountPasskeyLoginFinishSetsCookieAndRedirect(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{AuthClient: fakeAuthClient{}})
+	m := New(fakeAuthClient{})
+	mount, _ := m.Mount()
 	payload := map[string]any{"session_id": "session-1", "credential": map[string]any{"id": "cred-1"}}
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest(http.MethodPost, routepath.PasskeyLoginFinish, bytes.NewReader(body))
@@ -347,8 +380,8 @@ func TestMountPasskeyLoginFinishSetsCookieAndRedirect(t *testing.T) {
 func TestMountPasskeyLoginFinishSetsSecureCookieForHTTPS(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{AuthClient: fakeAuthClient{}})
+	m := New(fakeAuthClient{})
+	mount, _ := m.Mount()
 	payload := map[string]any{"session_id": "session-1", "credential": map[string]any{"id": "cred-1"}}
 	body, _ := json.Marshal(payload)
 	req := httptest.NewRequest(http.MethodPost, "https://app.example.test"+routepath.PasskeyLoginFinish, bytes.NewReader(body))
@@ -370,8 +403,8 @@ func TestMountPasskeyLoginFinishSetsSecureCookieForHTTPS(t *testing.T) {
 func TestMountLogoutClearsSessionCookieAndRedirectsToLogin(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "user-1"})
 	req.Header.Set("Origin", "http://example.com")
@@ -400,8 +433,8 @@ func TestMountLogoutClearsSessionCookieAndRedirectsToLogin(t *testing.T) {
 func TestMountLogoutSetsSecureClearingCookieForHTTPS(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, "https://app.example.test"+routepath.Logout, nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "user-1"})
 	req.Header.Set("Origin", "https://app.example.test")
@@ -423,8 +456,8 @@ func TestMountLogoutSetsSecureClearingCookieForHTTPS(t *testing.T) {
 func TestMountLogoutRejectsGetMethod(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, "/logout", nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -440,8 +473,8 @@ func TestMountLogoutRejectsGetMethod(t *testing.T) {
 func TestMountLogoutRejectsCookieMutationWithoutSameOriginProof(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{})
+	m := New(nil)
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.Logout, nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "user-1"})
 	rr := httptest.NewRecorder()
@@ -455,8 +488,8 @@ func TestMountLogoutRejectsCookieMutationWithoutSameOriginProof(t *testing.T) {
 func TestMountAuthPagesRedirectAuthenticatedUsersToValidatedNextPath(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{AuthClient: validatingAuthClient{validSessionID: "ws-1"}})
+	m := New(validatingAuthClient{validSessionID: "ws-1"})
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?next=/app/settings", nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "ws-1"})
 	rr := httptest.NewRecorder()
@@ -480,11 +513,21 @@ func TestResolveAppRedirectPathValidation(t *testing.T) {
 	}{
 		{name: "empty falls back", raw: "", want: routepath.AppDashboard},
 		{name: "whitespace falls back", raw: "   ", want: routepath.AppDashboard},
+		{name: "absolute path with opaque syntax falls back", raw: "mailto:user@example.com", want: routepath.AppDashboard},
 		{name: "non app path falls back", raw: "/login", want: routepath.AppDashboard},
 		{name: "absolute url falls back", raw: "https://example.com/app/settings", want: routepath.AppDashboard},
+		{name: "scheme-relative url falls back", raw: "//example.com/app/settings", want: routepath.AppDashboard},
 		{name: "invalid url falls back", raw: "http://[::1", want: routepath.AppDashboard},
+		{name: "traversal escapes app path", raw: "/app/../login", want: routepath.AppDashboard},
+		{name: "double traversal escapes app path", raw: "/app/x/../../settings", want: routepath.AppDashboard},
+		{name: "encoded traversal escapes app path", raw: "/app/%2e%2e/login", want: routepath.AppDashboard},
+		{name: "traversal in query-only form is kept when path canonicalized", raw: "/app/settings?next=%2fapp%2fprofile", want: "/app/settings?next=%2fapp%2fprofile"},
+		{name: "encoded slash in segment rejected", raw: "/app/secret%2fsettings", want: routepath.AppDashboard},
 		{name: "keeps app route", raw: "/app/settings", want: "/app/settings"},
 		{name: "keeps app route query", raw: "/app/settings?tab=profile", want: "/app/settings?tab=profile"},
+		{name: "keeps app route encoded query", raw: "/app/settings?tab=%2fprofile", want: "/app/settings?tab=%2fprofile"},
+		{name: "rejects path outside app root", raw: "..", want: routepath.AppDashboard},
+		{name: "empty path after decode", raw: "%2e", want: routepath.AppDashboard},
 	}
 
 	for _, tc := range tests {
@@ -510,28 +553,28 @@ func TestHandlersPasskeyEndpointsReturnJSONErrors(t *testing.T) {
 	}{
 		{
 			name:    "login start service failure",
-			handler: newHandlers(service{auth: &authGatewayStub{beginPasskeyLoginErr: errors.New("boom")}}),
+			handler: newHandlers(service{auth: &authGatewayStub{beginPasskeyLoginErr: apperrors.E(apperrors.KindInvalidInput, "boom")}}, requestmeta.SchemePolicy{}),
 			path:    routepath.PasskeyLoginStart,
 			body:    `{}`,
 			invoke:  func(h handlers, w http.ResponseWriter, r *http.Request) { h.handlePasskeyLoginStart(w, r) },
 		},
 		{
 			name:    "login finish invalid json",
-			handler: newHandlers(service{auth: &authGatewayStub{}}),
+			handler: newHandlers(service{auth: &authGatewayStub{}}, requestmeta.SchemePolicy{}),
 			path:    routepath.PasskeyLoginFinish,
 			body:    `{`,
 			invoke:  func(h handlers, w http.ResponseWriter, r *http.Request) { h.handlePasskeyLoginFinish(w, r) },
 		},
 		{
 			name:    "register start invalid json",
-			handler: newHandlers(service{auth: &authGatewayStub{}}),
+			handler: newHandlers(service{auth: &authGatewayStub{}}, requestmeta.SchemePolicy{}),
 			path:    routepath.PasskeyRegisterStart,
 			body:    `{`,
 			invoke:  func(h handlers, w http.ResponseWriter, r *http.Request) { h.handlePasskeyRegisterStart(w, r) },
 		},
 		{
 			name:    "register finish service failure",
-			handler: newHandlers(service{auth: &authGatewayStub{finishPasskeyRegistrationErr: errors.New("boom")}}),
+			handler: newHandlers(service{auth: &authGatewayStub{finishPasskeyRegistrationErr: apperrors.E(apperrors.KindInvalidInput, "boom")}}, requestmeta.SchemePolicy{}),
 			path:    routepath.PasskeyRegisterFinish,
 			body:    `{"session_id":"session-1","credential":{"id":"cred-1"}}`,
 			invoke:  func(h handlers, w http.ResponseWriter, r *http.Request) { h.handlePasskeyRegisterFinish(w, r) },
@@ -563,7 +606,7 @@ func TestHandlersPasskeyEndpointsReturnJSONErrors(t *testing.T) {
 func TestHandlersWriteAuthPageRenderFailureWritesErrorBody(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(service{auth: &authGatewayStub{}})
+	h := newHandlers(service{auth: &authGatewayStub{}}, requestmeta.SchemePolicy{})
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	rr := httptest.NewRecorder()
 	h.writeAuthPage(rr, req, "Login", "desc", "en-US", failingTemplComponent{err: errors.New("render failed")})
@@ -587,7 +630,7 @@ func TestHandlersWriteAuthPageRenderFailureWritesErrorBody(t *testing.T) {
 func TestWriteJSONErrorDoesNotLeakInternalErrorStrings(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(service{auth: &authGatewayStub{}})
+	h := newHandlers(service{auth: &authGatewayStub{}}, requestmeta.SchemePolicy{})
 	req := httptest.NewRequest(http.MethodPost, routepath.PasskeyLoginStart, nil)
 	rr := httptest.NewRecorder()
 	h.writeJSONError(rr, req, errors.New("backend exploded"))
@@ -605,8 +648,8 @@ func TestWriteJSONErrorDoesNotLeakInternalErrorStrings(t *testing.T) {
 func TestMountPasskeyRegisterStartAndFinish(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{AuthClient: fakeAuthClient{}})
+	m := New(fakeAuthClient{})
+	mount, _ := m.Mount()
 	startReq := httptest.NewRequest(http.MethodPost, routepath.PasskeyRegisterStart, strings.NewReader(`{"email":"new@example.com"}`))
 	startReq.Header.Set("Content-Type", "application/json")
 	startRR := httptest.NewRecorder()
@@ -635,8 +678,8 @@ func TestMountPasskeyRegisterStartAndFinish(t *testing.T) {
 func TestMountPasskeyRegisterStartCreateUserFailureReturnsLegacyErrorMessage(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, _ := m.Mount(module.Dependencies{AuthClient: failingCreateUserAuthClient{}})
+	m := New(failingCreateUserAuthClient{})
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.PasskeyRegisterStart, strings.NewReader(`{"email":"existing@example.com"}`))
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()

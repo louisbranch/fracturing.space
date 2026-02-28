@@ -130,7 +130,7 @@ func pageHead(title string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(ComposePageTitle(title))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 102, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 101, Col: 33}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -143,7 +143,7 @@ func pageHead(title string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "layout.meta_description"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 103, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 102, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -156,7 +156,7 @@ func pageHead(title string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var4 templ.SafeURL
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinURLErrs(defaultThemeStylesheet)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 105, Col: 36}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 104, Col: 36}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -198,7 +198,7 @@ func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(lang)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 111, Col: 18}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 110, Col: 18}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -211,7 +211,7 @@ func ShellLayout(title string, lang string, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(defaultTheme)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 111, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 110, Col: 46}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -273,7 +273,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(options.Lang)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 125, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 124, Col: 26}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -286,7 +286,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(chromeTheme(options.ChromeOptions))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 125, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 124, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -323,7 +323,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(chromeDataLayout(options.ChromeOptions))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 136, Col: 98}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 135, Col: 98}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -350,7 +350,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			var templ_7745c5c3_Var12 string
 			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(options.AppName)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 144, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 143, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 			if templ_7745c5c3_Err != nil {
@@ -363,7 +363,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			var templ_7745c5c3_Var13 string
 			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "dashboard.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 156, Col: 42}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 155, Col: 42}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 			if templ_7745c5c3_Err != nil {
@@ -376,7 +376,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "game.campaigns.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 165, Col: 47}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 164, Col: 47}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -389,7 +389,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "game.notifications.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 174, Col: 62}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 173, Col: 62}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -402,7 +402,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 			var templ_7745c5c3_Var16 string
 			templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "game.notifications.title"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 175, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 174, Col: 57}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 			if templ_7745c5c3_Err != nil {
@@ -435,7 +435,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				var templ_7745c5c3_Var17 string
 				templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(options.ChromeOptions.UserAvatarURL)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 188, Col: 52}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 187, Col: 52}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 				if templ_7745c5c3_Err != nil {
@@ -448,7 +448,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				var templ_7745c5c3_Var18 string
 				templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(options.ChromeOptions.UserName)
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 189, Col: 47}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 188, Col: 47}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 				if templ_7745c5c3_Err != nil {
@@ -465,7 +465,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				var templ_7745c5c3_Var19 string
 				templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.profile"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 204, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 203, Col: 44}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 				if templ_7745c5c3_Err != nil {
@@ -482,7 +482,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				var templ_7745c5c3_Var20 string
 				templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.settings"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 215, Col: 45}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 214, Col: 45}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 				if templ_7745c5c3_Err != nil {
@@ -499,7 +499,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				var templ_7745c5c3_Var21 string
 				templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.sign_out"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 220, Col: 46}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 219, Col: 46}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 				if templ_7745c5c3_Err != nil {
@@ -521,7 +521,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 				var templ_7745c5c3_Var22 string
 				templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(T(options.Loc, "layout.sign_out"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 229, Col: 44}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 228, Col: 44}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 				if templ_7745c5c3_Err != nil {
@@ -562,7 +562,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templruntime.SanitizeStyleAttributeValues(options.ChromeOptions.MainStyle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 238, Col: 43}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 237, Col: 43}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -575,7 +575,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(options.ChromeOptions.MainStyle)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 239, Col: 56}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 238, Col: 56}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -588,7 +588,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var27 string
 		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainClassFromStyle(options.ChromeOptions.MainStyle, options.ChromeOptions.MainClass))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 241, Col: 115}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 240, Col: 115}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -601,7 +601,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainClassFromStyle("", ""))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 242, Col: 58}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 241, Col: 58}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 		if templ_7745c5c3_Err != nil {
@@ -614,7 +614,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(chromeMainAria(options.Loc, options.ChromeOptions))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 243, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 242, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -637,7 +637,7 @@ func AppChromeLayout(options AppChromeLayoutOptions) templ.Component {
 		var templ_7745c5c3_Var30 string
 		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(pageHeadingFromTitle(options.Title, options.AppName))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 249, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/shared/templates/layout.templ`, Line: 248, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 		if templ_7745c5c3_Err != nil {

@@ -35,8 +35,12 @@ baseline:
 - For campaigns/settings-style modules, build production gateways in
   composition (`modules/registry.go` via `NewGRPCGateway(...)`) rather than
   inside `Mount`.
-- Consume shared runtime seams from `module.Dependencies` only for
-  per-request/runtime concerns (for example rendering, viewer, user-id,
+- When a module intentionally exposes split stable/experimental route sets, expose
+  explicit constructors for each surface (`NewStableWithGateway` and
+  `NewExperimentalWithGateway`) and avoid ambiguous `NewWithGateway` names.
+- Modules receive their narrow dependencies at construction time via the
+  registry, not through `Mount`.  Protected modules receive a
+  `modulehandler.Base` for shared request-scoped resolvers (viewer, user-id,
   language).
 - Register routes with stdlib method+path patterns and keep method/path guards
   out of handlers.
@@ -44,8 +48,14 @@ baseline:
   surfaces.
 - Source browser endpoint URLs from `routepath` constants/builders (including
   script data attributes) instead of hardcoded literals.
+- Emit server-owned app-shell route metadata in layout options so client behavior
+  (for example campaign-workspace main styling) is driven by layout contracts,
+  not client-side route regexes.
 - Use `internal/services/web/platform/httpx.WriteRedirect` for mutation
   success redirects so HTMX and non-HTMX clients stay in parity.
+  - Exception: handlers that intentionally render different HTMX vs non-HTMX
+    payloads may keep explicit branching; document those cases explicitly with
+    tests.
 - Use `internal/services/web/platform/httpx.MethodNotAllowed` for `405` +
   `Allow` behavior instead of duplicating module-local helpers.
 - Keep handlers thin; call service methods for behavior.
@@ -96,6 +106,23 @@ baseline:
   consistent localized error rendering across full-page and HTMX app flows.
 - Use `internal/services/web/platform/weberror.PublicMessage` for user-visible
   JSON/text errors so raw internal strings are never exposed.
+
+## Public Module Variant
+
+Public (unauthenticated) modules follow a lighter pattern than protected modules:
+
+- They do **not** embed `modulehandler.Base` — there is no authenticated user to
+  resolve, so viewer/user-id/language resolvers are not injected.
+- Gateway code may be collocated in `service.go` instead of a separate
+  `gateway_grpc.go` when the gateway surface is small.
+- Error rendering uses `httpx.WriteJSONError` or custom page helpers instead of
+  `weberror.WriteModuleError`, since public routes may serve JSON APIs or
+  standalone landing pages rather than app-shell HTML.
+- Page rendering uses `pagerender.WritePublicPage` instead of
+  `pagerender.WriteModulePage`.
+
+The `public` module (auth/passkey flows, landing page) is the reference
+implementation for this variant.
 
 ## Registering a Module
 

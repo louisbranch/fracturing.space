@@ -7,12 +7,15 @@ import (
 	"testing"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 )
 
 func TestStaticThemeServedByWeb(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -30,7 +33,9 @@ func TestStaticThemeServedByWeb(t *testing.T) {
 func TestStaticThemeIncludesCampaignChatDrawerToggleRules(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -56,7 +61,9 @@ func TestStaticThemeIncludesCampaignChatDrawerToggleRules(t *testing.T) {
 func TestStaticCampaignChatScriptServedByWeb(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -74,7 +81,9 @@ func TestStaticCampaignChatScriptServedByWeb(t *testing.T) {
 func TestStaticCampaignChatScriptIncludesAppHostFallbackLogic(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -100,7 +109,9 @@ func TestStaticCampaignChatScriptIncludesAppHostFallbackLogic(t *testing.T) {
 func TestStaticCampaignChatScriptPrefersFallbackPortForLocalhost(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -127,7 +138,9 @@ func TestStaticCampaignChatScriptPrefersFallbackPortForLocalhost(t *testing.T) {
 func TestStaticAppShellScriptIncludesHTMXErrorSwapContract(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{AuthClient: newFakeWebAuthClient()})
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -149,15 +162,52 @@ func TestStaticAppShellScriptIncludesHTMXErrorSwapContract(t *testing.T) {
 	}
 }
 
+func TestStaticAppShellScriptIncludesRouteMetadataContract(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/static/app-shell.js", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-app-route-area`,
+		`campaignWorkspaceRouteArea`,
+		`isCampaignWorkspaceMetadata`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("app-shell.js missing route metadata marker %q", marker)
+		}
+	}
+}
+
 func TestCampaignGamePageIsExposedOnExperimentalCampaignSurface(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
 		EnableExperimentalModules: true,
-		AuthClient:                auth,
-		CampaignClient:            fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
 		ChatHTTPAddr:              "localhost:8086",
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{SessionClient: auth},
+			modules.Dependencies{
+				AuthClient:          auth,
+				CampaignClient:      fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
+				ParticipantClient:   defaultParticipantClient(),
+				CharacterClient:     defaultCharacterClient(),
+				SessionClient:       defaultSessionClient(),
+				InviteClient:        defaultInviteClient(),
+				AuthorizationClient: defaultAuthorizationClient(),
+			},
+		),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)

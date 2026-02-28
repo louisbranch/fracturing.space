@@ -3,7 +3,8 @@ package discovery
 import (
 	"net/http"
 
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -17,10 +18,10 @@ func New() Module { return Module{} }
 func (Module) ID() string { return "discovery" }
 
 // Mount wires discovery route handlers.
-func (Module) Mount(module.Dependencies) (module.Mount, error) {
+func (Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := newService()
-	h := newHandlers(svc)
+	base := publichandler.NewBase()
+	h := newHandlers(base)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.DiscoverPrefix, Handler: mux}, nil
 }

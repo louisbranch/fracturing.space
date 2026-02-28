@@ -5,21 +5,21 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(newService(module.Dependencies{})))
+	registerRoutes(nil, newHandlers(newServiceWithGateway(nil), requestmeta.SchemePolicy{}))
 }
 
 func TestRegisterRoutesPublicPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(newService(module.Dependencies{})))
+	registerRoutes(mux, newHandlers(newServiceWithGateway(nil), requestmeta.SchemePolicy{}))
 
 	tests := []struct {
 		name       string

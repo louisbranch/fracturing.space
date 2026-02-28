@@ -73,6 +73,7 @@ type DeliveryRecord struct {
 type NotificationStore interface {
 	PutNotification(ctx context.Context, record NotificationRecord) error
 	GetNotificationByRecipientAndDedupeKey(ctx context.Context, recipientUserID string, dedupeKey string) (NotificationRecord, error)
+	GetNotificationByRecipientAndID(ctx context.Context, recipientUserID string, notificationID string) (NotificationRecord, error)
 	ListNotificationsByRecipient(ctx context.Context, recipientUserID string, pageSize int, pageToken string) (NotificationPage, error)
 	CountUnreadNotificationsByRecipient(ctx context.Context, recipientUserID string) (int, error)
 	MarkNotificationRead(ctx context.Context, recipientUserID string, notificationID string, readAt time.Time) (NotificationRecord, error)

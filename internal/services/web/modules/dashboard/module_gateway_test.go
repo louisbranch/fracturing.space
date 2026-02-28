@@ -2,32 +2,29 @@ package dashboard
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 	grpcmetadata "google.golang.org/grpc/metadata"
+
+	"golang.org/x/text/language"
 )
 
 func TestNewGRPCGatewayWithoutClientFallsBackToUnavailableGateway(t *testing.T) {
 	t.Parallel()
 
-	gateway := NewGRPCGateway(module.Dependencies{})
-	snapshot, err := gateway.LoadDashboard(context.Background(), "user-1", commonv1.Locale_LOCALE_EN_US)
-	if err != nil {
-		t.Fatalf("LoadDashboard() error = %v", err)
+	gateway := NewGRPCGateway(nil)
+	_, err := gateway.LoadDashboard(context.Background(), "user-1", language.AmericanEnglish)
+	if err == nil {
+		t.Fatalf("expected unavailable error")
 	}
-	if snapshot.NeedsProfileCompletion {
-		t.Fatalf("NeedsProfileCompletion = true, want false")
-	}
-	if snapshot.HasDraftOrActiveCampaign {
-		t.Fatalf("HasDraftOrActiveCampaign = true, want false")
-	}
-	if snapshot.CampaignsHasMore {
-		t.Fatalf("CampaignsHasMore = true, want false")
+	if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
 	}
 }
 
@@ -45,9 +42,9 @@ func TestGRPCGatewayMapsDashboardResponseAuthMetadataAndCampaignState(t *testing
 			},
 		},
 	}}
-	gateway := NewGRPCGateway(module.Dependencies{UserHubClient: client})
+	gateway := NewGRPCGateway(client)
 
-	snapshot, err := gateway.LoadDashboard(context.Background(), " user-1 ", commonv1.Locale_LOCALE_UNSPECIFIED)
+	snapshot, err := gateway.LoadDashboard(context.Background(), " user-1 ", language.Und)
 	if err != nil {
 		t.Fatalf("LoadDashboard() error = %v", err)
 	}

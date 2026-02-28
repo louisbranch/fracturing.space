@@ -8,11 +8,9 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"golang.org/x/text/language"
 	"google.golang.org/grpc/metadata"
 )
 
@@ -78,7 +76,7 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 		{name: "end session", run: func() error { return svc.endSession(ctx, "c1") }},
 		{name: "update participants", run: func() error { return svc.updateParticipants(ctx, "c1") }},
 		{name: "create character", run: func() error {
-			_, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC})
+			_, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 			return err
 		}},
 		{name: "update character", run: func() error { return svc.updateCharacter(ctx, "c1") }},
@@ -321,13 +319,13 @@ func TestCampaignCharactersHydratesEditabilityFromBatchAuthorization(t *testing.
 		t.Fatalf("batch authorization requests = %d, want 2", len(gateway.batchAuthorizationRequests))
 	}
 	for _, req := range gateway.batchAuthorizationRequests {
-		if req.Action != statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE {
-			t.Fatalf("batch authorization action = %v, want %v", req.Action, statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE)
+		if req.Action != campaignAuthzActionMutate {
+			t.Fatalf("batch authorization action = %v, want %v", req.Action, campaignAuthzActionMutate)
 		}
-		if req.Resource != statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER {
-			t.Fatalf("batch authorization resource = %v, want %v", req.Resource, statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER)
+		if req.Resource != campaignAuthzResourceCharacter {
+			t.Fatalf("batch authorization resource = %v, want %v", req.Resource, campaignAuthzResourceCharacter)
 		}
-		if req.Target == nil || strings.TrimSpace(req.Target.GetResourceId()) == "" {
+		if req.Target == nil || strings.TrimSpace(req.Target.ResourceID) == "" {
 			t.Fatalf("batch authorization target resource id was empty")
 		}
 	}
@@ -432,28 +430,28 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	ctx := contextWithResolvedUserID("user-1")
 
 	if err := svc.startSession(ctx, "c1"); err != nil {
-		t.Fatalf("startSession() error = %v", err)
+		t.Fatalf("StartSession() error = %v", err)
 	}
 	if err := svc.endSession(ctx, "c1"); err != nil {
-		t.Fatalf("endSession() error = %v", err)
+		t.Fatalf("EndSession() error = %v", err)
 	}
 	if err := svc.updateParticipants(ctx, "c1"); err != nil {
-		t.Fatalf("updateParticipants() error = %v", err)
+		t.Fatalf("UpdateParticipants() error = %v", err)
 	}
-	if _, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC}); err != nil {
+	if _, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
 		t.Fatalf("createCharacter() error = %v", err)
 	}
 	if err := svc.updateCharacter(ctx, "c1"); err != nil {
-		t.Fatalf("updateCharacter() error = %v", err)
+		t.Fatalf("UpdateCharacter() error = %v", err)
 	}
 	if err := svc.controlCharacter(ctx, "c1"); err != nil {
-		t.Fatalf("controlCharacter() error = %v", err)
+		t.Fatalf("ControlCharacter() error = %v", err)
 	}
 	if err := svc.createInvite(ctx, "c1"); err != nil {
-		t.Fatalf("createInvite() error = %v", err)
+		t.Fatalf("CreateInvite() error = %v", err)
 	}
 	if err := svc.revokeInvite(ctx, "c1"); err != nil {
-		t.Fatalf("revokeInvite() error = %v", err)
+		t.Fatalf("RevokeInvite() error = %v", err)
 	}
 
 	want := []string{"start", "end", "participants", "create-character", "update-character", "control-character", "create-invite", "revoke-invite"}
@@ -505,7 +503,7 @@ func TestMutationMethodsAllowManagerAndOwnerCampaignAccess(t *testing.T) {
 			}
 			svc := newService(gateway)
 			if err := svc.startSession(contextWithResolvedUserID("user-1"), "c1"); err != nil {
-				t.Fatalf("startSession() error = %v", err)
+				t.Fatalf("StartSession() error = %v", err)
 			}
 			if len(gateway.calls) != 1 || gateway.calls[0] != "start" {
 				t.Fatalf("mutation gateway calls = %v, want [start]", gateway.calls)
@@ -524,7 +522,7 @@ func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
 		}
 		svc := newService(gateway)
 		if err := svc.startSession(contextWithResolvedUserID("user-1"), "c1"); err != nil {
-			t.Fatalf("startSession() error = %v", err)
+			t.Fatalf("StartSession() error = %v", err)
 		}
 		if gateway.authorizationCalls != 1 {
 			t.Fatalf("authorization calls = %d, want 1", gateway.authorizationCalls)
@@ -532,11 +530,11 @@ func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
 		if len(gateway.authorizationRequests) != 1 {
 			t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
 		}
-		if got := gateway.authorizationRequests[0].Action; got != statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE {
-			t.Fatalf("authorization action = %v, want %v", got, statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE)
+		if got := gateway.authorizationRequests[0].Action; got != campaignAuthzActionManage {
+			t.Fatalf("authorization action = %v, want %v", got, campaignAuthzActionManage)
 		}
-		if got := gateway.authorizationRequests[0].Resource; got != statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION {
-			t.Fatalf("authorization resource = %v, want %v", got, statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION)
+		if got := gateway.authorizationRequests[0].Resource; got != campaignAuthzResourceSession {
+			t.Fatalf("authorization resource = %v, want %v", got, campaignAuthzResourceSession)
 		}
 		if len(gateway.calls) != 1 || gateway.calls[0] != "start" {
 			t.Fatalf("mutation gateway calls = %v, want [start]", gateway.calls)
@@ -562,11 +560,11 @@ func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
 		if len(gateway.authorizationRequests) != 1 {
 			t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
 		}
-		if got := gateway.authorizationRequests[0].Action; got != statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE {
-			t.Fatalf("authorization action = %v, want %v", got, statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE)
+		if got := gateway.authorizationRequests[0].Action; got != campaignAuthzActionManage {
+			t.Fatalf("authorization action = %v, want %v", got, campaignAuthzActionManage)
 		}
-		if got := gateway.authorizationRequests[0].Resource; got != statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION {
-			t.Fatalf("authorization resource = %v, want %v", got, statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION)
+		if got := gateway.authorizationRequests[0].Resource; got != campaignAuthzResourceSession {
+			t.Fatalf("authorization resource = %v, want %v", got, campaignAuthzResourceSession)
 		}
 		if len(gateway.calls) != 0 {
 			t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
@@ -580,73 +578,73 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 	tests := []struct {
 		name         string
 		run          func(service) error
-		wantAction   statev1.AuthorizationAction
-		wantResource statev1.AuthorizationResource
+		wantAction   campaignAuthorizationAction
+		wantResource campaignAuthorizationResource
 	}{
 		{
 			name: "start session",
 			run: func(s service) error {
 				return s.startSession(contextWithResolvedUserID("user-1"), "c1")
 			},
-			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION,
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceSession,
 		},
 		{
 			name: "end session",
 			run: func(s service) error {
 				return s.endSession(contextWithResolvedUserID("user-1"), "c1")
 			},
-			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION,
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceSession,
 		},
 		{
 			name: "update participants",
 			run: func(s service) error {
 				return s.updateParticipants(contextWithResolvedUserID("user-1"), "c1")
 			},
-			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_PARTICIPANT,
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceParticipant,
 		},
 		{
 			name: "create character",
 			run: func(s service) error {
-				_, err := s.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC})
+				_, err := s.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 				return err
 			},
-			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+			wantAction:   campaignAuthzActionMutate,
+			wantResource: campaignAuthzResourceCharacter,
 		},
 		{
 			name: "update character",
 			run: func(s service) error {
 				return s.updateCharacter(contextWithResolvedUserID("user-1"), "c1")
 			},
-			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+			wantAction:   campaignAuthzActionMutate,
+			wantResource: campaignAuthzResourceCharacter,
 		},
 		{
 			name: "control character",
 			run: func(s service) error {
 				return s.controlCharacter(contextWithResolvedUserID("user-1"), "c1")
 			},
-			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceCharacter,
 		},
 		{
 			name: "create invite",
 			run: func(s service) error {
 				return s.createInvite(contextWithResolvedUserID("user-1"), "c1")
 			},
-			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_INVITE,
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceInvite,
 		},
 		{
 			name: "revoke invite",
 			run: func(s service) error {
 				return s.revokeInvite(contextWithResolvedUserID("user-1"), "c1")
 			},
-			wantAction:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MANAGE,
-			wantResource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_INVITE,
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceInvite,
 		},
 	}
 
@@ -682,11 +680,11 @@ func TestCharacterMutationMethodsAllowMemberCampaignAccess(t *testing.T) {
 		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 	}
 	svc := newService(gateway)
-	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC}); err != nil {
+	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
 		t.Fatalf("createCharacter() error = %v", err)
 	}
 	if err := svc.updateCharacter(contextWithResolvedUserID("user-1"), "c1"); err != nil {
-		t.Fatalf("updateCharacter() error = %v", err)
+		t.Fatalf("UpdateCharacter() error = %v", err)
 	}
 	if len(gateway.calls) != 2 || gateway.calls[0] != "create-character" || gateway.calls[1] != "update-character" {
 		t.Fatalf("mutation gateway calls = %v, want [create-character update-character]", gateway.calls)
@@ -698,10 +696,10 @@ func TestCreateCharacterValidatesRequiredFields(t *testing.T) {
 
 	svc := newService(&campaignGatewayStub{authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true}})
 
-	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "", Kind: statev1.CharacterKind_PC}); err == nil {
+	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "", Kind: CharacterKindPC}); err == nil {
 		t.Fatalf("expected validation error for empty name")
 	}
-	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED}); err == nil {
+	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindUnspecified}); err == nil {
 		t.Fatalf("expected validation error for unspecified kind")
 	}
 }
@@ -716,7 +714,7 @@ func TestServiceCreateCharacterRejectsEmptyCreatedCharacterID(t *testing.T) {
 	}
 	svc := newService(gateway)
 
-	_, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC})
+	_, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 	if err == nil {
 		t.Fatalf("expected empty character id error")
 	}
@@ -759,44 +757,21 @@ func TestMutationMethodsDenyWhenAuthorizationGatewayErrors(t *testing.T) {
 	}
 }
 
-func TestCampaignCharacterCreationBuildsFilteredWorkflowView(t *testing.T) {
+func TestCampaignCharacterCreationDelegatesToWorkflow(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{
 		characterCreationProgress: CampaignCharacterCreationProgress{
 			Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: true}, {Step: 2, Key: "heritage", Complete: false}},
 			NextStep: 2,
-			Ready:    false,
 		},
 		characterCreationProfile: CampaignCharacterCreationProfile{ClassID: "warrior", SubclassID: "guardian"},
 		characterCreationCatalog: CampaignCharacterCreationCatalog{
-			Classes: []DaggerheartCreationClass{
-				{ID: "warrior", Name: "Warrior", DomainIDs: []string{"valor"}},
-				{ID: "rogue", Name: "Rogue", DomainIDs: []string{"midnight"}},
-			},
-			Subclasses: []DaggerheartCreationSubclass{
-				{ID: "guardian", Name: "Guardian", ClassID: "warrior"},
-				{ID: "shadow", Name: "Shadow", ClassID: "rogue"},
-			},
-			Heritages: []DaggerheartCreationHeritage{
-				{ID: "human", Name: "Human", Kind: "ancestry"},
-				{ID: "ridgeborne", Name: "Ridgeborne", Kind: "community"},
-			},
-			Weapons: []DaggerheartCreationWeapon{
-				{ID: "weapon.longsword", Name: "Longsword", Category: "primary", Tier: 1},
-				{ID: "weapon.dagger", Name: "Dagger", Category: "secondary", Tier: 1},
-				{ID: "weapon.rare", Name: "Rare", Category: "primary", Tier: 2},
-			},
-			Armor: []DaggerheartCreationArmor{{ID: "armor.chain", Name: "Chain", Tier: 1}, {ID: "armor.rare", Name: "Rare", Tier: 2}},
-			Items: []DaggerheartCreationItem{{ID: "item.minor-health-potion", Name: "Minor Health Potion"}, {ID: "item.other", Name: "Other"}},
-			DomainCards: []DaggerheartCreationDomainCard{
-				{ID: "card.guard", Name: "Guard", DomainID: "valor", Level: 1},
-				{ID: "card.shadow", Name: "Shadow", DomainID: "midnight", Level: 1},
-			},
+			Classes: []CatalogClass{{ID: "warrior", Name: "Warrior"}},
 		},
 	})
 
-	creation, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", commonv1.Locale_LOCALE_EN_US)
+	creation, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", language.AmericanEnglish, testCreationWorkflow{})
 	if err != nil {
 		t.Fatalf("campaignCharacterCreation() error = %v", err)
 	}
@@ -806,26 +781,8 @@ func TestCampaignCharacterCreationBuildsFilteredWorkflowView(t *testing.T) {
 	if creation.Profile.ClassID != "warrior" {
 		t.Fatalf("ClassID = %q, want %q", creation.Profile.ClassID, "warrior")
 	}
-	if len(creation.Subclasses) != 1 || creation.Subclasses[0].ID != "guardian" {
-		t.Fatalf("Subclasses = %#v, want only warrior subclasses", creation.Subclasses)
-	}
-	if len(creation.Ancestries) != 1 || len(creation.Communities) != 1 {
-		t.Fatalf("heritages split = ancestries:%d communities:%d", len(creation.Ancestries), len(creation.Communities))
-	}
-	if len(creation.PrimaryWeapons) != 1 || creation.PrimaryWeapons[0].ID != "weapon.longsword" {
-		t.Fatalf("PrimaryWeapons = %#v", creation.PrimaryWeapons)
-	}
-	if len(creation.SecondaryWeapons) != 1 || creation.SecondaryWeapons[0].ID != "weapon.dagger" {
-		t.Fatalf("SecondaryWeapons = %#v", creation.SecondaryWeapons)
-	}
-	if len(creation.Armor) != 1 || creation.Armor[0].ID != "armor.chain" {
-		t.Fatalf("Armor = %#v", creation.Armor)
-	}
-	if len(creation.PotionItems) != 1 || creation.PotionItems[0].ID != "item.minor-health-potion" {
-		t.Fatalf("PotionItems = %#v", creation.PotionItems)
-	}
-	if len(creation.DomainCards) != 1 || creation.DomainCards[0].ID != "card.guard" {
-		t.Fatalf("DomainCards = %#v", creation.DomainCards)
+	if len(creation.Classes) != 1 || creation.Classes[0].ID != "warrior" {
+		t.Fatalf("Classes = %#v, want single warrior class", creation.Classes)
 	}
 }
 
@@ -835,12 +792,13 @@ func TestCampaignCharacterCreationForwardsCatalogLocale(t *testing.T) {
 	gateway := &campaignGatewayStub{}
 	svc := newService(gateway)
 
-	_, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", commonv1.Locale_LOCALE_PT_BR)
+	ptBR := language.MustParse("pt-BR")
+	_, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", ptBR, testCreationWorkflow{})
 	if err != nil {
 		t.Fatalf("campaignCharacterCreation() error = %v", err)
 	}
-	if gateway.characterCreationCatalogLocale != commonv1.Locale_LOCALE_PT_BR {
-		t.Fatalf("catalog locale = %v, want %v", gateway.characterCreationCatalogLocale, commonv1.Locale_LOCALE_PT_BR)
+	if gateway.characterCreationCatalogLocale != ptBR {
+		t.Fatalf("catalog locale = %v, want %v", gateway.characterCreationCatalogLocale, ptBR)
 	}
 }
 
@@ -851,7 +809,9 @@ func TestCharacterCreationMutationMethodsDelegateToGateway(t *testing.T) {
 	svc := newService(gateway)
 	ctx := contextWithResolvedUserID("user-1")
 
-	if err := svc.applyCharacterCreationStep(ctx, "c1", "char-1", &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{}}}); err != nil {
+	if err := svc.applyCharacterCreationStep(ctx, "c1", "char-1", &CampaignCharacterCreationStepInput{
+		Details: &CampaignCharacterCreationStepDetails{},
+	}); err != nil {
 		t.Fatalf("applyCharacterCreationStep() error = %v", err)
 	}
 	if err := svc.resetCharacterCreationWorkflow(ctx, "c1", "char-1"); err != nil {
@@ -899,7 +859,7 @@ type campaignGatewayStub struct {
 	characterCreationProgressErr      error
 	characterCreationCatalog          CampaignCharacterCreationCatalog
 	characterCreationCatalogErr       error
-	characterCreationCatalogLocale    commonv1.Locale
+	characterCreationCatalogLocale    language.Tag
 	characterCreationProfile          CampaignCharacterCreationProfile
 	characterCreationProfileErr       error
 	createCharacterResult             CreateCharacterResult
@@ -911,9 +871,9 @@ type campaignGatewayStub struct {
 }
 
 type campaignAuthorizationRequest struct {
-	Action   statev1.AuthorizationAction
-	Resource statev1.AuthorizationResource
-	Target   *statev1.AuthorizationTarget
+	Action   campaignAuthorizationAction
+	Resource campaignAuthorizationResource
+	Target   *campaignAuthorizationTarget
 }
 
 func (f *campaignGatewayStub) ListCampaigns(context.Context) ([]CampaignSummary, error) {
@@ -976,7 +936,7 @@ func (f *campaignGatewayStub) CharacterCreationProgress(context.Context, string,
 	return f.characterCreationProgress, nil
 }
 
-func (f *campaignGatewayStub) CharacterCreationCatalog(_ context.Context, locale commonv1.Locale) (CampaignCharacterCreationCatalog, error) {
+func (f *campaignGatewayStub) CharacterCreationCatalog(_ context.Context, locale language.Tag) (CampaignCharacterCreationCatalog, error) {
 	f.characterCreationCatalogLocale = locale
 	if f.characterCreationCatalogErr != nil {
 		return CampaignCharacterCreationCatalog{}, f.characterCreationCatalogErr
@@ -1051,7 +1011,7 @@ func (f *campaignGatewayStub) RevokeInvite(context.Context, string) error {
 	return nil
 }
 
-func (f *campaignGatewayStub) ApplyCharacterCreationStep(context.Context, string, string, *daggerheartv1.DaggerheartCreationStepInput) error {
+func (f *campaignGatewayStub) ApplyCharacterCreationStep(context.Context, string, string, *CampaignCharacterCreationStepInput) error {
 	f.calls = append(f.calls, "apply-character-creation-step")
 	return f.applyCharacterCreationStepErr
 }
@@ -1064,9 +1024,9 @@ func (f *campaignGatewayStub) ResetCharacterCreationWorkflow(context.Context, st
 func (f *campaignGatewayStub) CanCampaignAction(
 	_ context.Context,
 	_ string,
-	action statev1.AuthorizationAction,
-	resource statev1.AuthorizationResource,
-	target *statev1.AuthorizationTarget,
+	action campaignAuthorizationAction,
+	resource campaignAuthorizationResource,
+	target *campaignAuthorizationTarget,
 ) (campaignAuthorizationDecision, error) {
 	f.authorizationCalls++
 	f.authorizationRequests = append(f.authorizationRequests, campaignAuthorizationRequest{Action: action, Resource: resource, Target: target})
@@ -1097,8 +1057,8 @@ func TestCreateCampaignForwardsInputToGateway(t *testing.T) {
 
 	input := CreateCampaignInput{
 		Name:        "The Guild",
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GMMode:      statev1.GmMode_AI,
+		System:      GameSystemDaggerheart,
+		GMMode:      GmModeAI,
 		ThemePrompt: "Storm coast",
 	}
 

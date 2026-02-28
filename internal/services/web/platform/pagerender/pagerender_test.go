@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 )
 
@@ -19,7 +18,7 @@ func TestWriteModulePageRendersHTMXFragmentWithStatus(t *testing.T) {
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
 
-	err := WriteModulePage(rr, req, module.Dependencies{}, ModulePage{
+	err := WriteModulePage(rr, req, nil, ModulePage{
 		Title:      "Settings",
 		StatusCode: http.StatusCreated,
 		Fragment:   textComponent(`<section id="fragment-root">ok</section>`),
@@ -45,7 +44,7 @@ func TestWriteModulePageRendersFullPageWithAppShell(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
 	rr := httptest.NewRecorder()
 
-	err := WriteModulePage(rr, req, module.Dependencies{}, ModulePage{
+	err := WriteModulePage(rr, req, nil, ModulePage{
 		Title:      "Settings",
 		StatusCode: http.StatusAccepted,
 		Fragment:   textComponent(`<section id="fragment-root">ok</section>`),
@@ -74,7 +73,7 @@ func TestWriteModulePageRendersToastFromFlashNotice(t *testing.T) {
 	setFlashCookie(t, req, flashnotice.NoticeSuccess("web.settings.user_profile.notice_saved"))
 	rr := httptest.NewRecorder()
 
-	err := WriteModulePage(rr, req, module.Dependencies{}, ModulePage{
+	err := WriteModulePage(rr, req, nil, ModulePage{
 		Title:    "Settings",
 		Fragment: textComponent(`<section id="fragment-root">ok</section>`),
 	})
@@ -100,7 +99,7 @@ func TestWriteModulePageHTMXDoesNotConsumeFlashNotice(t *testing.T) {
 	setFlashCookie(t, req, flashnotice.NoticeSuccess("web.settings.user_profile.notice_saved"))
 	rr := httptest.NewRecorder()
 
-	err := WriteModulePage(rr, req, module.Dependencies{}, ModulePage{
+	err := WriteModulePage(rr, req, nil, ModulePage{
 		Title:    "Settings",
 		Fragment: textComponent(`<section id="fragment-root">ok</section>`),
 	})

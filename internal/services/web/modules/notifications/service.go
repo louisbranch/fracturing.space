@@ -27,62 +27,18 @@ type NotificationGateway interface {
 	OpenNotification(context.Context, string, string) (NotificationSummary, error)
 }
 
+// requireUserID validates and returns a trimmed user ID, or returns an
+// unauthorized error if it is blank.
+func requireUserID(userID string) (string, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return "", apperrors.EK(apperrors.KindUnauthorized, "error.web.message.user_id_is_required", "user id is required")
+	}
+	return userID, nil
+}
+
 type service struct {
 	gateway NotificationGateway
-}
-
-type staticGateway struct{}
-
-type unavailableGateway struct{}
-
-func (staticGateway) ListNotifications(context.Context, string) ([]NotificationSummary, error) {
-	now := time.Now().UTC()
-	return []NotificationSummary{{
-		ID:          "notification-1",
-		MessageType: "auth.onboarding.welcome",
-		PayloadJSON: `{"signup_method":"passkey"}`,
-		Source:      "system",
-		Read:        false,
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}}, nil
-}
-
-func (g staticGateway) GetNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
-	items, err := g.ListNotifications(ctx, userID)
-	if err != nil {
-		return NotificationSummary{}, err
-	}
-	for _, item := range items {
-		if strings.TrimSpace(item.ID) == strings.TrimSpace(notificationID) {
-			return item, nil
-		}
-	}
-	return NotificationSummary{}, apperrors.E(apperrors.KindNotFound, "notification not found")
-}
-
-func (g staticGateway) OpenNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
-	item, err := g.GetNotification(ctx, userID, notificationID)
-	if err != nil {
-		return NotificationSummary{}, err
-	}
-	now := time.Now().UTC()
-	item.Read = true
-	item.ReadAt = &now
-	item.UpdatedAt = now
-	return item, nil
-}
-
-func (unavailableGateway) ListNotifications(context.Context, string) ([]NotificationSummary, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "notifications service is not configured")
-}
-
-func (unavailableGateway) GetNotification(context.Context, string, string) (NotificationSummary, error) {
-	return NotificationSummary{}, apperrors.E(apperrors.KindUnavailable, "notifications service is not configured")
-}
-
-func (unavailableGateway) OpenNotification(context.Context, string, string) (NotificationSummary, error) {
-	return NotificationSummary{}, apperrors.E(apperrors.KindUnavailable, "notifications service is not configured")
 }
 
 func newService(gateway NotificationGateway) service {
@@ -143,12 +99,4 @@ func (s service) openNotification(ctx context.Context, userID string, notificati
 		return NotificationSummary{}, apperrors.E(apperrors.KindNotFound, "notification not found")
 	}
 	return item, nil
-}
-
-func requireUserID(userID string) (string, error) {
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return "", apperrors.EK(apperrors.KindUnauthorized, "error.web.message.user_id_is_required", "user id is required")
-	}
-	return userID, nil
 }

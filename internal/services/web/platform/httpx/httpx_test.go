@@ -145,8 +145,8 @@ func TestWriteJSONSetsContentTypeAndBody(t *testing.T) {
 	if err != nil {
 		t.Fatalf("WriteJSON() error = %v", err)
 	}
-	if got := rr.Header().Get("Content-Type"); got != "application/json" {
-		t.Fatalf("content-type = %q, want %q", got, "application/json")
+	if got := rr.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
+		t.Fatalf("content-type = %q, want %q", got, "application/json; charset=utf-8")
 	}
 	if body := rr.Body.String(); !strings.Contains(body, "\"value\":\"ok\"") {
 		t.Fatalf("body = %q, want encoded json", body)

@@ -1,14 +1,13 @@
 package notifications
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,8 +16,8 @@ import (
 func TestMountServesNotificationsGet(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}})
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}}, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -43,8 +42,8 @@ func TestMountServesNotificationsGet(t *testing.T) {
 func TestMountServesNotificationsHead(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}})
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}}, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -67,8 +66,8 @@ func TestModuleIDReturnsNotifications(t *testing.T) {
 func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(nil, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -91,8 +90,8 @@ func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 func TestMountRejectsNotificationsNonGet(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{})
-	mount, _ := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{}, notificationsTestBase())
+	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPatch, routepath.Notifications+"inbox", nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -104,8 +103,8 @@ func TestMountRejectsNotificationsNonGet(t *testing.T) {
 func TestMountServesNotificationDetailRoute(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{getItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}})
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{getItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}}, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -127,8 +126,8 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 func TestMountNotificationOpenRouteRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}})
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}}, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -146,8 +145,8 @@ func TestMountNotificationOpenRouteRedirectsToDetail(t *testing.T) {
 func TestMountNotificationOpenRouteHTMXRedirects(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}})
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{openItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}}, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -166,8 +165,8 @@ func TestMountNotificationOpenRouteHTMXRedirects(t *testing.T) {
 func TestMountMapsNotificationGatewayErrorToHTTPStatus(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{listErr: apperrors.E(apperrors.KindUnauthorized, "missing session")})
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{listErr: apperrors.E(apperrors.KindUnauthorized, "missing session")}, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -182,8 +181,8 @@ func TestMountMapsNotificationGatewayErrorToHTTPStatus(t *testing.T) {
 func TestMountNotificationsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{listErr: status.Error(codes.NotFound, "notification not found")})
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{listErr: status.Error(codes.NotFound, "notification not found")}, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -206,8 +205,8 @@ func TestMountNotificationsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 func TestMountNotificationsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}})
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}}, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -231,8 +230,8 @@ func TestMountNotificationsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.
 func TestMountNotificationsUnknownSubpathRendersSharedNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(fakeGateway{})
-	mount, err := m.Mount(notificationsTestDependencies())
+	m := NewWithGateway(fakeGateway{}, notificationsTestBase())
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -252,50 +251,6 @@ func TestMountNotificationsUnknownSubpathRendersSharedNotFoundPage(t *testing.T)
 	}
 }
 
-func notificationsTestDependencies() module.Dependencies {
-	return module.Dependencies{ResolveUserID: func(*http.Request) string { return "user-1" }}
+func notificationsTestBase() modulehandler.Base {
+	return modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil)
 }
-
-type fakeGateway struct {
-	listItems []NotificationSummary
-	listErr   error
-	getItem   NotificationSummary
-	getErr    error
-	openItem  NotificationSummary
-	openErr   error
-}
-
-func (f fakeGateway) ListNotifications(context.Context, string) ([]NotificationSummary, error) {
-	if f.listErr != nil {
-		return nil, f.listErr
-	}
-	if f.listItems == nil {
-		return []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}, nil
-	}
-	return f.listItems, nil
-}
-
-func (f fakeGateway) GetNotification(context.Context, string, string) (NotificationSummary, error) {
-	if f.getErr != nil {
-		return NotificationSummary{}, f.getErr
-	}
-	if f.getItem != (NotificationSummary{}) {
-		return f.getItem, nil
-	}
-	if len(f.listItems) > 0 {
-		return f.listItems[0], nil
-	}
-	return NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}, nil
-}
-
-func (f fakeGateway) OpenNotification(context.Context, string, string) (NotificationSummary, error) {
-	if f.openErr != nil {
-		return NotificationSummary{}, f.openErr
-	}
-	if f.openItem != (NotificationSummary{}) {
-		return f.openItem, nil
-	}
-	return NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}, nil
-}
-
-var _ NotificationGateway = fakeGateway{}

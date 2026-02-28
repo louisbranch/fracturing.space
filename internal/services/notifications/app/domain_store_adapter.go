@@ -34,6 +34,17 @@ func (a *domainStoreAdapter) GetNotificationByRecipientAndDedupeKey(ctx context.
 	return toDomainNotification(record), nil
 }
 
+func (a *domainStoreAdapter) GetNotificationByRecipientAndID(ctx context.Context, recipientUserID string, notificationID string) (domain.Notification, error) {
+	if a == nil || a.notificationStore == nil {
+		return domain.Notification{}, domain.ErrStoreNotConfigured
+	}
+	record, err := a.notificationStore.GetNotificationByRecipientAndID(ctx, recipientUserID, notificationID)
+	if err != nil {
+		return domain.Notification{}, mapStorageError(err)
+	}
+	return toDomainNotification(record), nil
+}
+
 func (a *domainStoreAdapter) PutNotification(ctx context.Context, notification domain.Notification) error {
 	if a == nil || a.notificationStore == nil {
 		return domain.ErrStoreNotConfigured

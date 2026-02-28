@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
 
 func TestWriteAndReadAndClearRoundTrip(t *testing.T) {
@@ -65,5 +67,22 @@ func TestWriteIgnoresInvalidNotice(t *testing.T) {
 	Write(rr, req, Notice{Kind: KindSuccess, Key: ""})
 	if got := rr.Header().Get("Set-Cookie"); got != "" {
 		t.Fatalf("Set-Cookie = %q, want empty", got)
+	}
+}
+
+func TestWriteWithPolicyRespectsForwardedProtoTrust(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "http://app.example.test", nil)
+	req.Header.Set("X-Forwarded-Proto", "https")
+	rr := httptest.NewRecorder()
+
+	WriteWithPolicy(rr, req, NoticeSuccess("web.settings.user_profile.notice_saved"), requestmeta.SchemePolicy{TrustForwardedProto: true})
+	cookie, err := http.ParseSetCookie(rr.Header().Get("Set-Cookie"))
+	if err != nil {
+		t.Fatalf("ParseSetCookie() error = %v", err)
+	}
+	if !cookie.Secure {
+		t.Fatalf("expected secure flash cookie with trusted forwarded-proto policy")
 	}
 }

@@ -1,10 +1,10 @@
 package public
 
 import (
-	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"path"
 	"strings"
 
 	"github.com/a-h/templ"
@@ -12,6 +12,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
@@ -21,11 +22,13 @@ import (
 )
 
 type handlers struct {
-	service service
+	publichandler.Base
+	service     service
+	requestMeta requestmeta.SchemePolicy
 }
 
-func newHandlers(s service) handlers {
-	return handlers{service: s}
+func newHandlers(s service, policy requestmeta.SchemePolicy) handlers {
+	return handlers{service: s, requestMeta: policy}
 }
 
 func (h handlers) handleRoot(w http.ResponseWriter, r *http.Request) {
@@ -50,12 +53,12 @@ func (h handlers) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if h.redirectAuthenticatedToApp(w, r) {
 		return
 	}
-	http.Redirect(w, r, routepath.Login, http.StatusFound)
+	httpx.WriteRedirect(w, r, routepath.Login)
 }
 
 func (h handlers) handleLogout(w http.ResponseWriter, r *http.Request) {
 	sessionID, hasSession := sessioncookie.Read(r)
-	if hasSession && !requestmeta.HasSameOriginProof(r) {
+	if hasSession && !h.hasSameOriginProof(r) {
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return
 	}
@@ -63,7 +66,7 @@ func (h handlers) handleLogout(w http.ResponseWriter, r *http.Request) {
 	if hasSession {
 		_ = h.service.revokeWebSession(r.Context(), sessionID)
 	}
-	http.Redirect(w, r, routepath.Root, http.StatusFound)
+	httpx.WriteRedirect(w, r, routepath.Root)
 }
 
 func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request) {
@@ -72,7 +75,7 @@ func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request
 		h.writeJSONError(w, r, err)
 		return
 	}
-	h.writeJSON(w, http.StatusOK, map[string]any{"session_id": start.sessionID, "public_key": start.publicKey})
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"session_id": start.SessionID, "public_key": start.PublicKey})
 }
 
 func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Request) {
@@ -89,8 +92,8 @@ func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 		h.writeJSONError(w, r, err)
 		return
 	}
-	h.writeSessionCookie(w, r, finished.sessionID)
-	h.writeJSON(w, http.StatusOK, map[string]any{"redirect_url": routepath.AppDashboard})
+	h.writeSessionCookie(w, r, finished.SessionID)
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"redirect_url": routepath.AppDashboard})
 }
 
 func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Request) {
@@ -106,7 +109,7 @@ func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 		h.writeJSONError(w, r, err)
 		return
 	}
-	h.writeJSON(w, http.StatusOK, map[string]any{"session_id": start.sessionID, "public_key": start.publicKey, "user_id": start.userID})
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"session_id": start.SessionID, "public_key": start.PublicKey, "user_id": start.UserID})
 }
 
 func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +126,7 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 		h.writeJSONError(w, r, err)
 		return
 	}
-	h.writeJSON(w, http.StatusOK, map[string]any{"user_id": finished.userID})
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"user_id": finished.UserID})
 }
 
 func (h handlers) handleHealth(w http.ResponseWriter, r *http.Request) {
@@ -135,35 +138,11 @@ func (h handlers) handleNotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h handlers) writeAuthPage(w http.ResponseWriter, r *http.Request, title string, metaDesc string, lang string, body templ.Component) {
-	h.writeAuthPageWithStatus(w, r, title, metaDesc, lang, http.StatusOK, body)
-}
-
-func (h handlers) writeAuthPageWithStatus(w http.ResponseWriter, r *http.Request, title string, metaDesc string, lang string, statusCode int, body templ.Component) {
-	ctx := templ.WithChildren(r.Context(), body)
-	var rendered bytes.Buffer
-	if err := webtemplates.AuthLayout(title, metaDesc, lang, r.URL.Path, r.URL.RawQuery).Render(ctx, &rendered); err != nil {
-		http.Error(w, weberror.PublicMessage(nil, err), http.StatusInternalServerError)
-		return
-	}
-	if statusCode <= 0 {
-		statusCode = http.StatusOK
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.WriteHeader(statusCode)
-	_, _ = w.Write(rendered.Bytes())
+	h.WritePublicPage(w, r, title, metaDesc, lang, http.StatusOK, body)
 }
 
 func (h handlers) writeNotFoundPage(w http.ResponseWriter, r *http.Request) {
-	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
-	h.writeAuthPageWithStatus(
-		w,
-		r,
-		webtemplates.AppErrorPageTitle(http.StatusNotFound, loc),
-		webtemplates.T(loc, "layout.meta_description"),
-		lang,
-		http.StatusNotFound,
-		webtemplates.AppErrorState(http.StatusNotFound, loc),
-	)
+	h.WriteNotFound(w, r)
 }
 
 func (h handlers) resolveAuthTag(w http.ResponseWriter, r *http.Request) language.Tag {
@@ -174,15 +153,9 @@ func (h handlers) resolveAuthTag(w http.ResponseWriter, r *http.Request) languag
 	return langTag
 }
 
-func (handlers) writeJSON(w http.ResponseWriter, status int, payload any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(payload)
-}
-
 func (h handlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
 	loc, _ := webi18n.ResolveLocalizer(w, r, nil)
-	h.writeJSON(w, apperrors.HTTPStatus(err), map[string]any{"error": weberror.PublicMessage(loc, err)})
+	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), weberror.PublicMessage(loc, err))
 }
 
 func (h handlers) redirectAuthenticatedToApp(w http.ResponseWriter, r *http.Request) bool {
@@ -196,16 +169,20 @@ func (h handlers) redirectAuthenticatedToApp(w http.ResponseWriter, r *http.Requ
 	if !h.service.hasValidWebSession(r.Context(), sessionID) {
 		return false
 	}
-	http.Redirect(w, r, resolveAppRedirectPath(r.URL.Query().Get("next")), http.StatusFound)
+	httpx.WriteRedirect(w, r, resolveAppRedirectPath(r.URL.Query().Get("next")))
 	return true
 }
 
-func (handlers) writeSessionCookie(w http.ResponseWriter, r *http.Request, sessionID string) {
-	sessioncookie.Write(w, r, sessionID)
+func (h handlers) writeSessionCookie(w http.ResponseWriter, r *http.Request, sessionID string) {
+	sessioncookie.WriteWithPolicy(w, r, sessionID, h.requestMeta)
 }
 
-func (handlers) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
-	sessioncookie.Clear(w, r)
+func (h handlers) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
+	sessioncookie.ClearWithPolicy(w, r, h.requestMeta)
+}
+
+func (h handlers) hasSameOriginProof(r *http.Request) bool {
+	return requestmeta.HasSameOriginProofWithPolicy(r, h.requestMeta)
 }
 
 func resolveAppRedirectPath(raw string) string {
@@ -214,17 +191,58 @@ func resolveAppRedirectPath(raw string) string {
 		return routepath.AppDashboard
 	}
 	parsed, err := url.Parse(next)
-	if err != nil || parsed.Scheme != "" || parsed.Host != "" {
+	if err != nil || parsed.Scheme != "" || parsed.Host != "" || parsed.Opaque != "" {
 		return routepath.AppDashboard
 	}
-	if !strings.HasPrefix(parsed.Path, routepath.AppPrefix) {
+	rawPath := strings.TrimSpace(parsed.EscapedPath())
+	if hasEncodedSlash(rawPath) {
 		return routepath.AppDashboard
 	}
-	if parsed.Path == "" {
+	decodedPath, err := url.PathUnescape(strings.TrimSpace(parsed.Path))
+	if err != nil {
+		return routepath.AppDashboard
+	}
+	if hasDotSegment(decodedPath) {
+		return routepath.AppDashboard
+	}
+	canonicalPath := path.Clean(decodedPath)
+	if strings.TrimSpace(canonicalPath) == "." {
+		canonicalPath = "/"
+	}
+	canonicalPath = ensureLeadingSlash(canonicalPath)
+	if !strings.HasPrefix(canonicalPath, routepath.AppPrefix) {
+		return routepath.AppDashboard
+	}
+	if canonicalPath == routepath.AppPrefix {
 		return routepath.AppDashboard
 	}
 	if parsed.RawQuery != "" {
-		return parsed.Path + "?" + parsed.RawQuery
+		return canonicalPath + "?" + parsed.RawQuery
 	}
-	return parsed.Path
+	return canonicalPath
+}
+
+func hasDotSegment(rawPath string) bool {
+	for _, part := range strings.Split(rawPath, "/") {
+		if part == "." || part == ".." {
+			return true
+		}
+	}
+	return false
+}
+
+func hasEncodedSlash(rawPath string) bool {
+	lower := strings.ToLower(rawPath)
+	return strings.Contains(lower, "%2f") || strings.Contains(lower, "%5c")
+}
+
+func ensureLeadingSlash(pathValue string) string {
+	pathValue = strings.TrimSpace(pathValue)
+	if pathValue == "" {
+		return "/"
+	}
+	if strings.HasPrefix(pathValue, "/") {
+		return pathValue
+	}
+	return "/" + pathValue
 }

@@ -25,7 +25,7 @@ func registerRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsAIKeyRevokePattern, httpx.MethodNotAllowed(http.MethodPost))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsAIKeyRevokePattern, h.handleAIKeyRevokeRoute)
 
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsRestPattern, h.handleNotFound)
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsRestPattern, h.handleNotFound)
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsRestPattern, h.WriteNotFound)
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsRestPattern, h.WriteNotFound)
 
 }

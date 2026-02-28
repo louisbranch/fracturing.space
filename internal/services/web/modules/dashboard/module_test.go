@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	modulehandler "github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc"
 )
@@ -25,7 +25,7 @@ func TestMountServesDashboardGet(t *testing.T) {
 	t.Parallel()
 
 	m := New()
-	mount, err := m.Mount(module.Dependencies{})
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -56,7 +56,7 @@ func TestMountServesDashboardHead(t *testing.T) {
 	t.Parallel()
 
 	m := New()
-	mount, err := m.Mount(module.Dependencies{})
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -72,7 +72,7 @@ func TestMountDashboardHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	t.Parallel()
 
 	m := New()
-	mount, err := m.Mount(module.Dependencies{})
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -95,14 +95,16 @@ func TestMountDashboardHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 func TestMountRendersPendingProfileBlockFromUserHubState(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, err := m.Mount(module.Dependencies{
-		ResolveUserID:   func(*http.Request) string { return "user-1" },
-		ResolveLanguage: func(*http.Request) string { return "pt-BR" },
-		UserHubClient: dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-			User: &userhubv1.UserSummary{NeedsProfileCompletion: true},
-		}},
-	})
+	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+		User: &userhubv1.UserSummary{NeedsProfileCompletion: true},
+	}}
+	base := modulehandler.NewBase(
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "pt-BR" },
+		nil,
+	)
+	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -125,15 +127,17 @@ func TestMountRendersPendingProfileBlockFromUserHubState(t *testing.T) {
 func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, err := m.Mount(module.Dependencies{
-		ResolveUserID:   func(*http.Request) string { return "user-1" },
-		ResolveLanguage: func(*http.Request) string { return "en-US" },
-		UserHubClient: dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-			User:     &userhubv1.UserSummary{NeedsProfileCompletion: true},
-			Metadata: &userhubv1.DashboardMetadata{DegradedDependencies: []string{"social.profile"}},
-		}},
-	})
+	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+		User:     &userhubv1.UserSummary{NeedsProfileCompletion: true},
+		Metadata: &userhubv1.DashboardMetadata{DegradedDependencies: []string{"social.profile"}},
+	}}
+	base := modulehandler.NewBase(
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en-US" },
+		nil,
+	)
+	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -157,19 +161,21 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, err := m.Mount(module.Dependencies{
-		ResolveUserID:   func(*http.Request) string { return "user-1" },
-		ResolveLanguage: func(*http.Request) string { return "en-US" },
-		UserHubClient: dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-			Campaigns: &userhubv1.CampaignSummary{
-				HasMore: false,
-				Campaigns: []*userhubv1.CampaignPreview{
-					{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
-				},
+	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+		Campaigns: &userhubv1.CampaignSummary{
+			HasMore: false,
+			Campaigns: []*userhubv1.CampaignPreview{
+				{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
 			},
-		}},
-	})
+		},
+	}}
+	base := modulehandler.NewBase(
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en-US" },
+		nil,
+	)
+	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -192,19 +198,21 @@ func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *
 func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, err := m.Mount(module.Dependencies{
-		ResolveUserID:   func(*http.Request) string { return "user-1" },
-		ResolveLanguage: func(*http.Request) string { return "en-US" },
-		UserHubClient: dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-			Campaigns: &userhubv1.CampaignSummary{
-				HasMore: false,
-				Campaigns: []*userhubv1.CampaignPreview{
-					{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_DRAFT},
-				},
+	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+		Campaigns: &userhubv1.CampaignSummary{
+			HasMore: false,
+			Campaigns: []*userhubv1.CampaignPreview{
+				{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_DRAFT},
 			},
-		}},
-	})
+		},
+	}}
+	base := modulehandler.NewBase(
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en-US" },
+		nil,
+	)
+	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
@@ -224,20 +232,22 @@ func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *test
 func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.T) {
 	t.Parallel()
 
-	m := New()
-	mount, err := m.Mount(module.Dependencies{
-		ResolveUserID:   func(*http.Request) string { return "user-1" },
-		ResolveLanguage: func(*http.Request) string { return "en-US" },
-		UserHubClient: dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-			Metadata: &userhubv1.DashboardMetadata{DegradedDependencies: []string{"game.campaigns"}},
-			Campaigns: &userhubv1.CampaignSummary{
-				HasMore: false,
-				Campaigns: []*userhubv1.CampaignPreview{
-					{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
-				},
+	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+		Metadata: &userhubv1.DashboardMetadata{DegradedDependencies: []string{"game.campaigns"}},
+		Campaigns: &userhubv1.CampaignSummary{
+			HasMore: false,
+			Campaigns: []*userhubv1.CampaignPreview{
+				{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
 			},
-		}},
-	})
+		},
+	}}
+	base := modulehandler.NewBase(
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en-US" },
+		nil,
+	)
+	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}

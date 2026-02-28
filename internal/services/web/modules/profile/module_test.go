@@ -18,20 +18,16 @@ import (
 func TestMountServesProfilePage(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, module.Dependencies{
-		SocialClient: &socialClientStub{lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{
-			UserId:        "user-1",
-			Username:      "louis",
-			Name:          "Louis",
-			Pronouns:      "they/them",
-			AvatarSetId:   "avatar_set_v1",
-			AvatarAssetId: "001",
-			Bio:           "Building Fracturing.Space.",
-		}}},
-		AssetBaseURL: "https://cdn.example.com/avatars",
-		ResolveViewer: func(*http.Request) module.Viewer {
-			return module.Viewer{DisplayName: "Louis"}
-		},
+	mount := mountProfileModule(t, &socialClientStub{lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{
+		UserId:        "user-1",
+		Username:      "louis",
+		Name:          "Louis",
+		Pronouns:      "they/them",
+		AvatarSetId:   "avatar_set_v1",
+		AvatarAssetId: "001",
+		Bio:           "Building Fracturing.Space.",
+	}}}, "https://cdn.example.com/avatars", func(*http.Request) bool {
+		return true
 	})
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("louis"), nil)
@@ -69,12 +65,10 @@ func TestMountServesProfilePage(t *testing.T) {
 func TestMountServesHomeActionWhenViewerAnonymous(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, module.Dependencies{
-		SocialClient: &socialClientStub{lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{
-			UserId:   "user-1",
-			Username: "louis",
-		}}},
-	})
+	mount := mountProfileModule(t, &socialClientStub{lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{
+		UserId:   "user-1",
+		Username: "louis",
+	}}}, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
@@ -98,9 +92,7 @@ func TestMountServesHomeActionWhenViewerAnonymous(t *testing.T) {
 func TestMountServesProfileHead(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, module.Dependencies{
-		SocialClient: &socialClientStub{lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "louis"}}},
-	})
+	mount := mountProfileModule(t, &socialClientStub{lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "louis"}}}, "", nil)
 
 	req := httptest.NewRequest(http.MethodHead, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
@@ -113,9 +105,7 @@ func TestMountServesProfileHead(t *testing.T) {
 func TestMountReturnsNotFoundWhenUsernameMissing(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, module.Dependencies{
-		SocialClient: &socialClientStub{},
-	})
+	mount := mountProfileModule(t, &socialClientStub{}, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfilePrefix, nil)
 	rr := httptest.NewRecorder()
@@ -132,9 +122,7 @@ func TestMountReturnsNotFoundWhenUsernameMissing(t *testing.T) {
 func TestMountReturnsNotFoundWhenProfileLookupMisses(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, module.Dependencies{
-		SocialClient: &socialClientStub{lookupErr: status.Error(codes.NotFound, "username not found")},
-	})
+	mount := mountProfileModule(t, &socialClientStub{lookupErr: status.Error(codes.NotFound, "username not found")}, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("unknown"), nil)
 	rr := httptest.NewRecorder()
@@ -148,7 +136,7 @@ func TestMountReturnsNotFoundWhenProfileLookupMisses(t *testing.T) {
 func TestMountReturnsNotFoundForNestedPath(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, module.Dependencies{SocialClient: &socialClientStub{}})
+	mount := mountProfileModule(t, &socialClientStub{}, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("louis")+"/extra", nil)
 	rr := httptest.NewRecorder()
@@ -162,7 +150,7 @@ func TestMountReturnsNotFoundForNestedPath(t *testing.T) {
 func TestMountReturnsServiceUnavailableWhenSocialServiceMissing(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, module.Dependencies{})
+	mount := mountProfileModule(t, nil, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
@@ -179,7 +167,7 @@ func TestMountReturnsServiceUnavailableWhenSocialServiceMissing(t *testing.T) {
 func TestMountRejectsProfileNonGet(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, module.Dependencies{SocialClient: &socialClientStub{}})
+	mount := mountProfileModule(t, &socialClientStub{}, "", nil)
 	req := httptest.NewRequest(http.MethodDelete, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -191,15 +179,15 @@ func TestMountRejectsProfileNonGet(t *testing.T) {
 func TestModuleIDReturnsProfile(t *testing.T) {
 	t.Parallel()
 
-	if got := New().ID(); got != "profile" {
+	if got := New(nil, "", nil).ID(); got != "profile" {
 		t.Fatalf("ID() = %q, want %q", got, "profile")
 	}
 }
 
-func mountProfileModule(t *testing.T, deps module.Dependencies) module.Mount {
+func mountProfileModule(t *testing.T, socialClient SocialClient, assetBaseURL string, resolveSignedIn module.ResolveSignedIn) module.Mount {
 	t.Helper()
 
-	mount, err := New().Mount(deps)
+	mount, err := New(socialClient, assetBaseURL, resolveSignedIn).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}

@@ -243,6 +243,8 @@ func init() {
 
 	// Shared layout copy
 	message.SetString(lang, "layout.meta_description", "Motor de código aberto, autoritativo no servidor, para campanhas de RPG de mesa determinísticas e mestres de jogo com IA.")
+	message.SetString(lang, "web.discovery.title", "Descobrir")
+	message.SetString(lang, "web.discovery.coming_soon", "Descoberta de campanhas em breve.")
 	message.SetString(lang, "layout.dashboard", "Painel")
 	message.SetString(lang, "layout.settings", "Configurações")
 	message.SetString(lang, "layout.profile", "Perfil")
@@ -325,6 +327,9 @@ func init() {
 	message.SetString(lang, "web.dashboard.campaign_adventure.title", "Comece uma nova aventura")
 	message.SetString(lang, "web.dashboard.campaign_adventure.body", "Embarque em uma nova aventura no Fracturing.Space criando uma campanha.")
 	message.SetString(lang, "web.dashboard.campaign_adventure.cta", "Começar aventura")
+	message.SetString(lang, "web.dashboard.service_health.title", "Status dos Serviços")
+	message.SetString(lang, "web.dashboard.service_health.all_operational", "Todos os sistemas operacionais")
+	message.SetString(lang, "web.dashboard.service_health.degraded", "degradado")
 	message.SetString(lang, "game.aria_label", "Jogo")
 
 	// Shared campaign shell

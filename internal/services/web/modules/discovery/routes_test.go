@@ -3,28 +3,36 @@ package discovery
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(newService()))
+	registerRoutes(nil, newHandlers(publichandler.NewBase()))
 }
 
 func TestRegisterRoutesDiscoveryMethodContract(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(newService()))
+	registerRoutes(mux, newHandlers(publichandler.NewBase()))
 
 	getReq := httptest.NewRequest(http.MethodGet, routepath.DiscoverPrefix, nil)
 	getRR := httptest.NewRecorder()
 	mux.ServeHTTP(getRR, getReq)
 	if getRR.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", getRR.Code, http.StatusOK)
+	}
+	if getRR.Header().Get("Content-Type") != "text/html; charset=utf-8" {
+		t.Fatalf("content-type = %q, want %q", getRR.Header().Get("Content-Type"), "text/html; charset=utf-8")
+	}
+	if body := getRR.Body.String(); !strings.Contains(body, "discover-root") {
+		t.Fatalf("body missing discovery marker: %q", body)
 	}
 
 	headReq := httptest.NewRequest(http.MethodHead, routepath.DiscoverPrefix, nil)

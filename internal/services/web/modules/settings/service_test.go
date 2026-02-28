@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
@@ -48,7 +47,7 @@ func TestNewServiceFailsClosedWhenGatewayMissing(t *testing.T) {
 func TestSaveProfileAllowsOptionalUsernameAndName(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(settingsGatewayStub{})
+	svc := newService(&fakeGateway{})
 	err := svc.saveProfile(context.Background(), "user-1", SettingsProfile{})
 	if err != nil {
 		t.Fatalf("saveProfile() error = %v", err)
@@ -58,7 +57,7 @@ func TestSaveProfileAllowsOptionalUsernameAndName(t *testing.T) {
 func TestServiceRequiresUserID(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(settingsGatewayStub{})
+	svc := newService(&fakeGateway{})
 	_, err := svc.loadProfile(context.Background(), "   ")
 	if err == nil {
 		t.Fatalf("expected user-id error")
@@ -71,7 +70,7 @@ func TestServiceRequiresUserID(t *testing.T) {
 func TestSaveProfileValidatesNameLength(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(settingsGatewayStub{})
+	svc := newService(&fakeGateway{})
 	err := svc.saveProfile(context.Background(), "user-1", SettingsProfile{
 		Username: "rhea",
 		Name:     strings.Repeat("x", userProfileNameMaxLength+1),
@@ -87,7 +86,7 @@ func TestSaveProfileValidatesNameLength(t *testing.T) {
 func TestSaveProfileDelegatesToGateway(t *testing.T) {
 	t.Parallel()
 
-	gateway := &settingsGatewayRecorder{}
+	gateway := &fakeGateway{}
 	svc := newService(gateway)
 	err := svc.saveProfile(context.Background(), "user-1", SettingsProfile{Username: "rhea", Name: "Rhea Vale"})
 	if err != nil {
@@ -104,7 +103,7 @@ func TestSaveProfileDelegatesToGateway(t *testing.T) {
 func TestSaveLocaleParsesAndDelegates(t *testing.T) {
 	t.Parallel()
 
-	gateway := &settingsGatewayRecorder{}
+	gateway := &fakeGateway{}
 	svc := newService(gateway)
 	err := svc.saveLocale(context.Background(), "user-1", "pt-BR")
 	if err != nil {
@@ -113,15 +112,15 @@ func TestSaveLocaleParsesAndDelegates(t *testing.T) {
 	if gateway.lastRequestedUserID != "user-1" {
 		t.Fatalf("user id = %q, want %q", gateway.lastRequestedUserID, "user-1")
 	}
-	if gateway.lastSavedLocale != commonv1.Locale_LOCALE_PT_BR {
-		t.Fatalf("saved locale = %v, want %v", gateway.lastSavedLocale, commonv1.Locale_LOCALE_PT_BR)
+	if gateway.lastSavedLocale != "pt-BR" {
+		t.Fatalf("saved locale = %v, want %v", gateway.lastSavedLocale, "pt-BR")
 	}
 }
 
 func TestSaveLocaleRejectsUnknownLocale(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(settingsGatewayStub{})
+	svc := newService(&fakeGateway{})
 	err := svc.saveLocale(context.Background(), "user-1", "es-ES")
 	if err == nil {
 		t.Fatalf("expected validation error")
@@ -134,7 +133,7 @@ func TestSaveLocaleRejectsUnknownLocale(t *testing.T) {
 func TestCreateAIKeyValidatesInput(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(settingsGatewayStub{})
+	svc := newService(&fakeGateway{})
 	err := svc.createAIKey(context.Background(), "user-1", "", "secret")
 	if err == nil {
 		t.Fatalf("expected validation error")
@@ -155,7 +154,7 @@ func TestCreateAIKeyValidatesInput(t *testing.T) {
 func TestCreateAIKeyDelegatesToGateway(t *testing.T) {
 	t.Parallel()
 
-	gateway := &settingsGatewayRecorder{}
+	gateway := &fakeGateway{}
 	svc := newService(gateway)
 	err := svc.createAIKey(context.Background(), "user-1", "Primary", "sk-secret")
 	if err != nil {
@@ -175,7 +174,7 @@ func TestCreateAIKeyDelegatesToGateway(t *testing.T) {
 func TestRevokeAIKeyValidatesCredentialID(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(settingsGatewayStub{})
+	svc := newService(&fakeGateway{})
 	err := svc.revokeAIKey(context.Background(), "user-1", "")
 	if err == nil {
 		t.Fatalf("expected validation error")
@@ -188,7 +187,7 @@ func TestRevokeAIKeyValidatesCredentialID(t *testing.T) {
 func TestLoadProfilePropagatesGatewayError(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(settingsGatewayStub{loadProfileErr: errors.New("boom")})
+	svc := newService(&fakeGateway{loadProfileErr: errors.New("boom")})
 	_, err := svc.loadProfile(context.Background(), "user-1")
 	if err == nil {
 		t.Fatalf("expected gateway error")
@@ -196,112 +195,4 @@ func TestLoadProfilePropagatesGatewayError(t *testing.T) {
 	if err.Error() != "boom" {
 		t.Fatalf("err = %q, want %q", err.Error(), "boom")
 	}
-}
-
-type settingsGatewayStub struct {
-	profile        SettingsProfile
-	locale         commonv1.Locale
-	keys           []SettingsAIKey
-	loadProfileErr error
-	loadLocaleErr  error
-	listAIKeysErr  error
-	saveProfileErr error
-	saveLocaleErr  error
-	createAIKeyErr error
-	revokeAIKeyErr error
-}
-
-func (f settingsGatewayStub) LoadProfile(context.Context, string) (SettingsProfile, error) {
-	if f.loadProfileErr != nil {
-		return SettingsProfile{}, f.loadProfileErr
-	}
-	if f.profile == (SettingsProfile{}) {
-		return SettingsProfile{Username: "adventurer", Name: "Adventurer"}, nil
-	}
-	return f.profile, nil
-}
-
-func (f settingsGatewayStub) SaveProfile(context.Context, string, SettingsProfile) error {
-	return f.saveProfileErr
-}
-
-func (f settingsGatewayStub) LoadLocale(context.Context, string) (commonv1.Locale, error) {
-	if f.loadLocaleErr != nil {
-		return commonv1.Locale_LOCALE_UNSPECIFIED, f.loadLocaleErr
-	}
-	if f.locale == commonv1.Locale_LOCALE_UNSPECIFIED {
-		return commonv1.Locale_LOCALE_EN_US, nil
-	}
-	return f.locale, nil
-}
-
-func (f settingsGatewayStub) SaveLocale(context.Context, string, commonv1.Locale) error {
-	return f.saveLocaleErr
-}
-
-func (f settingsGatewayStub) ListAIKeys(context.Context, string) ([]SettingsAIKey, error) {
-	if f.listAIKeysErr != nil {
-		return nil, f.listAIKeysErr
-	}
-	if f.keys == nil {
-		return []SettingsAIKey{}, nil
-	}
-	return f.keys, nil
-}
-
-func (f settingsGatewayStub) CreateAIKey(context.Context, string, string, string) error {
-	return f.createAIKeyErr
-}
-
-func (f settingsGatewayStub) RevokeAIKey(context.Context, string, string) error {
-	return f.revokeAIKeyErr
-}
-
-type settingsGatewayRecorder struct {
-	lastRequestedUserID string
-	lastSavedProfile    SettingsProfile
-	lastSavedLocale     commonv1.Locale
-	lastCreatedLabel    string
-	lastCreatedSecret   string
-	lastRevokedKeyID    string
-}
-
-func (f *settingsGatewayRecorder) LoadProfile(_ context.Context, userID string) (SettingsProfile, error) {
-	f.lastRequestedUserID = userID
-	return SettingsProfile{Username: "adventurer", Name: "Adventurer"}, nil
-}
-
-func (f *settingsGatewayRecorder) SaveProfile(_ context.Context, userID string, profile SettingsProfile) error {
-	f.lastRequestedUserID = userID
-	f.lastSavedProfile = profile
-	return nil
-}
-
-func (f *settingsGatewayRecorder) LoadLocale(_ context.Context, userID string) (commonv1.Locale, error) {
-	f.lastRequestedUserID = userID
-	return commonv1.Locale_LOCALE_EN_US, nil
-}
-
-func (f *settingsGatewayRecorder) SaveLocale(_ context.Context, userID string, locale commonv1.Locale) error {
-	f.lastRequestedUserID = userID
-	f.lastSavedLocale = locale
-	return nil
-}
-
-func (f *settingsGatewayRecorder) ListAIKeys(_ context.Context, userID string) ([]SettingsAIKey, error) {
-	f.lastRequestedUserID = userID
-	return []SettingsAIKey{}, nil
-}
-
-func (f *settingsGatewayRecorder) CreateAIKey(_ context.Context, userID string, label string, secret string) error {
-	f.lastRequestedUserID = userID
-	f.lastCreatedLabel = label
-	f.lastCreatedSecret = secret
-	return nil
-}
-
-func (f *settingsGatewayRecorder) RevokeAIKey(_ context.Context, userID string, keyID string) error {
-	f.lastRequestedUserID = userID
-	f.lastRevokedKeyID = keyID
-	return nil
 }

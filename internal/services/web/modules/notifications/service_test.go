@@ -41,7 +41,7 @@ func TestNewServiceFailsClosedWhenGatewayMissing(t *testing.T) {
 func TestServiceRequiresExplicitUserID(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(notificationGatewayStub{})
+	svc := newService(fakeGateway{})
 	_, err := svc.listNotifications(context.Background(), "   ")
 	if err == nil {
 		t.Fatalf("expected user-id error")
@@ -54,7 +54,7 @@ func TestServiceRequiresExplicitUserID(t *testing.T) {
 func TestListNotificationsReturnsEmptySliceForEmptyList(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(notificationGatewayStub{items: []NotificationSummary{}})
+	svc := newService(fakeGateway{listItems: []NotificationSummary{}})
 	items, err := svc.listNotifications(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("listNotifications() error = %v", err)
@@ -67,7 +67,7 @@ func TestListNotificationsReturnsEmptySliceForEmptyList(t *testing.T) {
 func TestListNotificationsPropagatesGatewayError(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(notificationGatewayStub{listErr: errors.New("boom")})
+	svc := newService(fakeGateway{listErr: errors.New("boom")})
 	_, err := svc.listNotifications(context.Background(), "user-1")
 	if err == nil {
 		t.Fatalf("expected list error")
@@ -80,7 +80,7 @@ func TestListNotificationsPropagatesGatewayError(t *testing.T) {
 func TestGetNotificationReturnsNotFoundWhenIDMissing(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(notificationGatewayStub{})
+	svc := newService(fakeGateway{})
 	_, err := svc.getNotification(context.Background(), "user-1", "   ")
 	if err == nil {
 		t.Fatalf("expected not-found error")
@@ -93,7 +93,7 @@ func TestGetNotificationReturnsNotFoundWhenIDMissing(t *testing.T) {
 func TestOpenNotificationReturnsNotFoundWhenIDMissing(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(notificationGatewayStub{})
+	svc := newService(fakeGateway{})
 	_, err := svc.openNotification(context.Background(), "user-1", "   ")
 	if err == nil {
 		t.Fatalf("expected not-found error")
@@ -106,7 +106,7 @@ func TestOpenNotificationReturnsNotFoundWhenIDMissing(t *testing.T) {
 func TestOpenNotificationPropagatesGatewayError(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(notificationGatewayStub{openErr: errors.New("unavailable")})
+	svc := newService(fakeGateway{openErr: errors.New("unavailable")})
 	_, err := svc.openNotification(context.Background(), "user-1", "n1")
 	if err == nil {
 		t.Fatalf("expected open error")
@@ -114,43 +114,4 @@ func TestOpenNotificationPropagatesGatewayError(t *testing.T) {
 	if err.Error() != "unavailable" {
 		t.Fatalf("err = %q, want %q", err.Error(), "unavailable")
 	}
-}
-
-type notificationGatewayStub struct {
-	items    []NotificationSummary
-	listErr  error
-	getItem  NotificationSummary
-	getErr   error
-	openItem NotificationSummary
-	openErr  error
-}
-
-func (f notificationGatewayStub) ListNotifications(context.Context, string) ([]NotificationSummary, error) {
-	if f.listErr != nil {
-		return nil, f.listErr
-	}
-	if f.items == nil {
-		return []NotificationSummary{{ID: "n-1", MessageType: "auth.onboarding.welcome"}}, nil
-	}
-	return f.items, nil
-}
-
-func (f notificationGatewayStub) GetNotification(context.Context, string, string) (NotificationSummary, error) {
-	if f.getErr != nil {
-		return NotificationSummary{}, f.getErr
-	}
-	if f.getItem == (NotificationSummary{}) {
-		return NotificationSummary{ID: "n-1", MessageType: "auth.onboarding.welcome"}, nil
-	}
-	return f.getItem, nil
-}
-
-func (f notificationGatewayStub) OpenNotification(context.Context, string, string) (NotificationSummary, error) {
-	if f.openErr != nil {
-		return NotificationSummary{}, f.openErr
-	}
-	if f.openItem == (NotificationSummary{}) {
-		return NotificationSummary{ID: "n-1", MessageType: "auth.onboarding.welcome", Read: true}, nil
-	}
-	return f.openItem, nil
 }

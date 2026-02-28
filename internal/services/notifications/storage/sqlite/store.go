@@ -308,7 +308,7 @@ WHERE recipient_user_id = ?
 	if affected == 0 {
 		return storage.NotificationRecord{}, storage.ErrNotFound
 	}
-	return s.getNotificationByRecipientAndID(ctx, recipientUserID, notificationID)
+	return s.GetNotificationByRecipientAndID(ctx, recipientUserID, notificationID)
 }
 
 // PutDelivery upserts one delivery attempt state row.
@@ -475,12 +475,30 @@ WHERE n.recipient_user_id = ?
 	return fromMillis(createdAtMillis), nil
 }
 
-func (s *Store) getNotificationByRecipientAndID(ctx context.Context, recipientUserID string, notificationID string) (storage.NotificationRecord, error) {
+func (s *Store) GetNotificationByRecipientAndID(ctx context.Context, recipientUserID string, notificationID string) (storage.NotificationRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.NotificationRecord{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.NotificationRecord{}, fmt.Errorf("storage is not configured")
+	}
+	recipientUserID = strings.TrimSpace(recipientUserID)
+	notificationID = strings.TrimSpace(notificationID)
+	if recipientUserID == "" {
+		return storage.NotificationRecord{}, fmt.Errorf("recipient user id is required")
+	}
+	if notificationID == "" {
+		return storage.NotificationRecord{}, fmt.Errorf("notification id is required")
+	}
 	row := s.sqlDB.QueryRowContext(ctx, `
-SELECT id, recipient_user_id, message_type, payload_json, dedupe_key, source, created_at, updated_at, read_at
-FROM notifications
-WHERE recipient_user_id = ? AND id = ?
-`, recipientUserID, notificationID)
+SELECT n.id, n.recipient_user_id, n.message_type, n.payload_json, n.dedupe_key, n.source, n.created_at, n.updated_at, n.read_at
+FROM notifications n
+JOIN notification_deliveries d ON d.notification_id = n.id
+WHERE n.recipient_user_id = ?
+  AND n.id = ?
+  AND d.channel = ?
+  AND d.status = ?
+`, recipientUserID, notificationID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered)
 	record, err := scanNotification(row.Scan)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

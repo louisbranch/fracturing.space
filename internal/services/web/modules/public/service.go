@@ -3,92 +3,67 @@ package public
 import (
 	"context"
 	"encoding/json"
-	"net/http"
 	"strings"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
 type service struct {
-	auth authGateway
+	auth AuthGateway
 }
 
-type authGateway interface {
-	CreateUser(context.Context, *authv1.CreateUserRequest) (*authv1.CreateUserResponse, error)
-	BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest) (*authv1.BeginPasskeyRegistrationResponse, error)
-	FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest) (*authv1.FinishPasskeyRegistrationResponse, error)
-	BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest) (*authv1.BeginPasskeyLoginResponse, error)
-	FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest) (*authv1.FinishPasskeyLoginResponse, error)
-	CreateWebSession(context.Context, *authv1.CreateWebSessionRequest) (*authv1.CreateWebSessionResponse, error)
-	GetWebSession(context.Context, *authv1.GetWebSessionRequest) (*authv1.GetWebSessionResponse, error)
-	RevokeWebSession(context.Context, *authv1.RevokeWebSessionRequest) (*authv1.RevokeWebSessionResponse, error)
+// AuthGateway abstracts authentication operations behind domain types.
+type AuthGateway interface {
+	// CreateUser creates a new user account, returning the user ID.
+	CreateUser(ctx context.Context, email string) (string, error)
+	// BeginPasskeyRegistration starts passkey registration for a user.
+	BeginPasskeyRegistration(ctx context.Context, userID string) (passkeyChallenge, error)
+	// FinishPasskeyRegistration completes registration and returns the user ID.
+	FinishPasskeyRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (string, error)
+	// BeginPasskeyLogin starts a passkey login flow.
+	BeginPasskeyLogin(ctx context.Context) (passkeyChallenge, error)
+	// FinishPasskeyLogin completes login and returns the user ID.
+	FinishPasskeyLogin(ctx context.Context, sessionID string, credential json.RawMessage) (string, error)
+	// CreateWebSession creates a session for the given user, returning the session ID.
+	CreateWebSession(ctx context.Context, userID string) (string, error)
+	// HasValidWebSession checks whether a session exists and is valid.
+	HasValidWebSession(ctx context.Context, sessionID string) bool
+	// RevokeWebSession invalidates a web session.
+	RevokeWebSession(ctx context.Context, sessionID string) error
 }
 
-type grpcAuthGateway struct {
-	client module.AuthClient
+// passkeyChallenge holds the session and public key from a passkey begin operation.
+type passkeyChallenge struct {
+	SessionID string
+	PublicKey json.RawMessage
 }
 
-type unavailableAuthGateway struct{}
-
-const authServiceUnavailableMessage = "auth service is not configured"
-
-type passkeyStart struct {
-	sessionID string
-	publicKey json.RawMessage
-}
-
-type passkeyRegisterStart struct {
-	sessionID string
-	userID    string
-	publicKey json.RawMessage
+type passkeyRegisterResult struct {
+	SessionID string
+	UserID    string
+	PublicKey json.RawMessage
 }
 
 type passkeyFinish struct {
-	sessionID string
-	userID    string
+	SessionID string
+	UserID    string
 }
 
-func newService(deps module.Dependencies) service {
-	if deps.AuthClient != nil {
-		return service{auth: grpcAuthGateway{client: deps.AuthClient}}
+func newServiceWithGateway(gateway AuthGateway) service {
+	if gateway == nil {
+		gateway = unavailableAuthGateway{}
 	}
-	return service{auth: unavailableAuthGateway{}}
+	return service{auth: gateway}
 }
 
 func (service) healthBody() string {
 	return "ok"
 }
 
-func mapAuthGatewayError(err error, fallbackKind apperrors.Kind, fallbackMessage string) error {
-	return mapAuthGatewayErrorWithKey(err, fallbackKind, "", fallbackMessage)
-}
-
-func mapAuthGatewayErrorWithKey(err error, fallbackKind apperrors.Kind, fallbackKey string, fallbackMessage string) error {
-	if err == nil {
-		return nil
-	}
-	// TODO(web-errors): preserve richer upstream grpc/app error kinds so fallback mapping does not blur invalid-input vs dependency failures.
-	if apperrors.HTTPStatus(err) == http.StatusServiceUnavailable {
-		return apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
-	}
-	if strings.TrimSpace(fallbackKey) != "" {
-		return apperrors.EK(fallbackKind, fallbackKey, fallbackMessage)
-	}
-	return apperrors.E(fallbackKind, fallbackMessage)
-}
-
-func (s service) passkeyLoginStart(ctx context.Context) (passkeyStart, error) {
-	resp, err := s.auth.BeginPasskeyLogin(ctx, &authv1.BeginPasskeyLoginRequest{})
-	if err != nil {
-		return passkeyStart{}, mapAuthGatewayError(err, apperrors.KindInvalidInput, "failed to start passkey login")
-	}
-	if strings.TrimSpace(resp.GetSessionId()) == "" {
-		return passkeyStart{}, apperrors.E(apperrors.KindUnknown, "auth did not return login session")
-	}
-	return passkeyStart{sessionID: resp.GetSessionId(), publicKey: json.RawMessage(resp.GetCredentialRequestOptionsJson())}, nil
+func (s service) passkeyLoginStart(ctx context.Context) (passkeyChallenge, error) {
+	return s.auth.BeginPasskeyLogin(ctx)
 }
 
 func (s service) passkeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage) (passkeyFinish, error) {
@@ -98,45 +73,30 @@ func (s service) passkeyLoginFinish(ctx context.Context, sessionID string, crede
 	if len(credential) == 0 {
 		return passkeyFinish{}, apperrors.E(apperrors.KindInvalidInput, "credential is required")
 	}
-	resp, err := s.auth.FinishPasskeyLogin(ctx, &authv1.FinishPasskeyLoginRequest{SessionId: sessionID, CredentialResponseJson: credential})
+	userID, err := s.auth.FinishPasskeyLogin(ctx, sessionID, credential)
 	if err != nil {
-		return passkeyFinish{}, mapAuthGatewayError(err, apperrors.KindInvalidInput, "failed to finish passkey login")
+		return passkeyFinish{}, err
 	}
-	userID := strings.TrimSpace(resp.GetUser().GetId())
-	if userID == "" {
-		return passkeyFinish{}, apperrors.E(apperrors.KindUnknown, "auth did not return user id")
-	}
-	session, err := s.auth.CreateWebSession(ctx, &authv1.CreateWebSessionRequest{UserId: userID})
+	webSessionID, err := s.auth.CreateWebSession(ctx, userID)
 	if err != nil {
-		return passkeyFinish{}, mapAuthGatewayError(err, apperrors.KindUnknown, "failed to create web session")
+		return passkeyFinish{}, err
 	}
-	webSessionID := strings.TrimSpace(session.GetSession().GetId())
-	if webSessionID == "" {
-		return passkeyFinish{}, apperrors.E(apperrors.KindUnknown, "auth did not return web session id")
-	}
-	return passkeyFinish{sessionID: webSessionID, userID: userID}, nil
+	return passkeyFinish{SessionID: webSessionID, UserID: userID}, nil
 }
 
-func (s service) passkeyRegisterStart(ctx context.Context, email string) (passkeyRegisterStart, error) {
+func (s service) passkeyRegisterStart(ctx context.Context, email string) (passkeyRegisterResult, error) {
 	if strings.TrimSpace(email) == "" {
-		return passkeyRegisterStart{}, apperrors.E(apperrors.KindInvalidInput, "email is required")
+		return passkeyRegisterResult{}, apperrors.E(apperrors.KindInvalidInput, "email is required")
 	}
-	created, err := s.auth.CreateUser(ctx, &authv1.CreateUserRequest{Email: strings.TrimSpace(email), Locale: commonv1.Locale_LOCALE_EN_US})
+	userID, err := s.auth.CreateUser(ctx, strings.TrimSpace(email))
 	if err != nil {
-		return passkeyRegisterStart{}, mapAuthGatewayErrorWithKey(err, apperrors.KindInvalidInput, "error.http.failed_to_create_user", "failed to create user")
+		return passkeyRegisterResult{}, err
 	}
-	userID := strings.TrimSpace(created.GetUser().GetId())
-	if userID == "" {
-		return passkeyRegisterStart{}, apperrors.E(apperrors.KindUnknown, "auth did not return user id")
-	}
-	begin, err := s.auth.BeginPasskeyRegistration(ctx, &authv1.BeginPasskeyRegistrationRequest{UserId: userID})
+	challenge, err := s.auth.BeginPasskeyRegistration(ctx, userID)
 	if err != nil {
-		return passkeyRegisterStart{}, mapAuthGatewayError(err, apperrors.KindInvalidInput, "failed to start passkey registration")
+		return passkeyRegisterResult{}, err
 	}
-	if strings.TrimSpace(begin.GetSessionId()) == "" {
-		return passkeyRegisterStart{}, apperrors.E(apperrors.KindUnknown, "auth did not return registration session")
-	}
-	return passkeyRegisterStart{sessionID: begin.GetSessionId(), userID: userID, publicKey: json.RawMessage(begin.GetCredentialCreationOptionsJson())}, nil
+	return passkeyRegisterResult{SessionID: challenge.SessionID, UserID: userID, PublicKey: challenge.PublicKey}, nil
 }
 
 func (s service) passkeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (passkeyFinish, error) {
@@ -146,15 +106,11 @@ func (s service) passkeyRegisterFinish(ctx context.Context, sessionID string, cr
 	if len(credential) == 0 {
 		return passkeyFinish{}, apperrors.E(apperrors.KindInvalidInput, "credential is required")
 	}
-	resp, err := s.auth.FinishPasskeyRegistration(ctx, &authv1.FinishPasskeyRegistrationRequest{SessionId: sessionID, CredentialResponseJson: credential})
+	userID, err := s.auth.FinishPasskeyRegistration(ctx, sessionID, credential)
 	if err != nil {
-		return passkeyFinish{}, mapAuthGatewayError(err, apperrors.KindInvalidInput, "failed to finish passkey registration")
+		return passkeyFinish{}, err
 	}
-	userID := strings.TrimSpace(resp.GetUser().GetId())
-	if userID == "" {
-		return passkeyFinish{}, apperrors.E(apperrors.KindUnknown, "auth did not return user id")
-	}
-	return passkeyFinish{userID: userID}, nil
+	return passkeyFinish{UserID: userID}, nil
 }
 
 func (s service) hasValidWebSession(ctx context.Context, sessionID string) bool {
@@ -162,87 +118,174 @@ func (s service) hasValidWebSession(ctx context.Context, sessionID string) bool 
 	if sessionID == "" {
 		return false
 	}
-	resp, err := s.auth.GetWebSession(ctx, &authv1.GetWebSessionRequest{SessionId: sessionID})
-	if err != nil {
-		return false
-	}
-	if resp == nil || resp.GetSession() == nil {
-		return false
-	}
-	return strings.TrimSpace(resp.GetSession().GetId()) != ""
+	return s.auth.HasValidWebSession(ctx, sessionID)
 }
 
 func (s service) revokeWebSession(ctx context.Context, sessionID string) error {
 	if strings.TrimSpace(sessionID) == "" {
 		return nil
 	}
-	_, err := s.auth.RevokeWebSession(ctx, &authv1.RevokeWebSessionRequest{SessionId: sessionID})
-	if err != nil {
-		return mapAuthGatewayError(err, apperrors.KindUnknown, "failed to revoke web session")
+	return s.auth.RevokeWebSession(ctx, sessionID)
+}
+
+// --- gRPC gateway ---
+
+type grpcAuthGateway struct {
+	client AuthClient
+}
+
+// NewGRPCAuthGateway builds an AuthGateway backed by gRPC auth client calls.
+func NewGRPCAuthGateway(client AuthClient) AuthGateway {
+	if client == nil {
+		return unavailableAuthGateway{}
 	}
-	return nil
+	return newGRPCAuthGateway(client)
 }
 
-func (g grpcAuthGateway) CreateUser(ctx context.Context, req *authv1.CreateUserRequest) (*authv1.CreateUserResponse, error) {
-	return g.client.CreateUser(ctx, req)
+func newGRPCAuthGateway(client AuthClient) grpcAuthGateway {
+	return grpcAuthGateway{client: client}
 }
 
-func (g grpcAuthGateway) BeginPasskeyRegistration(ctx context.Context, req *authv1.BeginPasskeyRegistrationRequest) (*authv1.BeginPasskeyRegistrationResponse, error) {
-	return g.client.BeginPasskeyRegistration(ctx, req)
+const authServiceUnavailableMessage = "auth service is not configured"
+
+func mapAuthGatewayError(err error, fallbackKind apperrors.Kind, fallbackMessage string) error {
+	return mapAuthGatewayErrorWithKey(err, fallbackKind, "", fallbackMessage)
 }
 
-func (g grpcAuthGateway) FinishPasskeyRegistration(ctx context.Context, req *authv1.FinishPasskeyRegistrationRequest) (*authv1.FinishPasskeyRegistrationResponse, error) {
-	return g.client.FinishPasskeyRegistration(ctx, req)
+func mapAuthGatewayErrorWithKey(err error, fallbackKind apperrors.Kind, fallbackKey string, fallbackMessage string) error {
+	return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+		FallbackKind:    fallbackKind,
+		FallbackKey:     fallbackKey,
+		FallbackMessage: fallbackMessage,
+	})
 }
 
-func (g grpcAuthGateway) BeginPasskeyLogin(ctx context.Context, req *authv1.BeginPasskeyLoginRequest) (*authv1.BeginPasskeyLoginResponse, error) {
-	return g.client.BeginPasskeyLogin(ctx, req)
+func (g grpcAuthGateway) CreateUser(ctx context.Context, email string) (string, error) {
+	resp, err := g.client.CreateUser(ctx, &authv1.CreateUserRequest{
+		Email:  email,
+		Locale: commonv1.Locale_LOCALE_EN_US,
+	})
+	if err != nil {
+		return "", mapAuthGatewayErrorWithKey(err, apperrors.KindInvalidInput, "error.http.failed_to_create_user", "failed to create user")
+	}
+	userID := strings.TrimSpace(resp.GetUser().GetId())
+	if userID == "" {
+		return "", apperrors.E(apperrors.KindUnknown, "auth did not return user id")
+	}
+	return userID, nil
 }
 
-func (g grpcAuthGateway) FinishPasskeyLogin(ctx context.Context, req *authv1.FinishPasskeyLoginRequest) (*authv1.FinishPasskeyLoginResponse, error) {
-	return g.client.FinishPasskeyLogin(ctx, req)
+func (g grpcAuthGateway) BeginPasskeyRegistration(ctx context.Context, userID string) (passkeyChallenge, error) {
+	resp, err := g.client.BeginPasskeyRegistration(ctx, &authv1.BeginPasskeyRegistrationRequest{UserId: userID})
+	if err != nil {
+		return passkeyChallenge{}, mapAuthGatewayError(err, apperrors.KindInvalidInput, "failed to start passkey registration")
+	}
+	sessionID := strings.TrimSpace(resp.GetSessionId())
+	if sessionID == "" {
+		return passkeyChallenge{}, apperrors.E(apperrors.KindUnknown, "auth did not return registration session")
+	}
+	return passkeyChallenge{SessionID: sessionID, PublicKey: json.RawMessage(resp.GetCredentialCreationOptionsJson())}, nil
 }
 
-func (g grpcAuthGateway) CreateWebSession(ctx context.Context, req *authv1.CreateWebSessionRequest) (*authv1.CreateWebSessionResponse, error) {
-	return g.client.CreateWebSession(ctx, req)
+func (g grpcAuthGateway) FinishPasskeyRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (string, error) {
+	resp, err := g.client.FinishPasskeyRegistration(ctx, &authv1.FinishPasskeyRegistrationRequest{
+		SessionId:              sessionID,
+		CredentialResponseJson: credential,
+	})
+	if err != nil {
+		return "", mapAuthGatewayError(err, apperrors.KindInvalidInput, "failed to finish passkey registration")
+	}
+	userID := strings.TrimSpace(resp.GetUser().GetId())
+	if userID == "" {
+		return "", apperrors.E(apperrors.KindUnknown, "auth did not return user id")
+	}
+	return userID, nil
 }
 
-func (g grpcAuthGateway) GetWebSession(ctx context.Context, req *authv1.GetWebSessionRequest) (*authv1.GetWebSessionResponse, error) {
-	return g.client.GetWebSession(ctx, req)
+func (g grpcAuthGateway) BeginPasskeyLogin(ctx context.Context) (passkeyChallenge, error) {
+	resp, err := g.client.BeginPasskeyLogin(ctx, &authv1.BeginPasskeyLoginRequest{})
+	if err != nil {
+		return passkeyChallenge{}, mapAuthGatewayError(err, apperrors.KindInvalidInput, "failed to start passkey login")
+	}
+	sessionID := strings.TrimSpace(resp.GetSessionId())
+	if sessionID == "" {
+		return passkeyChallenge{}, apperrors.E(apperrors.KindUnknown, "auth did not return login session")
+	}
+	return passkeyChallenge{SessionID: sessionID, PublicKey: json.RawMessage(resp.GetCredentialRequestOptionsJson())}, nil
 }
 
-func (g grpcAuthGateway) RevokeWebSession(ctx context.Context, req *authv1.RevokeWebSessionRequest) (*authv1.RevokeWebSessionResponse, error) {
-	return g.client.RevokeWebSession(ctx, req)
+func (g grpcAuthGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, credential json.RawMessage) (string, error) {
+	resp, err := g.client.FinishPasskeyLogin(ctx, &authv1.FinishPasskeyLoginRequest{
+		SessionId:              sessionID,
+		CredentialResponseJson: credential,
+	})
+	if err != nil {
+		return "", mapAuthGatewayError(err, apperrors.KindInvalidInput, "failed to finish passkey login")
+	}
+	userID := strings.TrimSpace(resp.GetUser().GetId())
+	if userID == "" {
+		return "", apperrors.E(apperrors.KindUnknown, "auth did not return user id")
+	}
+	return userID, nil
 }
 
-func (unavailableAuthGateway) CreateUser(context.Context, *authv1.CreateUserRequest) (*authv1.CreateUserResponse, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+func (g grpcAuthGateway) CreateWebSession(ctx context.Context, userID string) (string, error) {
+	resp, err := g.client.CreateWebSession(ctx, &authv1.CreateWebSessionRequest{UserId: userID})
+	if err != nil {
+		return "", mapAuthGatewayError(err, apperrors.KindUnknown, "failed to create web session")
+	}
+	sessionID := strings.TrimSpace(resp.GetSession().GetId())
+	if sessionID == "" {
+		return "", apperrors.E(apperrors.KindUnknown, "auth did not return web session id")
+	}
+	return sessionID, nil
 }
 
-func (unavailableAuthGateway) BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest) (*authv1.BeginPasskeyRegistrationResponse, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+func (g grpcAuthGateway) HasValidWebSession(ctx context.Context, sessionID string) bool {
+	resp, err := g.client.GetWebSession(ctx, &authv1.GetWebSessionRequest{SessionId: sessionID})
+	if err != nil || resp == nil || resp.GetSession() == nil {
+		return false
+	}
+	return strings.TrimSpace(resp.GetSession().GetId()) != ""
 }
 
-func (unavailableAuthGateway) FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest) (*authv1.FinishPasskeyRegistrationResponse, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+func (g grpcAuthGateway) RevokeWebSession(ctx context.Context, sessionID string) error {
+	_, err := g.client.RevokeWebSession(ctx, &authv1.RevokeWebSessionRequest{SessionId: sessionID})
+	return mapAuthGatewayError(err, apperrors.KindUnknown, "failed to revoke web session")
 }
 
-func (unavailableAuthGateway) BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest) (*authv1.BeginPasskeyLoginResponse, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+// --- Unavailable gateway ---
+
+type unavailableAuthGateway struct{}
+
+func (unavailableAuthGateway) CreateUser(context.Context, string) (string, error) {
+	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-func (unavailableAuthGateway) FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest) (*authv1.FinishPasskeyLoginResponse, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+func (unavailableAuthGateway) BeginPasskeyRegistration(context.Context, string) (passkeyChallenge, error) {
+	return passkeyChallenge{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-func (unavailableAuthGateway) CreateWebSession(context.Context, *authv1.CreateWebSessionRequest) (*authv1.CreateWebSessionResponse, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+func (unavailableAuthGateway) FinishPasskeyRegistration(context.Context, string, json.RawMessage) (string, error) {
+	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-func (unavailableAuthGateway) GetWebSession(context.Context, *authv1.GetWebSessionRequest) (*authv1.GetWebSessionResponse, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+func (unavailableAuthGateway) BeginPasskeyLogin(context.Context) (passkeyChallenge, error) {
+	return passkeyChallenge{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-func (unavailableAuthGateway) RevokeWebSession(context.Context, *authv1.RevokeWebSessionRequest) (*authv1.RevokeWebSessionResponse, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+func (unavailableAuthGateway) FinishPasskeyLogin(context.Context, string, json.RawMessage) (string, error) {
+	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+}
+
+func (unavailableAuthGateway) CreateWebSession(context.Context, string) (string, error) {
+	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+}
+
+func (unavailableAuthGateway) HasValidWebSession(context.Context, string) bool {
+	return false
+}
+
+func (unavailableAuthGateway) RevokeWebSession(context.Context, string) error {
+	return apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }

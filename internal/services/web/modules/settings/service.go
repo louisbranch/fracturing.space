@@ -5,8 +5,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"golang.org/x/text/language"
+
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
@@ -33,79 +33,44 @@ type SettingsAIKey struct {
 	CanRevoke bool
 }
 
+type settingsLocale string
+
+const (
+	settingsLocaleUnspecified settingsLocale = ""
+	settingsLocaleEnUS        settingsLocale = "en-US"
+	settingsLocalePtBR        settingsLocale = "pt-BR"
+)
+
+var settingsLocaleByTag = map[string]settingsLocale{
+	"en":    settingsLocaleEnUS,
+	"en-us": settingsLocaleEnUS,
+	"pt":    settingsLocalePtBR,
+	"pt-br": settingsLocalePtBR,
+}
+
 // SettingsGateway loads and updates settings data for web handlers.
 type SettingsGateway interface {
 	LoadProfile(context.Context, string) (SettingsProfile, error)
 	SaveProfile(context.Context, string, SettingsProfile) error
-	LoadLocale(context.Context, string) (commonv1.Locale, error)
-	SaveLocale(context.Context, string, commonv1.Locale) error
+	LoadLocale(context.Context, string) (string, error)
+	SaveLocale(context.Context, string, string) error
 	ListAIKeys(context.Context, string) ([]SettingsAIKey, error)
 	CreateAIKey(context.Context, string, string, string) error
 	RevokeAIKey(context.Context, string, string) error
 }
 
+// requireUserID validates and returns a trimmed user ID, or returns an
+// unauthorized error if it is blank.
+func requireUserID(userID string) (string, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return "", apperrors.EK(apperrors.KindUnauthorized, "error.web.message.user_id_is_required", "user id is required")
+	}
+	return userID, nil
+}
+
 type service struct {
 	gateway SettingsGateway
-}
-
-type staticGateway struct{}
-
-type unavailableGateway struct{}
-
-func (staticGateway) LoadProfile(context.Context, string) (SettingsProfile, error) {
-	return SettingsProfile{Username: "adventurer", Name: "Adventurer"}, nil
-}
-
-func (staticGateway) SaveProfile(context.Context, string, SettingsProfile) error {
-	return nil
-}
-
-func (staticGateway) LoadLocale(context.Context, string) (commonv1.Locale, error) {
-	return commonv1.Locale_LOCALE_EN_US, nil
-}
-
-func (staticGateway) SaveLocale(context.Context, string, commonv1.Locale) error {
-	return nil
-}
-
-func (staticGateway) ListAIKeys(context.Context, string) ([]SettingsAIKey, error) {
-	return []SettingsAIKey{}, nil
-}
-
-func (staticGateway) CreateAIKey(context.Context, string, string, string) error {
-	return nil
-}
-
-func (staticGateway) RevokeAIKey(context.Context, string, string) error {
-	return nil
-}
-
-func (unavailableGateway) LoadProfile(context.Context, string) (SettingsProfile, error) {
-	return SettingsProfile{}, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-func (unavailableGateway) SaveProfile(context.Context, string, SettingsProfile) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-func (unavailableGateway) LoadLocale(context.Context, string) (commonv1.Locale, error) {
-	return commonv1.Locale_LOCALE_UNSPECIFIED, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-func (unavailableGateway) SaveLocale(context.Context, string, commonv1.Locale) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-func (unavailableGateway) ListAIKeys(context.Context, string) ([]SettingsAIKey, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-func (unavailableGateway) CreateAIKey(context.Context, string, string, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-func (unavailableGateway) RevokeAIKey(context.Context, string, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
 }
 
 func newService(gateway SettingsGateway) service {
@@ -151,16 +116,16 @@ func (s service) saveProfile(ctx context.Context, userID string, profile Setting
 	return s.gateway.SaveProfile(ctx, resolvedUserID, profile)
 }
 
-func (s service) loadLocale(ctx context.Context, userID string) (commonv1.Locale, error) {
+func (s service) loadLocale(ctx context.Context, userID string) (string, error) {
 	resolvedUserID, err := requireUserID(userID)
 	if err != nil {
-		return commonv1.Locale_LOCALE_UNSPECIFIED, err
+		return "", err
 	}
 	locale, err := s.gateway.LoadLocale(ctx, resolvedUserID)
 	if err != nil {
-		return commonv1.Locale_LOCALE_UNSPECIFIED, err
+		return "", err
 	}
-	return platformi18n.NormalizeLocale(locale), nil
+	return string(normalizeSettingsLocale(settingsLocale(locale))), nil
 }
 
 func (s service) saveLocale(ctx context.Context, userID string, value string) error {
@@ -168,11 +133,31 @@ func (s service) saveLocale(ctx context.Context, userID string, value string) er
 	if err != nil {
 		return err
 	}
-	locale, ok := platformi18n.ParseLocale(value)
+	locale, ok := parseSettingsLocale(value)
 	if !ok {
 		return apperrors.EK(apperrors.KindInvalidInput, "error.http.invalid_locale", "locale is invalid")
 	}
-	return s.gateway.SaveLocale(ctx, resolvedUserID, locale)
+	return s.gateway.SaveLocale(ctx, resolvedUserID, string(locale))
+}
+
+func parseSettingsLocale(value string) (settingsLocale, bool) {
+	tag, err := language.Parse(strings.TrimSpace(value))
+	if err != nil {
+		return settingsLocaleUnspecified, false
+	}
+	normalized := strings.ToLower(tag.String())
+	if locale, ok := settingsLocaleByTag[normalized]; ok {
+		return locale, true
+	}
+	return settingsLocaleUnspecified, false
+}
+
+func normalizeSettingsLocale(value settingsLocale) settingsLocale {
+	locale, ok := parseSettingsLocale(string(value))
+	if ok {
+		return locale
+	}
+	return settingsLocaleEnUS
 }
 
 func (s service) listAIKeys(ctx context.Context, userID string) ([]SettingsAIKey, error) {
@@ -241,14 +226,6 @@ func (s service) revokeAIKey(ctx context.Context, userID string, credentialID st
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.ai_key_id_is_required", "credential id is required")
 	}
 	return s.gateway.RevokeAIKey(ctx, resolvedUserID, strings.TrimSpace(credentialID))
-}
-
-func requireUserID(userID string) (string, error) {
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return "", apperrors.EK(apperrors.KindUnauthorized, "error.web.message.user_id_is_required", "user id is required")
-	}
-	return userID, nil
 }
 
 func isSafeCredentialPathID(value string) bool {

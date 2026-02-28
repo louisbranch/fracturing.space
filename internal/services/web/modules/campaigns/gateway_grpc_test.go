@@ -8,6 +8,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"golang.org/x/text/language"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -27,15 +28,15 @@ func TestBatchCanCampaignActionMapsResults(t *testing.T) {
 	decisions, err := gateway.BatchCanCampaignAction(context.Background(), "c1", []campaignAuthorizationCheck{
 		{
 			CheckID:  "char-a",
-			Action:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-			Resource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
-			Target:   &statev1.AuthorizationTarget{ResourceId: "char-a"},
+			Action:   campaignAuthzActionMutate,
+			Resource: campaignAuthzResourceCharacter,
+			Target:   &campaignAuthorizationTarget{ResourceID: "char-a"},
 		},
 		{
 			CheckID:  "char-b",
-			Action:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-			Resource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
-			Target:   &statev1.AuthorizationTarget{ResourceId: "char-b"},
+			Action:   campaignAuthzActionMutate,
+			Resource: campaignAuthzResourceCharacter,
+			Target:   &campaignAuthorizationTarget{ResourceID: "char-b"},
 		},
 	})
 	if err != nil {
@@ -64,9 +65,9 @@ func TestBatchCanCampaignActionFallsBackToRequestCheckID(t *testing.T) {
 	decisions, err := gateway.BatchCanCampaignAction(context.Background(), "c1", []campaignAuthorizationCheck{
 		{
 			CheckID:  "char-a",
-			Action:   statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE,
-			Resource: statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CHARACTER,
-			Target:   &statev1.AuthorizationTarget{ResourceId: "char-a"},
+			Action:   campaignAuthzActionMutate,
+			Resource: campaignAuthzResourceCharacter,
+			Target:   &campaignAuthorizationTarget{ResourceID: "char-a"},
 		},
 	})
 	if err != nil {
@@ -134,7 +135,7 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 	}}}
 	gateway := grpcGateway{daggerheartClient: contentClient}
 
-	catalog, err := gateway.CharacterCreationCatalog(context.Background(), commonv1.Locale_LOCALE_PT_BR)
+	catalog, err := gateway.CharacterCreationCatalog(context.Background(), language.MustParse("pt-BR"))
 	if err != nil {
 		t.Fatalf("CharacterCreationCatalog() error = %v", err)
 	}
@@ -167,7 +168,7 @@ func TestCharacterCreationCatalogDefaultsLocaleToEnglishUS(t *testing.T) {
 	contentClient := &fakeDaggerheartContentClient{}
 	gateway := grpcGateway{daggerheartClient: contentClient}
 
-	if _, err := gateway.CharacterCreationCatalog(context.Background(), commonv1.Locale_LOCALE_UNSPECIFIED); err != nil {
+	if _, err := gateway.CharacterCreationCatalog(context.Background(), language.Und); err != nil {
 		t.Fatalf("CharacterCreationCatalog() error = %v", err)
 	}
 	if contentClient.lastReq == nil {
@@ -234,7 +235,7 @@ func TestApplyAndResetCharacterCreationWorkflowForwardRequests(t *testing.T) {
 	characterClient := &fakeCharacterWorkflowClient{}
 	gateway := grpcGateway{characterClient: characterClient}
 
-	step := &daggerheartv1.DaggerheartCreationStepInput{Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{}}}
+	step := &CampaignCharacterCreationStepInput{Details: &CampaignCharacterCreationStepDetails{}}
 	if err := gateway.ApplyCharacterCreationStep(context.Background(), "c1", "char-1", step); err != nil {
 		t.Fatalf("ApplyCharacterCreationStep() error = %v", err)
 	}
@@ -243,6 +244,12 @@ func TestApplyAndResetCharacterCreationWorkflowForwardRequests(t *testing.T) {
 	}
 	if characterClient.applyReq.GetCampaignId() != "c1" || characterClient.applyReq.GetCharacterId() != "char-1" {
 		t.Fatalf("apply request = %#v", characterClient.applyReq)
+	}
+	if characterClient.applyReq.GetDaggerheart() == nil {
+		t.Fatalf("expected daggerheart system step: %#v", characterClient.applyReq)
+	}
+	if _, ok := characterClient.applyReq.GetDaggerheart().GetStep().(*daggerheartv1.DaggerheartCreationStepInput_DetailsInput); !ok {
+		t.Fatalf("system step type = %T", characterClient.applyReq.GetDaggerheart().GetStep())
 	}
 
 	if err := gateway.ResetCharacterCreationWorkflow(context.Background(), "c1", "char-1"); err != nil {
@@ -256,13 +263,100 @@ func TestApplyAndResetCharacterCreationWorkflowForwardRequests(t *testing.T) {
 	}
 }
 
+func TestMapCampaignCharacterCreationStepToProtoRejectsNilOrAmbiguousInputs(t *testing.T) {
+	t.Parallel()
+
+	if _, err := mapCampaignCharacterCreationStepToProto(nil); err == nil {
+		t.Fatalf("expected error for nil step")
+	}
+
+	if _, err := mapCampaignCharacterCreationStepToProto(&CampaignCharacterCreationStepInput{
+		ClassSubclass: &CampaignCharacterCreationStepClassSubclass{
+			ClassID:    "warrior",
+			SubclassID: "guardian",
+		},
+		Details: &CampaignCharacterCreationStepDetails{},
+	}); err == nil {
+		t.Fatalf("expected error for ambiguous step")
+	}
+}
+
+func TestMapCampaignCharacterCreationStepToProtoTrimsWhitespace(t *testing.T) {
+	t.Parallel()
+
+	step := &CampaignCharacterCreationStepInput{
+		ClassSubclass: &CampaignCharacterCreationStepClassSubclass{
+			ClassID:    "  warrior  ",
+			SubclassID: "  guardian  ",
+		},
+	}
+	protoStep, err := mapCampaignCharacterCreationStepToProto(step)
+	if err != nil {
+		t.Fatalf("mapCampaignCharacterCreationStepToProto() error = %v", err)
+	}
+
+	classStep, ok := protoStep.GetStep().(*daggerheartv1.DaggerheartCreationStepInput_ClassSubclassInput)
+	if !ok {
+		t.Fatalf("proto step type = %T", protoStep.GetStep())
+	}
+	if classStep.ClassSubclassInput == nil {
+		t.Fatalf("class subclass input = nil")
+	}
+	if classStep.ClassSubclassInput.GetClassId() != "warrior" {
+		t.Fatalf("class id = %q, want %q", classStep.ClassSubclassInput.GetClassId(), "warrior")
+	}
+	if classStep.ClassSubclassInput.GetSubclassId() != "guardian" {
+		t.Fatalf("subclass id = %q, want %q", classStep.ClassSubclassInput.GetSubclassId(), "guardian")
+	}
+}
+
+func TestMapCampaignCharacterCreationStepToProtoFiltersWhitespaceItems(t *testing.T) {
+	t.Parallel()
+
+	step := &CampaignCharacterCreationStepInput{
+		Equipment: &CampaignCharacterCreationStepEquipment{
+			WeaponIDs:    []string{"  weapon.longsword  ", "   ", "weapon.dagger"},
+			ArmorID:      "  armor.chain  ",
+			PotionItemID: "  item.minor-health-potion  ",
+		},
+	}
+	protoStep, err := mapCampaignCharacterCreationStepToProto(step)
+	if err != nil {
+		t.Fatalf("mapCampaignCharacterCreationStepToProto() error = %v", err)
+	}
+
+	equipmentStep, ok := protoStep.GetStep().(*daggerheartv1.DaggerheartCreationStepInput_EquipmentInput)
+	if !ok {
+		t.Fatalf("proto step type = %T", protoStep.GetStep())
+	}
+	if equipmentStep.EquipmentInput == nil {
+		t.Fatalf("equipment input = nil")
+	}
+	equipmentInput := equipmentStep.EquipmentInput
+	if len(equipmentInput.GetWeaponIds()) != 2 {
+		t.Fatalf("weapon ids = %#v, want 2", equipmentInput.GetWeaponIds())
+	}
+	if equipmentInput.GetWeaponIds()[0] != "weapon.longsword" {
+		t.Fatalf("weapon id[0] = %q, want %q", equipmentInput.GetWeaponIds()[0], "weapon.longsword")
+	}
+	if equipmentInput.GetWeaponIds()[1] != "weapon.dagger" {
+		t.Fatalf("weapon id[1] = %q, want %q", equipmentInput.GetWeaponIds()[1], "weapon.dagger")
+	}
+	if equipmentInput.GetArmorId() != "armor.chain" {
+		t.Fatalf("armor id = %q, want %q", equipmentInput.GetArmorId(), "armor.chain")
+	}
+	if equipmentInput.GetPotionItemId() != "item.minor-health-potion" {
+		t.Fatalf("potion item id = %q, want %q", equipmentInput.GetPotionItemId(), "item.minor-health-potion")
+	}
+}
+
 func TestCreateCharacterForwardsRequestAndReturnsCharacterID(t *testing.T) {
 	t.Parallel()
 
 	characterClient := &fakeCharacterWorkflowClient{createResp: &statev1.CreateCharacterResponse{Character: &statev1.Character{Id: "char-42"}}}
 	gateway := grpcGateway{characterClient: characterClient}
 
-	created, err := gateway.CreateCharacter(context.Background(), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC})
+	created, err := gateway.CreateCharacter(context.Background(), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 	if err != nil {
 		t.Fatalf("CreateCharacter() error = %v", err)
 	}
@@ -283,7 +377,7 @@ func TestCreateCharacterRejectsEmptyCreatedCharacterID(t *testing.T) {
 	characterClient := &fakeCharacterWorkflowClient{createResp: &statev1.CreateCharacterResponse{Character: &statev1.Character{}}}
 	gateway := grpcGateway{characterClient: characterClient}
 
-	_, err := gateway.CreateCharacter(context.Background(), "c1", CreateCharacterInput{Name: "Hero", Kind: statev1.CharacterKind_PC})
+	_, err := gateway.CreateCharacter(context.Background(), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 	if err == nil {
 		t.Fatalf("expected empty created character id error")
 	}

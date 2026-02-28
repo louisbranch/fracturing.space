@@ -9,36 +9,28 @@ import (
 	"net/http"
 	"strings"
 
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	webapp "github.com/louisbranch/fracturing.space/internal/services/web/app"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/observability"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	webstatic "github.com/louisbranch/fracturing.space/internal/services/web/static"
 )
 
 // Config defines startup inputs for the web service.
 type Config struct {
 	HTTPAddr                  string
-	AssetBaseURL              string
 	ChatHTTPAddr              string
 	EnableExperimentalModules bool
-	CampaignClient            module.CampaignClient
-	ParticipantClient         module.ParticipantClient
-	CharacterClient           module.CharacterClient
-	DaggerheartContentClient  module.DaggerheartContentClient
-	SessionClient             module.SessionClient
-	InviteClient              module.InviteClient
-	AuthorizationClient       module.AuthorizationClient
-	AuthClient                module.AuthClient
-	AccountClient             module.AccountClient
-	CredentialClient          module.CredentialClient
-	UserHubClient             module.UserHubClient
-	NotificationClient        module.NotificationClient
-	SocialClient              socialv1.SocialServiceClient
+
+	// RequestSchemePolicy controls scheme resolution for proxy headers.
+	RequestSchemePolicy requestmeta.SchemePolicy
+
+	// Dependencies carries startup dependencies in one place for principal resolution
+	// and module registry construction.
+	Dependencies *DependencyBundle
 }
 
 // Server hosts the web HTTP surface and lifecycle.
@@ -49,40 +41,41 @@ type Server struct {
 
 // NewHandler builds a root handler from default module registry groups.
 func NewHandler(cfg Config) (http.Handler, error) {
-	principal := newPrincipalResolver(cfg)
-	deps := module.Dependencies{
-		CampaignClient:           cfg.CampaignClient,
-		ParticipantClient:        cfg.ParticipantClient,
-		CharacterClient:          cfg.CharacterClient,
-		DaggerheartContentClient: cfg.DaggerheartContentClient,
-		SessionClient:            cfg.SessionClient,
-		InviteClient:             cfg.InviteClient,
-		AuthorizationClient:      cfg.AuthorizationClient,
-		AuthClient:               cfg.AuthClient,
-		AccountClient:            cfg.AccountClient,
-		CredentialClient:         cfg.CredentialClient,
-		UserHubClient:            cfg.UserHubClient,
-		NotificationClient:       cfg.NotificationClient,
-		SocialClient:             cfg.SocialClient,
-		ResolveViewer:            principal.resolveViewer,
-		ResolveUserID:            principal.resolveRequestUserID,
-		ResolveLanguage:          principal.resolveRequestLanguage,
-		AssetBaseURL:             cfg.AssetBaseURL,
-		ChatFallbackPort:         websupport.ResolveChatFallbackPort(cfg.ChatHTTPAddr),
+	deps := DependencyBundle{}
+	if cfg.Dependencies != nil {
+		deps = *cfg.Dependencies
 	}
-	publicModules := modules.DefaultPublicModules()
-	protectedModules := modules.DefaultProtectedModules(deps)
-	// TODO(web-cutover): revisit stable registry composition as parity gaps close so default surfaces never expose scaffold-only behavior.
+
+	session := newSessionResolver(deps.Principal.SessionClient)
+	viewer := newViewerResolver(deps.Principal.SocialClient, deps.Principal.NotificationClient, deps.Principal.AssetBaseURL, session.resolveRequestUserID)
+	lang := newLanguageResolver(deps.Principal.AccountClient, session.resolveRequestUserID)
+	resolvers := modules.ModuleResolvers{
+		ResolveViewer:   viewer.resolveViewer,
+		ResolveSignedIn: session.resolveRequestSignedIn,
+		ResolveUserID:   session.resolveRequestUserID,
+		ResolveLanguage: lang.resolveRequestLanguage,
+	}
+	publicModules := modules.DefaultPublicModules(deps.Modules, resolvers, modules.PublicModuleOptions{
+		RequestSchemePolicy: cfg.RequestSchemePolicy,
+	})
+	protectedOpts := modules.ProtectedModuleOptions{
+		ChatFallbackPort:    websupport.ResolveChatFallbackPort(cfg.ChatHTTPAddr),
+		RequestSchemePolicy: cfg.RequestSchemePolicy,
+	}
+	var protectedModules []modules.Module
 	if cfg.EnableExperimentalModules {
-		protectedModules = modules.DefaultProtectedModulesWithExperimentalCampaignRoutes(deps)
-		publicModules = append(publicModules, modules.ExperimentalPublicModules()...)
-		protectedModules = append(protectedModules, modules.ExperimentalProtectedModules(deps)...)
+		experimentalPublic := modules.ExperimentalPublicModules()
+		protectedModules = modules.ExperimentalProtectedModules(deps.Modules, resolvers, protectedOpts, append(publicModules, experimentalPublic...))
+		publicModules = append(publicModules, experimentalPublic...)
+	} else {
+		protectedModules = modules.DefaultProtectedModules(deps.Modules, resolvers, protectedOpts, publicModules)
 	}
-	h, err := webapp.BuildRootHandler(webapp.Config{
-		Dependencies:     deps,
-		PublicModules:    publicModules,
-		ProtectedModules: protectedModules,
-	}, principal.authRequired())
+	h, err := webapp.Compose(webapp.ComposeInput{
+		AuthRequired:        session.authRequired(),
+		PublicModules:       publicModules,
+		ProtectedModules:    protectedModules,
+		RequestSchemePolicy: cfg.RequestSchemePolicy,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +89,6 @@ func NewHandler(cfg Config) (http.Handler, error) {
 		observability.RequestLogger(log.Default()),
 	), nil
 }
-
 func withRequestPrincipalState() httpx.Middleware {
 	return func(next http.Handler) http.Handler {
 		if next == nil {
