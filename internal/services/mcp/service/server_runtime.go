@@ -146,6 +146,16 @@ func (s *Server) Serve(ctx context.Context) error {
 	return s.serveWithTransport(ctx, &mcp.StdioTransport{})
 }
 
+// ServeWithTransport starts the MCP server with an explicit transport.
+// This keeps transport lifecycle explicit for integration harnesses that need
+// in-memory or custom transports without spawning a separate process.
+func (s *Server) ServeWithTransport(ctx context.Context, transport mcp.Transport) error {
+	if transport == nil {
+		return fmt.Errorf("transport is required")
+	}
+	return s.serveWithTransport(ctx, transport)
+}
+
 // Close releases the gRPC connection held by the server.
 func (s *Server) Close() error {
 	if s == nil || s.conn == nil {

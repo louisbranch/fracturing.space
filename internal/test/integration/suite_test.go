@@ -6,13 +6,9 @@ import "testing"
 
 // TestMCPStdioEndToEnd validates MCP stdio integration end-to-end.
 func TestMCPStdioEndToEnd(t *testing.T) {
-	grpcAddr, authAddr, stopServer := startGRPCServer(t)
-	defer stopServer()
-
-	clientSession, closeClient := startMCPClient(t, grpcAddr)
-	defer closeClient()
-
-	userID := createAuthUser(t, authAddr, "test-creator")
+	fixture := newSuiteFixture(t)
+	clientSession := fixture.newMCPClientSession(t)
+	userID := fixture.newUserID(t, "test-creator")
 	suite := &integrationSuite{client: clientSession, userID: userID}
 
 	t.Run("duality tools", func(t *testing.T) {
@@ -28,26 +24,26 @@ func TestMCPStdioEndToEnd(t *testing.T) {
 	})
 
 	t.Run("session outcomes", func(t *testing.T) {
-		runSessionOutcomeTests(t, suite, grpcAddr)
+		runSessionOutcomeTests(t, suite, fixture.grpcAddr)
 	})
 
 	t.Run("metadata", func(t *testing.T) {
-		runMetadataTests(t, suite, grpcAddr)
+		runMetadataTests(t, suite, fixture.grpcAddr)
 	})
 
 	t.Run("session lock", func(t *testing.T) {
-		runSessionLockTests(t, grpcAddr, authAddr)
+		runSessionLockTests(t, fixture.grpcAddr, fixture.authAddr)
 	})
 
 	t.Run("participant user link", func(t *testing.T) {
-		runParticipantUserLinkTests(t, grpcAddr, authAddr)
+		runParticipantUserLinkTests(t, fixture.grpcAddr, fixture.authAddr)
 	})
 
 	t.Run("event list", func(t *testing.T) {
-		runEventListTests(t, grpcAddr, authAddr)
+		runEventListTests(t, fixture.grpcAddr, fixture.authAddr)
 	})
 
 	t.Run("mutation event guardrails", func(t *testing.T) {
-		runMutationEventGuardrailTests(t, suite, grpcAddr, authAddr)
+		runMutationEventGuardrailTests(t, suite, fixture.grpcAddr, fixture.authAddr)
 	})
 }
