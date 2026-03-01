@@ -5,10 +5,26 @@ set -euo pipefail
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$repo_root"
 
-if [ "$#" -gt 0 ]; then
-  mapfile -t files < <(printf '%s\n' "$@" | rg '_test[.]go$' || true)
+if command -v rg >/dev/null 2>&1; then
+  list_test_files() {
+    rg --files -g '*_test.go'
+  }
+  filter_test_files() {
+    rg '_test[.]go$' || true
+  }
 else
-  mapfile -t files < <(rg --files -g '*_test.go')
+  list_test_files() {
+    find . -type f -name '*_test.go' -print | sed 's|^\./||'
+  }
+  filter_test_files() {
+    grep -E '_test[.]go$' || true
+  }
+fi
+
+if [ "$#" -gt 0 ]; then
+  mapfile -t files < <(printf '%s\n' "$@" | filter_test_files)
+else
+  mapfile -t files < <(list_test_files)
 fi
 
 if [ "${#files[@]}" -eq 0 ]; then

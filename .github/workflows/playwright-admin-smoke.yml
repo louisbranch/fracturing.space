@@ -46,15 +46,13 @@ jobs:
           export FRACTURING_SPACE_JOIN_GRANT_ISSUER="fracturing.space/auth"
           export FRACTURING_SPACE_JOIN_GRANT_AUDIENCE="fracturing.space/game"
           export FRACTURING_SPACE_JOIN_GRANT_TTL="5m"
-          FRACTURING_SPACE_GAME_EVENT_HMAC_KEY="${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY}" ./bin/game 2>&1 &
-          FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 ./bin/auth 2>&1 &
-          FRACTURING_SPACE_ADMIN_ADDR=127.0.0.1:8082 FRACTURING_SPACE_GAME_ADDR=127.0.0.1:8080 FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 ./bin/admin 2>&1 &
-          timeout 60 bash -c 'until curl -fsS http://127.0.0.1:8082/ >/dev/null; do sleep 0.5; done'
-      - name: Seed demo data
-        run: go run ./cmd/seed -manifest=internal/tools/seed/manifests/local-dev.json -v
+          ./bin/auth -port=8083 2>&1 &
+          FRACTURING_SPACE_GAME_EVENT_HMAC_KEY="${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY}" FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 ./bin/game -addr=127.0.0.1:8082 2>&1 &
+          FRACTURING_SPACE_ADMIN_ADDR=127.0.0.1:8081 FRACTURING_SPACE_GAME_ADDR=127.0.0.1:8082 FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 ./bin/admin 2>&1 &
+          timeout 60 bash -c 'until curl -fsS http://127.0.0.1:8081/ >/dev/null; do sleep 0.5; done'
       - name: Run admin smoke flow
         env:
-          BASE_URL: "http://127.0.0.1:8082"
+          BASE_URL: "http://127.0.0.1:8081"
         run: scripts/playwright-admin-smoke.sh
       - name: Upload Playwright artifacts
         if: always()

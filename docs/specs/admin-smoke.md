@@ -7,7 +7,7 @@ nav_order: 1
 # Admin Smoke Spec (Playwright CLI)
 
 ## Purpose
-Quick regression coverage for the admin UI: navigation, user creation, impersonation,
+Quick regression coverage for the admin UI: navigation, users lookup/list visibility,
 and campaigns read-only visibility.
 
 ## Preconditions
@@ -27,17 +27,14 @@ open_browser
 step "Run admin smoke flow"
 cli run-code "$(cat <<'EOF'
 async page => {
-  const ts = Date.now();
-  const email = "playwright-smoke-" + ts + "@example.com";
-
   await page.setViewportSize({ width: 1280, height: 720 });
   page.setDefaultTimeout(20000);
 
-  await page.getByRole("heading", { name: "Dashboard", level: 2 }).waitFor();
-  await page.getByRole("heading", { name: "Recent Activity", level: 3 }).waitFor();
+  await page.getByRole("heading", { name: "Dashboard", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "Recent Activity", exact: true }).waitFor();
 
   await page.getByRole("link", { name: "Systems" }).click();
-  await page.getByRole("heading", { name: "Systems", level: 2 }).waitFor();
+  await page.getByRole("heading", { name: "Systems", exact: true }).waitFor();
   await page.waitForFunction(() => {
     const table = document.querySelector("table");
     const text = document.body.innerText || "";
@@ -45,39 +42,30 @@ async page => {
   });
 
   await page.getByRole("link", { name: "Users" }).click();
-  await page.getByRole("heading", { name: "Users", level: 2 }).waitFor();
-  await page.getByRole("heading", { name: "All Users", level: 3 }).waitFor();
+  await page.getByRole("heading", { name: "Users", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "All Users", exact: true }).waitFor();
   await page.waitForFunction(() => {
     const table = document.querySelector("table");
     const text = document.body.innerText || "";
     return table || text.includes("No users yet.") || text.includes("Users unavailable.") || text.includes("User service unavailable.");
   });
-
-  const emailInput = page.locator("form[action=\"/users/create\"] input[name=\"email\"]");
-  await emailInput.waitFor();
-  await emailInput.fill(email);
-  await page.locator("form[action=\"/users/create\"]").getByRole("button", { name: "Create" }).click();
-  await page.getByRole("heading", { name: email, level: 2 }).waitFor();
-
-  await page.getByRole("button", { name: "Impersonate" }).click();
-  await page.getByText("Currently impersonating").waitFor();
+  const lookupForm = page.locator("form[action=\"/users/lookup\"]");
+  await lookupForm.waitFor();
+  await lookupForm.locator("input[name=\"user_id\"]").waitFor();
 
   await page.getByRole("link", { name: "Campaigns" }).click();
-  await page.getByRole("heading", { name: "Campaigns", level: 2 }).waitFor();
+  await page.getByRole("heading", { name: "Campaigns", exact: true }).waitFor();
   await page.waitForFunction(() => {
     const table = document.querySelector("table");
     const text = document.body.innerText || "";
     return table || text.includes("No campaigns yet.") || text.includes("Campaigns unavailable.") || text.includes("Campaign service unavailable.");
   });
 
-  if (await page.getByRole("link", { name: "Create Campaign" }).count() !== 0) {
-    throw new Error("Admin unexpectedly shows Create Campaign link.");
+  const origin = page.url().replace(/\/[^/]*$/, "");
+  const createResponse = await page.request.get(origin + "/campaigns/create", { maxRedirects: 0 });
+  if (createResponse.status() !== 404) {
+    throw new Error("Expected /campaigns/create status 404, got: " + createResponse.status());
   }
-  if (await page.locator("form[action=\"/campaigns/create\"]").count() !== 0) {
-    throw new Error("Admin unexpectedly renders campaign create form.");
-  }
-
-  console.log("Created user: " + email);
 }
 EOF
 )"
