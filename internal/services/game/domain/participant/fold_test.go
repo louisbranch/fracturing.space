@@ -127,3 +127,52 @@ func TestFoldSeatReassignedUpdatesUserID(t *testing.T) {
 		})
 	}
 }
+
+func TestFoldParticipantRecognizedEvents_InvalidPayloadReturnsError(t *testing.T) {
+	eventTypes := []event.Type{
+		EventTypeJoined,
+		EventTypeUpdated,
+		EventTypeLeft,
+		EventTypeBound,
+		EventTypeUnbound,
+		EventTypeSeatReassigned,
+		EventTypeSeatReassignedLegacy,
+	}
+
+	for _, eventType := range eventTypes {
+		t.Run(string(eventType), func(t *testing.T) {
+			_, err := Fold(State{}, event.Event{
+				Type:        eventType,
+				PayloadJSON: []byte(`{bad json`),
+			})
+			if err == nil {
+				t.Fatal("expected error for invalid payload")
+			}
+		})
+	}
+}
+
+func TestFoldParticipantUpdated_AppliesUserAvatarAndPronounsFields(t *testing.T) {
+	state := State{Joined: true, ParticipantID: "p-1", UserID: "u-1"}
+	updated, err := Fold(state, event.Event{
+		Type: event.Type("participant.updated"),
+		PayloadJSON: []byte(
+			`{"participant_id":"p-1","fields":{"user_id":"u-2","avatar_set_id":"set-2","avatar_asset_id":"asset-3","pronouns":"they/them"}}`,
+		),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.UserID != "u-2" {
+		t.Fatalf("user id = %q, want %q", updated.UserID, "u-2")
+	}
+	if updated.AvatarSetID != "set-2" {
+		t.Fatalf("avatar set = %q, want %q", updated.AvatarSetID, "set-2")
+	}
+	if updated.AvatarAssetID != "asset-3" {
+		t.Fatalf("avatar asset = %q, want %q", updated.AvatarAssetID, "asset-3")
+	}
+	if updated.Pronouns != "they/them" {
+		t.Fatalf("pronouns = %q, want %q", updated.Pronouns, "they/them")
+	}
+}

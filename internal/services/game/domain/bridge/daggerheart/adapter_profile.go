@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -65,9 +66,9 @@ func (a *Adapter) ApplyProfile(ctx context.Context, campaignID, characterID stri
 		return nil
 	}
 
-	experiences := make([]Experience, 0, len(profile.Experiences))
+	experiences := make([]daggerheartprofile.Experience, 0, len(profile.Experiences))
 	for _, exp := range profile.Experiences {
-		experiences = append(experiences, Experience{
+		experiences = append(experiences, daggerheartprofile.Experience{
 			Name:     exp.Name,
 			Modifier: exp.Modifier,
 		})
@@ -75,10 +76,10 @@ func (a *Adapter) ApplyProfile(ctx context.Context, campaignID, characterID stri
 
 	level := profile.Level
 	if level == 0 {
-		level = PCLevelDefault
+		level = daggerheartprofile.PCLevelDefault
 	}
 
-	if err := ValidateProfile(
+	if err := daggerheartprofile.Validate(
 		level,
 		profile.HpMax,
 		profile.StressMax,
@@ -88,7 +89,7 @@ func (a *Adapter) ApplyProfile(ctx context.Context, campaignID, characterID stri
 		profile.Proficiency,
 		profile.ArmorScore,
 		profile.ArmorMax,
-		Traits{
+		daggerheartprofile.Traits{
 			Agility:   profile.Agility,
 			Strength:  profile.Strength,
 			Finesse:   profile.Finesse,

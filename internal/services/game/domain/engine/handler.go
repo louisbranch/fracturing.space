@@ -171,13 +171,14 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 	if err != nil {
 		return Result{}, err
 	}
+	now := h.nowFunc()
 	if h.Checkpoints != nil && len(decision.Events) > 0 {
 		last := decision.Events[len(decision.Events)-1]
 		if last.Seq > 0 {
 			if err := h.Checkpoints.Save(ctx, replay.Checkpoint{
 				CampaignID: validated.CampaignID,
 				LastSeq:    last.Seq,
-				UpdatedAt:  time.Now().UTC(),
+				UpdatedAt:  now().UTC(),
 			}); err != nil {
 				return Result{}, err
 			}
@@ -195,87 +196,154 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 }
 
 func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (command.Command, any, command.Decision, error) {
-	// Required in production via NewHandler; nil here supports test-path flexibility.
-	if h.Commands == nil {
-		return command.Command{}, nil, command.Decision{}, ErrCommandRegistryRequired
-	}
-	validated, err := h.Commands.ValidateForDecision(cmd)
+	validated, err := h.validateCommand(cmd)
 	if err != nil {
 		return command.Command{}, nil, command.Decision{}, err
 	}
-	cmd = validated
 
-	if def, ok := h.Commands.Definition(cmd.Type); ok && def.Gate.Scope == command.GateScopeSession {
-		// Truly optional; only required for gate-scoped commands.
-		if h.GateStateLoader == nil {
-			return command.Command{}, nil, command.Decision{}, ErrGateStateLoaderRequired
-		}
-		state, err := h.GateStateLoader.LoadSession(ctx, cmd.CampaignID, cmd.SessionID)
-		if err != nil {
-			return command.Command{}, nil, command.Decision{}, err
-		}
-		decision := h.Gate.Check(state, cmd)
-		if len(decision.Rejections) > 0 {
-			return cmd, nil, decision, nil
-		}
+	gateDecision, shortCircuit, err := h.evaluateSessionGate(ctx, validated)
+	if err != nil {
+		return command.Command{}, nil, command.Decision{}, err
+	}
+	if shortCircuit {
+		return validated, nil, gateDecision, nil
 	}
 
+	state, err := h.loadState(ctx, validated)
+	if err != nil {
+		return command.Command{}, nil, command.Decision{}, err
+	}
+
+	decision, err := h.decide(state, validated)
+	if err != nil {
+		return command.Command{}, nil, command.Decision{}, err
+	}
+
+	decision, err = h.validateDecisionEvents(decision)
+	if err != nil {
+		return command.Command{}, nil, command.Decision{}, err
+	}
+
+	decision, err = h.appendDecisionEvents(ctx, decision)
+	if err != nil {
+		return command.Command{}, nil, command.Decision{}, err
+	}
+
+	state, err = h.applyDecisionEvents(state, decision)
+	if err != nil {
+		return command.Command{}, nil, command.Decision{}, err
+	}
+
+	return validated, state, decision, nil
+}
+
+func (h Handler) validateCommand(cmd command.Command) (command.Command, error) {
 	// Required in production via NewHandler; nil here supports test-path flexibility.
-	if h.Decider == nil {
-		return command.Command{}, nil, command.Decision{}, ErrDeciderRequired
+	if h.Commands == nil {
+		return command.Command{}, ErrCommandRegistryRequired
 	}
+	return h.Commands.ValidateForDecision(cmd)
+}
+
+func (h Handler) evaluateSessionGate(ctx context.Context, cmd command.Command) (command.Decision, bool, error) {
+	def, ok := h.Commands.Definition(cmd.Type)
+	if !ok || def.Gate.Scope != command.GateScopeSession {
+		return command.Decision{}, false, nil
+	}
+
+	// Truly optional; only required for gate-scoped commands.
+	if h.GateStateLoader == nil {
+		return command.Decision{}, false, ErrGateStateLoaderRequired
+	}
+	state, err := h.GateStateLoader.LoadSession(ctx, cmd.CampaignID, cmd.SessionID)
+	if err != nil {
+		return command.Decision{}, false, err
+	}
+	decision := h.Gate.Check(state, cmd)
+	if len(decision.Rejections) > 0 {
+		return decision, true, nil
+	}
+	return command.Decision{}, false, nil
+}
+
+func (h Handler) loadState(ctx context.Context, cmd command.Command) (any, error) {
 	var state any
 	// Truly optional; falls back to nil state (stateless deciders).
-	if h.StateLoader != nil {
-		state, err = h.StateLoader.Load(ctx, cmd)
-		if err != nil {
-			return command.Command{}, nil, command.Decision{}, err
-		}
+	if h.StateLoader == nil {
+		return state, nil
 	}
-	// Truly optional; falls back to time.Now.
-	now := h.Now
-	if now == nil {
-		now = time.Now
+	return h.StateLoader.Load(ctx, cmd)
+}
+
+func (h Handler) decide(state any, cmd command.Command) (command.Decision, error) {
+	// Required in production via NewHandler; nil here supports test-path flexibility.
+	if h.Decider == nil {
+		return command.Decision{}, ErrDeciderRequired
 	}
+
+	now := h.nowFunc()
 	decision := h.Decider.Decide(state, cmd, now)
 	if err := decision.Validate(); err != nil {
 		// FIXME(telemetry): emit metric for command decider no-op outcomes (no events, no rejections)
 		// once domain/write model counters are wired.
-		return command.Command{}, nil, command.Decision{}, ErrCommandMustMutate
+		return command.Decision{}, ErrCommandMustMutate
 	}
-	// Required in production via NewHandler; nil here supports test-path flexibility.
-	if h.Events != nil && len(decision.Events) > 0 {
-		validated := make([]event.Event, 0, len(decision.Events))
-		for _, evt := range decision.Events {
-			vetted, err := h.Events.ValidateForAppend(evt)
-			if err != nil {
-				return command.Command{}, nil, command.Decision{}, err
-			}
-			validated = append(validated, vetted)
-		}
-		decision.Events = validated
+	return decision, nil
+}
+
+func (h Handler) nowFunc() func() time.Time {
+	now := h.Now
+	if now == nil {
+		now = time.Now
 	}
+	return now
+}
+
+func (h Handler) validateDecisionEvents(decision command.Decision) (command.Decision, error) {
 	// Required in production via NewHandler; nil here supports test-path flexibility.
-	if h.Journal != nil && len(decision.Events) > 0 {
-		stored, err := h.Journal.BatchAppend(ctx, decision.Events)
+	if h.Events == nil || len(decision.Events) == 0 {
+		return decision, nil
+	}
+	validated := make([]event.Event, 0, len(decision.Events))
+	for _, evt := range decision.Events {
+		vetted, err := h.Events.ValidateForAppend(evt)
 		if err != nil {
-			return command.Command{}, nil, command.Decision{}, err
+			return command.Decision{}, err
 		}
-		decision.Events = stored
+		validated = append(validated, vetted)
 	}
+	decision.Events = validated
+	return decision, nil
+}
+
+func (h Handler) appendDecisionEvents(ctx context.Context, decision command.Decision) (command.Decision, error) {
 	// Required in production via NewHandler; nil here supports test-path flexibility.
-	if h.Folder != nil && len(decision.Events) > 0 {
-		journalPersisted := h.Journal != nil
-		for _, evt := range decision.Events {
-			stateAfter, err := h.Folder.Fold(state, evt)
-			if err != nil {
-				if journalPersisted {
-					return command.Command{}, nil, command.Decision{}, wrapNonRetryable(fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err))
-				}
-				return command.Command{}, nil, command.Decision{}, err
-			}
-			state = stateAfter
-		}
+	if h.Journal == nil || len(decision.Events) == 0 {
+		return decision, nil
 	}
-	return cmd, state, decision, nil
+	stored, err := h.Journal.BatchAppend(ctx, decision.Events)
+	if err != nil {
+		return command.Decision{}, err
+	}
+	decision.Events = stored
+	return decision, nil
+}
+
+func (h Handler) applyDecisionEvents(state any, decision command.Decision) (any, error) {
+	// Required in production via NewHandler; nil here supports test-path flexibility.
+	if h.Folder == nil || len(decision.Events) == 0 {
+		return state, nil
+	}
+	journalPersisted := h.Journal != nil
+	for _, evt := range decision.Events {
+		stateAfter, err := h.Folder.Fold(state, evt)
+		if err != nil {
+			if journalPersisted {
+				return nil, wrapNonRetryable(fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err))
+			}
+			return nil, err
+		}
+		state = stateAfter
+	}
+	return state, nil
 }

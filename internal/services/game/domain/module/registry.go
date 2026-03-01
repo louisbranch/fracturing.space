@@ -127,25 +127,46 @@ func NewRegistry() *Registry {
 	}
 }
 
+func normalizeModuleKey(id, version string) (string, string) {
+	return strings.TrimSpace(id), strings.TrimSpace(version)
+}
+
+func resolveModule(registry *Registry, systemID, systemVersion string) (Module, string, string, error) {
+	if registry == nil {
+		return nil, "", "", ErrRegistryRequired
+	}
+	resolvedID, resolvedVersion := normalizeModuleKey(systemID, systemVersion)
+	if resolvedID == "" {
+		return nil, resolvedID, resolvedVersion, ErrSystemIDRequired
+	}
+	if resolvedVersion == "" {
+		return nil, resolvedID, resolvedVersion, ErrSystemVersionRequired
+	}
+	module := registry.Get(resolvedID, resolvedVersion)
+	if module == nil {
+		return nil, resolvedID, resolvedVersion, fmt.Errorf("%w: %s@%s", ErrModuleNotFound, resolvedID, resolvedVersion)
+	}
+	return module, resolvedID, resolvedVersion, nil
+}
+
+func resolveCommandModule(registry *Registry, cmd command.Command) (Module, error) {
+	module, _, _, err := resolveModule(registry, cmd.SystemID, cmd.SystemVersion)
+	return module, err
+}
+
+func resolveEventModule(registry *Registry, evt event.Event) (Module, error) {
+	module, _, _, err := resolveModule(registry, evt.SystemID, evt.SystemVersion)
+	return module, err
+}
+
 // RouteCommand routes a system command to the registered module decider.
 //
 // This boundary allows custom game systems to participate in command handling
 // without leaking system-specific behavior into core aggregates.
 func RouteCommand(registry *Registry, state any, cmd command.Command, now func() time.Time) (command.Decision, error) {
-	if registry == nil {
-		return command.Decision{}, ErrRegistryRequired
-	}
-	systemID := strings.TrimSpace(cmd.SystemID)
-	if systemID == "" {
-		return command.Decision{}, ErrSystemIDRequired
-	}
-	systemVersion := strings.TrimSpace(cmd.SystemVersion)
-	if systemVersion == "" {
-		return command.Decision{}, ErrSystemVersionRequired
-	}
-	module := registry.Get(systemID, systemVersion)
-	if module == nil {
-		return command.Decision{}, fmt.Errorf("%w: %s@%s", ErrModuleNotFound, systemID, systemVersion)
+	module, err := resolveCommandModule(registry, cmd)
+	if err != nil {
+		return command.Decision{}, err
 	}
 	decider := module.Decider()
 	if decider == nil {
@@ -159,20 +180,9 @@ func RouteCommand(registry *Registry, state any, cmd command.Command, now func()
 // Folders keep system-owned aggregate state slices aligned with event semantics
 // defined by the same module that emitted them.
 func RouteEvent(registry *Registry, state any, evt event.Event) (any, error) {
-	if registry == nil {
-		return nil, ErrRegistryRequired
-	}
-	systemID := strings.TrimSpace(evt.SystemID)
-	if systemID == "" {
-		return nil, ErrSystemIDRequired
-	}
-	systemVersion := strings.TrimSpace(evt.SystemVersion)
-	if systemVersion == "" {
-		return nil, ErrSystemVersionRequired
-	}
-	module := registry.Get(systemID, systemVersion)
-	if module == nil {
-		return nil, fmt.Errorf("%w: %s@%s", ErrModuleNotFound, systemID, systemVersion)
+	module, err := resolveEventModule(registry, evt)
+	if err != nil {
+		return nil, err
 	}
 	folder := module.Folder()
 	if folder == nil {
@@ -191,11 +201,10 @@ func (r *Registry) Register(module Module) error {
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	id := strings.TrimSpace(module.ID())
+	id, version := normalizeModuleKey(module.ID(), module.Version())
 	if id == "" {
 		return ErrSystemIDRequired
 	}
-	version := strings.TrimSpace(module.Version())
 	if version == "" {
 		return ErrSystemVersionRequired
 	}
@@ -225,8 +234,7 @@ func (r *Registry) Get(id, version string) Module {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	resolvedID := strings.TrimSpace(id)
-	resolvedVersion := strings.TrimSpace(version)
+	resolvedID, resolvedVersion := normalizeModuleKey(id, version)
 	if resolvedID == "" {
 		return nil
 	}

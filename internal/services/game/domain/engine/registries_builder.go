@@ -11,87 +11,211 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
+type registryBootstrap struct {
+	commandRegistry *command.Registry
+	eventRegistry   *event.Registry
+	systemRegistry  *module.Registry
+	modules         []module.Module
+}
+
+// newRegistryBootstrap centralizes write-path registry allocation so tests can
+// exercise the same bootstrap state container as production.
+func newRegistryBootstrap(modules []module.Module) registryBootstrap {
+	return registryBootstrap{
+		commandRegistry: command.NewRegistry(),
+		eventRegistry:   event.NewRegistry(),
+		systemRegistry:  module.NewRegistry(),
+		modules:         modules,
+	}
+}
+
 // BuildRegistries registers core and system modules.
 //
 // This is the shared bootstrap point where all command/event contracts become a
 // single validated registry consumed by the write handler and projections.
 func BuildRegistries(modules ...module.Module) (Registries, error) {
-	commandRegistry := command.NewRegistry()
-	eventRegistry := event.NewRegistry()
-	systemRegistry := module.NewRegistry()
+	return buildRegistries(CoreDomains(), modules)
+}
 
-	for _, domain := range CoreDomains() {
-		if err := domain.RegisterCommands(commandRegistry); err != nil {
-			return Registries{}, fmt.Errorf("register %s commands: %w", domain.Name(), err)
+// buildRegistries executes registry bootstrap with explicit domain/module inputs.
+// This seam keeps production wiring simple while allowing deterministic branch
+// tests around startup validation failures.
+func buildRegistries(domains []CoreDomain, modules []module.Module) (Registries, error) {
+	bootstrap := newRegistryBootstrap(modules)
+
+	if err := bootstrap.registerCoreDomains(domains); err != nil {
+		return Registries{}, err
+	}
+
+	if err := bootstrap.registerCoreAliases(); err != nil {
+		return Registries{}, err
+	}
+
+	if err := bootstrap.validateCoreRegistrations(); err != nil {
+		return Registries{}, err
+	}
+
+	if err := bootstrap.registerSystemModules(); err != nil {
+		return Registries{}, err
+	}
+
+	if err := bootstrap.validateRegistryContracts(domains); err != nil {
+		return Registries{}, err
+	}
+
+	if err := bootstrap.validateProjectionRegistries(domains); err != nil {
+		return Registries{}, err
+	}
+
+	if err := bootstrap.validatePayloadValidators(); err != nil {
+		return Registries{}, err
+	}
+
+	return Registries{
+		Commands: bootstrap.commandRegistry,
+		Events:   bootstrap.eventRegistry,
+		Systems:  bootstrap.systemRegistry,
+	}, nil
+}
+
+// registerCoreDomains keeps core registration isolated from system module
+// wiring so command/event contract failures are reported with domain context.
+func (b registryBootstrap) registerCoreDomains(domains []CoreDomain) error {
+	for _, domain := range domains {
+		if err := domain.RegisterCommands(b.commandRegistry); err != nil {
+			return fmt.Errorf("register %s commands: %w", domain.Name(), err)
 		}
-		if err := domain.RegisterEvents(eventRegistry); err != nil {
-			return Registries{}, fmt.Errorf("register %s events: %w", domain.Name(), err)
+		if err := domain.RegisterEvents(b.eventRegistry); err != nil {
+			return fmt.Errorf("register %s events: %w", domain.Name(), err)
 		}
 	}
+	return nil
+}
 
-	if err := eventRegistry.RegisterAlias(participant.EventTypeSeatReassignedLegacy, participant.EventTypeSeatReassigned); err != nil {
-		return Registries{}, err
-	}
+// registerCoreAliases seeds registry-level backward-compatible aliases that are
+// treated as core runtime contracts.
+func (b registryBootstrap) registerCoreAliases() error {
+	return b.eventRegistry.RegisterAlias(participant.EventTypeSeatReassignedLegacy, participant.EventTypeSeatReassigned)
+}
 
-	if err := validateCoreEmittableEventTypes(eventRegistry); err != nil {
-		return Registries{}, err
-	}
+// validateCoreRegistrations enforces core domain emission declarations against
+// the shared event registry before system modules are loaded.
+func (b registryBootstrap) validateCoreRegistrations() error {
+	return validateCoreEmittableEventTypes(b.eventRegistry)
+}
 
-	for _, mod := range modules {
-		if err := systemRegistry.Register(mod); err != nil {
-			return Registries{}, err
+// registerSystemModules executes the module registration phase and validates
+// new system-owned command/event types against namespace and emit declarations.
+func (b registryBootstrap) registerSystemModules() error {
+	for _, mod := range b.modules {
+		if err := b.systemRegistry.Register(mod); err != nil {
+			return err
 		}
-		beforeCommands := commandTypeSet(commandRegistry.ListDefinitions())
-		if err := mod.RegisterCommands(commandRegistry); err != nil {
-			return Registries{}, err
+		beforeCommands := commandTypeSet(b.commandRegistry.ListDefinitions())
+		if err := mod.RegisterCommands(b.commandRegistry); err != nil {
+			return err
 		}
-		beforeEvents := eventTypeSet(eventRegistry.ListDefinitions())
-		if err := mod.RegisterEvents(eventRegistry); err != nil {
-			return Registries{}, err
+		beforeEvents := eventTypeSet(b.eventRegistry.ListDefinitions())
+		if err := mod.RegisterEvents(b.eventRegistry); err != nil {
+			return err
 		}
-		if err := validateModuleSystemTypePrefixes(mod, beforeCommands, beforeEvents, commandRegistry.ListDefinitions(), eventRegistry.ListDefinitions()); err != nil {
-			return Registries{}, err
+		if err := validateModuleSystemTypePrefixes(
+			mod,
+			beforeCommands,
+			beforeEvents,
+			b.commandRegistry.ListDefinitions(),
+			b.eventRegistry.ListDefinitions(),
+		); err != nil {
+			return err
 		}
-		if err := validateEmittableEventTypes(mod, eventRegistry); err != nil {
-			return Registries{}, err
+		if err := validateEmittableEventTypes(mod, b.eventRegistry); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
-	if err := ValidateSystemReadinessCheckerCoverage(systemRegistry); err != nil {
-		return Registries{}, err
+type registryValidationStep func(registryBootstrap) error
+
+// runRegistryValidationPipeline runs registry validators in order and short
+// circuits on first failure to preserve startup fail-fast behavior.
+func runRegistryValidationPipeline(bootstrap registryBootstrap, steps ...registryValidationStep) error {
+	for _, step := range steps {
+		if err := step(bootstrap); err != nil {
+			return err
+		}
 	}
+	return nil
+}
 
-	if err := ValidateSystemFoldCoverage(systemRegistry, eventRegistry); err != nil {
-		return Registries{}, err
+// validateRegistryContracts executes aggregate/runtime guardrails after all
+// command/event definitions are loaded into registries.
+func (b registryBootstrap) validateRegistryContracts(domains []CoreDomain) error {
+	allFoldHandled := collectFoldHandledTypes(domains, b.modules)
+	return runRegistryValidationPipeline(
+		b,
+		func(state registryBootstrap) error {
+			return ValidateSystemReadinessCheckerCoverage(state.systemRegistry)
+		},
+		func(state registryBootstrap) error {
+			return ValidateSystemFoldCoverage(state.systemRegistry, state.eventRegistry)
+		},
+		func(state registryBootstrap) error {
+			return ValidateDeciderCommandCoverage(state.systemRegistry, state.commandRegistry)
+		},
+		func(state registryBootstrap) error {
+			return ValidateCoreDeciderCommandCoverage(state.commandRegistry)
+		},
+		func(state registryBootstrap) error {
+			return ValidateFoldCoverage(state.eventRegistry)
+		},
+		func(state registryBootstrap) error {
+			return ValidateAliasFoldCoverage(state.eventRegistry)
+		},
+		func(state registryBootstrap) error {
+			return ValidateAggregateFoldDispatch(state.eventRegistry)
+		},
+		func(state registryBootstrap) error {
+			return ValidateEntityKeyedAddressing(state.eventRegistry)
+		},
+		func(state registryBootstrap) error {
+			return ValidateNoFoldHandlersForAuditOnlyEvents(state.eventRegistry, allFoldHandled)
+		},
+		func(state registryBootstrap) error {
+			return ValidateStateFactoryDeterminism(state.systemRegistry)
+		},
+		func(state registryBootstrap) error {
+			return ValidateSystemMetadataConsistency(state.eventRegistry, state.systemRegistry)
+		},
+	)
+}
+
+// validateProjectionRegistries ensures projection declarations stay aligned with
+// current registry definitions and module metadata.
+func (b registryBootstrap) validateProjectionRegistries(domains []CoreDomain) error {
+	projectionHandled := collectProjectionHandledTypes(domains)
+	return ValidateProjectionRegistries(b.eventRegistry, b.systemRegistry, nil, projectionHandled)
+}
+
+// validatePayloadValidators rejects non-audit event types that skipped payload
+// validation wiring so append-time contracts remain explicit.
+func (b registryBootstrap) validatePayloadValidators() error {
+	missing := b.eventRegistry.MissingPayloadValidators()
+	if len(missing) == 0 {
+		return nil
 	}
-
-	if err := ValidateDeciderCommandCoverage(systemRegistry, commandRegistry); err != nil {
-		return Registries{}, err
+	names := make([]string, len(missing))
+	for i, t := range missing {
+		names[i] = string(t)
 	}
+	return fmt.Errorf("non-audit events without payload validators: %s", strings.Join(names, ", "))
+}
 
-	if err := ValidateCoreDeciderCommandCoverage(commandRegistry); err != nil {
-		return Registries{}, err
-	}
-
-	if err := ValidateFoldCoverage(eventRegistry); err != nil {
-		return Registries{}, err
-	}
-
-	if err := ValidateAliasFoldCoverage(eventRegistry); err != nil {
-		return Registries{}, err
-	}
-
-	if err := ValidateAggregateFoldDispatch(eventRegistry); err != nil {
-		return Registries{}, err
-	}
-
-	if err := ValidateEntityKeyedAddressing(eventRegistry); err != nil {
-		return Registries{}, err
-	}
-
-	// Collect all fold handled types (core + system) for intent-guard validation.
+// collectFoldHandledTypes gathers fold declarations across core domains and
+// system modules for intent-guard validation.
+func collectFoldHandledTypes(domains []CoreDomain, modules []module.Module) []event.Type {
 	var allFoldHandled []event.Type
-	for _, domain := range CoreDomains() {
+	for _, domain := range domains {
 		allFoldHandled = append(allFoldHandled, domain.FoldHandledTypes()...)
 	}
 	for _, mod := range modules {
@@ -99,47 +223,19 @@ func BuildRegistries(modules ...module.Module) (Registries, error) {
 			allFoldHandled = append(allFoldHandled, folder.FoldHandledTypes()...)
 		}
 	}
-	if err := ValidateNoFoldHandlersForAuditOnlyEvents(eventRegistry, allFoldHandled); err != nil {
-		return Registries{}, err
-	}
+	return allFoldHandled
+}
 
-	if err := ValidateStateFactoryDeterminism(systemRegistry); err != nil {
-		return Registries{}, err
-	}
-
-	if err := ValidateSystemMetadataConsistency(eventRegistry, systemRegistry); err != nil {
-		return Registries{}, err
-	}
-
+// collectProjectionHandledTypes gathers core projection declarations used by
+// projection registry consistency checks.
+func collectProjectionHandledTypes(domains []CoreDomain) []event.Type {
 	projectionHandled := make([]event.Type, 0)
-	for _, domain := range CoreDomains() {
+	for _, domain := range domains {
 		if domain.ProjectionHandledTypes != nil {
 			projectionHandled = append(projectionHandled, domain.ProjectionHandledTypes()...)
 		}
 	}
-	if err := ValidateProjectionRegistries(
-		eventRegistry,
-		systemRegistry,
-		nil,
-		projectionHandled,
-	); err != nil {
-		return Registries{}, err
-	}
-
-	missing := eventRegistry.MissingPayloadValidators()
-	if len(missing) > 0 {
-		names := make([]string, len(missing))
-		for i, t := range missing {
-			names[i] = string(t)
-		}
-		return Registries{}, fmt.Errorf("non-audit events without payload validators: %s", strings.Join(names, ", "))
-	}
-
-	return Registries{
-		Commands: commandRegistry,
-		Events:   eventRegistry,
-		Systems:  systemRegistry,
-	}, nil
+	return projectionHandled
 }
 
 // commandTypeSet creates a set view for prefix validation comparisons.

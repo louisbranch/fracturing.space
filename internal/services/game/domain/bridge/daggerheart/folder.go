@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/reducer"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
@@ -202,24 +203,14 @@ func applyCharacterStatePatched(state *SnapshotState, payload CharacterStatePatc
 	characterState := state.CharacterStates[characterID]
 	characterState.CampaignID = state.CampaignID
 	characterState.CharacterID = characterID
-	if payload.HPAfter != nil {
-		characterState.HP = *payload.HPAfter
-	}
-	if payload.HopeAfter != nil {
-		characterState.Hope = *payload.HopeAfter
-	}
-	if payload.HopeMaxAfter != nil {
-		characterState.HopeMax = *payload.HopeMaxAfter
-	}
-	if payload.StressAfter != nil {
-		characterState.Stress = *payload.StressAfter
-	}
-	if payload.ArmorAfter != nil {
-		characterState.Armor = *payload.ArmorAfter
-	}
-	if payload.LifeStateAfter != nil {
-		characterState.LifeState = *payload.LifeStateAfter
-	}
+	reducer.ApplyCharacterStatePatch(&characterState, reducer.CharacterStatePatch{
+		HPAfter:        payload.HPAfter,
+		HopeAfter:      payload.HopeAfter,
+		HopeMaxAfter:   payload.HopeMaxAfter,
+		StressAfter:    payload.StressAfter,
+		ArmorAfter:     payload.ArmorAfter,
+		LifeStateAfter: payload.LifeStateAfter,
+	})
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -231,7 +222,7 @@ func applyCharacterConditionsChanged(state *SnapshotState, payload ConditionChan
 	characterState := state.CharacterStates[characterID]
 	characterState.CampaignID = state.CampaignID
 	characterState.CharacterID = characterID
-	characterState.Conditions = append([]string(nil), payload.ConditionsAfter...)
+	reducer.ApplyConditionPatch(&characterState, payload.ConditionsAfter)
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -243,9 +234,7 @@ func applyCharacterLoadoutSwapped(state *SnapshotState, payload LoadoutSwappedPa
 	characterState := state.CharacterStates[characterID]
 	characterState.CampaignID = state.CampaignID
 	characterState.CharacterID = characterID
-	if payload.StressAfter != nil {
-		characterState.Stress = *payload.StressAfter
-	}
+	reducer.ApplyLoadoutSwap(&characterState, payload.StressAfter)
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -257,7 +246,7 @@ func applyCharacterTemporaryArmorApplied(state *SnapshotState, payload Character
 	characterState := state.CharacterStates[characterID]
 	characterState.CampaignID = state.CampaignID
 	characterState.CharacterID = characterID
-	characterState.ApplyTemporaryArmor(TemporaryArmorBucket{
+	reducer.ApplyTemporaryArmor(&characterState, reducer.TemporaryArmorPatch{
 		Source:   strings.TrimSpace(payload.Source),
 		Duration: strings.TrimSpace(payload.Duration),
 		SourceID: strings.TrimSpace(payload.SourceID),
@@ -274,15 +263,11 @@ func applyRestCharacterPatch(state *SnapshotState, payload RestCharacterStatePat
 	characterState := state.CharacterStates[characterID]
 	characterState.CampaignID = state.CampaignID
 	characterState.CharacterID = characterID
-	if payload.HopeAfter != nil {
-		characterState.Hope = *payload.HopeAfter
-	}
-	if payload.StressAfter != nil {
-		characterState.Stress = *payload.StressAfter
-	}
-	if payload.ArmorAfter != nil {
-		characterState.Armor = *payload.ArmorAfter
-	}
+	reducer.ApplyRestPatch(&characterState, reducer.RestCharacterPatch{
+		HopeAfter:   payload.HopeAfter,
+		StressAfter: payload.StressAfter,
+		ArmorAfter:  payload.ArmorAfter,
+	})
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -294,13 +279,7 @@ func clearRestTemporaryArmor(state *SnapshotState, characterID string, clearShor
 	characterState := state.CharacterStates[characterID]
 	characterState.CampaignID = state.CampaignID
 	characterState.CharacterID = characterID
-	if clearShortRest {
-		characterState.ClearTemporaryArmorByDuration("short_rest")
-	}
-	if clearLongRest {
-		characterState.ClearTemporaryArmorByDuration("long_rest")
-	}
-	characterState.SetArmor(characterState.ResourceCap(ResourceArmor))
+	reducer.ClearRestTemporaryArmor(&characterState, clearShortRest, clearLongRest)
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -334,12 +313,7 @@ func applyDamageApplied(state *SnapshotState, characterID string, hpAfter, armor
 	characterState := state.CharacterStates[characterID]
 	characterState.CampaignID = state.CampaignID
 	characterState.CharacterID = characterID
-	if hpAfter != nil {
-		characterState.HP = *hpAfter
-	}
-	if armorAfter != nil {
-		characterState.Armor = *armorAfter
-	}
+	reducer.ApplyDamage(&characterState, hpAfter, armorAfter)
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -351,22 +325,7 @@ func applyDowntimeMove(state *SnapshotState, characterID string, move string, ho
 	characterState := state.CharacterStates[characterID]
 	characterState.CampaignID = state.CampaignID
 	characterState.CharacterID = characterID
-	if hopeAfter != nil {
-		characterState.Hope = *hopeAfter
-	}
-	if stressAfter != nil {
-		characterState.Stress = *stressAfter
-	}
-	if move == "repair_all_armor" {
-		characterState.ClearTemporaryArmorByDuration("short_rest")
-		characterState.SetArmor(characterState.Armor)
-	}
-	if armorAfter != nil {
-		characterState.Armor = *armorAfter
-		if move == "repair_all_armor" {
-			characterState.SetArmor(*armorAfter)
-		}
-	}
+	reducer.ApplyDowntimeMove(&characterState, move, hopeAfter, stressAfter, armorAfter)
 	state.CharacterStates[characterID] = characterState
 }
 

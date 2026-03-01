@@ -291,3 +291,27 @@ func TestRegisterEvents_ValidatesProfileUpdatedPayload(t *testing.T) {
 		t.Fatalf("expected payload validation error, got %v", err)
 	}
 }
+
+func TestRegisterCommands_PropagatesDuplicateRegistrationError(t *testing.T) {
+	registry := command.NewRegistry()
+	if err := registry.Register(characterCommandContracts[0].definition); err != nil {
+		t.Fatalf("seed duplicate command definition: %v", err)
+	}
+
+	err := RegisterCommands(registry)
+	if err == nil {
+		t.Fatal("expected duplicate registration error")
+	}
+}
+
+func TestRegisterEvents_PropagatesDuplicateRegistrationError(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := registry.Register(characterEventContracts[0].definition); err != nil {
+		t.Fatalf("seed duplicate event definition: %v", err)
+	}
+
+	err := RegisterEvents(registry)
+	if err == nil {
+		t.Fatal("expected duplicate registration error")
+	}
+}

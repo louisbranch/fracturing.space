@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	bridgeDaggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -39,17 +39,17 @@ func TestNormalizeAdversaryStatsDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if stats.Evasion != bridgeDaggerheart.AdversaryDefaultEvasion ||
-		stats.Major != bridgeDaggerheart.AdversaryDefaultMajor ||
-		stats.Severe != bridgeDaggerheart.AdversaryDefaultSevere {
+	if stats.Evasion != daggerheartprofile.AdversaryDefaultEvasion ||
+		stats.Major != daggerheartprofile.AdversaryDefaultMajor ||
+		stats.Severe != daggerheartprofile.AdversaryDefaultSevere {
 		t.Fatalf(
 			"expected defaults to use bridge adversary defaults, got Evasion=%d (want %d), Major=%d (want %d), Severe=%d (want %d)",
 			stats.Evasion,
-			bridgeDaggerheart.AdversaryDefaultEvasion,
+			daggerheartprofile.AdversaryDefaultEvasion,
 			stats.Major,
-			bridgeDaggerheart.AdversaryDefaultMajor,
+			daggerheartprofile.AdversaryDefaultMajor,
 			stats.Severe,
-			bridgeDaggerheart.AdversaryDefaultSevere,
+			daggerheartprofile.AdversaryDefaultSevere,
 		)
 	}
 	if stats.HPMax == 0 || stats.HP == 0 {

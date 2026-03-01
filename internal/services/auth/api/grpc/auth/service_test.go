@@ -13,7 +13,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
-	invite "github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/joingrant"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -369,11 +369,11 @@ func TestIssueJoinGrant_Success(t *testing.T) {
 		t.Fatal("expected expires_at")
 	}
 
-	claims, err := invite.ValidateJoinGrant(resp.GetJoinGrant(), invite.JoinGrantExpectation{
+	claims, err := joingrant.Validate(resp.GetJoinGrant(), joingrant.Expectation{
 		CampaignID: "campaign-1",
 		InviteID:   "invite-1",
 		UserID:     "user-1",
-	}, invite.JoinGrantConfig{
+	}, joingrant.Config{
 		Issuer:   issuer,
 		Audience: audience,
 		Key:      publicKey,

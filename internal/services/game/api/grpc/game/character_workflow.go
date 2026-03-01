@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -435,7 +436,7 @@ func (c characterApplication) applyDaggerheartCreationStepInput(ctx context.Cont
 		return nil
 
 	case *daggerheartv1.DaggerheartCreationStepInput_TraitsInput:
-		traits := daggerheart.Traits{
+		traits := daggerheartprofile.Traits{
 			Agility:   int(step.TraitsInput.GetAgility()),
 			Strength:  int(step.TraitsInput.GetStrength()),
 			Finesse:   int(step.TraitsInput.GetFinesse()),
@@ -443,22 +444,22 @@ func (c characterApplication) applyDaggerheartCreationStepInput(ctx context.Cont
 			Presence:  int(step.TraitsInput.GetPresence()),
 			Knowledge: int(step.TraitsInput.GetKnowledge()),
 		}
-		if err := daggerheart.ValidateTrait("agility", traits.Agility); err != nil {
+		if err := daggerheartprofile.ValidateTrait("agility", traits.Agility); err != nil {
 			return err
 		}
-		if err := daggerheart.ValidateTrait("strength", traits.Strength); err != nil {
+		if err := daggerheartprofile.ValidateTrait("strength", traits.Strength); err != nil {
 			return err
 		}
-		if err := daggerheart.ValidateTrait("finesse", traits.Finesse); err != nil {
+		if err := daggerheartprofile.ValidateTrait("finesse", traits.Finesse); err != nil {
 			return err
 		}
-		if err := daggerheart.ValidateTrait("instinct", traits.Instinct); err != nil {
+		if err := daggerheartprofile.ValidateTrait("instinct", traits.Instinct); err != nil {
 			return err
 		}
-		if err := daggerheart.ValidateTrait("presence", traits.Presence); err != nil {
+		if err := daggerheartprofile.ValidateTrait("presence", traits.Presence); err != nil {
 			return err
 		}
-		if err := daggerheart.ValidateTrait("knowledge", traits.Knowledge); err != nil {
+		if err := daggerheartprofile.ValidateTrait("knowledge", traits.Knowledge); err != nil {
 			return err
 		}
 		if err := daggerheart.ValidateCreationTraitDistribution(traits); err != nil {
@@ -490,16 +491,16 @@ func (c characterApplication) applyDaggerheartCreationStepInput(ctx context.Cont
 		if class.StartingEvasion <= 0 {
 			return status.Errorf(codes.InvalidArgument, "class_id %q has invalid starting evasion", profile.ClassID)
 		}
-		profile.Level = daggerheart.PCLevelDefault
+		profile.Level = daggerheartprofile.PCLevelDefault
 		profile.HpMax = class.StartingHP
-		profile.StressMax = daggerheart.PCStressMax
+		profile.StressMax = daggerheartprofile.PCStressMax
 		profile.Evasion = class.StartingEvasion
 		profile.DetailsRecorded = true
-		profile.MajorThreshold, profile.SevereThreshold = daggerheart.DeriveThresholds(
+		profile.MajorThreshold, profile.SevereThreshold = daggerheartprofile.DeriveThresholds(
 			profile.Level,
 			profile.ArmorScore,
-			daggerheart.PCMajorThreshold,
-			daggerheart.PCSevereThreshold,
+			daggerheartprofile.PCMajorThreshold,
+			daggerheartprofile.PCSevereThreshold,
 		)
 		return nil
 
@@ -588,12 +589,12 @@ func (c characterApplication) applyDaggerheartCreationStepInput(ctx context.Cont
 		profile.StartingWeaponIDs = normalizedWeaponIDs
 		profile.StartingArmorID = armorID
 		profile.StartingPotionItemID = potionItemID
-		profile.Proficiency = daggerheart.PCProficiency
+		profile.Proficiency = daggerheartprofile.PCProficiency
 		profile.ArmorScore = armor.ArmorScore
 		if profile.Level == 0 {
-			profile.Level = daggerheart.PCLevelDefault
+			profile.Level = daggerheartprofile.PCLevelDefault
 		}
-		profile.MajorThreshold, profile.SevereThreshold = daggerheart.DeriveThresholds(
+		profile.MajorThreshold, profile.SevereThreshold = daggerheartprofile.DeriveThresholds(
 			profile.Level,
 			profile.ArmorScore,
 			armor.BaseMajorThreshold,
@@ -767,15 +768,15 @@ func daggerheartCreationStepNumber(input *daggerheartv1.DaggerheartCreationStepI
 }
 
 func validateDaggerheartProfile(profile storage.DaggerheartCharacterProfile) error {
-	experiences := make([]daggerheart.Experience, 0, len(profile.Experiences))
+	experiences := make([]daggerheartprofile.Experience, 0, len(profile.Experiences))
 	for _, experience := range profile.Experiences {
-		experiences = append(experiences, daggerheart.Experience{
+		experiences = append(experiences, daggerheartprofile.Experience{
 			Name:     experience.Name,
 			Modifier: experience.Modifier,
 		})
 	}
 
-	if err := daggerheart.ValidateProfile(
+	if err := daggerheartprofile.Validate(
 		profile.Level,
 		profile.HpMax,
 		profile.StressMax,
@@ -785,7 +786,7 @@ func validateDaggerheartProfile(profile storage.DaggerheartCharacterProfile) err
 		profile.Proficiency,
 		profile.ArmorScore,
 		profile.ArmorMax,
-		daggerheart.Traits{
+		daggerheartprofile.Traits{
 			Agility:   profile.Agility,
 			Strength:  profile.Strength,
 			Finesse:   profile.Finesse,
@@ -813,7 +814,7 @@ func ensureDaggerheartProfileDefaults(profile storage.DaggerheartCharacterProfil
 	if kind == character.KindNPC {
 		kindLabel = "NPC"
 	}
-	defaults := daggerheart.GetProfileDefaults(kindLabel)
+	defaults := daggerheartprofile.GetDefaults(kindLabel)
 
 	if profile.Level == 0 {
 		profile.Level = defaults.Level
@@ -834,7 +835,7 @@ func ensureDaggerheartProfileDefaults(profile storage.DaggerheartCharacterProfil
 		profile.ArmorMax = defaults.ArmorMax
 	}
 	if profile.MajorThreshold == 0 && profile.SevereThreshold == 0 {
-		profile.MajorThreshold, profile.SevereThreshold = daggerheart.DeriveThresholds(
+		profile.MajorThreshold, profile.SevereThreshold = daggerheartprofile.DeriveThresholds(
 			profile.Level,
 			profile.ArmorScore,
 			defaults.MajorThreshold,
@@ -888,9 +889,9 @@ func daggerheartSystemProfileMap(profile storage.DaggerheartCharacterProfile) ma
 }
 
 func daggerheartCreationProfileFromStorage(profile storage.DaggerheartCharacterProfile) daggerheart.CreationProfile {
-	experiences := make([]daggerheart.Experience, 0, len(profile.Experiences))
+	experiences := make([]daggerheartprofile.Experience, 0, len(profile.Experiences))
 	for _, experience := range profile.Experiences {
-		experiences = append(experiences, daggerheart.Experience{
+		experiences = append(experiences, daggerheartprofile.Experience{
 			Name:     experience.Name,
 			Modifier: experience.Modifier,
 		})
@@ -902,7 +903,7 @@ func daggerheartCreationProfileFromStorage(profile storage.DaggerheartCharacterP
 		AncestryID:     profile.AncestryID,
 		CommunityID:    profile.CommunityID,
 		TraitsAssigned: profile.TraitsAssigned,
-		Traits: daggerheart.Traits{
+		Traits: daggerheartprofile.Traits{
 			Agility:   profile.Agility,
 			Strength:  profile.Strength,
 			Finesse:   profile.Finesse,

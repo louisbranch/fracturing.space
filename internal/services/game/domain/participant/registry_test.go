@@ -417,3 +417,27 @@ func TestRegisterEvents_ValidatesSeatReassignedPayload(t *testing.T) {
 		}
 	}
 }
+
+func TestRegisterCommands_PropagatesDuplicateRegistrationError(t *testing.T) {
+	registry := command.NewRegistry()
+	if err := registry.Register(participantCommandRegistrations[0].definition); err != nil {
+		t.Fatalf("seed duplicate command definition: %v", err)
+	}
+
+	err := RegisterCommands(registry)
+	if err == nil {
+		t.Fatal("expected duplicate registration error")
+	}
+}
+
+func TestRegisterEvents_PropagatesDuplicateRegistrationError(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := registry.Register(participantEventRegistrations[0].definition); err != nil {
+		t.Fatalf("seed duplicate event definition: %v", err)
+	}
+
+	err := RegisterEvents(registry)
+	if err == nil {
+		t.Fatal("expected duplicate registration error")
+	}
+}

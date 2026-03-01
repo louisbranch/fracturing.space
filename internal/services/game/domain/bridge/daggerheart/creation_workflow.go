@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 )
 
 const (
@@ -52,7 +54,7 @@ type CreationProfile struct {
 	AncestryID           string
 	CommunityID          string
 	TraitsAssigned       bool
-	Traits               Traits
+	Traits               daggerheartprofile.Traits
 	DetailsRecorded      bool
 	Level                int
 	HpMax                int
@@ -62,7 +64,7 @@ type CreationProfile struct {
 	StartingArmorID      string
 	StartingPotionItemID string
 	Background           string
-	Experiences          []Experience
+	Experiences          []daggerheartprofile.Experience
 	DomainCardIDs        []string
 	Connections          string
 }
@@ -150,7 +152,7 @@ func EvaluateCreationProgress(profile CreationProfile) CreationProgress {
 
 // ValidateCreationTraitDistribution validates the SRD-required starting
 // distribution (+2,+1,+1,+0,+0,-1).
-func ValidateCreationTraitDistribution(traits Traits) error {
+func ValidateCreationTraitDistribution(traits daggerheartprofile.Traits) error {
 	values := []int{
 		traits.Agility,
 		traits.Strength,
@@ -160,7 +162,7 @@ func ValidateCreationTraitDistribution(traits Traits) error {
 		traits.Knowledge,
 	}
 	for _, value := range values {
-		if value < TraitMin || value > TraitMax {
+		if value < daggerheartprofile.TraitMin || value > daggerheartprofile.TraitMax {
 			return fmt.Errorf("traits must be assigned as +2,+1,+1,+0,+0,-1")
 		}
 	}
@@ -217,9 +219,9 @@ func EvaluateCreationReadinessFromSystemProfile(systemProfile map[string]any) (b
 }
 
 func creationProfileFromPayload(payload profilePayload) CreationProfile {
-	experiences := make([]Experience, 0, len(payload.Experiences))
+	experiences := make([]daggerheartprofile.Experience, 0, len(payload.Experiences))
 	for _, exp := range payload.Experiences {
-		experiences = append(experiences, Experience{
+		experiences = append(experiences, daggerheartprofile.Experience{
 			Name:     exp.Name,
 			Modifier: exp.Modifier,
 		})
@@ -230,7 +232,7 @@ func creationProfileFromPayload(payload profilePayload) CreationProfile {
 		AncestryID:     payload.AncestryID,
 		CommunityID:    payload.CommunityID,
 		TraitsAssigned: payload.TraitsAssigned,
-		Traits: Traits{
+		Traits: daggerheartprofile.Traits{
 			Agility:   payload.Agility,
 			Strength:  payload.Strength,
 			Finesse:   payload.Finesse,
@@ -290,7 +292,7 @@ func hasStartingEquipment(profile CreationProfile) bool {
 	return IsValidStartingPotionItemID(profile.StartingPotionItemID)
 }
 
-func hasExperiences(experiences []Experience) bool {
+func hasExperiences(experiences []daggerheartprofile.Experience) bool {
 	if len(experiences) == 0 {
 		return false
 	}

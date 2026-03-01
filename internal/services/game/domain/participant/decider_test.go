@@ -829,6 +829,161 @@ func TestDecide_MalformedJoinPayloadRejected(t *testing.T) {
 	}
 }
 
+func TestDecide_MalformedBindPayloadRejected(t *testing.T) {
+	decision := Decide(State{Joined: true}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.bind"),
+		PayloadJSON: []byte(`{corrupt`),
+	}, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "PAYLOAD_DECODE_FAILED" {
+		t.Fatalf("rejection code = %s, want PAYLOAD_DECODE_FAILED", decision.Rejections[0].Code)
+	}
+}
+
+func TestDecide_MalformedUnbindPayloadRejected(t *testing.T) {
+	decision := Decide(State{Joined: true}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.unbind"),
+		PayloadJSON: []byte(`{corrupt`),
+	}, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "PAYLOAD_DECODE_FAILED" {
+		t.Fatalf("rejection code = %s, want PAYLOAD_DECODE_FAILED", decision.Rejections[0].Code)
+	}
+}
+
+func TestDecide_MalformedSeatReassignPayloadRejected(t *testing.T) {
+	commandTypes := []command.Type{
+		command.Type("seat.reassign"),
+		command.Type("participant.seat.reassign"),
+	}
+	for _, cmdType := range commandTypes {
+		t.Run(string(cmdType), func(t *testing.T) {
+			decision := Decide(State{Joined: true}, command.Command{
+				CampaignID:  "camp-1",
+				Type:        cmdType,
+				PayloadJSON: []byte(`{corrupt`),
+			}, nil)
+			if len(decision.Rejections) != 1 {
+				t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+			}
+			if decision.Rejections[0].Code != "PAYLOAD_DECODE_FAILED" {
+				t.Fatalf("rejection code = %s, want PAYLOAD_DECODE_FAILED", decision.Rejections[0].Code)
+			}
+		})
+	}
+}
+
+func TestDecideParticipantBind_MissingParticipantIDRejected(t *testing.T) {
+	decision := Decide(State{Joined: true}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.bind"),
+		PayloadJSON: []byte(`{"participant_id":" ","user_id":"user-2"}`),
+	}, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantIDRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantIDRequired)
+	}
+}
+
+func TestDecideParticipantUnbind_MissingParticipantIDRejected(t *testing.T) {
+	decision := Decide(State{Joined: true}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.unbind"),
+		PayloadJSON: []byte(`{"participant_id":" ","user_id":"user-2"}`),
+	}, nil)
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantIDRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantIDRequired)
+	}
+}
+
+func TestDecideSeatReassign_MissingParticipantIDRejected(t *testing.T) {
+	commandTypes := []command.Type{
+		command.Type("seat.reassign"),
+		command.Type("participant.seat.reassign"),
+	}
+	for _, cmdType := range commandTypes {
+		t.Run(string(cmdType), func(t *testing.T) {
+			decision := Decide(State{Joined: true}, command.Command{
+				CampaignID:  "camp-1",
+				Type:        cmdType,
+				PayloadJSON: []byte(`{"participant_id":" ","user_id":"user-2"}`),
+			}, nil)
+			if len(decision.Rejections) != 1 {
+				t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+			}
+			if decision.Rejections[0].Code != rejectionCodeParticipantIDRequired {
+				t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantIDRequired)
+			}
+		})
+	}
+}
+
+func TestDecideParticipantActiveGuards_LeftParticipantRejected(t *testing.T) {
+	tests := []struct {
+		name string
+		cmd  command.Command
+	}{
+		{
+			name: "bind",
+			cmd: command.Command{
+				CampaignID:  "camp-1",
+				Type:        CommandTypeBind,
+				PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-2"}`),
+			},
+		},
+		{
+			name: "unbind",
+			cmd: command.Command{
+				CampaignID:  "camp-1",
+				Type:        CommandTypeUnbind,
+				PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-1"}`),
+			},
+		},
+		{
+			name: "seat.reassign",
+			cmd: command.Command{
+				CampaignID:  "camp-1",
+				Type:        CommandTypeSeatReassignLegacy,
+				PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"user-1","user_id":"user-2"}`),
+			},
+		},
+		{
+			name: "participant.seat.reassign",
+			cmd: command.Command{
+				CampaignID:  "camp-1",
+				Type:        CommandTypeSeatReassign,
+				PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"user-1","user_id":"user-2"}`),
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			decision := Decide(State{Joined: true, Left: true, UserID: "user-1"}, test.cmd, nil)
+			if len(decision.Events) != 0 {
+				t.Fatalf("expected no events, got %d", len(decision.Events))
+			}
+			if len(decision.Rejections) != 1 {
+				t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+			}
+			if decision.Rejections[0].Code != rejectionCodeParticipantNotJoined {
+				t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantNotJoined)
+			}
+		})
+	}
+}
+
 func TestParticipantDecisionHandlersCoverSupportedCommands(t *testing.T) {
 	expected := []command.Type{
 		CommandTypeJoin,

@@ -1,9 +1,10 @@
-package daggerheart
+package profile
 
 import (
 	"fmt"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics"
 )
 
 const (
@@ -34,6 +35,10 @@ const (
 	TraitDefault = 0
 	TraitMin     = -2
 	TraitMax     = 4
+
+	HPMaxCap     = mechanics.HPMaxCap
+	StressMaxCap = mechanics.StressMaxCap
+	ArmorMaxCap  = mechanics.ArmorMaxCap
 )
 
 var (
@@ -78,16 +83,16 @@ func ValidateTrait(name string, value int) error {
 	return nil
 }
 
-func ValidateTraits(t Traits) error {
-	traits := map[string]int{
-		"agility":   t.Agility,
-		"strength":  t.Strength,
-		"finesse":   t.Finesse,
-		"instinct":  t.Instinct,
-		"presence":  t.Presence,
-		"knowledge": t.Knowledge,
+func ValidateTraits(traits Traits) error {
+	values := map[string]int{
+		"agility":   traits.Agility,
+		"strength":  traits.Strength,
+		"finesse":   traits.Finesse,
+		"instinct":  traits.Instinct,
+		"presence":  traits.Presence,
+		"knowledge": traits.Knowledge,
 	}
-	for name, value := range traits {
+	for name, value := range values {
 		if err := ValidateTrait(name, value); err != nil {
 			return err
 		}
@@ -95,7 +100,7 @@ func ValidateTraits(t Traits) error {
 	return nil
 }
 
-type ProfileDefaults struct {
+type Defaults struct {
 	Level           int
 	HpMax           int
 	StressMax       int
@@ -109,12 +114,12 @@ type ProfileDefaults struct {
 	Experiences     []Experience
 }
 
-func GetProfileDefaults(kind string) ProfileDefaults {
+func GetDefaults(kind string) Defaults {
 	switch kind {
 	case "NPC":
 		level := NPCLevelDefault
 		major, severe := DeriveThresholds(level, NPCArmorScore, NPCMajorThreshold, NPCSevereThreshold)
-		return ProfileDefaults{
+		return Defaults{
 			Level:           level,
 			HpMax:           NPCHpMax,
 			StressMax:       NPCStressMax,
@@ -129,7 +134,7 @@ func GetProfileDefaults(kind string) ProfileDefaults {
 	default:
 		level := PCLevelDefault
 		major, severe := DeriveThresholds(level, PCArmorScore, PCMajorThreshold, PCSevereThreshold)
-		return ProfileDefaults{
+		return Defaults{
 			Level:           level,
 			HpMax:           PCHpMax,
 			StressMax:       PCStressMax,
@@ -144,7 +149,7 @@ func GetProfileDefaults(kind string) ProfileDefaults {
 	}
 }
 
-func UnarmoredThresholds(level int) (majorThreshold, severeThreshold int) {
+func UnarmoredThresholds(level int) (majorThreshold int, severeThreshold int) {
 	return level, level * 2
 }
 
@@ -162,7 +167,19 @@ func ValidateLevel(level int) error {
 	return nil
 }
 
-func ValidateProfile(level, hpMax, stressMax, evasion, majorThreshold, severeThreshold, proficiency, armorScore, armorMax int, traits Traits, experiences []Experience) error {
+func Validate(
+	level,
+	hpMax,
+	stressMax,
+	evasion,
+	majorThreshold,
+	severeThreshold,
+	proficiency,
+	armorScore,
+	armorMax int,
+	traits Traits,
+	experiences []Experience,
+) error {
 	if err := ValidateLevel(level); err != nil {
 		return err
 	}

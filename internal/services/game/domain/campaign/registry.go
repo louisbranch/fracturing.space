@@ -9,43 +9,101 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
+type commandContract struct {
+	definition command.Definition
+}
+
+type eventProjectionContract struct {
+	definition event.Definition
+	emittable  bool
+	projection bool
+}
+
+var campaignCommandContracts = []commandContract{
+	{
+		definition: command.Definition{
+			Type:            CommandTypeCreate,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateCreatePayload,
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeUpdate,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateUpdatePayload,
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeFork,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateForkPayload,
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeEnd,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateEmptyPayload,
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeArchive,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateEmptyPayload,
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeRestore,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateEmptyPayload,
+		},
+	},
+}
+
+var campaignEventContracts = []eventProjectionContract{
+	{
+		definition: event.Definition{
+			Type:            EventTypeCreated,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateCreatePayload,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeUpdated,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateUpdatePayload,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeForked,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateForkPayload,
+		},
+		emittable:  true,
+		projection: true,
+	},
+}
+
 // RegisterCommands registers campaign commands with the shared registry.
 func RegisterCommands(registry *command.Registry) error {
 	if registry == nil {
 		return errors.New("command registry is required")
 	}
-	if err := registry.Register(command.Definition{
-		Type:            CommandTypeCreate,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateCreatePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            CommandTypeUpdate,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateUpdatePayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            CommandTypeFork,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateForkPayload,
-	}); err != nil {
-		return err
-	}
-	statusCommands := []command.Type{
-		CommandTypeEnd,
-		CommandTypeArchive,
-		CommandTypeRestore,
-	}
-	for _, cmdType := range statusCommands {
-		if err := registry.Register(command.Definition{
-			Type:            cmdType,
-			Owner:           command.OwnerCore,
-			ValidatePayload: validateEmptyPayload,
-		}); err != nil {
+	for _, contract := range campaignCommandContracts {
+		if err := registry.Register(contract.definition); err != nil {
 			return err
 		}
 	}
@@ -54,33 +112,26 @@ func RegisterCommands(registry *command.Registry) error {
 
 // EmittableEventTypes returns all event types the campaign decider can emit.
 func EmittableEventTypes() []event.Type {
-	return []event.Type{
-		EventTypeCreated,
-		EventTypeUpdated,
-		EventTypeForked,
-	}
+	return campaignEventTypes(func(contract eventProjectionContract) bool {
+		return contract.emittable
+	})
 }
 
 // DeciderHandledCommands returns all command types the campaign decider handles.
 func DeciderHandledCommands() []command.Type {
-	return []command.Type{
-		CommandTypeCreate,
-		CommandTypeUpdate,
-		CommandTypeFork,
-		CommandTypeEnd,
-		CommandTypeArchive,
-		CommandTypeRestore,
+	types := make([]command.Type, 0, len(campaignCommandContracts))
+	for _, contract := range campaignCommandContracts {
+		types = append(types, contract.definition.Type)
 	}
+	return types
 }
 
 // ProjectionHandledTypes returns the campaign event types that require
 // projection handlers (IntentProjectionAndReplay).
 func ProjectionHandledTypes() []event.Type {
-	return []event.Type{
-		EventTypeCreated,
-		EventTypeUpdated,
-		EventTypeForked,
-	}
+	return campaignEventTypes(func(contract eventProjectionContract) bool {
+		return contract.projection
+	})
 }
 
 // RegisterEvents registers campaign events with the shared registry.
@@ -88,28 +139,22 @@ func RegisterEvents(registry *event.Registry) error {
 	if registry == nil {
 		return errors.New("event registry is required")
 	}
-	if err := registry.Register(event.Definition{
-		Type:            EventTypeCreated,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateCreatePayload,
-	}); err != nil {
-		return err
+	for _, contract := range campaignEventContracts {
+		if err := registry.Register(contract.definition); err != nil {
+			return err
+		}
 	}
-	if err := registry.Register(event.Definition{
-		Type:            EventTypeForked,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateForkPayload,
-	}); err != nil {
-		return err
+	return nil
+}
+
+func campaignEventTypes(include func(eventProjectionContract) bool) []event.Type {
+	types := make([]event.Type, 0, len(campaignEventContracts))
+	for _, contract := range campaignEventContracts {
+		if include(contract) {
+			types = append(types, contract.definition.Type)
+		}
 	}
-	return registry.Register(event.Definition{
-		Type:            EventTypeUpdated,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateUpdatePayload,
-	})
+	return types
 }
 
 // validateCreatePayload ensures command payloads match the campaign create shape.

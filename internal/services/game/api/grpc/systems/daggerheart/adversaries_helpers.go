@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	bridgeDaggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -33,9 +34,9 @@ type adversaryStats struct {
 }
 
 const (
-	defaultAdversaryEvasion = bridgeDaggerheart.AdversaryDefaultEvasion
-	defaultAdversaryMajor   = bridgeDaggerheart.AdversaryDefaultMajor
-	defaultAdversarySevere  = bridgeDaggerheart.AdversaryDefaultSevere
+	defaultAdversaryEvasion = daggerheartprofile.AdversaryDefaultEvasion
+	defaultAdversaryMajor   = daggerheartprofile.AdversaryDefaultMajor
+	defaultAdversarySevere  = daggerheartprofile.AdversaryDefaultSevere
 )
 
 func normalizeAdversaryStats(input adversaryStatsInput) (adversaryStats, error) {

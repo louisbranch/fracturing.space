@@ -9,6 +9,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -158,7 +159,7 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 	}
 	hpMax := profile.HpMax
 	if hpMax == 0 {
-		hpMax = daggerheart.PCHpMax
+		hpMax = daggerheartprofile.PCHpMax
 	}
 	stressMax := profile.StressMax
 	if stressMax < 0 {
@@ -167,7 +168,7 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 	hopeMax := daggerheart.HopeMax
 	level := profile.Level
 	if level == 0 {
-		level = daggerheart.PCLevelDefault
+		level = daggerheartprofile.PCLevelDefault
 	}
 	result, err := daggerheart.ResolveDeathMove(daggerheart.DeathMoveInput{
 		Move:      move,
@@ -260,7 +261,7 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 
 	hpMax := profile.HpMax
 	if hpMax == 0 {
-		hpMax = daggerheart.PCHpMax
+		hpMax = daggerheartprofile.PCHpMax
 	}
 	stressMax := profile.StressMax
 	if stressMax < 0 {
@@ -272,7 +273,7 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 	}
 	level := profile.Level
 	if level == 0 {
-		level = daggerheart.PCLevelDefault
+		level = daggerheartprofile.PCLevelDefault
 	}
 
 	result, err := daggerheart.ResolveDeathMove(daggerheart.DeathMoveInput{

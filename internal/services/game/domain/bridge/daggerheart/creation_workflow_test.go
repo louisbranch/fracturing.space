@@ -1,6 +1,10 @@
 package daggerheart
 
-import "testing"
+import (
+	"testing"
+
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
+)
 
 func TestEvaluateCreationProgress_NextStepAdvancesInOrder(t *testing.T) {
 	progress := EvaluateCreationProgress(CreationProfile{})
@@ -17,7 +21,7 @@ func TestEvaluateCreationProgress_NextStepAdvancesInOrder(t *testing.T) {
 		AncestryID:     "heritage.clank",
 		CommunityID:    "heritage.farmer",
 		TraitsAssigned: true,
-		Traits: Traits{
+		Traits: daggerheartprofile.Traits{
 			Agility:   2,
 			Strength:  1,
 			Finesse:   1,
@@ -34,7 +38,7 @@ func TestEvaluateCreationProgress_NextStepAdvancesInOrder(t *testing.T) {
 		StartingArmorID:      "armor.gambeson-armor",
 		StartingPotionItemID: StartingPotionMinorHealthID,
 		Background:           "Guard captain",
-		Experiences: []Experience{
+		Experiences: []daggerheartprofile.Experience{
 			{Name: "Tactics", Modifier: 2},
 		},
 		DomainCardIDs: []string{"domain-card.ward"},
@@ -59,10 +63,10 @@ func TestEvaluateCreationReadinessFromSystemProfile_RequiresDaggerheartProfile(t
 }
 
 func TestValidateCreationTraitDistribution(t *testing.T) {
-	if err := ValidateCreationTraitDistribution(Traits{Agility: 2, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1}); err != nil {
+	if err := ValidateCreationTraitDistribution(daggerheartprofile.Traits{Agility: 2, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1}); err != nil {
 		t.Fatalf("expected valid distribution, got %v", err)
 	}
-	if err := ValidateCreationTraitDistribution(Traits{Agility: 1, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1}); err == nil {
+	if err := ValidateCreationTraitDistribution(daggerheartprofile.Traits{Agility: 1, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1}); err == nil {
 		t.Fatal("expected invalid distribution error")
 	}
 }

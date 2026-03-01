@@ -41,6 +41,10 @@ var (
 	ErrStorageFieldsSet = errors.New("storage-assigned fields must be empty")
 )
 
+// canonicalJSON is package-level so tests can force canonicalization failures
+// without relying on malformed JSON that may be rejected earlier.
+var canonicalJSON = coreencoding.CanonicalJSON
+
 // Type identifies a stable event semantic used by API transport and projections.
 //
 // Event names are part of the write-path contract; changing one affects
@@ -209,28 +213,66 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 	if r == nil {
 		return Event{}, fmt.Errorf("registry is required")
 	}
+	if err := validateStorageFieldsUnset(evt); err != nil {
+		return Event{}, err
+	}
+
+	normalized, def, err := r.normalizeAppendEnvelope(evt)
+	if err != nil {
+		return Event{}, err
+	}
+
+	requireEntityType, requireEntityID := requiredAddressing(def.Addressing)
+	requireEntityType, requireEntityID, err = applyOwnerAddressingConstraints(def.Owner, normalized, requireEntityType, requireEntityID)
+	if err != nil {
+		return Event{}, err
+	}
+	if err := validateEntityAddressing(normalized, requireEntityType, requireEntityID); err != nil {
+		return Event{}, err
+	}
+
+	normalized.PayloadJSON, err = normalizePayloadJSON(normalized.PayloadJSON)
+	if err != nil {
+		return Event{}, err
+	}
+	if def.ValidatePayload != nil {
+		if err := def.ValidatePayload(json.RawMessage(normalized.PayloadJSON)); err != nil {
+			return Event{}, fmt.Errorf("payload invalid: %w", err)
+		}
+	}
+
+	return normalized, nil
+}
+
+// validateStorageFieldsUnset protects storage-assigned fields from caller input.
+func validateStorageFieldsUnset(evt Event) error {
 	if evt.Seq != 0 || strings.TrimSpace(evt.Hash) != "" || strings.TrimSpace(evt.PrevHash) != "" ||
 		strings.TrimSpace(evt.ChainHash) != "" || strings.TrimSpace(evt.Signature) != "" ||
 		strings.TrimSpace(evt.SignatureKeyID) != "" {
-		return Event{}, ErrStorageFieldsSet
+		return ErrStorageFieldsSet
 	}
+	return nil
+}
 
+// normalizeAppendEnvelope trims append envelope metadata and resolves the
+// registered definition that governs owner/addressing rules.
+func (r *Registry) normalizeAppendEnvelope(evt Event) (Event, Definition, error) {
 	evt.CampaignID = strings.TrimSpace(evt.CampaignID)
 	if evt.CampaignID == "" {
-		return Event{}, ErrCampaignIDRequired
+		return Event{}, Definition{}, ErrCampaignIDRequired
 	}
 
 	if evt.Timestamp.IsZero() {
-		return Event{}, ErrTimestampRequired
+		return Event{}, Definition{}, ErrTimestampRequired
 	}
 
 	evt.Type = Type(strings.TrimSpace(string(evt.Type)))
 	if evt.Type == "" {
-		return Event{}, ErrTypeRequired
+		return Event{}, Definition{}, ErrTypeRequired
 	}
 	def, ok := r.definitions[evt.Type]
 	if !ok {
-		return Event{}, ErrTypeUnknown
+		return Event{}, Definition{}, ErrTypeUnknown
 	}
 
 	evt.ActorType = ActorType(strings.TrimSpace(string(evt.ActorType)))
@@ -241,11 +283,11 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 	case ActorTypeSystem, ActorTypeParticipant, ActorTypeGM:
 		// allowed
 	default:
-		return Event{}, ErrActorTypeInvalid
+		return Event{}, Definition{}, ErrActorTypeInvalid
 	}
 	evt.ActorID = strings.TrimSpace(evt.ActorID)
 	if (evt.ActorType == ActorTypeParticipant || evt.ActorType == ActorTypeGM) && evt.ActorID == "" {
-		return Event{}, ErrActorIDRequired
+		return Event{}, Definition{}, ErrActorIDRequired
 	}
 
 	evt.SessionID = strings.TrimSpace(evt.SessionID)
@@ -258,63 +300,70 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 	evt.CorrelationID = strings.TrimSpace(evt.CorrelationID)
 	evt.CausationID = strings.TrimSpace(evt.CausationID)
 
-	requireEntityType := false
-	requireEntityID := false
-	switch def.Addressing {
-	case AddressingPolicyEntityType:
-		requireEntityType = true
-	case AddressingPolicyEntityTarget:
-		requireEntityType = true
-		requireEntityID = true
-	}
+	return evt, def, nil
+}
 
-	switch def.Owner {
+// requiredAddressing resolves definition addressing policy into required fields.
+func requiredAddressing(policy AddressingPolicy) (bool, bool) {
+	switch policy {
+	case AddressingPolicyEntityType:
+		return true, false
+	case AddressingPolicyEntityTarget:
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+// applyOwnerAddressingConstraints enforces owner-specific metadata contracts.
+func applyOwnerAddressingConstraints(owner Owner, evt Event, requireEntityType, requireEntityID bool) (bool, bool, error) {
+	switch owner {
 	case OwnerSystem:
 		if evt.SystemID == "" || evt.SystemVersion == "" {
-			return Event{}, ErrSystemMetadataRequired
+			return false, false, ErrSystemMetadataRequired
 		}
 		if err := naming.ValidateSystemNamespace(string(evt.Type), evt.SystemID); err != nil {
-			return Event{}, fmt.Errorf("%w: %v", ErrSystemTypeNamespaceMismatch, err)
+			return false, false, fmt.Errorf("%w: %v", ErrSystemTypeNamespaceMismatch, err)
 		}
-		requireEntityType = true
-		requireEntityID = true
+		return true, true, nil
 	case OwnerCore:
 		if evt.SystemID != "" || evt.SystemVersion != "" {
-			return Event{}, ErrSystemMetadataForbidden
+			return false, false, ErrSystemMetadataForbidden
 		}
+		return requireEntityType, requireEntityID, nil
 	default:
-		return Event{}, fmt.Errorf("event owner is invalid")
+		return false, false, fmt.Errorf("event owner is invalid")
 	}
+}
+
+// validateEntityAddressing enforces required/consistent entity metadata fields.
+func validateEntityAddressing(evt Event, requireEntityType, requireEntityID bool) error {
 	if requireEntityType && evt.EntityType == "" {
-		return Event{}, ErrEntityTypeRequired
+		return ErrEntityTypeRequired
 	}
 	if requireEntityID && evt.EntityID == "" {
-		return Event{}, ErrEntityIDRequired
+		return ErrEntityIDRequired
 	}
 	if evt.EntityID != "" && evt.EntityType == "" {
-		return Event{}, ErrEntityTypeRequired
+		return ErrEntityTypeRequired
+	}
+	return nil
+}
+
+// normalizePayloadJSON defaults, validates, and canonicalizes payload JSON.
+func normalizePayloadJSON(payload []byte) ([]byte, error) {
+	if len(payload) == 0 {
+		payload = []byte("{}")
+	}
+	if !json.Valid(payload) {
+		return nil, ErrPayloadInvalid
 	}
 
-	if len(evt.PayloadJSON) == 0 {
-		evt.PayloadJSON = []byte("{}")
-	}
-	if !json.Valid(evt.PayloadJSON) {
-		return Event{}, ErrPayloadInvalid
-	}
-
-	canonical, err := coreencoding.CanonicalJSON(json.RawMessage(evt.PayloadJSON))
+	canonical, err := canonicalJSON(json.RawMessage(payload))
 	if err != nil {
-		return Event{}, fmt.Errorf("canonical payload json: %w", err)
+		return nil, fmt.Errorf("canonical payload json: %w", err)
 	}
-	evt.PayloadJSON = canonical
-
-	if def.ValidatePayload != nil {
-		if err := def.ValidatePayload(json.RawMessage(evt.PayloadJSON)); err != nil {
-			return Event{}, fmt.Errorf("payload invalid: %w", err)
-		}
-	}
-
-	return evt, nil
+	return canonical, nil
 }
 
 // ShouldFold returns true when the event type should be folded into aggregate

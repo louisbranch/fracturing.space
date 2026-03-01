@@ -127,3 +127,59 @@ func TestFoldProfileUpdatedSetsSystemProfile(t *testing.T) {
 		t.Fatalf("level = %v, want %v", level, 2)
 	}
 }
+
+func TestFoldCharacterRecognizedEvents_InvalidPayloadReturnsError(t *testing.T) {
+	eventTypes := []event.Type{
+		EventTypeCreated,
+		EventTypeUpdated,
+		EventTypeDeleted,
+		EventTypeProfileUpdated,
+	}
+
+	for _, eventType := range eventTypes {
+		t.Run(string(eventType), func(t *testing.T) {
+			_, err := Fold(State{}, event.Event{
+				Type:        eventType,
+				PayloadJSON: []byte(`{bad json`),
+			})
+			if err == nil {
+				t.Fatal("expected error for invalid payload")
+			}
+		})
+	}
+}
+
+func TestFoldCharacterUpdated_AppliesAvatarPronounsAndAliasesFields(t *testing.T) {
+	state := State{Created: true, CharacterID: "char-1"}
+	updated, err := Fold(state, event.Event{
+		Type: event.Type("character.updated"),
+		PayloadJSON: []byte(
+			`{"character_id":"char-1","fields":{"avatar_set_id":"set-2","avatar_asset_id":"asset-2","pronouns":"she/her","aliases":"[\"Aria\",\"Aria\",\"  Storm  \"]"}}`,
+		),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AvatarSetID != "set-2" {
+		t.Fatalf("avatar set = %q, want %q", updated.AvatarSetID, "set-2")
+	}
+	if updated.AvatarAssetID != "asset-2" {
+		t.Fatalf("avatar asset = %q, want %q", updated.AvatarAssetID, "asset-2")
+	}
+	if updated.Pronouns != "she/her" {
+		t.Fatalf("pronouns = %q, want %q", updated.Pronouns, "she/her")
+	}
+	if len(updated.Aliases) != 2 || updated.Aliases[0] != "Aria" || updated.Aliases[1] != "Storm" {
+		t.Fatalf("aliases = %v, want [Aria Storm]", updated.Aliases)
+	}
+}
+
+func TestFoldCharacterUpdated_InvalidAliasesFieldReturnsError(t *testing.T) {
+	_, err := Fold(State{Created: true}, event.Event{
+		Type:        event.Type("character.updated"),
+		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"aliases":"not-json"}}`),
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid aliases payload")
+	}
+}

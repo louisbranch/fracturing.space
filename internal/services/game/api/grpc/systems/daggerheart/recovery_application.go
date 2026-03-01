@@ -11,6 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -733,7 +734,7 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 
 	hpMax := profile.HpMax
 	if hpMax == 0 {
-		hpMax = daggerheart.PCHpMax
+		hpMax = daggerheartprofile.PCHpMax
 	}
 	stressMax := profile.StressMax
 	if stressMax < 0 {
@@ -745,7 +746,7 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 	}
 	level := profile.Level
 	if level == 0 {
-		level = daggerheart.PCLevelDefault
+		level = daggerheartprofile.PCLevelDefault
 	}
 
 	var hpClear *int

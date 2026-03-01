@@ -1,11 +1,11 @@
 package participant
 
 import (
-	"errors"
 	"strings"
 
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/internal/avatarreject"
 )
 
 var participantAvatarManifest = assetcatalog.AvatarManifest()
@@ -29,21 +29,19 @@ func resolveParticipantAvatarSelection(participantID, userID, setID, assetID str
 }
 
 func participantAvatarRejection(err error) command.Rejection {
-	switch {
-	case errors.Is(err, assetcatalog.ErrSetNotFound):
-		return command.Rejection{
+	return avatarreject.FromSelectionError(
+		err,
+		command.Rejection{
 			Code:    rejectionCodeParticipantAvatarSetInvalid,
 			Message: "participant avatar set is invalid",
-		}
-	case errors.Is(err, assetcatalog.ErrAssetInvalid):
-		return command.Rejection{
+		},
+		command.Rejection{
 			Code:    rejectionCodeParticipantAvatarAssetInvalid,
 			Message: "participant avatar asset is invalid",
-		}
-	default:
-		return command.Rejection{
+		},
+		command.Rejection{
 			Code:    rejectionCodeParticipantAvatarAssetInvalid,
 			Message: "participant avatar is invalid",
-		}
-	}
+		},
+	)
 }

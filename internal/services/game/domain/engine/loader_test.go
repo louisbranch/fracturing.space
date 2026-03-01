@@ -188,3 +188,67 @@ func TestReplayStateLoader_ReturnsSnapshotLoadError(t *testing.T) {
 		t.Fatal("expected error")
 	}
 }
+
+func TestReplayGateStateLoader_LoadSessionErrorBranches(t *testing.T) {
+	t.Run("nil reconstructed state", func(t *testing.T) {
+		loader := ReplayGateStateLoader{
+			StateLoader: ReplayStateLoader{
+				Events:      &trackingReplayEventStore{},
+				Checkpoints: checkpoint.NewMemory(),
+				Folder:      &aggregate.Folder{},
+			},
+		}
+		_, err := loader.LoadSession(context.Background(), "camp-1", "sess-1")
+		if err == nil || err.Error() != "state is required" {
+			t.Fatalf("LoadSession() error = %v, want state is required", err)
+		}
+	})
+
+	t.Run("typed nil aggregate pointer", func(t *testing.T) {
+		loader := ReplayGateStateLoader{
+			StateLoader: ReplayStateLoader{
+				Events:      &trackingReplayEventStore{},
+				Checkpoints: checkpoint.NewMemory(),
+				Folder:      &aggregate.Folder{},
+				StateFactory: func() any {
+					var state *aggregate.State
+					return state
+				},
+			},
+		}
+		_, err := loader.LoadSession(context.Background(), "camp-1", "sess-1")
+		if err == nil || err.Error() != "state is required" {
+			t.Fatalf("LoadSession() error = %v, want state is required", err)
+		}
+	})
+
+	t.Run("unsupported state type", func(t *testing.T) {
+		loader := ReplayGateStateLoader{
+			StateLoader: ReplayStateLoader{
+				Events:      &trackingReplayEventStore{},
+				Checkpoints: checkpoint.NewMemory(),
+				Folder:      &aggregate.Folder{},
+				StateFactory: func() any {
+					return struct{}{}
+				},
+			},
+		}
+		_, err := loader.LoadSession(context.Background(), "camp-1", "sess-1")
+		if err == nil || err.Error() != "unsupported state type" {
+			t.Fatalf("LoadSession() error = %v, want unsupported state type", err)
+		}
+	})
+
+	t.Run("propagates state loader error", func(t *testing.T) {
+		loader := ReplayGateStateLoader{
+			StateLoader: ReplayStateLoader{
+				Checkpoints: checkpoint.NewMemory(),
+				Folder:      &aggregate.Folder{},
+			},
+		}
+		_, err := loader.LoadSession(context.Background(), "camp-1", "sess-1")
+		if !errors.Is(err, replay.ErrEventStoreRequired) {
+			t.Fatalf("expected ErrEventStoreRequired, got %v", err)
+		}
+	})
+}

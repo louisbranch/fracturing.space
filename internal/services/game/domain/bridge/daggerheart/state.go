@@ -1,5 +1,7 @@
 package daggerheart
 
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics"
+
 const (
 	// SystemID identifies the Daggerheart system for system modules.
 	SystemID = "daggerheart"
@@ -10,15 +12,15 @@ const (
 	GMFearMax     = 12
 	GMFearDefault = 0
 
-	HPDefault        = 6
-	HPMaxDefault     = 6
-	HopeDefault      = 2
-	HopeMaxDefault   = 6
-	StressDefault    = 0
-	StressMaxDefault = 6
-	ArmorDefault     = 0
-	ArmorMaxDefault  = 0
-	LifeStateAlive   = "alive"
+	HPDefault        = mechanics.HPDefault
+	HPMaxDefault     = mechanics.HPMaxDefault
+	HopeDefault      = mechanics.HopeDefault
+	HopeMaxDefault   = mechanics.HopeMaxDefault
+	StressDefault    = mechanics.StressDefault
+	StressMaxDefault = mechanics.StressMaxDefault
+	ArmorDefault     = mechanics.ArmorDefault
+	ArmorMaxDefault  = mechanics.ArmorMaxDefault
+	LifeStateAlive   = mechanics.LifeStateAlive
 )
 
 // SnapshotState captures campaign-level Daggerheart state.
@@ -30,31 +32,8 @@ type SnapshotState struct {
 	CountdownStates map[string]CountdownState
 }
 
-// TemporaryArmorBucket tracks temporary armor contributions on a character.
-type TemporaryArmorBucket struct {
-	Source   string `json:"source"`
-	Duration string `json:"duration"`
-	SourceID string `json:"source_id,omitempty"`
-	Amount   int    `json:"amount"`
-}
-
-// CharacterState captures Daggerheart character state.
-type CharacterState struct {
-	CampaignID  string
-	CharacterID string
-	Kind        string
-	HP          int
-	HPMax       int
-	Hope        int
-	HopeMax     int
-	Stress      int
-	StressMax   int
-	Armor       int
-	ArmorMax    int
-	ArmorBonus  []TemporaryArmorBucket
-	LifeState   string
-	Conditions  []string
-}
+type TemporaryArmorBucket = mechanics.TemporaryArmorBucket
+type CharacterState = mechanics.CharacterState
 
 // AdversaryState captures Daggerheart adversary state for aggregate projections.
 type AdversaryState struct {
