@@ -154,6 +154,7 @@ jobs:
           name: coverage
       - name: Generate and push coverage badge
         run: |
+          set -euo pipefail
           COVERAGE_PERCENT=$(go tool cover -func=coverage.out | awk '/total/ {print substr($3, 1, length($3)-1)}')
           if [ -z "$COVERAGE_PERCENT" ] || ! printf '%s\n' "$COVERAGE_PERCENT" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
             echo "Failed to extract valid coverage percentage"
@@ -176,16 +177,29 @@ jobs:
           if [ -f docs/reference/coverage-floors.json ]; then
             cp docs/reference/coverage-floors.json "$TMP_DIR/coverage-floors-seed.json"
           fi
+          EXISTING_FLOORS_PATH=
           if git ls-remote --exit-code --heads origin badges; then
             git fetch origin badges
-            git show origin/badges:coverage-package-floors.json > "$TMP_DIR/coverage-package-floors-existing.json" || true
+            if git show origin/badges:coverage-package-floors.json > "$TMP_DIR/coverage-package-floors-existing.json"; then
+              EXISTING_FLOORS_PATH="$TMP_DIR/coverage-package-floors-existing.json"
+            else
+              rm -f "$TMP_DIR/coverage-package-floors-existing.json"
+              echo "No existing coverage-package-floors.json on badges; ratcheting from seed floors."
+            fi
           fi
           if [ -f "$TMP_DIR/coverage-floors-seed.json" ]; then
-            go run ./internal/tools/coveragefloors ratchet \
-              -profile="$TMP_DIR/coverage.out" \
-              -seed="$TMP_DIR/coverage-floors-seed.json" \
-              -existing="$TMP_DIR/coverage-package-floors-existing.json" \
-              -out="$TMP_DIR/coverage-package-floors.json"
+            if [ -n "$EXISTING_FLOORS_PATH" ]; then
+              go run ./internal/tools/coveragefloors ratchet \
+                -profile="$TMP_DIR/coverage.out" \
+                -seed="$TMP_DIR/coverage-floors-seed.json" \
+                -existing="$EXISTING_FLOORS_PATH" \
+                -out="$TMP_DIR/coverage-package-floors.json"
+            else
+              go run ./internal/tools/coveragefloors ratchet \
+                -profile="$TMP_DIR/coverage.out" \
+                -seed="$TMP_DIR/coverage-floors-seed.json" \
+                -out="$TMP_DIR/coverage-package-floors.json"
+            fi
           fi
           if git ls-remote --exit-code --heads origin badges; then
             git checkout -B badges origin/badges
