@@ -9,8 +9,8 @@ nav_order: 2
 ## Purpose
 
 Quick regression coverage for the web UI: landing page renders with branding
-and sign-in link, login page renders with passkey form elements, and route
-canonicalization keeps `/campaigns/{id}` canonical.
+and sign-in link, login page renders with passkey form elements, and protected
+campaign routes keep `/app/campaigns/{id}` as the authenticated path.
 
 ## Preconditions
 
@@ -53,7 +53,7 @@ async page => {
   const origin = page.url().replace(/\/[^/]*$/, "");
   await page.goto(origin + "/login?pending_id=test&client_id=test&client_name=Test");
 
-  await page.getByRole("heading", { name: "Sign in to continue" }).waitFor();
+  await page.getByRole("heading", { name: /Sign in to/i }).waitFor();
   await page.getByText("Account Access").waitFor();
   await page.getByLabel("Email").waitFor();
   await page.getByRole("button", { name: "Create Account With Passkey" }).waitFor();
@@ -71,21 +71,21 @@ async page => {
 
   const origin = page.url().replace(/\/[^/]*$/, "");
 
-  const canonicalResponse = await page.request.get(origin + "/campaigns/camp-123", { maxRedirects: 0 });
-  if (canonicalResponse.status() !== 302) {
-    throw new Error("Expected /campaigns/camp-123 status 302, got: " + canonicalResponse.status());
-  }
-  const location = canonicalResponse.headers()["location"] || "";
-  if (!location.startsWith("/auth/login")) {
-    throw new Error("Expected /campaigns/camp-123 Location starting with /auth/login, got: " + location);
-  }
-
-  const deprecatedResponse = await page.request.get(origin + "/app/campaigns/camp-123", { maxRedirects: 0 });
+  const deprecatedResponse = await page.request.get(origin + "/campaigns/camp-123", { maxRedirects: 0 });
   if (deprecatedResponse.status() !== 404) {
-    throw new Error("Expected deprecated /app/campaigns/camp-123 status 404, got: " + deprecatedResponse.status());
+    throw new Error("Expected deprecated /campaigns/camp-123 status 404, got: " + deprecatedResponse.status());
   }
 
-  console.log("Campaign route canonicalization OK");
+  const protectedResponse = await page.request.get(origin + "/app/campaigns/camp-123", { maxRedirects: 0 });
+  if (protectedResponse.status() !== 302) {
+    throw new Error("Expected /app/campaigns/camp-123 status 302, got: " + protectedResponse.status());
+  }
+  const location = protectedResponse.headers()["location"] || "";
+  if (!location.startsWith("/login")) {
+    throw new Error("Expected /app/campaigns/camp-123 Location starting with /login, got: " + location);
+  }
+
+  console.log("Campaign route contract OK");
 }
 EOF
 )"
