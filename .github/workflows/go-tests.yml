@@ -201,6 +201,7 @@ jobs:
                 -out="$TMP_DIR/coverage-package-floors.json"
             fi
           fi
+          go run github.com/nikolaydubina/go-cover-treemap -coverprofile="$TMP_DIR/coverage.out" -percent > "$TMP_DIR/coverage-treemap.svg"
           if git ls-remote --exit-code --heads origin badges; then
             git checkout -B badges origin/badges
           else
@@ -211,10 +212,10 @@ jobs:
           fi
           mv "$TMP_DIR/coverage.out" ./coverage.out
           mv "$TMP_DIR/coverage-critical-domain.out" ./coverage-critical-domain.out
+          mv "$TMP_DIR/coverage-treemap.svg" ./coverage-treemap.svg
           if [ -f "$TMP_DIR/coverage-package-floors.json" ]; then
             mv "$TMP_DIR/coverage-package-floors.json" ./coverage-package-floors.json
           fi
-          go run github.com/nikolaydubina/go-cover-treemap -coverprofile=coverage.out -percent > coverage-treemap.svg
           curl -f -o coverage.svg "https://img.shields.io/badge/coverage-${COVERAGE_PERCENT}%25-${COLOR}"
           echo "$COVERAGE_PERCENT" > coverage-baseline.txt
           echo "$CRITICAL_DOMAIN_COVERAGE_PERCENT" > coverage-critical-domain-baseline.txt
