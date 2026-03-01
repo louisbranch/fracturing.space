@@ -1,5 +1,7 @@
 package daggerheart
 
+import daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
+
 // DamageSeverity describes the severity tier of incoming damage.
 type DamageSeverity int
 
@@ -59,7 +61,7 @@ type DamageApplication struct {
 // Thresholds are expected to already include any level adjustments.
 func EvaluateDamage(amount, majorThreshold, severeThreshold int, opts DamageOptions) (DamageResult, error) {
 	if majorThreshold < 0 || severeThreshold < majorThreshold {
-		return DamageResult{}, ErrInvalidThresholds
+		return DamageResult{}, daggerheartprofile.ErrInvalidThresholds
 	}
 	if amount <= 0 {
 		return DamageResult{Severity: DamageNone, Marks: 0}, nil

@@ -27,6 +27,8 @@ const (
 	rejectionCodeOutcomeEffectTypeForbidden        = "OUTCOME_EFFECT_TYPE_FORBIDDEN"
 )
 
+var coreOutcomeEffectPolicy = newOutcomeEffectPolicy("session.gate_opened", "session.spotlight_set")
+
 // Decide returns the decision for an action command against current state.
 //
 // The action aggregate is intentionally lightweight: each supported action command
@@ -39,98 +41,114 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 	switch cmd.Type {
 	case CommandTypeRollResolve:
-		var payload RollResolvePayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		requestID := strings.TrimSpace(payload.RequestID)
-		if requestID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeRequestIDRequired,
-				Message: "request_id is required",
-			})
-		}
-		if payload.RollSeq == 0 {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeRollSeqRequired,
-				Message: "roll_seq must be greater than zero",
-			})
-		}
-		return acceptActionEvent(cmd, now, EventTypeRollResolved, "roll", requestID, payload)
+		return decideRollResolve(cmd, now)
 	case CommandTypeOutcomeApply:
-		var payload OutcomeApplyPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		requestID := strings.TrimSpace(payload.RequestID)
-		if requestID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeRequestIDRequired,
-				Message: "request_id is required",
-			})
-		}
-		if payload.RollSeq == 0 {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeRollSeqRequired,
-				Message: "roll_seq must be greater than zero",
-			})
-		}
-		if hasSystemOwnedOutcomeEffect(payload.PreEffects) || hasSystemOwnedOutcomeEffect(payload.PostEffects) {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeOutcomeEffectSystemOwnedForbidden,
-				Message: "core action.outcome.apply cannot emit system-owned effects",
-			})
-		}
-		if hasDisallowedCoreOutcomeEffect(payload.PreEffects) || hasDisallowedCoreOutcomeEffect(payload.PostEffects) {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeOutcomeEffectTypeForbidden,
-				Message: "core action.outcome.apply effect type is not allowed",
-			})
-		}
-		if _, alreadyApplied := state.AppliedOutcomes[payload.RollSeq]; alreadyApplied {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeOutcomeAlreadyApplied,
-				Message: ErrOutcomeAlreadyApplied.Error(),
-			})
-		}
-		events := make([]event.Event, 0, len(payload.PreEffects)+len(payload.PostEffects)+1)
-		for _, effect := range payload.PreEffects {
-			events = append(events, buildOutcomeEffectEvent(cmd, now, effect))
-		}
-
-		postEffects := payload.PostEffects
-		payload.PreEffects = nil
-		payload.PostEffects = nil
-		outcomeEvent := acceptActionEvent(cmd, now, EventTypeOutcomeApplied, "outcome", requestID, payload).Events
-		events = append(events, outcomeEvent...)
-
-		for _, effect := range postEffects {
-			events = append(events, buildOutcomeEffectEvent(cmd, now, effect))
-		}
-		return command.Accept(events...)
+		return decideOutcomeApply(state, cmd, now)
 	case CommandTypeOutcomeReject:
-		var payload OutcomeRejectPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		requestID := strings.TrimSpace(payload.RequestID)
-		if requestID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeRequestIDRequired,
-				Message: "request_id is required",
-			})
-		}
-		if payload.RollSeq == 0 {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeRollSeqRequired,
-				Message: "roll_seq must be greater than zero",
-			})
-		}
-		return acceptActionEvent(cmd, now, EventTypeOutcomeRejected, "outcome", requestID, payload)
+		return decideOutcomeReject(cmd, now)
 	case CommandTypeNoteAdd:
-		var payload NoteAddPayload
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		return acceptActionEvent(cmd, now, EventTypeNoteAdded, "note", cmd.EntityID, payload)
+		return decideNoteAdd(cmd, now)
 	default:
 		return command.Reject(command.Rejection{
 			Code:    "COMMAND_TYPE_UNSUPPORTED",
 			Message: "command type is not supported by action decider",
 		})
 	}
+}
+
+func decideRollResolve(cmd command.Command, now func() time.Time) command.Decision {
+	var payload RollResolvePayload
+	_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+	requestID := strings.TrimSpace(payload.RequestID)
+	if requestID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeRequestIDRequired,
+			Message: "request_id is required",
+		})
+	}
+	if payload.RollSeq == 0 {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeRollSeqRequired,
+			Message: "roll_seq must be greater than zero",
+		})
+	}
+	return acceptActionEvent(cmd, now, EventTypeRollResolved, "roll", requestID, payload)
+}
+
+func decideOutcomeApply(state State, cmd command.Command, now func() time.Time) command.Decision {
+	var payload OutcomeApplyPayload
+	_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+	requestID := strings.TrimSpace(payload.RequestID)
+	if requestID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeRequestIDRequired,
+			Message: "request_id is required",
+		})
+	}
+	if payload.RollSeq == 0 {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeRollSeqRequired,
+			Message: "roll_seq must be greater than zero",
+		})
+	}
+	if hasSystemOwnedOutcomeEffect(payload.PreEffects) || hasSystemOwnedOutcomeEffect(payload.PostEffects) {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeOutcomeEffectSystemOwnedForbidden,
+			Message: "core action.outcome.apply cannot emit system-owned effects",
+		})
+	}
+	if hasDisallowedCoreOutcomeEffect(payload.PreEffects) || hasDisallowedCoreOutcomeEffect(payload.PostEffects) {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeOutcomeEffectTypeForbidden,
+			Message: "core action.outcome.apply effect type is not allowed",
+		})
+	}
+	if _, alreadyApplied := state.AppliedOutcomes[payload.RollSeq]; alreadyApplied {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeOutcomeAlreadyApplied,
+			Message: ErrOutcomeAlreadyApplied.Error(),
+		})
+	}
+
+	events := make([]event.Event, 0, len(payload.PreEffects)+len(payload.PostEffects)+1)
+	for _, effect := range payload.PreEffects {
+		events = append(events, buildOutcomeEffectEvent(cmd, now, effect))
+	}
+
+	postEffects := payload.PostEffects
+	payload.PreEffects = nil
+	payload.PostEffects = nil
+	events = append(events, acceptActionEvent(cmd, now, EventTypeOutcomeApplied, "outcome", requestID, payload).Events...)
+
+	for _, effect := range postEffects {
+		events = append(events, buildOutcomeEffectEvent(cmd, now, effect))
+	}
+	return command.Accept(events...)
+}
+
+func decideOutcomeReject(cmd command.Command, now func() time.Time) command.Decision {
+	var payload OutcomeRejectPayload
+	_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+	requestID := strings.TrimSpace(payload.RequestID)
+	if requestID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeRequestIDRequired,
+			Message: "request_id is required",
+		})
+	}
+	if payload.RollSeq == 0 {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeRollSeqRequired,
+			Message: "roll_seq must be greater than zero",
+		})
+	}
+	return acceptActionEvent(cmd, now, EventTypeOutcomeRejected, "outcome", requestID, payload)
+}
+
+func decideNoteAdd(cmd command.Command, now func() time.Time) command.Decision {
+	var payload NoteAddPayload
+	_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+	return acceptActionEvent(cmd, now, EventTypeNoteAdded, "note", cmd.EntityID, payload)
 }
 
 // acceptActionEvent creates the standard action event envelope for accepted commands.
@@ -162,7 +180,19 @@ func buildOutcomeEffectEvent(cmd command.Command, now func() time.Time, effect O
 	return evt
 }
 
-func hasSystemOwnedOutcomeEffect(effects []OutcomeAppliedEffect) bool {
+type outcomeEffectPolicy struct {
+	allowed map[string]struct{}
+}
+
+func newOutcomeEffectPolicy(allowed ...string) outcomeEffectPolicy {
+	policy := outcomeEffectPolicy{allowed: make(map[string]struct{}, len(allowed))}
+	for _, effectType := range allowed {
+		policy.allowed[strings.TrimSpace(effectType)] = struct{}{}
+	}
+	return policy
+}
+
+func (p outcomeEffectPolicy) hasSystemOwned(effects []OutcomeAppliedEffect) bool {
 	for _, effect := range effects {
 		if strings.HasPrefix(strings.TrimSpace(effect.Type), "sys.") {
 			return true
@@ -174,20 +204,28 @@ func hasSystemOwnedOutcomeEffect(effects []OutcomeAppliedEffect) bool {
 	return false
 }
 
-func hasDisallowedCoreOutcomeEffect(effects []OutcomeAppliedEffect) bool {
+func (p outcomeEffectPolicy) hasDisallowed(effects []OutcomeAppliedEffect) bool {
 	for _, effect := range effects {
-		if !isAllowedCoreOutcomeEffectType(effect.Type) {
+		if !p.isAllowed(strings.TrimSpace(effect.Type)) {
 			return true
 		}
 	}
 	return false
 }
 
+func (p outcomeEffectPolicy) isAllowed(effectType string) bool {
+	_, ok := p.allowed[strings.TrimSpace(effectType)]
+	return ok
+}
+
+func hasSystemOwnedOutcomeEffect(effects []OutcomeAppliedEffect) bool {
+	return coreOutcomeEffectPolicy.hasSystemOwned(effects)
+}
+
+func hasDisallowedCoreOutcomeEffect(effects []OutcomeAppliedEffect) bool {
+	return coreOutcomeEffectPolicy.hasDisallowed(effects)
+}
+
 func isAllowedCoreOutcomeEffectType(effectType string) bool {
-	switch strings.TrimSpace(effectType) {
-	case "session.gate_opened", "session.spotlight_set":
-		return true
-	default:
-		return false
-	}
+	return coreOutcomeEffectPolicy.isAllowed(effectType)
 }

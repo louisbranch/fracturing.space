@@ -1,6 +1,9 @@
 PROTO_DIR := api/proto
 GEN_GO_DIR := api/gen/go
 COVER_EXCLUDE_REGEX := (api/gen/|_templ[.]go|internal/services/admin/templates/|internal/services/game/storage/sqlite/db/|internal/services/auth/storage/sqlite/db/|internal/services/admin/storage/sqlite/db/|internal/tools/eventdocgen/|cmd/|internal/cmd/)
+COVERAGE_FLOORS_FILE ?= docs/reference/coverage-floors.json
+CRITICAL_DOMAIN_COVERPKG := ./internal/services/game/domain/action,./internal/services/game/domain/aggregate,./internal/services/game/domain/authz,./internal/services/game/domain/bridge,./internal/services/game/domain/bridge/daggerheart,./internal/services/game/domain/bridge/daggerheart/domain,./internal/services/game/domain/bridge/daggerheart/profile,./internal/services/game/domain/bridge/daggerheart/internal/mechanics,./internal/services/game/domain/bridge/daggerheart/internal/reducer,./internal/services/game/domain/bridge/manifest,./internal/services/game/domain/campaign,./internal/services/game/domain/character,./internal/services/game/domain/checkpoint,./internal/services/game/domain/command,./internal/services/game/domain/engine,./internal/services/game/domain/event,./internal/services/game/domain/fork,./internal/services/game/domain/invite,./internal/services/game/domain/journal,./internal/services/game/domain/module,./internal/services/game/domain/participant,./internal/services/game/domain/readiness,./internal/services/game/domain/replay,./internal/services/game/domain/session,./internal/services/shared/joingrant
+CRITICAL_DOMAIN_TEST_PKGS := ./internal/services/game/domain/... ./internal/services/shared/joingrant
 SCENARIO_SMOKE_MANIFEST := internal/test/game/scenarios/smoke.txt
 INTEGRATION_SMOKE_FULL_PATTERN := ^(TestMCPStdioEndToEnd|TestMCPHTTPBlackbox)$$
 INTEGRATION_SMOKE_PR_PATTERN := ^(TestMCPStdioEndToEnd|TestMCPHTTPBlackboxSmoke)$$
@@ -16,7 +19,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/userhub/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-treemap test test-unit test-changed integration integration-full integration-smoke integration-smoke-full integration-smoke-pr integration-shard integration-shard-check scenario scenario-full scenario-smoke scenario-shard scenario-shard-check scenario-fast templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-lifecycle-check negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-critical-domain cover-package-floors coverage-floors-ratchet cover-treemap test test-unit test-changed integration integration-full integration-smoke integration-smoke-full integration-smoke-pr integration-shard integration-shard-check scenario scenario-full scenario-smoke scenario-shard scenario-shard-check scenario-fast templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-lifecycle-check negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -87,6 +90,20 @@ cover:
 	go tool cover -func coverage.out > coverage.func
 	@awk '/^total:/{print}' coverage.func
 	go tool cover -html=coverage.out -o coverage.html
+
+cover-critical-domain:
+	rm -f coverage-critical-domain.out coverage-critical-domain.func
+	go test -count=1 -tags=integration -covermode=set -coverpkg=$(CRITICAL_DOMAIN_COVERPKG) -coverprofile=coverage-critical-domain.out $(CRITICAL_DOMAIN_TEST_PKGS)
+	go tool cover -func=coverage-critical-domain.out > coverage-critical-domain.func
+	@awk '/^total:/{print}' coverage-critical-domain.func
+
+cover-package-floors:
+	@test -f coverage.out || (echo "coverage.out not found; run 'make cover' first" && exit 1)
+	go run ./internal/tools/coveragefloors check -profile=coverage.out -floors=$(COVERAGE_FLOORS_FILE)
+
+coverage-floors-ratchet:
+	@test -f coverage.out || (echo "coverage.out not found; run 'make cover' first" && exit 1)
+	go run ./internal/tools/coveragefloors ratchet -profile=coverage.out -seed=$(COVERAGE_FLOORS_FILE) -existing=coverage-package-floors.json -out=coverage-package-floors.json
 
 cover-treemap: cover
 	go run github.com/nikolaydubina/go-cover-treemap -coverprofile=coverage.out -percent > coverage-treemap.svg

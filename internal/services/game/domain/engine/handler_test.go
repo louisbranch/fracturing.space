@@ -199,6 +199,28 @@ func TestHandle_RejectsWhenGateOpen(t *testing.T) {
 	}
 }
 
+func TestHandle_RequiresCommandRegistry(t *testing.T) {
+	handler := Handler{
+		Decider: fixedDecider{
+			decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.tested"),
+				Timestamp:   time.Unix(0, 0).UTC(),
+				ActorType:   event.ActorTypeSystem,
+				PayloadJSON: []byte(`{}`),
+			}),
+		},
+	}
+	_, err := handler.Handle(context.Background(), command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.test"),
+		ActorType:  command.ActorTypeSystem,
+	})
+	if !errors.Is(err, ErrCommandRegistryRequired) {
+		t.Fatalf("expected ErrCommandRegistryRequired, got %v", err)
+	}
+}
+
 func TestHandle_ValidatesEventsWithRegistry(t *testing.T) {
 	cmdRegistry := command.NewRegistry()
 	if err := cmdRegistry.Register(command.Definition{
@@ -372,6 +394,46 @@ func TestExecute_SavesCheckpointAfterAppend(t *testing.T) {
 	}
 	if checkpoints.last.LastSeq != 1 {
 		t.Fatalf("checkpoint seq = %d, want %d", checkpoints.last.LastSeq, 1)
+	}
+}
+
+func TestExecute_SavesCheckpointWithHandlerClock(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("action.test"),
+		Owner: command.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+
+	zone := time.FixedZone("offset", -7*60*60)
+	now := time.Date(2026, 3, 1, 14, 30, 0, 0, zone)
+
+	journal := &fakeJournal{}
+	checkpoints := &fakeCheckpointStore{}
+	handler := Handler{
+		Commands:    cmdRegistry,
+		Decider:     fixedDecider{decision: command.Accept(event.Event{CampaignID: "camp-1", Type: event.Type("action.tested"), Timestamp: time.Unix(0, 0).UTC(), ActorType: event.ActorTypeSystem, PayloadJSON: []byte(`{}`)})},
+		Journal:     journal,
+		Checkpoints: checkpoints,
+		Now: func() time.Time {
+			return now
+		},
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.test"),
+		ActorType:  command.ActorTypeSystem,
+	})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if checkpoints.calls != 1 {
+		t.Fatalf("checkpoint calls = %d, want 1", checkpoints.calls)
+	}
+	if checkpoints.last.UpdatedAt != now.UTC() {
+		t.Fatalf("checkpoint updated_at = %s, want %s", checkpoints.last.UpdatedAt, now.UTC())
 	}
 }
 

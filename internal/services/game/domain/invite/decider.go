@@ -1,7 +1,6 @@
 package invite
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -42,126 +41,138 @@ const (
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	switch cmd.Type {
 	case CommandTypeCreate:
-		if state.Created {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteAlreadyExists, Message: "invite already exists"})
-		}
-		var payload CreatePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		inviteID := strings.TrimSpace(payload.InviteID)
-		if inviteID == "" {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"})
-		}
-		participantID := strings.TrimSpace(payload.ParticipantID)
-		if participantID == "" {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteParticipantNeeded, Message: "participant id is required"})
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := CreatePayload{
-			InviteID:               inviteID,
-			ParticipantID:          participantID,
-			RecipientUserID:        strings.TrimSpace(payload.RecipientUserID),
-			CreatedByParticipantID: strings.TrimSpace(payload.CreatedByParticipantID),
-			Status:                 statusPending,
-		}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		return command.Accept(command.NewEvent(cmd, EventTypeCreated, "invite", inviteID, payloadJSON, now().UTC()))
-
+		return decideCreate(state, cmd, now)
 	case CommandTypeClaim:
-		if !state.Created {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
-		}
-		if state.Status != "" && state.Status != statusPending {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
-		}
-		var payload ClaimPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		inviteID := strings.TrimSpace(payload.InviteID)
-		if inviteID == "" {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"})
-		}
-		participantID := strings.TrimSpace(payload.ParticipantID)
-		if participantID == "" {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteParticipantNeeded, Message: "participant id is required"})
-		}
-		userID := strings.TrimSpace(payload.UserID)
-		if userID == "" {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteUserIDRequired, Message: "user id is required"})
-		}
-		jwtID := strings.TrimSpace(payload.JWTID)
-		if jwtID == "" {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteJWTRequired, Message: "jti is required"})
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := ClaimPayload{
-			InviteID:      inviteID,
-			ParticipantID: participantID,
-			UserID:        userID,
-			JWTID:         jwtID,
-		}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		return command.Accept(command.NewEvent(cmd, EventTypeClaimed, "invite", inviteID, payloadJSON, now().UTC()))
-
+		return decideClaim(state, cmd, now)
 	case CommandTypeRevoke:
-		if !state.Created {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
-		}
-		if state.Status == statusClaimed || state.Status == statusRevoked {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
-		}
-		return module.DecideFunc(
-			cmd,
-			EventTypeRevoked,
-			"invite",
-			func(payload *RevokePayload) string {
-				return payload.InviteID
-			},
-			func(payload *RevokePayload, _ func() time.Time) *command.Rejection {
-				payload.InviteID = strings.TrimSpace(payload.InviteID)
-				if payload.InviteID == "" {
-					return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
-				}
-				return nil
-			},
-			now,
-		)
-
+		return decideRevoke(state, cmd, now)
 	case CommandTypeUpdate:
-		if !state.Created {
-			return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
-		}
-		return module.DecideFunc(
-			cmd,
-			EventTypeUpdated,
-			"invite",
-			func(payload *UpdatePayload) string {
-				return payload.InviteID
-			},
-			func(payload *UpdatePayload, _ func() time.Time) *command.Rejection {
-				payload.InviteID = strings.TrimSpace(payload.InviteID)
-				if payload.InviteID == "" {
-					return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
-				}
-				status, ok := normalizeStatusLabel(payload.Status)
-				if !ok {
-					return &command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"}
-				}
-				payload.Status = status
-				return nil
-			},
-			now,
-		)
-
+		return decideUpdate(state, cmd, now)
 	default:
 		return command.Reject(command.Rejection{Code: "COMMAND_TYPE_UNSUPPORTED", Message: fmt.Sprintf("command type %s is not supported by invite decider", cmd.Type)})
 	}
+}
+
+func decideCreate(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if state.Created {
+		return command.Reject(command.Rejection{Code: rejectionCodeInviteAlreadyExists, Message: "invite already exists"})
+	}
+	// create always derives entity routing from payload for deterministic identity.
+	cmd.EntityID = ""
+	cmd.EntityType = ""
+	return module.DecideFunc(
+		cmd,
+		EventTypeCreated,
+		"invite",
+		func(payload *CreatePayload) string {
+			return payload.InviteID
+		},
+		func(payload *CreatePayload, _ func() time.Time) *command.Rejection {
+			payload.InviteID = strings.TrimSpace(payload.InviteID)
+			if payload.InviteID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
+			}
+			payload.ParticipantID = strings.TrimSpace(payload.ParticipantID)
+			if payload.ParticipantID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteParticipantNeeded, Message: "participant id is required"}
+			}
+			payload.RecipientUserID = strings.TrimSpace(payload.RecipientUserID)
+			payload.CreatedByParticipantID = strings.TrimSpace(payload.CreatedByParticipantID)
+			payload.Status = statusPending
+			return nil
+		},
+		now,
+	)
+}
+
+func decideClaim(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Created {
+		return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
+	}
+	if state.Status != "" && state.Status != statusPending {
+		return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
+	}
+	// claim always derives entity routing from payload for deterministic identity.
+	cmd.EntityID = ""
+	cmd.EntityType = ""
+	return module.DecideFunc(
+		cmd,
+		EventTypeClaimed,
+		"invite",
+		func(payload *ClaimPayload) string {
+			return payload.InviteID
+		},
+		func(payload *ClaimPayload, _ func() time.Time) *command.Rejection {
+			payload.InviteID = strings.TrimSpace(payload.InviteID)
+			if payload.InviteID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
+			}
+			payload.ParticipantID = strings.TrimSpace(payload.ParticipantID)
+			if payload.ParticipantID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteParticipantNeeded, Message: "participant id is required"}
+			}
+			payload.UserID = strings.TrimSpace(payload.UserID)
+			if payload.UserID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteUserIDRequired, Message: "user id is required"}
+			}
+			payload.JWTID = strings.TrimSpace(payload.JWTID)
+			if payload.JWTID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteJWTRequired, Message: "jti is required"}
+			}
+			return nil
+		},
+		now,
+	)
+}
+
+func decideRevoke(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Created {
+		return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
+	}
+	if state.Status == statusClaimed || state.Status == statusRevoked {
+		return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
+	}
+	return module.DecideFunc(
+		cmd,
+		EventTypeRevoked,
+		"invite",
+		func(payload *RevokePayload) string {
+			return payload.InviteID
+		},
+		func(payload *RevokePayload, _ func() time.Time) *command.Rejection {
+			payload.InviteID = strings.TrimSpace(payload.InviteID)
+			if payload.InviteID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
+			}
+			return nil
+		},
+		now,
+	)
+}
+
+func decideUpdate(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Created {
+		return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
+	}
+	return module.DecideFunc(
+		cmd,
+		EventTypeUpdated,
+		"invite",
+		func(payload *UpdatePayload) string {
+			return payload.InviteID
+		},
+		func(payload *UpdatePayload, _ func() time.Time) *command.Rejection {
+			payload.InviteID = strings.TrimSpace(payload.InviteID)
+			if payload.InviteID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
+			}
+			status, ok := normalizeStatusLabel(payload.Status)
+			if !ok {
+				return &command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"}
+			}
+			payload.Status = status
+			return nil
+		},
+		now,
+	)
 }

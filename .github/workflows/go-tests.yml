@@ -37,6 +37,8 @@ jobs:
         run: make negative-test-assertion-check
       - name: Run tests and generate coverage report
         run: make cover
+      - name: Run critical-domain coverpkg report
+        run: make cover-critical-domain
       - name: Check coverage regression against baseline
         if: github.event_name == 'pull_request'
         run: |
@@ -67,6 +69,48 @@ jobs:
           fi
           echo "Coverage regression: current $CURRENT% vs baseline $BASELINE% (allow drop $ALLOW_DROP%). Please add tests to restore coverage or update the baseline if this is intentional."
           exit 1
+      - name: Check critical-domain coverage regression against baseline
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          CURRENT=$(go tool cover -func=coverage-critical-domain.out | awk '/total/ {print substr($3, 1, length($3)-1)}')
+          if [ -z "$CURRENT" ] || ! printf '%s\n' "$CURRENT" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
+            echo "Failed to extract valid critical-domain coverage percentage for PR."
+            exit 1
+          fi
+          if ! git ls-remote --exit-code --heads origin badges; then
+            echo "No badges branch found; skipping critical-domain coverage regression check."
+            exit 0
+          fi
+          git fetch origin badges:refs/remotes/origin/badges
+          if ! git show origin/badges:coverage-critical-domain-baseline.txt > /tmp/coverage-critical-domain-baseline.txt; then
+            echo "No coverage-critical-domain-baseline.txt found; skipping critical-domain coverage regression check."
+            exit 0
+          fi
+          BASELINE=$(cat /tmp/coverage-critical-domain-baseline.txt)
+          if [ -z "$BASELINE" ] || ! printf '%s\n' "$BASELINE" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
+            echo "Invalid critical-domain coverage baseline value: $BASELINE"
+            exit 1
+          fi
+          ALLOW_DROP=0.1
+          if awk "BEGIN {exit !($CURRENT + 0 >= $BASELINE - $ALLOW_DROP)}"; then
+            echo "Critical-domain coverage OK: current $CURRENT% vs baseline $BASELINE% (allow drop $ALLOW_DROP%)"
+            exit 0
+          fi
+          echo "Critical-domain coverage regression: current $CURRENT% vs baseline $BASELINE% (allow drop $ALLOW_DROP%). Please add tests to restore critical-domain coverage or update the baseline if intentional."
+          exit 1
+      - name: Check package coverage floor regression
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          FLOORS=docs/reference/coverage-floors.json
+          if git ls-remote --exit-code --heads origin badges; then
+            git fetch origin badges:refs/remotes/origin/badges
+            if git show origin/badges:coverage-package-floors.json > /tmp/coverage-package-floors.json; then
+              FLOORS=/tmp/coverage-package-floors.json
+            fi
+          fi
+          go run ./internal/tools/coveragefloors check -profile=coverage.out -floors="$FLOORS"
       - name: Upload coverage logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -75,13 +119,17 @@ jobs:
           path: |
             coverage.log
             coverage.raw
+            coverage-critical-domain.func
+            coverage-critical-domain.out
           if-no-files-found: warn
       - name: Upload coverage artifact
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-artifact@v4
         with:
           name: coverage
-          path: coverage.out
+          path: |
+            coverage.out
+            coverage-critical-domain.out
 
   coverage-badge:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -111,6 +159,11 @@ jobs:
             echo "Failed to extract valid coverage percentage"
             exit 1
           fi
+          CRITICAL_DOMAIN_COVERAGE_PERCENT=$(go tool cover -func=coverage-critical-domain.out | awk '/total/ {print substr($3, 1, length($3)-1)}')
+          if [ -z "$CRITICAL_DOMAIN_COVERAGE_PERCENT" ] || ! printf '%s\n' "$CRITICAL_DOMAIN_COVERAGE_PERCENT" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
+            echo "Failed to extract valid critical-domain coverage percentage"
+            exit 1
+          fi
           COLOR=red
           if awk "BEGIN {exit !($COVERAGE_PERCENT >= 80)}"; then
             COLOR=brightgreen
@@ -119,8 +172,22 @@ jobs:
           fi
           TMP_DIR=$(mktemp -d)
           mv coverage.out "$TMP_DIR/coverage.out"
+          mv coverage-critical-domain.out "$TMP_DIR/coverage-critical-domain.out"
+          if [ -f docs/reference/coverage-floors.json ]; then
+            cp docs/reference/coverage-floors.json "$TMP_DIR/coverage-floors-seed.json"
+          fi
           if git ls-remote --exit-code --heads origin badges; then
             git fetch origin badges
+            git show origin/badges:coverage-package-floors.json > "$TMP_DIR/coverage-package-floors-existing.json" || true
+          fi
+          if [ -f "$TMP_DIR/coverage-floors-seed.json" ]; then
+            go run ./internal/tools/coveragefloors ratchet \
+              -profile="$TMP_DIR/coverage.out" \
+              -seed="$TMP_DIR/coverage-floors-seed.json" \
+              -existing="$TMP_DIR/coverage-package-floors-existing.json" \
+              -out="$TMP_DIR/coverage-package-floors.json"
+          fi
+          if git ls-remote --exit-code --heads origin badges; then
             git checkout -B badges origin/badges
           else
             git checkout --orphan badges
@@ -129,10 +196,15 @@ jobs:
             git commit --allow-empty -m "chore: initialize badges branch"
           fi
           mv "$TMP_DIR/coverage.out" ./coverage.out
+          mv "$TMP_DIR/coverage-critical-domain.out" ./coverage-critical-domain.out
+          if [ -f "$TMP_DIR/coverage-package-floors.json" ]; then
+            mv "$TMP_DIR/coverage-package-floors.json" ./coverage-package-floors.json
+          fi
           go run github.com/nikolaydubina/go-cover-treemap -coverprofile=coverage.out -percent > coverage-treemap.svg
           curl -f -o coverage.svg "https://img.shields.io/badge/coverage-${COVERAGE_PERCENT}%25-${COLOR}"
           echo "$COVERAGE_PERCENT" > coverage-baseline.txt
-          git add -f coverage.svg coverage-treemap.svg coverage-baseline.txt
+          echo "$CRITICAL_DOMAIN_COVERAGE_PERCENT" > coverage-critical-domain-baseline.txt
+          git add -f coverage.svg coverage-treemap.svg coverage-baseline.txt coverage-critical-domain-baseline.txt coverage-package-floors.json
           if git diff --cached --quiet; then
             echo "No changes to coverage badge."
             exit 0

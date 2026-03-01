@@ -14,6 +14,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -140,7 +141,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if created.Kind == character.KindNPC {
 		kindStr = "NPC"
 	}
-	dhDefaults := daggerheart.GetProfileDefaults(kindStr)
+	dhDefaults := daggerheartprofile.GetDefaults(kindStr)
 
 	reqID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
@@ -617,7 +618,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 			return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.InvalidArgument, "level must be non-negative")
 		}
 		if dhPatch.Level > 0 {
-			if err := daggerheart.ValidateLevel(int(dhPatch.Level)); err != nil {
+			if err := daggerheartprofile.ValidateLevel(int(dhPatch.Level)); err != nil {
 				return "", storage.DaggerheartCharacterProfile{}, err
 			}
 			dhProfile.Level = int(dhPatch.Level)
@@ -628,7 +629,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 			return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.InvalidArgument, "hp_max must be non-negative")
 		}
 		if dhPatch.HpMax > 0 {
-			if dhPatch.HpMax > daggerheart.HPMaxCap {
+			if dhPatch.HpMax > daggerheartprofile.HPMaxCap {
 				return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.InvalidArgument, "hp_max must be in range 1..12")
 			}
 			dhProfile.HpMax = int(dhPatch.HpMax)
@@ -640,7 +641,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 			if val < 0 {
 				return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.InvalidArgument, "stress_max must be non-negative")
 			}
-			if val > daggerheart.StressMaxCap {
+			if val > daggerheartprofile.StressMaxCap {
 				return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.InvalidArgument, "stress_max must be in range 0..12")
 			}
 			dhProfile.StressMax = val
@@ -694,7 +695,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		// Validate armor_max (wrapper type: nil means not provided)
 		if dhPatch.GetArmorMax() != nil {
 			val := int(dhPatch.GetArmorMax().GetValue())
-			if val < 0 || val > daggerheart.ArmorMaxCap {
+			if val < 0 || val > daggerheartprofile.ArmorMaxCap {
 				return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.InvalidArgument, "armor_max must be in range 0..12")
 			}
 			dhProfile.ArmorMax = val
@@ -714,23 +715,23 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 			dhProfile.Experiences = experiences
 		}
 		if dhProfile.Level == 0 {
-			dhProfile.Level = daggerheart.PCLevelDefault
+			dhProfile.Level = daggerheartprofile.PCLevelDefault
 		}
-		dhProfile.MajorThreshold, dhProfile.SevereThreshold = daggerheart.DeriveThresholds(
+		dhProfile.MajorThreshold, dhProfile.SevereThreshold = daggerheartprofile.DeriveThresholds(
 			dhProfile.Level,
 			dhProfile.ArmorScore,
 			dhProfile.MajorThreshold,
 			dhProfile.SevereThreshold,
 		)
 
-		experiences := make([]daggerheart.Experience, 0, len(dhProfile.Experiences))
+		experiences := make([]daggerheartprofile.Experience, 0, len(dhProfile.Experiences))
 		for _, experience := range dhProfile.Experiences {
-			experiences = append(experiences, daggerheart.Experience{
+			experiences = append(experiences, daggerheartprofile.Experience{
 				Name:     experience.Name,
 				Modifier: experience.Modifier,
 			})
 		}
-		if err := daggerheart.ValidateProfile(
+		if err := daggerheartprofile.Validate(
 			dhProfile.Level,
 			dhProfile.HpMax,
 			dhProfile.StressMax,
@@ -740,7 +741,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 			dhProfile.Proficiency,
 			dhProfile.ArmorScore,
 			dhProfile.ArmorMax,
-			daggerheart.Traits{
+			daggerheartprofile.Traits{
 				Agility:   dhProfile.Agility,
 				Strength:  dhProfile.Strength,
 				Finesse:   dhProfile.Finesse,

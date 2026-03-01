@@ -1,4 +1,4 @@
-package invite
+package joingrant
 
 import (
 	"crypto/ed25519"
@@ -14,30 +14,30 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 )
 
-// joinGrantEnv holds raw env values before post-parse validation.
-type joinGrantEnv struct {
+// envConfig holds raw env values before post-parse validation.
+type envConfig struct {
 	Issuer    string `env:"FRACTURING_SPACE_JOIN_GRANT_ISSUER"`
 	Audience  string `env:"FRACTURING_SPACE_JOIN_GRANT_AUDIENCE"`
 	PublicKey string `env:"FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY"`
 }
 
-// JoinGrantConfig defines how join grants are verified.
-type JoinGrantConfig struct {
+// Config defines how join grants are verified.
+type Config struct {
 	Issuer   string
 	Audience string
 	Key      ed25519.PublicKey
 	Now      func() time.Time
 }
 
-// JoinGrantExpectation defines the expected identity for a join grant.
-type JoinGrantExpectation struct {
+// Expectation defines the expected identity for a join grant.
+type Expectation struct {
 	CampaignID string
 	InviteID   string
 	UserID     string
 }
 
-// JoinGrantClaims captures validated join grant claims.
-type JoinGrantClaims struct {
+// Claims captures validated join grant claims.
+type Claims struct {
 	Issuer     string
 	Audience   []string
 	ExpiresAt  time.Time
@@ -49,43 +49,74 @@ type JoinGrantClaims struct {
 	UserID     string
 }
 
-// joinGrantClaims is the internal claims type used for JWT parsing.
-type joinGrantClaims struct {
+// Verifier validates a join grant token against expected claims.
+type Verifier interface {
+	Validate(grant string, expected Expectation) (Claims, error)
+}
+
+var ErrVerifierNotConfigured = errors.New("join grant verifier is not configured")
+
+// EnvVerifier validates using config loaded from process env.
+type EnvVerifier struct {
+	Now func() time.Time
+}
+
+// Validate validates a join grant using env-loaded configuration.
+func (v EnvVerifier) Validate(grant string, expected Expectation) (Claims, error) {
+	cfg, err := LoadConfigFromEnv(v.Now)
+	if err != nil {
+		return Claims{}, fmt.Errorf("%w: %v", ErrVerifierNotConfigured, err)
+	}
+	return Validate(grant, expected, cfg)
+}
+
+// StaticVerifier validates using a pre-configured static verifier config.
+type StaticVerifier struct {
+	Config Config
+}
+
+// Validate validates a join grant using static configuration.
+func (v StaticVerifier) Validate(grant string, expected Expectation) (Claims, error) {
+	return Validate(grant, expected, v.Config)
+}
+
+// claimsPayload is the internal claims type used for JWT parsing.
+type claimsPayload struct {
 	jwt.RegisteredClaims
 	CampaignID string `json:"campaign_id"`
 	InviteID   string `json:"invite_id"`
 	UserID     string `json:"user_id"`
 }
 
-// LoadJoinGrantConfigFromEnv reads join grant verification configuration.
-func LoadJoinGrantConfigFromEnv(now func() time.Time) (JoinGrantConfig, error) {
-	var raw joinGrantEnv
+// LoadConfigFromEnv reads join grant verification configuration.
+func LoadConfigFromEnv(now func() time.Time) (Config, error) {
+	var raw envConfig
 	if err := env.Parse(&raw); err != nil {
-		return JoinGrantConfig{}, fmt.Errorf("parse join grant env: %w", err)
+		return Config{}, fmt.Errorf("parse join grant env: %w", err)
 	}
 	issuer := strings.TrimSpace(raw.Issuer)
 	audience := strings.TrimSpace(raw.Audience)
 	publicKey := strings.TrimSpace(raw.PublicKey)
 	if issuer == "" {
-		return JoinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_ISSUER is required")
+		return Config{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_ISSUER is required")
 	}
 	if audience == "" {
-		return JoinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE is required")
+		return Config{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE is required")
 	}
 	if publicKey == "" {
-		return JoinGrantConfig{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY is required")
+		return Config{}, fmt.Errorf("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY is required")
 	}
 	keyBytes, err := decodeBase64(publicKey)
 	if err != nil {
-		return JoinGrantConfig{}, fmt.Errorf("decode join grant public key: %w", err)
+		return Config{}, fmt.Errorf("decode join grant public key: %w", err)
 	}
 	if len(keyBytes) != ed25519.PublicKeySize {
-		return JoinGrantConfig{}, fmt.Errorf("join grant public key must be %d bytes", ed25519.PublicKeySize)
+		return Config{}, fmt.Errorf("join grant public key must be %d bytes", ed25519.PublicKeySize)
 	}
 	if now == nil {
 		now = time.Now
 	}
-	return JoinGrantConfig{
+	return Config{
 		Issuer:   issuer,
 		Audience: audience,
 		Key:      ed25519.PublicKey(keyBytes),
@@ -93,20 +124,20 @@ func LoadJoinGrantConfigFromEnv(now func() time.Time) (JoinGrantConfig, error) {
 	}, nil
 }
 
-// ValidateJoinGrant verifies a join grant token and validates expected claims.
-func ValidateJoinGrant(grant string, expected JoinGrantExpectation, cfg JoinGrantConfig) (JoinGrantClaims, error) {
+// Validate verifies a join grant token and validates expected claims.
+func Validate(grant string, expected Expectation, cfg Config) (Claims, error) {
 	grant = strings.TrimSpace(grant)
 	if grant == "" {
-		return JoinGrantClaims{}, apperrors.New(apperrors.CodeInviteJoinGrantInvalid, "join grant is required")
+		return Claims{}, apperrors.New(apperrors.CodeInviteJoinGrantInvalid, "join grant is required")
 	}
 	if cfg.Now == nil {
 		cfg.Now = time.Now
 	}
 	if cfg.Issuer == "" || cfg.Audience == "" || len(cfg.Key) != ed25519.PublicKeySize {
-		return JoinGrantClaims{}, errors.New("join grant verifier is not configured")
+		return Claims{}, errors.New("join grant verifier is not configured")
 	}
 
-	var parsed joinGrantClaims
+	var parsed claimsPayload
 	_, err := jwt.ParseWithClaims(grant, &parsed, func(token *jwt.Token) (any, error) {
 		return cfg.Key, nil
 	},
@@ -114,18 +145,18 @@ func ValidateJoinGrant(grant string, expected JoinGrantExpectation, cfg JoinGran
 		jwt.WithoutClaimsValidation(),
 	)
 	if err != nil {
-		return JoinGrantClaims{}, mapJWTError(err)
+		return Claims{}, mapJWTError(err)
 	}
 
 	if parsed.Issuer == "" || parsed.Issuer != cfg.Issuer {
-		return JoinGrantClaims{}, apperrors.WithMetadata(
+		return Claims{}, apperrors.WithMetadata(
 			apperrors.CodeInviteJoinGrantMismatch,
 			"join grant issuer mismatch",
 			map[string]string{"Field": "issuer"},
 		)
 	}
 	if !audienceContains(parsed.Audience, cfg.Audience) {
-		return JoinGrantClaims{}, apperrors.WithMetadata(
+		return Claims{}, apperrors.WithMetadata(
 			apperrors.CodeInviteJoinGrantMismatch,
 			"join grant audience mismatch",
 			map[string]string{"Field": "audience"},
@@ -133,47 +164,47 @@ func ValidateJoinGrant(grant string, expected JoinGrantExpectation, cfg JoinGran
 	}
 
 	if parsed.ID == "" {
-		return JoinGrantClaims{}, apperrors.New(apperrors.CodeInviteJoinGrantInvalid, "join grant jti is required")
+		return Claims{}, apperrors.New(apperrors.CodeInviteJoinGrantInvalid, "join grant jti is required")
 	}
 	if parsed.ExpiresAt == nil {
-		return JoinGrantClaims{}, apperrors.New(apperrors.CodeInviteJoinGrantInvalid, "join grant exp is required")
+		return Claims{}, apperrors.New(apperrors.CodeInviteJoinGrantInvalid, "join grant exp is required")
 	}
 
 	now := cfg.Now().UTC()
 	exp := parsed.ExpiresAt.Time.UTC()
 	if !exp.After(now) {
-		return JoinGrantClaims{}, apperrors.New(apperrors.CodeInviteJoinGrantExpired, "join grant is expired")
+		return Claims{}, apperrors.New(apperrors.CodeInviteJoinGrantExpired, "join grant is expired")
 	}
 	if parsed.NotBefore != nil {
 		nbf := parsed.NotBefore.Time.UTC()
 		if now.Before(nbf) {
-			return JoinGrantClaims{}, apperrors.New(apperrors.CodeInviteJoinGrantInvalid, "join grant not active yet")
+			return Claims{}, apperrors.New(apperrors.CodeInviteJoinGrantInvalid, "join grant not active yet")
 		}
 	}
 
 	if strings.TrimSpace(parsed.CampaignID) == "" || parsed.CampaignID != expected.CampaignID {
-		return JoinGrantClaims{}, apperrors.WithMetadata(
+		return Claims{}, apperrors.WithMetadata(
 			apperrors.CodeInviteJoinGrantMismatch,
 			"join grant campaign mismatch",
 			map[string]string{"Field": "campaign_id"},
 		)
 	}
 	if strings.TrimSpace(parsed.InviteID) == "" || parsed.InviteID != expected.InviteID {
-		return JoinGrantClaims{}, apperrors.WithMetadata(
+		return Claims{}, apperrors.WithMetadata(
 			apperrors.CodeInviteJoinGrantMismatch,
 			"join grant invite mismatch",
 			map[string]string{"Field": "invite_id"},
 		)
 	}
 	if strings.TrimSpace(parsed.UserID) == "" || parsed.UserID != expected.UserID {
-		return JoinGrantClaims{}, apperrors.WithMetadata(
+		return Claims{}, apperrors.WithMetadata(
 			apperrors.CodeInviteJoinGrantMismatch,
 			"join grant user mismatch",
 			map[string]string{"Field": "user_id"},
 		)
 	}
 
-	claims := JoinGrantClaims{
+	claims := Claims{
 		Issuer:     parsed.Issuer,
 		Audience:   []string(parsed.Audience),
 		ExpiresAt:  exp,

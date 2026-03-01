@@ -153,8 +153,8 @@ func validateGMFearSetPayload(raw json.RawMessage) error {
 	if payload.After == nil {
 		return errors.New("after is required")
 	}
-	if *payload.After < GMFearMin || *payload.After > GMFearMax {
-		return fmt.Errorf("after must be in range %d..%d", GMFearMin, GMFearMax)
+	if err := requireRange(*payload.After, GMFearMin, GMFearMax, "after"); err != nil {
+		return err
 	}
 	return nil
 }
@@ -256,11 +256,11 @@ func validateLoadoutSwapPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return errors.New("character_id is required")
+	if err := requireTrimmedValue(payload.CharacterID, "character_id"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(payload.CardID) == "" {
-		return errors.New("card_id is required")
+	if err := requireTrimmedValue(payload.CardID, "card_id"); err != nil {
+		return err
 	}
 	return nil
 }
@@ -274,8 +274,8 @@ func validateRestTakePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.RestType) == "" {
-		return errors.New("rest_type is required")
+	if err := requireTrimmedValue(payload.RestType, "rest_type"); err != nil {
+		return err
 	}
 	if payload.LongTermCountdown != nil {
 		if err := validateRestLongTermCountdownPayload(*payload.LongTermCountdown); err != nil {
@@ -297,20 +297,20 @@ func validateCountdownCreatePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CountdownID) == "" {
-		return errors.New("countdown_id is required")
+	if err := requireTrimmedValue(payload.CountdownID, "countdown_id"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(payload.Name) == "" {
-		return errors.New("name is required")
+	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(payload.Kind) == "" {
-		return errors.New("kind is required")
+	if err := requireTrimmedValue(payload.Kind, "kind"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(payload.Direction) == "" {
-		return errors.New("direction is required")
+	if err := requireTrimmedValue(payload.Direction, "direction"); err != nil {
+		return err
 	}
-	if payload.Max <= 0 {
-		return errors.New("max must be positive")
+	if err := requirePositive(payload.Max, "max"); err != nil {
+		return err
 	}
 	if payload.Current < 0 || payload.Current > payload.Max {
 		return fmt.Errorf("current must be in range 0..%d", payload.Max)
@@ -470,11 +470,11 @@ func validateCharacterTemporaryArmorApplyPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
-		return errors.New("character_id is required")
+	if err := requireTrimmedValue(payload.CharacterID, "character_id"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(payload.Source) == "" {
-		return errors.New("source is required")
+	if err := requireTrimmedValue(payload.Source, "source"); err != nil {
+		return err
 	}
 	if !isTemporaryArmorDuration(strings.TrimSpace(payload.Duration)) {
 		return errors.New("duration must be short_rest, long_rest, session, or scene")
@@ -585,11 +585,11 @@ func validateAdversaryCreatePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.AdversaryID) == "" {
-		return errors.New("adversary_id is required")
+	if err := requireTrimmedValue(payload.AdversaryID, "adversary_id"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(payload.Name) == "" {
-		return errors.New("name is required")
+	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
+		return err
 	}
 	return nil
 }
@@ -603,11 +603,11 @@ func validateAdversaryUpdatePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.AdversaryID) == "" {
-		return errors.New("adversary_id is required")
+	if err := requireTrimmedValue(payload.AdversaryID, "adversary_id"); err != nil {
+		return err
 	}
-	if strings.TrimSpace(payload.Name) == "" {
-		return errors.New("name is required")
+	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
+		return err
 	}
 	return nil
 }

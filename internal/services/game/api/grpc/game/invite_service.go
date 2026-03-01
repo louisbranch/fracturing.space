@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/joingrant"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -27,18 +28,20 @@ const (
 // InviteService implements the game.v1.InviteService gRPC API.
 type InviteService struct {
 	campaignv1.UnimplementedInviteServiceServer
-	stores      Stores
-	clock       func() time.Time
-	idGenerator func() (string, error)
-	authClient  authv1.AuthServiceClient
+	stores            Stores
+	clock             func() time.Time
+	idGenerator       func() (string, error)
+	authClient        authv1.AuthServiceClient
+	joinGrantVerifier joingrant.Verifier
 }
 
 // NewInviteService creates an InviteService with default dependencies.
 func NewInviteService(stores Stores) *InviteService {
 	return &InviteService{
-		stores:      stores,
-		clock:       time.Now,
-		idGenerator: id.NewID,
+		stores:            stores,
+		clock:             time.Now,
+		idGenerator:       id.NewID,
+		joinGrantVerifier: joingrant.EnvVerifier{Now: time.Now},
 	}
 }
 

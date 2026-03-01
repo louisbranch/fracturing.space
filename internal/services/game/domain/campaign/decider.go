@@ -37,6 +37,51 @@ const (
 	rejectionCodePayloadDecodeFailed        = "PAYLOAD_DECODE_FAILED"
 )
 
+var lifecycleCommandTargets = map[command.Type]Status{
+	CommandTypeEnd:     StatusCompleted,
+	CommandTypeArchive: StatusArchived,
+	CommandTypeRestore: StatusDraft,
+}
+
+type updateFieldNormalizer func(currentStatus Status, value string) (string, *command.Rejection)
+
+var campaignUpdateFieldNormalizers = map[string]updateFieldNormalizer{
+	"status": func(currentStatus Status, value string) (string, *command.Rejection) {
+		normalizedStatus, ok := normalizeStatusLabel(value)
+		if !ok {
+			return "", &command.Rejection{Code: rejectionCodeCampaignStatusInvalid, Message: "campaign status is invalid"}
+		}
+		if !isStatusTransitionAllowed(currentStatus, normalizedStatus) {
+			return "", &command.Rejection{Code: rejectionCodeCampaignStatusTransition, Message: "campaign status transition is not allowed"}
+		}
+		return string(normalizedStatus), nil
+	},
+	"name": func(_ Status, value string) (string, *command.Rejection) {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			return "", &command.Rejection{Code: rejectionCodeCampaignNameEmpty, Message: "campaign name is required"}
+		}
+		return trimmed, nil
+	},
+	"theme_prompt": func(_ Status, value string) (string, *command.Rejection) {
+		return strings.TrimSpace(value), nil
+	},
+	"cover_asset_id": func(_ Status, value string) (string, *command.Rejection) {
+		normalizedCoverAssetID, ok := normalizeCampaignCoverAssetID(value)
+		if !ok {
+			return "", &command.Rejection{Code: rejectionCodeCampaignCoverAssetInvalid, Message: "campaign cover asset is invalid"}
+		}
+		return normalizedCoverAssetID, nil
+	},
+	"cover_set_id": func(_ Status, value string) (string, *command.Rejection) {
+		normalizedCoverSetID, ok := normalizeCampaignCoverSetID(value)
+		if !ok {
+			return "", &command.Rejection{Code: rejectionCodeCampaignCoverSetInvalid, Message: "campaign cover set is invalid"}
+		}
+		return normalizedCoverSetID, nil
+	},
+}
+
 // Decide returns the decision for a campaign command against current state.
 //
 // This function is the campaign policy hub: it normalizes command payloads,
@@ -45,224 +90,13 @@ const (
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	switch cmd.Type {
 	case CommandTypeCreate:
-		if state.Created {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignAlreadyExists,
-				Message: "campaign already exists",
-			})
-		}
-		var payload CreatePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		normalizedName := strings.TrimSpace(payload.Name)
-		if normalizedName == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignNameEmpty,
-				Message: "campaign name is required",
-			})
-		}
-		normalizedGameSystem, ok := normalizeGameSystemLabel(payload.GameSystem)
-		if !ok {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignGameSystemInvalid,
-				Message: "game system is required",
-			})
-		}
-		normalizedGmMode, ok := normalizeGmModeLabel(payload.GmMode)
-		if !ok {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignGmModeInvalid,
-				Message: "gm mode is required",
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-		coverAssetID := strings.TrimSpace(payload.CoverAssetID)
-		if coverAssetID == "" {
-			coverAssetID = defaultCampaignCoverAssetID(cmd.CampaignID)
-		}
-		normalizedCoverAssetID, ok := normalizeCampaignCoverAssetID(coverAssetID)
-		if !ok {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignCoverAssetInvalid,
-				Message: "campaign cover asset is invalid",
-			})
-		}
-		coverSetID := strings.TrimSpace(payload.CoverSetID)
-		if coverSetID == "" {
-			coverSetID = defaultCampaignCoverSetID
-		}
-		normalizedCoverSetID, ok := normalizeCampaignCoverSetID(coverSetID)
-		if !ok {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignCoverSetInvalid,
-				Message: "campaign cover set is invalid",
-			})
-		}
-
-		normalizedPayload := CreatePayload{
-			Name:         normalizedName,
-			Locale:       strings.TrimSpace(payload.Locale),
-			GameSystem:   normalizedGameSystem,
-			GmMode:       normalizedGmMode,
-			Intent:       strings.TrimSpace(payload.Intent),
-			AccessPolicy: strings.TrimSpace(payload.AccessPolicy),
-			ThemePrompt:  payload.ThemePrompt,
-			CoverAssetID: normalizedCoverAssetID,
-			CoverSetID:   normalizedCoverSetID,
-		}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-
-		evt := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
+		return decideCreate(state, cmd, now)
 	case CommandTypeUpdate:
-		if !state.Created {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignNotCreated,
-				Message: "campaign does not exist",
-			})
-		}
-		var payload UpdatePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		if len(payload.Fields) == 0 {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignUpdateEmpty,
-				Message: "campaign update requires fields",
-			})
-		}
-
-		normalizedFields := make(map[string]string, len(payload.Fields))
-		currentStatus := state.Status
-		if currentStatus == "" {
-			currentStatus = StatusDraft
-		}
-		for key, value := range payload.Fields {
-			switch key {
-			case "status":
-				normalizedStatus, ok := normalizeStatusLabel(value)
-				if !ok {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeCampaignStatusInvalid,
-						Message: "campaign status is invalid",
-					})
-				}
-				if !isStatusTransitionAllowed(currentStatus, normalizedStatus) {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeCampaignStatusTransition,
-						Message: "campaign status transition is not allowed",
-					})
-				}
-				normalizedFields[key] = string(normalizedStatus)
-			case "name":
-				trimmed := strings.TrimSpace(value)
-				if trimmed == "" {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeCampaignNameEmpty,
-						Message: "campaign name is required",
-					})
-				}
-				normalizedFields[key] = trimmed
-			case "theme_prompt":
-				normalizedFields[key] = strings.TrimSpace(value)
-			case "cover_asset_id":
-				normalizedCoverAssetID, ok := normalizeCampaignCoverAssetID(value)
-				if !ok {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeCampaignCoverAssetInvalid,
-						Message: "campaign cover asset is invalid",
-					})
-				}
-				normalizedFields[key] = normalizedCoverAssetID
-			case "cover_set_id":
-				normalizedCoverSetID, ok := normalizeCampaignCoverSetID(value)
-				if !ok {
-					return command.Reject(command.Rejection{
-						Code:    rejectionCodeCampaignCoverSetInvalid,
-						Message: "campaign cover set is invalid",
-					})
-				}
-				normalizedFields[key] = normalizedCoverSetID
-			default:
-				return command.Reject(command.Rejection{
-					Code:    rejectionCodeCampaignUpdateFieldInvalid,
-					Message: "campaign update field is invalid",
-				})
-			}
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := UpdatePayload{Fields: normalizedFields}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
+		return decideUpdate(state, cmd, now)
 	case CommandTypeFork:
-		if !state.Created {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignNotCreated,
-				Message: "campaign does not exist",
-			})
-		}
-		var payload ForkPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodePayloadDecodeFailed,
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		payload.ParentCampaignID = strings.TrimSpace(payload.ParentCampaignID)
-		payload.OriginCampaignID = strings.TrimSpace(payload.OriginCampaignID)
-		if now == nil {
-			now = time.Now
-		}
-		payloadJSON, _ := json.Marshal(payload)
-		evt := command.NewEvent(cmd, EventTypeForked, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
+		return decideFork(state, cmd, now)
 	case CommandTypeEnd, CommandTypeArchive, CommandTypeRestore:
-		targetStatus, _ := statusCommandTarget(cmd.Type)
-		if !state.Created {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignNotCreated,
-				Message: "campaign does not exist",
-			})
-		}
-		currentStatus := state.Status
-		if currentStatus == "" {
-			currentStatus = StatusDraft
-		}
-		if !isStatusTransitionAllowed(currentStatus, targetStatus) {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCampaignStatusTransition,
-				Message: "campaign status transition is not allowed",
-			})
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := UpdatePayload{Fields: map[string]string{"status": string(targetStatus)}}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
-
+		return decideLifecycleStatus(state, cmd, now)
 	default:
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeCommandTypeUnsupported,
@@ -271,21 +105,190 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	}
 }
 
+func decideCreate(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if state.Created {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignAlreadyExists,
+			Message: "campaign already exists",
+		})
+	}
+	var payload CreatePayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+
+	normalizedName := strings.TrimSpace(payload.Name)
+	if normalizedName == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignNameEmpty,
+			Message: "campaign name is required",
+		})
+	}
+	normalizedGameSystem, ok := normalizeGameSystemLabel(payload.GameSystem)
+	if !ok {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignGameSystemInvalid,
+			Message: "game system is required",
+		})
+	}
+	normalizedGmMode, ok := normalizeGmModeLabel(payload.GmMode)
+	if !ok {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignGmModeInvalid,
+			Message: "gm mode is required",
+		})
+	}
+
+	coverAssetID := strings.TrimSpace(payload.CoverAssetID)
+	if coverAssetID == "" {
+		coverAssetID = defaultCampaignCoverAssetID(cmd.CampaignID)
+	}
+	normalizedCoverAssetID, ok := normalizeCampaignCoverAssetID(coverAssetID)
+	if !ok {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignCoverAssetInvalid,
+			Message: "campaign cover asset is invalid",
+		})
+	}
+	coverSetID := strings.TrimSpace(payload.CoverSetID)
+	if coverSetID == "" {
+		coverSetID = defaultCampaignCoverSetID
+	}
+	normalizedCoverSetID, ok := normalizeCampaignCoverSetID(coverSetID)
+	if !ok {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignCoverSetInvalid,
+			Message: "campaign cover set is invalid",
+		})
+	}
+
+	normalizedPayload := CreatePayload{
+		Name:         normalizedName,
+		Locale:       strings.TrimSpace(payload.Locale),
+		GameSystem:   normalizedGameSystem,
+		GmMode:       normalizedGmMode,
+		Intent:       strings.TrimSpace(payload.Intent),
+		AccessPolicy: strings.TrimSpace(payload.AccessPolicy),
+		ThemePrompt:  payload.ThemePrompt,
+		CoverAssetID: normalizedCoverAssetID,
+		CoverSetID:   normalizedCoverSetID,
+	}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+
+	evt := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	return command.Accept(evt)
+}
+
+func decideUpdate(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Created {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignNotCreated,
+			Message: "campaign does not exist",
+		})
+	}
+	var payload UpdatePayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	if len(payload.Fields) == 0 {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignUpdateEmpty,
+			Message: "campaign update requires fields",
+		})
+	}
+
+	normalizedFields := make(map[string]string, len(payload.Fields))
+	currentStatus := state.Status
+	if currentStatus == "" {
+		currentStatus = StatusDraft
+	}
+	for key, value := range payload.Fields {
+		normalizeField, ok := campaignUpdateFieldNormalizers[key]
+		if !ok {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeCampaignUpdateFieldInvalid,
+				Message: "campaign update field is invalid",
+			})
+		}
+		normalized, rejection := normalizeField(currentStatus, value)
+		if rejection != nil {
+			return command.Reject(*rejection)
+		}
+		normalizedFields[key] = normalized
+	}
+
+	normalizedPayload := UpdatePayload{Fields: normalizedFields}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	return command.Accept(evt)
+}
+
+func decideFork(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Created {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignNotCreated,
+			Message: "campaign does not exist",
+		})
+	}
+	var payload ForkPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	payload.ParentCampaignID = strings.TrimSpace(payload.ParentCampaignID)
+	payload.OriginCampaignID = strings.TrimSpace(payload.OriginCampaignID)
+	payloadJSON, _ := json.Marshal(payload)
+	evt := command.NewEvent(cmd, EventTypeForked, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	return command.Accept(evt)
+}
+
+func decideLifecycleStatus(state State, cmd command.Command, now func() time.Time) command.Decision {
+	targetStatus, _ := statusCommandTarget(cmd.Type)
+	if !state.Created {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignNotCreated,
+			Message: "campaign does not exist",
+		})
+	}
+	currentStatus := state.Status
+	if currentStatus == "" {
+		currentStatus = StatusDraft
+	}
+	if !isStatusTransitionAllowed(currentStatus, targetStatus) {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignStatusTransition,
+			Message: "campaign status transition is not allowed",
+		})
+	}
+
+	normalizedPayload := UpdatePayload{Fields: map[string]string{"status": string(targetStatus)}}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	return command.Accept(evt)
+}
+
+func nowFunc(now func() time.Time) func() time.Time {
+	if now == nil {
+		return time.Now
+	}
+	return now
+}
+
 // statusCommandTarget maps lifecycle command names to their destination status.
 //
 // Centralizing lifecycle transition targets prevents duplicate status-mapping logic
 // in every handler and keeps command intent readable.
 func statusCommandTarget(cmdType command.Type) (Status, bool) {
-	switch cmdType {
-	case CommandTypeEnd:
-		return StatusCompleted, true
-	case CommandTypeArchive:
-		return StatusArchived, true
-	case CommandTypeRestore:
-		return StatusDraft, true
-	default:
-		return "", false
-	}
+	target, ok := lifecycleCommandTargets[cmdType]
+	return target, ok
 }
 
 // normalizeGameSystemLabel returns a canonical label for stable payload hashes.

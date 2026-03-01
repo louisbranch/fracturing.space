@@ -3,6 +3,8 @@ package daggerheart
 import (
 	"errors"
 	"testing"
+
+	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 )
 
 func TestEvaluateDamage(t *testing.T) {
@@ -16,7 +18,7 @@ func TestEvaluateDamage(t *testing.T) {
 		wantMarks       int
 		wantErr         error
 	}{
-		{"invalid thresholds", 5, 10, 8, DamageOptions{}, 0, 0, ErrInvalidThresholds},
+		{"invalid thresholds", 5, 10, 8, DamageOptions{}, 0, 0, daggerheartprofile.ErrInvalidThresholds},
 		{"zero damage", 0, 5, 10, DamageOptions{}, DamageNone, 0, nil},
 		{"minor damage", 4, 5, 10, DamageOptions{}, DamageMinor, 1, nil},
 		{"major at threshold", 5, 5, 10, DamageOptions{}, DamageMajor, 2, nil},

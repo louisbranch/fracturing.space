@@ -89,7 +89,7 @@ func ChainHash(evt Event, prevHash string) (string, error) {
 	if evt.Hash == "" {
 		return "", fmt.Errorf("event hash is required")
 	}
-	canonical, err := coreencoding.CanonicalJSON(chainEnvelope(evt, prevHash))
+	canonical, err := canonicalJSON(chainEnvelope(evt, prevHash))
 	if err != nil {
 		return "", fmt.Errorf("canonical json: %w", err)
 	}

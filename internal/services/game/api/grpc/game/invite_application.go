@@ -20,21 +20,33 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/joingrant"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 type inviteApplication struct {
-	stores      Stores
-	clock       func() time.Time
-	idGenerator func() (string, error)
-	authClient  authv1.AuthServiceClient
+	stores            Stores
+	clock             func() time.Time
+	idGenerator       func() (string, error)
+	authClient        authv1.AuthServiceClient
+	joinGrantVerifier joingrant.Verifier
 }
 
 func newInviteApplication(service *InviteService) inviteApplication {
-	app := inviteApplication{stores: service.stores, clock: service.clock, idGenerator: service.idGenerator, authClient: service.authClient}
+	app := inviteApplication{
+		stores:      service.stores,
+		clock:       service.clock,
+		idGenerator: service.idGenerator,
+		authClient:  service.authClient,
+	}
 	if app.clock == nil {
 		app.clock = time.Now
+	}
+	if service.joinGrantVerifier != nil {
+		app.joinGrantVerifier = service.joinGrantVerifier
+	} else {
+		app.joinGrantVerifier = joingrant.EnvVerifier{Now: app.clock}
 	}
 	return app
 }
@@ -162,16 +174,15 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, err
 	}
 
-	config, err := invite.LoadJoinGrantConfigFromEnv(a.clock)
-	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "join grant validation is not configured: %v", err)
-	}
-	claims, err := invite.ValidateJoinGrant(in.GetJoinGrant(), invite.JoinGrantExpectation{
+	claims, err := a.joinGrantVerifier.Validate(in.GetJoinGrant(), joingrant.Expectation{
 		CampaignID: campaignID,
 		InviteID:   inv.ID,
 		UserID:     userID,
-	}, config)
+	})
 	if err != nil {
+		if errors.Is(err, joingrant.ErrVerifierNotConfigured) {
+			return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "join grant validation is not configured: %v", err)
+		}
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return storage.InviteRecord{}, storage.ParticipantRecord{}, err
 		}

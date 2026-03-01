@@ -8,117 +8,202 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
+type commandContract struct {
+	definition command.Definition
+}
+
+type eventProjectionContract struct {
+	definition event.Definition
+	emittable  bool
+	projection bool
+}
+
+var sessionCommandContracts = []commandContract{
+	{
+		definition: command.Definition{
+			Type:            CommandTypeStart,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateStartPayload,
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeEnd,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateEndPayload,
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeGateOpen,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateGateOpenedPayload,
+			Gate: command.GatePolicy{
+				Scope: command.GateScopeSession,
+			},
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeGateResolve,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateGateResolvedPayload,
+			Gate: command.GatePolicy{
+				Scope:         command.GateScopeSession,
+				AllowWhenOpen: true,
+			},
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeGateAbandon,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateGateAbandonedPayload,
+			Gate: command.GatePolicy{
+				Scope:         command.GateScopeSession,
+				AllowWhenOpen: true,
+			},
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeSpotlightSet,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateSpotlightSetPayload,
+			Gate: command.GatePolicy{
+				Scope:         command.GateScopeSession,
+				AllowWhenOpen: true,
+			},
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeSpotlightClear,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateSpotlightClearedPayload,
+			Gate: command.GatePolicy{
+				Scope:         command.GateScopeSession,
+				AllowWhenOpen: true,
+			},
+		},
+	},
+}
+
+var sessionEventContracts = []eventProjectionContract{
+	{
+		definition: event.Definition{
+			Type:            EventTypeStarted,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateStartPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeEnded,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateEndPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeGateOpened,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateGateOpenedPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeGateResolved,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateGateResolvedPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeGateAbandoned,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateGateAbandonedPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeSpotlightSet,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateSpotlightSetPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeSpotlightCleared,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateSpotlightClearedPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+}
+
 // RegisterCommands registers session commands with the shared registry.
 func RegisterCommands(registry *command.Registry) error {
 	if registry == nil {
 		return errors.New("command registry is required")
 	}
-	if err := registry.Register(command.Definition{
-		Type:            CommandTypeStart,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateStartPayload,
-	}); err != nil {
-		return err
+	for _, contract := range sessionCommandContracts {
+		if err := registry.Register(contract.definition); err != nil {
+			return err
+		}
 	}
-	if err := registry.Register(command.Definition{
-		Type:            CommandTypeEnd,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateEndPayload,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            CommandTypeGateOpen,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateGateOpenedPayload,
-		Gate: command.GatePolicy{
-			Scope: command.GateScopeSession,
-		},
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            CommandTypeGateResolve,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateGateResolvedPayload,
-		Gate: command.GatePolicy{
-			Scope:         command.GateScopeSession,
-			AllowWhenOpen: true,
-		},
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            CommandTypeGateAbandon,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateGateAbandonedPayload,
-		Gate: command.GatePolicy{
-			Scope:         command.GateScopeSession,
-			AllowWhenOpen: true,
-		},
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(command.Definition{
-		Type:            CommandTypeSpotlightSet,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateSpotlightSetPayload,
-		Gate: command.GatePolicy{
-			Scope:         command.GateScopeSession,
-			AllowWhenOpen: true,
-		},
-	}); err != nil {
-		return err
-	}
-	return registry.Register(command.Definition{
-		Type:            CommandTypeSpotlightClear,
-		Owner:           command.OwnerCore,
-		ValidatePayload: validateSpotlightClearedPayload,
-		Gate: command.GatePolicy{
-			Scope:         command.GateScopeSession,
-			AllowWhenOpen: true,
-		},
-	})
+	return nil
 }
 
 // EmittableEventTypes returns all event types the session decider can emit.
 func EmittableEventTypes() []event.Type {
-	return []event.Type{
-		EventTypeStarted,
-		EventTypeEnded,
-		EventTypeGateOpened,
-		EventTypeGateResolved,
-		EventTypeGateAbandoned,
-		EventTypeSpotlightSet,
-		EventTypeSpotlightCleared,
-	}
+	return sessionEventTypes(func(contract eventProjectionContract) bool {
+		return contract.emittable
+	})
 }
 
 // DeciderHandledCommands returns all command types the session decider handles.
 func DeciderHandledCommands() []command.Type {
-	return []command.Type{
-		CommandTypeStart,
-		CommandTypeEnd,
-		CommandTypeGateOpen,
-		CommandTypeGateResolve,
-		CommandTypeGateAbandon,
-		CommandTypeSpotlightSet,
-		CommandTypeSpotlightClear,
+	types := make([]command.Type, 0, len(sessionCommandContracts))
+	for _, contract := range sessionCommandContracts {
+		types = append(types, contract.definition.Type)
 	}
+	return types
 }
 
 // ProjectionHandledTypes returns the session event types that require
 // projection handlers (IntentProjectionAndReplay).
 func ProjectionHandledTypes() []event.Type {
-	return []event.Type{
-		EventTypeStarted,
-		EventTypeEnded,
-		EventTypeGateOpened,
-		EventTypeGateResolved,
-		EventTypeGateAbandoned,
-		EventTypeSpotlightSet,
-		EventTypeSpotlightCleared,
-	}
+	return sessionEventTypes(func(contract eventProjectionContract) bool {
+		return contract.projection
+	})
 }
 
 // RegisterEvents registers session events with the shared registry.
@@ -126,67 +211,22 @@ func RegisterEvents(registry *event.Registry) error {
 	if registry == nil {
 		return errors.New("event registry is required")
 	}
-	if err := registry.Register(event.Definition{
-		Type:            EventTypeStarted,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateStartPayload,
-		Intent:          event.IntentProjectionAndReplay,
-	}); err != nil {
-		return err
+	for _, contract := range sessionEventContracts {
+		if err := registry.Register(contract.definition); err != nil {
+			return err
+		}
 	}
-	if err := registry.Register(event.Definition{
-		Type:            EventTypeEnded,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateEndPayload,
-		Intent:          event.IntentProjectionAndReplay,
-	}); err != nil {
-		return err
+	return nil
+}
+
+func sessionEventTypes(include func(eventProjectionContract) bool) []event.Type {
+	types := make([]event.Type, 0, len(sessionEventContracts))
+	for _, contract := range sessionEventContracts {
+		if include(contract) {
+			types = append(types, contract.definition.Type)
+		}
 	}
-	if err := registry.Register(event.Definition{
-		Type:            EventTypeGateOpened,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateGateOpenedPayload,
-		Intent:          event.IntentProjectionAndReplay,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            EventTypeGateResolved,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateGateResolvedPayload,
-		Intent:          event.IntentProjectionAndReplay,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            EventTypeGateAbandoned,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateGateAbandonedPayload,
-		Intent:          event.IntentProjectionAndReplay,
-	}); err != nil {
-		return err
-	}
-	if err := registry.Register(event.Definition{
-		Type:            EventTypeSpotlightSet,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateSpotlightSetPayload,
-		Intent:          event.IntentProjectionAndReplay,
-	}); err != nil {
-		return err
-	}
-	return registry.Register(event.Definition{
-		Type:            EventTypeSpotlightCleared,
-		Owner:           event.OwnerCore,
-		Addressing:      event.AddressingPolicyEntityTarget,
-		ValidatePayload: validateSpotlightClearedPayload,
-		Intent:          event.IntentProjectionAndReplay,
-	})
+	return types
 }
 
 // validateStartPayload ensures start payloads match the session start shape.

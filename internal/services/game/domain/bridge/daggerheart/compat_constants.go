@@ -1,17 +1,19 @@
 package daggerheart
 
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics"
+
 // Compatibility constants used by gRPC application mappings during migration.
 const (
-	HPMin        = 0
-	HPMaxCap     = 12
-	HopeMin      = 0
-	HopeMax      = HopeMaxDefault
-	StressMin    = 0
-	StressMaxCap = 12
-	ArmorMin     = 0
-	ArmorMaxCap  = 12
+	HPMin        = mechanics.HPMin
+	HPMaxCap     = mechanics.HPMaxCap
+	HopeMin      = mechanics.HopeMin
+	HopeMax      = mechanics.HopeMax
+	StressMin    = mechanics.StressMin
+	StressMaxCap = mechanics.StressMaxCap
+	ArmorMin     = mechanics.ArmorMin
+	ArmorMaxCap  = mechanics.ArmorMaxCap
 
-	LifeStateUnconscious  = "unconscious"
-	LifeStateBlazeOfGlory = "blaze_of_glory"
-	LifeStateDead         = "dead"
+	LifeStateUnconscious  = mechanics.LifeStateUnconscious
+	LifeStateBlazeOfGlory = mechanics.LifeStateBlazeOfGlory
+	LifeStateDead         = mechanics.LifeStateDead
 )
