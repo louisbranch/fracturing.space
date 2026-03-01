@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -76,7 +77,7 @@ func TestHandleIndexGracefullyDegradesWhenGatewayFails(t *testing.T) {
 func TestHandleIndexNilGatewayRendersDegradedDashboard(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(newService(nil, nil, nil), dashboardTestBase())
+	h := newHandlers(dashboardapp.NewService(nil, nil, nil), dashboardTestBase())
 	mux := http.NewServeMux()
 	registerRoutes(mux, h)
 
@@ -92,7 +93,7 @@ func TestHandleIndexNilGatewayRendersDegradedDashboard(t *testing.T) {
 // --- helpers ---
 
 func newTestHandlers(gw *fakeGateway) handlers {
-	return newHandlers(newService(gw, nil, nil), dashboardTestBase())
+	return newHandlers(dashboardapp.NewService(gw, nil, nil), dashboardTestBase())
 }
 
 func dashboardTestBase() modulehandler.Base {

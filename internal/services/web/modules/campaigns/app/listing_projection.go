@@ -10,6 +10,7 @@ import (
 
 // campaignThemePromptLimit keeps campaign cards compact and scan-friendly.
 const campaignThemePromptLimit = 80
+const campaignCoverFallbackPath = "/static/campaign-cover-fallback.svg"
 
 var campaignCoverManifest = catalog.CampaignCoverManifest()
 
@@ -40,8 +41,11 @@ func campaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID st
 	if err == nil {
 		return resolvedAssetURL
 	}
-	// TODO(web-assets): this fallback assumes static campaign-cover files are served; verify assets exist or return a deterministic CDN-safe placeholder.
-	return "/static/campaign-covers/" + url.PathEscape(resolvedCoverAssetID) + ".png"
+	fallbackURL := campaignCoverFallbackPath
+	if trimmedAssetID := strings.TrimSpace(resolvedCoverAssetID); trimmedAssetID != "" {
+		fallbackURL += "?asset_id=" + url.QueryEscape(trimmedAssetID)
+	}
+	return fallbackURL
 }
 
 // CampaignCoverImageURL resolves the final card image URL with a deterministic fallback.

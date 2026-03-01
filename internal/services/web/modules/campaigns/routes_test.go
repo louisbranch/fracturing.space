@@ -3,6 +3,7 @@ package campaigns
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
@@ -101,19 +102,27 @@ func TestRegisterExperimentalRoutesExposeExperimentalWorkspaceRoutes(t *testing.
 		name       string
 		method     string
 		path       string
+		body       string
 		wantStatus int
 	}{
 		{name: "sessions route", method: http.MethodGet, path: routepath.AppCampaignSessions("c1"), wantStatus: http.StatusOK},
 		{name: "session detail route", method: http.MethodGet, path: routepath.AppCampaignSession("c1", "sess-1"), wantStatus: http.StatusOK},
+		{name: "session start route", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+Two", wantStatus: http.StatusFound},
+		{name: "session end route", method: http.MethodPost, path: routepath.AppCampaignSessionEnd("c1"), body: "session_id=sess-1", wantStatus: http.StatusFound},
 		{name: "game route", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusOK},
 		{name: "invites route", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusOK},
+		{name: "invite create route", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), body: "participant_id=p-1&recipient_user_id=user-123", wantStatus: http.StatusFound},
+		{name: "invite revoke route", method: http.MethodPost, path: routepath.AppCampaignInviteRevoke("c1"), body: "invite_id=inv-1", wantStatus: http.StatusFound},
 	}
 
 	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			req := httptest.NewRequest(tc.method, tc.path, nil)
+			req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
+			if tc.method == http.MethodPost {
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			}
 			rr := httptest.NewRecorder()
 			mux.ServeHTTP(rr, req)
 			if rr.Code != tc.wantStatus {
@@ -159,9 +168,6 @@ func TestRegisterStableRoutesExposeStableWorkspaceRoutesAndHideExperimentalRoute
 		{name: "game", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusNotFound},
 		{name: "session start", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), wantStatus: http.StatusNotFound},
 		{name: "session end", method: http.MethodPost, path: routepath.AppCampaignSessionEnd("c1"), wantStatus: http.StatusNotFound},
-		{name: "participant update", method: http.MethodPost, path: routepath.AppCampaignParticipantUpdate("c1"), wantStatus: http.StatusNotFound},
-		{name: "character update", method: http.MethodPost, path: routepath.AppCampaignCharacterUpdate("c1"), wantStatus: http.StatusNotFound},
-		{name: "character control", method: http.MethodPost, path: routepath.AppCampaignCharacterControl("c1"), wantStatus: http.StatusNotFound},
 		{name: "invite create", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), wantStatus: http.StatusNotFound},
 		{name: "invite revoke", method: http.MethodPost, path: routepath.AppCampaignInviteRevoke("c1"), wantStatus: http.StatusNotFound},
 	} {

@@ -148,12 +148,3 @@ func (g GRPCGateway) CreateCharacter(ctx context.Context, campaignID string, inp
 	}
 	return campaignapp.CreateCharacterResult{CharacterID: createdCharacterID}, nil
 }
-
-// TODO(mutation-activation): see gateway_grpc_sessions.go for activation criteria.
-func (g GRPCGateway) UpdateCharacter(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaign character updates are not implemented")
-}
-
-func (g GRPCGateway) ControlCharacter(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaign character control is not implemented")
-}

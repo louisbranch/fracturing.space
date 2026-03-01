@@ -8,6 +8,7 @@ import (
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -19,7 +20,7 @@ import (
 func TestNewGRPCGatewayFailsClosedWhenClientMissing(t *testing.T) {
 	t.Parallel()
 
-	gateway := NewGRPCGateway(nil)
+	gateway := notificationsgateway.NewGRPCGateway(nil)
 	_, err := gateway.ListNotifications(context.Background(), "user-1")
 	if err == nil {
 		t.Fatalf("expected unavailable error")
@@ -47,7 +48,7 @@ func TestGRPCGatewayListNotificationsMapsFieldsAndUserMetadata(t *testing.T) {
 			}},
 		}},
 	}
-	gateway := grpcGateway{client: client}
+	gateway := notificationsgateway.GRPCGateway{Client: client}
 
 	items, err := gateway.ListNotifications(context.Background(), "user-1")
 	if err != nil {
@@ -88,7 +89,7 @@ func TestGRPCGatewayGetNotificationCallsPointEndpoint(t *testing.T) {
 			},
 		},
 	}
-	gateway := grpcGateway{client: client}
+	gateway := notificationsgateway.GRPCGateway{Client: client}
 
 	item, err := gateway.GetNotification(context.Background(), "user-1", "note-2")
 	if err != nil {
@@ -109,7 +110,7 @@ func TestGRPCGatewayOpenNotificationMapsNotFound(t *testing.T) {
 	t.Parallel()
 
 	client := &notificationClientStub{markErr: status.Error(codes.NotFound, "notification not found")}
-	gateway := grpcGateway{client: client}
+	gateway := notificationsgateway.GRPCGateway{Client: client}
 
 	_, err := gateway.OpenNotification(context.Background(), "user-1", "missing")
 	if err == nil {

@@ -29,18 +29,18 @@ func (h handlers) handleCharacterCreationStepRoute(w http.ResponseWriter, r *htt
 
 	ctx, _ := h.RequestContextAndUserID(r)
 
-	workspace, err := h.service.campaignWorkspace(ctx, campaignID)
+	workspace, err := h.service.CampaignWorkspace(ctx, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	workflow := h.service.resolveWorkflow(workspace.System)
+	workflow := h.resolveWorkflow(workspace.System)
 	if workflow == nil {
 		h.WriteNotFound(w, r)
 		return
 	}
 
-	progress, err := h.service.campaignCharacterCreationProgress(ctx, campaignID, characterID)
+	progress, err := h.service.CampaignCharacterCreationProgress(ctx, campaignID, characterID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -50,12 +50,12 @@ func (h handlers) handleCharacterCreationStepRoute(w http.ResponseWriter, r *htt
 		return
 	}
 
-	stepInput, err := workflow.ParseStepInput(r, progress.NextStep)
+	stepInput, err := workflow.ParseStepInput(r.Form, progress.NextStep)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	if err := h.service.applyCharacterCreationStep(ctx, strings.TrimSpace(campaignID), strings.TrimSpace(characterID), stepInput); err != nil {
+	if err := h.service.ApplyCharacterCreationStep(ctx, strings.TrimSpace(campaignID), strings.TrimSpace(characterID), stepInput); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
@@ -75,7 +75,7 @@ func (h handlers) handleCharacterCreationResetRoute(w http.ResponseWriter, r *ht
 		return
 	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.service.resetCharacterCreationWorkflow(ctx, strings.TrimSpace(campaignID), strings.TrimSpace(characterID)); err != nil {
+	if err := h.service.ResetCharacterCreationWorkflow(ctx, strings.TrimSpace(campaignID), strings.TrimSpace(characterID)); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}

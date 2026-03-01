@@ -364,6 +364,14 @@ func campaignInviteStatusLabel(loc Localizer, value string) string {
 	}
 }
 
+func campaignSessionCanEnd(status string) bool {
+	return strings.EqualFold(strings.TrimSpace(status), "active")
+}
+
+func campaignInviteCanRevoke(status string) bool {
+	return strings.EqualFold(strings.TrimSpace(status), "pending")
+}
+
 func campaignParticipantRoleLabel(loc Localizer, value string) string {
 	raw := strings.TrimSpace(value)
 	value = strings.ToLower(raw)
@@ -594,7 +602,6 @@ templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
 }
 
 templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
-	// FIXME(web-cutover): replace marker fallback content with full route-specific pages before campaigns detail routes are treated as complete.
 	<section id={ view.Marker } class="space-y-4">
 		if view.Marker == "campaign-overview" {
 			<div class="card bg-base-200">
@@ -749,9 +756,24 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 				</div>
 			</div>
 		} else if view.Marker == "campaign-sessions" {
+			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-session-start-entry="true">
+				<div class="card-body">
+					<form method="post" action={ routepath.AppCampaignSessionStart(view.CampaignID) } class="flex flex-col gap-3 md:flex-row md:items-end" data-campaign-session-start-form="true">
+						<div class="form-control w-full md:flex-1">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.sessions.field_name") }</span>
+							</label>
+							<input type="text" name="name" placeholder={ T(loc, "game.sessions.placeholder_name") } class="input input-bordered w-full"/>
+						</div>
+						<div class="card-actions justify-end md:justify-start">
+							<button class="btn btn-primary" type="submit">{ T(loc, "game.sessions.start") }</button>
+						</div>
+					</form>
+				</div>
+			</div>
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				if len(view.Sessions) == 0 {
-					<p>{ T(loc, "game.sessions.empty") }</p>
+					<p data-campaign-sessions-empty="true">{ T(loc, "game.sessions.empty") }</p>
 				}
 				for _, session := range view.Sessions {
 					<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-session-card-id={ session.ID }>
@@ -760,6 +782,15 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 								<a href={ routepath.AppCampaignSession(view.CampaignID, session.ID) }>{ session.Name }</a>
 							</h2>
 							<p data-campaign-session-status={ campaignSessionStatusLabel(loc, session.Status) }>{ campaignSessionStatusLabel(loc, session.Status) }</p>
+							<p data-campaign-session-updated-at={ session.UpdatedAt }>{ session.UpdatedAt }</p>
+							if campaignSessionCanEnd(session.Status) {
+								<div class="card-actions justify-end">
+									<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-end-form="true">
+										<input type="hidden" name="session_id" value={ session.ID }/>
+										<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.sessions.end") }</button>
+									</form>
+								</div>
+							}
 						</div>
 					</div>
 				}
@@ -767,11 +798,28 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 		} else if view.Marker == "campaign-session-detail" {
 			<div class="card bg-base-200">
 				<div class="card-body">
-				<h2 class="card-title" data-campaign-session-detail-id={ campaignSessionByID(loc, view).ID }>{ campaignSessionByID(loc, view).ID }</h2>
-				<p data-campaign-session-detail-name={ campaignSessionByID(loc, view).Name }>{ campaignSessionByID(loc, view).Name }</p>
-				<p data-campaign-session-detail-status={ campaignSessionByID(loc, view).Status }>{ campaignSessionByID(loc, view).Status }</p>
+					<h2 class="card-title" data-campaign-session-detail-id={ campaignSessionByID(loc, view).ID }>{ campaignSessionByID(loc, view).ID }</h2>
+					<p data-campaign-session-detail-name={ campaignSessionByID(loc, view).Name }>{ campaignSessionByID(loc, view).Name }</p>
+					<p data-campaign-session-detail-status={ campaignSessionStatusLabel(loc, campaignSessionByID(loc, view).Status) }>{ campaignSessionStatusLabel(loc, campaignSessionByID(loc, view).Status) }</p>
+					if campaignSessionByID(loc, view).StartedAt != "" {
+						<p data-campaign-session-detail-started-at={ campaignSessionByID(loc, view).StartedAt }>{ campaignSessionByID(loc, view).StartedAt }</p>
+					}
+					if campaignSessionByID(loc, view).UpdatedAt != "" {
+						<p data-campaign-session-detail-updated-at={ campaignSessionByID(loc, view).UpdatedAt }>{ campaignSessionByID(loc, view).UpdatedAt }</p>
+					}
+					if campaignSessionByID(loc, view).EndedAt != "" {
+						<p data-campaign-session-detail-ended-at={ campaignSessionByID(loc, view).EndedAt }>{ campaignSessionByID(loc, view).EndedAt }</p>
+					}
+					if campaignSessionCanEnd(campaignSessionByID(loc, view).Status) {
+						<div class="card-actions justify-end">
+							<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-detail-end-form="true">
+								<input type="hidden" name="session_id" value={ campaignSessionByID(loc, view).ID }/>
+								<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.sessions.end") }</button>
+							</form>
+						</div>
+					}
+				</div>
 			</div>
-		</div>
 		} else if view.Marker == "campaign-character-detail" {
 			<div class="space-y-4">
 				<div class="card bg-base-200">
@@ -1035,9 +1083,26 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 				}
 			</div>
 		} else if view.Marker == "campaign-invites" {
+			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-invite-create-entry="true">
+				<div class="card-body">
+					<form method="post" action={ routepath.AppCampaignInviteCreate(view.CampaignID) } class="grid gap-3 md:grid-cols-2" data-campaign-invite-create-form="true">
+						<label class="form-control">
+							<span class="label-text">{ T(loc, "game.campaign_invites.field_participant_id") }</span>
+							<input type="text" name="participant_id" required placeholder={ T(loc, "game.campaign_invites.placeholder_participant_id") } class="input input-bordered"/>
+						</label>
+						<label class="form-control">
+							<span class="label-text">{ T(loc, "game.campaign_invites.field_recipient_user_id") }</span>
+							<input type="text" name="recipient_user_id" placeholder={ T(loc, "game.campaign_invites.placeholder_recipient_user_id") } class="input input-bordered"/>
+						</label>
+						<div class="md:col-span-2 card-actions justify-end">
+							<button class="btn btn-primary" type="submit">{ T(loc, "game.campaign_invites.submit_create") }</button>
+						</div>
+					</form>
+				</div>
+			</div>
 			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				if len(view.Invites) == 0 {
-					<p>{ T(loc, "game.campaign_invites.empty") }</p>
+					<p data-campaign-invites-empty="true">{ T(loc, "game.campaign_invites.empty") }</p>
 				}
 				for _, invite := range view.Invites {
 					<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-invite-card-id={ invite.ID }>
@@ -1045,19 +1110,20 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 							<p data-campaign-invite-participant={ invite.ParticipantID }>{ invite.ParticipantID }</p>
 							<p data-campaign-invite-recipient={ invite.RecipientUserID }>{ invite.RecipientUserID }</p>
 							<p data-campaign-invite-status={ campaignInviteStatusLabel(loc, invite.Status) }>{ campaignInviteStatusLabel(loc, invite.Status) }</p>
+							if campaignInviteCanRevoke(invite.Status) {
+								<div class="card-actions justify-end">
+									<form method="post" action={ routepath.AppCampaignInviteRevoke(view.CampaignID) } data-campaign-invite-revoke-form="true">
+										<input type="hidden" name="invite_id" value={ invite.ID }/>
+										<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.campaign_invites.submit_revoke") }</button>
+									</form>
+								</div>
+							}
 						</div>
 					</div>
 				}
 			</div>
 		} else {
-			<h2>{ view.Marker }</h2>
-			<p>campaign={ view.CampaignID }</p>
-			if view.SessionID != "" {
-				<p>session={ view.SessionID }</p>
-			}
-			if view.CharacterID != "" {
-				<p>character={ view.CharacterID }</p>
-			}
+			<div class="alert alert-error" data-campaign-detail-unsupported-view="true">{ T(loc, "web.error.message_not_found") }</div>
 		}
 	</section>
 }

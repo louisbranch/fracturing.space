@@ -114,7 +114,8 @@ func bootstrapDependencies(
 			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 				socialClient := socialv1.NewSocialServiceClient(conn)
 				p.SocialClient = socialClient
-				m.SocialClient = socialClient
+				m.ProfileSocialClient = socialClient
+				m.SettingsSocialClient = socialClient
 			},
 		},
 		{

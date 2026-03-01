@@ -1,69 +1,69 @@
 package daggerheart
 
 import (
-	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
 // ParseStepInput parses a character creation step form submission into domain
 // step input based on the current step number.
-func (Workflow) ParseStepInput(r *http.Request, nextStep int32) (*campaigns.CampaignCharacterCreationStepInput, error) {
+func (Workflow) ParseStepInput(form url.Values, nextStep int32) (*campaignapp.CampaignCharacterCreationStepInput, error) {
 	switch nextStep {
 	case 1:
-		classID := strings.TrimSpace(r.FormValue("class_id"))
-		subclassID := strings.TrimSpace(r.FormValue("subclass_id"))
+		classID := strings.TrimSpace(form.Get("class_id"))
+		subclassID := strings.TrimSpace(form.Get("subclass_id"))
 		if classID == "" || subclassID == "" {
 			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_class_and_subclass_are_required", "class and subclass are required")
 		}
-		return &campaigns.CampaignCharacterCreationStepInput{
-			ClassSubclass: &campaigns.CampaignCharacterCreationStepClassSubclass{
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			ClassSubclass: &campaignapp.CampaignCharacterCreationStepClassSubclass{
 				ClassID:    classID,
 				SubclassID: subclassID,
 			},
 		}, nil
 	case 2:
-		ancestryID := strings.TrimSpace(r.FormValue("ancestry_id"))
-		communityID := strings.TrimSpace(r.FormValue("community_id"))
+		ancestryID := strings.TrimSpace(form.Get("ancestry_id"))
+		communityID := strings.TrimSpace(form.Get("community_id"))
 		if ancestryID == "" || communityID == "" {
 			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_ancestry_and_community_are_required", "ancestry and community are required")
 		}
-		return &campaigns.CampaignCharacterCreationStepInput{
-			Heritage: &campaigns.CampaignCharacterCreationStepHeritage{
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			Heritage: &campaignapp.CampaignCharacterCreationStepHeritage{
 				AncestryID:  ancestryID,
 				CommunityID: communityID,
 			},
 		}, nil
 	case 3:
-		agility, err := parseRequiredInt32(r.FormValue("agility"), "agility")
+		agility, err := parseRequiredInt32(form.Get("agility"), "agility")
 		if err != nil {
 			return nil, err
 		}
-		strength, err := parseRequiredInt32(r.FormValue("strength"), "strength")
+		strength, err := parseRequiredInt32(form.Get("strength"), "strength")
 		if err != nil {
 			return nil, err
 		}
-		finesse, err := parseRequiredInt32(r.FormValue("finesse"), "finesse")
+		finesse, err := parseRequiredInt32(form.Get("finesse"), "finesse")
 		if err != nil {
 			return nil, err
 		}
-		instinct, err := parseRequiredInt32(r.FormValue("instinct"), "instinct")
+		instinct, err := parseRequiredInt32(form.Get("instinct"), "instinct")
 		if err != nil {
 			return nil, err
 		}
-		presence, err := parseRequiredInt32(r.FormValue("presence"), "presence")
+		presence, err := parseRequiredInt32(form.Get("presence"), "presence")
 		if err != nil {
 			return nil, err
 		}
-		knowledge, err := parseRequiredInt32(r.FormValue("knowledge"), "knowledge")
+		knowledge, err := parseRequiredInt32(form.Get("knowledge"), "knowledge")
 		if err != nil {
 			return nil, err
 		}
-		return &campaigns.CampaignCharacterCreationStepInput{
-			Traits: &campaigns.CampaignCharacterCreationStepTraits{
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			Traits: &campaignapp.CampaignCharacterCreationStepTraits{
 				Agility:   agility,
 				Strength:  strength,
 				Finesse:   finesse,
@@ -73,14 +73,14 @@ func (Workflow) ParseStepInput(r *http.Request, nextStep int32) (*campaigns.Camp
 			},
 		}, nil
 	case 4:
-		return &campaigns.CampaignCharacterCreationStepInput{
-			Details: &campaigns.CampaignCharacterCreationStepDetails{},
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			Details: &campaignapp.CampaignCharacterCreationStepDetails{},
 		}, nil
 	case 5:
-		primaryWeaponID := strings.TrimSpace(r.FormValue("weapon_primary_id"))
-		secondaryWeaponID := strings.TrimSpace(r.FormValue("weapon_secondary_id"))
-		armorID := strings.TrimSpace(r.FormValue("armor_id"))
-		potionItemID := strings.TrimSpace(r.FormValue("potion_item_id"))
+		primaryWeaponID := strings.TrimSpace(form.Get("weapon_primary_id"))
+		secondaryWeaponID := strings.TrimSpace(form.Get("weapon_secondary_id"))
+		armorID := strings.TrimSpace(form.Get("armor_id"))
+		potionItemID := strings.TrimSpace(form.Get("potion_item_id"))
 		if primaryWeaponID == "" || armorID == "" || potionItemID == "" {
 			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_primary_weapon_armor_and_potion_are_required", "primary weapon, armor, and potion are required")
 		}
@@ -88,35 +88,35 @@ func (Workflow) ParseStepInput(r *http.Request, nextStep int32) (*campaigns.Camp
 		if secondaryWeaponID != "" {
 			weaponIDs = append(weaponIDs, secondaryWeaponID)
 		}
-		return &campaigns.CampaignCharacterCreationStepInput{
-			Equipment: &campaigns.CampaignCharacterCreationStepEquipment{
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			Equipment: &campaignapp.CampaignCharacterCreationStepEquipment{
 				WeaponIDs:    weaponIDs,
 				ArmorID:      armorID,
 				PotionItemID: potionItemID,
 			},
 		}, nil
 	case 6:
-		background := strings.TrimSpace(r.FormValue("background"))
+		background := strings.TrimSpace(form.Get("background"))
 		if background == "" {
 			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_background_is_required", "background is required")
 		}
-		return &campaigns.CampaignCharacterCreationStepInput{
-			Background: &campaigns.CampaignCharacterCreationStepBackground{
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			Background: &campaignapp.CampaignCharacterCreationStepBackground{
 				Background: background,
 			},
 		}, nil
 	case 7:
-		experienceName := strings.TrimSpace(r.FormValue("experience_name"))
+		experienceName := strings.TrimSpace(form.Get("experience_name"))
 		if experienceName == "" {
 			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_experience_name_is_required", "experience name is required")
 		}
-		experienceModifier, err := parseOptionalInt32(r.FormValue("experience_modifier"))
+		experienceModifier, err := parseOptionalInt32(form.Get("experience_modifier"))
 		if err != nil {
 			return nil, err
 		}
-		return &campaigns.CampaignCharacterCreationStepInput{
-			Experiences: &campaigns.CampaignCharacterCreationStepExperiences{
-				Experiences: []campaigns.CampaignCharacterCreationStepExperience{
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			Experiences: &campaignapp.CampaignCharacterCreationStepExperiences{
+				Experiences: []campaignapp.CampaignCharacterCreationStepExperience{
 					{
 						Name:     experienceName,
 						Modifier: experienceModifier,
@@ -125,10 +125,7 @@ func (Workflow) ParseStepInput(r *http.Request, nextStep int32) (*campaigns.Camp
 			},
 		}, nil
 	case 8:
-		if r.Form == nil {
-			r.ParseForm()
-		}
-		rawDomainCardIDs := r.Form["domain_card_id"]
+		rawDomainCardIDs := form["domain_card_id"]
 		domainCardIDs := make([]string, 0, len(rawDomainCardIDs))
 		seen := map[string]struct{}{}
 		for _, rawDomainCardID := range rawDomainCardIDs {
@@ -145,18 +142,18 @@ func (Workflow) ParseStepInput(r *http.Request, nextStep int32) (*campaigns.Camp
 		if len(domainCardIDs) == 0 {
 			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_at_least_one_domain_card_is_required", "at least one domain card is required")
 		}
-		return &campaigns.CampaignCharacterCreationStepInput{
-			DomainCards: &campaigns.CampaignCharacterCreationStepDomainCards{
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			DomainCards: &campaignapp.CampaignCharacterCreationStepDomainCards{
 				DomainCardIDs: domainCardIDs,
 			},
 		}, nil
 	case 9:
-		connections := strings.TrimSpace(r.FormValue("connections"))
+		connections := strings.TrimSpace(form.Get("connections"))
 		if connections == "" {
 			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_connections_are_required", "connections are required")
 		}
-		return &campaigns.CampaignCharacterCreationStepInput{
-			Connections: &campaigns.CampaignCharacterCreationStepConnections{
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			Connections: &campaignapp.CampaignCharacterCreationStepConnections{
 				Connections: connections,
 			},
 		}, nil

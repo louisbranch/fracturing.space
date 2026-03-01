@@ -12,6 +12,8 @@ import (
 	"testing"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
+	publicauthgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -20,10 +22,14 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+func newModuleWithClient(client publicauthgateway.AuthClient) Module {
+	return NewWithGateway(publicauthgateway.NewGRPCGateway(client))
+}
+
 func TestModuleIDReturnsPublic(t *testing.T) {
 	t.Parallel()
 
-	if got := New(nil).ID(); got != "public" {
+	if got := NewWithGateway(nil).ID(); got != "public" {
 		t.Fatalf("ID() = %q, want %q", got, "public")
 	}
 }
@@ -63,7 +69,7 @@ func TestSplitPublicConstructorsExposeStableIDsAndMountPrefixes(t *testing.T) {
 func TestMountServesRootAndLogin(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -87,7 +93,7 @@ func TestMountServesRootAndLogin(t *testing.T) {
 func TestMountServesHeadForAuthReads(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -106,7 +112,7 @@ func TestMountServesHeadForAuthReads(t *testing.T) {
 func TestMountAuthLocaleSwitchPersistsCookieAndHighlightsSelection(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?lang=pt-BR", nil)
 	rr := httptest.NewRecorder()
@@ -131,7 +137,7 @@ func TestMountAuthLocaleSwitchPersistsCookieAndHighlightsSelection(t *testing.T)
 func TestMountAuthLocaleUsesLanguageCookie(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	req.AddCookie(&http.Cookie{Name: "fs_lang", Value: "pt-BR"})
@@ -153,7 +159,7 @@ func TestMountAuthLocaleUsesLanguageCookie(t *testing.T) {
 func TestMountAuthLocaleRendersPortugueseCopy(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 
 	for _, path := range []string{routepath.Root, routepath.Login} {
@@ -180,7 +186,7 @@ func TestMountAuthLocaleRendersPortugueseCopy(t *testing.T) {
 func TestMountAuthLocaleRendersPortuguesePasskeyScriptStrings(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?lang=pt-BR", nil)
 	rr := httptest.NewRecorder()
@@ -201,7 +207,7 @@ func TestMountAuthLocaleRendersPortuguesePasskeyScriptStrings(t *testing.T) {
 func TestMountLoginPublishesPasskeyEndpointDataAttributes(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	rr := httptest.NewRecorder()
@@ -246,7 +252,7 @@ func assertAuthShellMarkers(t *testing.T, path, body string) {
 func TestMountAuthLoginRedirectsToLogin(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.AuthLogin, nil)
 	rr := httptest.NewRecorder()
@@ -262,7 +268,7 @@ func TestMountAuthLoginRedirectsToLogin(t *testing.T) {
 func TestMountAuthPagesRedirectAuthenticatedUsersToDashboard(t *testing.T) {
 	t.Parallel()
 
-	m := New(validatingAuthClient{validSessionID: "ws-1"})
+	m := newModuleWithClient(validatingAuthClient{validSessionID: "ws-1"})
 	mount, _ := m.Mount()
 
 	for _, path := range []string{routepath.Root, routepath.Login, routepath.AuthLogin} {
@@ -282,7 +288,7 @@ func TestMountAuthPagesRedirectAuthenticatedUsersToDashboard(t *testing.T) {
 func TestMountAuthPagesDoNotRedirectUnknownSessionCookie(t *testing.T) {
 	t.Parallel()
 
-	m := New(validatingAuthClient{validSessionID: "ws-1"})
+	m := newModuleWithClient(validatingAuthClient{validSessionID: "ws-1"})
 	mount, _ := m.Mount()
 
 	for _, path := range []string{routepath.Root, routepath.Login} {
@@ -300,7 +306,7 @@ func TestMountAuthPagesDoNotRedirectUnknownSessionCookie(t *testing.T) {
 func TestMountLoginIgnoresUntrustedUserHeader(t *testing.T) {
 	t.Parallel()
 
-	m := New(validatingAuthClient{validSessionID: "ws-1"})
+	m := newModuleWithClient(validatingAuthClient{validSessionID: "ws-1"})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	req.Header.Set("X-Web-User", "user-1")
@@ -316,7 +322,7 @@ func TestMountLoginIgnoresUntrustedUserHeader(t *testing.T) {
 func TestMountPasskeyLoginStartReturnsJSONChallenge(t *testing.T) {
 	t.Parallel()
 
-	m := New(fakeAuthClient{})
+	m := newModuleWithClient(fakeAuthClient{})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.PasskeyLoginStart, strings.NewReader(`{}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -340,7 +346,7 @@ func TestMountPasskeyLoginStartReturnsJSONChallenge(t *testing.T) {
 func TestMountPasskeyLoginFinishSetsCookieAndRedirect(t *testing.T) {
 	t.Parallel()
 
-	m := New(fakeAuthClient{})
+	m := newModuleWithClient(fakeAuthClient{})
 	mount, _ := m.Mount()
 	payload := map[string]any{"session_id": "session-1", "credential": map[string]any{"id": "cred-1"}}
 	body, _ := json.Marshal(payload)
@@ -380,7 +386,7 @@ func TestMountPasskeyLoginFinishSetsCookieAndRedirect(t *testing.T) {
 func TestMountPasskeyLoginFinishSetsSecureCookieForHTTPS(t *testing.T) {
 	t.Parallel()
 
-	m := New(fakeAuthClient{})
+	m := newModuleWithClient(fakeAuthClient{})
 	mount, _ := m.Mount()
 	payload := map[string]any{"session_id": "session-1", "credential": map[string]any{"id": "cred-1"}}
 	body, _ := json.Marshal(payload)
@@ -403,7 +409,7 @@ func TestMountPasskeyLoginFinishSetsSecureCookieForHTTPS(t *testing.T) {
 func TestMountLogoutClearsSessionCookieAndRedirectsToLogin(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "user-1"})
@@ -433,7 +439,7 @@ func TestMountLogoutClearsSessionCookieAndRedirectsToLogin(t *testing.T) {
 func TestMountLogoutSetsSecureClearingCookieForHTTPS(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, "https://app.example.test"+routepath.Logout, nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "user-1"})
@@ -456,7 +462,7 @@ func TestMountLogoutSetsSecureClearingCookieForHTTPS(t *testing.T) {
 func TestMountLogoutRejectsGetMethod(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, "/logout", nil)
 	rr := httptest.NewRecorder()
@@ -473,7 +479,7 @@ func TestMountLogoutRejectsGetMethod(t *testing.T) {
 func TestMountLogoutRejectsCookieMutationWithoutSameOriginProof(t *testing.T) {
 	t.Parallel()
 
-	m := New(nil)
+	m := NewWithGateway(nil)
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.Logout, nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "user-1"})
@@ -488,7 +494,7 @@ func TestMountLogoutRejectsCookieMutationWithoutSameOriginProof(t *testing.T) {
 func TestMountAuthPagesRedirectAuthenticatedUsersToValidatedNextPath(t *testing.T) {
 	t.Parallel()
 
-	m := New(validatingAuthClient{validSessionID: "ws-1"})
+	m := newModuleWithClient(validatingAuthClient{validSessionID: "ws-1"})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?next=/app/settings", nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "ws-1"})
@@ -553,28 +559,28 @@ func TestHandlersPasskeyEndpointsReturnJSONErrors(t *testing.T) {
 	}{
 		{
 			name:    "login start service failure",
-			handler: newHandlers(service{auth: &authGatewayStub{beginPasskeyLoginErr: apperrors.E(apperrors.KindInvalidInput, "boom")}}, requestmeta.SchemePolicy{}),
+			handler: newHandlers(publicauthapp.NewService(&moduleAuthGatewayStub{beginPasskeyLoginErr: apperrors.E(apperrors.KindInvalidInput, "boom")}), requestmeta.SchemePolicy{}),
 			path:    routepath.PasskeyLoginStart,
 			body:    `{}`,
 			invoke:  func(h handlers, w http.ResponseWriter, r *http.Request) { h.handlePasskeyLoginStart(w, r) },
 		},
 		{
 			name:    "login finish invalid json",
-			handler: newHandlers(service{auth: &authGatewayStub{}}, requestmeta.SchemePolicy{}),
+			handler: newHandlers(publicauthapp.NewService(&moduleAuthGatewayStub{}), requestmeta.SchemePolicy{}),
 			path:    routepath.PasskeyLoginFinish,
 			body:    `{`,
 			invoke:  func(h handlers, w http.ResponseWriter, r *http.Request) { h.handlePasskeyLoginFinish(w, r) },
 		},
 		{
 			name:    "register start invalid json",
-			handler: newHandlers(service{auth: &authGatewayStub{}}, requestmeta.SchemePolicy{}),
+			handler: newHandlers(publicauthapp.NewService(&moduleAuthGatewayStub{}), requestmeta.SchemePolicy{}),
 			path:    routepath.PasskeyRegisterStart,
 			body:    `{`,
 			invoke:  func(h handlers, w http.ResponseWriter, r *http.Request) { h.handlePasskeyRegisterStart(w, r) },
 		},
 		{
 			name:    "register finish service failure",
-			handler: newHandlers(service{auth: &authGatewayStub{finishPasskeyRegistrationErr: apperrors.E(apperrors.KindInvalidInput, "boom")}}, requestmeta.SchemePolicy{}),
+			handler: newHandlers(publicauthapp.NewService(&moduleAuthGatewayStub{finishPasskeyRegistrationErr: apperrors.E(apperrors.KindInvalidInput, "boom")}), requestmeta.SchemePolicy{}),
 			path:    routepath.PasskeyRegisterFinish,
 			body:    `{"session_id":"session-1","credential":{"id":"cred-1"}}`,
 			invoke:  func(h handlers, w http.ResponseWriter, r *http.Request) { h.handlePasskeyRegisterFinish(w, r) },
@@ -606,7 +612,7 @@ func TestHandlersPasskeyEndpointsReturnJSONErrors(t *testing.T) {
 func TestHandlersWriteAuthPageRenderFailureWritesErrorBody(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(service{auth: &authGatewayStub{}}, requestmeta.SchemePolicy{})
+	h := newHandlers(publicauthapp.NewService(&moduleAuthGatewayStub{}), requestmeta.SchemePolicy{})
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	rr := httptest.NewRecorder()
 	h.writeAuthPage(rr, req, "Login", "desc", "en-US", failingTemplComponent{err: errors.New("render failed")})
@@ -630,7 +636,7 @@ func TestHandlersWriteAuthPageRenderFailureWritesErrorBody(t *testing.T) {
 func TestWriteJSONErrorDoesNotLeakInternalErrorStrings(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(service{auth: &authGatewayStub{}}, requestmeta.SchemePolicy{})
+	h := newHandlers(publicauthapp.NewService(&moduleAuthGatewayStub{}), requestmeta.SchemePolicy{})
 	req := httptest.NewRequest(http.MethodPost, routepath.PasskeyLoginStart, nil)
 	rr := httptest.NewRecorder()
 	h.writeJSONError(rr, req, errors.New("backend exploded"))
@@ -648,7 +654,7 @@ func TestWriteJSONErrorDoesNotLeakInternalErrorStrings(t *testing.T) {
 func TestMountPasskeyRegisterStartAndFinish(t *testing.T) {
 	t.Parallel()
 
-	m := New(fakeAuthClient{})
+	m := newModuleWithClient(fakeAuthClient{})
 	mount, _ := m.Mount()
 	startReq := httptest.NewRequest(http.MethodPost, routepath.PasskeyRegisterStart, strings.NewReader(`{"email":"new@example.com"}`))
 	startReq.Header.Set("Content-Type", "application/json")
@@ -678,7 +684,7 @@ func TestMountPasskeyRegisterStartAndFinish(t *testing.T) {
 func TestMountPasskeyRegisterStartCreateUserFailureReturnsLegacyErrorMessage(t *testing.T) {
 	t.Parallel()
 
-	m := New(failingCreateUserAuthClient{})
+	m := newModuleWithClient(failingCreateUserAuthClient{})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.PasskeyRegisterStart, strings.NewReader(`{"email":"existing@example.com"}`))
 	req.Header.Set("Content-Type", "application/json")
@@ -708,6 +714,49 @@ func asString(v any) string {
 		return s
 	}
 	return ""
+}
+
+type moduleAuthGatewayStub struct {
+	beginPasskeyLoginErr         error
+	finishPasskeyRegistrationErr error
+}
+
+func (g *moduleAuthGatewayStub) CreateUser(context.Context, string) (string, error) {
+	return "user-1", nil
+}
+
+func (g *moduleAuthGatewayStub) BeginPasskeyRegistration(context.Context, string) (publicauthapp.PasskeyChallenge, error) {
+	return publicauthapp.PasskeyChallenge{SessionID: "register-session", PublicKey: json.RawMessage(`{"publicKey":{}}`)}, nil
+}
+
+func (g *moduleAuthGatewayStub) FinishPasskeyRegistration(context.Context, string, json.RawMessage) (string, error) {
+	if g.finishPasskeyRegistrationErr != nil {
+		return "", g.finishPasskeyRegistrationErr
+	}
+	return "user-1", nil
+}
+
+func (g *moduleAuthGatewayStub) BeginPasskeyLogin(context.Context) (publicauthapp.PasskeyChallenge, error) {
+	if g.beginPasskeyLoginErr != nil {
+		return publicauthapp.PasskeyChallenge{}, g.beginPasskeyLoginErr
+	}
+	return publicauthapp.PasskeyChallenge{SessionID: "login-session", PublicKey: json.RawMessage(`{"publicKey":{}}`)}, nil
+}
+
+func (g *moduleAuthGatewayStub) FinishPasskeyLogin(context.Context, string, json.RawMessage) (string, error) {
+	return "user-1", nil
+}
+
+func (g *moduleAuthGatewayStub) CreateWebSession(context.Context, string) (string, error) {
+	return "ws-1", nil
+}
+
+func (g *moduleAuthGatewayStub) HasValidWebSession(context.Context, string) bool {
+	return false
+}
+
+func (g *moduleAuthGatewayStub) RevokeWebSession(context.Context, string) error {
+	return nil
 }
 
 type failingTemplComponent struct {

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
+	dashboardgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/gateway"
 	modulehandler "github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc"
@@ -103,7 +104,7 @@ func TestMountRendersPendingProfileBlockFromUserHubState(t *testing.T) {
 		func(*http.Request) string { return "pt-BR" },
 		nil,
 	)
-	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -136,7 +137,7 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -174,7 +175,7 @@ func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -211,7 +212,7 @@ func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *test
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -246,7 +247,7 @@ func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := NewWithGateway(NewGRPCGateway(client), base, nil)
+	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

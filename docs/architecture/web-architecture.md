@@ -4,7 +4,7 @@ parent: "Architecture"
 nav_order: 16
 status: canonical
 owner: engineering
-last_reviewed: "2026-02-28"
+last_reviewed: "2026-03-01"
 ---
 
 # Web Architecture
@@ -41,11 +41,39 @@ Current package layout is organized into four layers:
   and orchestration service logic.
 - `internal/services/web/modules/campaigns/gateway/`: campaigns gRPC adapter
   mapping and client integrations.
+- `internal/services/web/modules/settings/app/`: settings domain contracts and
+  orchestration service logic.
+- `internal/services/web/modules/settings/gateway/`: settings gRPC adapter
+  mapping and client integrations.
+- `internal/services/web/modules/notifications/app/`: notifications domain
+  contracts and orchestration service logic.
+- `internal/services/web/modules/notifications/gateway/`: notifications gRPC
+  adapter mapping and client integrations.
+- `internal/services/web/modules/dashboard/app/`: dashboard domain contracts
+  and orchestration service logic.
+- `internal/services/web/modules/dashboard/gateway/`: dashboard gRPC adapter
+  mapping and client integrations.
+- `internal/services/web/modules/profile/app/`: profile domain contracts and
+  orchestration service logic.
+- `internal/services/web/modules/profile/gateway/`: profile gRPC adapter
+  mapping and client integrations.
 - `internal/services/web/modules/publicauth/`: shared unauthenticated auth flow
-  transport + service wiring.
+  transport/module surface wiring.
+- `internal/services/web/modules/publicauth/app/`: public-auth domain
+  contracts and orchestration service logic.
+- `internal/services/web/modules/publicauth/gateway/`: public-auth gRPC adapter
+  mapping and client integrations.
 - `internal/services/web/modules/publicauth/surfaces/*`: explicit public/auth
   route-owner modules (`shell`, `passkeys`, `authredirect`).
 - `internal/services/web/routepath/`: canonical route constants.
+
+Module archetypes:
+
+- `transport-only`: root package owns route/handler rendering flow directly
+  (for example `discovery`).
+- `transport + app + gateway`: root package is transport-thin while
+  orchestration and adapter mapping live in area-local `app` and `gateway`
+  packages.
 
 ## Module Model
 
@@ -61,22 +89,20 @@ Composition mounts modules in two groups:
 
 Module registration also has stability tiers:
 
-- Stable defaults are mounted through `modules.DefaultPublicModules(deps, res)`
-  and `modules.DefaultProtectedModules(deps, res, opts)`. The registry
-  decomposes `modules.Dependencies` (gRPC clients) and `modules.ModuleResolvers`
-  (request-scoped resolver functions derived from the principal resolver) into
-  per-module constructor arguments so individual modules receive only the narrow
-  dependencies they need. Each client field is typed as the narrow interface
-  defined by the consuming module, so modules physically cannot access clients
-  they were not given.
 - Runtime composition uses `modules.Registry.Build(modules.BuildInput)` to
   produce both public/protected module sets and derived service health metadata
-  from a single contract.
+  from a single contract. `BuildInput.EnableExperimentalModules` controls
+  whether stable-only or stable+experimental module sets are composed.
+- The registry decomposes `modules.Dependencies` (gRPC clients) and
+  `modules.ModuleResolvers` (request-scoped resolver functions derived from the
+  principal resolver) into per-module constructor arguments so individual
+  modules receive only the narrow dependencies they need. Each client field is
+  typed as the narrow interface defined by the consuming module, so modules
+  physically cannot access clients they were not given.
 - Runtime startup wiring derives both principal and module inputs from a single
   `web.DependencyBundle`.
-- Incomplete/scaffold surfaces stay opt-in through
-  `modules.ExperimentalPublicModules()` and
-  `modules.ExperimentalProtectedModules()`.
+- Incomplete/scaffold surfaces stay opt-in through registry build mode rather
+  than direct constructor calls.
 - Stable modules may intentionally expose only a subset of area routes. Unstable
   routes stay unregistered (or remain in an explicit experimental surface)
   until behavior is production-ready.
@@ -133,11 +159,19 @@ This keeps route ownership explicit and avoids framework lock-in.
 - `composition.ComposeAppHandler` is the runtime boundary that converts
   principal resolvers + module dependencies into `app.ComposeInput`; avoid
   duplicating this wiring in `server.NewHandler`.
-- Campaign/settings service gateways are composition-owned wiring; modules
-  receive pre-built gateways through constructors, not raw client bags.
+- Campaign/settings/notifications/dashboard/profile service gateways are
+  composition-owned wiring; modules receive pre-built gateways through
+  constructors, not raw client bags.
 - Campaigns root package (`modules/campaigns`) is transport-only
   (module mount/routes/handlers/view mapping). Domain orchestration lives in
   `modules/campaigns/app`; gRPC mapping lives in `modules/campaigns/gateway`.
+- Settings/notifications/dashboard root packages are transport-only and do not
+  keep compatibility shim files after cutover. Domain orchestration and
+  fail-closed defaults live in each module `app` package; gRPC mapping lives in
+  each module `gateway` package.
+- Profile root package is transport-only and does not keep compatibility shim
+  files after cutover. Domain orchestration lives in `modules/profile/app`;
+  gRPC mapping lives in `modules/profile/gateway`.
 - User-scoped gateways/services should accept explicit `userID` parameters;
   avoid hidden transport-metadata extraction inside gateway internals.
 - Session cookie and same-origin request proofs are shared platform primitives
@@ -152,14 +186,22 @@ This keeps route ownership explicit and avoids framework lock-in.
   (`platform/weberror.PublicMessage`), never raw backend/internal strings.
 - Default app chrome should not link to experimental module routes;
   experimental surfaces are explicitly opt-in.
-- Campaigns are stable-by-default for read/create workspace flows; in-campaign
-  mutation routes remain hidden until participant permission policy is
-  finalized, except participant-level character create plus workflow apply/reset.
 - Stable campaigns route exposure currently includes
   list/create/overview/participants/characters plus character create,
   character detail, and character-creation apply/reset workflow routes.
+- Campaign session/invite mutations (`POST` start/end/create/revoke) are
+  mounted only in experimental campaigns modules; stable defaults do not expose
+  these mutation handlers.
+- Promotion criteria for these routes are tracked in
+  `docs/architecture/campaigns-mutation-promotion-checklist.md`.
+- Deferred campaign mutation scaffolds (participant update, character
+  update/control) are intentionally removed until backed by production-ready
+  contracts.
 - Scaffold detail surfaces for sessions/invites/game chat remain unregistered
   on stable defaults.
+- Campaign cover rendering must resolve to a guaranteed static fallback asset
+  (`/static/campaign-cover-fallback.svg`) when upstream assets are absent; this
+  avoids runtime references to non-existent static files.
 - Campaign mutation flows must enforce authorization through evaluated
   `AuthorizationService.Can` decisions and fail closed when authz decisions are
   missing, unevaluated, or unavailable.

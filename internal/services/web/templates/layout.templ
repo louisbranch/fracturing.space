@@ -132,10 +132,11 @@ type AppSideMenu struct {
 }
 
 type AppMainLayoutOptions struct {
-	MainStyle string
-	MainClass string
-	SideMenu  *AppSideMenu
-	Metadata  AppMainLayoutMetadata
+	MainStyle              string
+	MainClass              string
+	MainBackgroundImageURL string
+	SideMenu               *AppSideMenu
+	Metadata               AppMainLayoutMetadata
 }
 
 type AppToast struct {
@@ -146,11 +147,28 @@ type AppToast struct {
 const breadcrumbLabelMaxChars = 32
 
 func appMainLayoutMainStyle(layout AppMainLayoutOptions) string {
-	return strings.TrimSpace(layout.MainStyle)
+	style := strings.TrimSpace(layout.MainStyle)
+	backgroundImageURL := appMainLayoutMainBackgroundImageURL(layout)
+	if backgroundImageURL == "" {
+		return style
+	}
+	backgroundImageURL = strings.ReplaceAll(backgroundImageURL, "\"", "\\\"")
+	backgroundStyle := "background-image: url(\"" + backgroundImageURL + "\"); background-size: cover; background-position: center; background-repeat: no-repeat;"
+	if style == "" {
+		return backgroundStyle
+	}
+	if strings.HasSuffix(style, ";") {
+		return style + " " + backgroundStyle
+	}
+	return style + "; " + backgroundStyle
 }
 
 func appMainLayoutMainClass(layout AppMainLayoutOptions) string {
 	return strings.TrimSpace(layout.MainClass)
+}
+
+func appMainLayoutMainBackgroundImageURL(layout AppMainLayoutOptions) string {
+	return strings.TrimSpace(layout.MainBackgroundImageURL)
 }
 
 func appMainLayoutMetadata(layout AppMainLayoutOptions) AppMainLayoutMetadata {

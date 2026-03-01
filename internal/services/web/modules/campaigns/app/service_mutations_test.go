@@ -1,0 +1,523 @@
+package app
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"testing"
+
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+)
+
+func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(nil)
+	ctx := contextWithResolvedUserID("user-1")
+	tests := []struct {
+		name string
+		run  func() error
+	}{
+		{name: "start session", run: func() error { return svc.startSession(ctx, "c1", StartSessionInput{Name: "Session One"}) }},
+		{name: "end session", run: func() error { return svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}) }},
+		{name: "create character", run: func() error {
+			_, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
+			return err
+		}},
+		{name: "create invite", run: func() error {
+			return svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"})
+		}},
+		{name: "revoke invite", run: func() error { return svc.revokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}) }},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := tc.run()
+			if err == nil {
+				t.Fatalf("expected forbidden error")
+			}
+			if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+				t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
+			}
+		})
+	}
+}
+func TestMutationMethodsDelegateToGateway(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+	}
+	svc := newService(gateway)
+	ctx := contextWithResolvedUserID("user-1")
+
+	if err := svc.startSession(ctx, "c1", StartSessionInput{Name: "Session One"}); err != nil {
+		t.Fatalf("StartSession() error = %v", err)
+	}
+	if err := svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}); err != nil {
+		t.Fatalf("EndSession() error = %v", err)
+	}
+	if _, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
+		t.Fatalf("createCharacter() error = %v", err)
+	}
+	if err := svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"}); err != nil {
+		t.Fatalf("CreateInvite() error = %v", err)
+	}
+	if err := svc.revokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}); err != nil {
+		t.Fatalf("RevokeInvite() error = %v", err)
+	}
+
+	want := []string{"start", "end", "create-character", "create-invite", "revoke-invite"}
+	if len(gateway.calls) != len(want) {
+		t.Fatalf("len(calls) = %d, want %d (%v)", len(gateway.calls), len(want), gateway.calls)
+	}
+	for i := range want {
+		if gateway.calls[i] != want[i] {
+			t.Fatalf("calls[%d] = %q, want %q", i, gateway.calls[i], want[i])
+		}
+	}
+	if gateway.lastStartSessionInput.Name != "Session One" {
+		t.Fatalf("start session input name = %q, want %q", gateway.lastStartSessionInput.Name, "Session One")
+	}
+	if gateway.lastEndSessionInput.SessionID != "sess-1" {
+		t.Fatalf("end session input session id = %q, want %q", gateway.lastEndSessionInput.SessionID, "sess-1")
+	}
+	if gateway.lastCreateInviteInput.ParticipantID != "p-1" || gateway.lastCreateInviteInput.RecipientUserID != "user-2" {
+		t.Fatalf("create invite input = %#v", gateway.lastCreateInviteInput)
+	}
+	if gateway.lastRevokeInviteInput.InviteID != "inv-1" {
+		t.Fatalf("revoke invite input invite id = %q, want %q", gateway.lastRevokeInviteInput.InviteID, "inv-1")
+	}
+}
+
+func TestMutationMethodsDenyMemberCampaignAccess(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+	}
+	svc := newService(gateway)
+	err := svc.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
+	if err == nil {
+		t.Fatalf("expected forbidden error for member mutation attempt")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
+	}
+	if len(gateway.calls) != 0 {
+		t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+	}
+}
+
+func TestMutationMethodsAllowManagerAndOwnerCampaignAccess(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name   string
+		access string
+	}{
+		{name: "manager", access: "Manager"},
+		{name: "owner", access: "Owner"},
+	} {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			gateway := &campaignGatewayStub{
+				authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+				campaignParticipants:  []CampaignParticipant{{ID: "p-1", UserID: "user-1", CampaignAccess: tc.access}},
+			}
+			svc := newService(gateway)
+			if err := svc.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"}); err != nil {
+				t.Fatalf("StartSession() error = %v", err)
+			}
+			if len(gateway.calls) != 1 || gateway.calls[0] != "start" {
+				t.Fatalf("mutation gateway calls = %v, want [start]", gateway.calls)
+			}
+		})
+	}
+}
+
+func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
+	t.Parallel()
+
+	t.Run("allow", func(t *testing.T) {
+		t.Parallel()
+		gateway := &campaignGatewayStub{
+			authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		}
+		svc := newService(gateway)
+		if err := svc.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"}); err != nil {
+			t.Fatalf("StartSession() error = %v", err)
+		}
+		if gateway.authorizationCalls != 1 {
+			t.Fatalf("authorization calls = %d, want 1", gateway.authorizationCalls)
+		}
+		if len(gateway.authorizationRequests) != 1 {
+			t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
+		}
+		if got := gateway.authorizationRequests[0].Action; got != campaignAuthzActionManage {
+			t.Fatalf("authorization action = %v, want %v", got, campaignAuthzActionManage)
+		}
+		if got := gateway.authorizationRequests[0].Resource; got != campaignAuthzResourceSession {
+			t.Fatalf("authorization resource = %v, want %v", got, campaignAuthzResourceSession)
+		}
+		if len(gateway.calls) != 1 || gateway.calls[0] != "start" {
+			t.Fatalf("mutation gateway calls = %v, want [start]", gateway.calls)
+		}
+	})
+
+	t.Run("deny", func(t *testing.T) {
+		t.Parallel()
+		gateway := &campaignGatewayStub{
+			authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+		}
+		svc := newService(gateway)
+		err := svc.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
+		if err == nil {
+			t.Fatal("expected forbidden error")
+		}
+		if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+			t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
+		}
+		if gateway.authorizationCalls != 1 {
+			t.Fatalf("authorization calls = %d, want 1", gateway.authorizationCalls)
+		}
+		if len(gateway.authorizationRequests) != 1 {
+			t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
+		}
+		if got := gateway.authorizationRequests[0].Action; got != campaignAuthzActionManage {
+			t.Fatalf("authorization action = %v, want %v", got, campaignAuthzActionManage)
+		}
+		if got := gateway.authorizationRequests[0].Resource; got != campaignAuthzResourceSession {
+			t.Fatalf("authorization resource = %v, want %v", got, campaignAuthzResourceSession)
+		}
+		if len(gateway.calls) != 0 {
+			t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+		}
+	})
+}
+
+func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		run          func(service) error
+		wantAction   campaignAuthorizationAction
+		wantResource campaignAuthorizationResource
+	}{
+		{
+			name: "start session",
+			run: func(s service) error {
+				return s.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
+			},
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceSession,
+		},
+		{
+			name: "end session",
+			run: func(s service) error {
+				return s.endSession(contextWithResolvedUserID("user-1"), "c1", EndSessionInput{SessionID: "sess-1"})
+			},
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceSession,
+		},
+		{
+			name: "create character",
+			run: func(s service) error {
+				_, err := s.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
+				return err
+			},
+			wantAction:   campaignAuthzActionMutate,
+			wantResource: campaignAuthzResourceCharacter,
+		},
+		{
+			name: "create invite",
+			run: func(s service) error {
+				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"})
+			},
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceInvite,
+		},
+		{
+			name: "revoke invite",
+			run: func(s service) error {
+				return s.revokeInvite(contextWithResolvedUserID("user-1"), "c1", RevokeInviteInput{InviteID: "inv-1"})
+			},
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceInvite,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			gateway := &campaignGatewayStub{
+				authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+			}
+			svc := newService(gateway)
+			if err := tc.run(svc); err != nil {
+				t.Fatalf("mutation call error = %v", err)
+			}
+			if len(gateway.authorizationRequests) != 1 {
+				t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
+			}
+			req := gateway.authorizationRequests[0]
+			if req.Action != tc.wantAction {
+				t.Fatalf("authorization action = %v, want %v", req.Action, tc.wantAction)
+			}
+			if req.Resource != tc.wantResource {
+				t.Fatalf("authorization resource = %v, want %v", req.Resource, tc.wantResource)
+			}
+		})
+	}
+}
+
+func TestCreateCharacterAllowsMemberCampaignAccess(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+	}
+	svc := newService(gateway)
+	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
+		t.Fatalf("createCharacter() error = %v", err)
+	}
+	if len(gateway.calls) != 1 || gateway.calls[0] != "create-character" {
+		t.Fatalf("mutation gateway calls = %v, want [create-character]", gateway.calls)
+	}
+}
+
+func TestCreateCharacterValidatesRequiredFields(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true}})
+
+	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "", Kind: CharacterKindPC}); err == nil {
+		t.Fatalf("expected validation error for empty name")
+	}
+	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindUnspecified}); err == nil {
+		t.Fatalf("expected validation error for unspecified kind")
+	}
+}
+
+func TestEndSessionValidatesSessionID(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+	})
+	err := svc.endSession(contextWithResolvedUserID("user-1"), "c1", EndSessionInput{SessionID: "   "})
+	if err == nil {
+		t.Fatalf("expected validation error for empty session id")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusBadRequest {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusBadRequest)
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.session_id_is_required" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.session_id_is_required")
+	}
+}
+
+func TestCreateInviteValidatesParticipantID(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+	})
+	err := svc.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{
+		ParticipantID:   "   ",
+		RecipientUserID: "user-2",
+	})
+	if err == nil {
+		t.Fatalf("expected validation error for empty participant id")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusBadRequest {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusBadRequest)
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.participant_id_is_required" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.participant_id_is_required")
+	}
+}
+
+func TestRevokeInviteValidatesInviteID(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+	})
+	err := svc.revokeInvite(contextWithResolvedUserID("user-1"), "c1", RevokeInviteInput{InviteID: "   "})
+	if err == nil {
+		t.Fatalf("expected validation error for empty invite id")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusBadRequest {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusBadRequest)
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.invite_id_is_required" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.invite_id_is_required")
+	}
+}
+
+func TestServiceCreateCharacterRejectsEmptyCreatedCharacterID(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision:    campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		createCharacterResult:    CreateCharacterResult{CharacterID: "   "},
+		createCharacterResultSet: true,
+	}
+	svc := newService(gateway)
+
+	_, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
+	if err == nil {
+		t.Fatalf("expected empty character id error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusInternalServerError {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusInternalServerError)
+	}
+}
+
+func TestMutationMethodsDenyWhenAuthorizationNotEvaluated(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		run  func(service) error
+	}{
+		{
+			name: "start session",
+			run: func(s service) error {
+				return s.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
+			},
+		},
+		{
+			name: "end session",
+			run: func(s service) error {
+				return s.endSession(contextWithResolvedUserID("user-1"), "c1", EndSessionInput{SessionID: "sess-1"})
+			},
+		},
+		{
+			name: "create invite",
+			run: func(s service) error {
+				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{
+					ParticipantID:   "p-1",
+					RecipientUserID: "user-2",
+				})
+			},
+		},
+		{
+			name: "revoke invite",
+			run: func(s service) error {
+				return s.revokeInvite(contextWithResolvedUserID("user-1"), "c1", RevokeInviteInput{InviteID: "inv-1"})
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			gateway := &campaignGatewayStub{}
+			svc := newService(gateway)
+			err := tc.run(svc)
+			if err == nil {
+				t.Fatalf("expected forbidden error when authorization was not evaluated")
+			}
+			if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+				t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
+			}
+			if len(gateway.calls) != 0 {
+				t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+			}
+		})
+	}
+}
+
+func TestMutationMethodsDenyWhenAuthorizationGatewayErrors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		run  func(service) error
+	}{
+		{
+			name: "start session",
+			run: func(s service) error {
+				return s.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
+			},
+		},
+		{
+			name: "end session",
+			run: func(s service) error {
+				return s.endSession(contextWithResolvedUserID("user-1"), "c1", EndSessionInput{SessionID: "sess-1"})
+			},
+		},
+		{
+			name: "create invite",
+			run: func(s service) error {
+				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{
+					ParticipantID:   "p-1",
+					RecipientUserID: "user-2",
+				})
+			},
+		},
+		{
+			name: "revoke invite",
+			run: func(s service) error {
+				return s.revokeInvite(contextWithResolvedUserID("user-1"), "c1", RevokeInviteInput{InviteID: "inv-1"})
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			gateway := &campaignGatewayStub{authorizationErr: errors.New("authz unavailable")}
+			svc := newService(gateway)
+			err := tc.run(svc)
+			if err == nil {
+				t.Fatalf("expected forbidden error when authz check fails")
+			}
+			if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+				t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
+			}
+			if len(gateway.calls) != 0 {
+				t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+			}
+		})
+	}
+}
+func TestCreateCampaignForwardsInputToGateway(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{}
+	svc := newService(gateway)
+
+	input := CreateCampaignInput{
+		Name:        "The Guild",
+		System:      GameSystemDaggerheart,
+		GMMode:      GmModeAI,
+		ThemePrompt: "Storm coast",
+	}
+
+	if _, err := svc.createCampaign(context.Background(), input); err != nil {
+		t.Fatalf("createCampaign() error = %v", err)
+	}
+
+	if gateway.lastCreateInput.Name != input.Name {
+		t.Fatalf("Name = %q, want %q", gateway.lastCreateInput.Name, input.Name)
+	}
+	if gateway.lastCreateInput.System != input.System {
+		t.Fatalf("System = %v, want %v", gateway.lastCreateInput.System, input.System)
+	}
+	if gateway.lastCreateInput.GMMode != input.GMMode {
+		t.Fatalf("GMMode = %v, want %v", gateway.lastCreateInput.GMMode, input.GMMode)
+	}
+	if gateway.lastCreateInput.ThemePrompt != input.ThemePrompt {
+		t.Fatalf("ThemePrompt = %q, want %q", gateway.lastCreateInput.ThemePrompt, input.ThemePrompt)
+	}
+}

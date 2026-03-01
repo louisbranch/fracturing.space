@@ -10,6 +10,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,7 +30,7 @@ func TestGRPCGatewayLoadAndSaveProfile(t *testing.T) {
 			Bio:           "  Traveler  ",
 		}},
 	}
-	gateway := grpcGateway{socialClient: social}
+	gateway := settingsgateway.GRPCGateway{SocialClient: social}
 
 	profile, err := gateway.LoadProfile(context.Background(), "user-1")
 	if err != nil {
@@ -64,7 +65,7 @@ func TestGRPCGatewayLoadProfileReturnsEmptyWhenSocialProfileMissing(t *testing.T
 	t.Parallel()
 
 	social := &socialClientStub{getErr: status.Error(codes.NotFound, "user profile not found")}
-	gateway := grpcGateway{socialClient: social}
+	gateway := settingsgateway.GRPCGateway{SocialClient: social}
 
 	profile, err := gateway.LoadProfile(context.Background(), "user-1")
 	if err != nil {
@@ -79,7 +80,7 @@ func TestGRPCGatewayLoadAndSaveLocale(t *testing.T) {
 	t.Parallel()
 
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
-	gateway := grpcGateway{accountClient: account}
+	gateway := settingsgateway.GRPCGateway{AccountClient: account}
 
 	locale, err := gateway.LoadLocale(context.Background(), "user-1")
 	if err != nil {
@@ -126,7 +127,7 @@ func TestGRPCGatewayListCreateAndRevokeAIKeys(t *testing.T) {
 			CreatedAt: &timestamppb.Timestamp{Seconds: 1, Nanos: 2_000_000_000},
 		},
 	}}}
-	gateway := grpcGateway{credentialClient: credentials}
+	gateway := settingsgateway.GRPCGateway{CredentialClient: credentials}
 
 	rows, err := gateway.ListAIKeys(context.Background(), "user-1")
 	if err != nil {
@@ -183,7 +184,7 @@ func TestGRPCGatewayListCreateAndRevokeAIKeys(t *testing.T) {
 func TestGRPCGatewayMissingClientBehavior(t *testing.T) {
 	t.Parallel()
 
-	gateway := grpcGateway{}
+	gateway := settingsgateway.GRPCGateway{}
 
 	tests := []struct {
 		name string

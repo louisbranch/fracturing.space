@@ -1,12 +1,12 @@
 package daggerheart
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // CreationView maps the domain creation model to the template view type.
-func (Workflow) CreationView(creation campaigns.CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
+func (Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
 	view := webtemplates.CampaignCharacterCreationView{
 		Ready:              creation.Progress.Ready,
 		NextStep:           creation.Progress.NextStep,

@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -13,14 +14,14 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(newService(&routeGatewayStub{}, ""), publichandler.Base{}))
+	registerRoutes(nil, newHandlers(profileapp.NewService(&routeGatewayStub{}, ""), publichandler.Base{}))
 }
 
 func TestRegisterRoutesProfileMethodContract(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(newService(&routeGatewayStub{
+	registerRoutes(mux, newHandlers(profileapp.NewService(&routeGatewayStub{
 		lookupResp: LookupUserProfileResponse{Username: "adventurer"},
 	}, ""), publichandler.Base{}))
 

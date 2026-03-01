@@ -5,9 +5,13 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
+	dashboardgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
+	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
+	profilegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
+	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
@@ -20,8 +24,15 @@ var (
 func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	t.Parallel()
 
-	public := DefaultPublicModules(Dependencies{}, ModuleResolvers{}, PublicModuleOptions{})
-	protected := DefaultProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{})
+	reg := NewRegistry()
+	built := reg.Build(BuildInput{
+		Dependencies:     Dependencies{},
+		Resolvers:        ModuleResolvers{},
+		PublicOptions:    PublicModuleOptions{},
+		ProtectedOptions: ProtectedModuleOptions{},
+	})
+	public := built.Public
+	protected := built.Protected
 	if len(public) != 5 {
 		t.Fatalf("public module count = %d, want %d", len(public), 5)
 	}
@@ -61,23 +72,34 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 func TestExperimentalModulesAvailableWhenEnabled(t *testing.T) {
 	t.Parallel()
 
-	public := ExperimentalPublicModules()
-	protected := ExperimentalProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{})
-	if len(public) != 0 {
-		t.Fatalf("experimental public module count = %d, want %d", len(public), 0)
+	reg := NewRegistry()
+	built := reg.Build(BuildInput{
+		Dependencies:              Dependencies{},
+		Resolvers:                 ModuleResolvers{},
+		PublicOptions:             PublicModuleOptions{},
+		ProtectedOptions:          ProtectedModuleOptions{},
+		EnableExperimentalModules: true,
+	})
+	if len(built.Public) != 5 {
+		t.Fatalf("experimental public module count = %d, want %d", len(built.Public), 5)
 	}
-	if len(protected) != 4 {
-		t.Fatalf("experimental protected module count = %d, want %d", len(protected), 4)
+	if len(built.Protected) != 4 {
+		t.Fatalf("experimental protected module count = %d, want %d", len(built.Protected), 4)
 	}
 }
 
 func TestStableModulesHaveUniquePrefixes(t *testing.T) {
 	t.Parallel()
 
-	public := DefaultPublicModules(Dependencies{}, ModuleResolvers{}, PublicModuleOptions{})
-	protected := DefaultProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{})
+	reg := NewRegistry()
+	built := reg.Build(BuildInput{
+		Dependencies:     Dependencies{},
+		Resolvers:        ModuleResolvers{},
+		PublicOptions:    PublicModuleOptions{},
+		ProtectedOptions: ProtectedModuleOptions{},
+	})
 	seen := map[string]struct{}{}
-	for _, module := range append(public, protected...) {
+	for _, module := range append(built.Public, built.Protected...) {
 		mount, err := module.Mount()
 		if err != nil {
 			t.Fatalf("module %q mount error = %v", module.ID(), err)
@@ -95,9 +117,16 @@ func TestStableModulesHaveUniquePrefixes(t *testing.T) {
 func TestExperimentalModulesHaveUniquePrefixes(t *testing.T) {
 	t.Parallel()
 
-	protected := ExperimentalProtectedModules(Dependencies{}, ModuleResolvers{}, ProtectedModuleOptions{})
+	reg := NewRegistry()
+	built := reg.Build(BuildInput{
+		Dependencies:              Dependencies{},
+		Resolvers:                 ModuleResolvers{},
+		PublicOptions:             PublicModuleOptions{},
+		ProtectedOptions:          ProtectedModuleOptions{},
+		EnableExperimentalModules: true,
+	})
 	seen := map[string]struct{}{}
-	for _, module := range protected {
+	for _, module := range built.Protected {
 		mount, err := module.Mount()
 		if err != nil {
 			t.Fatalf("module %q mount error = %v", module.ID(), err)
@@ -131,17 +160,18 @@ func TestDeriveServiceHealthAllPresent(t *testing.T) {
 	t.Parallel()
 
 	deps := Dependencies{
-		CampaignClient:      stubCampaignClient{},
-		ParticipantClient:   stubParticipantClient{},
-		CharacterClient:     stubCharacterClient{},
-		SessionClient:       stubSessionClient{},
-		InviteClient:        stubInviteClient{},
-		AuthorizationClient: stubAuthorizationClient{},
-		UserHubClient:       stubUserHubClient{},
-		SocialClient:        stubSocialClient{},
-		AccountClient:       stubAccountClient{},
-		CredentialClient:    stubCredentialClient{},
-		NotificationClient:  stubNotificationClient{},
+		CampaignClient:       stubCampaignClient{},
+		ParticipantClient:    stubParticipantClient{},
+		CharacterClient:      stubCharacterClient{},
+		SessionClient:        stubSessionClient{},
+		InviteClient:         stubInviteClient{},
+		AuthorizationClient:  stubAuthorizationClient{},
+		UserHubClient:        stubUserHubClient{},
+		ProfileSocialClient:  stubSocialClient{},
+		SettingsSocialClient: stubSocialClient{},
+		AccountClient:        stubAccountClient{},
+		CredentialClient:     stubCredentialClient{},
+		NotificationClient:   stubNotificationClient{},
 	}
 	modules := buildHealthModules(deps)
 	health := DeriveServiceHealth(modules)
@@ -162,10 +192,10 @@ func TestDeriveServiceHealthMixedDeps(t *testing.T) {
 		CampaignClient: stubCampaignClient{},
 		// Campaigns is missing ParticipantClient etc → degraded
 		// UserHubClient nil → Dashboard degraded
-		// SocialClient nil → Profile degraded
+		// ProfileSocialClient nil → Profile degraded
 		AccountClient:      stubAccountClient{},
 		NotificationClient: stubNotificationClient{},
-		// Settings missing SocialClient and CredentialClient → degraded
+		// Settings missing SettingsSocialClient and CredentialClient → degraded
 	}
 	modules := buildHealthModules(deps)
 	health := DeriveServiceHealth(modules)
@@ -251,50 +281,14 @@ func TestRegistryBuildStableAndExperimental(t *testing.T) {
 	}
 }
 
-func TestRegistryBuildMatchesCompatibilityWrappers(t *testing.T) {
-	t.Parallel()
-
-	deps := Dependencies{}
-	res := ModuleResolvers{}
-	publicOpts := PublicModuleOptions{}
-	protectedOpts := ProtectedModuleOptions{}
-
-	reg := NewRegistry()
-	built := reg.Build(BuildInput{
-		Dependencies:     deps,
-		Resolvers:        res,
-		PublicOptions:    publicOpts,
-		ProtectedOptions: protectedOpts,
-	})
-
-	wrappedPublic := DefaultPublicModules(deps, res, publicOpts)
-	wrappedProtected := DefaultProtectedModules(deps, res, protectedOpts)
-
-	assertModuleIDsEqual(t, built.Public, wrappedPublic, "public")
-	assertModuleIDsEqual(t, built.Protected, wrappedProtected, "protected")
-}
-
-func assertModuleIDsEqual(t *testing.T, got []Module, want []Module, label string) {
-	t.Helper()
-
-	if len(got) != len(want) {
-		t.Fatalf("%s module count = %d, want %d", label, len(got), len(want))
-	}
-	for i := range got {
-		if got[i].ID() != want[i].ID() {
-			t.Fatalf("%s module[%d] id = %q, want %q", label, i, got[i].ID(), want[i].ID())
-		}
-	}
-}
-
 // buildHealthModules constructs modules from deps for health derivation tests.
 func buildHealthModules(deps Dependencies) []Module {
 	return []Module{
 		campaigns.NewStableWithGateway(newCampaignGateway(deps), emptyBase, "", nil),
-		dashboard.NewWithGateway(dashboard.NewGRPCGateway(deps.UserHubClient), emptyBase, nil),
-		profile.NewWithGateway(profile.NewGRPCGateway(deps.SocialClient), "", nil),
-		settings.New(settings.WithGateway(settings.NewGRPCGateway(deps.SocialClient, deps.AccountClient, deps.CredentialClient)), settings.WithBase(emptyBase), settings.WithSchemePolicy(emptyPolicy)),
-		notifications.NewWithGateway(notifications.NewGRPCGateway(deps.NotificationClient), emptyBase),
+		dashboard.NewWithGateway(dashboardgateway.NewGRPCGateway(deps.UserHubClient), emptyBase, nil),
+		profile.NewWithGateway(profilegateway.NewGRPCGateway(deps.ProfileSocialClient), "", nil),
+		settings.New(settings.WithGateway(settingsgateway.NewGRPCGateway(deps.SettingsSocialClient, deps.AccountClient, deps.CredentialClient)), settings.WithBase(emptyBase), settings.WithSchemePolicy(emptyPolicy)),
+		notifications.NewWithGateway(notificationsgateway.NewGRPCGateway(deps.NotificationClient), emptyBase),
 	}
 }
 

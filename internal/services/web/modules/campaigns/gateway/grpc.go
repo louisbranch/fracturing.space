@@ -44,11 +44,15 @@ type DaggerheartContentClient interface {
 // SessionClient exposes session listing for campaign workspace pages.
 type SessionClient interface {
 	ListSessions(context.Context, *statev1.ListSessionsRequest, ...grpc.CallOption) (*statev1.ListSessionsResponse, error)
+	StartSession(context.Context, *statev1.StartSessionRequest, ...grpc.CallOption) (*statev1.StartSessionResponse, error)
+	EndSession(context.Context, *statev1.EndSessionRequest, ...grpc.CallOption) (*statev1.EndSessionResponse, error)
 }
 
 // InviteClient exposes invite listing for campaign workspace pages.
 type InviteClient interface {
 	ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error)
+	CreateInvite(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error)
+	RevokeInvite(context.Context, *statev1.RevokeInviteRequest, ...grpc.CallOption) (*statev1.RevokeInviteResponse, error)
 }
 
 // AuthorizationClient exposes campaign authorization checks.

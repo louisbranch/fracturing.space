@@ -51,20 +51,52 @@ func (g GRPCGateway) CampaignSessions(ctx context.Context, campaignID string) ([
 	)
 }
 
-// TODO(mutation-activation): session/participant/invite mutations are scaffolded
-// but intentionally return KindUnavailable. Activation criteria:
-//  1. Backend gRPC service implements the corresponding RPC.
-//  2. Gateway method is implemented with real client call + error mapping.
-//  3. Route is registered in registerExperimentalRoutesForCampaigns (or promoted to stable).
-//  4. Integration tests cover the mutation end-to-end.
-func (g GRPCGateway) StartSession(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaign start session is not implemented")
+func (g GRPCGateway) StartSession(ctx context.Context, campaignID string, input campaignapp.StartSessionInput) error {
+	if g.SessionClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.session_service_client_is_not_configured", "session service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+
+	_, err := g.SessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+		CampaignId: campaignID,
+		Name:       strings.TrimSpace(input.Name),
+	})
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_start_session",
+			FallbackMessage: "failed to start session",
+		})
+	}
+	return nil
 }
 
-func (g GRPCGateway) EndSession(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaign end session is not implemented")
-}
+func (g GRPCGateway) EndSession(ctx context.Context, campaignID string, input campaignapp.EndSessionInput) error {
+	if g.SessionClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.session_service_client_is_not_configured", "session service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	sessionID := strings.TrimSpace(input.SessionID)
+	if sessionID == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.session_id_is_required", "session id is required")
+	}
 
-func (g GRPCGateway) UpdateParticipants(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaign participant updates are not implemented")
+	_, err := g.SessionClient.EndSession(ctx, &statev1.EndSessionRequest{
+		CampaignId: campaignID,
+		SessionId:  sessionID,
+	})
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_end_session",
+			FallbackMessage: "failed to end session",
+		})
+	}
+	return nil
 }

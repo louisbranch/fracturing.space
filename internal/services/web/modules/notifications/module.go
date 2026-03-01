@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/module"
+	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -29,17 +30,13 @@ func (Module) ID() string { return "notifications" }
 
 // Healthy reports whether the notifications module has an operational gateway.
 func (m Module) Healthy() bool {
-	if m.gateway == nil {
-		return false
-	}
-	_, unavailable := m.gateway.(unavailableGateway)
-	return !unavailable
+	return notificationsapp.IsGatewayHealthy(m.gateway)
 }
 
 // Mount wires notifications route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := newService(m.gateway)
+	svc := notificationsapp.NewService(m.gateway)
 	h := newHandlers(svc, m.base)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.Notifications, Handler: mux}, nil

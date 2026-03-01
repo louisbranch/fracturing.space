@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="675" viewBox="0 0 1200 675" role="img" aria-label="Campaign cover placeholder">
+  <defs>
+    <linearGradient id="coverGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1f2937" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="675" fill="url(#coverGradient)" />
+  <g fill="none" stroke="#334155" stroke-width="2" opacity="0.6">
+    <path d="M0 120h1200" />
+    <path d="M0 240h1200" />
+    <path d="M0 360h1200" />
+    <path d="M0 480h1200" />
+    <path d="M0 600h1200" />
+    <path d="M160 0v675" />
+    <path d="M320 0v675" />
+    <path d="M480 0v675" />
+    <path d="M640 0v675" />
+    <path d="M800 0v675" />
+    <path d="M960 0v675" />
+    <path d="M1120 0v675" />
+  </g>
+  <g fill="#e2e8f0" text-anchor="middle" font-family="ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif">
+    <text x="600" y="320" font-size="52" font-weight="700">Campaign Cover</text>
+    <text x="600" y="370" font-size="28" opacity="0.8">Placeholder</text>
+  </g>
+</svg>

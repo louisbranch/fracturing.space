@@ -1,32 +1,29 @@
 package dashboard
 
 import (
-	"context"
 	"net/http"
 
+	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
-	"golang.org/x/text/language"
 )
 
-// dashboardService defines the service operations used by dashboard handlers.
-type dashboardService interface {
-	loadDashboard(ctx context.Context, userID string, locale language.Tag) (DashboardView, error)
-}
+// dashboardService defines the service contract used by dashboard handlers.
+type dashboardService = dashboardapp.Service
 
 type handlers struct {
 	modulehandler.Base
 	service dashboardService
 }
 
-func newHandlers(s service, base modulehandler.Base) handlers {
+func newHandlers(s dashboardService, base modulehandler.Base) handlers {
 	return handlers{Base: base, service: s}
 }
 
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, userID := h.RequestContextAndUserID(r)
-	view, err := h.service.loadDashboard(ctx, userID, h.RequestLocaleTag(r))
+	view, err := h.service.LoadDashboard(ctx, userID, h.RequestLocaleTag(r))
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

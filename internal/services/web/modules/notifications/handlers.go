@@ -1,23 +1,19 @@
 package notifications
 
 import (
-	"context"
 	"net/http"
 	"strings"
 	"time"
 
+	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-// notificationService defines the service operations used by notification handlers.
-type notificationService interface {
-	listNotifications(ctx context.Context, userID string) ([]NotificationSummary, error)
-	getNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error)
-	openNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error)
-}
+// notificationService defines the service contract used by notification handlers.
+type notificationService = notificationsapp.Service
 
 type handlers struct {
 	modulehandler.Base
@@ -25,7 +21,7 @@ type handlers struct {
 	nowFunc func() time.Time
 }
 
-func newHandlers(s service, base modulehandler.Base) handlers {
+func newHandlers(s notificationService, base modulehandler.Base) handlers {
 	return handlers{Base: base, service: s, nowFunc: time.Now}
 }
 
@@ -50,7 +46,7 @@ func (h handlers) handleOpenRoute(w http.ResponseWriter, r *http.Request) {
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, userID := h.RequestContextAndUserID(r)
-	items, err := h.service.listNotifications(ctx, userID)
+	items, err := h.service.ListNotifications(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -61,12 +57,12 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, notificationID string) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, userID := h.RequestContextAndUserID(r)
-	items, err := h.service.listNotifications(ctx, userID)
+	items, err := h.service.ListNotifications(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	item, err := h.service.getNotification(ctx, userID, notificationID)
+	item, err := h.service.GetNotification(ctx, userID, notificationID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -76,7 +72,7 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, notificat
 
 func (h handlers) handleOpen(w http.ResponseWriter, r *http.Request, notificationID string) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	item, err := h.service.openNotification(ctx, userID, notificationID)
+	item, err := h.service.OpenNotification(ctx, userID, notificationID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

@@ -4,16 +4,16 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 )
 
 // AssembleCatalog builds the Daggerheart-specific catalog view from generic
 // gateway data (progress, catalog, profile).
 func (Workflow) AssembleCatalog(
-	progress campaigns.CampaignCharacterCreationProgress,
-	catalog campaigns.CampaignCharacterCreationCatalog,
-	profile campaigns.CampaignCharacterCreationProfile,
-) campaigns.CampaignCharacterCreation {
+	progress campaignapp.CampaignCharacterCreationProgress,
+	catalog campaignapp.CampaignCharacterCreationCatalog,
+	profile campaignapp.CampaignCharacterCreationProfile,
+) campaignapp.CampaignCharacterCreation {
 	selectedDomainCardIDs := make([]string, 0, len(profile.DomainCardIDs))
 	for _, domainCardID := range profile.DomainCardIDs {
 		trimmedDomainCardID := strings.TrimSpace(domainCardID)
@@ -23,14 +23,14 @@ func (Workflow) AssembleCatalog(
 		selectedDomainCardIDs = append(selectedDomainCardIDs, trimmedDomainCardID)
 	}
 
-	creation := campaigns.CampaignCharacterCreation{
-		Progress: campaigns.CampaignCharacterCreationProgress{
-			Steps:        append([]campaigns.CampaignCharacterCreationStep(nil), progress.Steps...),
+	creation := campaignapp.CampaignCharacterCreation{
+		Progress: campaignapp.CampaignCharacterCreationProgress{
+			Steps:        append([]campaignapp.CampaignCharacterCreationStep(nil), progress.Steps...),
 			NextStep:     progress.NextStep,
 			Ready:        progress.Ready,
 			UnmetReasons: append([]string(nil), progress.UnmetReasons...),
 		},
-		Profile: campaigns.CampaignCharacterCreationProfile{
+		Profile: campaignapp.CampaignCharacterCreationProfile{
 			ClassID:            strings.TrimSpace(profile.ClassID),
 			SubclassID:         strings.TrimSpace(profile.SubclassID),
 			AncestryID:         strings.TrimSpace(profile.AncestryID),
@@ -51,15 +51,15 @@ func (Workflow) AssembleCatalog(
 			DomainCardIDs:      selectedDomainCardIDs,
 			Connections:        strings.TrimSpace(profile.Connections),
 		},
-		Classes:          []campaigns.CatalogClass{},
-		Subclasses:       []campaigns.CatalogSubclass{},
-		Ancestries:       []campaigns.CatalogHeritage{},
-		Communities:      []campaigns.CatalogHeritage{},
-		PrimaryWeapons:   []campaigns.CatalogWeapon{},
-		SecondaryWeapons: []campaigns.CatalogWeapon{},
-		Armor:            []campaigns.CatalogArmor{},
-		PotionItems:      []campaigns.CatalogItem{},
-		DomainCards:      []campaigns.CatalogDomainCard{},
+		Classes:          []campaignapp.CatalogClass{},
+		Subclasses:       []campaignapp.CatalogSubclass{},
+		Ancestries:       []campaignapp.CatalogHeritage{},
+		Communities:      []campaignapp.CatalogHeritage{},
+		PrimaryWeapons:   []campaignapp.CatalogWeapon{},
+		SecondaryWeapons: []campaignapp.CatalogWeapon{},
+		Armor:            []campaignapp.CatalogArmor{},
+		PotionItems:      []campaignapp.CatalogItem{},
+		DomainCards:      []campaignapp.CatalogDomainCard{},
 	}
 
 	classDomainsByID := make(map[string]map[string]struct{}, len(catalog.Classes))
@@ -83,13 +83,13 @@ func (Workflow) AssembleCatalog(
 			domains[trimmedDomainID] = struct{}{}
 		}
 		classDomainsByID[classID] = domains
-		creation.Classes = append(creation.Classes, campaigns.CatalogClass{
+		creation.Classes = append(creation.Classes, campaignapp.CatalogClass{
 			ID:        classID,
 			Name:      className,
 			DomainIDs: domainIDs,
 		})
 	}
-	sortByName(creation.Classes, func(c campaigns.CatalogClass) string { return c.Name }, func(c campaigns.CatalogClass) string { return c.ID })
+	sortByName(creation.Classes, func(c campaignapp.CatalogClass) string { return c.Name }, func(c campaignapp.CatalogClass) string { return c.ID })
 
 	selectedClassID := strings.TrimSpace(creation.Profile.ClassID)
 	for _, subclass := range catalog.Subclasses {
@@ -105,13 +105,13 @@ func (Workflow) AssembleCatalog(
 		if subclassName == "" {
 			subclassName = subclassID
 		}
-		creation.Subclasses = append(creation.Subclasses, campaigns.CatalogSubclass{
+		creation.Subclasses = append(creation.Subclasses, campaignapp.CatalogSubclass{
 			ID:      subclassID,
 			Name:    subclassName,
 			ClassID: subclassClassID,
 		})
 	}
-	sortByName(creation.Subclasses, func(s campaigns.CatalogSubclass) string { return s.Name }, func(s campaigns.CatalogSubclass) string { return s.ID })
+	sortByName(creation.Subclasses, func(s campaignapp.CatalogSubclass) string { return s.Name }, func(s campaignapp.CatalogSubclass) string { return s.ID })
 
 	for _, heritage := range catalog.Heritages {
 		heritageID := strings.TrimSpace(heritage.ID)
@@ -122,7 +122,7 @@ func (Workflow) AssembleCatalog(
 		if heritageName == "" {
 			heritageName = heritageID
 		}
-		entry := campaigns.CatalogHeritage{
+		entry := campaignapp.CatalogHeritage{
 			ID:   heritageID,
 			Name: heritageName,
 			Kind: strings.TrimSpace(heritage.Kind),
@@ -134,8 +134,8 @@ func (Workflow) AssembleCatalog(
 			creation.Communities = append(creation.Communities, entry)
 		}
 	}
-	sortByName(creation.Ancestries, func(h campaigns.CatalogHeritage) string { return h.Name }, func(h campaigns.CatalogHeritage) string { return h.ID })
-	sortByName(creation.Communities, func(h campaigns.CatalogHeritage) string { return h.Name }, func(h campaigns.CatalogHeritage) string { return h.ID })
+	sortByName(creation.Ancestries, func(h campaignapp.CatalogHeritage) string { return h.Name }, func(h campaignapp.CatalogHeritage) string { return h.ID })
+	sortByName(creation.Communities, func(h campaignapp.CatalogHeritage) string { return h.Name }, func(h campaignapp.CatalogHeritage) string { return h.ID })
 
 	for _, weapon := range catalog.Weapons {
 		weaponID := strings.TrimSpace(weapon.ID)
@@ -146,7 +146,7 @@ func (Workflow) AssembleCatalog(
 		if weaponName == "" {
 			weaponName = weaponID
 		}
-		entry := campaigns.CatalogWeapon{
+		entry := campaignapp.CatalogWeapon{
 			ID:       weaponID,
 			Name:     weaponName,
 			Category: strings.TrimSpace(weapon.Category),
@@ -159,8 +159,8 @@ func (Workflow) AssembleCatalog(
 			creation.SecondaryWeapons = append(creation.SecondaryWeapons, entry)
 		}
 	}
-	sortByName(creation.PrimaryWeapons, func(w campaigns.CatalogWeapon) string { return w.Name }, func(w campaigns.CatalogWeapon) string { return w.ID })
-	sortByName(creation.SecondaryWeapons, func(w campaigns.CatalogWeapon) string { return w.Name }, func(w campaigns.CatalogWeapon) string { return w.ID })
+	sortByName(creation.PrimaryWeapons, func(w campaignapp.CatalogWeapon) string { return w.Name }, func(w campaignapp.CatalogWeapon) string { return w.ID })
+	sortByName(creation.SecondaryWeapons, func(w campaignapp.CatalogWeapon) string { return w.Name }, func(w campaignapp.CatalogWeapon) string { return w.ID })
 
 	for _, armor := range catalog.Armor {
 		armorID := strings.TrimSpace(armor.ID)
@@ -171,13 +171,13 @@ func (Workflow) AssembleCatalog(
 		if armorName == "" {
 			armorName = armorID
 		}
-		creation.Armor = append(creation.Armor, campaigns.CatalogArmor{
+		creation.Armor = append(creation.Armor, campaignapp.CatalogArmor{
 			ID:   armorID,
 			Name: armorName,
 			Tier: armor.Tier,
 		})
 	}
-	sortByName(creation.Armor, func(a campaigns.CatalogArmor) string { return a.Name }, func(a campaigns.CatalogArmor) string { return a.ID })
+	sortByName(creation.Armor, func(a campaignapp.CatalogArmor) string { return a.Name }, func(a campaignapp.CatalogArmor) string { return a.ID })
 
 	for _, item := range catalog.Items {
 		itemID := strings.TrimSpace(item.ID)
@@ -191,9 +191,9 @@ func (Workflow) AssembleCatalog(
 		if itemName == "" {
 			itemName = itemID
 		}
-		creation.PotionItems = append(creation.PotionItems, campaigns.CatalogItem{ID: itemID, Name: itemName})
+		creation.PotionItems = append(creation.PotionItems, campaignapp.CatalogItem{ID: itemID, Name: itemName})
 	}
-	sortByName(creation.PotionItems, func(i campaigns.CatalogItem) string { return i.Name }, func(i campaigns.CatalogItem) string { return i.ID })
+	sortByName(creation.PotionItems, func(i campaignapp.CatalogItem) string { return i.Name }, func(i campaignapp.CatalogItem) string { return i.ID })
 
 	allowedDomains := classDomainsByID[selectedClassID]
 	for _, domainCard := range catalog.DomainCards {
@@ -211,7 +211,7 @@ func (Workflow) AssembleCatalog(
 		if domainCardName == "" {
 			domainCardName = domainCardID
 		}
-		creation.DomainCards = append(creation.DomainCards, campaigns.CatalogDomainCard{
+		creation.DomainCards = append(creation.DomainCards, campaignapp.CatalogDomainCard{
 			ID:       domainCardID,
 			Name:     domainCardName,
 			DomainID: domainID,

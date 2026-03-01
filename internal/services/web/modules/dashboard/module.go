@@ -1,10 +1,10 @@
 package dashboard
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/module"
+	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -31,17 +31,13 @@ func (Module) ID() string { return "dashboard" }
 
 // Healthy reports whether the dashboard module has an operational gateway.
 func (m Module) Healthy() bool {
-	if m.gateway == nil {
-		return false
-	}
-	_, unavailable := m.gateway.(unavailableGateway)
-	return !unavailable
+	return dashboardapp.IsGatewayHealthy(m.gateway)
 }
 
 // Mount wires dashboard route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	h := newHandlers(newService(m.gateway, log.Default(), m.health), m.base)
+	h := newHandlers(dashboardapp.NewService(m.gateway, nil, m.health), m.base)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.DashboardPrefix, Handler: mux}, nil
 }
