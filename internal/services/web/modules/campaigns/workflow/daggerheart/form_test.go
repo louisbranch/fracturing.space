@@ -1,12 +1,10 @@
 package daggerheart
 
 import (
-	"net/http"
-	"net/http/httptest"
-	"strings"
+	"net/url"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
@@ -17,13 +15,13 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 		name   string
 		step   int32
 		body   string
-		verify func(*testing.T, *campaigns.CampaignCharacterCreationStepInput)
+		verify func(*testing.T, *campaignapp.CampaignCharacterCreationStepInput)
 	}{
 		{
 			name: "step 1 class and subclass",
 			step: 1,
 			body: "class_id=warrior&subclass_id=guardian",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.ClassSubclass == nil {
 					t.Fatal("ClassSubclass is nil")
 				}
@@ -39,7 +37,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 2 ancestry and community",
 			step: 2,
 			body: "ancestry_id=elf&community_id=loreborne",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Heritage == nil {
 					t.Fatal("Heritage is nil")
 				}
@@ -55,7 +53,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 3 traits",
 			step: 3,
 			body: "agility=2&strength=-1&finesse=1&instinct=0&presence=3&knowledge=-2",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Traits == nil {
 					t.Fatal("Traits is nil")
 				}
@@ -74,7 +72,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 4 details",
 			step: 4,
 			body: "",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Details == nil {
 					t.Fatal("Details is nil")
 				}
@@ -84,7 +82,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 5 equipment with secondary weapon",
 			step: 5,
 			body: "weapon_primary_id=sword&weapon_secondary_id=dagger&armor_id=leather&potion_item_id=item.minor-health-potion",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Equipment == nil {
 					t.Fatal("Equipment is nil")
 				}
@@ -100,7 +98,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 5 equipment without secondary weapon",
 			step: 5,
 			body: "weapon_primary_id=sword&armor_id=leather&potion_item_id=item.minor-health-potion",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Equipment == nil {
 					t.Fatal("Equipment is nil")
 				}
@@ -113,7 +111,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 6 background",
 			step: 6,
 			body: "background=Noble+scholar",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Background == nil {
 					t.Fatal("Background is nil")
 				}
@@ -126,7 +124,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 7 experience with modifier",
 			step: 7,
 			body: "experience_name=Outlander&experience_modifier=2",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Experiences == nil {
 					t.Fatal("Experiences is nil")
 				}
@@ -145,7 +143,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 7 experience without modifier",
 			step: 7,
 			body: "experience_name=Outlander",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Experiences == nil {
 					t.Fatal("Experiences is nil")
 				}
@@ -158,7 +156,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 8 domain cards deduplicates",
 			step: 8,
 			body: "domain_card_id=dc1&domain_card_id=dc2&domain_card_id=dc1",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.DomainCards == nil {
 					t.Fatal("DomainCards is nil")
 				}
@@ -171,7 +169,7 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			name: "step 9 connections",
 			step: 9,
 			body: "connections=My+ally+is+the+barkeep",
-			verify: func(t *testing.T, input *campaigns.CampaignCharacterCreationStepInput) {
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Connections == nil {
 					t.Fatal("Connections is nil")
 				}
@@ -187,10 +185,12 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			form, err := url.ParseQuery(tt.body)
+			if err != nil {
+				t.Fatalf("ParseQuery() error = %v", err)
+			}
 
-			input, err := Workflow{}.ParseStepInput(req, tt.step)
+			input, err := Workflow{}.ParseStepInput(form, tt.step)
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
@@ -233,10 +233,12 @@ func TestParseStepInputUsesLocalizationKeys(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			form, err := url.ParseQuery(tt.body)
+			if err != nil {
+				t.Fatalf("ParseQuery() error = %v", err)
+			}
 
-			_, err := Workflow{}.ParseStepInput(req, tt.step)
+			_, err = Workflow{}.ParseStepInput(form, tt.step)
 			if err == nil {
 				t.Fatalf("expected error")
 			}

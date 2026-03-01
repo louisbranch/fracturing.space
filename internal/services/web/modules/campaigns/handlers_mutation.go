@@ -17,8 +17,14 @@ func (h handlers) handleSessionStartRoute(w http.ResponseWriter, r *http.Request
 		h.WriteNotFound(w, r)
 		return
 	}
+	if err := r.ParseForm(); err != nil {
+		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_session_start_form", "failed to parse session start form"))
+		return
+	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.service.startSession(ctx, campaignID); err != nil {
+	if err := h.service.StartSession(ctx, campaignID, StartSessionInput{
+		Name: strings.TrimSpace(r.Form.Get("name")),
+	}); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
@@ -31,26 +37,18 @@ func (h handlers) handleSessionEndRoute(w http.ResponseWriter, r *http.Request) 
 		h.WriteNotFound(w, r)
 		return
 	}
+	if err := r.ParseForm(); err != nil {
+		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_session_end_form", "failed to parse session end form"))
+		return
+	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.service.endSession(ctx, campaignID); err != nil {
+	if err := h.service.EndSession(ctx, campaignID, EndSessionInput{
+		SessionID: strings.TrimSpace(r.Form.Get("session_id")),
+	}); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
 	httpx.WriteRedirect(w, r, routepath.AppCampaignSessions(campaignID))
-}
-
-func (h handlers) handleParticipantUpdateRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.service.updateParticipants(ctx, campaignID); err != nil {
-		h.WriteError(w, r, err)
-		return
-	}
-	httpx.WriteRedirect(w, r, routepath.AppCampaignParticipants(campaignID))
 }
 
 func (h handlers) handleCharacterCreateRoute(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +75,7 @@ func (h handlers) handleCharacterCreateRoute(w http.ResponseWriter, r *http.Requ
 	}
 
 	ctx, _ := h.RequestContextAndUserID(r)
-	created, err := h.service.createCharacter(ctx, campaignID, CreateCharacterInput{
+	created, err := h.service.CreateCharacter(ctx, campaignID, CreateCharacterInput{
 		Name: name,
 		Kind: kind,
 	})
@@ -89,42 +87,21 @@ func (h handlers) handleCharacterCreateRoute(w http.ResponseWriter, r *http.Requ
 	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacter(campaignID, created.CharacterID))
 }
 
-func (h handlers) handleCharacterUpdateRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.service.updateCharacter(ctx, campaignID); err != nil {
-		h.WriteError(w, r, err)
-		return
-	}
-	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacters(campaignID))
-}
-
-func (h handlers) handleCharacterControlRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.service.controlCharacter(ctx, campaignID); err != nil {
-		h.WriteError(w, r, err)
-		return
-	}
-	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacters(campaignID))
-}
-
 func (h handlers) handleInviteCreateRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
 		h.WriteNotFound(w, r)
 		return
 	}
+	if err := r.ParseForm(); err != nil {
+		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_invite_create_form", "failed to parse invite create form"))
+		return
+	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.service.createInvite(ctx, campaignID); err != nil {
+	if err := h.service.CreateInvite(ctx, campaignID, CreateInviteInput{
+		ParticipantID:   strings.TrimSpace(r.Form.Get("participant_id")),
+		RecipientUserID: strings.TrimSpace(r.Form.Get("recipient_user_id")),
+	}); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
@@ -137,8 +114,14 @@ func (h handlers) handleInviteRevokeRoute(w http.ResponseWriter, r *http.Request
 		h.WriteNotFound(w, r)
 		return
 	}
+	if err := r.ParseForm(); err != nil {
+		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_invite_revoke_form", "failed to parse invite revoke form"))
+		return
+	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.service.revokeInvite(ctx, campaignID); err != nil {
+	if err := h.service.RevokeInvite(ctx, campaignID, RevokeInviteInput{
+		InviteID: strings.TrimSpace(r.Form.Get("invite_id")),
+	}); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}

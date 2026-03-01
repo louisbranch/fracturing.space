@@ -99,23 +99,11 @@ var (
 		denyKey:  "error.web.message.manager_or_owner_access_required_for_session_action",
 		denyMsg:  "manager or owner access required for session action",
 	}
-	policyManageParticipant = mutationAuthzPolicy{
-		action:   campaignAuthzActionManage,
-		resource: campaignAuthzResourceParticipant,
-		denyKey:  "error.web.message.manager_or_owner_access_required_for_participant_action",
-		denyMsg:  "manager or owner access required for participant action",
-	}
 	policyMutateCharacter = mutationAuthzPolicy{
 		action:   campaignAuthzActionMutate,
 		resource: campaignAuthzResourceCharacter,
 		denyKey:  "error.web.message.campaign_membership_required_for_character_action",
 		denyMsg:  "campaign membership required for character action",
-	}
-	policyManageCharacter = mutationAuthzPolicy{
-		action:   campaignAuthzActionManage,
-		resource: campaignAuthzResourceCharacter,
-		denyKey:  "error.web.message.manager_or_owner_access_required_for_character_action",
-		denyMsg:  "manager or owner access required for character action",
 	}
 	policyManageInvite = mutationAuthzPolicy{
 		action:   campaignAuthzActionManage,

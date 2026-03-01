@@ -43,9 +43,12 @@ type (
 	CampaignCharacterCreation                  = campaignapp.CampaignCharacterCreation
 	CreateCampaignInput                        = campaignapp.CreateCampaignInput
 	CreateCampaignResult                       = campaignapp.CreateCampaignResult
+	StartSessionInput                          = campaignapp.StartSessionInput
+	EndSessionInput                            = campaignapp.EndSessionInput
+	CreateInviteInput                          = campaignapp.CreateInviteInput
+	RevokeInviteInput                          = campaignapp.RevokeInviteInput
 	CreateCharacterInput                       = campaignapp.CreateCharacterInput
 	CreateCharacterResult                      = campaignapp.CreateCharacterResult
-	CharacterCreationWorkflow                  = campaignapp.CharacterCreationWorkflow
 	CampaignGateway                            = campaignapp.CampaignGateway
 
 	campaignAuthorizationDecision = campaignapp.AuthorizationDecision

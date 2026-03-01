@@ -8,6 +8,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	dashboardgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 	grpcmetadata "google.golang.org/grpc/metadata"
@@ -18,7 +19,7 @@ import (
 func TestNewGRPCGatewayWithoutClientFallsBackToUnavailableGateway(t *testing.T) {
 	t.Parallel()
 
-	gateway := NewGRPCGateway(nil)
+	gateway := dashboardgateway.NewGRPCGateway(nil)
 	_, err := gateway.LoadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err == nil {
 		t.Fatalf("expected unavailable error")
@@ -42,7 +43,7 @@ func TestGRPCGatewayMapsDashboardResponseAuthMetadataAndCampaignState(t *testing
 			},
 		},
 	}}
-	gateway := NewGRPCGateway(client)
+	gateway := dashboardgateway.NewGRPCGateway(client)
 
 	snapshot, err := gateway.LoadDashboard(context.Background(), " user-1 ", language.Und)
 	if err != nil {
@@ -114,7 +115,7 @@ func TestHasDraftOrActiveCampaign(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := hasDraftOrActiveCampaign(tc.campaigns); got != tc.want {
+			if got := dashboardgateway.HasDraftOrActiveCampaign(tc.campaigns); got != tc.want {
 				t.Fatalf("hasDraftOrActiveCampaign() = %t, want %t", got, tc.want)
 			}
 		})

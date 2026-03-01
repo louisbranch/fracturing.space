@@ -9,6 +9,7 @@ import (
 
 	"github.com/a-h/templ"
 	sharedi18n "github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
+	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
@@ -23,11 +24,11 @@ import (
 
 type handlers struct {
 	publichandler.Base
-	service     service
+	service     publicauthapp.Service
 	requestMeta requestmeta.SchemePolicy
 }
 
-func newHandlers(s service, policy requestmeta.SchemePolicy) handlers {
+func newHandlers(s publicauthapp.Service, policy requestmeta.SchemePolicy) handlers {
 	return handlers{service: s, requestMeta: policy}
 }
 
@@ -64,13 +65,13 @@ func (h handlers) handleLogout(w http.ResponseWriter, r *http.Request) {
 	}
 	h.clearSessionCookie(w, r)
 	if hasSession {
-		_ = h.service.revokeWebSession(r.Context(), sessionID)
+		_ = h.service.RevokeWebSession(r.Context(), sessionID)
 	}
 	httpx.WriteRedirect(w, r, routepath.Root)
 }
 
 func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request) {
-	start, err := h.service.passkeyLoginStart(r.Context())
+	start, err := h.service.PasskeyLoginStart(r.Context())
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -87,7 +88,7 @@ func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 		h.writeJSONError(w, r, apperrors.E(apperrors.KindInvalidInput, "invalid json body"))
 		return
 	}
-	finished, err := h.service.passkeyLoginFinish(r.Context(), payload.SessionID, payload.Credential)
+	finished, err := h.service.PasskeyLoginFinish(r.Context(), payload.SessionID, payload.Credential)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -104,7 +105,7 @@ func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 		h.writeJSONError(w, r, apperrors.E(apperrors.KindInvalidInput, "invalid json body"))
 		return
 	}
-	start, err := h.service.passkeyRegisterStart(r.Context(), payload.Email)
+	start, err := h.service.PasskeyRegisterStart(r.Context(), payload.Email)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -121,7 +122,7 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 		h.writeJSONError(w, r, apperrors.E(apperrors.KindInvalidInput, "invalid json body"))
 		return
 	}
-	finished, err := h.service.passkeyRegisterFinish(r.Context(), payload.SessionID, payload.Credential)
+	finished, err := h.service.PasskeyRegisterFinish(r.Context(), payload.SessionID, payload.Credential)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -130,7 +131,7 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 }
 
 func (h handlers) handleHealth(w http.ResponseWriter, r *http.Request) {
-	_ = httpx.WriteHTML(w, http.StatusOK, h.service.healthBody())
+	_ = httpx.WriteHTML(w, http.StatusOK, h.service.HealthBody())
 }
 
 func (h handlers) handleNotFound(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +167,7 @@ func (h handlers) redirectAuthenticatedToApp(w http.ResponseWriter, r *http.Requ
 	if !ok {
 		return false
 	}
-	if !h.service.hasValidWebSession(r.Context(), sessionID) {
+	if !h.service.HasValidWebSession(r.Context(), sessionID) {
 		return false
 	}
 	httpx.WriteRedirect(w, r, resolveAppRedirectPath(r.URL.Query().Get("next")))

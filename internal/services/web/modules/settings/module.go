@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/module"
+	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -49,17 +50,13 @@ func (Module) ID() string { return "settings" }
 
 // Healthy reports whether the settings module has an operational gateway.
 func (m Module) Healthy() bool {
-	if m.gateway == nil {
-		return false
-	}
-	_, unavailable := m.gateway.(unavailableGateway)
-	return !unavailable
+	return settingsapp.IsGatewayHealthy(m.gateway)
 }
 
 // Mount wires settings route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := newService(m.gateway)
+	svc := settingsapp.NewService(m.gateway)
 	h := newHandlers(svc, m.base, m.flashMeta)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.SettingsPrefix, Handler: mux}, nil

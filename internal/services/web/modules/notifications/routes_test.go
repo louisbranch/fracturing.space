@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -16,14 +17,14 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(newService(staticGateway{}), routeTestBase()))
+	registerRoutes(nil, newHandlers(notificationsapp.NewService(staticGateway{}), routeTestBase()))
 }
 
 func TestRegisterRoutesNotificationsPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(newService(staticGateway{}), routeTestBase()))
+	registerRoutes(mux, newHandlers(notificationsapp.NewService(staticGateway{}), routeTestBase()))
 
 	tests := []struct {
 		name       string

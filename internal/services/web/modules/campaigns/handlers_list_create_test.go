@@ -59,7 +59,7 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 	for _, marker := range []string{
 		`class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"`,
 		`<a href="/app/campaigns/camp-new" class="group block"><img`,
-		`/static/campaign-covers/abandoned_castle_courtyard.png`,
+		`/static/campaign-cover-fallback.svg?asset_id=abandoned_castle_courtyard`,
 		`Participants: 12`,
 		`Characters: 7`,
 		`Updated`,

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
@@ -15,16 +16,8 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-// settingsService defines the service operations used by settings handlers.
-type settingsService interface {
-	loadProfile(ctx context.Context, userID string) (SettingsProfile, error)
-	saveProfile(ctx context.Context, userID string, profile SettingsProfile) error
-	loadLocale(ctx context.Context, userID string) (string, error)
-	saveLocale(ctx context.Context, userID string, value string) error
-	listAIKeys(ctx context.Context, userID string) ([]SettingsAIKey, error)
-	createAIKey(ctx context.Context, userID string, label string, secret string) error
-	revokeAIKey(ctx context.Context, userID string, credentialID string) error
-}
+// settingsService defines the service contract used by settings handlers.
+type settingsService = settingsapp.Service
 
 type handlers struct {
 	modulehandler.Base
@@ -32,7 +25,7 @@ type handlers struct {
 	flashMeta requestmeta.SchemePolicy
 }
 
-func newHandlers(s service, base modulehandler.Base, policy requestmeta.SchemePolicy) handlers {
+func newHandlers(s settingsService, base modulehandler.Base, policy requestmeta.SchemePolicy) handlers {
 	return handlers{Base: base, service: s, flashMeta: policy}
 }
 
@@ -46,7 +39,7 @@ func (h handlers) redirectSettingsRoot(w http.ResponseWriter, r *http.Request) {
 
 func (h handlers) handleProfileGet(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	profile, err := h.service.loadProfile(ctx, userID)
+	profile, err := h.service.LoadProfile(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -60,7 +53,7 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_profile_form", "failed to parse profile form"))
 		return
 	}
-	existingProfile, err := h.service.loadProfile(ctx, userID)
+	existingProfile, err := h.service.LoadProfile(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -73,7 +66,7 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 		Pronouns:      strings.TrimSpace(r.FormValue("pronouns")),
 		Bio:           strings.TrimSpace(r.FormValue("bio")),
 	}
-	if err := h.service.saveProfile(ctx, userID, profile); err != nil {
+	if err := h.service.SaveProfile(ctx, userID, profile); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
 			loc, _ := h.PageLocalizer(w, r)
 			h.renderProfilePage(w, r, http.StatusBadRequest, profile, webi18n.LocalizeError(loc, err), "")
@@ -88,7 +81,7 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 
 func (h handlers) handleLocaleGet(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	locale, err := h.service.loadLocale(ctx, userID)
+	locale, err := h.service.LoadLocale(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -103,7 +96,7 @@ func (h handlers) handleLocalePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	selectedLocale := strings.TrimSpace(r.FormValue("locale"))
-	if err := h.service.saveLocale(ctx, userID, selectedLocale); err != nil {
+	if err := h.service.SaveLocale(ctx, userID, selectedLocale); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
 			loc, _ := h.PageLocalizer(w, r)
 			h.renderLocalePage(w, r, http.StatusBadRequest, selectedLocale, webi18n.LocalizeError(loc, err))
@@ -129,7 +122,7 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	label := strings.TrimSpace(r.FormValue("label"))
 	secret := strings.TrimSpace(r.FormValue("secret"))
-	if err := h.service.createAIKey(ctx, userID, label, secret); err != nil {
+	if err := h.service.CreateAIKey(ctx, userID, label, secret); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
 			loc, _ := h.PageLocalizer(w, r)
 			h.renderAIKeysPage(w, r, ctx, userID, http.StatusBadRequest, label, webi18n.LocalizeError(loc, err))
@@ -144,7 +137,7 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 
 func (h handlers) handleAIKeyRevoke(w http.ResponseWriter, r *http.Request, credentialID string) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.service.revokeAIKey(ctx, userID, credentialID); err != nil {
+	if err := h.service.RevokeAIKey(ctx, userID, credentialID); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
@@ -205,7 +198,7 @@ func (h handlers) renderLocalePage(w http.ResponseWriter, r *http.Request, statu
 
 func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx context.Context, userID string, statusCode int, label string, errorMessage string) {
 	loc, _ := h.PageLocalizer(w, r)
-	keys, err := h.service.listAIKeys(ctx, userID)
+	keys, err := h.service.ListAIKeys(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

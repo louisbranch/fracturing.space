@@ -37,12 +37,9 @@ const (
 	AppCampaignSessionStartPattern           = CampaignsPrefix + "{campaignID}/sessions/start"
 	AppCampaignSessionEndPattern             = CampaignsPrefix + "{campaignID}/sessions/end"
 	AppCampaignParticipantsPattern           = CampaignsPrefix + "{campaignID}/participants"
-	AppCampaignParticipantUpdatePattern      = CampaignsPrefix + "{campaignID}/participants/update"
 	AppCampaignCharactersPattern             = CampaignsPrefix + "{campaignID}/characters"
 	AppCampaignCharacterPattern              = CampaignsPrefix + "{campaignID}/characters/{characterID}"
 	AppCampaignCharacterCreatePattern        = CampaignsPrefix + "{campaignID}/characters/create"
-	AppCampaignCharacterUpdatePattern        = CampaignsPrefix + "{campaignID}/characters/update"
-	AppCampaignCharacterControlPattern       = CampaignsPrefix + "{campaignID}/characters/control"
 	AppCampaignCharacterCreationStepPattern  = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation/step"
 	AppCampaignCharacterCreationResetPattern = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation/reset"
 	AppCampaignGamePattern                   = CampaignsPrefix + "{campaignID}/game"
@@ -97,11 +94,6 @@ func AppCampaignParticipants(campaignID string) string {
 	return AppCampaign(campaignID) + "/participants"
 }
 
-// AppCampaignParticipantUpdate returns the campaign participant-update route.
-func AppCampaignParticipantUpdate(campaignID string) string {
-	return AppCampaignParticipants(campaignID) + "/update"
-}
-
 // AppCampaignCharacters returns the campaign characters route.
 func AppCampaignCharacters(campaignID string) string {
 	return AppCampaign(campaignID) + "/characters"
@@ -135,16 +127,6 @@ func AppCampaignCharacterCreationReset(campaignID string, characterID string) st
 // AppCampaignCharacterCreate returns the campaign character-create route.
 func AppCampaignCharacterCreate(campaignID string) string {
 	return AppCampaignCharacters(campaignID) + "/create"
-}
-
-// AppCampaignCharacterUpdate returns the campaign character-update route.
-func AppCampaignCharacterUpdate(campaignID string) string {
-	return AppCampaignCharacters(campaignID) + "/update"
-}
-
-// AppCampaignCharacterControl returns the campaign character-control route.
-func AppCampaignCharacterControl(campaignID string) string {
-	return AppCampaignCharacters(campaignID) + "/control"
 }
 
 // AppCampaignInvites returns the campaign invites route.

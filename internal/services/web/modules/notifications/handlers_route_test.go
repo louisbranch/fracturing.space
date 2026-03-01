@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -34,7 +35,7 @@ func TestHandleIndexRendersNotifications(t *testing.T) {
 func TestHandleIndexReturnsErrorWhenGatewayFails(t *testing.T) {
 	t.Parallel()
 
-	h := newTestHandlers(unavailableGateway{})
+	h := newTestHandlers(notificationsapp.NewUnavailableGateway())
 	mux := http.NewServeMux()
 	registerRoutes(mux, h)
 
@@ -109,7 +110,7 @@ func TestHandleDetailReturnsNotFoundForMissingNotification(t *testing.T) {
 func TestHandleDetailReturnsErrorWhenGatewayFails(t *testing.T) {
 	t.Parallel()
 
-	h := newTestHandlers(unavailableGateway{})
+	h := newTestHandlers(notificationsapp.NewUnavailableGateway())
 	mux := http.NewServeMux()
 	registerRoutes(mux, h)
 
@@ -162,7 +163,7 @@ func TestHandleOpenReturnsNotFoundForMissingNotification(t *testing.T) {
 func TestHandleOpenReturnsErrorWhenGatewayFails(t *testing.T) {
 	t.Parallel()
 
-	h := newTestHandlers(unavailableGateway{})
+	h := newTestHandlers(notificationsapp.NewUnavailableGateway())
 	mux := http.NewServeMux()
 	registerRoutes(mux, h)
 
@@ -178,5 +179,5 @@ func TestHandleOpenReturnsErrorWhenGatewayFails(t *testing.T) {
 // --- helpers ---
 
 func newTestHandlers(gw NotificationGateway) handlers {
-	return newHandlers(newService(gw), routeTestBase())
+	return newHandlers(notificationsapp.NewService(gw), routeTestBase())
 }

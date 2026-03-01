@@ -4,7 +4,7 @@ parent: "Architecture"
 nav_order: 17
 status: canonical
 owner: engineering
-last_reviewed: "2026-02-28"
+last_reviewed: "2026-03-01"
 ---
 
 # Web Module Playbook
@@ -24,12 +24,19 @@ baseline:
 
 - `module.go`: module identity and mount implementation.
 - `handlers.go`: HTTP handlers for the area.
-- `service.go`: area orchestration logic.
 - `routes.go`: route registration within the local mux.
 - `routes_test.go`: route contract and method coverage.
 
-When a module grows beyond one cohesive file set (campaigns is the reference),
-split inside the same area boundary:
+Supported module archetypes:
+
+- `transport-only`: root package owns route/handler rendering flow without
+  dedicated app/gateway subpackages (for example `discovery`).
+- `transport + app + gateway`: root package is transport-thin while
+  orchestration and transport-adapter mapping live in subpackages.
+
+When a module needs explicit orchestration/adapter boundaries (campaigns/
+settings/notifications/dashboard/profile/publicauth are references), split
+inside the same area boundary:
 
 - `<area>/`: transport/module surface only (mount, handlers, routes, view maps).
 - `<area>/app/`: domain contracts + orchestration logic.
@@ -41,9 +48,9 @@ split inside the same area boundary:
 - Keep one root package owner per area. Subpackages may exist for that area,
   but sibling area imports remain forbidden.
 - Accept service integrations through constructors/interfaces.
-- For campaigns/settings-style modules, build production gateways in
-  composition (`modules/registry.go` via `NewGRPCGateway(...)`) rather than
-  inside `Mount`.
+- For campaigns/settings/profile-style modules, build production gateways in
+  composition (registry composition files under `modules/registry_*.go`) rather
+  than inside `Mount`.
 - Runtime module selection is composition-owned: `composition.ComposeAppHandler`
   calls `modules.Registry.Build(modules.BuildInput)` to build stable or
   experimental module sets. Keep module packages unaware of startup mode flags.
@@ -57,6 +64,9 @@ split inside the same area boundary:
 - Keep root module packages transport-thin: handlers/routes own request/response
   flow while orchestration and gateway mapping live in area-local `app` and
   `gateway` subpackages when present.
+- Temporary root compatibility adapters are migration-only. Remove them in the
+  same cutover slice once handlers/modules are wired directly to `app` and
+  `gateway` contracts.
 - Register routes with stdlib method+path patterns and keep method/path guards
   out of handlers.
 - Prefer route-level contracts that naturally support `HEAD` for `GET`
@@ -91,6 +101,14 @@ split inside the same area boundary:
 - Campaign mutation gates must fail closed when authz is unavailable or returns
   an unevaluated decision; do not approximate mutation permissions from
   participant-list fallback logic.
+- For campaigns split-surface ownership, keep session/invite mutation handlers
+  (`start`, `end`, `create`, `revoke`) in experimental route registration until
+  stable promotion criteria are met.
+- Use `docs/architecture/campaigns-mutation-promotion-checklist.md` as the
+  stable promotion gate for campaign mutation routes.
+- Do not keep long-lived deferred mutation scaffolds. If a mutation contract is
+  not implemented (for example participant update or character control), remove
+  transport/app stubs instead of preserving placeholder routes.
 
 ## Security Defaults
 
@@ -128,15 +146,18 @@ Public (unauthenticated) modules follow a lighter pattern than protected modules
 
 - They do **not** embed `modulehandler.Base` — there is no authenticated user to
   resolve, so viewer/user-id/language resolvers are not injected.
-- Gateway code may be collocated in `service.go` instead of a separate
-  `gateway_grpc.go` when the gateway surface is small.
+- Public modules may start with collocated gateway code in `service.go` when
+  the gateway surface is small.
+  - Once complexity grows, split to explicit `app` + `gateway` packages (for
+    example `profile` and `publicauth`).
 - Error rendering uses `httpx.WriteJSONError` or custom page helpers instead of
   `weberror.WriteModuleError`, since public routes may serve JSON APIs or
   standalone landing pages rather than app-shell HTML.
 - Page rendering uses `pagerender.WritePublicPage` instead of
   `pagerender.WriteModulePage`.
 
-The `publicauth` package is the reference implementation for this variant.
+The `publicauth` package is the reference implementation for split-surface
+public module ownership plus `app`/`gateway` boundaries.
 Public/auth route ownership is split into explicit surface modules under:
 - `internal/services/web/modules/publicauth/surfaces/shell`
 - `internal/services/web/modules/publicauth/surfaces/passkeys`
@@ -145,13 +166,14 @@ Public/auth route ownership is split into explicit surface modules under:
 ## Registering a Module
 
 1. Implement the module package.
-2. Add module constructor in `internal/services/web/modules/registry.go`.
+2. Add module constructor wiring in registry composition (`modules/registry_*.go`).
 3. Choose public or protected group.
 4. Choose stability tier:
-  - experimental (`ExperimentalPublicModules` /
-     `ExperimentalProtectedModules`) while scaffolded or incomplete,
-  - stable defaults (`DefaultPublicModules` / `DefaultProtectedModules`) once
-     exposed routes are production-ready and fail-closed checks are in place.
+  - experimental while scaffolded or incomplete,
+  - stable defaults once exposed routes are production-ready and fail-closed
+    checks are in place.
+  - enforce this through `Registry.Build(BuildInput{EnableExperimentalModules: ...})`
+    rather than direct module-constructor entrypoints.
 5. Ensure new module dependencies are wired through `modules.BuildInput` and
    represented in `BuildOutput.Health` when the module implements
    `module.HealthReporter`.

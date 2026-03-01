@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
@@ -11,18 +12,20 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
+type profileService = profileapp.Service
+
 type handlers struct {
 	publichandler.Base
-	service service
+	service profileService
 }
 
-func newHandlers(s service, base publichandler.Base) handlers {
+func newHandlers(s profileService, base publichandler.Base) handlers {
 	return handlers{Base: base, service: s}
 }
 
 func (h handlers) handleProfile(w http.ResponseWriter, r *http.Request) {
 	username := strings.TrimSpace(r.PathValue("username"))
-	profile, err := h.service.loadProfile(httpx.RequestContext(r), username)
+	profile, err := h.service.LoadProfile(httpx.RequestContext(r), username)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

@@ -1,49 +1,39 @@
 package campaigns
 
 import (
-	"context"
+	"strings"
 	"time"
 
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
-	"golang.org/x/text/language"
 )
-
-// campaignService defines the service operations used by campaign handlers.
-type campaignService interface {
-	listCampaigns(ctx context.Context) ([]CampaignSummary, error)
-	createCampaign(ctx context.Context, input CreateCampaignInput) (CreateCampaignResult, error)
-	campaignWorkspace(ctx context.Context, campaignID string) (CampaignWorkspace, error)
-	campaignParticipants(ctx context.Context, campaignID string) ([]CampaignParticipant, error)
-	campaignCharacters(ctx context.Context, campaignID string) ([]CampaignCharacter, error)
-	campaignSessions(ctx context.Context, campaignID string) ([]CampaignSession, error)
-	campaignInvites(ctx context.Context, campaignID string) ([]CampaignInvite, error)
-	startSession(ctx context.Context, campaignID string) error
-	endSession(ctx context.Context, campaignID string) error
-	updateParticipants(ctx context.Context, campaignID string) error
-	createCharacter(ctx context.Context, campaignID string, input CreateCharacterInput) (CreateCharacterResult, error)
-	updateCharacter(ctx context.Context, campaignID string) error
-	controlCharacter(ctx context.Context, campaignID string) error
-	createInvite(ctx context.Context, campaignID string) error
-	revokeInvite(ctx context.Context, campaignID string) error
-	resolveWorkflow(system string) CharacterCreationWorkflow
-	campaignCharacterCreation(ctx context.Context, campaignID string, characterID string, locale language.Tag, workflow CharacterCreationWorkflow) (CampaignCharacterCreation, error)
-	campaignCharacterCreationProgress(ctx context.Context, campaignID string, characterID string) (CampaignCharacterCreationProgress, error)
-	applyCharacterCreationStep(ctx context.Context, campaignID string, characterID string, step *CampaignCharacterCreationStepInput) error
-	resetCharacterCreationWorkflow(ctx context.Context, campaignID string, characterID string) error
-}
 
 type handlers struct {
 	modulehandler.Base
-	service          campaignService
+	service          campaignapp.Service
 	chatFallbackPort string
+	workflows        map[string]CharacterCreationWorkflow
 	nowFunc          func() time.Time
 }
 
-func newHandlers(s campaignService, base modulehandler.Base, chatFallbackPort string) handlers {
+func newHandlers(
+	s campaignapp.Service,
+	base modulehandler.Base,
+	chatFallbackPort string,
+	workflows ...map[string]CharacterCreationWorkflow,
+) handlers {
+	if s == nil {
+		s = campaignapp.NewService(nil)
+	}
+	var workflowMap map[string]CharacterCreationWorkflow
+	if len(workflows) > 0 {
+		workflowMap = workflows[0]
+	}
 	return handlers{
 		Base:             base,
 		service:          s,
 		chatFallbackPort: chatFallbackPort,
+		workflows:        workflowMap,
 		nowFunc:          time.Now,
 	}
 }
@@ -53,4 +43,11 @@ func (h handlers) now() time.Time {
 		return h.nowFunc()
 	}
 	return time.Now()
+}
+
+func (h handlers) resolveWorkflow(system string) CharacterCreationWorkflow {
+	if h.workflows == nil {
+		return nil
+	}
+	return h.workflows[strings.ToLower(strings.TrimSpace(system))]
 }

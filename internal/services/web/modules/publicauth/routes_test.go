@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -12,14 +13,14 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(newServiceWithGateway(nil), requestmeta.SchemePolicy{}))
+	registerRoutes(nil, newHandlers(publicauthapp.NewService(nil), requestmeta.SchemePolicy{}))
 }
 
 func TestRegisterRoutesPublicPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(newServiceWithGateway(nil), requestmeta.SchemePolicy{}))
+	registerRoutes(mux, newHandlers(publicauthapp.NewService(nil), requestmeta.SchemePolicy{}))
 
 	tests := []struct {
 		name       string

@@ -3,21 +3,21 @@ package daggerheart
 import (
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 )
 
 func TestAssembleCatalogSortsClassesByName(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Classes: []campaigns.CatalogClass{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Classes: []campaignapp.CatalogClass{
 				{ID: "c2", Name: "Warrior"},
 				{ID: "c1", Name: "Bard"},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.Classes) != 2 {
 		t.Fatalf("classes count = %d, want 2", len(creation.Classes))
@@ -31,15 +31,15 @@ func TestAssembleCatalogSkipsEmptyIDs(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Classes:    []campaigns.CatalogClass{{ID: "", Name: "Ghost"}, {ID: "c1", Name: "Bard"}},
-			Subclasses: []campaigns.CatalogSubclass{{ID: "", Name: "None"}, {ID: "s1", Name: "Lore", ClassID: "c1"}},
-			Heritages:  []campaigns.CatalogHeritage{{ID: "", Name: "None"}, {ID: "h1", Name: "Elf", Kind: "ancestry"}},
-			Weapons:    []campaigns.CatalogWeapon{{ID: "", Name: "None", Tier: 1, Category: "primary"}},
-			Armor:      []campaigns.CatalogArmor{{ID: "", Name: "None", Tier: 1}},
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Classes:    []campaignapp.CatalogClass{{ID: "", Name: "Ghost"}, {ID: "c1", Name: "Bard"}},
+			Subclasses: []campaignapp.CatalogSubclass{{ID: "", Name: "None"}, {ID: "s1", Name: "Lore", ClassID: "c1"}},
+			Heritages:  []campaignapp.CatalogHeritage{{ID: "", Name: "None"}, {ID: "h1", Name: "Elf", Kind: "ancestry"}},
+			Weapons:    []campaignapp.CatalogWeapon{{ID: "", Name: "None", Tier: 1, Category: "primary"}},
+			Armor:      []campaignapp.CatalogArmor{{ID: "", Name: "None", Tier: 1}},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.Classes) != 1 {
 		t.Fatalf("classes = %d, want 1", len(creation.Classes))
@@ -62,14 +62,14 @@ func TestAssembleCatalogFiltersSubclassesBySelectedClass(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Subclasses: []campaigns.CatalogSubclass{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Subclasses: []campaignapp.CatalogSubclass{
 				{ID: "s1", Name: "Lore", ClassID: "bard"},
 				{ID: "s2", Name: "Battle", ClassID: "warrior"},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{ClassID: "bard"},
+		campaignapp.CampaignCharacterCreationProfile{ClassID: "bard"},
 	)
 	if len(creation.Subclasses) != 1 {
 		t.Fatalf("subclasses = %d, want 1", len(creation.Subclasses))
@@ -83,14 +83,14 @@ func TestAssembleCatalogIncludesAllSubclassesWhenNoClassSelected(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Subclasses: []campaigns.CatalogSubclass{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Subclasses: []campaignapp.CatalogSubclass{
 				{ID: "s1", Name: "Lore", ClassID: "bard"},
 				{ID: "s2", Name: "Battle", ClassID: "warrior"},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.Subclasses) != 2 {
 		t.Fatalf("subclasses = %d, want 2", len(creation.Subclasses))
@@ -101,15 +101,15 @@ func TestAssembleCatalogSplitsHeritagesByKind(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Heritages: []campaigns.CatalogHeritage{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Heritages: []campaignapp.CatalogHeritage{
 				{ID: "h1", Name: "Elf", Kind: "ancestry"},
 				{ID: "h2", Name: "Dwarf", Kind: "ancestry"},
 				{ID: "h3", Name: "Loreborne", Kind: "community"},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.Ancestries) != 2 {
 		t.Fatalf("ancestries = %d, want 2", len(creation.Ancestries))
@@ -123,15 +123,15 @@ func TestAssembleCatalogFiltersWeaponsByTierAndCategory(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Weapons: []campaigns.CatalogWeapon{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Weapons: []campaignapp.CatalogWeapon{
 				{ID: "w1", Name: "Sword", Tier: 1, Category: "primary"},
 				{ID: "w2", Name: "Dagger", Tier: 1, Category: "secondary"},
 				{ID: "w3", Name: "Greatsword", Tier: 2, Category: "primary"},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.PrimaryWeapons) != 1 {
 		t.Fatalf("primary weapons = %d, want 1", len(creation.PrimaryWeapons))
@@ -148,14 +148,14 @@ func TestAssembleCatalogFiltersArmorByTier(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Armor: []campaigns.CatalogArmor{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Armor: []campaignapp.CatalogArmor{
 				{ID: "a1", Name: "Leather", Tier: 1},
 				{ID: "a2", Name: "Plate", Tier: 2},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.Armor) != 1 {
 		t.Fatalf("armor = %d, want 1", len(creation.Armor))
@@ -169,15 +169,15 @@ func TestAssembleCatalogFiltersPotionsByAllowlist(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Items: []campaigns.CatalogItem{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Items: []campaignapp.CatalogItem{
 				{ID: allowedPotionMinorHealth, Name: "Minor Health Potion"},
 				{ID: "item.elixir-of-power", Name: "Elixir"},
 				{ID: allowedPotionMinorStamina, Name: "Minor Stamina Potion"},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.PotionItems) != 2 {
 		t.Fatalf("potion items = %d, want 2", len(creation.PotionItems))
@@ -188,18 +188,18 @@ func TestAssembleCatalogFiltersDomainCardsByClassDomains(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Classes: []campaigns.CatalogClass{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Classes: []campaignapp.CatalogClass{
 				{ID: "bard", Name: "Bard", DomainIDs: []string{"arcana", "grace"}},
 			},
-			DomainCards: []campaigns.CatalogDomainCard{
+			DomainCards: []campaignapp.CatalogDomainCard{
 				{ID: "dc1", Name: "Arcane Bolt", DomainID: "arcana", Level: 1},
 				{ID: "dc2", Name: "Shield Wall", DomainID: "valor", Level: 1},
 				{ID: "dc3", Name: "Grace Step", DomainID: "grace", Level: 1},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{ClassID: "bard"},
+		campaignapp.CampaignCharacterCreationProfile{ClassID: "bard"},
 	)
 	if len(creation.DomainCards) != 2 {
 		t.Fatalf("domain cards = %d, want 2", len(creation.DomainCards))
@@ -213,14 +213,14 @@ func TestAssembleCatalogIncludesAllDomainCardsWhenNoClassSelected(t *testing.T) 
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			DomainCards: []campaigns.CatalogDomainCard{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			DomainCards: []campaignapp.CatalogDomainCard{
 				{ID: "dc1", Name: "Arcane Bolt", DomainID: "arcana", Level: 1},
 				{ID: "dc2", Name: "Shield Wall", DomainID: "valor", Level: 1},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.DomainCards) != 2 {
 		t.Fatalf("domain cards = %d, want 2", len(creation.DomainCards))
@@ -231,15 +231,15 @@ func TestAssembleCatalogSortsDomainCardsByLevelThenName(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			DomainCards: []campaigns.CatalogDomainCard{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			DomainCards: []campaignapp.CatalogDomainCard{
 				{ID: "dc3", Name: "Zephyr", DomainID: "grace", Level: 1},
 				{ID: "dc2", Name: "Arcane Bolt", DomainID: "arcana", Level: 2},
 				{ID: "dc1", Name: "Arcane Shield", DomainID: "arcana", Level: 1},
 			},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.DomainCards) != 3 {
 		t.Fatalf("domain cards = %d, want 3", len(creation.DomainCards))
@@ -260,9 +260,9 @@ func TestAssembleCatalogTrimsProfileFields(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{},
-		campaigns.CampaignCharacterCreationProfile{
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{},
+		campaignapp.CampaignCharacterCreationProfile{
 			ClassID:       "  bard  ",
 			SubclassID:    "  lore  ",
 			Background:    "  noble  ",
@@ -290,11 +290,11 @@ func TestAssembleCatalogUsesIDAsNameFallback(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
-		campaigns.CampaignCharacterCreationProgress{},
-		campaigns.CampaignCharacterCreationCatalog{
-			Classes: []campaigns.CatalogClass{{ID: "bard", Name: ""}},
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Classes: []campaignapp.CatalogClass{{ID: "bard", Name: ""}},
 		},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if len(creation.Classes) != 1 {
 		t.Fatalf("classes = %d, want 1", len(creation.Classes))
@@ -307,16 +307,16 @@ func TestAssembleCatalogUsesIDAsNameFallback(t *testing.T) {
 func TestAssembleCatalogCopiesProgressFields(t *testing.T) {
 	t.Parallel()
 
-	progress := campaigns.CampaignCharacterCreationProgress{
-		Steps:        []campaigns.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: true}},
+	progress := campaignapp.CampaignCharacterCreationProgress{
+		Steps:        []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: true}},
 		NextStep:     2,
 		Ready:        false,
 		UnmetReasons: []string{"missing heritage"},
 	}
 	creation := Workflow{}.AssembleCatalog(
 		progress,
-		campaigns.CampaignCharacterCreationCatalog{},
-		campaigns.CampaignCharacterCreationProfile{},
+		campaignapp.CampaignCharacterCreationCatalog{},
+		campaignapp.CampaignCharacterCreationProfile{},
 	)
 	if creation.Progress.NextStep != 2 {
 		t.Fatalf("NextStep = %d, want 2", creation.Progress.NextStep)

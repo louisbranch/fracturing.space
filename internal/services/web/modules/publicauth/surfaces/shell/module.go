@@ -3,6 +3,7 @@ package shell
 import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
+	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
 
@@ -12,7 +13,7 @@ type Module struct {
 }
 
 // NewWithGatewayAndPolicy builds the shell module with explicit gateway/policy dependencies.
-func NewWithGatewayAndPolicy(gateway publicauth.AuthGateway, policy requestmeta.SchemePolicy) Module {
+func NewWithGatewayAndPolicy(gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
 	return Module{inner: publicauth.NewShellWithGatewayAndPolicy(gateway, policy)}
 }
 

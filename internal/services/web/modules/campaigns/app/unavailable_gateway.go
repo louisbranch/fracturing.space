@@ -58,15 +58,11 @@ func (unavailableGateway) CreateCampaign(context.Context, CreateCampaignInput) (
 	return CreateCampaignResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
-func (unavailableGateway) StartSession(context.Context, string) error {
+func (unavailableGateway) StartSession(context.Context, string, StartSessionInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
-func (unavailableGateway) EndSession(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) UpdateParticipants(context.Context, string) error {
+func (unavailableGateway) EndSession(context.Context, string, EndSessionInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
@@ -74,19 +70,11 @@ func (unavailableGateway) CreateCharacter(context.Context, string, CreateCharact
 	return CreateCharacterResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
-func (unavailableGateway) UpdateCharacter(context.Context, string) error {
+func (unavailableGateway) CreateInvite(context.Context, string, CreateInviteInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
-func (unavailableGateway) ControlCharacter(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) CreateInvite(context.Context, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
-func (unavailableGateway) RevokeInvite(context.Context, string) error {
+func (unavailableGateway) RevokeInvite(context.Context, string, RevokeInviteInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 

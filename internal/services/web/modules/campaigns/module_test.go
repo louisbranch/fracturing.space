@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -365,19 +366,16 @@ func TestGRPCGatewayMutationMethodsReturnUnavailable(t *testing.T) {
 		name string
 		err  error
 	}{
-		{name: "start session", err: g.StartSession(context.Background(), "c1")},
-		{name: "end session", err: g.EndSession(context.Background(), "c1")},
-		{name: "update participants", err: g.UpdateParticipants(context.Background(), "c1")},
+		{name: "start session", err: g.StartSession(context.Background(), "c1", StartSessionInput{Name: "Session One"})},
+		{name: "end session", err: g.EndSession(context.Background(), "c1", EndSessionInput{SessionID: "sess-1"})},
 		{name: "create character", err: func() error {
 			_, err := g.CreateCharacter(context.Background(), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 			return err
 		}()},
-		{name: "update character", err: g.UpdateCharacter(context.Background(), "c1")},
-		{name: "control character", err: g.ControlCharacter(context.Background(), "c1")},
 		{name: "apply character creation step", err: g.ApplyCharacterCreationStep(context.Background(), "c1", "char-1", &CampaignCharacterCreationStepInput{Details: &CampaignCharacterCreationStepDetails{}})},
 		{name: "reset character creation workflow", err: g.ResetCharacterCreationWorkflow(context.Background(), "c1", "char-1")},
-		{name: "create invite", err: g.CreateInvite(context.Background(), "c1")},
-		{name: "revoke invite", err: g.RevokeInvite(context.Background(), "c1")},
+		{name: "create invite", err: g.CreateInvite(context.Background(), "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"})},
+		{name: "revoke invite", err: g.RevokeInvite(context.Background(), "c1", RevokeInviteInput{InviteID: "inv-1"})},
 	}
 	for _, tc := range tests {
 		tc := tc
@@ -586,11 +584,11 @@ func (testCreationWorkflow) CreationView(creation CampaignCharacterCreation) web
 	return view
 }
 
-func (testCreationWorkflow) ParseStepInput(r *http.Request, nextStep int32) (*CampaignCharacterCreationStepInput, error) {
+func (testCreationWorkflow) ParseStepInput(form url.Values, nextStep int32) (*CampaignCharacterCreationStepInput, error) {
 	switch nextStep {
 	case 1:
-		classID := strings.TrimSpace(r.FormValue("class_id"))
-		subclassID := strings.TrimSpace(r.FormValue("subclass_id"))
+		classID := strings.TrimSpace(form.Get("class_id"))
+		subclassID := strings.TrimSpace(form.Get("subclass_id"))
 		if classID == "" || subclassID == "" {
 			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_class_and_subclass_are_required", "class and subclass are required")
 		}
@@ -645,7 +643,7 @@ type mutationContextGateway struct {
 	startSessionUserID string
 }
 
-func (g *mutationContextGateway) StartSession(ctx context.Context, _ string) error {
+func (g *mutationContextGateway) StartSession(ctx context.Context, _ string, _ StartSessionInput) error {
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {
 		g.startSessionUserID = ""
@@ -786,9 +784,8 @@ func (f fakeGateway) CreateCampaign(context.Context, CreateCampaignInput) (Creat
 	return CreateCampaignResult{CampaignID: createdID}, nil
 }
 
-func (fakeGateway) StartSession(context.Context, string) error       { return nil }
-func (fakeGateway) EndSession(context.Context, string) error         { return nil }
-func (fakeGateway) UpdateParticipants(context.Context, string) error { return nil }
+func (fakeGateway) StartSession(context.Context, string, StartSessionInput) error { return nil }
+func (fakeGateway) EndSession(context.Context, string, EndSessionInput) error     { return nil }
 func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error) {
 	if f.createCharacterErr != nil {
 		return CreateCharacterResult{}, f.createCharacterErr
@@ -799,10 +796,8 @@ func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInp
 	}
 	return CreateCharacterResult{CharacterID: createdCharacterID}, nil
 }
-func (fakeGateway) UpdateCharacter(context.Context, string) error  { return nil }
-func (fakeGateway) ControlCharacter(context.Context, string) error { return nil }
-func (fakeGateway) CreateInvite(context.Context, string) error     { return nil }
-func (fakeGateway) RevokeInvite(context.Context, string) error     { return nil }
+func (fakeGateway) CreateInvite(context.Context, string, CreateInviteInput) error { return nil }
+func (fakeGateway) RevokeInvite(context.Context, string, RevokeInviteInput) error { return nil }
 func (f fakeGateway) ApplyCharacterCreationStep(context.Context, string, string, *CampaignCharacterCreationStepInput) error {
 	return f.applyCharacterCreationStepErr
 }
@@ -848,6 +843,29 @@ func (f fakeSessionClient) ListSessions(context.Context, *statev1.ListSessionsRe
 	return &statev1.ListSessionsResponse{}, nil
 }
 
+func (f fakeSessionClient) StartSession(_ context.Context, req *statev1.StartSessionRequest, _ ...grpc.CallOption) (*statev1.StartSessionResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.StartSessionResponse{Session: &statev1.Session{
+		Id:         "sess-created",
+		CampaignId: strings.TrimSpace(req.GetCampaignId()),
+		Name:       strings.TrimSpace(req.GetName()),
+		Status:     statev1.SessionStatus_SESSION_ACTIVE,
+	}}, nil
+}
+
+func (f fakeSessionClient) EndSession(_ context.Context, req *statev1.EndSessionRequest, _ ...grpc.CallOption) (*statev1.EndSessionResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.EndSessionResponse{Session: &statev1.Session{
+		Id:         strings.TrimSpace(req.GetSessionId()),
+		CampaignId: strings.TrimSpace(req.GetCampaignId()),
+		Status:     statev1.SessionStatus_SESSION_ENDED,
+	}}, nil
+}
+
 type fakeInviteClient struct {
 	response *statev1.ListInvitesResponse
 	err      error
@@ -861,6 +879,29 @@ func (f fakeInviteClient) ListInvites(context.Context, *statev1.ListInvitesReque
 		return f.response, nil
 	}
 	return &statev1.ListInvitesResponse{}, nil
+}
+
+func (f fakeInviteClient) CreateInvite(_ context.Context, req *statev1.CreateInviteRequest, _ ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.CreateInviteResponse{Invite: &statev1.Invite{
+		Id:              "invite-created",
+		CampaignId:      strings.TrimSpace(req.GetCampaignId()),
+		ParticipantId:   strings.TrimSpace(req.GetParticipantId()),
+		RecipientUserId: strings.TrimSpace(req.GetRecipientUserId()),
+		Status:          statev1.InviteStatus_PENDING,
+	}}, nil
+}
+
+func (f fakeInviteClient) RevokeInvite(_ context.Context, req *statev1.RevokeInviteRequest, _ ...grpc.CallOption) (*statev1.RevokeInviteResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.RevokeInviteResponse{Invite: &statev1.Invite{
+		Id:     strings.TrimSpace(req.GetInviteId()),
+		Status: statev1.InviteStatus_REVOKED,
+	}}, nil
 }
 
 func (c *capturingCampaignClient) ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {

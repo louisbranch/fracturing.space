@@ -183,6 +183,12 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 	if bundle.Modules.CredentialClient == nil {
 		t.Fatalf("expected credential client")
 	}
+	if bundle.Modules.ProfileSocialClient == nil {
+		t.Fatalf("expected profile social client")
+	}
+	if bundle.Modules.SettingsSocialClient == nil {
+		t.Fatalf("expected settings social client")
+	}
 	if bundle.Modules.UserHubClient == nil {
 		t.Fatalf("expected userhub client")
 	}

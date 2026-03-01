@@ -11,6 +11,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
@@ -255,7 +256,7 @@ func TestMountUsesDependenciesSocialClientWhenGatewayNotProvided(t *testing.T) {
 		Bio:      "From dependencies",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(WithGateway(NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
+	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -278,7 +279,7 @@ func TestMountSettingsProfileFailsClosedWhenSocialClientMissing(t *testing.T) {
 	t.Parallel()
 
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(WithGateway(NewGRPCGateway(nil, account, nil)), WithBase(settingsTestBase()))
+	m := New(WithGateway(settingsgateway.NewGRPCGateway(nil, account, nil)), WithBase(settingsTestBase()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -298,7 +299,7 @@ func TestMountSettingsLocaleFailsClosedWhenAccountClientMissing(t *testing.T) {
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
-	m := New(WithGateway(NewGRPCGateway(social, nil, nil)), WithBase(settingsTestBase()))
+	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, nil, nil)), WithBase(settingsTestBase()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -318,7 +319,7 @@ func TestMountSettingsAIKeysFailsClosedWhenCredentialClientMissing(t *testing.T)
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
-	m := New(WithGateway(NewGRPCGateway(social, nil, nil)), WithBase(settingsTestBase()))
+	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, nil, nil)), WithBase(settingsTestBase()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -551,7 +552,7 @@ func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *t
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(WithGateway(NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
+	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -608,7 +609,7 @@ func TestMountProfilePostBlankPronounsSavesUnspecifiedPronouns(t *testing.T) {
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(WithGateway(NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
+	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

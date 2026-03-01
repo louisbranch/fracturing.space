@@ -4,6 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -55,24 +56,59 @@ func TestRoutePrefixesRemainUniqueConstants(t *testing.T) {
 func TestFeatureModulesFollowTemplate(t *testing.T) {
 	t.Parallel()
 
+	const (
+		archetypeTransportOnly    = "transport_only"
+		archetypeTransportLayered = "transport_with_app_gateway"
+	)
+	moduleArchetypes := map[string]string{
+		"campaigns":     archetypeTransportLayered,
+		"dashboard":     archetypeTransportLayered,
+		"discovery":     archetypeTransportOnly,
+		"notifications": archetypeTransportLayered,
+		"profile":       archetypeTransportLayered,
+		"publicauth":    archetypeTransportLayered,
+		"settings":      archetypeTransportLayered,
+	}
 	protectedModuleGatewayUnavailableFiles := map[string]string{
 		"campaigns":     filepath.Join("app", "unavailable_gateway.go"),
-		"dashboard":     "gateway_unavailable.go",
-		"notifications": "gateway_unavailable.go",
-		"settings":      "gateway_unavailable.go",
+		"dashboard":     filepath.Join("app", "unavailable_gateway.go"),
+		"notifications": filepath.Join("app", "unavailable_gateway.go"),
+		"settings":      filepath.Join("app", "unavailable_gateway.go"),
 	}
 	for _, mod := range discoverModules(t) {
+		archetype, ok := moduleArchetypes[mod]
+		if !ok {
+			t.Fatalf("module %q missing archetype classification", mod)
+		}
 		for _, file := range []string{"module.go", "routes.go", "routes_test.go"} {
 			path := filepath.Join(mod, file)
 			if _, err := os.Stat(path); err != nil {
 				t.Fatalf("module %q missing required file %q: %v", mod, file, err)
 			}
 		}
-		if len(moduleHandlerFiles(mod)) == 0 {
+		if len(moduleHandlerFiles(t, mod)) == 0 {
 			t.Fatalf("module %q has no handler files matching *handlers*.go", mod)
 		}
-		if len(moduleServiceFiles(mod)) == 0 {
-			t.Fatalf("module %q has no service files matching *service*.go", mod)
+		switch archetype {
+		case archetypeTransportOnly:
+			// transport-only modules intentionally keep orchestration minimal and
+			// do not require root/service or app/gateway subpackages.
+		case archetypeTransportLayered:
+			for _, file := range []string{
+				filepath.Join("app", "doc.go"),
+				filepath.Join("app", "service.go"),
+				filepath.Join("gateway", "doc.go"),
+			} {
+				path := filepath.Join(mod, file)
+				if _, err := os.Stat(path); err != nil {
+					t.Fatalf("module %q missing layered boundary file %q: %v", mod, file, err)
+				}
+			}
+			if len(goFilesUnder(t, filepath.Join(mod, "gateway"), false)) == 0 {
+				t.Fatalf("module %q has no gateway implementation files", mod)
+			}
+		default:
+			t.Fatalf("module %q has unknown archetype %q", mod, archetype)
 		}
 		if unavailFile, ok := protectedModuleGatewayUnavailableFiles[mod]; ok {
 			path := filepath.Join(mod, unavailFile)
@@ -93,9 +129,9 @@ func TestModulesMountDoNotReadGatewayClientsFromDependencies(t *testing.T) {
 		"AssetBaseURL":      {},
 	})
 	assertMountDoNotReadDependencyFields(t, filepath.Join("settings", "module.go"), map[string]struct{}{
-		"SocialClient":     {},
-		"AccountClient":    {},
-		"CredentialClient": {},
+		"SettingsSocialClient": {},
+		"AccountClient":        {},
+		"CredentialClient":     {},
 	})
 	assertMountDoNotReadDependencyFields(t, filepath.Join("notifications", "module.go"), map[string]struct{}{
 		"NotificationClient": {},
@@ -116,7 +152,7 @@ func TestProtectedModuleHandlersDoNotBypassBaseResolverMethods(t *testing.T) {
 	}
 	protectedModules := []string{"campaigns", "dashboard", "notifications", "settings"}
 	for _, mod := range protectedModules {
-		for _, file := range moduleHandlerFiles(mod) {
+		for _, file := range moduleHandlerFiles(t, mod) {
 			parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
 			if err != nil {
 				t.Fatalf("parse handler file %s: %v", file, err)
@@ -139,7 +175,7 @@ func TestProtectedModuleServicesDoNotImportWebContext(t *testing.T) {
 	forbidden := "github.com/louisbranch/fracturing.space/internal/services/web/platform/webctx"
 	protectedModules := []string{"campaigns", "dashboard", "notifications", "settings"}
 	for _, mod := range protectedModules {
-		for _, file := range moduleServiceFiles(mod) {
+		for _, file := range moduleServiceFiles(t, mod) {
 			parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
 			if err != nil {
 				t.Fatalf("parse service file %s: %v", file, err)
@@ -162,7 +198,7 @@ func TestProtectedModuleHandlersDoNotImportProtoPackages(t *testing.T) {
 	forbiddenPrefix := "github.com/louisbranch/fracturing.space/api/gen/go/"
 	protectedModules := []string{"campaigns", "dashboard", "notifications", "settings"}
 	for _, mod := range protectedModules {
-		for _, file := range moduleHandlerFiles(mod) {
+		for _, file := range moduleHandlerFiles(t, mod) {
 			parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
 			if err != nil {
 				t.Fatalf("parse handler file %s: %v", file, err)
@@ -171,6 +207,71 @@ func TestProtectedModuleHandlersDoNotImportProtoPackages(t *testing.T) {
 				path := strings.Trim(imp.Path.Value, "\"")
 				if strings.HasPrefix(path, forbiddenPrefix) {
 					t.Errorf("%s imports proto package %s; use domain types and map at the gateway boundary", file, path)
+				}
+			}
+		}
+	}
+}
+
+func TestCampaignAppPackageDoesNotImportTransportOrTemplates(t *testing.T) {
+	t.Parallel()
+
+	files := goFilesUnder(t, filepath.Join("campaigns", "app"), false)
+	forbidden := map[string]string{
+		"net/http": "app package should stay transport-free; parse forms in handlers/workflows",
+		"github.com/louisbranch/fracturing.space/internal/services/web/templates": "app package should return domain models, not template views",
+	}
+
+	for _, file := range files {
+		parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
+		if err != nil {
+			t.Fatalf("parse app file %s: %v", file, err)
+		}
+		for _, imp := range parsed.Imports {
+			path := strings.Trim(imp.Path.Value, "\"")
+			if why, exists := forbidden[path]; exists {
+				t.Errorf("%s imports %s: %s", file, path, why)
+			}
+		}
+	}
+}
+
+func TestCampaignWorkflowPackagesDoNotImportRootCampaignsPackage(t *testing.T) {
+	t.Parallel()
+
+	const rootCampaignsImport = "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	for _, file := range goFilesUnder(t, filepath.Join("campaigns", "workflow"), false) {
+		parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
+		if err != nil {
+			t.Fatalf("parse workflow file %s: %v", file, err)
+		}
+		for _, imp := range parsed.Imports {
+			path := strings.Trim(imp.Path.Value, "\"")
+			if path == rootCampaignsImport {
+				t.Errorf("%s imports %s; use campaigns/app contracts to avoid parent-package coupling", file, path)
+			}
+		}
+	}
+}
+
+func TestGatewayPackagesDoNotImportTemplates(t *testing.T) {
+	t.Parallel()
+
+	const templatesImport = "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+
+	for _, mod := range discoverModules(t) {
+		for _, file := range moduleGoFiles(t, mod, false) {
+			if !isGatewayFile(file) {
+				continue
+			}
+			parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
+			if err != nil {
+				t.Fatalf("parse gateway file %s: %v", file, err)
+			}
+			for _, imp := range parsed.Imports {
+				path := strings.Trim(imp.Path.Value, "\"")
+				if path == templatesImport {
+					t.Errorf("%s imports %s; gateway code should map transport/domain contracts only", file, path)
 				}
 			}
 		}
@@ -279,41 +380,32 @@ func discoverModules(t *testing.T) []string {
 func moduleGoFiles(t *testing.T, module string, includeTests bool) []string {
 	t.Helper()
 
-	files, err := filepath.Glob(filepath.Join(module, "*.go"))
-	if err != nil {
-		t.Fatalf("glob go files for module %q: %v", module, err)
-	}
-	filtered := files[:0]
-	for _, file := range files {
-		if includeTests || !strings.HasSuffix(file, "_test.go") {
-			filtered = append(filtered, file)
-		}
-	}
-	sort.Strings(filtered)
-	return filtered
+	return goFilesUnder(t, module, includeTests)
 }
 
-func moduleHandlerFiles(module string) []string {
-	files, _ := filepath.Glob(filepath.Join(module, "*handlers*.go"))
-	candidates := files[:0]
+func moduleHandlerFiles(t *testing.T, module string) []string {
+	t.Helper()
+
+	files := moduleGoFiles(t, module, false)
+	candidates := make([]string, 0, len(files))
 	for _, file := range files {
-		if strings.HasSuffix(file, "_test.go") {
-			continue
+		if strings.Contains(filepath.Base(file), "handlers") {
+			candidates = append(candidates, file)
 		}
-		candidates = append(candidates, file)
 	}
 	sort.Strings(candidates)
 	return candidates
 }
 
-func moduleServiceFiles(module string) []string {
-	files, _ := filepath.Glob(filepath.Join(module, "*service*.go"))
-	candidates := files[:0]
+func moduleServiceFiles(t *testing.T, module string) []string {
+	t.Helper()
+
+	files := moduleGoFiles(t, module, false)
+	candidates := make([]string, 0, len(files))
 	for _, file := range files {
-		if strings.HasSuffix(file, "_test.go") {
-			continue
+		if strings.Contains(filepath.Base(file), "service") {
+			candidates = append(candidates, file)
 		}
-		candidates = append(candidates, file)
 	}
 	sort.Strings(candidates)
 	return candidates
@@ -337,4 +429,42 @@ func assertNoSiblingModuleImport(t *testing.T, file string, imports []*ast.Impor
 			t.Fatalf("file %s imports sibling module path %q", file, path)
 		}
 	}
+}
+
+func goFilesUnder(t *testing.T, root string, includeTests bool) []string {
+	t.Helper()
+
+	files := make([]string, 0, 16)
+	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() {
+			if strings.HasPrefix(d.Name(), ".") {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(path) != ".go" {
+			return nil
+		}
+		if !includeTests && strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		files = append(files, path)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk go files under %q: %v", root, err)
+	}
+	sort.Strings(files)
+	return files
+}
+
+func isGatewayFile(path string) bool {
+	path = filepath.ToSlash(path)
+	if strings.Contains(path, "/gateway/") {
+		return true
+	}
+	return strings.Contains(filepath.Base(path), "gateway")
 }

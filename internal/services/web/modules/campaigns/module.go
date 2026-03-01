@@ -45,7 +45,7 @@ func (m Module) Healthy() bool {
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	svc := newServiceWithWorkflows(m.gateway, m.workflows)
-	h := newHandlers(svc, m.base, m.chatFallbackPort)
+	h := newHandlers(svc, m.base, m.chatFallbackPort, m.workflows)
 	if m.registerRoutes == nil {
 		m.registerRoutes = registerStableRoutes
 	}

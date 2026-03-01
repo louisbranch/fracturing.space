@@ -67,9 +67,6 @@ func TestCampaignRouteBuilders(t *testing.T) {
 	if got := AppCampaignParticipants("camp-1"); got != "/app/campaigns/camp-1/participants" {
 		t.Fatalf("AppCampaignParticipants() = %q", got)
 	}
-	if got := AppCampaignParticipantUpdate("camp-1"); got != "/app/campaigns/camp-1/participants/update" {
-		t.Fatalf("AppCampaignParticipantUpdate() = %q", got)
-	}
 	if got := AppCampaignCharacters("camp-1"); got != "/app/campaigns/camp-1/characters" {
 		t.Fatalf("AppCampaignCharacters() = %q", got)
 	}
@@ -87,12 +84,6 @@ func TestCampaignRouteBuilders(t *testing.T) {
 	}
 	if got := AppCampaignCharacterCreate("camp-1"); got != "/app/campaigns/camp-1/characters/create" {
 		t.Fatalf("AppCampaignCharacterCreate() = %q", got)
-	}
-	if got := AppCampaignCharacterUpdate("camp-1"); got != "/app/campaigns/camp-1/characters/update" {
-		t.Fatalf("AppCampaignCharacterUpdate() = %q", got)
-	}
-	if got := AppCampaignCharacterControl("camp-1"); got != "/app/campaigns/camp-1/characters/control" {
-		t.Fatalf("AppCampaignCharacterControl() = %q", got)
 	}
 	if got := AppCampaignInvites("camp-1"); got != "/app/campaigns/camp-1/invites" {
 		t.Fatalf("AppCampaignInvites() = %q", got)

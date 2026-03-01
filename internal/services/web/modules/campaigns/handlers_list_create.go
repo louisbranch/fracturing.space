@@ -48,7 +48,7 @@ func campaignCreateHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeade
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
-	items, err := h.service.listCampaigns(ctx)
+	items, err := h.service.ListCampaigns(ctx)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -107,7 +107,7 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 	themePrompt := strings.TrimSpace(r.FormValue("theme_prompt"))
 	ctx, _ := h.RequestContextAndUserID(r)
 
-	created, err := h.service.createCampaign(ctx, CreateCampaignInput{
+	created, err := h.service.CreateCampaign(ctx, CreateCampaignInput{
 		Name:        name,
 		System:      system,
 		GMMode:      gmMode,

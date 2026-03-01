@@ -300,6 +300,27 @@ type CreateCampaignResult struct {
 	CampaignID string
 }
 
+// StartSessionInput stores start-session form values.
+type StartSessionInput struct {
+	Name string
+}
+
+// EndSessionInput stores end-session form values.
+type EndSessionInput struct {
+	SessionID string
+}
+
+// CreateInviteInput stores create-invite form values.
+type CreateInviteInput struct {
+	ParticipantID   string
+	RecipientUserID string
+}
+
+// RevokeInviteInput stores revoke-invite form values.
+type RevokeInviteInput struct {
+	InviteID string
+}
+
 // CreateCharacterInput stores create-character form values.
 type CreateCharacterInput struct {
 	Name string
