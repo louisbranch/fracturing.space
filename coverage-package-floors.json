@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "allow_drop": 0.1,
+  "updated_at": "2026-03-01T18:31:37Z",
+  "packages": [
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
+      "floor": 94.7,
+      "description": "Core action command and outcome behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate",
+      "floor": 91.4,
+      "description": "Aggregate fold routing and typed state reconstruction."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz",
+      "floor": 93.4,
+      "description": "Campaign authorization capability and policy decisions."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge",
+      "floor": 97.7,
+      "description": "Bridge registry and system metadata routing boundaries."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart",
+      "floor": 95.8,
+      "description": "Daggerheart system module, fold, and projection adapter path."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain",
+      "floor": 94.8,
+      "description": "Pure Daggerheart mechanics helpers."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics",
+      "floor": 95.5,
+      "description": "Pure Daggerheart mechanics seam used by folder and adapter paths."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/reducer",
+      "floor": 93.8,
+      "description": "Pure Daggerheart reducer seam for deterministic state mutations."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile",
+      "floor": 97.7,
+      "description": "Daggerheart profile defaults and validation policy seams."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest",
+      "floor": 94.8,
+      "description": "Built-in system descriptor and adapter wiring contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign",
+      "floor": 93.5,
+      "description": "Campaign lifecycle domain behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/character",
+      "floor": 95.2,
+      "description": "Character domain invariants and state transitions."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/checkpoint",
+      "floor": 97.8,
+      "description": "Checkpoint persistence and snapshot cloning behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/command",
+      "floor": 91.8,
+      "description": "Command envelope normalization and registry validation."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/engine",
+      "floor": 93.1,
+      "description": "Core domain engine orchestration and routing."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/event",
+      "floor": 99.5,
+      "description": "Event envelope validation, aliasing, and integrity contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/fork",
+      "floor": 94.1,
+      "description": "Fork lineage value objects and constructor logic."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/invite",
+      "floor": 98.7,
+      "description": "Invite lifecycle and grant-validation path."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/journal",
+      "floor": 93.1,
+      "description": "Journal append/list ordering and hash-chain guarantees."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/module",
+      "floor": 99.2,
+      "description": "System module registry and command/event routing contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/participant",
+      "floor": 96.2,
+      "description": "Participant lifecycle, access labels, and seat control behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness",
+      "floor": 96.9,
+      "description": "Session-start readiness invariants from aggregate state."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/replay",
+      "floor": 98.3,
+      "description": "Deterministic replay sequencing and checkpoint persistence."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/session",
+      "floor": 93.1,
+      "description": "Session start/end and gate behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/shared/joingrant",
+      "floor": 98.8,
+      "description": "Join-grant verifier used by invite claim boundary."
+    }
+  ]
+}
