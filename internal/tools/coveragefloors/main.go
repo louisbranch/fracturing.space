@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"errors"
 	"flag"
@@ -285,6 +286,13 @@ func tryLoadFloors(filePath string) (floorFile, error) {
 	}
 	if info.IsDir() {
 		return floorFile{}, fmt.Errorf("%s is a directory", filePath)
+	}
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return floorFile{}, err
+	}
+	if len(bytes.TrimSpace(data)) == 0 {
+		return floorFile{}, nil
 	}
 	return loadFloors(filePath)
 }
