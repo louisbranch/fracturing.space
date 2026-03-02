@@ -19,7 +19,7 @@ templ ParticipantsListPage(campaignID string, campaignName string, loc Localizer
 
 // ParticipantsLoading renders the HTMX loading placeholder.
 templ ParticipantsLoading(campaignID string, loc Localizer) {
-	@LazyLoad("/campaigns/"+campaignID+"/participants/table", T(loc, "participants.loading"))
+	@LazyLoad("/campaigns/"+campaignID+"/participants/_rows", T(loc, "participants.loading"))
 }
 
 // ParticipantsTable renders the participants table.

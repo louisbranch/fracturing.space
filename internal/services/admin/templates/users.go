@@ -21,11 +21,8 @@ type UserFormCardView struct {
 
 // UserDetailPageView provides data for the single user detail page.
 type UserDetailPageView struct {
-	Message            string
-	Detail             *UserDetail
-	MagicLinkURL       string
-	MagicLinkEmail     string
-	MagicLinkExpiresAt string
+	Message string
+	Detail  *UserDetail
 }
 
 // UserRow represents a row in the users table.

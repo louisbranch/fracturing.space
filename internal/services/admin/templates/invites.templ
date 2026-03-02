@@ -19,7 +19,7 @@ templ InvitesListPage(campaignID string, campaignName string, loc Localizer) {
 
 // InvitesLoading renders the HTMX loading placeholder.
 templ InvitesLoading(campaignID string, loc Localizer) {
-	@LazyLoad("/campaigns/"+campaignID+"/invites/table", T(loc, "invites.loading"))
+	@LazyLoad("/campaigns/"+campaignID+"/invites/_rows", T(loc, "invites.loading"))
 }
 
 // InvitesTable renders the invites table.

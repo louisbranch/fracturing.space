@@ -30,7 +30,7 @@ func TestRegisterRoutes(t *testing.T) {
 		wantCall string
 	}{
 		{path: "/icons", wantCall: "icons_page"},
-		{path: "/icons/table", wantCall: "icons_table"},
+		{path: "/icons/_rows", wantCall: "icons_table"},
 	}
 
 	for _, tc := range tests {

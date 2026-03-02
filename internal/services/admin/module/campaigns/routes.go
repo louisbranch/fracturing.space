@@ -37,7 +37,7 @@ var campaignRouteDescriptors = []campaignRouteDescriptor{
 	},
 	{
 		length:   3,
-		literals: map[int]string{1: "characters", 2: "table"},
+		literals: map[int]string{1: "characters", 2: "_rows"},
 		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
 			service.HandleCharactersTable(w, r, parts[0])
 		},
@@ -65,7 +65,7 @@ var campaignRouteDescriptors = []campaignRouteDescriptor{
 	},
 	{
 		length:   3,
-		literals: map[int]string{1: "participants", 2: "table"},
+		literals: map[int]string{1: "participants", 2: "_rows"},
 		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
 			service.HandleParticipantsTable(w, r, parts[0])
 		},
@@ -79,7 +79,7 @@ var campaignRouteDescriptors = []campaignRouteDescriptor{
 	},
 	{
 		length:   3,
-		literals: map[int]string{1: "invites", 2: "table"},
+		literals: map[int]string{1: "invites", 2: "_rows"},
 		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
 			service.HandleInvitesTable(w, r, parts[0])
 		},
@@ -93,7 +93,7 @@ var campaignRouteDescriptors = []campaignRouteDescriptor{
 	},
 	{
 		length:   3,
-		literals: map[int]string{1: "sessions", 2: "table"},
+		literals: map[int]string{1: "sessions", 2: "_rows"},
 		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
 			service.HandleSessionsTable(w, r, parts[0])
 		},
@@ -121,7 +121,7 @@ var campaignRouteDescriptors = []campaignRouteDescriptor{
 	},
 	{
 		length:   3,
-		literals: map[int]string{1: "events", 2: "table"},
+		literals: map[int]string{1: "events", 2: "_rows"},
 		handle: func(service Service, w http.ResponseWriter, r *http.Request, parts []string) {
 			service.HandleEventLogTable(w, r, parts[0])
 		},

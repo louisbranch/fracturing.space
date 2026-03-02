@@ -45,11 +45,11 @@ func HandleScenarioPath(w http.ResponseWriter, r *http.Request, service Service)
 		service.HandleScenarioEvents(w, r, parts[0])
 		return
 	}
-	if len(parts) == 3 && parts[1] == "events" && parts[2] == "table" {
+	if len(parts) == 3 && parts[1] == "events" && parts[2] == "_rows" {
 		service.HandleScenarioEventsTable(w, r, parts[0])
 		return
 	}
-	if len(parts) == 3 && parts[1] == "timeline" && parts[2] == "table" {
+	if len(parts) == 3 && parts[1] == "timeline" && parts[2] == "_rows" {
 		service.HandleScenarioTimelineTable(w, r, parts[0])
 		return
 	}

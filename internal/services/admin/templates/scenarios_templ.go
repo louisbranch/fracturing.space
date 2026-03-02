@@ -406,7 +406,7 @@ func ScenarioTimelinePanel(campaignID string, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = LazyLoad("/scenarios/"+campaignID+"/timeline/table", T(loc, "common.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/scenarios/"+campaignID+"/timeline/_rows", T(loc, "common.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -488,8 +488,8 @@ func ScenarioTimelineTableContent(view ScenarioTimelineView, loc Localizer) temp
 				templ_7745c5c3_Err = PaginationTargeted(
 					view.NextToken,
 					view.PrevToken,
-					"/scenarios/"+view.CampaignID+"/timeline/table",
-					"/scenarios/"+view.CampaignID+"/timeline/table",
+					"/scenarios/"+view.CampaignID+"/timeline/_rows",
+					"/scenarios/"+view.CampaignID+"/timeline/_rows",
 					"#scenario-timeline-container",
 					false,
 					loc,
@@ -904,7 +904,7 @@ func ScenarioEventFilterForm(campaignID string, filters EventFilterOptions, loc 
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var37 string
-		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs("/scenarios/" + campaignID + "/events/table")
+		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs("/scenarios/" + campaignID + "/events/_rows")
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/scenarios.templ`, Line: 285, Col: 55}
 		}
@@ -1252,7 +1252,7 @@ func ScenarioEventsTableContent(view ScenarioEventsView, loc Localizer) templ.Co
 				view.NextToken,
 				view.PrevToken,
 				EventFilterBaseURL("/scenarios/"+view.CampaignID+"/events", view.Filters),
-				EventFilterBaseURL("/scenarios/"+view.CampaignID+"/events/table", view.Filters),
+				EventFilterBaseURL("/scenarios/"+view.CampaignID+"/events/_rows", view.Filters),
 				"#scenario-events-container",
 				true,
 				loc,

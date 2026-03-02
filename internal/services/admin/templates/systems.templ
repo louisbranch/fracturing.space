@@ -14,7 +14,7 @@ templ SystemsPage(loc Localizer) {
 
 // SystemsLoading renders the HTMX loading placeholder.
 templ SystemsLoading(loc Localizer) {
-	@LazyLoad("/systems/table", T(loc, "systems.loading"))
+	@LazyLoad("/systems/_rows", T(loc, "systems.loading"))
 }
 
 // SystemsTable renders a systems table or a message when empty.

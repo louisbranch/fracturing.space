@@ -27,6 +27,6 @@ func main() {
 	defer stop()
 
 	if err := admincmd.Run(ctx, cfg); err != nil {
-		log.Fatalf("serve web: %v", err)
+		log.Fatalf("serve admin: %v", err)
 	}
 }

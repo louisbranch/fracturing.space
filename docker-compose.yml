@@ -251,7 +251,6 @@ services:
       - auth
     environment:
       FRACTURING_SPACE_ADMIN_ADDR: 0.0.0.0:8081
-      FRACTURING_SPACE_ADMIN_DB_PATH: /data/admin.db
       # Admin auth requires a real domain (not localhost) for cross-subdomain cookies.
       # To enable locally, set FRACTURING_SPACE_DOMAIN to a real domain in .env and
       # add /etc/hosts entries for {domain} and admin.{domain}.
@@ -259,8 +258,6 @@ services:
       FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET: ${FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET:-}
       FRACTURING_SPACE_ADMIN_LOGIN_URL: ${FRACTURING_SPACE_ADMIN_LOGIN_URL:-}
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
-    volumes:
-      - fracturing-space-data:/data
     networks:
       - internal
     restart: unless-stopped

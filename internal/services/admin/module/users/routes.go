@@ -14,7 +14,6 @@ type Service interface {
 	HandleUsersPage(w http.ResponseWriter, r *http.Request)
 	HandleUsersTable(w http.ResponseWriter, r *http.Request)
 	HandleUserLookup(w http.ResponseWriter, r *http.Request)
-	HandleMagicLink(w http.ResponseWriter, r *http.Request)
 	HandleUserDetail(w http.ResponseWriter, r *http.Request, userID string)
 	HandleUserInvites(w http.ResponseWriter, r *http.Request, userID string)
 }
@@ -28,7 +27,6 @@ func RegisterRoutes(mux *http.ServeMux, service Service) {
 	mux.HandleFunc(routepath.UsersTable, service.HandleUsersTable)
 	mux.HandleFunc(routepath.UsersLookup, service.HandleUserLookup)
 	mux.Handle(routepath.UsersCreate, http.NotFoundHandler())
-	mux.HandleFunc(routepath.UsersMagicLink, service.HandleMagicLink)
 	mux.HandleFunc(routepath.UsersPrefix, func(w http.ResponseWriter, r *http.Request) {
 		HandleUserPath(w, r, service)
 	})
@@ -46,6 +44,10 @@ func HandleUserPath(w http.ResponseWriter, r *http.Request, service Service) {
 
 	path := strings.TrimPrefix(r.URL.Path, routepath.UsersPrefix)
 	parts := sharedpath.SplitPathParts(path)
+	if len(parts) == 1 && (strings.EqualFold(parts[0], "magic-link") || strings.EqualFold(parts[0], "table")) {
+		http.NotFound(w, r)
+		return
+	}
 	if len(parts) == 2 && parts[1] == "invites" {
 		service.HandleUserInvites(w, r, parts[0])
 		return

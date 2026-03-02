@@ -131,7 +131,7 @@ func ParticipantsLoading(campaignID string, loc Localizer) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/campaigns/"+campaignID+"/participants/table", T(loc, "participants.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/campaigns/"+campaignID+"/participants/_rows", T(loc, "participants.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

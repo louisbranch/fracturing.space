@@ -86,7 +86,7 @@ templ CampaignCreatePage(view CampaignCreatePageView, loc Localizer) {
 
 // CampaignsLoading renders the HTMX loading placeholder.
 templ CampaignsLoading(loc Localizer) {
-	@LazyLoad("/campaigns/table", T(loc, "campaigns.loading"))
+	@LazyLoad("/campaigns/_rows", T(loc, "campaigns.loading"))
 }
 
 // CampaignsTable renders a campaigns table or a message when empty.

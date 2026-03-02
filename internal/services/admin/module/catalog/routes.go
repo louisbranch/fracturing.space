@@ -51,7 +51,7 @@ func HandleCatalogPath(w http.ResponseWriter, r *http.Request, service Service) 
 		service.HandleCatalogSection(w, r, parts[1])
 		return
 	}
-	if len(parts) == 3 && parts[0] == DaggerheartSystemID && parts[2] == "table" && templates.IsDaggerheartCatalogSection(parts[1]) {
+	if len(parts) == 3 && parts[0] == DaggerheartSystemID && parts[2] == "_rows" && templates.IsDaggerheartCatalogSection(parts[1]) {
 		service.HandleCatalogSectionTable(w, r, parts[1])
 		return
 	}

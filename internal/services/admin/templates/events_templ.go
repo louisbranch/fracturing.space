@@ -181,7 +181,7 @@ func EventFilterForm(campaignID string, sessionID string, filters EventFilterOpt
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs("/campaigns/" + campaignID + "/events/table")
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs("/campaigns/" + campaignID + "/events/_rows")
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/events.templ`, Line: 32, Col: 55}
 		}
@@ -524,7 +524,7 @@ func EventTimelineContent(view EventLogView, loc Localizer) templ.Component {
 				view.NextToken,
 				view.PrevToken,
 				EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events", view.Filters),
-				EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events/table", view.Filters),
+				EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events/_rows", view.Filters),
 				"#event-timeline-container",
 				true,
 				loc,

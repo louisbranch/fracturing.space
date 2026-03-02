@@ -133,7 +133,7 @@ func SessionsLoading(campaignID string, loc Localizer) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/campaigns/"+campaignID+"/sessions/table", T(loc, "sessions.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/campaigns/"+campaignID+"/sessions/_rows", T(loc, "sessions.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

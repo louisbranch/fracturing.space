@@ -116,22 +116,22 @@ func TestRegisterRoutes(t *testing.T) {
 		wantCharacter string
 	}{
 		{path: "/campaigns", wantCode: http.StatusOK, wantCall: "campaigns_page"},
-		{path: "/campaigns/table", wantCode: http.StatusOK, wantCall: "campaigns_table"},
+		{path: "/campaigns/_rows", wantCode: http.StatusOK, wantCall: "campaigns_table"},
 		{path: "/campaigns/camp-1", wantCode: http.StatusOK, wantCall: "campaign_detail", wantCampaign: "camp-1"},
 		{path: "/campaigns/camp-1/characters", wantCode: http.StatusOK, wantCall: "characters_list", wantCampaign: "camp-1"},
-		{path: "/campaigns/camp-1/characters/table", wantCode: http.StatusOK, wantCall: "characters_table", wantCampaign: "camp-1"},
+		{path: "/campaigns/camp-1/characters/_rows", wantCode: http.StatusOK, wantCall: "characters_table", wantCampaign: "camp-1"},
 		{path: "/campaigns/camp-1/characters/ch-1", wantCode: http.StatusOK, wantCall: "character_sheet", wantCampaign: "camp-1", wantCharacter: "ch-1"},
 		{path: "/campaigns/camp-1/characters/ch-1/activity", wantCode: http.StatusOK, wantCall: "character_activity", wantCampaign: "camp-1", wantCharacter: "ch-1"},
 		{path: "/campaigns/camp-1/participants", wantCode: http.StatusOK, wantCall: "participants_list", wantCampaign: "camp-1"},
-		{path: "/campaigns/camp-1/participants/table", wantCode: http.StatusOK, wantCall: "participants_table", wantCampaign: "camp-1"},
+		{path: "/campaigns/camp-1/participants/_rows", wantCode: http.StatusOK, wantCall: "participants_table", wantCampaign: "camp-1"},
 		{path: "/campaigns/camp-1/invites", wantCode: http.StatusOK, wantCall: "invites_list", wantCampaign: "camp-1"},
-		{path: "/campaigns/camp-1/invites/table", wantCode: http.StatusOK, wantCall: "invites_table", wantCampaign: "camp-1"},
+		{path: "/campaigns/camp-1/invites/_rows", wantCode: http.StatusOK, wantCall: "invites_table", wantCampaign: "camp-1"},
 		{path: "/campaigns/camp-1/sessions", wantCode: http.StatusOK, wantCall: "sessions_list", wantCampaign: "camp-1"},
-		{path: "/campaigns/camp-1/sessions/table", wantCode: http.StatusOK, wantCall: "sessions_table", wantCampaign: "camp-1"},
+		{path: "/campaigns/camp-1/sessions/_rows", wantCode: http.StatusOK, wantCall: "sessions_table", wantCampaign: "camp-1"},
 		{path: "/campaigns/camp-1/sessions/s-1", wantCode: http.StatusOK, wantCall: "session_detail", wantCampaign: "camp-1", wantSession: "s-1"},
 		{path: "/campaigns/camp-1/sessions/s-1/events", wantCode: http.StatusOK, wantCall: "session_events", wantCampaign: "camp-1", wantSession: "s-1"},
 		{path: "/campaigns/camp-1/events", wantCode: http.StatusOK, wantCall: "event_log", wantCampaign: "camp-1"},
-		{path: "/campaigns/camp-1/events/table", wantCode: http.StatusOK, wantCall: "event_log_table", wantCampaign: "camp-1"},
+		{path: "/campaigns/camp-1/events/_rows", wantCode: http.StatusOK, wantCall: "event_log_table", wantCampaign: "camp-1"},
 		{path: "/campaigns/create", wantCode: http.StatusNotFound},
 		{path: "/campaigns/camp-1/unknown", wantCode: http.StatusNotFound},
 	}
@@ -187,7 +187,7 @@ func TestHandleCampaignPathRedirectsTrailingSlash(t *testing.T) {
 func TestDispatchCampaignPathPrefersMostSpecificMatch(t *testing.T) {
 	t.Parallel()
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/sessions/_rows", nil)
 	rec := httptest.NewRecorder()
 	called := ""
 	descriptors := []campaignRouteDescriptor{
@@ -200,14 +200,14 @@ func TestDispatchCampaignPathPrefersMostSpecificMatch(t *testing.T) {
 		},
 		{
 			length:   3,
-			literals: map[int]string{1: "sessions", 2: "table"},
+			literals: map[int]string{1: "sessions", 2: "_rows"},
 			handle: func(Service, http.ResponseWriter, *http.Request, []string) {
 				called = "specific"
 			},
 		},
 	}
 
-	ok := dispatchMostSpecificCampaignPath(descriptors, &fakeService{}, rec, req, []string{"camp-1", "sessions", "table"})
+	ok := dispatchMostSpecificCampaignPath(descriptors, &fakeService{}, rec, req, []string{"camp-1", "sessions", "_rows"})
 	if !ok {
 		t.Fatalf("dispatch returned false, want true")
 	}

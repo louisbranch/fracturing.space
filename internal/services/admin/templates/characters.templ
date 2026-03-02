@@ -19,7 +19,7 @@ templ CharactersListPage(campaignID string, campaignName string, loc Localizer) 
 
 // CharactersLoading renders the HTMX loading placeholder.
 templ CharactersLoading(campaignID string, loc Localizer) {
-	@LazyLoad("/campaigns/"+campaignID+"/characters/table", T(loc, "characters.loading"))
+	@LazyLoad("/campaigns/"+campaignID+"/characters/_rows", T(loc, "characters.loading"))
 }
 
 // CharactersTable renders the characters table.
