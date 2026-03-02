@@ -176,7 +176,7 @@ The MCP server (`cmd/mcp`) accepts the following flags:
 - `-addr`: game server address. Default: `game:8082`
 - `-http-addr`: HTTP server address (for HTTP transport). Default: `localhost:8085`
   
-  When running the `cmd/mcp` binary, this value is provided by the flag definition. When constructing the MCP server programmatically and leaving the HTTP address empty in the `Config` struct, the server also falls back to `localhost:8085` internally.
+  When running the `cmd/mcp` binary, this value is provided by the command flag/env default (`localhost:8085`). When constructing the MCP service programmatically and leaving `HTTPAddr` empty in `internal/services/mcp/service.Config`, the service-layer fallback is `localhost:8081`.
 - `-transport`: Transport type (`stdio` or `http`). Default: `stdio`
 
 ### Address Overrides

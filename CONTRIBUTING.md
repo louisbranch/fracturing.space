@@ -70,7 +70,7 @@ use the Make targets documented in [integration tests](docs/running/integration-
 6. Register MCP tools/resources in `internal/services/mcp/domain/`
 7. Add integration tests
 
-See [AGENTS.md](AGENTS.md) for detailed architecture documentation.
+Use the canonical docs paths: [System extension onboarding](docs/guides/adding-command-event-system.md), [Architecture index](docs/architecture/index.md), and [Domain language](docs/architecture/foundations/domain-language.md).
 
 ------------------------------------------------------------------------
 

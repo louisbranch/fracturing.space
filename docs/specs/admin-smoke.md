@@ -2,6 +2,7 @@
 title: "Admin Smoke Spec"
 parent: "Specs"
 nav_order: 1
+nav_exclude: true
 ---
 
 # Admin Smoke Spec (Playwright CLI)

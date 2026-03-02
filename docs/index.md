@@ -9,34 +9,29 @@ Fracturing.Space is a server-authoritative, event-sourced engine for tabletop RP
 
 ## Start here
 
-Choose the path that matches your immediate goal:
+Choose the path that matches your goal.
 
+- I want to try the project as a player/GM: [Users](audience/users.md)
 - I want to contribute code/docs: [Contributors](audience/contributors.md)
-- I want to run the stack quickly: [Quickstart (Docker)](running/quickstart.md)
-- I want local Go development: [Local development (Go)](running/local-dev.md)
-- I want MCP/client integration details: [Clients and tooling](audience/clients.md)
-- I am designing/extending systems: [System designers](audience/system-designers.md)
+- I want to develop in Go: [Go developers](audience/go-developers.md)
+- I want to build MCP/client integrations: [Integrators](audience/integrators.md)
+- I want to design or extend a rules system: [System developers](audience/system-developers.md)
+- I want to run the stack: [Running](running/index.md)
+- I want to contribute translations: [Translators](audience/translators.md)
 
-## New contributor quick path
+## Need to know
 
-1. Run one setup path: [quickstart](running/quickstart.md) or [local development](running/local-dev.md).
-2. Follow [contributor onboarding](audience/contributors.md).
-3. Pick a first target from [contributor map](audience/contributor-map.md).
-4. Run checks from [CONTRIBUTING.md](../CONTRIBUTING.md).
+- Contribution workflow: [Contributing guide](https://github.com/louisbranch/fracturing.space/blob/main/CONTRIBUTING.md)
+- Runtime bootstrap: [Quickstart](running/quickstart.md)
+- Architecture orientation: [Architecture](architecture/index.md)
 
-## Documentation map
+## Good to know
 
-- Audience entrypoints: [audience/index.md](audience/index.md)
-- Runtime setup and operations: [running/index.md](running/index.md)
-- Canonical architecture and domain docs: [architecture/index.md](architecture/index.md)
-- Protocol and generated references: [reference/index.md](reference/index.md), [events/index.md](events/index.md)
-- Executable smoke and QA specs: [specs/index.md](specs/index.md)
+- Contributor routing map: [Contributor map](reference/contributor-map.md)
+- Runtime operations and config: [Running](running/index.md)
+- Domain vocabulary: [Domain language](architecture/foundations/domain-language.md)
 
-## Canonical deep dives (open only when needed)
+## Reference
 
-- [Project overview](architecture/overview.md)
-- [Architecture](architecture/architecture.md)
-- [Domain language](architecture/domain-language.md)
-- [Event-driven system](architecture/event-driven-system.md)
-- [Game systems architecture](architecture/game-systems.md)
-- [Testing policy](architecture/testing-coverage.md)
+- MCP contract docs: [Reference](reference/index.md)
+- Generated command/event catalogs: [Events index](events/index.md)

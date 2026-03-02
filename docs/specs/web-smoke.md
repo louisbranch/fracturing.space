@@ -2,6 +2,7 @@
 title: "Web Smoke Spec"
 parent: "Specs"
 nav_order: 2
+nav_exclude: true
 ---
 
 # Web Smoke Spec (Playwright CLI)

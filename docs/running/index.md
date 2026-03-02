@@ -23,5 +23,6 @@ Canonical runtime entrypoint.
 - [Configuration reference](configuration.md)
 - [Integration tests](integration-tests.md)
 - [Seeding](seeding.md)
+- [Replay operations](replay-operations.md)
 - [Scenario scripts](scenario-scripts.md)
 - [Translation workflow](translation-workflow.md)

@@ -2,6 +2,7 @@
 title: "Daggerheart PRD"
 parent: "Product"
 nav_order: 1
+nav_exclude: true
 ---
 
 # Daggerheart PRD: Core Mechanics (Setting-Agnostic)

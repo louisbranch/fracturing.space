@@ -19,7 +19,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/userhub/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-critical-domain cover-package-floors coverage-floors-ratchet cover-treemap test test-unit test-changed integration integration-full integration-smoke integration-smoke-full integration-smoke-pr integration-shard integration-shard-check scenario scenario-full scenario-smoke scenario-shard scenario-shard-check scenario-fast templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-lifecycle-check docs-web-route-check web-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-critical-domain cover-package-floors coverage-floors-ratchet cover-treemap test test-unit test-changed integration integration-full integration-smoke integration-smoke-full integration-smoke-pr integration-shard integration-shard-check scenario scenario-full scenario-smoke scenario-shard scenario-shard-check scenario-fast templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -166,7 +166,7 @@ scenario-shard-check:
 scenario-fast:
 	SCENARIO_PARALLELISM=$${SCENARIO_PARALLELISM:-4} go test -parallel=$${SCENARIO_PARALLELISM} -tags=scenario ./internal/test/game
 
-docs-check: docs-path-check docs-link-check docs-index-check docs-lifecycle-check docs-web-route-check
+docs-check: docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check
 
 docs-path-check:
 	@bash ./scripts/check-doc-paths.sh
@@ -177,11 +177,17 @@ docs-link-check:
 docs-index-check:
 	@bash ./scripts/check-doc-index-coverage.sh
 
+docs-nav-quality-check:
+	@bash ./scripts/check-doc-nav-quality.sh
+
 docs-lifecycle-check:
 	@bash ./scripts/check-doc-lifecycle.sh
 
 docs-web-route-check:
 	@bash ./scripts/check-web-route-doc-consistency.sh
+
+docs-architecture-budget-check:
+	@bash ./scripts/check-architecture-page-budget.sh
 
 web-architecture-check: web-package-comment-check web-declaration-comment-check web-comment-quality-check
 	go test ./internal/services/web/modules ./internal/services/web/routepath ./internal/services/web

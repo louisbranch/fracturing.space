@@ -2,13 +2,10 @@
 
 Fracturing.Space is an open-source, server-authoritative engine for tabletop RPG campaigns modeled as deterministic, event-sourced state machines. It exposes gRPC and MCP interfaces for clients and automated agents.
 
-## Why this is interesting
+## Start here
 
-Fracturing.Space is built for tables experimenting with AI GMs or mixed human/AI facilitation. The event-driven core makes every action an ordered, deterministic event, which means:
-
-- AI or programmatic GMs can reason over a full, authoritative history
-- Outcomes can be replayed and audited, not guessed or reinterpreted
-- Branching a campaign is safe and explicit, enabling "what if" timelines without rewriting history
+- Docs home: [docs/index.md](docs/index.md)
+- Contribution workflow: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ## Quickstart (Docker)
 
@@ -20,35 +17,20 @@ make bootstrap
 
 Open `http://localhost:8080`.
 
-This uses dev-only join-grant keys baked into `docker-compose.yml`. Replace them for any real deployment.
-
-Service URLs, explicit compose commands, and runtime variants:
+For detailed runtime paths:
 
 - [docs/running/quickstart.md](docs/running/quickstart.md)
 - [docs/running/docker-compose.md](docs/running/docker-compose.md)
 - [docs/running/local-dev.md](docs/running/local-dev.md)
 
-## New contributor path
+## Onboarding paths
 
-Recommended first path:
-
-1. Start at [docs/index.md](docs/index.md).
-2. Follow [docs/audience/contributors.md](docs/audience/contributors.md).
-3. Pick a first edit target from [docs/audience/contributor-map.md](docs/audience/contributor-map.md).
-4. Apply contribution workflow checks in [CONTRIBUTING.md](CONTRIBUTING.md).
-
-If you are evaluating architecture before coding, start with [docs/architecture/overview.md](docs/architecture/overview.md) and then return to the contributor path above.
-
-## Docs map
-
-- Docs home: [docs/index.md](docs/index.md)
-- Audience routing: [docs/audience/index.md](docs/audience/index.md)
-- Running and setup: [docs/running/index.md](docs/running/index.md)
-- Project architecture and domain docs: [docs/architecture/index.md](docs/architecture/index.md)
-
-## Documentation lifecycle
-
-Contributor entrypoints prioritize canonical docs. Temporary implementation plans and phase trackers are intentionally kept out of `docs/`.
+- User path (player/GM evaluation): [docs/audience/users.md](docs/audience/users.md)
+- Contributor path: [docs/audience/contributors.md](docs/audience/contributors.md)
+- Go developer path: [docs/audience/go-developers.md](docs/audience/go-developers.md)
+- Integrator path (MCP/clients): [docs/audience/integrators.md](docs/audience/integrators.md)
+- System developer path: [docs/audience/system-developers.md](docs/audience/system-developers.md)
+- Translator path: [docs/audience/translators.md](docs/audience/translators.md)
 
 ## Project status
 

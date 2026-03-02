@@ -1,10 +1,6 @@
+# Deprecated configuration file.
+# Public docs builds should use docs/_config.yml and front-matter nav controls.
+# This file is kept only for backward compatibility with older local scripts.
+
 exclude:
-  - events
-  - guides
-  - specs
-  - product
-  - architecture/campaign-authorization-audit.md
-  - architecture/campaign-authorization-model.md
-  - architecture/identity.md
-  - architecture/oauth.md
-  - reference/icon-catalog.md
+  - _config.public.yml
