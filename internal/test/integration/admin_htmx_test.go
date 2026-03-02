@@ -51,7 +51,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	baseURL := "http://" + adminAddr
 
 	t.Run("campaigns table empty", func(t *testing.T) {
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/table")
+		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/_rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -73,7 +73,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/table")
+		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/_rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -171,7 +171,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		// The HTMX fragment returns the sessions page with a loading placeholder
 		assertHTMLContains(t, body,
 			"<title>Sessions - Admin | "+branding.AppName+"</title>",
-			"/sessions/table",
+			"/sessions/_rows",
 		)
 		assertHTMXFragmentInvariant(t, body)
 	})
@@ -248,7 +248,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/dashboard/content")
+		status, body := htmxGet(t, httpClient, baseURL+"/dashboard/_stats")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -313,7 +313,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions/table")
+		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions/_rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -343,7 +343,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions/table")
+		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions/_rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -533,7 +533,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 		assertHTMLContains(t, body,
 			"<title>Characters - Admin | "+branding.AppName+"</title>",
-			"/characters/table",
+			"/characters/_rows",
 		)
 		assertHTMXFragmentInvariant(t, body)
 	})
@@ -549,7 +549,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/characters/table")
+		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/characters/_rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -578,7 +578,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create character: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/characters/table")
+		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/characters/_rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -732,7 +732,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 		assertHTMLContains(t, body,
 			"<title>Participants - Admin | "+branding.AppName+"</title>",
-			"/participants/table",
+			"/participants/_rows",
 		)
 		assertHTMXFragmentInvariant(t, body)
 	})
@@ -748,7 +748,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/participants/table")
+		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/participants/_rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -790,7 +790,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create participant: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/participants/table")
+		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/participants/_rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -888,7 +888,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/events/table")
+		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/events/_rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)

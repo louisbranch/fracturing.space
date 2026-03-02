@@ -2,7 +2,6 @@ package admin
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
@@ -167,8 +166,6 @@ func TestNewServerRequiresHTTPAddr(t *testing.T) {
 func TestListenAndServeStopsOnCancel(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	t.Setenv("FRACTURING_SPACE_ADMIN_DB_PATH", filepath.Join(t.TempDir(), "admin.db"))
 
 	server, err := NewServer(ctx, Config{HTTPAddr: "127.0.0.1:0"})
 	if err != nil {

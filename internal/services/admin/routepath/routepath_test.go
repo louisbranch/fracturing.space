@@ -11,7 +11,7 @@ func TestTopLevelRoutes(t *testing.T) {
 	if StaticPrefix != "/static/" {
 		t.Fatalf("StaticPrefix = %q", StaticPrefix)
 	}
-	if DashboardContent != "/dashboard/content" {
+	if DashboardContent != "/dashboard/_stats" {
 		t.Fatalf("DashboardContent = %q", DashboardContent)
 	}
 	if Campaigns != "/campaigns" {
@@ -20,13 +20,13 @@ func TestTopLevelRoutes(t *testing.T) {
 	if CampaignsCreate != "/campaigns/create" {
 		t.Fatalf("CampaignsCreate = %q", CampaignsCreate)
 	}
-	if CampaignsTable != "/campaigns/table" {
+	if CampaignsTable != "/campaigns/_rows" {
 		t.Fatalf("CampaignsTable = %q", CampaignsTable)
 	}
 	if Systems != "/systems" {
 		t.Fatalf("Systems = %q", Systems)
 	}
-	if SystemsTable != "/systems/table" {
+	if SystemsTable != "/systems/_rows" {
 		t.Fatalf("SystemsTable = %q", SystemsTable)
 	}
 	if Catalog != "/catalog" {
@@ -76,7 +76,7 @@ func TestCampaignBuilders(t *testing.T) {
 	if got := CampaignEvents("camp-1"); got != "/campaigns/camp-1/events" {
 		t.Fatalf("CampaignEvents = %q", got)
 	}
-	if got := CampaignEventsTable("camp-1"); got != "/campaigns/camp-1/events/table" {
+	if got := CampaignEventsTable("camp-1"); got != "/campaigns/camp-1/events/_rows" {
 		t.Fatalf("CampaignEventsTable = %q", got)
 	}
 }
@@ -90,7 +90,7 @@ func TestCatalogAndUserBuilders(t *testing.T) {
 	if got := CatalogSection("daggerheart", "classes"); got != "/catalog/daggerheart/classes" {
 		t.Fatalf("CatalogSection = %q", got)
 	}
-	if got := CatalogSectionTable("daggerheart", "classes"); got != "/catalog/daggerheart/classes/table" {
+	if got := CatalogSectionTable("daggerheart", "classes"); got != "/catalog/daggerheart/classes/_rows" {
 		t.Fatalf("CatalogSectionTable = %q", got)
 	}
 	if got := CatalogEntry("daggerheart", "classes", "class-1"); got != "/catalog/daggerheart/classes/class-1" {
@@ -110,10 +110,10 @@ func TestScenarioBuilders(t *testing.T) {
 	if got := ScenarioEvents("camp-1"); got != "/scenarios/camp-1/events" {
 		t.Fatalf("ScenarioEvents = %q", got)
 	}
-	if got := ScenarioEventsTable("camp-1"); got != "/scenarios/camp-1/events/table" {
+	if got := ScenarioEventsTable("camp-1"); got != "/scenarios/camp-1/events/_rows" {
 		t.Fatalf("ScenarioEventsTable = %q", got)
 	}
-	if got := ScenarioTimelineTable("camp-1"); got != "/scenarios/camp-1/timeline/table" {
+	if got := ScenarioTimelineTable("camp-1"); got != "/scenarios/camp-1/timeline/_rows" {
 		t.Fatalf("ScenarioTimelineTable = %q", got)
 	}
 }

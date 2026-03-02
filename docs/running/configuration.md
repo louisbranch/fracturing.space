@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 5
 status: canonical
 owner: engineering
-last_reviewed: "2026-02-26"
+last_reviewed: "2026-03-02"
 ---
 
 # Configuration
@@ -132,7 +132,10 @@ Internal gRPC dependencies default to Compose service DNS names (`service:port`)
 ### Admin
 
 - `FRACTURING_SPACE_ADMIN_ADDR`: HTTP bind address for the admin dashboard. Default: `:8081`.
-- `FRACTURING_SPACE_ADMIN_DB_PATH`: admin SQLite path. Default: `data/admin.db`.
+- `FRACTURING_SPACE_ADMIN_DIAL_TIMEOUT`: gRPC dial timeout for admin. Default: `2s`.
+- `FRACTURING_SPACE_ADMIN_AUTH_INTROSPECT_URL`: OAuth introspection endpoint for admin auth guard.
+- `FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET`: shared OAuth resource secret used for admin introspection.
+- `FRACTURING_SPACE_ADMIN_LOGIN_URL`: login redirect URL used when admin auth fails.
 - `FRACTURING_SPACE_AUTH_ADDR`: auth gRPC address used by the game, admin dashboard, and web login server. Default: `auth:8083`.
 
 ### Web

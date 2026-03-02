@@ -29,7 +29,7 @@ templ EventLogPage(view EventLogView, loc Localizer) {
 templ EventFilterForm(campaignID string, sessionID string, filters EventFilterOptions, loc Localizer) {
 	<form
 		class="border border-base-300 rounded-lg p-4"
-		hx-get={ "/campaigns/" + campaignID + "/events/table" }
+		hx-get={ "/campaigns/" + campaignID + "/events/_rows" }
 		hx-target="#event-timeline-container"
 		hx-swap="innerHTML"
 		hx-push-url="true"
@@ -96,7 +96,7 @@ templ EventTimelineContent(view EventLogView, loc Localizer) {
 			view.NextToken,
 			view.PrevToken,
 			EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events", view.Filters),
-			EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events/table", view.Filters),
+			EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events/_rows", view.Filters),
 			"#event-timeline-container",
 			true,
 			loc,

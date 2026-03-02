@@ -67,12 +67,12 @@ func Run(ctx context.Context, cfg Config) error {
 			AuthConfig:      authCfg,
 		})
 		if err != nil {
-			return fmt.Errorf("init web server: %w", err)
+			return fmt.Errorf("init admin server: %w", err)
 		}
 		defer server.Close()
 
 		if err := server.ListenAndServe(ctx); err != nil {
-			return fmt.Errorf("serve web: %w", err)
+			return fmt.Errorf("serve admin: %w", err)
 		}
 		return nil
 	})

@@ -14,19 +14,24 @@ const (
 )
 
 const (
-	DashboardContent = "/dashboard/content"
+	Dashboard        = "/dashboard"
+	DashboardAlt     = "/dashboard/"
+	DashboardStats   = "/dashboard/_stats"
+	DashboardContent = DashboardStats
 )
 
 const (
 	Campaigns       = "/campaigns"
 	CampaignsCreate = "/campaigns/create"
-	CampaignsTable  = "/campaigns/table"
+	CampaignsRows   = "/campaigns/_rows"
+	CampaignsTable  = CampaignsRows
 	CampaignsPrefix = "/campaigns/"
 )
 
 const (
 	Systems       = "/systems"
-	SystemsTable  = "/systems/table"
+	SystemsRows   = "/systems/_rows"
+	SystemsTable  = SystemsRows
 	SystemsPrefix = "/systems/"
 )
 
@@ -36,21 +41,24 @@ const (
 )
 
 const (
-	Icons      = "/icons"
-	IconsTable = "/icons/table"
+	Icons       = "/icons"
+	IconsPrefix = "/icons/"
+	IconsRows   = "/icons/_rows"
+	IconsTable  = IconsRows
 )
 
 const (
-	Users          = "/users"
-	UsersTable     = "/users/table"
-	UsersLookup    = "/users/lookup"
-	UsersCreate    = "/users/create"
-	UsersMagicLink = "/users/magic-link"
-	UsersPrefix    = "/users/"
+	Users       = "/users"
+	UsersRows   = "/users/_rows"
+	UsersTable  = UsersRows
+	UsersLookup = "/users/lookup"
+	UsersCreate = "/users/create"
+	UsersPrefix = "/users/"
 )
 
 const (
 	Scenarios       = "/scenarios"
+	ScenariosRun    = "/scenarios/run"
 	ScenariosPrefix = "/scenarios/"
 )
 
@@ -62,8 +70,12 @@ func CampaignCharacters(campaignID string) string {
 	return Campaign(campaignID) + "/characters"
 }
 
+func CampaignCharactersRows(campaignID string) string {
+	return CampaignCharacters(campaignID) + "/_rows"
+}
+
 func CampaignCharactersTable(campaignID string) string {
-	return CampaignCharacters(campaignID) + "/table"
+	return CampaignCharactersRows(campaignID)
 }
 
 func CampaignCharacter(campaignID string, characterID string) string {
@@ -78,24 +90,36 @@ func CampaignParticipants(campaignID string) string {
 	return Campaign(campaignID) + "/participants"
 }
 
+func CampaignParticipantsRows(campaignID string) string {
+	return CampaignParticipants(campaignID) + "/_rows"
+}
+
 func CampaignParticipantsTable(campaignID string) string {
-	return CampaignParticipants(campaignID) + "/table"
+	return CampaignParticipantsRows(campaignID)
 }
 
 func CampaignInvites(campaignID string) string {
 	return Campaign(campaignID) + "/invites"
 }
 
+func CampaignInvitesRows(campaignID string) string {
+	return CampaignInvites(campaignID) + "/_rows"
+}
+
 func CampaignInvitesTable(campaignID string) string {
-	return CampaignInvites(campaignID) + "/table"
+	return CampaignInvitesRows(campaignID)
 }
 
 func CampaignSessions(campaignID string) string {
 	return Campaign(campaignID) + "/sessions"
 }
 
+func CampaignSessionsRows(campaignID string) string {
+	return CampaignSessions(campaignID) + "/_rows"
+}
+
 func CampaignSessionsTable(campaignID string) string {
-	return CampaignSessions(campaignID) + "/table"
+	return CampaignSessionsRows(campaignID)
 }
 
 func CampaignSession(campaignID string, sessionID string) string {
@@ -110,8 +134,12 @@ func CampaignEvents(campaignID string) string {
 	return Campaign(campaignID) + "/events"
 }
 
+func CampaignEventsRows(campaignID string) string {
+	return CampaignEvents(campaignID) + "/_rows"
+}
+
 func CampaignEventsTable(campaignID string) string {
-	return CampaignEvents(campaignID) + "/table"
+	return CampaignEventsRows(campaignID)
 }
 
 func System(systemID string) string {
@@ -122,8 +150,12 @@ func CatalogSection(systemID string, sectionID string) string {
 	return Catalog + "/" + escapeSegment(systemID) + "/" + escapeSegment(sectionID)
 }
 
+func CatalogSectionRows(systemID string, sectionID string) string {
+	return CatalogSection(systemID, sectionID) + "/_rows"
+}
+
 func CatalogSectionTable(systemID string, sectionID string) string {
-	return CatalogSection(systemID, sectionID) + "/table"
+	return CatalogSectionRows(systemID, sectionID)
 }
 
 func CatalogEntry(systemID string, sectionID string, entryID string) string {
@@ -142,12 +174,20 @@ func ScenarioEvents(campaignID string) string {
 	return Scenarios + "/" + escapeSegment(campaignID) + "/events"
 }
 
+func ScenarioEventsRows(campaignID string) string {
+	return ScenarioEvents(campaignID) + "/_rows"
+}
+
 func ScenarioEventsTable(campaignID string) string {
-	return ScenarioEvents(campaignID) + "/table"
+	return ScenarioEventsRows(campaignID)
+}
+
+func ScenarioTimelineRows(campaignID string) string {
+	return Scenarios + "/" + escapeSegment(campaignID) + "/timeline/_rows"
 }
 
 func ScenarioTimelineTable(campaignID string) string {
-	return Scenarios + "/" + escapeSegment(campaignID) + "/timeline/table"
+	return ScenarioTimelineRows(campaignID)
 }
 
 func escapeSegment(raw string) string {

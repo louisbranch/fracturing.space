@@ -38,7 +38,7 @@ func TestRegisterRoutes(t *testing.T) {
 		wantSystem string
 	}{
 		{path: "/systems", wantCode: http.StatusOK, wantCall: "systems_page"},
-		{path: "/systems/table", wantCode: http.StatusOK, wantCall: "systems_table"},
+		{path: "/systems/_rows", wantCode: http.StatusOK, wantCall: "systems_table"},
 		{path: "/systems/daggerheart", wantCode: http.StatusOK, wantCall: "systems_detail", wantSystem: "daggerheart"},
 		{path: "/systems/daggerheart/version", wantCode: http.StatusNotFound},
 	}

@@ -48,7 +48,7 @@ func TestRegisterRoutes(t *testing.T) {
 	}{
 		{path: "/catalog", wantCode: http.StatusOK, wantCall: "catalog_page"},
 		{path: "/catalog/daggerheart/classes", wantCode: http.StatusOK, wantCall: "catalog_section", wantSection: "classes"},
-		{path: "/catalog/daggerheart/classes/table", wantCode: http.StatusOK, wantCall: "catalog_section_table", wantSection: "classes"},
+		{path: "/catalog/daggerheart/classes/_rows", wantCode: http.StatusOK, wantCall: "catalog_section_table", wantSection: "classes"},
 		{path: "/catalog/daggerheart/classes/class-1", wantCode: http.StatusOK, wantCall: "catalog_section_detail", wantSection: "classes", wantEntry: "class-1"},
 		{path: "/catalog/daggerheart/not-a-real-section", wantCode: http.StatusNotFound},
 		{path: "/catalog/unknown/classes", wantCode: http.StatusNotFound},

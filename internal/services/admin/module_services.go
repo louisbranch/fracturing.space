@@ -128,10 +128,6 @@ func (h *Handler) HandleUserLookup(w http.ResponseWriter, r *http.Request) {
 	h.handleUserLookup(w, r)
 }
 
-func (h *Handler) HandleMagicLink(w http.ResponseWriter, r *http.Request) {
-	h.handleMagicLink(w, r)
-}
-
 func (h *Handler) HandleUserDetail(w http.ResponseWriter, r *http.Request, userID string) {
 	h.handleUserDetail(w, r, userID)
 }

@@ -21,7 +21,7 @@ templ SessionsListPage(campaignID string, campaignName string, loc Localizer) {
 
 // SessionsLoading renders the HTMX loading placeholder for sessions.
 templ SessionsLoading(campaignID string, loc Localizer) {
-	@LazyLoad("/campaigns/"+campaignID+"/sessions/table", T(loc, "sessions.loading"))
+	@LazyLoad("/campaigns/"+campaignID+"/sessions/_rows", T(loc, "sessions.loading"))
 }
 
 // SessionDetailFullPage renders the session detail in the base layout.

@@ -292,7 +292,7 @@ func TestUsersPageRoute(t *testing.T) {
 
 func TestUsersTableRoute(t *testing.T) {
 	handler := NewHandler(nil)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/_rows", nil)
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, req)
 	if recorder.Code != http.StatusOK {
@@ -304,7 +304,7 @@ func TestUsersTableRoute(t *testing.T) {
 
 func TestCampaignsTableRoute(t *testing.T) {
 	handler := NewHandler(nil)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/_rows", nil)
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, req)
 	if recorder.Code != http.StatusOK {
@@ -318,7 +318,7 @@ func TestCampaignsTableWithClient(t *testing.T) {
 	provider := testClientProvider{campaign: campaignClient}
 	handler := NewHandler(provider)
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/_rows", nil)
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, req)
 	if recorder.Code != http.StatusOK {
@@ -387,7 +387,7 @@ func TestParticipantsListRoute(t *testing.T) {
 func TestParticipantsTableRoute(t *testing.T) {
 	t.Run("no client", func(t *testing.T) {
 		handler := NewHandler(nil)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-123/participants/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-123/participants/_rows", nil)
 		recorder := httptest.NewRecorder()
 		handler.ServeHTTP(recorder, req)
 		if recorder.Code != http.StatusOK {
@@ -403,7 +403,7 @@ func TestParticipantsTableRoute(t *testing.T) {
 			},
 		}
 		handler := NewHandler(testClientProvider{participant: participantClient})
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-123/participants/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-123/participants/_rows", nil)
 		recorder := httptest.NewRecorder()
 		handler.ServeHTTP(recorder, req)
 		if recorder.Code != http.StatusOK {
@@ -446,7 +446,7 @@ func TestDashboardRoute(t *testing.T) {
 	})
 
 	t.Run("dashboard content", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/dashboard/content", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/dashboard/_stats", nil)
 		recorder := httptest.NewRecorder()
 		handler.ServeHTTP(recorder, req)
 		if recorder.Code != http.StatusOK {
@@ -467,7 +467,7 @@ func TestEventLogRoute(t *testing.T) {
 
 func TestEventLogTableRoute(t *testing.T) {
 	handler := NewHandler(nil)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-123/events/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-123/events/_rows", nil)
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, req)
 	if recorder.Code != http.StatusOK {

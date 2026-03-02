@@ -61,12 +61,6 @@ async page => {
     const text = document.body.innerText || "";
     return table || text.includes("No campaigns yet.") || text.includes("Campaigns unavailable.") || text.includes("Campaign service unavailable.");
   });
-
-  const origin = page.url().replace(/\/[^/]*$/, "");
-  const createResponse = await page.request.get(origin + "/campaigns/create", { maxRedirects: 0 });
-  if (createResponse.status() !== 404) {
-    throw new Error("Expected /campaigns/create status 404, got: " + createResponse.status());
-  }
 }
 EOF
 )"

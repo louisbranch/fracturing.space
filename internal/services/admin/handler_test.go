@@ -317,21 +317,21 @@ func TestCatalogTablesAndDetails(t *testing.T) {
 		detailPath string
 		expected   string
 	}{
-		{section: templates.CatalogSectionClasses, listPath: "/catalog/daggerheart/classes/table", detailPath: "/catalog/daggerheart/classes/class-1", expected: "Sentinel"},
-		{section: templates.CatalogSectionSubclasses, listPath: "/catalog/daggerheart/subclasses/table", detailPath: "/catalog/daggerheart/subclasses/subclass-1", expected: "Warden"},
-		{section: templates.CatalogSectionHeritages, listPath: "/catalog/daggerheart/heritages/table", detailPath: "/catalog/daggerheart/heritages/heritage-1", expected: "Elder"},
-		{section: templates.CatalogSectionExperiences, listPath: "/catalog/daggerheart/experiences/table", detailPath: "/catalog/daggerheart/experiences/exp-1", expected: "Scholar"},
-		{section: templates.CatalogSectionDomains, listPath: "/catalog/daggerheart/domains/table", detailPath: "/catalog/daggerheart/domains/domain-1", expected: "Arcana"},
-		{section: templates.CatalogSectionDomainCards, listPath: "/catalog/daggerheart/domain-cards/table", detailPath: "/catalog/daggerheart/domain-cards/card-1", expected: "Flare"},
-		{section: templates.CatalogSectionItems, listPath: "/catalog/daggerheart/items/table", detailPath: "/catalog/daggerheart/items/item-1", expected: "Healing Draught"},
-		{section: templates.CatalogSectionWeapons, listPath: "/catalog/daggerheart/weapons/table", detailPath: "/catalog/daggerheart/weapons/weapon-1", expected: "Longsword"},
-		{section: templates.CatalogSectionArmor, listPath: "/catalog/daggerheart/armor/table", detailPath: "/catalog/daggerheart/armor/armor-1", expected: "Chainmail"},
-		{section: templates.CatalogSectionLoot, listPath: "/catalog/daggerheart/loot/table", detailPath: "/catalog/daggerheart/loot/loot-1", expected: "Ancient Coin"},
-		{section: templates.CatalogSectionDamageTypes, listPath: "/catalog/daggerheart/damage-types/table", detailPath: "/catalog/daggerheart/damage-types/damage-1", expected: "Fire"},
-		{section: templates.CatalogSectionAdversaries, listPath: "/catalog/daggerheart/adversaries/table", detailPath: "/catalog/daggerheart/adversaries/adv-1", expected: "Razorclaw"},
-		{section: templates.CatalogSectionBeastforms, listPath: "/catalog/daggerheart/beastforms/table", detailPath: "/catalog/daggerheart/beastforms/beast-1", expected: "Dire Wolf"},
-		{section: templates.CatalogSectionCompanionExperiences, listPath: "/catalog/daggerheart/companion-experiences/table", detailPath: "/catalog/daggerheart/companion-experiences/comp-1", expected: "Tracker"},
-		{section: templates.CatalogSectionEnvironments, listPath: "/catalog/daggerheart/environments/table", detailPath: "/catalog/daggerheart/environments/env-1", expected: "Haunted Keep"},
+		{section: templates.CatalogSectionClasses, listPath: "/catalog/daggerheart/classes/_rows", detailPath: "/catalog/daggerheart/classes/class-1", expected: "Sentinel"},
+		{section: templates.CatalogSectionSubclasses, listPath: "/catalog/daggerheart/subclasses/_rows", detailPath: "/catalog/daggerheart/subclasses/subclass-1", expected: "Warden"},
+		{section: templates.CatalogSectionHeritages, listPath: "/catalog/daggerheart/heritages/_rows", detailPath: "/catalog/daggerheart/heritages/heritage-1", expected: "Elder"},
+		{section: templates.CatalogSectionExperiences, listPath: "/catalog/daggerheart/experiences/_rows", detailPath: "/catalog/daggerheart/experiences/exp-1", expected: "Scholar"},
+		{section: templates.CatalogSectionDomains, listPath: "/catalog/daggerheart/domains/_rows", detailPath: "/catalog/daggerheart/domains/domain-1", expected: "Arcana"},
+		{section: templates.CatalogSectionDomainCards, listPath: "/catalog/daggerheart/domain-cards/_rows", detailPath: "/catalog/daggerheart/domain-cards/card-1", expected: "Flare"},
+		{section: templates.CatalogSectionItems, listPath: "/catalog/daggerheart/items/_rows", detailPath: "/catalog/daggerheart/items/item-1", expected: "Healing Draught"},
+		{section: templates.CatalogSectionWeapons, listPath: "/catalog/daggerheart/weapons/_rows", detailPath: "/catalog/daggerheart/weapons/weapon-1", expected: "Longsword"},
+		{section: templates.CatalogSectionArmor, listPath: "/catalog/daggerheart/armor/_rows", detailPath: "/catalog/daggerheart/armor/armor-1", expected: "Chainmail"},
+		{section: templates.CatalogSectionLoot, listPath: "/catalog/daggerheart/loot/_rows", detailPath: "/catalog/daggerheart/loot/loot-1", expected: "Ancient Coin"},
+		{section: templates.CatalogSectionDamageTypes, listPath: "/catalog/daggerheart/damage-types/_rows", detailPath: "/catalog/daggerheart/damage-types/damage-1", expected: "Fire"},
+		{section: templates.CatalogSectionAdversaries, listPath: "/catalog/daggerheart/adversaries/_rows", detailPath: "/catalog/daggerheart/adversaries/adv-1", expected: "Razorclaw"},
+		{section: templates.CatalogSectionBeastforms, listPath: "/catalog/daggerheart/beastforms/_rows", detailPath: "/catalog/daggerheart/beastforms/beast-1", expected: "Dire Wolf"},
+		{section: templates.CatalogSectionCompanionExperiences, listPath: "/catalog/daggerheart/companion-experiences/_rows", detailPath: "/catalog/daggerheart/companion-experiences/comp-1", expected: "Tracker"},
+		{section: templates.CatalogSectionEnvironments, listPath: "/catalog/daggerheart/environments/_rows", detailPath: "/catalog/daggerheart/environments/env-1", expected: "Haunted Keep"},
 	}
 
 	for _, tc := range sections {
@@ -391,7 +391,7 @@ func TestSystemsTableRendersDefaultBadge(t *testing.T) {
 	}
 	handler := NewHandler(testClientProvider{system: systemClient})
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/systems/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/systems/_rows", nil)
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, req)
 
@@ -408,7 +408,7 @@ func TestSystemsTableRendersDefaultBadge(t *testing.T) {
 func TestIconsTableRendersCatalog(t *testing.T) {
 	handler := NewHandler(nil)
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/icons/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/icons/_rows", nil)
 	recorder := httptest.NewRecorder()
 	handler.ServeHTTP(recorder, req)
 
@@ -507,7 +507,7 @@ func TestScenarioTimelineTable(t *testing.T) {
 	provider := testFullClientProvider{event: client}
 	handler := NewHandler(provider)
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/scenarios/camp-123/timeline/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/scenarios/camp-123/timeline/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -608,7 +608,7 @@ func TestCampaignSessionsRoute(t *testing.T) {
 	})
 
 	t.Run("sessions table htmx", func(t *testing.T) {
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-123/sessions/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-123/sessions/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		recorder := httptest.NewRecorder()
 		handler.ServeHTTP(recorder, req)
@@ -1541,7 +1541,7 @@ func TestCampaignsTableUsesContextUserMetadata(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	req = req.WithContext(requestctx.WithUserID(req.Context(), "user-context"))
 	recorder := httptest.NewRecorder()
@@ -1656,35 +1656,19 @@ func TestCreateUserEndpointUnavailable(t *testing.T) {
 	}
 }
 
-func TestGenerateMagicLink(t *testing.T) {
-	user := &authv1.User{Id: "user-1", Email: "Test User"}
-	authClient := &testAuthClient{
-		user: user,
-		magicLinkResp: &authv1.GenerateMagicLinkResponse{
-			MagicLinkUrl: "http://magic.local/link",
-			ExpiresAt:    timestamppb.Now(),
-		},
+func TestMagicLinkRouteUnavailable(t *testing.T) {
+	handler := NewHandler(nil)
+	for _, method := range []string{http.MethodGet, http.MethodPost} {
+		t.Run(method, func(t *testing.T) {
+			req := httptest.NewRequest(method, "http://example.com/users/magic-link", nil)
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("expected 404, got %d", rec.Code)
+			}
+		})
 	}
-	provider := testClientProvider{auth: authClient}
-	webHandler := &Handler{clientProvider: provider}
-	handler := webHandler.routes()
-
-	form := url.Values{}
-	form.Set("user_id", "user-1")
-	form.Set("email", "test@example.com")
-	form.Set("origin", "http://example.com")
-	formEncoded := form.Encode()
-
-	req := httptest.NewRequest(http.MethodPost, "http://example.com/users/magic-link", strings.NewReader(formEncoded))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "http://example.com")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-	assertContains(t, rec.Body.String(), "http://magic.local/link")
 }
 
 func TestUserDetailShowsEmails(t *testing.T) {
@@ -1715,7 +1699,7 @@ func TestUsersTable(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -1746,7 +1730,7 @@ func TestCampaignsTable(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -1764,7 +1748,7 @@ func TestSessionsTable(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/sessions/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/sessions/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -1780,7 +1764,7 @@ func TestParticipantsTable(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/participants/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/participants/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -1826,7 +1810,7 @@ func TestCharactersTable(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -1857,7 +1841,7 @@ func TestEventLogTable(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -1871,7 +1855,7 @@ func TestEventLogTablePushURL(t *testing.T) {
 	eventClient := &testEventClient{listResponse: &statev1.ListEventsResponse{}}
 	provider := testFullClientProvider{event: eventClient}
 	handler := NewHandler(provider)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/table?actor_type=system&event_type=campaign.started&page_token=next", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/_rows?actor_type=system&event_type=campaign.started&page_token=next", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -1937,7 +1921,7 @@ func TestDashboardContent(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/dashboard/content", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/dashboard/_stats", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -2881,7 +2865,7 @@ func TestSystemsTableWithData(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/systems/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/systems/_rows", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -2899,7 +2883,7 @@ func TestSystemsTableEmpty(t *testing.T) {
 	webHandler := &Handler{clientProvider: provider}
 	handler := webHandler.routes()
 
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/systems/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/systems/_rows", nil)
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 
@@ -3007,7 +2991,7 @@ func TestInvitesTable(t *testing.T) {
 		webHandler := &Handler{clientProvider: provider}
 		handler := webHandler.routes()
 
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/_rows", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
@@ -3026,7 +3010,7 @@ func TestInvitesTable(t *testing.T) {
 		webHandler := &Handler{clientProvider: provider}
 		handler := webHandler.routes()
 
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/_rows", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
@@ -3047,7 +3031,7 @@ func TestInvitesTable(t *testing.T) {
 		webHandler := &Handler{clientProvider: provider}
 		handler := webHandler.routes()
 
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/_rows", nil)
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
 
@@ -3970,7 +3954,7 @@ func TestBuildSystemRows(t *testing.T) {
 // TestUsersTableNilClient verifies the handler renders an error when authClient is nil.
 func TestUsersTableNilClient(t *testing.T) {
 	handler := NewHandler(nil) // nil provider → nil authClient
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -3985,7 +3969,7 @@ func TestUsersTableNilClient(t *testing.T) {
 func TestUsersTableListError(t *testing.T) {
 	authClient := &testAuthClient{listUsersErr: fmt.Errorf("connection refused")}
 	handler := NewHandler(testClientProvider{auth: authClient})
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4002,7 +3986,7 @@ func TestUsersTableWithUsers(t *testing.T) {
 		},
 	}
 	handler := NewHandler(testClientProvider{auth: authClient})
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4014,7 +3998,7 @@ func TestUsersTableWithUsers(t *testing.T) {
 // TestCampaignsTableNilClient verifies the handler renders an error when campaignClient is nil.
 func TestCampaignsTableNilClient(t *testing.T) {
 	handler := NewHandler(nil)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4026,7 +4010,7 @@ func TestCampaignsTableNilClient(t *testing.T) {
 func TestCampaignsTableListError(t *testing.T) {
 	campaignClient := &testCampaignClient{listErr: fmt.Errorf("unavailable")}
 	handler := NewHandler(testClientProvider{campaign: campaignClient})
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4044,7 +4028,7 @@ func TestCampaignsTableWithData(t *testing.T) {
 		},
 	}
 	handler := NewHandler(testClientProvider{campaign: campaignClient})
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4056,7 +4040,7 @@ func TestCampaignsTableWithData(t *testing.T) {
 func TestSystemsTableListError(t *testing.T) {
 	systemClient := &testSystemClient{listErr: fmt.Errorf("unavailable")}
 	handler := NewHandler(testClientProvider{system: systemClient})
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/systems/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/systems/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4092,7 +4076,7 @@ func TestSessionsTableListError(t *testing.T) {
 	sessionClient := &testSessionClient{listErr: fmt.Errorf("unavailable")}
 	provider := testFullClientProvider{session: sessionClient}
 	handler := NewHandler(provider)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/sessions/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/sessions/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4104,7 +4088,7 @@ func TestSessionsTableListError(t *testing.T) {
 func TestCharactersTableErrorPaths(t *testing.T) {
 	t.Run("nil client", func(t *testing.T) {
 		handler := NewHandler(nil)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4116,7 +4100,7 @@ func TestCharactersTableErrorPaths(t *testing.T) {
 		charClient := &testCharacterClient{listErr: fmt.Errorf("unavailable")}
 		provider := testFullClientProvider{character: charClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4139,7 +4123,7 @@ func TestCharactersTableErrorPaths(t *testing.T) {
 		}
 		provider := testFullClientProvider{character: charClient, participant: partClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4158,7 +4142,7 @@ func TestCharactersTableErrorPaths(t *testing.T) {
 		partClient := &testParticipantClient{listErr: fmt.Errorf("unavailable")}
 		provider := testFullClientProvider{character: charClient, participant: partClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/characters/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4172,7 +4156,7 @@ func TestCharactersTableErrorPaths(t *testing.T) {
 func TestInvitesTableErrorPaths(t *testing.T) {
 	t.Run("nil client", func(t *testing.T) {
 		handler := NewHandler(nil)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4184,7 +4168,7 @@ func TestInvitesTableErrorPaths(t *testing.T) {
 		inviteClient := &testInviteClient{listInvitesErr: fmt.Errorf("unavailable")}
 		provider := testFullClientProvider{invite: inviteClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4212,7 +4196,7 @@ func TestInvitesTableErrorPaths(t *testing.T) {
 		}
 		provider := testFullClientProvider{invite: inviteClient, auth: authClient, participant: partClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4232,7 +4216,7 @@ func TestInvitesTableErrorPaths(t *testing.T) {
 		authClient := &testAuthClient{getUserErr: fmt.Errorf("not found")}
 		provider := testFullClientProvider{invite: inviteClient, auth: authClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/invites/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4282,7 +4266,7 @@ func TestSnapshotClientNilProvider(t *testing.T) {
 // TestEventLogTableNilClient verifies the event log table renders an error when eventClient is nil.
 func TestEventLogTableNilClient(t *testing.T) {
 	handler := NewHandler(nil)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4293,7 +4277,7 @@ func TestEventLogTableNilClient(t *testing.T) {
 // TestParticipantsTableNilClient verifies participants table renders error when client is nil.
 func TestParticipantsTableNilClient(t *testing.T) {
 	handler := NewHandler(nil)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/participants/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/participants/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4365,7 +4349,7 @@ func TestSessionsTableWithData(t *testing.T) {
 	}
 	provider := testFullClientProvider{session: sessionClient}
 	handler := NewHandler(provider)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/sessions/table", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/sessions/_rows", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4379,7 +4363,7 @@ func TestParticipantsTableErrorPaths(t *testing.T) {
 		partClient := &testParticipantClient{listErr: fmt.Errorf("unavailable")}
 		provider := testFullClientProvider{participant: partClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/participants/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/participants/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4395,7 +4379,7 @@ func TestParticipantsTableErrorPaths(t *testing.T) {
 		}
 		provider := testFullClientProvider{participant: partClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/participants/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/participants/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4410,7 +4394,7 @@ func TestEventLogTableErrorPaths(t *testing.T) {
 		eventClient := &testEventClient{listErr: fmt.Errorf("unavailable")}
 		provider := testFullClientProvider{event: eventClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4428,7 +4412,7 @@ func TestEventLogTableErrorPaths(t *testing.T) {
 		}
 		provider := testFullClientProvider{event: eventClient, campaign: &testCampaignClient{}}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/table", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/_rows", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4442,7 +4426,7 @@ func TestEventLogTableErrorPaths(t *testing.T) {
 		eventClient := &testEventClient{}
 		provider := testFullClientProvider{event: eventClient}
 		handler := NewHandler(provider)
-		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/table?actor_type=system&event_type=campaign", nil)
+		req := httptest.NewRequest(http.MethodGet, "http://example.com/campaigns/camp-1/events/_rows?actor_type=system&event_type=campaign", nil)
 		req.Header.Set("HX-Request", "true")
 		rec := httptest.NewRecorder()
 		handler.ServeHTTP(rec, req)
@@ -4457,7 +4441,7 @@ func TestScenarioEventsTablePushURL(t *testing.T) {
 	eventClient := &testEventClient{listResponse: &statev1.ListEventsResponse{}}
 	provider := testFullClientProvider{event: eventClient}
 	handler := NewHandler(provider)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/scenarios/camp-1/events/table?event_type=campaign.created&start_date=2024-02-01&page_token=next", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/scenarios/camp-1/events/_rows?event_type=campaign.created&start_date=2024-02-01&page_token=next", nil)
 	req.Header.Set("HX-Request", "true")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
@@ -4487,86 +4471,8 @@ func TestUserDetailWithMessage(t *testing.T) {
 // TestDashboardContentNilClients verifies dashboard renders with missing clients.
 func TestDashboardContentNilClients(t *testing.T) {
 	handler := NewHandler(nil)
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/dashboard/content", nil)
+	req := httptest.NewRequest(http.MethodGet, "http://example.com/dashboard/_stats", nil)
 	req.Header.Set("HX-Request", "true")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-}
-
-func TestGenerateMagicLinkMethodNotAllowed(t *testing.T) {
-	webHandler := &Handler{}
-	handler := webHandler.routes()
-
-	req := httptest.NewRequest(http.MethodGet, "http://example.com/users/magic-link", nil)
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("expected 405, got %d", rec.Code)
-	}
-}
-
-func TestGenerateMagicLinkMissingFields(t *testing.T) {
-	authClient := &testAuthClient{user: &authv1.User{Id: "user-1"}}
-	provider := testClientProvider{auth: authClient}
-	webHandler := &Handler{clientProvider: provider}
-	handler := webHandler.routes()
-
-	form := url.Values{}
-	form.Set("origin", "http://example.com")
-
-	req := httptest.NewRequest(http.MethodPost, "http://example.com/users/magic-link", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "http://example.com")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-}
-
-func TestGenerateMagicLinkNilAuthClient(t *testing.T) {
-	webHandler := &Handler{}
-	handler := webHandler.routes()
-
-	form := url.Values{}
-	form.Set("user_id", "user-1")
-	form.Set("email", "test@example.com")
-	form.Set("origin", "http://example.com")
-
-	req := httptest.NewRequest(http.MethodPost, "http://example.com/users/magic-link", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "http://example.com")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("expected 200, got %d", rec.Code)
-	}
-}
-
-func TestGenerateMagicLinkGRPCError(t *testing.T) {
-	authClient := &testAuthClient{
-		user:         &authv1.User{Id: "user-1", Email: "Test User"},
-		magicLinkErr: status.Error(codes.Internal, "boom"),
-	}
-	provider := testClientProvider{auth: authClient}
-	webHandler := &Handler{clientProvider: provider}
-	handler := webHandler.routes()
-
-	form := url.Values{}
-	form.Set("user_id", "user-1")
-	form.Set("email", "test@example.com")
-	form.Set("origin", "http://example.com")
-
-	req := httptest.NewRequest(http.MethodPost, "http://example.com/users/magic-link", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-	req.Header.Set("Origin", "http://example.com")
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 

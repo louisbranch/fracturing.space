@@ -45,8 +45,8 @@ func TestRegisterRoutes(t *testing.T) {
 	}{
 		{path: "/scenarios", wantCode: http.StatusOK, wantCall: "scenarios_page"},
 		{path: "/scenarios/camp-1/events", wantCode: http.StatusOK, wantCall: "scenarios_events", wantCampaign: "camp-1"},
-		{path: "/scenarios/camp-1/events/table", wantCode: http.StatusOK, wantCall: "scenarios_events_table", wantCampaign: "camp-1"},
-		{path: "/scenarios/camp-1/timeline/table", wantCode: http.StatusOK, wantCall: "scenarios_timeline_table", wantCampaign: "camp-1"},
+		{path: "/scenarios/camp-1/events/_rows", wantCode: http.StatusOK, wantCall: "scenarios_events_table", wantCampaign: "camp-1"},
+		{path: "/scenarios/camp-1/timeline/_rows", wantCode: http.StatusOK, wantCall: "scenarios_timeline_table", wantCampaign: "camp-1"},
 		{path: "/scenarios/camp-1/unknown", wantCode: http.StatusNotFound},
 	}
 

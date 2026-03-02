@@ -30,7 +30,7 @@ func TestRegisterRoutes(t *testing.T) {
 		wantCall string
 	}{
 		{path: "/", wantCall: "dashboard"},
-		{path: "/dashboard/content", wantCall: "dashboard_content"},
+		{path: "/dashboard/_stats", wantCall: "dashboard_content"},
 	}
 
 	for _, tc := range tests {

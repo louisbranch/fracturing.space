@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -14,35 +13,15 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	admingrpcdial "github.com/louisbranch/fracturing.space/internal/services/admin/integration/grpcdial"
-	adminstorage "github.com/louisbranch/fracturing.space/internal/services/admin/integration/storage"
-	adminsqlite "github.com/louisbranch/fracturing.space/internal/services/admin/storage/sqlite"
 	"google.golang.org/grpc"
 )
-
-// adminServerEnv captures startup defaults for the admin process.
-type adminServerEnv struct {
-	DBPath string `env:"FRACTURING_SPACE_ADMIN_DB_PATH"`
-}
-
-func loadAdminServerEnv() adminServerEnv {
-	var cfg adminServerEnv
-	_ = config.ParseEnv(&cfg)
-	if cfg.DBPath == "" {
-		cfg.DBPath = filepath.Join("data", "admin.db")
-	}
-	return cfg
-}
 
 // adminAuthzOverrideReason records why admin service uses platform override.
 const adminAuthzOverrideReason = "admin_dashboard"
 
 // Config defines the inputs for the admin operator process.
-//
-// The admin service is a control plane that consumes game/auth APIs; these
-// values select those API surfaces and optional authentication enforcement.
 type Config struct {
 	HTTPAddr        string
 	GRPCAddr        string
@@ -53,16 +32,12 @@ type Config struct {
 }
 
 // Server hosts the admin dashboard and manages authenticated gRPC clients.
-//
-// It keeps a thin orchestration layer between operator HTTP handlers and domain
-// services that hold campaign/user/session/project state.
 type Server struct {
 	httpAddr    string
 	grpcAddr    string
 	authAddr    string
 	grpcClients *grpcClients
 	httpServer  *http.Server
-	adminStore  *adminsqlite.Store
 }
 
 // grpcClients stores gRPC connections and clients for the admin server.
@@ -309,42 +284,36 @@ func (g *grpcClients) Close() {
 }
 
 // NewServer builds a configured admin server.
-func NewServer(ctx context.Context, config Config) (*Server, error) {
-	httpAddr := strings.TrimSpace(config.HTTPAddr)
+func NewServer(ctx context.Context, cfg Config) (*Server, error) {
+	httpAddr := strings.TrimSpace(cfg.HTTPAddr)
 	if httpAddr == "" {
 		return nil, errors.New("http address is required")
 	}
-	if config.GRPCDialTimeout <= 0 {
-		config.GRPCDialTimeout = timeouts.GRPCDial
-	}
-
-	adminEnv := loadAdminServerEnv()
-	adminStore, err := openAdminStore(adminEnv.DBPath)
-	if err != nil {
-		return nil, err
+	if cfg.GRPCDialTimeout <= 0 {
+		cfg.GRPCDialTimeout = timeouts.GRPCDial
 	}
 
 	clients := &grpcClients{}
-	if strings.TrimSpace(config.GRPCAddr) != "" {
-		clientsResult, err := dialGameGRPC(ctx, config)
+	if strings.TrimSpace(cfg.GRPCAddr) != "" {
+		clientsResult, err := dialGameGRPC(ctx, cfg)
 		if err != nil {
 			log.Printf("admin game gRPC dial failed: %v", err)
-			go connectGameGRPCWithRetry(ctx, config, clients)
+			go connectGameGRPCWithRetry(ctx, cfg, clients)
 		} else {
 			clients.SetGameClients(clientsResult)
 		}
 	}
-	if strings.TrimSpace(config.AuthAddr) != "" {
-		clientsResult, err := dialAuthGRPC(ctx, config)
+	if strings.TrimSpace(cfg.AuthAddr) != "" {
+		clientsResult, err := dialAuthGRPC(ctx, cfg)
 		if err != nil {
 			log.Printf("admin auth gRPC dial failed: %v", err)
-			go connectAuthGRPCWithRetry(ctx, config, clients)
+			go connectAuthGRPCWithRetry(ctx, cfg, clients)
 		} else {
 			clients.SetAuthClients(clientsResult)
 		}
 	}
 
-	handler := NewHandlerWithConfig(clients, config.GRPCAddr, config.AuthConfig)
+	handler := NewHandlerWithConfig(clients, cfg.GRPCAddr, cfg.AuthConfig)
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           handler,
@@ -353,11 +322,10 @@ func NewServer(ctx context.Context, config Config) (*Server, error) {
 
 	return &Server{
 		httpAddr:    httpAddr,
-		grpcAddr:    config.GRPCAddr,
-		authAddr:    config.AuthAddr,
+		grpcAddr:    cfg.GRPCAddr,
+		authAddr:    cfg.AuthAddr,
 		grpcClients: clients,
 		httpServer:  httpServer,
-		adminStore:  adminStore,
 	}, nil
 }
 
@@ -401,20 +369,14 @@ func (s *Server) Close() {
 	if s.grpcClients != nil {
 		s.grpcClients.Close()
 	}
-	if s.adminStore != nil {
-		if err := s.adminStore.Close(); err != nil {
-			log.Printf("close admin store: %v", err)
-		}
+	if s.httpServer != nil {
+		_ = s.httpServer.Close()
 	}
 }
 
-func openAdminStore(path string) (*adminsqlite.Store, error) {
-	return adminstorage.OpenStore(path)
-}
-
-// dialGRPC connects to the game server and returns a client.
-func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
-	clients, err := admingrpcdial.DialGame(ctx, config.GRPCAddr, config.GRPCDialTimeout, adminAuthzOverrideReason)
+// dialGameGRPC connects to the game server and returns a client.
+func dialGameGRPC(ctx context.Context, cfg Config) (gameGRPCClients, error) {
+	clients, err := admingrpcdial.DialGame(ctx, cfg.GRPCAddr, cfg.GRPCDialTimeout, adminAuthzOverrideReason)
 	if err != nil {
 		return gameGRPCClients{}, err
 	}
@@ -435,8 +397,8 @@ func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 }
 
 // dialAuthGRPC connects to the auth server and returns a client.
-func dialAuthGRPC(ctx context.Context, config Config) (authGRPCClients, error) {
-	clients, err := admingrpcdial.DialAuth(ctx, config.AuthAddr, config.GRPCDialTimeout)
+func dialAuthGRPC(ctx context.Context, cfg Config) (authGRPCClients, error) {
+	clients, err := admingrpcdial.DialAuth(ctx, cfg.AuthAddr, cfg.GRPCDialTimeout)
 	if err != nil {
 		return authGRPCClients{}, err
 	}
@@ -448,19 +410,19 @@ func dialAuthGRPC(ctx context.Context, config Config) (authGRPCClients, error) {
 }
 
 // connectGameGRPCWithRetry keeps dialing until a connection is established or context ends.
-func connectGameGRPCWithRetry(ctx context.Context, config Config, clients *grpcClients) {
+func connectGameGRPCWithRetry(ctx context.Context, cfg Config, clients *grpcClients) {
 	if clients == nil {
 		return
 	}
-	if strings.TrimSpace(config.GRPCAddr) == "" {
+	if strings.TrimSpace(cfg.GRPCAddr) == "" {
 		return
 	}
 	connectGRPCWithRetry(
 		ctx,
-		config.GRPCAddr,
+		cfg.GRPCAddr,
 		clients.HasGameConnection,
 		func(connectCtx context.Context) error {
-			clientsResult, err := dialGameGRPC(connectCtx, config)
+			clientsResult, err := dialGameGRPC(connectCtx, cfg)
 			if err != nil {
 				return err
 			}
@@ -473,19 +435,19 @@ func connectGameGRPCWithRetry(ctx context.Context, config Config, clients *grpcC
 }
 
 // connectAuthGRPCWithRetry keeps dialing until a connection is established or context ends.
-func connectAuthGRPCWithRetry(ctx context.Context, config Config, clients *grpcClients) {
+func connectAuthGRPCWithRetry(ctx context.Context, cfg Config, clients *grpcClients) {
 	if clients == nil {
 		return
 	}
-	if strings.TrimSpace(config.AuthAddr) == "" {
+	if strings.TrimSpace(cfg.AuthAddr) == "" {
 		return
 	}
 	connectGRPCWithRetry(
 		ctx,
-		config.AuthAddr,
+		cfg.AuthAddr,
 		clients.HasAuthConnection,
 		func(connectCtx context.Context) error {
-			authClients, err := dialAuthGRPC(connectCtx, config)
+			authClients, err := dialAuthGRPC(connectCtx, cfg)
 			if err != nil {
 				return err
 			}

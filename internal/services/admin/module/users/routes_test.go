@@ -23,10 +23,6 @@ func (f *fakeService) HandleUserLookup(http.ResponseWriter, *http.Request) {
 	f.lastCall = "users_lookup"
 }
 
-func (f *fakeService) HandleMagicLink(http.ResponseWriter, *http.Request) {
-	f.lastCall = "users_magic_link"
-}
-
 func (f *fakeService) HandleUserDetail(_ http.ResponseWriter, _ *http.Request, userID string) {
 	f.lastCall = "users_detail"
 	f.lastUser = userID
@@ -52,9 +48,9 @@ func TestRegisterRoutes(t *testing.T) {
 		wantUser string
 	}{
 		{path: "/users", method: http.MethodGet, wantCode: http.StatusOK, wantCall: "users_page"},
-		{path: "/users/table", method: http.MethodGet, wantCode: http.StatusOK, wantCall: "users_table"},
+		{path: "/users/_rows", method: http.MethodGet, wantCode: http.StatusOK, wantCall: "users_table"},
 		{path: "/users/lookup", method: http.MethodGet, wantCode: http.StatusOK, wantCall: "users_lookup"},
-		{path: "/users/magic-link", method: http.MethodPost, wantCode: http.StatusOK, wantCall: "users_magic_link"},
+		{path: "/users/magic-link", method: http.MethodPost, wantCode: http.StatusNotFound},
 		{path: "/users/u-1", method: http.MethodGet, wantCode: http.StatusOK, wantCall: "users_detail", wantUser: "u-1"},
 		{path: "/users/u-1/invites", method: http.MethodGet, wantCode: http.StatusOK, wantCall: "users_invites", wantUser: "u-1"},
 		{path: "/users/create", method: http.MethodGet, wantCode: http.StatusNotFound},

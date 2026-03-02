@@ -170,7 +170,7 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 // ScenarioTimelinePanel renders the timeline tab content.
 templ ScenarioTimelinePanel(campaignID string, loc Localizer) {
 	<div id="scenario-timeline-container">
-		@LazyLoad("/scenarios/"+campaignID+"/timeline/table", T(loc, "common.loading"))
+		@LazyLoad("/scenarios/"+campaignID+"/timeline/_rows", T(loc, "common.loading"))
 	</div>
 }
 
@@ -193,8 +193,8 @@ templ ScenarioTimelineTableContent(view ScenarioTimelineView, loc Localizer) {
 			@PaginationTargeted(
 				view.NextToken,
 				view.PrevToken,
-				"/scenarios/"+view.CampaignID+"/timeline/table",
-				"/scenarios/"+view.CampaignID+"/timeline/table",
+				"/scenarios/"+view.CampaignID+"/timeline/_rows",
+				"/scenarios/"+view.CampaignID+"/timeline/_rows",
 				"#scenario-timeline-container",
 				false,
 				loc,
@@ -282,7 +282,7 @@ templ ScenarioEventsPanel(view ScenarioEventsView, loc Localizer) {
 templ ScenarioEventFilterForm(campaignID string, filters EventFilterOptions, loc Localizer) {
 	<form
 		class="border border-base-300 rounded-lg p-4"
-		hx-get={ "/scenarios/" + campaignID + "/events/table" }
+		hx-get={ "/scenarios/" + campaignID + "/events/_rows" }
 		hx-target="#scenario-events-container"
 		hx-swap="innerHTML"
 		hx-push-url="true"
@@ -351,7 +351,7 @@ templ ScenarioEventsTableContent(view ScenarioEventsView, loc Localizer) {
 			view.NextToken,
 			view.PrevToken,
 			EventFilterBaseURL("/scenarios/"+view.CampaignID+"/events", view.Filters),
-			EventFilterBaseURL("/scenarios/"+view.CampaignID+"/events/table", view.Filters),
+			EventFilterBaseURL("/scenarios/"+view.CampaignID+"/events/_rows", view.Filters),
 			"#scenario-events-container",
 			true,
 			loc,
