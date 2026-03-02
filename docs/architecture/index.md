@@ -4,7 +4,7 @@ nav_order: 4
 has_children: true
 status: canonical
 owner: engineering
-last_reviewed: "2026-02-26"
+last_reviewed: "2026-03-02"
 ---
 
 # Architecture
@@ -13,34 +13,14 @@ Durable architecture, domain, and policy documentation.
 
 ## Start here
 
-- [Overview](overview.md)
-- [Architecture](architecture.md)
-- [Domain language](domain-language.md)
-- [Event-driven system](event-driven-system.md)
+1. [Foundations](foundations/)
+2. [System extension](systems/)
+3. [Platform surfaces](platform/)
+4. [Policy and quality](policy/)
 
-## System extension path
+## Fast paths
 
-- [Game systems](game-systems.md)
-- [Systems checklist](systems.md)
-- [Quick start: system developer](quick-start-system-developer.md)
-- [System developer checklist](system-developer-checklist.md)
-- [Daggerheart event timeline contract](daggerheart-event-timeline-contract.md)
-- [Daggerheart creation workflow](daggerheart-creation-workflow.md)
-
-## Runtime boundaries and policy
-
-- [Web architecture](web-architecture.md)
-- [Web module playbook](web-module-playbook.md)
-- [I18n and l10n architecture](i18n-l10n-architecture.md)
-- [Identity and recovery](identity.md)
-- [OAuth system](oauth.md)
-- [Campaign authorization model](campaign-authorization-model.md)
-- [Campaign authorization audit and telemetry](campaign-authorization-audit.md)
-- [Asset catalog ownership](asset-catalog-ownership.md)
-
-## Safety and testing
-
-- [Event payload change policy](event-payload-change-policy.md)
-- [Testing policy](testing-coverage.md)
-- [Testability](testability.md)
-- [Event replay](event-replay.md)
+- I am new to the codebase: [Foundations](foundations/)
+- I am adding mechanics or a new system: [System extension](systems/)
+- I am changing auth/web/i18n/integration boundaries: [Platform surfaces](platform/)
+- I am changing testing or compatibility policy: [Policy and quality](policy/)

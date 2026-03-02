@@ -88,7 +88,7 @@ Run `make cover` when production behavior changes and report notable coverage im
 - Document both exported and non-exported functions/types with "why" context.
 - Promote durable decisions (architecture, domain language, migration rationale) to `docs/`.
 - Treat `.agents/plans/` notes as temporary working memory; migrate lasting knowledge before PR.
-- Keep domain language intentional and consistent with `docs/architecture/domain-language.md`.
+- Keep domain language intentional and consistent with `docs/architecture/foundations/domain-language.md`.
 - Docs lifecycle policy:
   - Keep `docs/` reader-first and durable; remove stale or completed implementation notes instead of preserving them as historical clutter.
   - Keep in-progress plans, phase trackers, and working backlogs in `.agents/plans/`, not in reader-facing docs.

@@ -6,13 +6,18 @@ has_children: true
 
 # Audience guides
 
-Pick the track that matches what you need right now.
+Role-based entrypoints for users, contributors, and maintainers.
 
-- [Contributors](contributors.md): first code/docs change, tests, and PR workflow.
-- [Contributor map](contributor-map.md): first-edit path by task type.
-- [Adding a command/event/system](adding-command-event-system.md): focused extension workflow.
-- [Operators](operators.md): local/prod runtime operations and configuration.
-- [Clients and tooling](clients.md): MCP and client integration surfaces.
-- [System designers](system-designers.md): system extension and mechanics design.
+## Quick routing
 
-If you are unsure, start with [Contributors](contributors.md) and switch tracks later.
+| Role | Need to know | Good to know | Reference |
+| --- | --- | --- | --- |
+| User (player/GM) | [Users](users.md) | [Running](../running/index.md) | [Project overview](../architecture/foundations/overview.md) |
+| Contributor | [Contributors](contributors.md) | [Contributor map](../reference/contributor-map.md) | [Architecture index](../architecture/index.md) |
+| Go developer | [Go developers](go-developers.md) | [Running](../running/index.md) | [Configuration](../running/configuration.md) |
+| Integrator (MCP/client) | [Integrators](integrators.md) | [Running](../running/quickstart.md) | [MCP reference](../reference/mcp.md) |
+| System developer | [System developers](system-developers.md) | [Add command/event/system](../guides/adding-command-event-system.md) | [Game systems architecture](../architecture/systems/game-systems.md) |
+| Operator | [Operators](operators.md) | [Integration tests](../running/integration-tests.md) | [Production](../running/production.md) |
+| Translator | [Translators](translators.md) | [I18n architecture](../architecture/platform/i18n-l10n-architecture.md) | [I18n status](../reference/i18n-status.md) |
+
+If you are unsure, start with [Contributors](contributors.md).

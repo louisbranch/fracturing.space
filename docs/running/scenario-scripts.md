@@ -1,7 +1,7 @@
 ---
 title: "Scenario scripts"
 parent: "Running"
-nav_order: 8
+nav_order: 9
 status: canonical
 owner: engineering
 last_reviewed: "2026-02-26"

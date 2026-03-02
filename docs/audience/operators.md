@@ -1,26 +1,25 @@
 ---
 title: "Operators"
 parent: "Audience"
-nav_order: 4
+nav_order: 6
 ---
 
 # Operators
 
 For running the stack locally or in production.
 
-## First action
+## Need to know
 
 - Local runtime: [Docker Compose (local)](../running/docker-compose.md)
 - Deployment runtime: [Production deployment](../running/production.md)
 - Runtime defaults: [Configuration reference](../running/configuration.md)
 
-## Useful files
+## Good to know
 
-- Compose topology: `../../docker-compose.yml`
-- Topology catalog: `../../topology/services.json`
-- Caddy entrypoint: `../../Caddyfile`
-- Generated Caddy routes: `../../Caddyfile.routes.generated`
+- Compose topology: `docker-compose.yml`
+- Topology catalog: `topology/services.json`
+- Caddy entrypoint: `Caddyfile`
 
-## Next step
+## Reference
 
-After runtime setup, validate service behavior with [integration tests](../running/integration-tests.md).
+After runtime setup, validate behavior with [Integration tests](../running/integration-tests.md).

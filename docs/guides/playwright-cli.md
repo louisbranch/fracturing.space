@@ -1,7 +1,7 @@
 ---
 title: "Playwright CLI"
 parent: "Guides"
-nav_order: 1
+nav_order: 3
 ---
 
 # Playwright-CLI: Learnings & Patterns

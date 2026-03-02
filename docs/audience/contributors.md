@@ -8,38 +8,23 @@ nav_order: 1
 
 Canonical onboarding path for developers adding features, fixing bugs, or improving docs.
 
-## Start here
+## Need to know
 
-- [Quickstart (Docker)](../running/quickstart.md)
-- [Local development (Go)](../running/local-dev.md)
-- [Contributing guide](../../CONTRIBUTING.md)
-- [Documentation quality checks](../guides/docs-quality-checks.md)
-
-## First contribution path
-
-1. Choose one runtime path (Docker or local Go).
-2. Verify baseline checks:
+1. Choose a runtime path: [Quickstart (Docker)](../running/quickstart.md) or [Local development (Go)](../running/local-dev.md).
+2. Follow the contribution workflow: [Contributing guide](https://github.com/louisbranch/fracturing.space/blob/main/CONTRIBUTING.md).
+3. Run baseline verification:
    - `make test`
    - `make integration`
-3. Pick an edit target from [Contributor map](contributor-map.md).
-4. Run area-specific tests plus docs checks before opening a PR.
+4. Run docs checks for docs-heavy changes:
+   - `make docs-check`
 
-## Common workflows
+## Good to know
 
-- [Integration tests](../running/integration-tests.md)
-- [Seeding demo data](../running/seeding.md)
-- [Contributor map (where to edit for X)](contributor-map.md)
-- [Web module playbook](../architecture/web-module-playbook.md)
+- File/package routing: [Contributor map](../reference/contributor-map.md)
+- Extension workflow: [Adding a command/event/system](../guides/adding-command-event-system.md)
+- Web module patterns: [Web module playbook](../guides/web-module-playbook.md)
 
-## Web architecture checks
+## Reference
 
-Run these when changing web routes, handlers, composition, or platform code:
-
-- `make web-architecture-check`
-- `go test ./internal/services/web/...`
-
-## Architecture context (only when needed)
-
-- [Project overview](../architecture/overview.md)
-- [Architecture](../architecture/architecture.md)
-- [Domain language](../architecture/domain-language.md)
+- Architecture start: [Architecture index](../architecture/index.md)
+- Runtime operations: [Running index](../running/index.md)
