@@ -14,8 +14,8 @@ Base locale: `en-US`.
 
 | Locale | Base Keys | Translated | Missing | Extra | Completion |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `en-US` | 976 | 976 | 0 | 0 | 100.0% |
-| `pt-BR` | 976 | 976 | 0 | 0 | 100.0% |
+| `en-US` | 958 | 958 | 0 | 0 | 100.0% |
+| `pt-BR` | 958 | 958 | 0 | 0 | 100.0% |
 
 ## Locale: `en-US`
 
@@ -23,7 +23,7 @@ Base locale: `en-US`.
 
 | Namespace | Base Keys | Translated | Missing | Extra | Completion |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `admin` | 387 | 387 | 0 | 0 | 100.0% |
+| `admin` | 369 | 369 | 0 | 0 | 100.0% |
 | `core` | 3 | 3 | 0 | 0 | 100.0% |
 | `errors` | 56 | 56 | 0 | 0 | 100.0% |
 | `game` | 2 | 2 | 0 | 0 | 100.0% |
@@ -36,7 +36,7 @@ Base locale: `en-US`.
 
 | Namespace | Base Keys | Translated | Missing | Extra | Completion |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| `admin` | 387 | 387 | 0 | 0 | 100.0% |
+| `admin` | 369 | 369 | 0 | 0 | 100.0% |
 | `core` | 3 | 3 | 0 | 0 | 100.0% |
 | `errors` | 56 | 56 | 0 | 0 | 100.0% |
 | `game` | 2 | 2 | 0 | 0 | 100.0% |

@@ -3,16 +3,16 @@
   "locales": [
     {
       "locale": "en-US",
-      "base_keys": 976,
-      "translated": 976,
+      "base_keys": 958,
+      "translated": 958,
       "missing": 0,
       "extra": 0,
       "completion": 100,
       "namespaces": [
         {
           "namespace": "admin",
-          "base_keys": 387,
-          "translated": 387,
+          "base_keys": 369,
+          "translated": 369,
           "missing": 0,
           "extra": 0,
           "completion": 100
@@ -63,16 +63,16 @@
     },
     {
       "locale": "pt-BR",
-      "base_keys": 976,
-      "translated": 976,
+      "base_keys": 958,
+      "translated": 958,
       "missing": 0,
       "extra": 0,
       "completion": 100,
       "namespaces": [
         {
           "namespace": "admin",
-          "base_keys": 387,
-          "translated": 387,
+          "base_keys": 369,
+          "translated": 369,
           "missing": 0,
           "extra": 0,
           "completion": 100
