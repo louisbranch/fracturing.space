@@ -3,7 +3,6 @@
 package integration
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -11,8 +10,7 @@ import (
 )
 
 func TestDaggerheartTimelineTypesAreRegistered(t *testing.T) {
-	repoRoot := integrationRepoRoot(t)
-	timelineDoc := filepath.Join(repoRoot, "docs", "architecture", "daggerheart-event-timeline-contract.md")
+	timelineDoc := daggerheartTimelineContractDocPath(t)
 
 	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypesFromDocs(timelineDoc)
 	if err != nil {
@@ -54,8 +52,7 @@ func TestDaggerheartTimelineTypesAreRegistered(t *testing.T) {
 }
 
 func TestRegisteredDaggerheartTimelineTypesAreDocumented(t *testing.T) {
-	repoRoot := integrationRepoRoot(t)
-	timelineDoc := filepath.Join(repoRoot, "docs", "architecture", "daggerheart-event-timeline-contract.md")
+	timelineDoc := daggerheartTimelineContractDocPath(t)
 
 	commandTypes, eventTypes, err := loadTimelineCommandAndEventTypesFromDocs(timelineDoc)
 	if err != nil {

@@ -19,6 +19,21 @@ import (
 
 var timelineTypePattern = regexp.MustCompile(`[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+`)
 
+func daggerheartTimelineContractDocPath(t *testing.T) string {
+	t.Helper()
+
+	docPath := filepath.Join(
+		integrationRepoRoot(t),
+		"docs",
+		"reference",
+		"daggerheart-event-timeline-contract.md",
+	)
+	if _, err := os.Stat(docPath); err != nil {
+		t.Fatalf("daggerheart timeline contract doc not found at %s: %v", docPath, err)
+	}
+	return docPath
+}
+
 func loadMarkedScenarioFiles(scenarioDir, marker string) (map[string]struct{}, error) {
 	out := make(map[string]struct{})
 	if strings.TrimSpace(scenarioDir) == "" {
