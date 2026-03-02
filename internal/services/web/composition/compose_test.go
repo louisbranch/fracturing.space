@@ -49,10 +49,9 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 			ResolveUserID:   func(*http.Request) string { return "user-1" },
 			ResolveLanguage: func(*http.Request) string { return "en" },
 		},
-		EnableExperimentalModules: true,
-		ChatHTTPAddr:              "127.0.0.1:9002",
-		RequestSchemePolicy:       requestmeta.SchemePolicy{TrustForwardedProto: true},
-		Registry:                  reg,
+		ChatHTTPAddr:        "127.0.0.1:9002",
+		RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: true},
+		Registry:            reg,
 	})
 	if err != nil {
 		t.Fatalf("ComposeAppHandler() error = %v", err)
@@ -65,9 +64,6 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNoContent)
 	}
 
-	if !reg.input.EnableExperimentalModules {
-		t.Fatalf("EnableExperimentalModules = false, want true")
-	}
 	if !reg.input.ProtectedOptions.RequestSchemePolicy.TrustForwardedProto {
 		t.Fatalf("ProtectedOptions.RequestSchemePolicy.TrustForwardedProto = false, want true")
 	}

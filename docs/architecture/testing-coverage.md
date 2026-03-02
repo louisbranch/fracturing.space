@@ -41,6 +41,10 @@ We follow test-driven development (TDD) for behavior changes. Coverage is a regr
   - `event`, `fork`, `invite`, `journal`, `module`, `participant`, `readiness`,
   - `replay`, `session`,
   - plus shared `joingrant`.
+- Web architecture floors also include critical transport seams:
+  - `web/app`, `web/composition`, `web/modules`,
+  - `web/platform/httpx`, `web/platform/requestmeta`, `web/platform/weberror`,
+  - `web/platform/modulehandler`, `web/platform/publichandler`, `web/platform/pagerender`.
 
 ## Critical domain coverpkg lens
 

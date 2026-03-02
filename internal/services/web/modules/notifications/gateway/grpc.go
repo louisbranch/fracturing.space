@@ -42,10 +42,12 @@ func NewGRPCGateway(client NotificationClient) notificationsapp.Gateway {
 	return GRPCGateway{Client: client}
 }
 
+// ListNotifications returns the package view collection for this workflow.
 func (g GRPCGateway) ListNotifications(ctx context.Context, userID string) ([]notificationsapp.NotificationSummary, error) {
 	return g.listAllNotifications(ctx, userID)
 }
 
+// GetNotification centralizes this web behavior in one helper seam.
 func (g GRPCGateway) GetNotification(ctx context.Context, userID string, notificationID string) (notificationsapp.NotificationSummary, error) {
 	resp, err := g.Client.GetNotification(
 		grpcauthctx.WithUserID(ctx, userID),
@@ -64,6 +66,7 @@ func (g GRPCGateway) GetNotification(ctx context.Context, userID string, notific
 	return mapNotification(resp.GetNotification()), nil
 }
 
+// OpenNotification applies this package workflow transition.
 func (g GRPCGateway) OpenNotification(ctx context.Context, userID string, notificationID string) (notificationsapp.NotificationSummary, error) {
 	resp, err := g.Client.MarkNotificationRead(
 		grpcauthctx.WithUserID(ctx, userID),
@@ -79,6 +82,7 @@ func (g GRPCGateway) OpenNotification(ctx context.Context, userID string, notifi
 	return mapNotification(resp.GetNotification()), nil
 }
 
+// listAllNotifications returns the package view collection for this workflow.
 func (g GRPCGateway) listAllNotifications(ctx context.Context, userID string) ([]notificationsapp.NotificationSummary, error) {
 	authCtx := grpcauthctx.WithUserID(ctx, userID)
 	return grpcpaging.CollectPagesMax[notificationsapp.NotificationSummary, *notificationsv1.Notification](
@@ -111,6 +115,7 @@ func (g GRPCGateway) listAllNotifications(ctx context.Context, userID string) ([
 	)
 }
 
+// mapNotification maps values across transport and domain boundaries.
 func mapNotification(notification *notificationsv1.Notification) notificationsapp.NotificationSummary {
 	if notification == nil {
 		return notificationsapp.NotificationSummary{}
@@ -128,6 +133,7 @@ func mapNotification(notification *notificationsv1.Notification) notificationsap
 	}
 }
 
+// sourceFromProto centralizes this web behavior in one helper seam.
 func sourceFromProto(source notificationsv1.NotificationSource) string {
 	switch source {
 	case notificationsv1.NotificationSource_NOTIFICATION_SOURCE_SYSTEM:
@@ -137,6 +143,7 @@ func sourceFromProto(source notificationsv1.NotificationSource) string {
 	}
 }
 
+// protoTimestampValue centralizes this web behavior in one helper seam.
 func protoTimestampValue(value *timestamppb.Timestamp) time.Time {
 	timestamp := protoTimestamp(value)
 	if timestamp == nil {
@@ -145,6 +152,7 @@ func protoTimestampValue(value *timestamppb.Timestamp) time.Time {
 	return *timestamp
 }
 
+// protoTimestamp centralizes this web behavior in one helper seam.
 func protoTimestamp(value *timestamppb.Timestamp) *time.Time {
 	if value == nil {
 		return nil

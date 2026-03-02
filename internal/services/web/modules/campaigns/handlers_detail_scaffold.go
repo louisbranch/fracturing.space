@@ -12,10 +12,12 @@ import (
 
 // --- Campaign detail route handlers ---
 
+// handleOverviewMethodNotAllowed preserves explicit Allow headers for the overview route.
 func (h handlers) handleOverviewMethodNotAllowed(w http.ResponseWriter, _ *http.Request) {
 	httpx.MethodNotAllowed(http.MethodGet+", HEAD")(w, nil)
 }
 
+// handleCharacterDetailRoute handles this route in the module transport layer.
 func (h handlers) handleCharacterDetailRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
@@ -30,6 +32,7 @@ func (h handlers) handleCharacterDetailRoute(w http.ResponseWriter, r *http.Requ
 	h.handleCharacterDetail(w, r, campaignID, characterID)
 }
 
+// handleSessionDetailRoute handles this route in the module transport layer.
 func (h handlers) handleSessionDetailRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
@@ -55,6 +58,7 @@ type campaignDetailSpec struct {
 	loadData func(ctx context.Context, campaignID string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error
 }
 
+// renderCampaignDetail centralizes this web behavior in one helper seam.
 func (h handlers) renderCampaignDetail(w http.ResponseWriter, r *http.Request, campaignID string, spec campaignDetailSpec) {
 	ctx, page, err := h.loadCampaignPage(w, r, campaignID)
 	if err != nil {

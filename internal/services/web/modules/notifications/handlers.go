@@ -15,16 +15,19 @@ import (
 // notificationService defines the service contract used by notification handlers.
 type notificationService = notificationsapp.Service
 
+// handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
 	service notificationService
 	nowFunc func() time.Time
 }
 
+// newHandlers builds package wiring for this web seam.
 func newHandlers(s notificationService, base modulehandler.Base) handlers {
 	return handlers{Base: base, service: s, nowFunc: time.Now}
 }
 
+// handleDetailRoute handles this route in the module transport layer.
 func (h handlers) handleDetailRoute(w http.ResponseWriter, r *http.Request) {
 	notificationID := strings.TrimSpace(r.PathValue("notificationID"))
 	if notificationID == "" {
@@ -34,6 +37,7 @@ func (h handlers) handleDetailRoute(w http.ResponseWriter, r *http.Request) {
 	h.handleDetail(w, r, notificationID)
 }
 
+// handleOpenRoute handles this route in the module transport layer.
 func (h handlers) handleOpenRoute(w http.ResponseWriter, r *http.Request) {
 	notificationID := strings.TrimSpace(r.PathValue("notificationID"))
 	if notificationID == "" {
@@ -43,6 +47,7 @@ func (h handlers) handleOpenRoute(w http.ResponseWriter, r *http.Request) {
 	h.handleOpen(w, r, notificationID)
 }
 
+// handleIndex handles this route in the module transport layer.
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, userID := h.RequestContextAndUserID(r)
@@ -54,6 +59,7 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	h.WritePage(w, r, webtemplates.T(loc, "game.notifications.title"), http.StatusOK, notificationsMainHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.NotificationsFragment(webtemplates.NotificationsPageView{Items: h.notificationListView(items, loc)}, loc))
 }
 
+// handleDetail handles this route in the module transport layer.
 func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, notificationID string) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, userID := h.RequestContextAndUserID(r)
@@ -70,6 +76,7 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, notificat
 	h.WritePage(w, r, webtemplates.T(loc, "game.notifications.title"), http.StatusOK, notificationsMainHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.NotificationsFragment(webtemplates.NotificationsPageView{Items: h.notificationListView(items, loc), Selected: h.notificationDetailView(item, loc)}, loc))
 }
 
+// handleOpen handles this route in the module transport layer.
 func (h handlers) handleOpen(w http.ResponseWriter, r *http.Request, notificationID string) {
 	ctx, userID := h.RequestContextAndUserID(r)
 	item, err := h.service.OpenNotification(ctx, userID, notificationID)
@@ -84,6 +91,7 @@ func (h handlers) handleOpen(w http.ResponseWriter, r *http.Request, notificatio
 	httpx.WriteRedirect(w, r, routepath.AppNotification(openID))
 }
 
+// notificationsMainHeader centralizes this web behavior in one helper seam.
 func notificationsMainHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader {
 	return &webtemplates.AppMainHeader{Title: webtemplates.T(loc, "game.notifications.title")}
 }

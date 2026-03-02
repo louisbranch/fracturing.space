@@ -58,6 +58,7 @@ func NewGRPCGateway(socialClient SocialClient, accountClient AccountClient, cred
 	}
 }
 
+// LoadProfile loads the package state needed for this request path.
 func (g GRPCGateway) LoadProfile(ctx context.Context, userID string) (settingsapp.SettingsProfile, error) {
 	if g.SocialClient == nil {
 		return settingsapp.SettingsProfile{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.social_service_is_not_configured", "social service client is not configured")
@@ -83,6 +84,7 @@ func (g GRPCGateway) LoadProfile(ctx context.Context, userID string) (settingsap
 	}, nil
 }
 
+// SaveProfile centralizes this web behavior in one helper seam.
 func (g GRPCGateway) SaveProfile(ctx context.Context, userID string, profile settingsapp.SettingsProfile) error {
 	if g.SocialClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.social_service_is_not_configured", "social service client is not configured")
@@ -99,6 +101,7 @@ func (g GRPCGateway) SaveProfile(ctx context.Context, userID string, profile set
 	return err
 }
 
+// LoadLocale loads the package state needed for this request path.
 func (g GRPCGateway) LoadLocale(ctx context.Context, userID string) (string, error) {
 	if g.AccountClient == nil {
 		return "", apperrors.EK(apperrors.KindUnavailable, "error.web.message.account_service_client_is_not_configured", "account service client is not configured")
@@ -113,6 +116,7 @@ func (g GRPCGateway) LoadLocale(ctx context.Context, userID string) (string, err
 	return mapSettingsLocaleFromProto(resp.GetProfile().GetLocale()), nil
 }
 
+// SaveLocale centralizes this web behavior in one helper seam.
 func (g GRPCGateway) SaveLocale(ctx context.Context, userID string, locale string) error {
 	if g.AccountClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.account_service_client_is_not_configured", "account service client is not configured")
@@ -121,6 +125,7 @@ func (g GRPCGateway) SaveLocale(ctx context.Context, userID string, locale strin
 	return err
 }
 
+// ListAIKeys returns the package view collection for this workflow.
 func (g GRPCGateway) ListAIKeys(ctx context.Context, userID string) ([]settingsapp.SettingsAIKey, error) {
 	if g.CredentialClient == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.credential_service_client_is_not_configured", "credential service client is not configured")
@@ -155,6 +160,7 @@ func (g GRPCGateway) ListAIKeys(ctx context.Context, userID string) ([]settingsa
 	return keys, nil
 }
 
+// CreateAIKey executes package-scoped creation behavior for this flow.
 func (g GRPCGateway) CreateAIKey(ctx context.Context, userID string, label string, secret string) error {
 	if g.CredentialClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.credential_service_client_is_not_configured", "credential service client is not configured")
@@ -167,6 +173,7 @@ func (g GRPCGateway) CreateAIKey(ctx context.Context, userID string, label strin
 	return err
 }
 
+// RevokeAIKey applies this package workflow transition.
 func (g GRPCGateway) RevokeAIKey(ctx context.Context, userID string, credentialID string) error {
 	if g.CredentialClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.credential_service_client_is_not_configured", "credential service client is not configured")
@@ -175,6 +182,7 @@ func (g GRPCGateway) RevokeAIKey(ctx context.Context, userID string, credentialI
 	return err
 }
 
+// providerDisplayLabel centralizes this web behavior in one helper seam.
 func providerDisplayLabel(provider aiv1.Provider) string {
 	switch provider {
 	case aiv1.Provider_PROVIDER_OPENAI:
@@ -184,6 +192,7 @@ func providerDisplayLabel(provider aiv1.Provider) string {
 	}
 }
 
+// credentialStatusDisplayLabel centralizes this web behavior in one helper seam.
 func credentialStatusDisplayLabel(statusValue aiv1.CredentialStatus) string {
 	switch statusValue {
 	case aiv1.CredentialStatus_CREDENTIAL_STATUS_ACTIVE:
@@ -195,6 +204,7 @@ func credentialStatusDisplayLabel(statusValue aiv1.CredentialStatus) string {
 	}
 }
 
+// formatProtoTimestamp centralizes this web behavior in one helper seam.
 func formatProtoTimestamp(value *timestamppb.Timestamp) string {
 	if value == nil {
 		return "-"
@@ -205,6 +215,7 @@ func formatProtoTimestamp(value *timestamppb.Timestamp) string {
 	return value.AsTime().UTC().Format("2006-01-02 15:04 UTC")
 }
 
+// mapSettingsLocaleToProto maps values across transport and domain boundaries.
 func mapSettingsLocaleToProto(locale string) commonv1.Locale {
 	s := settingsapp.NormalizeLocale(locale)
 	switch s {
@@ -215,6 +226,7 @@ func mapSettingsLocaleToProto(locale string) commonv1.Locale {
 	}
 }
 
+// mapSettingsLocaleFromProto maps values across transport and domain boundaries.
 func mapSettingsLocaleFromProto(locale commonv1.Locale) string {
 	switch locale {
 	case commonv1.Locale_LOCALE_PT_BR:
@@ -224,6 +236,7 @@ func mapSettingsLocaleFromProto(locale commonv1.Locale) string {
 	}
 }
 
+// isSafeCredentialPathID reports whether this package condition is satisfied.
 func isSafeCredentialPathID(value string) bool {
 	value = strings.TrimSpace(value)
 	if value == "" {

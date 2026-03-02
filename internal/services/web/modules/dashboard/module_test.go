@@ -22,6 +22,17 @@ func TestModuleIDReturnsDashboard(t *testing.T) {
 	}
 }
 
+func TestModuleHealthyReflectsGatewayState(t *testing.T) {
+	t.Parallel()
+
+	if New().Healthy() {
+		t.Fatalf("New().Healthy() = true, want false for degraded module")
+	}
+	if !NewWithGateway(&fakeGateway{}, modulehandler.NewTestBase(), nil).Healthy() {
+		t.Fatalf("NewWithGateway(...).Healthy() = false, want true")
+	}
+}
+
 func TestMountServesDashboardGet(t *testing.T) {
 	t.Parallel()
 

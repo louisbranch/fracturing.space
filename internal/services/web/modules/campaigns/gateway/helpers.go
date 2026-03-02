@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+// campaignSystemLabel centralizes this web behavior in one helper seam.
 func campaignSystemLabel(system commonv1.GameSystem) string {
 	switch system {
 	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
@@ -21,6 +22,7 @@ func campaignSystemLabel(system commonv1.GameSystem) string {
 	}
 }
 
+// campaignGMModeLabel centralizes this web behavior in one helper seam.
 func campaignGMModeLabel(mode statev1.GmMode) string {
 	switch mode {
 	case statev1.GmMode_HUMAN:
@@ -34,6 +36,7 @@ func campaignGMModeLabel(mode statev1.GmMode) string {
 	}
 }
 
+// campaignStatusLabel centralizes this web behavior in one helper seam.
 func campaignStatusLabel(status statev1.CampaignStatus) string {
 	switch status {
 	case statev1.CampaignStatus_DRAFT:
@@ -49,6 +52,7 @@ func campaignStatusLabel(status statev1.CampaignStatus) string {
 	}
 }
 
+// campaignLocaleLabel centralizes this web behavior in one helper seam.
 func campaignLocaleLabel(locale commonv1.Locale) string {
 	switch locale {
 	case commonv1.Locale_LOCALE_EN_US:
@@ -60,6 +64,7 @@ func campaignLocaleLabel(locale commonv1.Locale) string {
 	}
 }
 
+// campaignIntentLabel centralizes this web behavior in one helper seam.
 func campaignIntentLabel(intent statev1.CampaignIntent) string {
 	switch intent {
 	case statev1.CampaignIntent_STANDARD:
@@ -73,6 +78,7 @@ func campaignIntentLabel(intent statev1.CampaignIntent) string {
 	}
 }
 
+// campaignAccessPolicyLabel centralizes this web behavior in one helper seam.
 func campaignAccessPolicyLabel(policy statev1.CampaignAccessPolicy) string {
 	switch policy {
 	case statev1.CampaignAccessPolicy_PRIVATE:
@@ -86,6 +92,7 @@ func campaignAccessPolicyLabel(policy statev1.CampaignAccessPolicy) string {
 	}
 }
 
+// participantDisplayName centralizes this web behavior in one helper seam.
 func participantDisplayName(participant *statev1.Participant) string {
 	if participant == nil {
 		return "Unknown participant"
@@ -102,6 +109,7 @@ func participantDisplayName(participant *statev1.Participant) string {
 	return "Unknown participant"
 }
 
+// participantRoleLabel centralizes this web behavior in one helper seam.
 func participantRoleLabel(role statev1.ParticipantRole) string {
 	switch role {
 	case statev1.ParticipantRole_GM:
@@ -113,6 +121,7 @@ func participantRoleLabel(role statev1.ParticipantRole) string {
 	}
 }
 
+// participantCampaignAccessLabel centralizes this web behavior in one helper seam.
 func participantCampaignAccessLabel(access statev1.CampaignAccess) string {
 	switch access {
 	case statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER:
@@ -126,6 +135,7 @@ func participantCampaignAccessLabel(access statev1.CampaignAccess) string {
 	}
 }
 
+// participantControllerLabel centralizes this web behavior in one helper seam.
 func participantControllerLabel(controller statev1.Controller) string {
 	switch controller {
 	case statev1.Controller_CONTROLLER_HUMAN:
@@ -137,6 +147,7 @@ func participantControllerLabel(controller statev1.Controller) string {
 	}
 }
 
+// characterDisplayName centralizes this web behavior in one helper seam.
 func characterDisplayName(character *statev1.Character) string {
 	if character == nil {
 		return "Unknown character"
@@ -150,6 +161,7 @@ func characterDisplayName(character *statev1.Character) string {
 	return "Unknown character"
 }
 
+// characterKindLabel centralizes this web behavior in one helper seam.
 func characterKindLabel(kind statev1.CharacterKind) string {
 	switch kind {
 	case statev1.CharacterKind_PC:
@@ -161,6 +173,7 @@ func characterKindLabel(kind statev1.CharacterKind) string {
 	}
 }
 
+// sessionStatusLabel centralizes this web behavior in one helper seam.
 func sessionStatusLabel(status statev1.SessionStatus) string {
 	switch status {
 	case statev1.SessionStatus_SESSION_ACTIVE:
@@ -172,6 +185,7 @@ func sessionStatusLabel(status statev1.SessionStatus) string {
 	}
 }
 
+// inviteStatusLabel centralizes this web behavior in one helper seam.
 func inviteStatusLabel(status statev1.InviteStatus) string {
 	switch status {
 	case statev1.InviteStatus_PENDING:
@@ -185,6 +199,7 @@ func inviteStatusLabel(status statev1.InviteStatus) string {
 	}
 }
 
+// timestampString centralizes this web behavior in one helper seam.
 func timestampString(ts *timestamppb.Timestamp) string {
 	if ts == nil {
 		return ""
@@ -192,6 +207,7 @@ func timestampString(ts *timestamppb.Timestamp) string {
 	return strings.TrimSpace(ts.AsTime().UTC().Format("2006-01-02 15:04 UTC"))
 }
 
+// int32ValueString centralizes this web behavior in one helper seam.
 func int32ValueString(value *wrapperspb.Int32Value) string {
 	if value == nil {
 		return ""
@@ -199,6 +215,7 @@ func int32ValueString(value *wrapperspb.Int32Value) string {
 	return strconv.FormatInt(int64(value.GetValue()), 10)
 }
 
+// daggerheartHeritageKindLabel centralizes this web behavior in one helper seam.
 func daggerheartHeritageKindLabel(kind daggerheartv1.DaggerheartHeritageKind) string {
 	switch kind {
 	case daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY:
@@ -210,6 +227,7 @@ func daggerheartHeritageKindLabel(kind daggerheartv1.DaggerheartHeritageKind) st
 	}
 }
 
+// daggerheartWeaponCategoryLabel centralizes this web behavior in one helper seam.
 func daggerheartWeaponCategoryLabel(category daggerheartv1.DaggerheartWeaponCategory) string {
 	switch category {
 	case daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_PRIMARY:
@@ -223,6 +241,7 @@ func daggerheartWeaponCategoryLabel(category daggerheartv1.DaggerheartWeaponCate
 
 // --- Domain enum → proto mapping ---
 
+// mapGameSystemToProto maps campaign system identifiers into game service proto enums.
 func mapGameSystemToProto(s campaignapp.GameSystem) commonv1.GameSystem {
 	switch s {
 	case campaignapp.GameSystemDaggerheart:
@@ -232,6 +251,7 @@ func mapGameSystemToProto(s campaignapp.GameSystem) commonv1.GameSystem {
 	}
 }
 
+// mapGmModeToProto maps values across transport and domain boundaries.
 func mapGmModeToProto(m campaignapp.GmMode) statev1.GmMode {
 	switch m {
 	case campaignapp.GmModeHuman:
@@ -245,6 +265,7 @@ func mapGmModeToProto(m campaignapp.GmMode) statev1.GmMode {
 	}
 }
 
+// mapCharacterKindToProto maps values across transport and domain boundaries.
 func mapCharacterKindToProto(k campaignapp.CharacterKind) statev1.CharacterKind {
 	switch k {
 	case campaignapp.CharacterKindPC:

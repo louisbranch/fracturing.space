@@ -21,10 +21,12 @@ type sessionResolver struct {
 	authClient PrincipalSessionClient
 }
 
+// newSessionResolver builds package wiring for this web seam.
 func newSessionResolver(client PrincipalSessionClient) sessionResolver {
 	return sessionResolver{authClient: client}
 }
 
+// resolveSessionUserID resolves request-scoped values needed by this package.
 func (r sessionResolver) resolveSessionUserID(ctx context.Context, sessionID string) (string, bool) {
 	if r.authClient == nil {
 		return "", false
@@ -44,6 +46,7 @@ func (r sessionResolver) resolveSessionUserID(ctx context.Context, sessionID str
 	return userID, true
 }
 
+// resolveRequestUserIDUncached resolves request-scoped values needed by this package.
 func (r sessionResolver) resolveRequestUserIDUncached(req *http.Request) string {
 	if req == nil {
 		return ""
@@ -59,6 +62,7 @@ func (r sessionResolver) resolveRequestUserIDUncached(req *http.Request) string 
 	return userID
 }
 
+// resolveRequestUserID resolves request-scoped values needed by this package.
 func (r sessionResolver) resolveRequestUserID(request *http.Request) string {
 	if state := requestPrincipalStateFromRequest(request); state != nil {
 		state.userIDOnce.Do(func() {
@@ -69,10 +73,12 @@ func (r sessionResolver) resolveRequestUserID(request *http.Request) string {
 	return r.resolveRequestUserIDUncached(request)
 }
 
+// resolveRequestSignedIn resolves request-scoped values needed by this package.
 func (r sessionResolver) resolveRequestSignedIn(request *http.Request) bool {
 	return strings.TrimSpace(r.resolveRequestUserID(request)) != ""
 }
 
+// authRequired centralizes this web behavior in one helper seam.
 func (r sessionResolver) authRequired() func(*http.Request) bool {
 	validated := authctx.ValidatedSessionAuth(func(ctx context.Context, sessionID string) bool {
 		userID, ok := r.resolveSessionUserID(ctx, sessionID)

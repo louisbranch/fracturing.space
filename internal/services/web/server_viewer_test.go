@@ -60,7 +60,7 @@ func TestAppDashboardPageRendersPrimaryNavigation(t *testing.T) {
 	assertPrimaryNavLinks(t, body)
 }
 
-func TestPrimaryNavigationOmitsExperimentalLinksByDefault(t *testing.T) {
+func TestPrimaryNavigationOmitsUnavailableLinks(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
@@ -80,7 +80,7 @@ func TestPrimaryNavigationOmitsExperimentalLinksByDefault(t *testing.T) {
 		t.Fatalf("body missing stable notifications link: %q", body)
 	}
 	if strings.Contains(body, `href="/app/profile"`) {
-		t.Fatalf("body unexpectedly includes experimental profile link: %q", body)
+		t.Fatalf("body unexpectedly includes unavailable profile link: %q", body)
 	}
 }
 

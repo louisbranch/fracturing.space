@@ -185,6 +185,17 @@ func TestModuleIDReturnsProfile(t *testing.T) {
 	}
 }
 
+func TestModuleHealthyReflectsGatewayState(t *testing.T) {
+	t.Parallel()
+
+	if New(nil, "", nil).Healthy() {
+		t.Fatalf("New(nil,...).Healthy() = true, want false for degraded module")
+	}
+	if !New(&socialClientStub{}, "", nil).Healthy() {
+		t.Fatalf("New(non-nil social client,...).Healthy() = false, want true")
+	}
+}
+
 func mountProfileModule(t *testing.T, socialClient SocialClient, assetBaseURL string, resolveSignedIn module.ResolveSignedIn) module.Mount {
 	t.Helper()
 

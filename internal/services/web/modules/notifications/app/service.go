@@ -7,6 +7,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// service defines an internal contract used at this web package boundary.
 type service struct {
 	gateway Gateway
 }
@@ -19,6 +20,7 @@ func NewService(gateway Gateway) Service {
 	return service{gateway: gateway}
 }
 
+// ListNotifications returns the package view collection for this workflow.
 func (s service) ListNotifications(ctx context.Context, userID string) ([]NotificationSummary, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
@@ -34,6 +36,7 @@ func (s service) ListNotifications(ctx context.Context, userID string) ([]Notifi
 	return items, nil
 }
 
+// GetNotification centralizes this web behavior in one helper seam.
 func (s service) GetNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
@@ -53,6 +56,7 @@ func (s service) GetNotification(ctx context.Context, userID string, notificatio
 	return item, nil
 }
 
+// OpenNotification applies this package workflow transition.
 func (s service) OpenNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {

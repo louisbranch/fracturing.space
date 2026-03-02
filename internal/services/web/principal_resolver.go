@@ -30,8 +30,10 @@ type requestPrincipalState struct {
 	language     string
 }
 
+// requestPrincipalStateKey defines an internal contract used at this web package boundary.
 type requestPrincipalStateKey struct{}
 
+// contextFromRequest centralizes this web behavior in one helper seam.
 func contextFromRequest(request *http.Request) context.Context {
 	if request == nil {
 		return context.Background()

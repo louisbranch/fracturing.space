@@ -23,6 +23,32 @@ func TestNewServiceFailsClosedWhenGatewayMissing(t *testing.T) {
 	}
 }
 
+func TestUnavailableGatewayFailsClosed(t *testing.T) {
+	t.Parallel()
+
+	gateway := NewUnavailableGateway()
+	if IsGatewayHealthy(nil) {
+		t.Fatalf("IsGatewayHealthy(nil) = true, want false")
+	}
+	if IsGatewayHealthy(gateway) {
+		t.Fatalf("IsGatewayHealthy(unavailable) = true, want false")
+	}
+	if !IsGatewayHealthy(&fakeGateway{}) {
+		t.Fatalf("IsGatewayHealthy(stub) = false, want true")
+	}
+
+	resp, err := gateway.LookupUserProfile(context.Background(), LookupUserProfileRequest{Username: "louis"})
+	if err == nil {
+		t.Fatalf("LookupUserProfile() error = nil, want unavailable error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("LookupUserProfile() status = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+	if resp != (LookupUserProfileResponse{}) {
+		t.Fatalf("LookupUserProfile() resp = %+v, want zero value", resp)
+	}
+}
+
 func TestLoadProfileRequiresUsername(t *testing.T) {
 	t.Parallel()
 

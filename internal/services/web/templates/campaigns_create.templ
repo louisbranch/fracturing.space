@@ -1,0 +1,92 @@
+package templates
+
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+)
+
+templ CampaignStartFragment(loc Localizer) {
+	<section class="mx-auto flex min-h-[62vh] w-full max-w-6xl items-center justify-center">
+		<div class="w-full max-w-5xl rounded-box border border-base-300 bg-base-200/70 p-4 shadow-xl md:p-8">
+			<div class="mx-auto flex w-full max-w-4xl flex-col items-stretch justify-center lg:flex-row lg:items-center">
+				<article class="card flex-1 border border-base-300 bg-base-100 shadow-sm" data-campaign-start-option="browse">
+					<div class="card-body gap-3">
+						<h2 class="card-title">{ T(loc, "game.campaigns.new.browse.title") }</h2>
+						<p class="text-sm opacity-80">{ T(loc, "game.campaigns.new.browse.description") }</p>
+						<div class="card-actions mt-2 justify-start">
+							<button class="btn btn-outline w-full sm:w-auto" type="button" disabled aria-disabled="true">{ T(loc, "game.campaigns.new.browse.action") }</button>
+						</div>
+						<p class="text-xs uppercase tracking-[0.14em] opacity-60">{ T(loc, "game.campaigns.new.browse.disabled") }</p>
+					</div>
+				</article>
+				<div class="divider lg:divider-horizontal mx-4 text-xs font-semibold uppercase tracking-[0.28em] opacity-70" data-campaign-start-divider="or">{ T(loc, "game.campaigns.new.divider_or") }</div>
+				<article class="card flex-1 border border-primary/30 bg-base-100 shadow-sm" data-campaign-start-option="scratch">
+					<div class="card-body gap-3">
+						<h2 class="card-title">{ T(loc, "game.campaigns.new.scratch.title") }</h2>
+						<p class="text-sm opacity-80">{ T(loc, "game.campaigns.new.scratch.description") }</p>
+						<div class="card-actions mt-2 justify-start">
+							<a class="btn btn-primary w-full sm:w-auto" href={ routepath.AppCampaignsCreate }>{ T(loc, "game.campaigns.new.scratch.action") }</a>
+						</div>
+					</div>
+				</article>
+			</div>
+		</div>
+	</section>
+}
+
+templ CampaignCreateFragment(form CampaignCreateFormValues, loc Localizer) {
+	<section class="card bg-base-200">
+		<div class="card-body">
+			<form method="post" action={ routepath.AppCampaignsCreate } class="space-y-4">
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_name") }</span>
+					</label>
+					<input type="text" name="name" value={ form.Name } placeholder={ T(loc, "game.create.placeholder_name") } required class="input input-bordered w-full"/>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_system") }</span>
+					</label>
+					<select name="system" required class="select select-bordered w-full">
+						if campaignCreateSystemValue(form) == "daggerheart" {
+							<option value="daggerheart" selected>{ T(loc, "game.create.field_system_value_daggerheart") }</option>
+						} else {
+							<option value="daggerheart">{ T(loc, "game.create.field_system_value_daggerheart") }</option>
+						}
+					</select>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_gm_mode") }</span>
+					</label>
+					<select name="gm_mode" required class="select select-bordered w-full">
+						if campaignCreateGMModeValue(form) == "human" {
+							<option value="human" selected>{ T(loc, "game.create.field_gm_mode_human") }</option>
+						} else {
+							<option value="human">{ T(loc, "game.create.field_gm_mode_human") }</option>
+						}
+						if campaignCreateGMModeValue(form) == "ai" {
+							<option value="ai" selected>{ T(loc, "game.create.field_gm_mode_ai") }</option>
+						} else {
+							<option value="ai">{ T(loc, "game.create.field_gm_mode_ai") }</option>
+						}
+						if campaignCreateGMModeValue(form) == "hybrid" {
+							<option value="hybrid" selected>{ T(loc, "game.create.field_gm_mode_hybrid") }</option>
+						} else {
+							<option value="hybrid">{ T(loc, "game.create.field_gm_mode_hybrid") }</option>
+						}
+					</select>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_theme_prompt") }</span>
+					</label>
+					<textarea name="theme_prompt" rows="4" placeholder={ T(loc, "game.create.placeholder_theme_prompt") } class="textarea textarea-bordered w-full">{ form.ThemePrompt }</textarea>
+				</div>
+				<div class="card-actions justify-end">
+					<button class="btn btn-primary" type="submit">{ T(loc, "game.create.submit") }</button>
+				</div>
+			</form>
+		</div>
+	</section>
+}

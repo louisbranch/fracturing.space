@@ -20,11 +20,7 @@ Primary goals:
 - Keep each area modular with small muxes.
 - Make adding a new area predictable for new contributors.
 
-Current implementation note:
-
-- The canonical web service currently lives under `internal/services/web/`.
-- During package rename, move this structure to `internal/services/web/` without
-  changing boundaries.
+Canonical implementation path: `internal/services/web/`.
 
 ## Layering
 
@@ -91,8 +87,7 @@ Module registration also has stability tiers:
 
 - Runtime composition uses `modules.Registry.Build(modules.BuildInput)` to
   produce both public/protected module sets and derived service health metadata
-  from a single contract. `BuildInput.EnableExperimentalModules` controls
-  whether stable-only or stable+experimental module sets are composed.
+  from a single contract.
 - The registry decomposes `modules.Dependencies` (gRPC clients) and
   `modules.ModuleResolvers` (request-scoped resolver functions derived from the
   principal resolver) into per-module constructor arguments so individual
@@ -101,26 +96,22 @@ Module registration also has stability tiers:
   physically cannot access clients they were not given.
 - Runtime startup wiring derives both principal and module inputs from a single
   `web.DependencyBundle`.
-- Incomplete/scaffold surfaces stay opt-in through registry build mode rather
-  than direct constructor calls.
 - Stable modules may intentionally expose only a subset of area routes. Unstable
-  routes stay unregistered (or remain in an explicit experimental surface)
-  until behavior is production-ready.
-- Runtime opt-in for experimental surfaces is explicit through
-  `Config.EnableExperimentalModules`.
+  routes stay unregistered until behavior is production-ready.
 
 Startup fails if two modules claim the same prefix.
 
-## Campaign Surface Migration
+## Campaign Surface Ownership
 
-Campaigns moved to a split-route ownership model to isolate risk:
+Campaigns use explicit route-owner surfaces to keep ownership diffable and
+readable in one place:
 
-- Stable surface includes workspace/read/create flows where behavior and navigation
-  are considered production-safe.
-- Experimental surface hosts incomplete or high-churn campaign routes until they
-  pass reliability and permission model stability requirements.
-- The split lets the app shell keep stable links and redirects deterministic while
-  continuing product development on isolated routes.
+- Stable route assembly is explicit in `modules/campaigns/routes_surface_*.go`.
+- Surface ownership is grouped by coherent responsibility (`stable-core`,
+  `stable-workflow`, `stable-mutations`) and wired in mount order through
+  `stableRouteSurfaces()`.
+- Stable campaigns defaults include read/create flows, character workflows, and
+  session/invite mutation handlers.
 
 ## Routing Strategy
 
@@ -140,6 +131,9 @@ This keeps route ownership explicit and avoids framework lock-in.
 - Cross-cutting code belongs in `platform/*`.
 - Path constants belong in `routepath` and nowhere else.
 - Module composition prefixes must be canonical (`/` prefix and `/` suffix), and non-canonical prefixes are rejected at compose time.
+- Protected module roots are mounted only on canonical trailing-slash prefixes;
+  slashless root requests (for example `/app/campaigns`) are canonicalized by
+  `ServeMux` redirect behavior rather than dedicated compatibility aliases.
 - Route registration should use stdlib method+path patterns; avoid duplicating
   path/method guards inside handlers.
 - `GET` route surfaces should preserve `HEAD` behavior through method+path
@@ -184,21 +178,17 @@ This keeps route ownership explicit and avoids framework lock-in.
   default is safe for untrusted direct requests.
 - User-facing transport errors must resolve to safe public text
   (`platform/weberror.PublicMessage`), never raw backend/internal strings.
-- Default app chrome should not link to experimental module routes;
-  experimental surfaces are explicitly opt-in.
 - Stable campaigns route exposure currently includes
-  list/create/overview/participants/characters plus character create,
-  character detail, and character-creation apply/reset workflow routes.
-- Campaign session/invite mutations (`POST` start/end/create/revoke) are
-  mounted only in experimental campaigns modules; stable defaults do not expose
-  these mutation handlers.
-- Promotion criteria for these routes are tracked in
-  `docs/architecture/campaigns-mutation-promotion-checklist.md`.
+  list/create/overview/participants/characters, sessions, invites, and game
+  surfaces plus character create, character detail, and character-creation
+  apply/reset workflow routes.
+- Stable campaigns session/invite mutations (`POST` start/end/create/revoke)
+  are mounted by default.
 - Deferred campaign mutation scaffolds (participant update, character
   update/control) are intentionally removed until backed by production-ready
   contracts.
-- Scaffold detail surfaces for sessions/invites/game chat remain unregistered
-  on stable defaults.
+- Legacy top-level invites scaffolding (`/app/invites`) remains intentionally
+  unregistered until that area has a production route owner.
 - Campaign cover rendering must resolve to a guaranteed static fallback asset
   (`/static/campaign-cover-fallback.svg`) when upstream assets are absent; this
   avoids runtime references to non-existent static files.
@@ -208,6 +198,9 @@ This keeps route ownership explicit and avoids framework lock-in.
 - Campaign list/detail pages should use `AuthorizationService.BatchCan` for
   per-entity action visibility (for example character edit badges) instead of
   issuing N unary auth checks.
+- Campaign route ownership should be assembled through an explicit ordered
+  stable surface list (`stableRouteSurfaces`) rather than one monolithic
+  registration function.
 
 ## Degraded Operation Strategy
 
@@ -224,6 +217,17 @@ their interaction model:
   clients fall through to default values (empty user-id, "Adventurer" display
   name, browser-negotiated language).
 
+Startup wiring also records structured dependency dial outcomes for `auth`,
+`social`, `game`, `ai`, `userhub`, and `notifications` with one of:
+
+- `connected`
+- `dial_failed` (error detail captured)
+- `unavailable` (dial returned nil connection)
+
+The web command logs these statuses deterministically during startup and derives
+warning lines from the same status map, so degradation behavior and diagnostics
+stay testable at one seam.
+
 This distinction keeps the app shell navigable when optional backends are down
 while clearly surfacing errors for features that would silently lose data.
 
@@ -235,8 +239,7 @@ Architecture guardrails live in tests:
 - Sibling module import checks.
 - Auth wrapping checks for protected module mounts.
 - Composition-owned gateway wiring checks for campaigns/settings mount methods.
-- Stable vs experimental registry behavior checks.
-- Registry build contract checks (stable vs experimental module sets and health
+- Registry build contract checks (public/protected module sets and health
   metadata).
 - Shared redirect/method helper checks for HTMX and non-HTMX behavior parity.
 - Routepath constant contract checks for module registration patterns.

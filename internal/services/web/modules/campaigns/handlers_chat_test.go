@@ -13,7 +13,7 @@ import (
 func TestMountCampaignGameRouteRendersDedicatedDrawerChrome(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(fakeGateway{items: []CampaignSummary{{
+	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{
 		ID:            "c1",
 		Name:          "The Guildhouse",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
@@ -70,7 +70,7 @@ func TestMountCampaignGameRouteRendersDedicatedDrawerChrome(t *testing.T) {
 func TestMountCampaignGameRouteHTMXRedirectsToFullPage(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandler.NewTestBase(), "", nil)
+	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandler.NewTestBase(), "", nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

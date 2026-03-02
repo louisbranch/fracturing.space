@@ -10,11 +10,10 @@ type Registry struct{}
 
 // BuildInput carries the dependencies and options needed to compose module sets.
 type BuildInput struct {
-	Dependencies              Dependencies
-	Resolvers                 ModuleResolvers
-	PublicOptions             PublicModuleOptions
-	ProtectedOptions          ProtectedModuleOptions
-	EnableExperimentalModules bool
+	Dependencies     Dependencies
+	Resolvers        ModuleResolvers
+	PublicOptions    PublicModuleOptions
+	ProtectedOptions ProtectedModuleOptions
 }
 
 // BuildOutput contains the composed module sets and derived health metadata.
@@ -32,15 +31,10 @@ func NewRegistry() Registry {
 // Build composes module sets for the requested stability mode.
 func (Registry) Build(input BuildInput) BuildOutput {
 	publicModules := defaultPublicModules(input.Dependencies, input.Resolvers, input.PublicOptions)
-	if input.EnableExperimentalModules {
-		publicModules = append(publicModules, experimentalPublicModules()...)
-	}
-
 	protectedModules, health := buildProtectedModules(
 		input.Dependencies,
 		input.Resolvers,
 		input.ProtectedOptions,
-		input.EnableExperimentalModules,
 	)
 
 	return BuildOutput{

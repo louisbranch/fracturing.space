@@ -8,6 +8,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// service defines an internal contract used at this web package boundary.
 type service struct {
 	auth Gateway
 }
@@ -20,14 +21,17 @@ func NewService(gateway Gateway) Service {
 	return service{auth: gateway}
 }
 
+// HealthBody centralizes this web behavior in one helper seam.
 func (service) HealthBody() string {
 	return "ok"
 }
 
+// PasskeyLoginStart centralizes this web behavior in one helper seam.
 func (s service) PasskeyLoginStart(ctx context.Context) (PasskeyChallenge, error) {
 	return s.auth.BeginPasskeyLogin(ctx)
 }
 
+// PasskeyLoginFinish centralizes this web behavior in one helper seam.
 func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error) {
 	if strings.TrimSpace(sessionID) == "" {
 		return PasskeyFinish{}, apperrors.E(apperrors.KindInvalidInput, "session_id is required")
@@ -46,6 +50,7 @@ func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, crede
 	return PasskeyFinish{SessionID: webSessionID, UserID: userID}, nil
 }
 
+// PasskeyRegisterStart centralizes this web behavior in one helper seam.
 func (s service) PasskeyRegisterStart(ctx context.Context, email string) (PasskeyRegisterResult, error) {
 	if strings.TrimSpace(email) == "" {
 		return PasskeyRegisterResult{}, apperrors.E(apperrors.KindInvalidInput, "email is required")
@@ -61,6 +66,7 @@ func (s service) PasskeyRegisterStart(ctx context.Context, email string) (Passke
 	return PasskeyRegisterResult{SessionID: challenge.SessionID, UserID: userID, PublicKey: challenge.PublicKey}, nil
 }
 
+// PasskeyRegisterFinish centralizes this web behavior in one helper seam.
 func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error) {
 	if strings.TrimSpace(sessionID) == "" {
 		return PasskeyFinish{}, apperrors.E(apperrors.KindInvalidInput, "session_id is required")
@@ -75,6 +81,7 @@ func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, cr
 	return PasskeyFinish{UserID: userID}, nil
 }
 
+// HasValidWebSession reports whether this package condition is satisfied.
 func (s service) HasValidWebSession(ctx context.Context, sessionID string) bool {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
@@ -83,6 +90,7 @@ func (s service) HasValidWebSession(ctx context.Context, sessionID string) bool 
 	return s.auth.HasValidWebSession(ctx, sessionID)
 }
 
+// RevokeWebSession applies this package workflow transition.
 func (s service) RevokeWebSession(ctx context.Context, sessionID string) error {
 	if strings.TrimSpace(sessionID) == "" {
 		return nil

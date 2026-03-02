@@ -93,6 +93,7 @@ func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
 	}
 }
 
+// GRPCGateway defines an internal contract used at this web package boundary.
 type GRPCGateway struct {
 	Client              CampaignClient
 	ParticipantClient   ParticipantClient
@@ -104,6 +105,7 @@ type GRPCGateway struct {
 	AssetBaseURL        string
 }
 
+// ListCampaigns returns the package view collection for this workflow.
 func (g GRPCGateway) ListCampaigns(ctx context.Context) ([]campaignapp.CampaignSummary, error) {
 	resp, err := g.Client.ListCampaigns(ctx, &statev1.ListCampaignsRequest{PageSize: 10})
 	if err != nil {
@@ -133,6 +135,7 @@ func (g GRPCGateway) ListCampaigns(ctx context.Context) ([]campaignapp.CampaignS
 	return items, nil
 }
 
+// CampaignName centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignName(ctx context.Context, campaignID string) (string, error) {
 	resp, err := g.Client.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
 	if err != nil {
@@ -144,6 +147,7 @@ func (g GRPCGateway) CampaignName(ctx context.Context, campaignID string) (strin
 	return strings.TrimSpace(resp.GetCampaign().GetName()), nil
 }
 
+// CampaignWorkspace centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignWorkspace(ctx context.Context, campaignID string) (campaignapp.CampaignWorkspace, error) {
 	resp, err := g.Client.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
 	if err != nil {
@@ -177,6 +181,7 @@ func (g GRPCGateway) CampaignWorkspace(ctx context.Context, campaignID string) (
 	}, nil
 }
 
+// CreateCampaign executes package-scoped creation behavior for this flow.
 func (g GRPCGateway) CreateCampaign(ctx context.Context, input campaignapp.CreateCampaignInput) (campaignapp.CreateCampaignResult, error) {
 	locale := platformi18n.LocaleForTag(input.Locale)
 	locale = platformi18n.NormalizeLocale(locale)

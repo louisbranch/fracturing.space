@@ -10,8 +10,10 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"golang.org/x/text/language"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -197,6 +199,54 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	}
 }
 
+func TestCreateCampaignMapsInputAndValidatesResponse(t *testing.T) {
+	t.Parallel()
+
+	client := &contractCampaignClient{}
+	gateway := GRPCGateway{Client: client}
+
+	created, err := gateway.CreateCampaign(context.Background(), campaignapp.CreateCampaignInput{
+		Name:        "Smoke Campaign",
+		Locale:      language.MustParse("pt-BR"),
+		System:      campaignapp.GameSystemDaggerheart,
+		GMMode:      campaignapp.GmModeHybrid,
+		ThemePrompt: "Route contract",
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign() error = %v", err)
+	}
+	if created.CampaignID != "c-created" {
+		t.Fatalf("CreateCampaign() id = %q, want %q", created.CampaignID, "c-created")
+	}
+	if client.lastCreateReq == nil {
+		t.Fatalf("expected CreateCampaign request")
+	}
+	if client.lastCreateReq.GetLocale() != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("request locale = %v, want %v", client.lastCreateReq.GetLocale(), commonv1.Locale_LOCALE_PT_BR)
+	}
+	if client.lastCreateReq.GetSystem() != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+		t.Fatalf("request system = %v, want %v", client.lastCreateReq.GetSystem(), commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	}
+	if client.lastCreateReq.GetGmMode() != statev1.GmMode_HYBRID {
+		t.Fatalf("request gm mode = %v, want %v", client.lastCreateReq.GetGmMode(), statev1.GmMode_HYBRID)
+	}
+	if client.lastCreateReq.GetThemePrompt() != "Route contract" {
+		t.Fatalf("request theme prompt = %q, want %q", client.lastCreateReq.GetThemePrompt(), "Route contract")
+	}
+
+	client.createResp = &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{Id: "   "}}
+	if _, err := gateway.CreateCampaign(context.Background(), campaignapp.CreateCampaignInput{Name: "Missing ID", Locale: language.Und}); err == nil {
+		t.Fatalf("expected CreateCampaign() error for empty campaign id")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusInternalServerError {
+		t.Fatalf("CreateCampaign() HTTPStatus(err) = %d, want %d", got, http.StatusInternalServerError)
+	}
+
+	client.createErr = errors.New("create failed")
+	if _, err := gateway.CreateCampaign(context.Background(), campaignapp.CreateCampaignInput{Name: "Broken", Locale: language.AmericanEnglish}); err == nil {
+		t.Fatalf("expected CreateCampaign() transport error")
+	}
+}
+
 func TestMutationReadersValidateAndMapTransportErrors(t *testing.T) {
 	t.Parallel()
 
@@ -220,14 +270,46 @@ func TestMutationReadersValidateAndMapTransportErrors(t *testing.T) {
 
 	if err := gateway.StartSession(context.Background(), "c1", campaignapp.StartSessionInput{Name: "Session"}); err == nil {
 		t.Fatalf("expected StartSession mapping error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusBadRequest {
+		t.Fatalf("StartSession HTTPStatus(err) = %d, want %d", got, http.StatusBadRequest)
 	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_start_session" {
 		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.failed_to_start_session")
+	} else {
+		assertAppErrorKind(t, err, apperrors.KindInvalidInput)
 	}
+
+	sessionClient.startErr = status.Error(codes.FailedPrecondition, "campaign readiness requires at least one player participant")
+	if err := gateway.StartSession(context.Background(), "c1", campaignapp.StartSessionInput{Name: "Session"}); err == nil {
+		t.Fatalf("expected StartSession conflict mapping error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusConflict {
+		t.Fatalf("StartSession conflict HTTPStatus(err) = %d, want %d", got, http.StatusConflict)
+	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_start_session" {
+		t.Fatalf("LocalizationKey(conflict err) = %q, want %q", got, "error.web.message.failed_to_start_session")
+	} else {
+		assertAppErrorKind(t, err, apperrors.KindConflict)
+	}
+
 	if err := gateway.EndSession(context.Background(), "c1", campaignapp.EndSessionInput{SessionID: "sess-1"}); err == nil {
 		t.Fatalf("expected EndSession mapping error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusBadRequest {
+		t.Fatalf("EndSession HTTPStatus(err) = %d, want %d", got, http.StatusBadRequest)
 	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_end_session" {
 		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.failed_to_end_session")
+	} else {
+		assertAppErrorKind(t, err, apperrors.KindInvalidInput)
 	}
+
+	sessionClient.endErr = status.Error(codes.FailedPrecondition, "session is not active")
+	if err := gateway.EndSession(context.Background(), "c1", campaignapp.EndSessionInput{SessionID: "sess-1"}); err == nil {
+		t.Fatalf("expected EndSession conflict mapping error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusConflict {
+		t.Fatalf("EndSession conflict HTTPStatus(err) = %d, want %d", got, http.StatusConflict)
+	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_end_session" {
+		t.Fatalf("LocalizationKey(conflict err) = %q, want %q", got, "error.web.message.failed_to_end_session")
+	} else {
+		assertAppErrorKind(t, err, apperrors.KindConflict)
+	}
+
 	if err := gateway.CreateInvite(context.Background(), "c1", campaignapp.CreateInviteInput{ParticipantID: "p1", RecipientUserID: "user-2"}); err == nil {
 		t.Fatalf("expected CreateInvite mapping error")
 	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_create_invite" {
@@ -247,6 +329,17 @@ func TestMutationReadersValidateAndMapTransportErrors(t *testing.T) {
 	}
 	if err := gateway.RevokeInvite(context.Background(), "c1", campaignapp.RevokeInviteInput{}); err == nil {
 		t.Fatalf("expected invite_id validation error")
+	}
+}
+
+func assertAppErrorKind(t *testing.T, err error, want apperrors.Kind) {
+	t.Helper()
+	var appErr apperrors.Error
+	if !errors.As(err, &appErr) {
+		t.Fatalf("expected typed app error, got %T (%v)", err, err)
+	}
+	if appErr.Kind != want {
+		t.Fatalf("appErr.Kind = %q, want %q", appErr.Kind, want)
 	}
 }
 
@@ -277,53 +370,209 @@ func TestCanCampaignActionAndHelperMappings(t *testing.T) {
 	if got := campaignGMModeLabel(statev1.GmMode_HUMAN); got != "Human" {
 		t.Fatalf("campaignGMModeLabel() = %q", got)
 	}
+	if got := campaignGMModeLabel(statev1.GmMode_AI); got != "AI" {
+		t.Fatalf("campaignGMModeLabel() = %q", got)
+	}
+	if got := campaignGMModeLabel(statev1.GmMode_GM_MODE_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("campaignGMModeLabel() unspecified = %q", got)
+	}
 	if got := campaignStatusLabel(statev1.CampaignStatus_ARCHIVED); got != "Archived" {
 		t.Fatalf("campaignStatusLabel() = %q", got)
+	}
+	if got := campaignStatusLabel(statev1.CampaignStatus_DRAFT); got != "Draft" {
+		t.Fatalf("campaignStatusLabel(draft) = %q", got)
+	}
+	if got := campaignStatusLabel(statev1.CampaignStatus_ACTIVE); got != "Active" {
+		t.Fatalf("campaignStatusLabel(active) = %q", got)
+	}
+	if got := campaignStatusLabel(statev1.CampaignStatus_COMPLETED); got != "Completed" {
+		t.Fatalf("campaignStatusLabel(completed) = %q", got)
+	}
+	if got := campaignStatusLabel(statev1.CampaignStatus_CAMPAIGN_STATUS_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("campaignStatusLabel(unspecified) = %q", got)
 	}
 	if got := campaignLocaleLabel(commonv1.Locale_LOCALE_EN_US); got != "English (US)" {
 		t.Fatalf("campaignLocaleLabel() = %q", got)
 	}
+	if got := campaignLocaleLabel(commonv1.Locale_LOCALE_PT_BR); got != "Portuguese (Brazil)" {
+		t.Fatalf("campaignLocaleLabel(pt-BR) = %q", got)
+	}
+	if got := campaignLocaleLabel(commonv1.Locale_LOCALE_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("campaignLocaleLabel(unspecified) = %q", got)
+	}
 	if got := campaignIntentLabel(statev1.CampaignIntent_STARTER); got != "Starter" {
 		t.Fatalf("campaignIntentLabel() = %q", got)
+	}
+	if got := campaignIntentLabel(statev1.CampaignIntent_STANDARD); got != "Standard" {
+		t.Fatalf("campaignIntentLabel(standard) = %q", got)
+	}
+	if got := campaignIntentLabel(statev1.CampaignIntent_SANDBOX); got != "Sandbox" {
+		t.Fatalf("campaignIntentLabel(sandbox) = %q", got)
+	}
+	if got := campaignIntentLabel(statev1.CampaignIntent_CAMPAIGN_INTENT_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("campaignIntentLabel(unspecified) = %q", got)
 	}
 	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_RESTRICTED); got != "Restricted" {
 		t.Fatalf("campaignAccessPolicyLabel() = %q", got)
 	}
+	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_PRIVATE); got != "Private" {
+		t.Fatalf("campaignAccessPolicyLabel(private) = %q", got)
+	}
+	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_PUBLIC); got != "Public" {
+		t.Fatalf("campaignAccessPolicyLabel(public) = %q", got)
+	}
+	if got := campaignAccessPolicyLabel(statev1.CampaignAccessPolicy_CAMPAIGN_ACCESS_POLICY_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("campaignAccessPolicyLabel(unspecified) = %q", got)
+	}
 	if got := participantDisplayName(nil); got != "Unknown participant" {
 		t.Fatalf("participantDisplayName(nil) = %q", got)
+	}
+	if got := participantDisplayName(&statev1.Participant{Name: "  Dana  "}); got != "Dana" {
+		t.Fatalf("participantDisplayName(name) = %q", got)
+	}
+	if got := participantDisplayName(&statev1.Participant{UserId: " user-1 "}); got != "user-1" {
+		t.Fatalf("participantDisplayName(user) = %q", got)
+	}
+	if got := participantDisplayName(&statev1.Participant{Id: " p-1 "}); got != "p-1" {
+		t.Fatalf("participantDisplayName(id) = %q", got)
 	}
 	if got := participantRoleLabel(statev1.ParticipantRole_PLAYER); got != "Player" {
 		t.Fatalf("participantRoleLabel() = %q", got)
 	}
+	if got := participantRoleLabel(statev1.ParticipantRole_GM); got != "GM" {
+		t.Fatalf("participantRoleLabel(gm) = %q", got)
+	}
+	if got := participantRoleLabel(statev1.ParticipantRole(99)); got != "Unspecified" {
+		t.Fatalf("participantRoleLabel(unspecified) = %q", got)
+	}
 	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER); got != "Member" {
 		t.Fatalf("participantCampaignAccessLabel() = %q", got)
+	}
+	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER); got != "Manager" {
+		t.Fatalf("participantCampaignAccessLabel(manager) = %q", got)
+	}
+	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER); got != "Owner" {
+		t.Fatalf("participantCampaignAccessLabel(owner) = %q", got)
+	}
+	if got := participantCampaignAccessLabel(statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("participantCampaignAccessLabel(unspecified) = %q", got)
 	}
 	if got := participantControllerLabel(statev1.Controller_CONTROLLER_AI); got != "AI" {
 		t.Fatalf("participantControllerLabel() = %q", got)
 	}
+	if got := participantControllerLabel(statev1.Controller_CONTROLLER_HUMAN); got != "Human" {
+		t.Fatalf("participantControllerLabel(human) = %q", got)
+	}
+	if got := participantControllerLabel(statev1.Controller_CONTROLLER_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("participantControllerLabel(unspecified) = %q", got)
+	}
 	if got := characterDisplayName(nil); got != "Unknown character" {
 		t.Fatalf("characterDisplayName(nil) = %q", got)
+	}
+	if got := characterDisplayName(&statev1.Character{Name: "  Aria  "}); got != "Aria" {
+		t.Fatalf("characterDisplayName(name) = %q", got)
+	}
+	if got := characterDisplayName(&statev1.Character{Id: " char-1 "}); got != "char-1" {
+		t.Fatalf("characterDisplayName(id) = %q", got)
 	}
 	if got := characterKindLabel(statev1.CharacterKind_NPC); got != "NPC" {
 		t.Fatalf("characterKindLabel() = %q", got)
 	}
+	if got := characterKindLabel(statev1.CharacterKind_PC); got != "PC" {
+		t.Fatalf("characterKindLabel(pc) = %q", got)
+	}
+	if got := characterKindLabel(statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("characterKindLabel(unspecified) = %q", got)
+	}
 	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_ENDED); got != "Ended" {
 		t.Fatalf("sessionStatusLabel() = %q", got)
+	}
+	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_ACTIVE); got != "Active" {
+		t.Fatalf("sessionStatusLabel(active) = %q", got)
+	}
+	if got := sessionStatusLabel(statev1.SessionStatus_SESSION_STATUS_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("sessionStatusLabel(unspecified) = %q", got)
 	}
 	if got := inviteStatusLabel(statev1.InviteStatus_CLAIMED); got != "Claimed" {
 		t.Fatalf("inviteStatusLabel() = %q", got)
 	}
+	if got := inviteStatusLabel(statev1.InviteStatus_PENDING); got != "Pending" {
+		t.Fatalf("inviteStatusLabel(pending) = %q", got)
+	}
+	if got := inviteStatusLabel(statev1.InviteStatus_REVOKED); got != "Revoked" {
+		t.Fatalf("inviteStatusLabel(revoked) = %q", got)
+	}
+	if got := inviteStatusLabel(statev1.InviteStatus_INVITE_STATUS_UNSPECIFIED); got != "Unspecified" {
+		t.Fatalf("inviteStatusLabel(unspecified) = %q", got)
+	}
 	if got := timestampString(nil); got != "" {
 		t.Fatalf("timestampString(nil) = %q", got)
+	}
+	timestamp := timestamppb.Now()
+	if got := timestampString(timestamp); got == "" {
+		t.Fatalf("timestampString(non-nil) = empty, want formatted value")
 	}
 	if got := int32ValueString(nil); got != "" {
 		t.Fatalf("int32ValueString(nil) = %q", got)
 	}
+	if got := int32ValueString(wrapperspb.Int32(-7)); got != "-7" {
+		t.Fatalf("int32ValueString(value) = %q, want %q", got, "-7")
+	}
+	if got := daggerheartHeritageKindLabel(daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY); got != "ancestry" {
+		t.Fatalf("daggerheartHeritageKindLabel(ancestry) = %q", got)
+	}
+	if got := daggerheartHeritageKindLabel(daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_COMMUNITY); got != "community" {
+		t.Fatalf("daggerheartHeritageKindLabel(community) = %q", got)
+	}
+	if got := daggerheartHeritageKindLabel(daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_UNSPECIFIED); got != "" {
+		t.Fatalf("daggerheartHeritageKindLabel(unspecified) = %q, want empty", got)
+	}
+	if got := daggerheartWeaponCategoryLabel(daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_PRIMARY); got != "primary" {
+		t.Fatalf("daggerheartWeaponCategoryLabel(primary) = %q", got)
+	}
+	if got := daggerheartWeaponCategoryLabel(daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_SECONDARY); got != "secondary" {
+		t.Fatalf("daggerheartWeaponCategoryLabel(secondary) = %q", got)
+	}
+	if got := daggerheartWeaponCategoryLabel(daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_UNSPECIFIED); got != "" {
+		t.Fatalf("daggerheartWeaponCategoryLabel(unspecified) = %q, want empty", got)
+	}
 	if got := mapGameSystemToProto(campaignapp.GameSystemDaggerheart); got != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
 		t.Fatalf("mapGameSystemToProto() = %v", got)
 	}
+	if got := mapGameSystemToProto(campaignapp.GameSystemUnspecified); got != commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+		t.Fatalf("mapGameSystemToProto(unspecified) = %v", got)
+	}
 	if got := mapGmModeToProto(campaignapp.GmModeHybrid); got != statev1.GmMode_HYBRID {
 		t.Fatalf("mapGmModeToProto() = %v", got)
+	}
+	if got := mapGmModeToProto(campaignapp.GmModeHuman); got != statev1.GmMode_HUMAN {
+		t.Fatalf("mapGmModeToProto(human) = %v", got)
+	}
+	if got := mapGmModeToProto(campaignapp.GmModeAI); got != statev1.GmMode_AI {
+		t.Fatalf("mapGmModeToProto(ai) = %v", got)
+	}
+	if got := mapGmModeToProto(campaignapp.GmModeUnspecified); got != statev1.GmMode_GM_MODE_UNSPECIFIED {
+		t.Fatalf("mapGmModeToProto(unspecified) = %v", got)
+	}
+	if got := mapCharacterKindToProto(campaignapp.CharacterKindPC); got != statev1.CharacterKind_PC {
+		t.Fatalf("mapCharacterKindToProto(pc) = %v", got)
+	}
+	if got := mapCharacterKindToProto(campaignapp.CharacterKindNPC); got != statev1.CharacterKind_NPC {
+		t.Fatalf("mapCharacterKindToProto(npc) = %v", got)
+	}
+	if got := mapCharacterKindToProto(campaignapp.CharacterKindUnspecified); got != statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED {
+		t.Fatalf("mapCharacterKindToProto(unspecified) = %v", got)
+	}
+
+	if got := campaignCreatedAtUnixNano(nil); got != 0 {
+		t.Fatalf("campaignCreatedAtUnixNano(nil) = %d, want 0", got)
+	}
+	if got := campaignUpdatedAtUnixNano(nil); got != 0 {
+		t.Fatalf("campaignUpdatedAtUnixNano(nil) = %d, want 0", got)
+	}
+	createdOnly := timestamppb.Now()
+	if got := campaignUpdatedAtUnixNano(&statev1.Campaign{CreatedAt: createdOnly}); got != createdOnly.AsTime().UTC().UnixNano() {
+		t.Fatalf("campaignUpdatedAtUnixNano(created-only) = %d, want %d", got, createdOnly.AsTime().UTC().UnixNano())
 	}
 }
 
@@ -346,8 +595,9 @@ type contractCampaignClient struct {
 	getResp  *statev1.GetCampaignResponse
 	getErr   error
 
-	createResp *statev1.CreateCampaignResponse
-	createErr  error
+	createResp    *statev1.CreateCampaignResponse
+	createErr     error
+	lastCreateReq *statev1.CreateCampaignRequest
 }
 
 func (c *contractCampaignClient) ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
@@ -370,7 +620,8 @@ func (c *contractCampaignClient) GetCampaign(context.Context, *statev1.GetCampai
 	return &statev1.GetCampaignResponse{}, nil
 }
 
-func (c *contractCampaignClient) CreateCampaign(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
+func (c *contractCampaignClient) CreateCampaign(_ context.Context, req *statev1.CreateCampaignRequest, _ ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
+	c.lastCreateReq = req
 	if c.createErr != nil {
 		return nil, c.createErr
 	}

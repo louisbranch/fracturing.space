@@ -16,27 +16,18 @@ import (
 
 // defaultProtectedModules returns stable authenticated web modules.
 func defaultProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions) []Module {
-	modules, _ := buildProtectedModules(deps, res, opts, false)
+	modules, _ := buildProtectedModules(deps, res, opts)
 	return modules
 }
 
-// experimentalProtectedModules returns protected modules when experimental campaigns are enabled.
-func experimentalProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions) []Module {
-	modules, _ := buildProtectedModules(deps, res, opts, true)
-	return modules
-}
-
+// buildProtectedModules centralizes this web behavior in one helper seam.
 func buildProtectedModules(
 	deps Dependencies,
 	res ModuleResolvers,
 	opts ProtectedModuleOptions,
-	experimentalCampaigns bool,
 ) ([]Module, []dashboard.ServiceHealthEntry) {
 	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
-	campaignMod := newStableCampaignModule(deps, base, opts.ChatFallbackPort)
-	if experimentalCampaigns {
-		campaignMod = newExperimentalCampaignModule(deps, base, opts.ChatFallbackPort)
-	}
+	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort)
 	settingsMod := settings.New(settings.WithGateway(settingsgateway.NewGRPCGateway(deps.SettingsSocialClient, deps.AccountClient, deps.CredentialClient)), settings.WithBase(base), settings.WithSchemePolicy(opts.RequestSchemePolicy))
 	notifMod := notifications.NewWithGateway(notificationsgateway.NewGRPCGateway(deps.NotificationClient), base)
 	profileProbe := profile.NewWithGateway(profilegateway.NewGRPCGateway(deps.ProfileSocialClient), deps.AssetBaseURL, res.ResolveSignedIn)
@@ -66,16 +57,12 @@ func defaultCampaignWorkflows() map[string]campaigns.CharacterCreationWorkflow {
 	}
 }
 
-// newStableCampaignModule returns a campaigns module configured for stable routes.
-func newStableCampaignModule(deps Dependencies, base modulehandler.Base, chatFallbackPort string) Module {
+// newCampaignModule returns the campaigns module with stable route ownership.
+func newCampaignModule(deps Dependencies, base modulehandler.Base, chatFallbackPort string) Module {
 	return campaigns.NewStableWithGateway(newCampaignGateway(deps), base, chatFallbackPort, defaultCampaignWorkflows())
 }
 
-// newExperimentalCampaignModule returns a campaigns module configured for experimental routes.
-func newExperimentalCampaignModule(deps Dependencies, base modulehandler.Base, chatFallbackPort string) Module {
-	return campaigns.NewExperimentalWithGateway(newCampaignGateway(deps), base, chatFallbackPort, defaultCampaignWorkflows())
-}
-
+// newCampaignGateway builds package wiring for this web seam.
 func newCampaignGateway(deps Dependencies) campaigns.CampaignGateway {
 	return campaigns.NewGRPCGateway(campaigns.GRPCGatewayDeps{
 		CampaignClient:           deps.CampaignClient,

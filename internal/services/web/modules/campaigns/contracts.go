@@ -1,9 +1,7 @@
 package campaigns
 
 import (
-	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
-	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 )
 
 // Domain type aliases keep the root campaigns package as the HTTP/module
@@ -50,22 +48,6 @@ type (
 	CreateCharacterInput                       = campaignapp.CreateCharacterInput
 	CreateCharacterResult                      = campaignapp.CreateCharacterResult
 	CampaignGateway                            = campaignapp.CampaignGateway
-
-	campaignAuthorizationDecision = campaignapp.AuthorizationDecision
-	campaignAuthorizationTarget   = campaignapp.AuthorizationTarget
-	campaignAuthorizationCheck    = campaignapp.AuthorizationCheck
-	campaignAuthorizationAction   = campaignapp.AuthorizationAction
-	campaignAuthorizationResource = campaignapp.AuthorizationResource
-
-	CampaignClient           = campaigngateway.CampaignClient
-	ParticipantClient        = campaigngateway.ParticipantClient
-	CharacterClient          = campaigngateway.CharacterClient
-	DaggerheartContentClient = campaigngateway.DaggerheartContentClient
-	SessionClient            = campaigngateway.SessionClient
-	InviteClient             = campaigngateway.InviteClient
-	AuthorizationClient      = campaigngateway.AuthorizationClient
-	GRPCGatewayDeps          = campaigngateway.GRPCGatewayDeps
-	grpcGateway              = campaigngateway.GRPCGateway
 )
 
 const (
@@ -80,21 +62,4 @@ const (
 	CharacterKindUnspecified = campaignapp.CharacterKindUnspecified
 	CharacterKindPC          = campaignapp.CharacterKindPC
 	CharacterKindNPC         = campaignapp.CharacterKindNPC
-
-	campaignAuthzActionManage = campaignapp.AuthorizationActionManage
-	campaignAuthzActionMutate = campaignapp.AuthorizationActionMutate
-
-	campaignAuthzResourceSession     = campaignapp.AuthorizationResourceSession
-	campaignAuthzResourceParticipant = campaignapp.AuthorizationResourceParticipant
-	campaignAuthzResourceCharacter   = campaignapp.AuthorizationResourceCharacter
-	campaignAuthzResourceInvite      = campaignapp.AuthorizationResourceInvite
 )
-
-// NewGRPCGateway returns the production campaigns gateway.
-func NewGRPCGateway(deps GRPCGatewayDeps) CampaignGateway {
-	return campaigngateway.NewGRPCGateway(deps)
-}
-
-func mapCampaignCharacterCreationStepToProto(step *CampaignCharacterCreationStepInput) (*daggerheartv1.DaggerheartCreationStepInput, error) {
-	return campaigngateway.MapCampaignCharacterCreationStepToProto(step)
-}

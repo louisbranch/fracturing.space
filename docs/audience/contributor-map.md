@@ -21,6 +21,10 @@ Use this map to find the best first edit point for common contribution types.
 | Add/update MCP session/event/context registration | `internal/services/mcp/domain`, `internal/services/mcp/service/server.go` |
 | Add/update game projection/storage behavior | `internal/services/game/storage/sqlite/store_*.go`, `internal/services/game/storage/storage.go` |
 | Add game transport-level handlers (non-system) | `internal/services/game/api/grpc/game/` |
+| Add/update web module routes/handlers | `internal/services/web/modules/<area>/`, `docs/architecture/web-module-playbook.md` |
+| Add/update web module registry/composition wiring | `internal/services/web/modules/registry_*.go`, `internal/services/web/composition/compose.go` |
+| Add/update web cross-cutting transport behavior | `internal/services/web/platform/*`, `internal/services/web/app/compose.go` |
+| Add/update web startup dependency wiring | `internal/cmd/web/web.go`, `internal/services/web/dependencies.go` |
 | Change game service startup/bootstrap flow | `internal/services/game/app/bootstrap.go`, `internal/services/game/app/server_bootstrap.go` |
 | Add shared game test fakes/builders | `internal/test/mock/gamefakes/` |
 | Update domain write flow/apply behavior | `internal/services/game/api/grpc/internal/domainwrite/` |
@@ -31,6 +35,8 @@ Use this map to find the best first edit point for common contribution types.
 1. Read `docs/architecture/architecture.md` and `docs/architecture/domain-language.md`.
 2. Find your change row in the table above.
 3. Run targeted tests for that area first, then full validation:
+   - `make web-architecture-check`
+   - `go test ./internal/services/web/...`
    - `go test ./internal/services/game/api/grpc/internal/domainwrite -run TestShouldApplyProjectionInline`
    - `go test ./internal/services/game/app -run TestBuildCoreRouteTable`
    - `go test ./internal/services/mcp/service -run Test`

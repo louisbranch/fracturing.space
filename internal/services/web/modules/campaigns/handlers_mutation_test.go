@@ -57,10 +57,10 @@ func TestMountCharacterCreateRejectsInvalidKind(t *testing.T) {
 	}
 }
 
-func TestExperimentalMutationRoutesReturnParseErrorLocalizationKeys(t *testing.T) {
+func TestStableMutationRoutesReturnParseErrorLocalizationKeys(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -114,10 +114,10 @@ func TestExperimentalMutationRoutesReturnParseErrorLocalizationKeys(t *testing.T
 	}
 }
 
-func TestExperimentalMutationRoutesReturnRequiredFieldLocalizationKeys(t *testing.T) {
+func TestStableMutationRoutesReturnRequiredFieldLocalizationKeys(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -169,10 +169,10 @@ func TestExperimentalMutationRoutesReturnRequiredFieldLocalizationKeys(t *testin
 	}
 }
 
-func TestExperimentalMutationRoutesRedirectWithHTMXParity(t *testing.T) {
+func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
 	mount, _ := m.Mount()
 
 	tests := []struct {

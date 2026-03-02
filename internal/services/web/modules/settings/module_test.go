@@ -15,6 +15,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -243,6 +244,27 @@ func TestModuleIDReturnsSettings(t *testing.T) {
 
 	if got := New().ID(); got != "settings" {
 		t.Fatalf("ID() = %q, want %q", got, "settings")
+	}
+}
+
+func TestModuleHealthyAndSchemePolicyOptions(t *testing.T) {
+	t.Parallel()
+
+	if New().Healthy() {
+		t.Fatalf("New().Healthy() = true, want false for degraded module")
+	}
+
+	scheme := requestmeta.SchemePolicy{TrustForwardedProto: true}
+	module := New(
+		WithGateway(newPopulatedFakeGateway()),
+		WithBase(settingsTestBase()),
+		WithSchemePolicy(scheme),
+	)
+	if !module.Healthy() {
+		t.Fatalf("module.Healthy() = false, want true")
+	}
+	if module.flashMeta != scheme {
+		t.Fatalf("module.flashMeta = %+v, want %+v", module.flashMeta, scheme)
 	}
 }
 

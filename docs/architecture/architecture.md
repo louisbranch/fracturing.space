@@ -187,9 +187,9 @@ The primary service boundaries are:
 - **MCP service** (`internal/services/mcp/`): JSON-RPC adapter for the MCP protocol; forwards to the game service and does not own rules or state.
 - **Admin service** (`internal/services/admin/`): HTTP admin dashboard; renders UI and calls the game/auth services for operator workflows.
   - Internal boundaries: route modules under `internal/services/admin/module/*`, canonical paths under `internal/services/admin/routepath`, transport wiring under `internal/services/admin/transport/httpmux`, and startup integration seams under `internal/services/admin/integration/*`.
-- **Web service** (`internal/services/web/`, rename target `internal/services/web/`): Browser-facing modular BFF for end-user flows.
+- **Web service** (`internal/services/web/`): Browser-facing modular BFF for end-user flows.
   - Public/auth/discovery surface: `/`, `/login`, `/auth/*`, `/magic`, `/passkeys/*`, `/u/{username}`, `/discover`, `/discover/campaigns/{campaignID}`.
-  - Authenticated surface: canonical `/app/*` routes (`/app/dashboard`, `/app/campaigns`, `/app/campaigns/{id}/*`, `/app/invites`, `/app/notifications`, `/app/settings/*`).
+  - Authenticated surface: canonical `/app/*` routes (`/app/dashboard`, `/app/campaigns`, `/app/campaigns/{id}/*`, `/app/notifications`, `/app/settings/*`).
   - Internal boundaries: composition root in `internal/services/web/app`, cross-cutting primitives in `internal/services/web/platform`, feature modules in `internal/services/web/modules`, and canonical paths in `internal/services/web/routepath`.
   - Route ownership is module-scoped with stdlib `ServeMux`; composition stays thin and feature logic remains inside module/service packages.
 - **Userhub service** (`internal/services/userhub/`): Internal gRPC experience read-model service that aggregates user-at-a-glance dashboard data from game/social/notifications for client-facing transport layers.

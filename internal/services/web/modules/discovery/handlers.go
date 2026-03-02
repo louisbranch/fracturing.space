@@ -8,14 +8,17 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
+// handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	publichandler.Base
 }
 
+// newHandlers builds package wiring for this web seam.
 func newHandlers(base publichandler.Base) handlers {
 	return handlers{Base: base}
 }
 
+// handleIndex handles this route in the module transport layer.
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
 	h.WritePublicPage(

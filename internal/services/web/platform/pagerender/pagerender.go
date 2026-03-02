@@ -32,8 +32,10 @@ type ModulePage struct {
 	Fragment   templ.Component
 }
 
+// emptyComponent defines an internal contract used at this web package boundary.
 type emptyComponent struct{}
 
+// Render centralizes this web behavior in one helper seam.
 func (emptyComponent) Render(context.Context, io.Writer) error {
 	return nil
 }
@@ -85,6 +87,7 @@ func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver RequestRes
 	return nil
 }
 
+// resolveFlashToast resolves request-scoped values needed by this package.
 func resolveFlashToast(w http.ResponseWriter, r *http.Request, loc webi18n.Localizer) *webtemplates.AppToast {
 	notice, ok := flashnotice.ReadAndClear(w, r)
 	if !ok {

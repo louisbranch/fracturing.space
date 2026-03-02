@@ -222,7 +222,6 @@ The web server (`cmd/web`) accepts the following flags:
 - `-notifications-addr`: notifications gRPC dependency address. Default: `notifications:8088`
 - `-userhub-addr`: userhub gRPC dependency address. Default: `userhub:8092`
 - `-asset-base-url`: external base URL used for image asset delivery.
-- `-enable-experimental-modules`: enables experimental module surfaces.
 
 ### Address Overrides
 

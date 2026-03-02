@@ -15,22 +15,21 @@ type Module struct {
 	base             modulehandler.Base
 	chatFallbackPort string
 	workflows        map[string]CharacterCreationWorkflow
-	registerRoutes   func(*http.ServeMux, handlers)
 }
 
 // New returns a campaigns module with zero-value dependencies (degraded mode).
 func New() Module {
-	return Module{registerRoutes: registerStableRoutes}
+	return Module{}
 }
 
 // NewStableWithGateway returns a campaigns module with stable route exposure.
 func NewStableWithGateway(gateway CampaignGateway, base modulehandler.Base, chatFallbackPort string, workflows map[string]CharacterCreationWorkflow) Module {
-	return Module{gateway: gateway, base: base, chatFallbackPort: chatFallbackPort, workflows: workflows, registerRoutes: registerStableRoutes}
-}
-
-// NewExperimentalWithGateway returns a campaigns module with experimental route exposure.
-func NewExperimentalWithGateway(gateway CampaignGateway, base modulehandler.Base, chatFallbackPort string, workflows map[string]CharacterCreationWorkflow) Module {
-	return Module{gateway: gateway, base: base, chatFallbackPort: chatFallbackPort, workflows: workflows, registerRoutes: registerExperimentalRoutes}
+	return Module{
+		gateway:          gateway,
+		base:             base,
+		chatFallbackPort: chatFallbackPort,
+		workflows:        workflows,
+	}
 }
 
 // ID returns a stable module identifier.
@@ -46,9 +45,6 @@ func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	svc := newServiceWithWorkflows(m.gateway, m.workflows)
 	h := newHandlers(svc, m.base, m.chatFallbackPort, m.workflows)
-	if m.registerRoutes == nil {
-		m.registerRoutes = registerStableRoutes
-	}
-	m.registerRoutes(mux, h)
+	registerStableRoutes(mux, h)
 	return module.Mount{Prefix: routepath.CampaignsPrefix, Handler: mux}, nil
 }

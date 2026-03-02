@@ -8,12 +8,14 @@ import (
 	"time"
 )
 
+// responseMetricsWriter defines an internal contract used at this web package boundary.
 type responseMetricsWriter struct {
 	http.ResponseWriter
 	statusCode int
 	bytes      int
 }
 
+// WriteHeader centralizes this web behavior in one helper seam.
 func (w *responseMetricsWriter) WriteHeader(statusCode int) {
 	if w.statusCode == 0 {
 		w.statusCode = statusCode
@@ -21,6 +23,7 @@ func (w *responseMetricsWriter) WriteHeader(statusCode int) {
 	w.ResponseWriter.WriteHeader(statusCode)
 }
 
+// Write centralizes this web behavior in one helper seam.
 func (w *responseMetricsWriter) Write(payload []byte) (int, error) {
 	if w.statusCode == 0 {
 		w.statusCode = http.StatusOK
@@ -30,6 +33,7 @@ func (w *responseMetricsWriter) Write(payload []byte) (int, error) {
 	return n, err
 }
 
+// StatusCode centralizes this web behavior in one helper seam.
 func (w *responseMetricsWriter) StatusCode() int {
 	if w.statusCode == 0 {
 		return http.StatusOK

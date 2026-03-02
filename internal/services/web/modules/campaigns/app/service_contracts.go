@@ -7,6 +7,7 @@ import (
 	"golang.org/x/text/language"
 )
 
+// campaignReadGateway defines an internal contract used at this web package boundary.
 type campaignReadGateway interface {
 	ListCampaigns(context.Context) ([]CampaignSummary, error)
 	CampaignName(context.Context, string) (string, error)
@@ -20,6 +21,7 @@ type campaignReadGateway interface {
 	CharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error)
 }
 
+// campaignMutationGateway defines an internal contract used at this web package boundary.
 type campaignMutationGateway interface {
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
@@ -59,6 +61,7 @@ type Service interface {
 	ResetCharacterCreationWorkflow(context.Context, string, string) error
 }
 
+// service defines an internal contract used at this web package boundary.
 type service struct {
 	readGateway     campaignReadGateway
 	mutationGateway campaignMutationGateway
@@ -85,10 +88,12 @@ func IsGatewayHealthy(gateway CampaignGateway) bool {
 	return !unavailable
 }
 
+// newService builds package wiring for this web seam.
 func newService(gateway CampaignGateway) service {
 	return newServiceWithWorkflows(gateway, nil)
 }
 
+// newServiceWithWorkflows builds package wiring for this web seam.
 func newServiceWithWorkflows(gateway CampaignGateway, workflows map[string]CharacterCreationWorkflow) service {
 	if gateway == nil {
 		gateway = unavailableGateway{}

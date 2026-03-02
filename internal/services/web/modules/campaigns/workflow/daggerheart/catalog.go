@@ -235,6 +235,7 @@ func (Workflow) AssembleCatalog(
 	return creation
 }
 
+// sortByName centralizes this web behavior in one helper seam.
 func sortByName[T any](items []T, nameOf func(T) string, idOf func(T) string) {
 	sort.SliceStable(items, func(i, j int) bool {
 		left := strings.ToLower(strings.TrimSpace(nameOf(items[i])))

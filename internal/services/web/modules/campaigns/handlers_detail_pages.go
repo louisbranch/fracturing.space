@@ -11,10 +11,12 @@ import (
 
 // --- Per-sub-page detail handlers ---
 
+// handleOverview renders the default campaign detail overview section.
 func (h handlers) handleOverview(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{marker: markerOverview})
 }
 
+// handleParticipants handles this route in the module transport layer.
 func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerParticipants,
@@ -32,6 +34,7 @@ func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, cam
 	})
 }
 
+// handleCharacters handles this route in the module transport layer.
 func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerCharacters,
@@ -49,6 +52,7 @@ func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campa
 	})
 }
 
+// handleCharacterDetail handles this route in the module transport layer.
 func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerCharacterDetail,
@@ -79,6 +83,7 @@ func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, 
 	})
 }
 
+// handleSessions handles this route in the module transport layer.
 func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerSessions,
@@ -96,6 +101,7 @@ func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaig
 	})
 }
 
+// handleSessionDetail handles this route in the module transport layer.
 func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, campaignID, sessionID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerSessionDetail,
@@ -117,6 +123,7 @@ func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 	})
 }
 
+// handleInvites handles this route in the module transport layer.
 func (h handlers) handleInvites(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerInvites,

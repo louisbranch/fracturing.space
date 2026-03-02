@@ -59,6 +59,7 @@ func NewAuthRedirectWithGatewayAndPolicy(gateway publicauthapp.Gateway, policy r
 	return newPublicModule("public-auth-redirect", routepath.AuthPrefix, registerAuthRedirectRoutes, gateway, policy)
 }
 
+// newPublicModule builds package wiring for this web seam.
 func newPublicModule(id string, prefix string, registerRoutes func(*http.ServeMux, handlers), gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
 	return Module{
 		gateway:        gateway,

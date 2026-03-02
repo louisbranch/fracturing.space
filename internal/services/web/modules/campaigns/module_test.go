@@ -13,6 +13,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -30,6 +31,32 @@ func TestModuleIDReturnsCampaigns(t *testing.T) {
 
 	if got := New().ID(); got != "campaigns" {
 		t.Fatalf("ID() = %q, want %q", got, "campaigns")
+	}
+}
+
+func TestModuleHealthyReflectsGatewayState(t *testing.T) {
+	t.Parallel()
+
+	if New().Healthy() {
+		t.Fatalf("New().Healthy() = true, want false for degraded module")
+	}
+	if !NewStableWithGateway(fakeGateway{}, modulehandler.NewTestBase(), "", nil).Healthy() {
+		t.Fatalf("NewStableWithGateway(...).Healthy() = false, want true")
+	}
+}
+
+func TestMapCampaignCharacterCreationStepToProtoWrapper(t *testing.T) {
+	t.Parallel()
+
+	step := &campaignapp.CampaignCharacterCreationStepInput{
+		Details: &campaignapp.CampaignCharacterCreationStepDetails{},
+	}
+	mapped, err := mapCampaignCharacterCreationStepToProto(step)
+	if err != nil {
+		t.Fatalf("mapCampaignCharacterCreationStepToProto() error = %v", err)
+	}
+	if mapped == nil {
+		t.Fatalf("mapCampaignCharacterCreationStepToProto() = nil, want non-nil")
 	}
 }
 
@@ -627,7 +654,7 @@ type fakeGateway struct {
 	characterCreationCatalogErr       error
 	characterCreationProfile          CampaignCharacterCreationProfile
 	characterCreationProfileErr       error
-	batchAuthorizationDecisions       []campaignAuthorizationDecision
+	batchAuthorizationDecisions       []campaignapp.AuthorizationDecision
 	batchAuthorizationErr             error
 	applyCharacterCreationStepErr     error
 	resetCharacterCreationWorkflowErr error
@@ -804,15 +831,15 @@ func (f fakeGateway) ApplyCharacterCreationStep(context.Context, string, string,
 func (f fakeGateway) ResetCharacterCreationWorkflow(context.Context, string, string) error {
 	return f.resetCharacterCreationWorkflowErr
 }
-func (fakeGateway) CanCampaignAction(context.Context, string, campaignAuthorizationAction, campaignAuthorizationResource, *campaignAuthorizationTarget) (campaignAuthorizationDecision, error) {
-	return campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil
+func (fakeGateway) CanCampaignAction(context.Context, string, campaignapp.AuthorizationAction, campaignapp.AuthorizationResource, *campaignapp.AuthorizationTarget) (campaignapp.AuthorizationDecision, error) {
+	return campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil
 }
 
-func (f fakeGateway) BatchCanCampaignAction(context.Context, string, []campaignAuthorizationCheck) ([]campaignAuthorizationDecision, error) {
+func (f fakeGateway) BatchCanCampaignAction(context.Context, string, []campaignapp.AuthorizationCheck) ([]campaignapp.AuthorizationDecision, error) {
 	if f.batchAuthorizationErr != nil {
 		return nil, f.batchAuthorizationErr
 	}
-	return append([]campaignAuthorizationDecision(nil), f.batchAuthorizationDecisions...), nil
+	return append([]campaignapp.AuthorizationDecision(nil), f.batchAuthorizationDecisions...), nil
 }
 
 type fakeCampaignClient struct {

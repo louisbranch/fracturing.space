@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -39,10 +40,10 @@ func TestMountServesCampaignDetailRoutes(t *testing.T) {
 	}
 }
 
-func TestMountExperimentalCampaignDetailRoutes(t *testing.T) {
+func TestMountStableCampaignMutationDetailRoutes(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -68,7 +69,7 @@ func TestMountExperimentalCampaignDetailRoutes(t *testing.T) {
 func TestMountCampaignSessionsRouteRendersSessionCards(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(fakeGateway{
+	m := NewStableWithGateway(fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		sessions: []CampaignSession{{
 			ID:     "s1",
@@ -103,7 +104,7 @@ func TestMountCampaignSessionsRouteRendersSessionCards(t *testing.T) {
 func TestMountCampaignSessionDetailRouteRendersSelectedSession(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(fakeGateway{
+	m := NewStableWithGateway(fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		sessions: []CampaignSession{{
 			ID:     "s1",
@@ -137,7 +138,7 @@ func TestMountCampaignSessionDetailRouteRendersSelectedSession(t *testing.T) {
 func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(fakeGateway{
+	m := NewStableWithGateway(fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		invites: []CampaignInvite{{
 			ID:              "inv-1",
@@ -706,7 +707,7 @@ func TestMountCampaignCharactersShowsCreationEntryForEditableDaggerheartCharacte
 			Kind:       "PC",
 			Controller: "Ariadne",
 		}},
-		batchAuthorizationDecisions: []campaignAuthorizationDecision{{CheckID: "ch-a", Evaluated: true, Allowed: true}},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{{CheckID: "ch-a", Evaluated: true, Allowed: true}},
 	}, modulehandler.NewTestBase(), "", nil)
 	mount, err := m.Mount()
 	if err != nil {
@@ -958,7 +959,7 @@ func TestMountUsesWebLayoutForNonHTMX(t *testing.T) {
 func TestMountCampaignSessionDetailRendersBreadcrumbs(t *testing.T) {
 	t.Parallel()
 
-	m := NewExperimentalWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandler.NewTestBase(), "", nil)
+	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandler.NewTestBase(), "", nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -988,7 +989,7 @@ func TestMountCampaignSessionDetailTruncatesLongBreadcrumbLabels(t *testing.T) {
 
 	longCampaignName := "Campaign-" + strings.Repeat("x", 64)
 	longSessionID := "session-" + strings.Repeat("y", 64)
-	m := NewExperimentalWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: longCampaignName}}}, modulehandler.NewTestBase(), "", nil)
+	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: longCampaignName}}}, modulehandler.NewTestBase(), "", nil)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

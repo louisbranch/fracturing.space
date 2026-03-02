@@ -43,6 +43,7 @@ func campaignBreadcrumbs(campaignID, campaignLabel string, loc webtemplates.Loca
 	return append(result, extra...)
 }
 
+// campaignMainClass centralizes this web behavior in one helper seam.
 func campaignMainClass(coverImageURL string) string {
 	coverImageURL = strings.TrimSpace(coverImageURL)
 	if coverImageURL == "" {
@@ -61,6 +62,7 @@ type campaignPageContext struct {
 	locale    language.Tag
 }
 
+// loadCampaignPage loads the package state needed for this request path.
 func (h handlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campaignID string) (context.Context, *campaignPageContext, error) {
 	loc, lang := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
@@ -76,6 +78,7 @@ func (h handlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campa
 	}, nil
 }
 
+// layout centralizes this web behavior in one helper seam.
 func (p *campaignPageContext) layout(campaignID, currentPath string) webtemplates.AppMainLayoutOptions {
 	return webtemplates.AppMainLayoutOptions{
 		SideMenu:               campaignWorkspaceMenu(p.workspace, currentPath, p.loc),
@@ -104,6 +107,7 @@ func (p *campaignPageContext) detailView(campaignID, marker string) webtemplates
 	}
 }
 
+// title centralizes this web behavior in one helper seam.
 func (p *campaignPageContext) title(campaignID string) string {
 	name := strings.TrimSpace(p.workspace.Name)
 	if name != "" {
@@ -128,6 +132,7 @@ func (p *campaignPageContext) header(campaignID string, breadcrumbs []sharedtemp
 
 // --- Route param extractors ---
 
+// routeCampaignID extracts the canonical campaign route parameter.
 func (h handlers) routeCampaignID(r *http.Request) (string, bool) {
 	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
 	if campaignID == "" {
@@ -136,6 +141,7 @@ func (h handlers) routeCampaignID(r *http.Request) (string, bool) {
 	return campaignID, true
 }
 
+// routeCharacterID centralizes this web behavior in one helper seam.
 func (h handlers) routeCharacterID(r *http.Request) (string, bool) {
 	characterID := strings.TrimSpace(r.PathValue("characterID"))
 	if characterID == "" {

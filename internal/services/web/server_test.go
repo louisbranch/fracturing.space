@@ -60,8 +60,8 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	dashboardNoSlashReq := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
 	dashboardNoSlashRR := httptest.NewRecorder()
 	h.ServeHTTP(dashboardNoSlashRR, dashboardNoSlashReq)
-	if dashboardNoSlashRR.Code != http.StatusFound {
-		t.Fatalf("dashboard (no slash) status = %d, want %d", dashboardNoSlashRR.Code, http.StatusFound)
+	if dashboardNoSlashRR.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("dashboard (no slash) status = %d, want %d", dashboardNoSlashRR.Code, http.StatusTemporaryRedirect)
 	}
 
 	campaignsReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/123", nil)
@@ -76,8 +76,8 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	if got := dashboardRR.Header().Get("Location"); got != "/login" {
 		t.Fatalf("dashboard redirect = %q, want %q", got, "/login")
 	}
-	if got := dashboardNoSlashRR.Header().Get("Location"); got != "/login" {
-		t.Fatalf("dashboard (no slash) redirect = %q, want %q", got, "/login")
+	if got := dashboardNoSlashRR.Header().Get("Location"); got != "/app/dashboard/" {
+		t.Fatalf("dashboard (no slash) redirect = %q, want %q", got, "/app/dashboard/")
 	}
 
 	notificationsReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
@@ -91,41 +91,11 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	}
 }
 
-func TestNewHandlerMountsExperimentalModulesWhenEnabled(t *testing.T) {
-	t.Parallel()
-
-	h, err := NewHandler(Config{EnableExperimentalModules: true})
-	if err != nil {
-		t.Fatalf("NewHandler() error = %v", err)
-	}
-
-	publicReq := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
-	publicRR := httptest.NewRecorder()
-	h.ServeHTTP(publicRR, publicReq)
-	if publicRR.Code != http.StatusOK {
-		t.Fatalf("public status = %d, want %d", publicRR.Code, http.StatusOK)
-	}
-
-	protectedReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
-	protectedRR := httptest.NewRecorder()
-	h.ServeHTTP(protectedRR, protectedReq)
-	if protectedRR.Code != http.StatusFound {
-		t.Fatalf("protected status = %d, want %d", protectedRR.Code, http.StatusFound)
-	}
-
-	campaignsReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/123", nil)
-	campaignsRR := httptest.NewRecorder()
-	h.ServeHTTP(campaignsRR, campaignsReq)
-	if campaignsRR.Code != http.StatusFound {
-		t.Fatalf("campaigns status = %d, want %d", campaignsRR.Code, http.StatusFound)
-	}
-}
-
-func TestDefaultCampaignStableSurfaceExposesWorkflowRoutesAndHidesScaffoldedRoutes(t *testing.T) {
+func TestDefaultCampaignSurfaceExposesDetailAndMutationRoutes(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultStableProtectedConfig(auth))
+	h, err := NewHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -135,24 +105,26 @@ func TestDefaultCampaignStableSurfaceExposesWorkflowRoutesAndHidesScaffoldedRout
 		"/app/campaigns/c1/sessions/sess-1",
 		"/app/campaigns/c1/invites",
 		"/app/campaigns/c1/game",
+		"/app/campaigns/c1/characters/char-1",
 	} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		attachSessionCookie(t, req, auth, "user-1")
 		rr := httptest.NewRecorder()
 		h.ServeHTTP(rr, req)
-		if rr.Code != http.StatusNotFound {
-			t.Fatalf("path %q status = %d, want %d", path, rr.Code, http.StatusNotFound)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("path %q status = %d, want %d", path, rr.Code, http.StatusOK)
 		}
 	}
 
 	for _, tc := range []struct {
-		path string
-		body string
+		path     string
+		body     string
+		wantPath string
 	}{
-		{path: "/app/campaigns/c1/sessions/start", body: "name=Session+One"},
-		{path: "/app/campaigns/c1/sessions/end", body: "session_id=sess-1"},
-		{path: "/app/campaigns/c1/invites/create", body: "participant_id=p1&recipient_user_id=user-2"},
-		{path: "/app/campaigns/c1/invites/revoke", body: "invite_id=inv-1"},
+		{path: "/app/campaigns/c1/sessions/start", body: "name=Session+One", wantPath: "/app/campaigns/c1/sessions"},
+		{path: "/app/campaigns/c1/sessions/end", body: "session_id=sess-1", wantPath: "/app/campaigns/c1/sessions"},
+		{path: "/app/campaigns/c1/invites/create", body: "participant_id=p1&recipient_user_id=user-2", wantPath: "/app/campaigns/c1/invites"},
+		{path: "/app/campaigns/c1/invites/revoke", body: "invite_id=inv-1", wantPath: "/app/campaigns/c1/invites"},
 	} {
 		req := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -160,17 +132,12 @@ func TestDefaultCampaignStableSurfaceExposesWorkflowRoutesAndHidesScaffoldedRout
 		attachSessionCookie(t, req, auth, "user-1")
 		rr := httptest.NewRecorder()
 		h.ServeHTTP(rr, req)
-		if rr.Code != http.StatusNotFound {
-			t.Fatalf("path %q status = %d, want %d", tc.path, rr.Code, http.StatusNotFound)
+		if rr.Code != http.StatusFound {
+			t.Fatalf("path %q status = %d, want %d", tc.path, rr.Code, http.StatusFound)
 		}
-	}
-
-	characterReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/c1/characters/char-1", nil)
-	attachSessionCookie(t, characterReq, auth, "user-1")
-	characterRR := httptest.NewRecorder()
-	h.ServeHTTP(characterRR, characterReq)
-	if characterRR.Code == http.StatusNotFound {
-		t.Fatalf("character detail route unexpectedly hidden")
+		if got := rr.Header().Get("Location"); got != tc.wantPath {
+			t.Fatalf("path %q Location = %q, want %q", tc.path, got, tc.wantPath)
+		}
 	}
 
 	createReq := httptest.NewRequest(http.MethodPost, "/app/campaigns/c1/characters/create", strings.NewReader("name=Hero&kind=pc"))
@@ -181,91 +148,6 @@ func TestDefaultCampaignStableSurfaceExposesWorkflowRoutesAndHidesScaffoldedRout
 	h.ServeHTTP(createRR, createReq)
 	if createRR.Code == http.StatusNotFound {
 		t.Fatalf("stable character create route unexpectedly hidden")
-	}
-}
-
-func TestExperimentalCampaignSurfaceExposesDetailRoutes(t *testing.T) {
-	t.Parallel()
-
-	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
-	if err != nil {
-		t.Fatalf("NewHandler() error = %v", err)
-	}
-
-	for _, path := range []string{
-		"/app/campaigns/c1/sessions",
-		"/app/campaigns/c1/sessions/sess-1",
-		"/app/campaigns/c1/characters/char-1",
-		"/app/campaigns/c1/invites",
-		"/app/campaigns/c1/game",
-	} {
-		req := httptest.NewRequest(http.MethodGet, path, nil)
-		attachSessionCookie(t, req, auth, "user-1")
-		rr := httptest.NewRecorder()
-		h.ServeHTTP(rr, req)
-		if rr.Code != http.StatusOK {
-			t.Fatalf("path %q status = %d, want %d", path, rr.Code, http.StatusOK)
-		}
-	}
-}
-
-func TestExperimentalCampaignSessionMutationRoutesAreExposed(t *testing.T) {
-	t.Parallel()
-
-	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
-	if err != nil {
-		t.Fatalf("NewHandler() error = %v", err)
-	}
-
-	for _, tc := range []struct {
-		name     string
-		path     string
-		body     string
-		wantPath string
-	}{
-		{
-			name:     "session start",
-			path:     "/app/campaigns/c1/sessions/start",
-			body:     "name=Session+One",
-			wantPath: "/app/campaigns/c1/sessions",
-		},
-		{
-			name:     "session end",
-			path:     "/app/campaigns/c1/sessions/end",
-			body:     "session_id=sess-1",
-			wantPath: "/app/campaigns/c1/sessions",
-		},
-		{
-			name:     "invite create",
-			path:     "/app/campaigns/c1/invites/create",
-			body:     "participant_id=p1&recipient_user_id=user-2",
-			wantPath: "/app/campaigns/c1/invites",
-		},
-		{
-			name:     "invite revoke",
-			path:     "/app/campaigns/c1/invites/revoke",
-			body:     "invite_id=inv-1",
-			wantPath: "/app/campaigns/c1/invites",
-		},
-	} {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			req := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
-			req.Header.Set("Origin", "http://example.com")
-			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-			attachSessionCookie(t, req, auth, "user-1")
-			rr := httptest.NewRecorder()
-			h.ServeHTTP(rr, req)
-			if rr.Code != http.StatusFound {
-				t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
-			}
-			if got := rr.Header().Get("Location"); got != tc.wantPath {
-				t.Fatalf("Location = %q, want %q", got, tc.wantPath)
-			}
-		})
 	}
 }
 
@@ -308,7 +190,6 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
-		EnableExperimentalModules: true,
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{SessionClient: auth},
 			modules.Dependencies{

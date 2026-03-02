@@ -7,6 +7,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// service defines an internal contract used at this web package boundary.
 type service struct {
 	gateway Gateway
 }
@@ -19,6 +20,7 @@ func NewService(gateway Gateway) Service {
 	return service{gateway: gateway}
 }
 
+// LoadProfile loads the package state needed for this request path.
 func (s service) LoadProfile(ctx context.Context, userID string) (SettingsProfile, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
@@ -37,6 +39,7 @@ func (s service) LoadProfile(ctx context.Context, userID string) (SettingsProfil
 	return profile, nil
 }
 
+// SaveProfile centralizes this web behavior in one helper seam.
 func (s service) SaveProfile(ctx context.Context, userID string, profile SettingsProfile) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
@@ -54,6 +57,7 @@ func (s service) SaveProfile(ctx context.Context, userID string, profile Setting
 	return s.gateway.SaveProfile(ctx, resolvedUserID, profile)
 }
 
+// LoadLocale loads the package state needed for this request path.
 func (s service) LoadLocale(ctx context.Context, userID string) (string, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
@@ -66,6 +70,7 @@ func (s service) LoadLocale(ctx context.Context, userID string) (string, error) 
 	return NormalizeLocale(locale), nil
 }
 
+// SaveLocale centralizes this web behavior in one helper seam.
 func (s service) SaveLocale(ctx context.Context, userID string, value string) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
@@ -78,6 +83,7 @@ func (s service) SaveLocale(ctx context.Context, userID string, value string) er
 	return s.gateway.SaveLocale(ctx, resolvedUserID, locale)
 }
 
+// ListAIKeys returns the package view collection for this workflow.
 func (s service) ListAIKeys(ctx context.Context, userID string) ([]SettingsAIKey, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
@@ -122,6 +128,7 @@ func (s service) ListAIKeys(ctx context.Context, userID string) ([]SettingsAIKey
 	return normalized, nil
 }
 
+// CreateAIKey executes package-scoped creation behavior for this flow.
 func (s service) CreateAIKey(ctx context.Context, userID string, label string, secret string) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
@@ -135,6 +142,7 @@ func (s service) CreateAIKey(ctx context.Context, userID string, label string, s
 	return s.gateway.CreateAIKey(ctx, resolvedUserID, label, secret)
 }
 
+// RevokeAIKey applies this package workflow transition.
 func (s service) RevokeAIKey(ctx context.Context, userID string, credentialID string) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {

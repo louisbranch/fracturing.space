@@ -18,5 +18,9 @@ const userProfileNameMaxLength = settingsapp.UserProfileNameMaxLength
 
 // Settings gRPC dependency aliases keep root-module constructors/test seams stable.
 type SocialClient = settingsgateway.SocialClient
+
+// AccountClient defines an internal contract used at this web package boundary.
 type AccountClient = settingsgateway.AccountClient
+
+// CredentialClient defines an internal contract used at this web package boundary.
 type CredentialClient = settingsgateway.CredentialClient

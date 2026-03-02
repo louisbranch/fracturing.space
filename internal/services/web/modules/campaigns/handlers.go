@@ -8,6 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
 
+// handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
 	service          campaignapp.Service
@@ -16,6 +17,7 @@ type handlers struct {
 	nowFunc          func() time.Time
 }
 
+// newHandlers builds package wiring for this web seam.
 func newHandlers(
 	s campaignapp.Service,
 	base modulehandler.Base,
@@ -38,6 +40,7 @@ func newHandlers(
 	}
 }
 
+// now centralizes this web behavior in one helper seam.
 func (h handlers) now() time.Time {
 	if h.nowFunc != nil {
 		return h.nowFunc()
@@ -45,6 +48,7 @@ func (h handlers) now() time.Time {
 	return time.Now()
 }
 
+// resolveWorkflow resolves request-scoped values needed by this package.
 func (h handlers) resolveWorkflow(system string) CharacterCreationWorkflow {
 	if h.workflows == nil {
 		return nil

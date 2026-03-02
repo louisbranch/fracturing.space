@@ -64,6 +64,7 @@ func MapGRPCTransportError(err error, mapping GRPCStatusMapping) error {
 	}
 }
 
+// mapWithFallback maps values across transport and domain boundaries.
 func mapWithFallback(mapping GRPCStatusMapping) error {
 	if strings.TrimSpace(mapping.FallbackKey) != "" {
 		return EK(mapping.FallbackKind, mapping.FallbackKey, strings.TrimSpace(mapping.FallbackMessage))
@@ -135,6 +136,7 @@ func HTTPStatus(err error) int {
 	}
 }
 
+// grpcErrorHTTPStatus centralizes this web behavior in one helper seam.
 func grpcErrorHTTPStatus(err error, fallback int) int {
 	st, ok := status.FromError(err)
 	if !ok {

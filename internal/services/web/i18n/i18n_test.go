@@ -52,6 +52,27 @@ func TestResolveTagPrecedence(t *testing.T) {
 	})
 }
 
+func TestSupportedIncludesDefault(t *testing.T) {
+	t.Parallel()
+
+	supported := Supported()
+	if len(supported) == 0 {
+		t.Fatal("Supported() returned no language tags")
+	}
+
+	defaultTag := Default()
+	foundDefault := false
+	for _, tag := range supported {
+		if tag == defaultTag {
+			foundDefault = true
+			break
+		}
+	}
+	if !foundDefault {
+		t.Fatalf("Supported() missing default tag %q", defaultTag)
+	}
+}
+
 func TestResolveTagInvalidValues(t *testing.T) {
 	t.Run("invalid query param falls back", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "http://example.com/?lang=not-a-lang", nil)

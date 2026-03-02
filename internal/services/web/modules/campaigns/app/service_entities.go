@@ -18,6 +18,7 @@ func sortByName[T any](items []T, nameOf func(T) string, idOf func(T) string) {
 	})
 }
 
+// campaignParticipants centralizes this web behavior in one helper seam.
 func (s service) campaignParticipants(ctx context.Context, campaignID string) ([]CampaignParticipant, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
@@ -73,6 +74,7 @@ func (s service) campaignParticipants(ctx context.Context, campaignID string) ([
 	return normalized, nil
 }
 
+// campaignCharacters centralizes this web behavior in one helper seam.
 func (s service) campaignCharacters(ctx context.Context, campaignID string) ([]CampaignCharacter, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
@@ -124,6 +126,7 @@ func (s service) campaignCharacters(ctx context.Context, campaignID string) ([]C
 	return normalized, nil
 }
 
+// campaignSessions centralizes this web behavior in one helper seam.
 func (s service) campaignSessions(ctx context.Context, campaignID string) ([]CampaignSession, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
@@ -175,6 +178,7 @@ func (s service) campaignSessions(ctx context.Context, campaignID string) ([]Cam
 	return normalized, nil
 }
 
+// campaignInvites centralizes this web behavior in one helper seam.
 func (s service) campaignInvites(ctx context.Context, campaignID string) ([]CampaignInvite, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {

@@ -51,6 +51,8 @@ func Compose(input ComposeInput) (http.Handler, error) {
 	return root, nil
 }
 
+// mountModule performs shared mount bookkeeping so public/protected mounting
+// paths enforce one prefix owner and optional wrapper behavior consistently.
 func mountModule(
 	root *http.ServeMux,
 	feature module.Module,
@@ -75,6 +77,7 @@ func mountModule(
 	return nil
 }
 
+// mountPublicModule enforces that public modules never claim protected prefixes.
 func mountPublicModule(root *http.ServeMux, feature module.Module, seen map[string]string) error {
 	mount, prefix, err := resolveMount(feature)
 	if err != nil {
@@ -86,6 +89,8 @@ func mountPublicModule(root *http.ServeMux, feature module.Module, seen map[stri
 	return mountModule(root, feature, mount, prefix, seen, nil)
 }
 
+// mountProtectedModule enforces protected-prefix ownership for canonical
+// `/app/*` module roots.
 func mountProtectedModule(root *http.ServeMux, feature module.Module, seen map[string]string, wrap func(http.Handler) http.Handler) error {
 	mount, prefix, err := resolveMount(feature)
 	if err != nil {
@@ -94,21 +99,16 @@ func mountProtectedModule(root *http.ServeMux, feature module.Module, seen map[s
 	if !isProtectedPrefix(prefix) {
 		return fmt.Errorf("module %q must mount under /app/, got %q", feature.ID(), prefix)
 	}
-	if err := mountModule(root, feature, mount, prefix, seen, wrap); err != nil {
-		return err
-	}
-	if alias := protectedSlashlessPrefixAlias(prefix); alias != "" {
-		if err := mountModule(root, feature, mount, alias, seen, wrap); err != nil {
-			return err
-		}
-	}
-	return nil
+	return mountModule(root, feature, mount, prefix, seen, wrap)
 }
 
+// isProtectedPrefix centralizes the `/app/` ownership rule used during compose.
 func isProtectedPrefix(prefix string) bool {
 	return strings.HasPrefix(prefix, routepath.AppPrefix)
 }
 
+// resolveMount validates module mount contracts once so callers can share
+// canonical prefix and handler checks.
 func resolveMount(feature module.Module) (module.Mount, string, error) {
 	if feature == nil {
 		return module.Mount{}, "", fmt.Errorf("module is nil")
@@ -130,6 +130,8 @@ func resolveMount(feature module.Module) (module.Mount, string, error) {
 	return mount, prefix, nil
 }
 
+// validatePrefix rejects non-canonical compose prefixes before route
+// registration to avoid duplicate ownership and accidental mismatches.
 func validatePrefix(prefix string) error {
 	if prefix == "" {
 		return fmt.Errorf("prefix is required")
@@ -146,18 +148,8 @@ func validatePrefix(prefix string) error {
 	return nil
 }
 
-func protectedSlashlessPrefixAlias(prefix string) string {
-	prefix = strings.TrimSpace(prefix)
-	if !isProtectedPrefix(prefix) || !strings.HasSuffix(prefix, "/") {
-		return ""
-	}
-	alias := strings.TrimSuffix(prefix, "/")
-	if alias == "" {
-		return ""
-	}
-	return alias
-}
-
+// requireAuth wraps handlers with session-backed auth checks and redirects to
+// the shared login path when auth is missing.
 func requireAuth(authenticated func(*http.Request) bool) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if next == nil {
@@ -173,6 +165,8 @@ func requireAuth(authenticated func(*http.Request) bool) func(http.Handler) http
 	}
 }
 
+// wrapProtectedModule composes auth and same-origin protections for protected
+// modules so each module mount receives identical guardrails.
 func wrapProtectedModule(authenticated func(*http.Request) bool, policy requestmeta.SchemePolicy) func(http.Handler) http.Handler {
 	authWrap := requireAuth(authenticated)
 	csrfWrap := requireCookieSessionSameOrigin(policy)
@@ -181,6 +175,8 @@ func wrapProtectedModule(authenticated func(*http.Request) bool, policy requestm
 	}
 }
 
+// requireCookieSessionSameOrigin enforces same-origin proof for cookie-backed
+// mutation requests and leaves non-mutation reads untouched.
 func requireCookieSessionSameOrigin(policy requestmeta.SchemePolicy) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if next == nil {
@@ -200,6 +196,7 @@ func requireCookieSessionSameOrigin(policy requestmeta.SchemePolicy) func(http.H
 	}
 }
 
+// isMutationMethod identifies state-changing HTTP verbs for same-origin checks.
 func isMutationMethod(r *http.Request) bool {
 	if r == nil {
 		return false
@@ -212,11 +209,14 @@ func isMutationMethod(r *http.Request) bool {
 	}
 }
 
+// hasSessionCookie reports whether the request carries an authenticated web
+// session cookie and therefore requires same-origin mutation proof.
 func hasSessionCookie(r *http.Request) bool {
 	_, ok := sessioncookie.Read(r)
 	return ok
 }
 
+// hasSameOriginProof delegates proof validation to shared requestmeta helpers.
 func hasSameOriginProof(r *http.Request, policy requestmeta.SchemePolicy) bool {
 	return requestmeta.HasSameOriginProofWithPolicy(r, policy)
 }

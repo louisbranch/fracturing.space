@@ -69,26 +69,26 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	}
 }
 
-func TestExperimentalModulesAvailableWhenEnabled(t *testing.T) {
+func TestDefaultProtectedModulesDelegatesToBuilder(t *testing.T) {
 	t.Parallel()
 
-	reg := NewRegistry()
-	built := reg.Build(BuildInput{
-		Dependencies:              Dependencies{},
-		Resolvers:                 ModuleResolvers{},
-		PublicOptions:             PublicModuleOptions{},
-		ProtectedOptions:          ProtectedModuleOptions{},
-		EnableExperimentalModules: true,
-	})
-	if len(built.Public) != 5 {
-		t.Fatalf("experimental public module count = %d, want %d", len(built.Public), 5)
+	deps := Dependencies{}
+	resolvers := ModuleResolvers{}
+	opts := ProtectedModuleOptions{}
+
+	modules := defaultProtectedModules(deps, resolvers, opts)
+	builtModules, _ := buildProtectedModules(deps, resolvers, opts)
+	if len(modules) != len(builtModules) {
+		t.Fatalf("defaultProtectedModules len = %d, want %d", len(modules), len(builtModules))
 	}
-	if len(built.Protected) != 4 {
-		t.Fatalf("experimental protected module count = %d, want %d", len(built.Protected), 4)
+	for i := range modules {
+		if modules[i].ID() != builtModules[i].ID() {
+			t.Fatalf("module[%d].ID() = %q, want %q", i, modules[i].ID(), builtModules[i].ID())
+		}
 	}
 }
 
-func TestStableModulesHaveUniquePrefixes(t *testing.T) {
+func TestModulesHaveUniquePrefixes(t *testing.T) {
 	t.Parallel()
 
 	reg := NewRegistry()
@@ -108,34 +108,7 @@ func TestStableModulesHaveUniquePrefixes(t *testing.T) {
 			t.Fatalf("module %q prefix is empty", module.ID())
 		}
 		if _, ok := seen[mount.Prefix]; ok {
-			t.Fatalf("stable module duplicate mount prefix %q", mount.Prefix)
-		}
-		seen[mount.Prefix] = struct{}{}
-	}
-}
-
-func TestExperimentalModulesHaveUniquePrefixes(t *testing.T) {
-	t.Parallel()
-
-	reg := NewRegistry()
-	built := reg.Build(BuildInput{
-		Dependencies:              Dependencies{},
-		Resolvers:                 ModuleResolvers{},
-		PublicOptions:             PublicModuleOptions{},
-		ProtectedOptions:          ProtectedModuleOptions{},
-		EnableExperimentalModules: true,
-	})
-	seen := map[string]struct{}{}
-	for _, module := range built.Protected {
-		mount, err := module.Mount()
-		if err != nil {
-			t.Fatalf("module %q mount error = %v", module.ID(), err)
-		}
-		if mount.Prefix == "" {
-			t.Fatalf("module %q prefix is empty", module.ID())
-		}
-		if _, ok := seen[mount.Prefix]; ok {
-			t.Fatalf("experimental protected module duplicate mount prefix %q", mount.Prefix)
+			t.Fatalf("duplicate module mount prefix %q", mount.Prefix)
 		}
 		seen[mount.Prefix] = struct{}{}
 	}
@@ -242,42 +215,24 @@ func TestModuleHealthyReturnsFalseForUnavailableGateway(t *testing.T) {
 	}
 }
 
-func TestRegistryBuildStableAndExperimental(t *testing.T) {
+func TestRegistryBuildComposesExpectedModules(t *testing.T) {
 	t.Parallel()
 
 	reg := NewRegistry()
-
-	stable := reg.Build(BuildInput{
+	built := reg.Build(BuildInput{
 		Dependencies:     Dependencies{},
 		Resolvers:        ModuleResolvers{},
 		PublicOptions:    PublicModuleOptions{},
 		ProtectedOptions: ProtectedModuleOptions{},
 	})
-	if len(stable.Public) != 5 {
-		t.Fatalf("stable public module count = %d, want 5", len(stable.Public))
+	if len(built.Public) != 5 {
+		t.Fatalf("public module count = %d, want 5", len(built.Public))
 	}
-	if len(stable.Protected) != 4 {
-		t.Fatalf("stable protected module count = %d, want 4", len(stable.Protected))
+	if len(built.Protected) != 4 {
+		t.Fatalf("protected module count = %d, want 4", len(built.Protected))
 	}
-	if len(stable.Health) != 5 {
-		t.Fatalf("stable health entry count = %d, want 5", len(stable.Health))
-	}
-
-	experimental := reg.Build(BuildInput{
-		Dependencies:              Dependencies{},
-		Resolvers:                 ModuleResolvers{},
-		PublicOptions:             PublicModuleOptions{},
-		ProtectedOptions:          ProtectedModuleOptions{},
-		EnableExperimentalModules: true,
-	})
-	if len(experimental.Public) != 5 {
-		t.Fatalf("experimental public module count = %d, want 5", len(experimental.Public))
-	}
-	if len(experimental.Protected) != 4 {
-		t.Fatalf("experimental protected module count = %d, want 4", len(experimental.Protected))
-	}
-	if len(experimental.Health) != 5 {
-		t.Fatalf("experimental health entry count = %d, want 5", len(experimental.Health))
+	if len(built.Health) != 5 {
+		t.Fatalf("health entry count = %d, want 5", len(built.Health))
 	}
 }
 

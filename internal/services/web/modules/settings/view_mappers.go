@@ -6,6 +6,7 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
+// settingsSideMenu centralizes this web behavior in one helper seam.
 func settingsSideMenu(currentPath string, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
 	return &webtemplates.AppSideMenu{
 		CurrentPath: currentPath,

@@ -33,6 +33,7 @@ func NewGRPCGateway(client UserHubClient) dashboardapp.Gateway {
 	return GRPCGateway{Client: client}
 }
 
+// LoadDashboard loads the package state needed for this request path.
 func (g GRPCGateway) LoadDashboard(ctx context.Context, userID string, localeTag language.Tag) (dashboardapp.DashboardSnapshot, error) {
 	if g.Client == nil {
 		return dashboardapp.DashboardSnapshot{}, nil
@@ -77,6 +78,7 @@ func HasDraftOrActiveCampaign(campaigns []*userhubv1.CampaignPreview) bool {
 	return false
 }
 
+// normalizedDependencies centralizes this web behavior in one helper seam.
 func normalizedDependencies(values []string) []string {
 	if len(values) == 0 {
 		return nil

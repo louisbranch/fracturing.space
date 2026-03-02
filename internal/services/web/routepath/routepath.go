@@ -104,11 +104,6 @@ func AppCampaignGame(campaignID string) string {
 	return AppCampaign(campaignID) + "/game"
 }
 
-// AppCampaignChat returns the legacy campaign chat route alias.
-func AppCampaignChat(campaignID string) string {
-	return AppCampaignGame(campaignID)
-}
-
 // AppCampaignCharacter returns the campaign character-detail route.
 func AppCampaignCharacter(campaignID string, characterID string) string {
 	return AppCampaignCharacters(campaignID) + "/" + escapeSegment(characterID)
@@ -182,6 +177,7 @@ func AppSettingsProfileWithNotice(notice string) string {
 	return AppSettingsProfile + "?" + SettingsNoticeQueryKey + "=" + url.QueryEscape(notice)
 }
 
+// escapeSegment centralizes this web behavior in one helper seam.
 func escapeSegment(raw string) string {
 	return url.PathEscape(strings.TrimSpace(raw))
 }

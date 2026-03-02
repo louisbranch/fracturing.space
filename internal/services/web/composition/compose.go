@@ -31,9 +31,8 @@ type ComposeInput struct {
 
 	ModuleDependencies modules.Dependencies
 
-	EnableExperimentalModules bool
-	ChatHTTPAddr              string
-	RequestSchemePolicy       requestmeta.SchemePolicy
+	ChatHTTPAddr        string
+	RequestSchemePolicy requestmeta.SchemePolicy
 
 	Registry ModuleRegistry
 }
@@ -66,7 +65,6 @@ func ComposeAppHandler(input ComposeInput) (http.Handler, error) {
 			ChatFallbackPort:    websupport.ResolveChatFallbackPort(input.ChatHTTPAddr),
 			RequestSchemePolicy: input.RequestSchemePolicy,
 		},
-		EnableExperimentalModules: input.EnableExperimentalModules,
 	})
 
 	return webapp.Compose(webapp.ComposeInput{

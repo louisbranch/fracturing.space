@@ -34,6 +34,7 @@ type SettingsAIKey struct {
 	CanRevoke bool
 }
 
+// settingsLocale defines an internal contract used at this web package boundary.
 type settingsLocale string
 
 const (
@@ -81,6 +82,7 @@ func RequireUserID(userID string) (string, error) {
 	return userID, nil
 }
 
+// parseSettingsLocale parses inbound values into package-safe forms.
 func parseSettingsLocale(value string) (settingsLocale, bool) {
 	tag, err := language.Parse(strings.TrimSpace(value))
 	if err != nil {
@@ -93,6 +95,7 @@ func parseSettingsLocale(value string) (settingsLocale, bool) {
 	return settingsLocaleUnspecified, false
 }
 
+// normalizeSettingsLocale centralizes this web behavior in one helper seam.
 func normalizeSettingsLocale(value settingsLocale) settingsLocale {
 	locale, ok := parseSettingsLocale(string(value))
 	if ok {
@@ -115,6 +118,7 @@ func NormalizeLocale(value string) string {
 	return string(normalizeSettingsLocale(settingsLocale(value)))
 }
 
+// isSafeCredentialPathID reports whether this package condition is satisfied.
 func isSafeCredentialPathID(value string) bool {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -123,6 +127,7 @@ func isSafeCredentialPathID(value string) bool {
 	return !strings.Contains(value, "/") && !strings.Contains(value, "\\")
 }
 
+// validateNameLength centralizes this web behavior in one helper seam.
 func validateNameLength(name string) error {
 	if utf8.RuneCountInString(name) > UserProfileNameMaxLength {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.user_profile.error_name_too_long", "name is too long")

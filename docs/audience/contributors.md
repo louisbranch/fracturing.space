@@ -29,6 +29,14 @@ Canonical onboarding path for developers adding features, fixing bugs, or improv
 - [Integration tests](../running/integration-tests.md)
 - [Seeding demo data](../running/seeding.md)
 - [Contributor map (where to edit for X)](contributor-map.md)
+- [Web module playbook](../architecture/web-module-playbook.md)
+
+## Web architecture checks
+
+Run these when changing web routes, handlers, composition, or platform code:
+
+- `make web-architecture-check`
+- `go test ./internal/services/web/...`
 
 ## Architecture context (only when needed)
 

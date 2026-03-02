@@ -23,6 +23,29 @@ func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	)
 }
 
+func TestStableRouteSurfacesOwnExpectedRouteGroups(t *testing.T) {
+	t.Parallel()
+
+	surfaces := stableRouteSurfaces()
+	if len(surfaces) != 3 {
+		t.Fatalf("len(stableRouteSurfaces()) = %d, want 3", len(surfaces))
+	}
+	if surfaces[0].id != "stable-core" {
+		t.Fatalf("stable surface[0] id = %q, want %q", surfaces[0].id, "stable-core")
+	}
+	if surfaces[1].id != "stable-workflow" {
+		t.Fatalf("stable surface[1] id = %q, want %q", surfaces[1].id, "stable-workflow")
+	}
+	if surfaces[2].id != "stable-mutations" {
+		t.Fatalf("stable surface[2] id = %q, want %q", surfaces[2].id, "stable-mutations")
+	}
+	for _, surface := range surfaces {
+		if surface.register == nil {
+			t.Fatalf("surface %q missing register fn", surface.id)
+		}
+	}
+}
+
 func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
@@ -43,6 +66,7 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 		name       string
 		method     string
 		path       string
+		body       string
 		wantStatus int
 		wantAllow  string
 		wantLoc    string
@@ -53,7 +77,8 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 		{name: "campaign create get", method: http.MethodGet, path: routepath.AppCampaignsCreate, wantStatus: http.StatusOK},
 		{name: "campaign overview head", method: http.MethodHead, path: routepath.AppCampaign("c1"), wantStatus: http.StatusOK},
 		{name: "campaign overview post rejected", method: http.MethodPost, path: routepath.AppCampaign("c1"), wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodGet + ", HEAD"},
-		{name: "campaign session start post", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), wantStatus: http.StatusNotFound},
+		{name: "campaign session start get resolves session detail route", method: http.MethodGet, path: routepath.AppCampaignSessionStart("c1"), wantStatus: http.StatusOK},
+		{name: "campaign session start post", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+One", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaignSessions("c1")},
 		{name: "campaign unknown subpath", method: http.MethodGet, path: routepath.AppCampaign("c1") + "/unknown", wantStatus: http.StatusNotFound},
 	}
 
@@ -61,7 +86,10 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			req := httptest.NewRequest(tc.method, tc.path, nil)
+			req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
+			if tc.method == http.MethodPost {
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			}
 			rr := httptest.NewRecorder()
 			mux.ServeHTTP(rr, req)
 			if rr.Code != tc.wantStatus {
@@ -81,17 +109,21 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 	}
 }
 
-func TestRegisterExperimentalRoutesExposeExperimentalWorkspaceRoutes(t *testing.T) {
+func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerExperimentalRoutes(
+	registerStableRoutes(
 		mux,
 		newHandlers(
 			newService(fakeGateway{
 				items:    []CampaignSummary{{ID: "c1", Name: "Campaign"}},
 				sessions: []CampaignSession{{ID: "sess-1", Name: "Session One"}},
 				invites:  []CampaignInvite{{ID: "inv-1", ParticipantID: "p-1", RecipientUserID: "user-123", Status: "Pending"}},
+				characterCreationProgress: CampaignCharacterCreationProgress{
+					Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+					NextStep: 1,
+				},
 			}),
 			modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil),
 			"",
@@ -105,14 +137,19 @@ func TestRegisterExperimentalRoutesExposeExperimentalWorkspaceRoutes(t *testing.
 		body       string
 		wantStatus int
 	}{
-		{name: "sessions route", method: http.MethodGet, path: routepath.AppCampaignSessions("c1"), wantStatus: http.StatusOK},
-		{name: "session detail route", method: http.MethodGet, path: routepath.AppCampaignSession("c1", "sess-1"), wantStatus: http.StatusOK},
-		{name: "session start route", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+Two", wantStatus: http.StatusFound},
-		{name: "session end route", method: http.MethodPost, path: routepath.AppCampaignSessionEnd("c1"), body: "session_id=sess-1", wantStatus: http.StatusFound},
-		{name: "game route", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusOK},
-		{name: "invites route", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusOK},
-		{name: "invite create route", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), body: "participant_id=p-1&recipient_user_id=user-123", wantStatus: http.StatusFound},
-		{name: "invite revoke route", method: http.MethodPost, path: routepath.AppCampaignInviteRevoke("c1"), body: "invite_id=inv-1", wantStatus: http.StatusFound},
+		{name: "overview", method: http.MethodGet, path: routepath.AppCampaign("c1"), wantStatus: http.StatusOK},
+		{name: "participants", method: http.MethodGet, path: routepath.AppCampaignParticipants("c1"), wantStatus: http.StatusOK},
+		{name: "characters", method: http.MethodGet, path: routepath.AppCampaignCharacters("c1"), wantStatus: http.StatusOK},
+		{name: "character detail", method: http.MethodGet, path: routepath.AppCampaignCharacter("c1", "char-1"), wantStatus: http.StatusOK},
+		{name: "sessions", method: http.MethodGet, path: routepath.AppCampaignSessions("c1"), wantStatus: http.StatusOK},
+		{name: "session detail", method: http.MethodGet, path: routepath.AppCampaignSession("c1", "sess-1"), wantStatus: http.StatusOK},
+		{name: "invites", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusOK},
+		{name: "game", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusOK},
+		{name: "session start", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+Two", wantStatus: http.StatusFound},
+		{name: "session end", method: http.MethodPost, path: routepath.AppCampaignSessionEnd("c1"), body: "session_id=sess-1", wantStatus: http.StatusFound},
+		{name: "invite create", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), body: "participant_id=p-1&recipient_user_id=user-123", wantStatus: http.StatusFound},
+		{name: "invite revoke", method: http.MethodPost, path: routepath.AppCampaignInviteRevoke("c1"), body: "invite_id=inv-1", wantStatus: http.StatusFound},
+		{name: "rest route", method: http.MethodGet, path: routepath.AppCampaign("c1") + "/rest", wantStatus: http.StatusNotFound},
 	}
 
 	for _, tc := range tests {
@@ -123,58 +160,6 @@ func TestRegisterExperimentalRoutesExposeExperimentalWorkspaceRoutes(t *testing.
 			if tc.method == http.MethodPost {
 				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			}
-			rr := httptest.NewRecorder()
-			mux.ServeHTTP(rr, req)
-			if rr.Code != tc.wantStatus {
-				t.Fatalf("status = %d, want %d", rr.Code, tc.wantStatus)
-			}
-		})
-	}
-}
-
-func TestRegisterStableRoutesExposeStableWorkspaceRoutesAndHideExperimentalRoutes(t *testing.T) {
-	t.Parallel()
-
-	mux := http.NewServeMux()
-	registerStableRoutes(
-		mux,
-		newHandlers(
-			newService(fakeGateway{
-				items: []CampaignSummary{{ID: "c1", Name: "Campaign"}},
-				characterCreationProgress: CampaignCharacterCreationProgress{
-					Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
-					NextStep: 1,
-				},
-			}),
-			modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil),
-			"",
-		),
-	)
-
-	for _, tc := range []struct {
-		name       string
-		method     string
-		path       string
-		wantStatus int
-	}{
-		{name: "overview", method: http.MethodGet, path: routepath.AppCampaign("c1"), wantStatus: http.StatusOK},
-		{name: "participants", method: http.MethodGet, path: routepath.AppCampaignParticipants("c1"), wantStatus: http.StatusOK},
-		{name: "characters", method: http.MethodGet, path: routepath.AppCampaignCharacters("c1"), wantStatus: http.StatusOK},
-		{name: "character detail", method: http.MethodGet, path: routepath.AppCampaignCharacter("c1", "char-1"), wantStatus: http.StatusOK},
-		{name: "rest route", method: http.MethodGet, path: routepath.AppCampaign("c1") + "/rest", wantStatus: http.StatusNotFound},
-		{name: "sessions", method: http.MethodGet, path: routepath.AppCampaignSessions("c1"), wantStatus: http.StatusNotFound},
-		{name: "session detail", method: http.MethodGet, path: routepath.AppCampaignSession("c1", "sess-1"), wantStatus: http.StatusNotFound},
-		{name: "invites", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusNotFound},
-		{name: "game", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusNotFound},
-		{name: "session start", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), wantStatus: http.StatusNotFound},
-		{name: "session end", method: http.MethodPost, path: routepath.AppCampaignSessionEnd("c1"), wantStatus: http.StatusNotFound},
-		{name: "invite create", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), wantStatus: http.StatusNotFound},
-		{name: "invite revoke", method: http.MethodPost, path: routepath.AppCampaignInviteRevoke("c1"), wantStatus: http.StatusNotFound},
-	} {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			req := httptest.NewRequest(tc.method, tc.path, nil)
 			rr := httptest.NewRecorder()
 			mux.ServeHTTP(rr, req)
 			if rr.Code != tc.wantStatus {

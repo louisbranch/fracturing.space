@@ -14,6 +14,7 @@ var allowedPotionItemIDs = map[string]struct{}{
 	allowedPotionMinorStamina: {},
 }
 
+// isAllowedPotionItemID reports whether this package condition is satisfied.
 func isAllowedPotionItemID(rawItemID string) bool {
 	itemID := strings.TrimSpace(rawItemID)
 	_, ok := allowedPotionItemIDs[itemID]
