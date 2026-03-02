@@ -17,9 +17,6 @@ func TestTopLevelRoutes(t *testing.T) {
 	if Campaigns != "/campaigns" {
 		t.Fatalf("Campaigns = %q", Campaigns)
 	}
-	if CampaignsCreate != "/campaigns/create" {
-		t.Fatalf("CampaignsCreate = %q", CampaignsCreate)
-	}
 	if CampaignsTable != "/campaigns/_rows" {
 		t.Fatalf("CampaignsTable = %q", CampaignsTable)
 	}

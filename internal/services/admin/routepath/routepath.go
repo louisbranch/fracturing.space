@@ -22,7 +22,6 @@ const (
 
 const (
 	Campaigns       = "/campaigns"
-	CampaignsCreate = "/campaigns/create"
 	CampaignsRows   = "/campaigns/_rows"
 	CampaignsTable  = CampaignsRows
 	CampaignsPrefix = "/campaigns/"
