@@ -50,6 +50,7 @@ func HasSameOriginProofWithPolicy(r *http.Request, policy SchemePolicy) bool {
 	return false
 }
 
+// sameOriginHostPort centralizes this web behavior in one helper seam.
 func sameOriginHostPort(raw string, requestScheme string, requestHost string, requestPort string) bool {
 	parsed, err := url.Parse(raw)
 	if err != nil {
@@ -79,6 +80,7 @@ func sameOriginHostPort(raw string, requestScheme string, requestHost string, re
 	return originPort == requestPort
 }
 
+// requestOriginParts centralizes this web behavior in one helper seam.
 func requestOriginParts(r *http.Request, policy SchemePolicy) (string, string, string) {
 	if r == nil {
 		return "", "", ""
@@ -94,6 +96,7 @@ func requestOriginParts(r *http.Request, policy SchemePolicy) (string, string, s
 	return scheme, host, port
 }
 
+// requestScheme centralizes this web behavior in one helper seam.
 func requestScheme(r *http.Request, policy SchemePolicy) string {
 	if r == nil {
 		return ""
@@ -114,6 +117,7 @@ func requestScheme(r *http.Request, policy SchemePolicy) string {
 	return "http"
 }
 
+// defaultPortForScheme centralizes this web behavior in one helper seam.
 func defaultPortForScheme(scheme string) string {
 	switch strings.ToLower(strings.TrimSpace(scheme)) {
 	case "https":
@@ -125,6 +129,7 @@ func defaultPortForScheme(scheme string) string {
 	}
 }
 
+// requestHostParts centralizes this web behavior in one helper seam.
 func requestHostParts(rawHost string) (string, string) {
 	parsed, err := url.Parse("//" + strings.TrimSpace(rawHost))
 	if err != nil {

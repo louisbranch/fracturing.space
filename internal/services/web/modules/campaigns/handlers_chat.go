@@ -11,6 +11,7 @@ import (
 
 // --- Campaign chat route ---
 
+// handleGame renders the chat view for a campaign workspace route.
 func (h handlers) handleGame(w http.ResponseWriter, r *http.Request, campaignID string) {
 	_, page, err := h.loadCampaignPage(w, r, campaignID)
 	if err != nil {
@@ -26,6 +27,7 @@ func (h handlers) handleGame(w http.ResponseWriter, r *http.Request, campaignID 
 	h.writeCampaignChatHTML(w, r, view, page.lang, page.loc)
 }
 
+// writeCampaignChatHTML centralizes this web behavior in one helper seam.
 func (h handlers) writeCampaignChatHTML(
 	w http.ResponseWriter,
 	r *http.Request,

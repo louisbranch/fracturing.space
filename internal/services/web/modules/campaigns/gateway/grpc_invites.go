@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/grpcpaging"
 )
 
+// CampaignInvites centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignInvites(ctx context.Context, campaignID string) ([]campaignapp.CampaignInvite, error) {
 	if g.InviteClient == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.invite_service_client_is_not_configured", "invite service client is not configured")
@@ -49,6 +50,7 @@ func (g GRPCGateway) CampaignInvites(ctx context.Context, campaignID string) ([]
 	)
 }
 
+// CreateInvite executes package-scoped creation behavior for this flow.
 func (g GRPCGateway) CreateInvite(ctx context.Context, campaignID string, input campaignapp.CreateInviteInput) error {
 	if g.InviteClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.invite_service_client_is_not_configured", "invite service client is not configured")
@@ -77,6 +79,7 @@ func (g GRPCGateway) CreateInvite(ctx context.Context, campaignID string, input 
 	return nil
 }
 
+// RevokeInvite applies this package workflow transition.
 func (g GRPCGateway) RevokeInvite(ctx context.Context, campaignID string, input campaignapp.RevokeInviteInput) error {
 	if g.InviteClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.invite_service_client_is_not_configured", "invite service client is not configured")

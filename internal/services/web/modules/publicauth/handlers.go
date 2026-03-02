@@ -22,16 +22,19 @@ import (
 	"golang.org/x/text/language"
 )
 
+// handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	publichandler.Base
 	service     publicauthapp.Service
 	requestMeta requestmeta.SchemePolicy
 }
 
+// newHandlers builds package wiring for this web seam.
 func newHandlers(s publicauthapp.Service, policy requestmeta.SchemePolicy) handlers {
 	return handlers{service: s, requestMeta: policy}
 }
 
+// handleRoot handles this route in the module transport layer.
 func (h handlers) handleRoot(w http.ResponseWriter, r *http.Request) {
 	if h.redirectAuthenticatedToApp(w, r) {
 		return
@@ -41,6 +44,7 @@ func (h handlers) handleRoot(w http.ResponseWriter, r *http.Request) {
 	h.writeAuthPage(w, r, copy.LandingTitle, copy.MetaDescription, langTag.String(), webtemplates.PublicRootFragment(copy))
 }
 
+// handleLogin handles this route in the module transport layer.
 func (h handlers) handleLogin(w http.ResponseWriter, r *http.Request) {
 	if h.redirectAuthenticatedToApp(w, r) {
 		return
@@ -50,6 +54,7 @@ func (h handlers) handleLogin(w http.ResponseWriter, r *http.Request) {
 	h.writeAuthPage(w, r, copy.LoginTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyLoginPage(copy))
 }
 
+// handleAuthLogin handles this route in the module transport layer.
 func (h handlers) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if h.redirectAuthenticatedToApp(w, r) {
 		return
@@ -57,6 +62,7 @@ func (h handlers) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteRedirect(w, r, routepath.Login)
 }
 
+// handleLogout handles this route in the module transport layer.
 func (h handlers) handleLogout(w http.ResponseWriter, r *http.Request) {
 	sessionID, hasSession := sessioncookie.Read(r)
 	if hasSession && !h.hasSameOriginProof(r) {
@@ -70,6 +76,7 @@ func (h handlers) handleLogout(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteRedirect(w, r, routepath.Root)
 }
 
+// handlePasskeyLoginStart handles this route in the module transport layer.
 func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request) {
 	start, err := h.service.PasskeyLoginStart(r.Context())
 	if err != nil {
@@ -79,6 +86,7 @@ func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request
 	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"session_id": start.SessionID, "public_key": start.PublicKey})
 }
 
+// handlePasskeyLoginFinish handles this route in the module transport layer.
 func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		SessionID  string          `json:"session_id"`
@@ -97,6 +105,7 @@ func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"redirect_url": routepath.AppDashboard})
 }
 
+// handlePasskeyRegisterStart handles this route in the module transport layer.
 func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		Email string `json:"email"`
@@ -113,6 +122,7 @@ func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"session_id": start.SessionID, "public_key": start.PublicKey, "user_id": start.UserID})
 }
 
+// handlePasskeyRegisterFinish handles this route in the module transport layer.
 func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
 		SessionID  string          `json:"session_id"`
@@ -130,22 +140,27 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"user_id": finished.UserID})
 }
 
+// handleHealth handles this route in the module transport layer.
 func (h handlers) handleHealth(w http.ResponseWriter, r *http.Request) {
 	_ = httpx.WriteHTML(w, http.StatusOK, h.service.HealthBody())
 }
 
+// handleNotFound handles this route in the module transport layer.
 func (h handlers) handleNotFound(w http.ResponseWriter, r *http.Request) {
 	h.writeNotFoundPage(w, r)
 }
 
+// writeAuthPage centralizes this web behavior in one helper seam.
 func (h handlers) writeAuthPage(w http.ResponseWriter, r *http.Request, title string, metaDesc string, lang string, body templ.Component) {
 	h.WritePublicPage(w, r, title, metaDesc, lang, http.StatusOK, body)
 }
 
+// writeNotFoundPage centralizes this web behavior in one helper seam.
 func (h handlers) writeNotFoundPage(w http.ResponseWriter, r *http.Request) {
 	h.WriteNotFound(w, r)
 }
 
+// resolveAuthTag resolves request-scoped values needed by this package.
 func (h handlers) resolveAuthTag(w http.ResponseWriter, r *http.Request) language.Tag {
 	langTag, persist := sharedi18n.ResolveTag(r)
 	if persist {
@@ -154,11 +169,13 @@ func (h handlers) resolveAuthTag(w http.ResponseWriter, r *http.Request) languag
 	return langTag
 }
 
+// writeJSONError centralizes this web behavior in one helper seam.
 func (h handlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
 	loc, _ := webi18n.ResolveLocalizer(w, r, nil)
 	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), weberror.PublicMessage(loc, err))
 }
 
+// redirectAuthenticatedToApp centralizes this web behavior in one helper seam.
 func (h handlers) redirectAuthenticatedToApp(w http.ResponseWriter, r *http.Request) bool {
 	if r == nil {
 		return false
@@ -174,18 +191,22 @@ func (h handlers) redirectAuthenticatedToApp(w http.ResponseWriter, r *http.Requ
 	return true
 }
 
+// writeSessionCookie centralizes this web behavior in one helper seam.
 func (h handlers) writeSessionCookie(w http.ResponseWriter, r *http.Request, sessionID string) {
 	sessioncookie.WriteWithPolicy(w, r, sessionID, h.requestMeta)
 }
 
+// clearSessionCookie centralizes this web behavior in one helper seam.
 func (h handlers) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
 	sessioncookie.ClearWithPolicy(w, r, h.requestMeta)
 }
 
+// hasSameOriginProof reports whether this package condition is satisfied.
 func (h handlers) hasSameOriginProof(r *http.Request) bool {
 	return requestmeta.HasSameOriginProofWithPolicy(r, h.requestMeta)
 }
 
+// resolveAppRedirectPath resolves request-scoped values needed by this package.
 func resolveAppRedirectPath(raw string) string {
 	next := strings.TrimSpace(raw)
 	if next == "" {
@@ -223,6 +244,7 @@ func resolveAppRedirectPath(raw string) string {
 	return canonicalPath
 }
 
+// hasDotSegment reports whether this package condition is satisfied.
 func hasDotSegment(rawPath string) bool {
 	for _, part := range strings.Split(rawPath, "/") {
 		if part == "." || part == ".." {
@@ -232,11 +254,13 @@ func hasDotSegment(rawPath string) bool {
 	return false
 }
 
+// hasEncodedSlash reports whether this package condition is satisfied.
 func hasEncodedSlash(rawPath string) bool {
 	lower := strings.ToLower(rawPath)
 	return strings.Contains(lower, "%2f") || strings.Contains(lower, "%5c")
 }
 
+// ensureLeadingSlash centralizes this web behavior in one helper seam.
 func ensureLeadingSlash(pathValue string) string {
 	pathValue = strings.TrimSpace(pathValue)
 	if pathValue == "" {

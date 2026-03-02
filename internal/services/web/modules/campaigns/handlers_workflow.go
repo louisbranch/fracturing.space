@@ -11,6 +11,7 @@ import (
 
 // --- Character creation workflow routes ---
 
+// handleCharacterCreationStepRoute applies the next character creation workflow step.
 func (h handlers) handleCharacterCreationStepRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
@@ -63,6 +64,7 @@ func (h handlers) handleCharacterCreationStepRoute(w http.ResponseWriter, r *htt
 	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacter(campaignID, characterID))
 }
 
+// handleCharacterCreationResetRoute handles this route in the module transport layer.
 func (h handlers) handleCharacterCreationResetRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {

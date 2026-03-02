@@ -13,6 +13,7 @@ Protocol and API contracts.
 - [MCP tools and resources](mcp.md)
 - [I18n status](i18n-status.md)
 - [Coverage package floors](coverage-floors.json)
+- [Web declaration comment baseline](web-declaration-comment-baseline.txt)
 - [Icon rendering](icon-rendering.md)
 - [Icon catalog](icon-catalog.md)
 

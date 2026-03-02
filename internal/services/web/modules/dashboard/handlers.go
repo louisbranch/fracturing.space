@@ -11,15 +11,18 @@ import (
 // dashboardService defines the service contract used by dashboard handlers.
 type dashboardService = dashboardapp.Service
 
+// handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
 	service dashboardService
 }
 
+// newHandlers builds package wiring for this web seam.
 func newHandlers(s dashboardService, base modulehandler.Base) handlers {
 	return handlers{Base: base, service: s}
 }
 
+// handleIndex handles this route in the module transport layer.
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, userID := h.RequestContextAndUserID(r)
@@ -31,10 +34,12 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	h.WritePage(w, r, webtemplates.T(loc, "dashboard.title"), http.StatusOK, dashboardMainHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.DashboardFragment(mapDashboardTemplateView(view), loc))
 }
 
+// dashboardMainHeader centralizes this web behavior in one helper seam.
 func dashboardMainHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader {
 	return &webtemplates.AppMainHeader{Title: webtemplates.T(loc, "dashboard.title")}
 }
 
+// mapDashboardTemplateView maps values across transport and domain boundaries.
 func mapDashboardTemplateView(view DashboardView) webtemplates.DashboardPageView {
 	health := make([]webtemplates.DashboardServiceHealthEntry, len(view.ServiceHealth))
 	for i, e := range view.ServiceHealth {

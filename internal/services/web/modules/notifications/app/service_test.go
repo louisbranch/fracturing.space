@@ -46,6 +46,44 @@ func TestNewServiceFailsClosedWhenGatewayMissing(t *testing.T) {
 	}
 }
 
+func TestUnavailableGatewayFailsClosed(t *testing.T) {
+	t.Parallel()
+
+	gateway := NewUnavailableGateway()
+	if IsGatewayHealthy(nil) {
+		t.Fatalf("IsGatewayHealthy(nil) = true, want false")
+	}
+	if IsGatewayHealthy(gateway) {
+		t.Fatalf("IsGatewayHealthy(unavailable) = true, want false")
+	}
+	if !IsGatewayHealthy(gatewayStub{}) {
+		t.Fatalf("IsGatewayHealthy(stub) = false, want true")
+	}
+
+	ctx := context.Background()
+	if list, err := gateway.ListNotifications(ctx, "user-1"); err == nil {
+		t.Fatalf("ListNotifications() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("ListNotifications() status = %d, want %d", got, http.StatusServiceUnavailable)
+	} else if list != nil {
+		t.Fatalf("ListNotifications() list = %+v, want nil", list)
+	}
+	if item, err := gateway.GetNotification(ctx, "user-1", "n1"); err == nil {
+		t.Fatalf("GetNotification() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("GetNotification() status = %d, want %d", got, http.StatusServiceUnavailable)
+	} else if item != (NotificationSummary{}) {
+		t.Fatalf("GetNotification() item = %+v, want zero value", item)
+	}
+	if item, err := gateway.OpenNotification(ctx, "user-1", "n1"); err == nil {
+		t.Fatalf("OpenNotification() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("OpenNotification() status = %d, want %d", got, http.StatusServiceUnavailable)
+	} else if item != (NotificationSummary{}) {
+		t.Fatalf("OpenNotification() item = %+v, want zero value", item)
+	}
+}
+
 func TestServiceRequiresUserID(t *testing.T) {
 	t.Parallel()
 

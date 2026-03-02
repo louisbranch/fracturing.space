@@ -11,11 +11,7 @@ last_reviewed: "2026-03-01"
 
 This playbook defines the default way to add or modify a web area module.
 
-Path note:
-
-- Current implementation paths are under `internal/services/web/`.
-- During package rename, move these packages to `internal/services/web/` while
-  preserving the same boundaries.
+Canonical implementation path: `internal/services/web/`.
 
 ## Module Template
 
@@ -52,15 +48,16 @@ inside the same area boundary:
   composition (registry composition files under `modules/registry_*.go`) rather
   than inside `Mount`.
 - Runtime module selection is composition-owned: `composition.ComposeAppHandler`
-  calls `modules.Registry.Build(modules.BuildInput)` to build stable or
-  experimental module sets. Keep module packages unaware of startup mode flags.
-- When a module intentionally exposes split stable/experimental route sets, expose
-  explicit constructors for each surface (`NewStableWithGateway` and
-  `NewExperimentalWithGateway`) and avoid ambiguous `NewWithGateway` names.
+  calls `modules.Registry.Build(modules.BuildInput)` to assemble module sets.
+  Keep module packages unaware of startup mode flags.
 - Modules receive their narrow dependencies at construction time via the
   registry, not through `Mount`.  Protected modules receive a
   `modulehandler.Base` for shared request-scoped resolvers (viewer, user-id,
   language).
+- For modules with segmented route ownership, assemble route registration
+  through explicit route-surface slices (for example campaigns:
+  stable core + stable workflow + stable mutations) so ownership stays
+  diffable in one place.
 - Keep root module packages transport-thin: handlers/routes own request/response
   flow while orchestration and gateway mapping live in area-local `app` and
   `gateway` subpackages when present.
@@ -89,10 +86,6 @@ inside the same area boundary:
 - Protected module defaults must fail closed when a required backend dependency
   is absent; never return placeholder static domain data from runtime module
   wiring.
-- Incomplete/new surfaces must start as experimental module registrations.
-  Promotion to default registries is allowed when the exposed route surface is
-  stable; unfinished routes must remain unregistered (or explicitly
-  experimental).
 - For campaign mutation behavior, require evaluated game authorization decisions
   (`AuthorizationService.Can`) before calling mutation gateways.
 - For per-row action visibility (for example character editability), use
@@ -101,11 +94,6 @@ inside the same area boundary:
 - Campaign mutation gates must fail closed when authz is unavailable or returns
   an unevaluated decision; do not approximate mutation permissions from
   participant-list fallback logic.
-- For campaigns split-surface ownership, keep session/invite mutation handlers
-  (`start`, `end`, `create`, `revoke`) in experimental route registration until
-  stable promotion criteria are met.
-- Use `docs/architecture/campaigns-mutation-promotion-checklist.md` as the
-  stable promotion gate for campaign mutation routes.
 - Do not keep long-lived deferred mutation scaffolds. If a mutation contract is
   not implemented (for example participant update or character control), remove
   transport/app stubs instead of preserving placeholder routes.
@@ -168,18 +156,16 @@ Public/auth route ownership is split into explicit surface modules under:
 1. Implement the module package.
 2. Add module constructor wiring in registry composition (`modules/registry_*.go`).
 3. Choose public or protected group.
-4. Choose stability tier:
-  - experimental while scaffolded or incomplete,
-  - stable defaults once exposed routes are production-ready and fail-closed
-    checks are in place.
-  - enforce this through `Registry.Build(BuildInput{EnableExperimentalModules: ...})`
-    rather than direct module-constructor entrypoints.
+4. Choose route exposure tier:
+  - mount only production-ready handlers by default,
+  - keep incomplete handlers unregistered until contracts are stable and
+    fail-closed checks are in place.
 5. Ensure new module dependencies are wired through `modules.BuildInput` and
    represented in `BuildOutput.Health` when the module implements
    `module.HealthReporter`.
 6. If an area is partially ready, keep one module owner and split route
-   registration by surface (stable subset vs experimental/additional routes)
-   instead of exposing unstable handlers by default.
+   registration by explicit surfaces instead of exposing unstable handlers by
+   default.
 7. Run package tests and architecture checks.
 
 ## Required Checks
@@ -201,9 +187,7 @@ A module is done when:
 - It has route tests for method and path behavior.
 - It does not import sibling modules.
 - It is registered in the correct route group.
-- It is placed in the correct stability registry (experimental vs stable) for
-  the currently exposed route surface.
-- Any out-of-scope routes are not mounted in stable mode.
+- Out-of-scope or incomplete routes are not mounted.
 
 ## Test Structure Guidance
 

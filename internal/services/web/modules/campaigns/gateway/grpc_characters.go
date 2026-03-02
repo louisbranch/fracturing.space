@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/grpcpaging"
 )
 
+// CampaignCharacters centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string) ([]campaignapp.CampaignCharacter, error) {
 	if g.CharacterClient == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
@@ -117,6 +118,7 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string) 
 	)
 }
 
+// CreateCharacter executes package-scoped creation behavior for this flow.
 func (g GRPCGateway) CreateCharacter(ctx context.Context, campaignID string, input campaignapp.CreateCharacterInput) (campaignapp.CreateCharacterResult, error) {
 	if g.CharacterClient == nil {
 		return campaignapp.CreateCharacterResult{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")

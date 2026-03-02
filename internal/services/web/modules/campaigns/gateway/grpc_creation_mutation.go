@@ -10,6 +10,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// ApplyCharacterCreationStep applies this package workflow transition.
 func (g GRPCGateway) ApplyCharacterCreationStep(ctx context.Context, campaignID string, characterID string, step *campaignapp.CampaignCharacterCreationStepInput) error {
 	if g.CharacterClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
@@ -35,6 +36,7 @@ func (g GRPCGateway) ApplyCharacterCreationStep(ctx context.Context, campaignID 
 	return err
 }
 
+// mapCampaignCharacterCreationStepToProto maps values across transport and domain boundaries.
 func mapCampaignCharacterCreationStepToProto(step *campaignapp.CampaignCharacterCreationStepInput) (*daggerheartv1.DaggerheartCreationStepInput, error) {
 	if step == nil {
 		return nil, apperrors.E(apperrors.KindInvalidInput, "character creation step is required")
@@ -174,6 +176,7 @@ func MapCampaignCharacterCreationStepToProto(step *campaignapp.CampaignCharacter
 	return mapCampaignCharacterCreationStepToProto(step)
 }
 
+// ResetCharacterCreationWorkflow applies this package workflow transition.
 func (g GRPCGateway) ResetCharacterCreationWorkflow(ctx context.Context, campaignID string, characterID string) error {
 	if g.CharacterClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")

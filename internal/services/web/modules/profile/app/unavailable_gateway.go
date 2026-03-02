@@ -6,6 +6,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// unavailableGateway defines an internal contract used at this web package boundary.
 type unavailableGateway struct{}
 
 // NewUnavailableGateway returns a fail-closed profile gateway.
@@ -22,6 +23,7 @@ func IsGatewayHealthy(gateway Gateway) bool {
 	return !unavailable
 }
 
+// LookupUserProfile centralizes this web behavior in one helper seam.
 func (unavailableGateway) LookupUserProfile(context.Context, LookupUserProfileRequest) (LookupUserProfileResponse, error) {
 	return LookupUserProfileResponse{}, apperrors.E(apperrors.KindUnavailable, "social service client is not configured")
 }

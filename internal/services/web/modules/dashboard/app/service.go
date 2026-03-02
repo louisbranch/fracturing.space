@@ -8,6 +8,7 @@ import (
 	"golang.org/x/text/language"
 )
 
+// service defines an internal contract used at this web package boundary.
 type service struct {
 	readGateway   Gateway
 	logger        *log.Logger
@@ -25,6 +26,7 @@ func NewService(gateway Gateway, logger *log.Logger, health []ServiceHealthEntry
 	return service{readGateway: gateway, logger: logger, serviceHealth: health}
 }
 
+// LoadDashboard loads the package state needed for this request path.
 func (s service) LoadDashboard(ctx context.Context, userID string, locale language.Tag) (DashboardView, error) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {

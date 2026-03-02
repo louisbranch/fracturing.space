@@ -19,24 +19,29 @@ import (
 // settingsService defines the service contract used by settings handlers.
 type settingsService = settingsapp.Service
 
+// handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
 	service   settingsService
 	flashMeta requestmeta.SchemePolicy
 }
 
+// newHandlers builds package wiring for this web seam.
 func newHandlers(s settingsService, base modulehandler.Base, policy requestmeta.SchemePolicy) handlers {
 	return handlers{Base: base, service: s, flashMeta: policy}
 }
 
+// settingsMainHeader centralizes this web behavior in one helper seam.
 func settingsMainHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader {
 	return &webtemplates.AppMainHeader{Title: webtemplates.T(loc, "layout.settings")}
 }
 
+// redirectSettingsRoot centralizes this web behavior in one helper seam.
 func (h handlers) redirectSettingsRoot(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteRedirect(w, r, routepath.AppSettingsProfile)
 }
 
+// handleProfileGet handles this route in the module transport layer.
 func (h handlers) handleProfileGet(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
 	profile, err := h.service.LoadProfile(ctx, userID)
@@ -47,6 +52,7 @@ func (h handlers) handleProfileGet(w http.ResponseWriter, r *http.Request) {
 	h.renderProfilePage(w, r, http.StatusOK, profile, "", settingsProfileNoticeCode(r))
 }
 
+// handleProfilePost handles this route in the module transport layer.
 func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
 	if err := r.ParseForm(); err != nil {
@@ -79,6 +85,7 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteRedirect(w, r, routepath.AppSettingsProfile)
 }
 
+// handleLocaleGet handles this route in the module transport layer.
 func (h handlers) handleLocaleGet(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
 	locale, err := h.service.LoadLocale(ctx, userID)
@@ -89,6 +96,7 @@ func (h handlers) handleLocaleGet(w http.ResponseWriter, r *http.Request) {
 	h.renderLocalePage(w, r, http.StatusOK, locale, "")
 }
 
+// handleLocalePost handles this route in the module transport layer.
 func (h handlers) handleLocalePost(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
 	if err := r.ParseForm(); err != nil {
@@ -109,11 +117,13 @@ func (h handlers) handleLocalePost(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteRedirect(w, r, routepath.AppSettingsLocale)
 }
 
+// handleAIKeysGet handles this route in the module transport layer.
 func (h handlers) handleAIKeysGet(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
 	h.renderAIKeysPage(w, r, ctx, userID, http.StatusOK, "", "")
 }
 
+// handleAIKeysCreate handles this route in the module transport layer.
 func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
 	if err := r.ParseForm(); err != nil {
@@ -135,6 +145,7 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteRedirect(w, r, routepath.AppSettingsAIKeys)
 }
 
+// handleAIKeyRevoke handles this route in the module transport layer.
 func (h handlers) handleAIKeyRevoke(w http.ResponseWriter, r *http.Request, credentialID string) {
 	ctx, userID := h.RequestContextAndUserID(r)
 	if err := h.service.RevokeAIKey(ctx, userID, credentialID); err != nil {
@@ -145,10 +156,12 @@ func (h handlers) handleAIKeyRevoke(w http.ResponseWriter, r *http.Request, cred
 	httpx.WriteRedirect(w, r, routepath.AppSettingsAIKeys)
 }
 
+// writeFlashNotice centralizes this web behavior in one helper seam.
 func (h handlers) writeFlashNotice(w http.ResponseWriter, r *http.Request, notice flashnotice.Notice) {
 	flashnotice.WriteWithPolicy(w, r, notice, h.flashMeta)
 }
 
+// handleAIKeyRevokeRoute handles this route in the module transport layer.
 func (h handlers) handleAIKeyRevokeRoute(w http.ResponseWriter, r *http.Request) {
 	credentialID := strings.TrimSpace(r.PathValue("credentialID"))
 	if credentialID == "" {
@@ -158,6 +171,7 @@ func (h handlers) handleAIKeyRevokeRoute(w http.ResponseWriter, r *http.Request)
 	h.handleAIKeyRevoke(w, r, credentialID)
 }
 
+// renderProfilePage centralizes this web behavior in one helper seam.
 func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, statusCode int, profile SettingsProfile, errorMessage string, noticeCode string) {
 	loc, _ := h.PageLocalizer(w, r)
 	layout := webtemplates.AppMainLayoutOptions{SideMenu: settingsSideMenu(routepath.AppSettingsProfile, loc)}
@@ -180,6 +194,7 @@ func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, stat
 	)
 }
 
+// renderLocalePage centralizes this web behavior in one helper seam.
 func (h handlers) renderLocalePage(w http.ResponseWriter, r *http.Request, statusCode int, selectedLocale string, errorMessage string) {
 	loc, _ := h.PageLocalizer(w, r)
 	layout := webtemplates.AppMainLayoutOptions{SideMenu: settingsSideMenu(routepath.AppSettingsLocale, loc)}
@@ -196,6 +211,7 @@ func (h handlers) renderLocalePage(w http.ResponseWriter, r *http.Request, statu
 	)
 }
 
+// renderAIKeysPage centralizes this web behavior in one helper seam.
 func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx context.Context, userID string, statusCode int, label string, errorMessage string) {
 	loc, _ := h.PageLocalizer(w, r)
 	keys, err := h.service.ListAIKeys(ctx, userID)
@@ -230,6 +246,7 @@ func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx c
 	)
 }
 
+// settingsProfileNoticeCode centralizes this web behavior in one helper seam.
 func settingsProfileNoticeCode(r *http.Request) string {
 	if r == nil || r.URL == nil {
 		return ""
@@ -237,6 +254,7 @@ func settingsProfileNoticeCode(r *http.Request) string {
 	return strings.TrimSpace(r.URL.Query().Get(routepath.SettingsNoticeQueryKey))
 }
 
+// settingsProfileNoticeMessage centralizes this web behavior in one helper seam.
 func settingsProfileNoticeMessage(code string, loc webtemplates.Localizer) string {
 	switch strings.TrimSpace(code) {
 	case routepath.SettingsNoticePublicProfileRequired:

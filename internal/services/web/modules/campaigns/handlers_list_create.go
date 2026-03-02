@@ -13,6 +13,7 @@ import (
 
 // --- Headers ---
 
+// campaignsListHeader builds the campaigns list header and primary creation action.
 func campaignsListHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader {
 	return &webtemplates.AppMainHeader{
 		Title: webtemplates.T(loc, "game.campaigns.title"),
@@ -23,6 +24,7 @@ func campaignsListHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader
 	}
 }
 
+// campaignStartHeader centralizes this web behavior in one helper seam.
 func campaignStartHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader {
 	return &webtemplates.AppMainHeader{
 		Title: webtemplates.T(loc, "game.campaigns.new.title"),
@@ -33,6 +35,7 @@ func campaignStartHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader
 	}
 }
 
+// campaignCreateHeader centralizes this web behavior in one helper seam.
 func campaignCreateHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader {
 	return &webtemplates.AppMainHeader{
 		Title: webtemplates.T(loc, "game.create.title"),
@@ -45,6 +48,7 @@ func campaignCreateHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeade
 
 // --- List and creation handlers ---
 
+// handleIndex renders the campaign list page using the request-scoped service context.
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
@@ -56,6 +60,7 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	h.WritePage(w, r, webtemplates.T(loc, "game.campaigns.title"), http.StatusOK, campaignsListHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.CampaignListFragment(mapCampaignListItems(items, h.now(), loc), loc))
 }
 
+// handleStartNewCampaign handles this route in the module transport layer.
 func (h handlers) handleStartNewCampaign(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	h.WritePage(w, r,
@@ -66,6 +71,7 @@ func (h handlers) handleStartNewCampaign(w http.ResponseWriter, r *http.Request)
 	)
 }
 
+// handleCreateCampaign handles this route in the module transport layer.
 func (h handlers) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	h.WritePage(w, r,
@@ -76,6 +82,7 @@ func (h handlers) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// handleCreateCampaignSubmit handles this route in the module transport layer.
 func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
 		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_campaign_create_form", "failed to parse campaign create form"))
@@ -122,6 +129,7 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 	httpx.WriteRedirect(w, r, routepath.AppCampaign(created.CampaignID))
 }
 
+// parseAppGameSystem parses inbound values into package-safe forms.
 func parseAppGameSystem(value string) (GameSystem, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "daggerheart", "game_system_daggerheart":
@@ -131,6 +139,7 @@ func parseAppGameSystem(value string) (GameSystem, bool) {
 	}
 }
 
+// parseAppGmMode parses inbound values into package-safe forms.
 func parseAppGmMode(value string) (GmMode, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "human":

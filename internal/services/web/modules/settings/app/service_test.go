@@ -76,6 +76,64 @@ func TestNewServiceFailsClosedWhenGatewayMissing(t *testing.T) {
 	}
 }
 
+func TestUnavailableGatewayFailsClosed(t *testing.T) {
+	t.Parallel()
+
+	gateway := NewUnavailableGateway()
+	if IsGatewayHealthy(nil) {
+		t.Fatalf("IsGatewayHealthy(nil) = true, want false")
+	}
+	if IsGatewayHealthy(gateway) {
+		t.Fatalf("IsGatewayHealthy(unavailable) = true, want false")
+	}
+	if !IsGatewayHealthy(&gatewayStub{}) {
+		t.Fatalf("IsGatewayHealthy(stub) = false, want true")
+	}
+
+	ctx := context.Background()
+	if profile, err := gateway.LoadProfile(ctx, "user-1"); err == nil {
+		t.Fatalf("LoadProfile() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("LoadProfile() status = %d, want %d", got, http.StatusServiceUnavailable)
+	} else if profile != (SettingsProfile{}) {
+		t.Fatalf("LoadProfile() profile = %+v, want zero value", profile)
+	}
+	if err := gateway.SaveProfile(ctx, "user-1", SettingsProfile{Name: "Rhea"}); err == nil {
+		t.Fatalf("SaveProfile() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("SaveProfile() status = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+	if locale, err := gateway.LoadLocale(ctx, "user-1"); err == nil {
+		t.Fatalf("LoadLocale() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("LoadLocale() status = %d, want %d", got, http.StatusServiceUnavailable)
+	} else if locale != "" {
+		t.Fatalf("LoadLocale() locale = %q, want empty", locale)
+	}
+	if err := gateway.SaveLocale(ctx, "user-1", "en-US"); err == nil {
+		t.Fatalf("SaveLocale() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("SaveLocale() status = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+	if keys, err := gateway.ListAIKeys(ctx, "user-1"); err == nil {
+		t.Fatalf("ListAIKeys() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("ListAIKeys() status = %d, want %d", got, http.StatusServiceUnavailable)
+	} else if keys != nil {
+		t.Fatalf("ListAIKeys() keys = %+v, want nil", keys)
+	}
+	if err := gateway.CreateAIKey(ctx, "user-1", "Primary", "sk-secret"); err == nil {
+		t.Fatalf("CreateAIKey() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("CreateAIKey() status = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+	if err := gateway.RevokeAIKey(ctx, "user-1", "cred-1"); err == nil {
+		t.Fatalf("RevokeAIKey() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("RevokeAIKey() status = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+}
+
 func TestSaveProfileValidatesNameLength(t *testing.T) {
 	t.Parallel()
 
@@ -128,6 +186,23 @@ func TestSaveLocaleValidatesAndDelegates(t *testing.T) {
 	}
 	if err := svc.SaveLocale(context.Background(), "user-1", "es-ES"); err == nil {
 		t.Fatalf("expected invalid-locale error")
+	}
+}
+
+func TestLoadLocaleValidatesAndNormalizes(t *testing.T) {
+	t.Parallel()
+
+	svc := NewService(&gatewayStub{locale: "pt"})
+	locale, err := svc.LoadLocale(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("LoadLocale() error = %v", err)
+	}
+	if locale != "pt-BR" {
+		t.Fatalf("LoadLocale() = %q, want %q", locale, "pt-BR")
+	}
+
+	if _, err := svc.LoadLocale(context.Background(), "   "); err == nil {
+		t.Fatalf("expected user-id validation error")
 	}
 }
 

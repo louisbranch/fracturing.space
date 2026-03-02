@@ -7,6 +7,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
+// registerRoutes centralizes this web behavior in one helper seam.
 func registerRoutes(mux *http.ServeMux, h handlers) {
 	if mux == nil {
 		return
@@ -16,6 +17,7 @@ func registerRoutes(mux *http.ServeMux, h handlers) {
 	registerAuthRedirectRoutes(mux, h)
 }
 
+// registerShellRoutes centralizes this web behavior in one helper seam.
 func registerShellRoutes(mux *http.ServeMux, h handlers) {
 	if mux == nil {
 		return
@@ -29,6 +31,7 @@ func registerShellRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodGet+" "+routepath.Root+"{rest...}", h.handleNotFound)
 }
 
+// registerPasskeyRoutes centralizes this web behavior in one helper seam.
 func registerPasskeyRoutes(mux *http.ServeMux, h handlers) {
 	if mux == nil {
 		return
@@ -47,6 +50,7 @@ func registerPasskeyRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodGet+" "+routepath.PasskeysPrefix+"{rest...}", h.handleNotFound)
 }
 
+// registerAuthRedirectRoutes centralizes this web behavior in one helper seam.
 func registerAuthRedirectRoutes(mux *http.ServeMux, h handlers) {
 	if mux == nil {
 		return

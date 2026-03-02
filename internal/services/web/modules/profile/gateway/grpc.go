@@ -29,6 +29,7 @@ func NewGRPCGateway(client SocialClient) profileapp.Gateway {
 	return GRPCGateway{Client: client}
 }
 
+// LookupUserProfile centralizes this web behavior in one helper seam.
 func (g GRPCGateway) LookupUserProfile(ctx context.Context, req profileapp.LookupUserProfileRequest) (profileapp.LookupUserProfileResponse, error) {
 	if g.Client == nil {
 		return profileapp.LookupUserProfileResponse{}, apperrors.E(apperrors.KindUnavailable, "social service client is not configured")

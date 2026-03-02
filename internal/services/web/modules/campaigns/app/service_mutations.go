@@ -7,6 +7,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// createCampaign executes package-scoped creation behavior for this flow.
 func (s service) createCampaign(ctx context.Context, input CreateCampaignInput) (CreateCampaignResult, error) {
 	if strings.TrimSpace(input.Name) == "" {
 		return CreateCampaignResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_name_is_required", "campaign name is required")
@@ -21,6 +22,7 @@ func (s service) createCampaign(ctx context.Context, input CreateCampaignInput) 
 	return created, nil
 }
 
+// startSession applies this package workflow transition.
 func (s service) startSession(ctx context.Context, campaignID string, input StartSessionInput) error {
 	if err := s.requirePolicy(ctx, campaignID, policyManageSession); err != nil {
 		return err
@@ -28,6 +30,7 @@ func (s service) startSession(ctx context.Context, campaignID string, input Star
 	return s.mutationGateway.StartSession(ctx, campaignID, StartSessionInput{Name: strings.TrimSpace(input.Name)})
 }
 
+// endSession applies this package workflow transition.
 func (s service) endSession(ctx context.Context, campaignID string, input EndSessionInput) error {
 	if err := s.requirePolicy(ctx, campaignID, policyManageSession); err != nil {
 		return err
@@ -39,6 +42,7 @@ func (s service) endSession(ctx context.Context, campaignID string, input EndSes
 	return s.mutationGateway.EndSession(ctx, campaignID, EndSessionInput{SessionID: sessionID})
 }
 
+// createInvite executes package-scoped creation behavior for this flow.
 func (s service) createInvite(ctx context.Context, campaignID string, input CreateInviteInput) error {
 	if err := s.requirePolicy(ctx, campaignID, policyManageInvite); err != nil {
 		return err
@@ -53,6 +57,7 @@ func (s service) createInvite(ctx context.Context, campaignID string, input Crea
 	})
 }
 
+// revokeInvite applies this package workflow transition.
 func (s service) revokeInvite(ctx context.Context, campaignID string, input RevokeInviteInput) error {
 	if err := s.requirePolicy(ctx, campaignID, policyManageInvite); err != nil {
 		return err
@@ -64,6 +69,7 @@ func (s service) revokeInvite(ctx context.Context, campaignID string, input Revo
 	return s.mutationGateway.RevokeInvite(ctx, campaignID, RevokeInviteInput{InviteID: inviteID})
 }
 
+// createCharacter executes package-scoped creation behavior for this flow.
 func (s service) createCharacter(ctx context.Context, campaignID string, input CreateCharacterInput) (CreateCharacterResult, error) {
 	if strings.TrimSpace(input.Name) == "" {
 		return CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_name_is_required", "character name is required")

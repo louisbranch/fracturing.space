@@ -33,6 +33,7 @@ func CollectPagesMax[T any, R any](
 	return collectPages[T, R](ctx, pageSize, maxPages, fetch, mapItem)
 }
 
+// collectPages centralizes this web behavior in one helper seam.
 func collectPages[T any, R any](
 	ctx context.Context,
 	pageSize int32,

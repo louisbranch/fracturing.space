@@ -1,0 +1,93 @@
+package templates
+
+import (
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+)
+
+templ CampaignChatPage(view CampaignChatView, lang string, loc Localizer) {
+	<!doctype html>
+	<html lang={ appLayoutLang(lang) } data-theme={ daisyTheme }>
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<title>{ sharedtemplates.ComposePageTitle(campaignChatTitle(view)) }</title>
+			<meta name="description" content={ T(loc, "layout.meta_description") }/>
+			@daisyThemeHead()
+			<link rel="stylesheet" href="/static/theme.css"/>
+			@htmxHead()
+		</head>
+		<body class="min-h-[100dvh] bg-base-300">
+			@sharedtemplates.LucideSprite()
+			<div class="drawer lg:drawer-open min-h-[100dvh] campaign-chat-drawer" data-campaign-chat-page="true">
+				<input id="campaign-chat-drawer" type="checkbox" class="drawer-toggle"/>
+				<div class="drawer-content flex min-h-[100dvh] flex-col">
+					<header class="navbar border-b border-base-300 bg-base-100 px-4 lg:px-6">
+						<label for="campaign-chat-drawer" class="btn btn-ghost btn-square" aria-label="Toggle sidebar">
+							@sharedtemplates.LucideIcon("panel-left-open", "chat-drawer-icon-open size-5")
+							@sharedtemplates.LucideIcon("panel-right-close", "chat-drawer-icon-close size-5")
+						</label>
+						<div class="px-2 text-lg font-bold" data-campaign-chat-title={ campaignChatTitle(view) }>{ campaignChatTitle(view) }</div>
+					</header>
+					<main class="flex-1 p-4 lg:p-6">
+						<div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+							<section class="card border border-base-300 bg-base-100 shadow-xl">
+								<div
+									class="card-body"
+									data-campaign-id={ view.CampaignID }
+									data-chat-invalid-id={ T(loc, "campaign.chat.invalid_id") }
+									data-chat-connecting={ T(loc, "campaign.chat.connecting") }
+									data-chat-chat-unavailable={ T(loc, "campaign.chat.unavailable") }
+									data-chat-ws-setup-failed={ T(loc, "campaign.chat.ws_setup_failed") }
+									data-chat-connected={ T(loc, "campaign.chat.connected") }
+									data-chat-invalid-frame={ T(loc, "campaign.chat.invalid_frame") }
+									data-chat-joined={ T(loc, "campaign.chat.joined") }
+									data-chat-participant={ T(loc, "campaign.chat.participant") }
+									data-chat-request-failed={ T(loc, "campaign.chat.request_failed") }
+									data-chat-error-prefix={ T(loc, "campaign.chat.error_prefix") }
+									data-chat-unable-to-send={ T(loc, "campaign.chat.unable_to_send") }
+									data-chat-disconnected-retrying={ T(loc, "campaign.chat.disconnected_retrying") }
+									data-chat-fallback-port={ campaignChatFallbackPort(view) }
+								>
+									<div class="space-y-4">
+										<div class="flex items-center justify-between gap-4">
+											<h2 class="text-lg font-semibold">{ T(loc, "campaign.shell_chat") }</h2>
+											<span id="chat-status" class="text-sm opacity-70">{ T(loc, "campaign.shell_connecting") }</span>
+										</div>
+										<div id="chat-messages" class="h-96 overflow-y-auto rounded border border-base-300 p-3 text-sm"></div>
+										<form id="chat-form" class="flex gap-2">
+											<input id="chat-input" class="input input-bordered w-full" type="text" maxlength="2000" placeholder={ T(loc, "campaign.shell_message_placeholder") } autocomplete="off"/>
+											<button id="chat-send" class="btn btn-primary" type="submit">{ T(loc, "campaign.shell_send") }</button>
+										</form>
+									</div>
+								</div>
+							</section>
+							<div class="hidden lg:block"></div>
+						</div>
+					</main>
+				</div>
+				<div class="drawer-side is-drawer-close:overflow-visible">
+					<label for="campaign-chat-drawer" aria-label="Close sidebar" class="drawer-overlay chat-drawer-overlay lg:hidden"></label>
+					<aside class="chat-drawer-shell flex min-h-full flex-col items-start border-e border-base-300 bg-base-200">
+						<ul class="menu w-full grow gap-2 p-2">
+							<li>
+								<a
+									href={ campaignChatBackURL(view) }
+									title={ T(loc, "game.campaign.title") }
+									aria-label={ T(loc, "game.campaign.title") }
+									class="justify-start"
+								>
+									@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CAMPAIGN, "size-5")
+									<span class="chat-drawer-link-label">{ T(loc, "game.campaign.title") }</span>
+								</a>
+							</li>
+						</ul>
+					</aside>
+				</div>
+			</div>
+			<script>window.__FRACTURING_CHAT_JOIN_TYPE = "chat.join";</script>
+			<script defer src="/static/campaign-chat.js"></script>
+		</body>
+	</html>
+}
+

@@ -2,6 +2,7 @@ package templates
 
 import "strings"
 
+// participantPronounsLabel centralizes this web behavior in one helper seam.
 func participantPronounsLabel(loc Localizer, value string) string {
 	raw := strings.TrimSpace(value)
 	switch strings.ToLower(raw) {

@@ -21,8 +21,3 @@ func defaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicMod
 		profile.NewWithGateway(profilegateway.NewGRPCGateway(deps.ProfileSocialClient), deps.AssetBaseURL, res.ResolveSignedIn),
 	}
 }
-
-// experimentalPublicModules returns opt-in public modules that are still scaffolded.
-func experimentalPublicModules() []Module {
-	return []Module{}
-}

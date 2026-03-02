@@ -1,4 +1,4 @@
-name: Web Smoke (Playwright CLI)
+name: Web Critical Smoke (Playwright CLI)
 
 on:
   pull_request:
@@ -28,34 +28,133 @@ jobs:
           node-version: "20"
       - name: Install Playwright CLI browsers
         run: npx -y $PLAYWRIGHT_CLI_PKG install
-      - name: Build web service
+      - name: Build web critical services
         run: |
           set -euo pipefail
           mkdir -p bin
+          go build -o ./bin/auth ./cmd/auth
+          go build -o ./bin/game ./cmd/game
+          go build -o ./bin/social ./cmd/social
+          go build -o ./bin/notifications ./cmd/notifications
+          go build -o ./bin/ai ./cmd/ai
+          go build -o ./bin/userhub ./cmd/userhub
           go build -o ./bin/web ./cmd/web
-      - name: Start web service
+      - name: Start web critical dependency stack
         env:
-          FRACTURING_SPACE_WEB_HTTP_ADDR: "127.0.0.1:8086"
-          FRACTURING_SPACE_WEB_AUTH_BASE_URL: "http://localhost:8084"
-          FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID: "fracturing-space"
+          FRACTURING_SPACE_AUTH_DB_PATH: ".tmp/auth-web-smoke.db"
+          FRACTURING_SPACE_GAME_EVENTS_DB_PATH: ".tmp/game-events-web-smoke.db"
+          FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH: ".tmp/game-projections-web-smoke.db"
+          FRACTURING_SPACE_GAME_CONTENT_DB_PATH: ".tmp/game-content-web-smoke.db"
         run: |
           set -euo pipefail
-          ./bin/web -auth-addr="" 2>&1 &
-          timeout 30 bash -c 'until curl -fsS http://127.0.0.1:8086/up >/dev/null; do sleep 0.5; done'
-      - name: Run web smoke flow
+
+          dump_logs() {
+            for log in .tmp/auth.log .tmp/social.log .tmp/notifications.log .tmp/ai.log .tmp/game.log .tmp/userhub.log .tmp/web.log; do
+              echo "--- ${log} (tail) ---"
+              tail -n 120 "${log}" 2>/dev/null || true
+            done
+          }
+
+          wait_for_port() {
+            local host="$1"
+            local port="$2"
+            local label="$3"
+            for _ in $(seq 1 180); do
+              if (echo >"/dev/tcp/${host}/${port}") >/dev/null 2>&1; then
+                return 0
+              fi
+              sleep 0.5
+            done
+            echo "Timed out waiting for ${label} at ${host}:${port}"
+            dump_logs
+            exit 1
+          }
+
+          wait_for_http() {
+            local url="$1"
+            local label="$2"
+            for _ in $(seq 1 180); do
+              if curl -fsS "${url}" >/dev/null; then
+                return 0
+              fi
+              sleep 0.5
+            done
+            echo "Timed out waiting for ${label} at ${url}"
+            dump_logs
+            exit 1
+          }
+
+          mkdir -p .tmp
+          rm -f \
+            "${FRACTURING_SPACE_AUTH_DB_PATH}" \
+            "${FRACTURING_SPACE_GAME_EVENTS_DB_PATH}" \
+            "${FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH}" \
+            "${FRACTURING_SPACE_GAME_CONTENT_DB_PATH}"
+
+          go run ./cmd/catalog-importer \
+            -dir internal/tools/importer/content/daggerheart/v1 \
+            -db-path "${FRACTURING_SPACE_GAME_CONTENT_DB_PATH}"
+
+          ./bin/auth -port=8083 -http-addr=127.0.0.1:8084 >.tmp/auth.log 2>&1 &
+          wait_for_port 127.0.0.1 8083 "auth gRPC service"
+          wait_for_http "http://127.0.0.1:8084/up" "auth HTTP service"
+
+          ./bin/social -port=8090 >.tmp/social.log 2>&1 &
+          wait_for_port 127.0.0.1 8090 "social gRPC service"
+
+          ./bin/notifications -port=8088 >.tmp/notifications.log 2>&1 &
+          wait_for_port 127.0.0.1 8088 "notifications gRPC service"
+
+          FRACTURING_SPACE_AI_ENCRYPTION_KEY="MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY" \
+            ./bin/ai -port=8087 >.tmp/ai.log 2>&1 &
+          wait_for_port 127.0.0.1 8087 "ai gRPC service"
+
+          FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 \
+            FRACTURING_SPACE_SOCIAL_ADDR=127.0.0.1:8090 \
+            FRACTURING_SPACE_GAME_EVENT_HMAC_KEY="dev-secret" \
+            FRACTURING_SPACE_GAME_EVENTS_DB_PATH="${FRACTURING_SPACE_GAME_EVENTS_DB_PATH}" \
+            FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH="${FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH}" \
+            FRACTURING_SPACE_GAME_CONTENT_DB_PATH="${FRACTURING_SPACE_GAME_CONTENT_DB_PATH}" \
+            ./bin/game -addr=127.0.0.1:8082 >.tmp/game.log 2>&1 &
+          wait_for_port 127.0.0.1 8082 "game gRPC service"
+
+          ./bin/userhub -port=8092 -game-addr=127.0.0.1:8082 -social-addr=127.0.0.1:8090 -notifications-addr=127.0.0.1:8088 >.tmp/userhub.log 2>&1 &
+          wait_for_port 127.0.0.1 8092 "userhub gRPC service"
+
+          FRACTURING_SPACE_WEB_HTTP_ADDR=127.0.0.1:8086 \
+            FRACTURING_SPACE_WEB_AUTH_BASE_URL=http://127.0.0.1:8084 \
+            FRACTURING_SPACE_WEB_OAUTH_CLIENT_ID=fracturing-space \
+            FRACTURING_SPACE_AUTH_ADDR=127.0.0.1:8083 \
+            FRACTURING_SPACE_SOCIAL_ADDR=127.0.0.1:8090 \
+            FRACTURING_SPACE_GAME_ADDR=127.0.0.1:8082 \
+            FRACTURING_SPACE_AI_ADDR=127.0.0.1:8087 \
+            FRACTURING_SPACE_NOTIFICATIONS_ADDR=127.0.0.1:8088 \
+            FRACTURING_SPACE_USERHUB_ADDR=127.0.0.1:8092 \
+            ./bin/web >.tmp/web.log 2>&1 &
+          wait_for_http "http://127.0.0.1:8086/up" "web HTTP service"
+      - name: Run web critical smoke flow
         env:
           BASE_URL: "http://127.0.0.1:8086"
+          WEB_SMOKE_AUTH_ADDR: "127.0.0.1:8083"
+          WEB_SMOKE_REQUIRE_AUTH: "1"
         run: scripts/playwright-web-smoke.sh
       - name: Upload Playwright artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-web-smoke
+          name: playwright-web-critical-smoke
           path: |
             .playwright-cli
             artifacts
+            .tmp/*.log
           if-no-files-found: warn
-      - name: Stop web service
+      - name: Stop web critical stack
         if: always()
         run: |
           pkill -f "/bin/web" 2>/dev/null || true
+          pkill -f "/bin/auth" 2>/dev/null || true
+          pkill -f "/bin/game" 2>/dev/null || true
+          pkill -f "/bin/social" 2>/dev/null || true
+          pkill -f "/bin/notifications" 2>/dev/null || true
+          pkill -f "/bin/userhub" 2>/dev/null || true
+          pkill -f "/bin/ai" 2>/dev/null || true

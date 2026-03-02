@@ -22,13 +22,20 @@ type languageResolver struct {
 	resolveUserID func(*http.Request) string
 }
 
+// newLanguageResolver wires account lookup and user-id resolution for
+// request-scoped language selection.
 func newLanguageResolver(client PrincipalAccountClient, resolveUserID func(*http.Request) string) languageResolver {
 	return languageResolver{accountClient: client, resolveUserID: resolveUserID}
 }
 
+// resolveRequestLanguageUncached prefers account profile locale when available
+// and safely falls back to transport language negotiation otherwise.
 func (r languageResolver) resolveRequestLanguageUncached(request *http.Request) string {
 	fallback := webi18n.ResolveTag(request, nil).String()
 	if r.accountClient == nil {
+		return fallback
+	}
+	if r.resolveUserID == nil {
 		return fallback
 	}
 	userID := r.resolveUserID(request)
@@ -46,6 +53,8 @@ func (r languageResolver) resolveRequestLanguageUncached(request *http.Request) 
 	return platformi18n.LocaleString(platformi18n.NormalizeLocale(locale))
 }
 
+// resolveRequestLanguage memoizes language resolution within one request to
+// avoid duplicate account lookups across module handlers.
 func (r languageResolver) resolveRequestLanguage(request *http.Request) string {
 	if state := requestPrincipalStateFromRequest(request); state != nil {
 		state.languageOnce.Do(func() {

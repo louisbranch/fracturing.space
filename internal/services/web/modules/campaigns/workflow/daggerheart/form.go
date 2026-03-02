@@ -162,6 +162,7 @@ func (Workflow) ParseStepInput(form url.Values, nextStep int32) (*campaignapp.Ca
 	}
 }
 
+// parseRequiredInt32 parses inbound values into package-safe forms.
 func parseRequiredInt32(raw string, field string) (int32, error) {
 	trimmedRaw := strings.TrimSpace(raw)
 	if trimmedRaw == "" {
@@ -174,6 +175,7 @@ func parseRequiredInt32(raw string, field string) (int32, error) {
 	return int32(value), nil
 }
 
+// parseOptionalInt32 parses inbound values into package-safe forms.
 func parseOptionalInt32(raw string) (int32, error) {
 	trimmedRaw := strings.TrimSpace(raw)
 	if trimmedRaw == "" {

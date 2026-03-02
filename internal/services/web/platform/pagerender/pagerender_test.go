@@ -2,13 +2,17 @@ package pagerender
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 
+	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
+	"golang.org/x/text/message"
 )
 
 func TestWriteModulePageRendersHTMXFragmentWithStatus(t *testing.T) {
@@ -115,6 +119,133 @@ func TestWriteModulePageHTMXDoesNotConsumeFlashNotice(t *testing.T) {
 	}
 }
 
+func TestWriteModulePageDefaultsStatusAndNilFragment(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
+	rr := httptest.NewRecorder()
+
+	err := WriteModulePage(rr, req, nil, ModulePage{
+		Title: "Dashboard",
+	})
+	if err != nil {
+		t.Fatalf("WriteModulePage() error = %v", err)
+	}
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if !strings.Contains(rr.Body.String(), `id="main"`) {
+		t.Fatalf("expected app shell main container in response body")
+	}
+}
+
+func TestWriteModulePageInvokesResolverHooks(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
+	rr := httptest.NewRecorder()
+	resolver := &countingResolver{}
+
+	err := WriteModulePage(rr, req, resolver, ModulePage{
+		Title:    "Dashboard",
+		Fragment: textComponent(`<section id="fragment-root">ok</section>`),
+	})
+	if err != nil {
+		t.Fatalf("WriteModulePage() error = %v", err)
+	}
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if got := resolver.viewerCalls.Load(); got != 1 {
+		t.Fatalf("ResolveRequestViewer call count = %d, want 1", got)
+	}
+	if got := resolver.languageCalls.Load(); got != 1 {
+		t.Fatalf("ResolveRequestLanguage call count = %d, want 1", got)
+	}
+}
+
+func TestWriteModulePageAllowsNilRequest(t *testing.T) {
+	t.Parallel()
+
+	rr := httptest.NewRecorder()
+	err := WriteModulePage(rr, nil, nil, ModulePage{
+		Title:    "Dashboard",
+		Fragment: textComponent(`<section id="fragment-root">ok</section>`),
+	})
+	if err != nil {
+		t.Fatalf("WriteModulePage() error = %v", err)
+	}
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+}
+
+func TestWriteModulePageAllowsNilWriter(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
+	if err := WriteModulePage(nil, req, nil, ModulePage{Title: "Dashboard"}); err != nil {
+		t.Fatalf("WriteModulePage() error = %v, want nil", err)
+	}
+}
+
+func TestWritePublicPageHandlesNilRequest(t *testing.T) {
+	t.Parallel()
+
+	rr := httptest.NewRecorder()
+	WritePublicPage(rr, nil, "Sign In", "desc", "en", 0, textComponent(`<section id="public-fragment">ok</section>`))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `id="public-fragment"`) {
+		t.Fatalf("expected rendered fragment content in public page body")
+	}
+}
+
+func TestWritePublicPageDefaultsStatusAndNilBody(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
+	rr := httptest.NewRecorder()
+	WritePublicPage(rr, req, "Discover", "desc", "en", 0, nil)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if body := rr.Body.String(); !strings.Contains(body, `id="auth-shell"`) {
+		t.Fatalf("body missing auth shell marker: %q", body)
+	}
+}
+
+func TestWritePublicPageFallsBackToInternalServerErrorOnRenderFailure(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
+	rr := httptest.NewRecorder()
+	WritePublicPage(rr, req, "Discover", "desc", "en", http.StatusCreated, brokenComponent{})
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
+	}
+	if body := rr.Body.String(); !strings.Contains(body, http.StatusText(http.StatusInternalServerError)) {
+		t.Fatalf("body missing generic internal-server-error message: %q", body)
+	}
+}
+
+func TestResolveFlashToastFallsBackToNoticeKeyWhenLocalizationMissing(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	setFlashCookie(t, req, flashnotice.NoticeSuccess("web.notice.missing_translation"))
+	rr := httptest.NewRecorder()
+	toast := resolveFlashToast(rr, req, blankLocalizer{})
+	if toast == nil {
+		t.Fatalf("resolveFlashToast() = nil, want toast")
+	}
+	if toast.Message != "web.notice.missing_translation" {
+		t.Fatalf("toast.Message = %q, want notice key fallback", toast.Message)
+	}
+}
+
 func setFlashCookie(t *testing.T, req *http.Request, notice flashnotice.Notice) {
 	t.Helper()
 	seed := httptest.NewRecorder()
@@ -148,3 +279,28 @@ func (c textComponent) Render(_ context.Context, w io.Writer) error {
 	_, err := io.WriteString(w, string(c))
 	return err
 }
+
+type brokenComponent struct{}
+
+func (brokenComponent) Render(context.Context, io.Writer) error {
+	return errors.New("render boom")
+}
+
+type countingResolver struct {
+	viewerCalls   atomic.Int64
+	languageCalls atomic.Int64
+}
+
+func (r *countingResolver) ResolveRequestViewer(_ *http.Request) module.Viewer {
+	r.viewerCalls.Add(1)
+	return module.Viewer{DisplayName: "Ada"}
+}
+
+func (r *countingResolver) ResolveRequestLanguage(_ *http.Request) string {
+	r.languageCalls.Add(1)
+	return "en"
+}
+
+type blankLocalizer struct{}
+
+func (blankLocalizer) Sprintf(message.Reference, ...any) string { return "   " }

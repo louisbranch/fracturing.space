@@ -7,6 +7,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
+// registerRoutes centralizes this web behavior in one helper seam.
 func registerRoutes(mux *http.ServeMux, h handlers) {
 	if mux == nil {
 		return

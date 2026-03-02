@@ -6,6 +6,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"sort"
+	"strings"
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
@@ -28,18 +30,17 @@ import (
 
 // Config holds command inputs for web startup.
 type Config struct {
-	HTTPAddr                  string        `env:"FRACTURING_SPACE_WEB_HTTP_ADDR" envDefault:"localhost:8080"`
-	ChatHTTPAddr              string        `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR" envDefault:"localhost:8086"`
-	TrustForwardedProto       bool          `env:"FRACTURING_SPACE_WEB_TRUST_FORWARDED_PROTO" envDefault:"false"`
-	EnableExperimentalModules bool          `env:"FRACTURING_SPACE_WEB_ENABLE_EXPERIMENTAL_MODULES" envDefault:"false"`
-	AuthAddr                  string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
-	SocialAddr                string        `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
-	GameAddr                  string        `env:"FRACTURING_SPACE_GAME_ADDR"`
-	AIAddr                    string        `env:"FRACTURING_SPACE_AI_ADDR"`
-	NotificationsAddr         string        `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`
-	UserHubAddr               string        `env:"FRACTURING_SPACE_USERHUB_ADDR"`
-	AssetBaseURL              string        `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
-	GRPCDialTimeout           time.Duration `env:"FRACTURING_SPACE_WEB_DIAL_TIMEOUT" envDefault:"2s"`
+	HTTPAddr            string        `env:"FRACTURING_SPACE_WEB_HTTP_ADDR" envDefault:"localhost:8080"`
+	ChatHTTPAddr        string        `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR" envDefault:"localhost:8086"`
+	TrustForwardedProto bool          `env:"FRACTURING_SPACE_WEB_TRUST_FORWARDED_PROTO" envDefault:"false"`
+	AuthAddr            string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
+	SocialAddr          string        `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
+	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"`
+	AIAddr              string        `env:"FRACTURING_SPACE_AI_ADDR"`
+	NotificationsAddr   string        `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`
+	UserHubAddr         string        `env:"FRACTURING_SPACE_USERHUB_ADDR"`
+	AssetBaseURL        string        `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
+	GRPCDialTimeout     time.Duration `env:"FRACTURING_SPACE_WEB_DIAL_TIMEOUT" envDefault:"2s"`
 }
 
 // ParseConfig parses environment and flags into a Config.
@@ -68,32 +69,52 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.UserHubAddr, "userhub-addr", cfg.UserHubAddr, "Userhub service gRPC address")
 	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "Asset base URL for image delivery")
 	fs.BoolVar(&cfg.TrustForwardedProto, "trust-forwarded-proto", cfg.TrustForwardedProto, "Trust X-Forwarded-Proto when resolving request scheme")
-	fs.BoolVar(&cfg.EnableExperimentalModules, "enable-experimental-modules", cfg.EnableExperimentalModules, "Enable experimental web module surfaces")
 	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
 	return cfg, nil
 }
 
+// grpcDialer abstracts dependency dialing for startup tests.
 type grpcDialer func(context.Context, string, time.Duration) (*grpc.ClientConn, error)
 
+// dependencyRequirement describes one startup dependency dial and field wiring step.
 type dependencyRequirement struct {
 	name     string
 	address  string
 	setInput func(*web.PrincipalDependencies, *modules.Dependencies, *grpc.ClientConn)
 }
 
+// dependencyDialState classifies dependency dial outcomes at startup.
+type dependencyDialState string
+
+const (
+	dependencyDialStateConnected   dependencyDialState = "connected"
+	dependencyDialStateDialFailed  dependencyDialState = "dial_failed"
+	dependencyDialStateUnavailable dependencyDialState = "unavailable"
+)
+
+// dependencyStatus captures one dependency dial result for startup diagnostics.
+type dependencyStatus struct {
+	Name    string
+	Address string
+	State   dependencyDialState
+	Detail  string
+}
+
+// bootstrapDependencies dials service dependencies and maps connected clients
+// into principal and module dependency bundles.
 func bootstrapDependencies(
 	ctx context.Context,
 	cfg Config,
 	dialer grpcDialer,
-) (web.DependencyBundle, []*grpc.ClientConn, []string, error) {
+) (web.DependencyBundle, []*grpc.ClientConn, map[string]dependencyStatus, error) {
 	var principal web.PrincipalDependencies
 	principal.AssetBaseURL = cfg.AssetBaseURL
 	var modDeps modules.Dependencies
 	modDeps.AssetBaseURL = cfg.AssetBaseURL
 	conns := []*grpc.ClientConn{}
-	warnings := []string{}
+	statuses := map[string]dependencyStatus{}
 
 	deps := []dependencyRequirement{
 		{
@@ -157,23 +178,59 @@ func bootstrapDependencies(
 	}
 
 	for _, dep := range deps {
+		status := dependencyStatus{
+			Name:    dep.name,
+			Address: dep.address,
+			State:   dependencyDialStateConnected,
+		}
 		conn, err := dialer(ctx, dep.address, cfg.GRPCDialTimeout)
 		if err != nil {
-			warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable: %v", dep.name, dep.address, err))
+			status.State = dependencyDialStateDialFailed
+			status.Detail = err.Error()
+			statuses[dep.name] = status
 			continue
 		}
 		if conn == nil {
-			warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable", dep.name, dep.address))
+			status.State = dependencyDialStateUnavailable
+			statuses[dep.name] = status
 			continue
 		}
 		dep.setInput(&principal, &modDeps, conn)
 		conns = append(conns, conn)
+		statuses[dep.name] = status
 	}
 
 	bundle := web.DependencyBundle{Principal: principal, Modules: modDeps}
-	return bundle, conns, warnings, nil
+	return bundle, conns, statuses, nil
 }
 
+// dependencyStatusWarnings maps status diagnostics into legacy warning strings.
+func dependencyStatusWarnings(statuses map[string]dependencyStatus) []string {
+	if len(statuses) == 0 {
+		return nil
+	}
+	order := []string{"auth", "social", "game", "ai", "userhub", "notifications"}
+	warnings := make([]string, 0, len(statuses))
+	for _, name := range order {
+		status, ok := statuses[name]
+		if !ok {
+			continue
+		}
+		switch status.State {
+		case dependencyDialStateDialFailed:
+			if strings.TrimSpace(status.Detail) != "" {
+				warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable: %s", status.Name, status.Address, status.Detail))
+				continue
+			}
+			warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable", status.Name, status.Address))
+		case dependencyDialStateUnavailable:
+			warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable", status.Name, status.Address))
+		}
+	}
+	return warnings
+}
+
+// closeDependencyConnections closes all successfully dialed dependency connections.
 func closeDependencyConnections(conns []*grpc.ClientConn) {
 	for _, conn := range conns {
 		if conn == nil {
@@ -183,6 +240,7 @@ func closeDependencyConnections(conns []*grpc.ClientConn) {
 	}
 }
 
+// dialDependency dials one dependency endpoint with health checks and shared defaults.
 func dialDependency(
 	ctx context.Context,
 	address string,
@@ -197,21 +255,23 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceWeb, func(context.Context) error {
-		dependencies, dependencyConns, warnings, err := bootstrapDependencies(ctx, cfg, dialDependency)
+		dependencies, dependencyConns, statuses, err := bootstrapDependencies(ctx, cfg, dialDependency)
 		if err != nil {
 			return fmt.Errorf("init web dependency graph: %w", err)
 		}
 		defer closeDependencyConnections(dependencyConns)
-		for _, warning := range warnings {
+		for _, statusLine := range formatDependencyStatusLines(statuses) {
+			log.Printf("web startup: %s", statusLine)
+		}
+		for _, warning := range dependencyStatusWarnings(statuses) {
 			log.Printf("web startup: %s", warning)
 		}
 
 		server, err := web.NewServer(ctx, web.Config{
-			HTTPAddr:                  cfg.HTTPAddr,
-			ChatHTTPAddr:              cfg.ChatHTTPAddr,
-			EnableExperimentalModules: cfg.EnableExperimentalModules,
-			RequestSchemePolicy:       requestmeta.SchemePolicy{TrustForwardedProto: cfg.TrustForwardedProto},
-			Dependencies:              &dependencies,
+			HTTPAddr:            cfg.HTTPAddr,
+			ChatHTTPAddr:        cfg.ChatHTTPAddr,
+			RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: cfg.TrustForwardedProto},
+			Dependencies:        &dependencies,
 		})
 		if err != nil {
 			return fmt.Errorf("init web server: %w", err)
@@ -222,4 +282,27 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		return nil
 	})
+}
+
+// formatDependencyStatusLines renders stable startup diagnostics for each dependency.
+func formatDependencyStatusLines(statuses map[string]dependencyStatus) []string {
+	if len(statuses) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(statuses))
+	for name := range statuses {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	lines := make([]string, 0, len(names))
+	for _, name := range names {
+		status := statuses[name]
+		line := fmt.Sprintf("dependency=%s state=%s address=%s", status.Name, status.State, status.Address)
+		if strings.TrimSpace(status.Detail) != "" {
+			line += fmt.Sprintf(" detail=%s", strings.TrimSpace(status.Detail))
+		}
+		lines = append(lines, line)
+	}
+	return lines
 }

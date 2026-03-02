@@ -18,6 +18,7 @@ func (h handlers) now() time.Time {
 	return time.Now()
 }
 
+// notificationListView centralizes this web behavior in one helper seam.
 func (h handlers) notificationListView(items []NotificationSummary, loc webtemplates.Localizer) []webtemplates.NotificationListItemView {
 	if len(items) == 0 {
 		return nil
@@ -47,6 +48,7 @@ func (h handlers) notificationListView(items []NotificationSummary, loc webtempl
 	return rows
 }
 
+// notificationDetailView centralizes this web behavior in one helper seam.
 func (h handlers) notificationDetailView(item NotificationSummary, loc webtemplates.Localizer) *webtemplates.NotificationDetailView {
 	itemID := strings.TrimSpace(item.ID)
 	if itemID == "" {
@@ -69,6 +71,7 @@ func (h handlers) notificationDetailView(item NotificationSummary, loc webtempla
 	}
 }
 
+// notificationTitle centralizes this web behavior in one helper seam.
 func notificationTitle(value string, loc webtemplates.Localizer) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -77,6 +80,7 @@ func notificationTitle(value string, loc webtemplates.Localizer) string {
 	return value
 }
 
+// notificationBody centralizes this web behavior in one helper seam.
 func notificationBody(value string, loc webtemplates.Localizer) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
@@ -85,6 +89,7 @@ func notificationBody(value string, loc webtemplates.Localizer) string {
 	return value
 }
 
+// notificationSourceLabel centralizes this web behavior in one helper seam.
 func notificationSourceLabel(source string, loc webtemplates.Localizer) string {
 	source = strings.ToLower(strings.TrimSpace(source))
 	if source == notificationSourceSystem {
@@ -93,6 +98,7 @@ func notificationSourceLabel(source string, loc webtemplates.Localizer) string {
 	return webtemplates.T(loc, "game.notifications.source_unknown")
 }
 
+// notificationCreatedLabel centralizes this web behavior in one helper seam.
 func notificationCreatedLabel(createdAt time.Time, now time.Time, loc webtemplates.Localizer) string {
 	if createdAt.IsZero() {
 		return webtemplates.T(loc, "game.notifications.time.just_now")

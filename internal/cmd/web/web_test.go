@@ -43,9 +43,6 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.UserHubAddr != "userhub:8092" {
 		t.Fatalf("UserHubAddr = %q, want %q", cfg.UserHubAddr, "userhub:8092")
 	}
-	if cfg.EnableExperimentalModules {
-		t.Fatalf("EnableExperimentalModules = %t, want false", cfg.EnableExperimentalModules)
-	}
 	if cfg.TrustForwardedProto {
 		t.Fatalf("TrustForwardedProto = %t, want false", cfg.TrustForwardedProto)
 	}
@@ -90,19 +87,6 @@ func TestParseConfigOverrideChatHTTPAddr(t *testing.T) {
 	}
 	if cfg.ChatHTTPAddr != "127.0.0.1:18086" {
 		t.Fatalf("ChatHTTPAddr = %q, want %q", cfg.ChatHTTPAddr, "127.0.0.1:18086")
-	}
-}
-
-func TestParseConfigOverrideExperimentalModules(t *testing.T) {
-	t.Parallel()
-
-	fs := flag.NewFlagSet("web", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, []string{"-enable-experimental-modules"})
-	if err != nil {
-		t.Fatalf("ParseConfig() error = %v", err)
-	}
-	if !cfg.EnableExperimentalModules {
-		t.Fatalf("EnableExperimentalModules = %t, want true", cfg.EnableExperimentalModules)
 	}
 }
 
@@ -153,7 +137,7 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 		calls = append(calls, address)
 		return &grpc.ClientConn{}, nil
 	}
-	bundle, conns, warnings, err := bootstrapDependencies(context.Background(), Config{
+	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), Config{
 		AuthAddr:          "auth:8083",
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
@@ -171,7 +155,15 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 	if len(conns) != 6 {
 		t.Fatalf("dependency connections = %d, want %d", len(conns), 6)
 	}
-	if len(warnings) != 0 {
+	if len(statuses) != 6 {
+		t.Fatalf("statuses = %d, want %d", len(statuses), 6)
+	}
+	for name, status := range statuses {
+		if status.State != dependencyDialStateConnected {
+			t.Fatalf("status[%s].State = %q, want %q", name, status.State, dependencyDialStateConnected)
+		}
+	}
+	if warnings := dependencyStatusWarnings(statuses); len(warnings) != 0 {
 		t.Fatalf("warnings = %v, want none", warnings)
 	}
 	if bundle.Principal.SessionClient == nil {
@@ -214,7 +206,7 @@ func TestBootstrapDependenciesOptionalFailuresProduceWarnings(t *testing.T) {
 		}
 		return &grpc.ClientConn{}, nil
 	}
-	bundle, conns, warnings, err := bootstrapDependencies(context.Background(), Config{
+	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), Config{
 		AuthAddr:          "auth:8083",
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
@@ -231,6 +223,10 @@ func TestBootstrapDependenciesOptionalFailuresProduceWarnings(t *testing.T) {
 	if len(calls) != 6 {
 		t.Fatalf("dial calls = %d, want %d", len(calls), 6)
 	}
+	if got := statuses["ai"].State; got != dependencyDialStateDialFailed {
+		t.Fatalf("status[ai].State = %q, want %q", got, dependencyDialStateDialFailed)
+	}
+	warnings := dependencyStatusWarnings(statuses)
 	if len(warnings) != 1 {
 		t.Fatalf("warnings = %v, want one warning", warnings)
 	}
@@ -257,7 +253,7 @@ func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
 		}
 		return &grpc.ClientConn{}, nil
 	}
-	bundle, conns, warnings, err := bootstrapDependencies(context.Background(), Config{
+	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), Config{
 		AuthAddr:          "auth:8083",
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
@@ -274,6 +270,13 @@ func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
 	if len(conns) != 4 {
 		t.Fatalf("dependency connections = %d, want %d", len(conns), 4)
 	}
+	if got := statuses["ai"].State; got != dependencyDialStateDialFailed {
+		t.Fatalf("status[ai].State = %q, want %q", got, dependencyDialStateDialFailed)
+	}
+	if got := statuses["userhub"].State; got != dependencyDialStateDialFailed {
+		t.Fatalf("status[userhub].State = %q, want %q", got, dependencyDialStateDialFailed)
+	}
+	warnings := dependencyStatusWarnings(statuses)
 	if len(warnings) != 2 {
 		t.Fatalf("warnings = %v, want two warnings", warnings)
 	}
@@ -297,5 +300,81 @@ func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
 	}
 	if bundle.Modules.UserHubClient != nil {
 		t.Fatalf("expected userhub client to be unavailable")
+	}
+}
+
+func TestBootstrapDependenciesNilConnectionProducesWarning(t *testing.T) {
+	t.Parallel()
+
+	calls := []string{}
+	dialer := func(_ context.Context, address string, _ time.Duration) (*grpc.ClientConn, error) {
+		calls = append(calls, address)
+		if address == "social:8090" {
+			return nil, nil
+		}
+		return &grpc.ClientConn{}, nil
+	}
+	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), Config{
+		AuthAddr:          "auth:8083",
+		SocialAddr:        "social:8090",
+		GameAddr:          "game:8082",
+		AIAddr:            "ai:8087",
+		UserHubAddr:       "userhub:8092",
+		NotificationsAddr: "notifications:8088",
+	}, dialer)
+	if err != nil {
+		t.Fatalf("bootstrapDependencies() error = %v", err)
+	}
+	if len(calls) != 6 {
+		t.Fatalf("dial calls = %d, want %d", len(calls), 6)
+	}
+	if len(conns) != 5 {
+		t.Fatalf("dependency connections = %d, want %d", len(conns), 5)
+	}
+	if got := statuses["social"].State; got != dependencyDialStateUnavailable {
+		t.Fatalf("status[social].State = %q, want %q", got, dependencyDialStateUnavailable)
+	}
+	warnings := dependencyStatusWarnings(statuses)
+	if len(warnings) != 1 {
+		t.Fatalf("warnings = %v, want one warning", warnings)
+	}
+	if !strings.Contains(warnings[0], "social") {
+		t.Fatalf("warning = %q, want social warning", warnings[0])
+	}
+	if bundle.Principal.SocialClient != nil {
+		t.Fatalf("expected principal social client to be unavailable")
+	}
+	if bundle.Modules.ProfileSocialClient != nil || bundle.Modules.SettingsSocialClient != nil {
+		t.Fatalf("expected profile/settings social clients to be unavailable")
+	}
+}
+
+func TestFormatDependencyStatusLinesSortedAndDetailed(t *testing.T) {
+	t.Parallel()
+
+	lines := formatDependencyStatusLines(map[string]dependencyStatus{
+		"userhub": {
+			Name:    "userhub",
+			Address: "userhub:8092",
+			State:   dependencyDialStateConnected,
+		},
+		"ai": {
+			Name:    "ai",
+			Address: "ai:8087",
+			State:   dependencyDialStateDialFailed,
+			Detail:  "dial timeout",
+		},
+	})
+	if len(lines) != 2 {
+		t.Fatalf("len(formatDependencyStatusLines()) = %d, want 2", len(lines))
+	}
+	if !strings.Contains(lines[0], "dependency=ai") {
+		t.Fatalf("line[0] = %q, want ai first (sorted)", lines[0])
+	}
+	if !strings.Contains(lines[0], "detail=dial timeout") {
+		t.Fatalf("line[0] = %q, want detail", lines[0])
+	}
+	if !strings.Contains(lines[1], "dependency=userhub") {
+		t.Fatalf("line[1] = %q, want userhub second (sorted)", lines[1])
 	}
 }

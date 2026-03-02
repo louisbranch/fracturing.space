@@ -123,6 +123,61 @@
       "description": "Session start/end and gate behavior."
     },
     {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/app",
+      "floor": 83.5,
+      "description": "Web app composition and auth/csrf wrapper routing behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/composition",
+      "floor": 79.0,
+      "description": "Web startup composition contract from resolvers/dependencies to module sets."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/i18n",
+      "floor": 90.0,
+      "description": "Web locale resolution wrappers and language preference persistence contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules",
+      "floor": 83.5,
+      "description": "Web registry boundary guardrails and module-set composition invariants."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx",
+      "floor": 88.5,
+      "description": "Shared web HTTP middleware and redirect/method helper contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler",
+      "floor": 80.0,
+      "description": "Protected-module base resolver, locale/page rendering, and fail-safe error contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender",
+      "floor": 80.0,
+      "description": "App-shell/public-page rendering contracts, including HTMX and flash-notice fallback behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler",
+      "floor": 87.0,
+      "description": "Public-module base viewer-resolution, rendering, and safe transport-error contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta",
+      "floor": 80.5,
+      "description": "Scheme/origin request metadata and same-origin proof checks."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror",
+      "floor": 78.0,
+      "description": "User-safe localized app/module error rendering and fallback message contracts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/services/web/templates",
+      "floor": 85.0,
+      "description": "Template helper contracts for fallback localization and app-error copy mapping."
+    },
+    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/shared/joingrant",
       "floor": 98.8,
       "description": "Join-grant verifier used by invite claim boundary."

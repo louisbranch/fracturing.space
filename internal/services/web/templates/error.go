@@ -20,6 +20,7 @@ func AppErrorPageTitle(statusCode int, loc Localizer) string {
 	return T(loc, appErrorPageTitleServerErrKey)
 }
 
+// appErrorHeading centralizes this web behavior in one helper seam.
 func appErrorHeading(statusCode int, loc Localizer) string {
 	if normalizeAppErrorStatus(statusCode) == http.StatusNotFound {
 		return T(loc, appErrorHeadingNotFoundKey)
@@ -27,6 +28,7 @@ func appErrorHeading(statusCode int, loc Localizer) string {
 	return T(loc, appErrorHeadingServerErrKey)
 }
 
+// appErrorMessage centralizes this web behavior in one helper seam.
 func appErrorMessage(statusCode int, loc Localizer) string {
 	if normalizeAppErrorStatus(statusCode) == http.StatusNotFound {
 		return T(loc, appErrorMessageNotFoundKey)
@@ -34,6 +36,7 @@ func appErrorMessage(statusCode int, loc Localizer) string {
 	return T(loc, appErrorMessageServerErrKey)
 }
 
+// normalizeAppErrorStatus centralizes this web behavior in one helper seam.
 func normalizeAppErrorStatus(statusCode int) int {
 	if statusCode == http.StatusNotFound {
 		return http.StatusNotFound

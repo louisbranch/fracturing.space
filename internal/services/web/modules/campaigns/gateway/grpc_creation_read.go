@@ -14,6 +14,7 @@ import (
 	"golang.org/x/text/language"
 )
 
+// CharacterCreationProgress centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CharacterCreationProgress(ctx context.Context, campaignID string, characterID string) (campaignapp.CampaignCharacterCreationProgress, error) {
 	if g.CharacterClient == nil {
 		return campaignapp.CampaignCharacterCreationProgress{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
@@ -63,6 +64,7 @@ func (g GRPCGateway) CharacterCreationProgress(ctx context.Context, campaignID s
 	}, nil
 }
 
+// CharacterCreationCatalog centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag language.Tag) (campaignapp.CampaignCharacterCreationCatalog, error) {
 	if g.DaggerheartClient == nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.daggerheart_content_client_is_not_configured", "daggerheart content client is not configured")
@@ -208,6 +210,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 	return catalog, nil
 }
 
+// CharacterCreationProfile centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CharacterCreationProfile(ctx context.Context, campaignID string, characterID string) (campaignapp.CampaignCharacterCreationProfile, error) {
 	if g.CharacterClient == nil {
 		return campaignapp.CampaignCharacterCreationProfile{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")

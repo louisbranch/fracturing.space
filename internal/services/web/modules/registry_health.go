@@ -26,6 +26,7 @@ func DeriveServiceHealth(modules []Module) []dashboard.ServiceHealthEntry {
 	return entries
 }
 
+// capitalizeLabel centralizes this web behavior in one helper seam.
 func capitalizeLabel(id string) string {
 	if id == "" {
 		return id

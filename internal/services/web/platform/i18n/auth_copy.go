@@ -70,6 +70,7 @@ func Auth(tag language.Tag) AuthCopy {
 	}
 }
 
+// normalizeAuthTag centralizes this web behavior in one helper seam.
 func normalizeAuthTag(tag language.Tag) language.Tag {
 	if tag == language.MustParse("pt-BR") {
 		return language.MustParse("pt-BR")
@@ -82,6 +83,7 @@ func normalizeAuthTag(tag language.Tag) language.Tag {
 	return language.MustParse("en-US")
 }
 
+// withProductSuffix centralizes this web behavior in one helper seam.
 func withProductSuffix(value string) string {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
@@ -90,6 +92,7 @@ func withProductSuffix(value string) string {
 	return fmt.Sprintf("%s | %s", trimmed, authAppDisplayName)
 }
 
+// localizeWithFallback centralizes this web behavior in one helper seam.
 func localizeWithFallback(loc *message.Printer, key string, fallback string, args ...any) string {
 	if loc != nil {
 		value := strings.TrimSpace(loc.Sprintf(key, args...))

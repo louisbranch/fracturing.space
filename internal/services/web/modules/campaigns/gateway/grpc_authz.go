@@ -8,6 +8,7 @@ import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 )
 
+// CanCampaignAction centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CanCampaignAction(
 	ctx context.Context,
 	campaignID string,
@@ -42,6 +43,7 @@ func (g GRPCGateway) CanCampaignAction(
 	}, nil
 }
 
+// BatchCanCampaignAction centralizes this web behavior in one helper seam.
 func (g GRPCGateway) BatchCanCampaignAction(
 	ctx context.Context,
 	campaignID string,
@@ -101,6 +103,7 @@ func (g GRPCGateway) BatchCanCampaignAction(
 	return decisions, nil
 }
 
+// mapCampaignAuthorizationActionToProto maps values across transport and domain boundaries.
 func mapCampaignAuthorizationActionToProto(action campaignapp.AuthorizationAction) statev1.AuthorizationAction {
 	switch campaignapp.AuthorizationAction(strings.TrimSpace(string(action))) {
 	case campaignapp.AuthorizationActionManage:
@@ -112,6 +115,7 @@ func mapCampaignAuthorizationActionToProto(action campaignapp.AuthorizationActio
 	}
 }
 
+// mapCampaignAuthorizationResourceToProto maps values across transport and domain boundaries.
 func mapCampaignAuthorizationResourceToProto(resource campaignapp.AuthorizationResource) statev1.AuthorizationResource {
 	switch campaignapp.AuthorizationResource(strings.TrimSpace(string(resource))) {
 	case campaignapp.AuthorizationResourceSession:
@@ -127,6 +131,7 @@ func mapCampaignAuthorizationResourceToProto(resource campaignapp.AuthorizationR
 	}
 }
 
+// mapCampaignAuthorizationTargetToProto maps values across transport and domain boundaries.
 func mapCampaignAuthorizationTargetToProto(target *campaignapp.AuthorizationTarget) *statev1.AuthorizationTarget {
 	if target == nil {
 		return nil

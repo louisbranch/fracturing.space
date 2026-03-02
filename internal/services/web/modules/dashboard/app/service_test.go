@@ -3,8 +3,10 @@ package app
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"golang.org/x/text/language"
 )
 
@@ -36,6 +38,32 @@ func TestLoadDashboardSkipsBlankUserID(t *testing.T) {
 	}
 	if gw.calls != 0 {
 		t.Fatalf("gateway calls = %d, want 0", gw.calls)
+	}
+}
+
+func TestUnavailableGatewayFailsClosed(t *testing.T) {
+	t.Parallel()
+
+	gateway := NewUnavailableGateway()
+	if IsGatewayHealthy(nil) {
+		t.Fatalf("IsGatewayHealthy(nil) = true, want false")
+	}
+	if IsGatewayHealthy(gateway) {
+		t.Fatalf("IsGatewayHealthy(unavailable) = true, want false")
+	}
+	if !IsGatewayHealthy(&gatewayStub{}) {
+		t.Fatalf("IsGatewayHealthy(stub) = false, want true")
+	}
+
+	view, err := gateway.LoadDashboard(context.Background(), "user-1", language.AmericanEnglish)
+	if err == nil {
+		t.Fatalf("LoadDashboard() error = nil, want unavailable error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("LoadDashboard() status = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+	if view.NeedsProfileCompletion || view.HasDraftOrActiveCampaign || view.CampaignsHasMore || len(view.DegradedDependencies) != 0 {
+		t.Fatalf("LoadDashboard() view = %+v, want zero value", view)
 	}
 }
 

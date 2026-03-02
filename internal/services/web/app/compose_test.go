@@ -132,7 +132,7 @@ func TestComposeWrapsProtectedModulesWithAuthForHtmxRequest(t *testing.T) {
 	}
 }
 
-func TestComposeProtectsSlashlessProtectedRootBeforePublicFallback(t *testing.T) {
+func TestComposeCanonicalizesSlashlessProtectedRootBeforePublicFallback(t *testing.T) {
 	t.Parallel()
 
 	h, err := Compose(ComposeInput{
@@ -155,11 +155,11 @@ func TestComposeProtectsSlashlessProtectedRootBeforePublicFallback(t *testing.T)
 	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	if rr.Code != http.StatusTemporaryRedirect {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusTemporaryRedirect)
 	}
-	if got := rr.Header().Get("Location"); got != "/login" {
-		t.Fatalf("Location = %q, want %q", got, "/login")
+	if got := rr.Header().Get("Location"); got != "/app/campaigns/" {
+		t.Fatalf("Location = %q, want %q", got, "/app/campaigns/")
 	}
 }
 

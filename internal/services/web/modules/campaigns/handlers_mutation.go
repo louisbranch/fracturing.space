@@ -11,6 +11,7 @@ import (
 
 // --- Mutation route handlers ---
 
+// handleSessionStartRoute starts a campaign session and redirects to sessions detail.
 func (h handlers) handleSessionStartRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
@@ -31,6 +32,7 @@ func (h handlers) handleSessionStartRoute(w http.ResponseWriter, r *http.Request
 	httpx.WriteRedirect(w, r, routepath.AppCampaignSessions(campaignID))
 }
 
+// handleSessionEndRoute handles this route in the module transport layer.
 func (h handlers) handleSessionEndRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
@@ -51,6 +53,7 @@ func (h handlers) handleSessionEndRoute(w http.ResponseWriter, r *http.Request) 
 	httpx.WriteRedirect(w, r, routepath.AppCampaignSessions(campaignID))
 }
 
+// handleCharacterCreateRoute handles this route in the module transport layer.
 func (h handlers) handleCharacterCreateRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
@@ -87,6 +90,7 @@ func (h handlers) handleCharacterCreateRoute(w http.ResponseWriter, r *http.Requ
 	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacter(campaignID, created.CharacterID))
 }
 
+// handleInviteCreateRoute handles this route in the module transport layer.
 func (h handlers) handleInviteCreateRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
@@ -108,6 +112,7 @@ func (h handlers) handleInviteCreateRoute(w http.ResponseWriter, r *http.Request
 	httpx.WriteRedirect(w, r, routepath.AppCampaignInvites(campaignID))
 }
 
+// handleInviteRevokeRoute handles this route in the module transport layer.
 func (h handlers) handleInviteRevokeRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)
 	if !ok {
@@ -128,6 +133,7 @@ func (h handlers) handleInviteRevokeRoute(w http.ResponseWriter, r *http.Request
 	httpx.WriteRedirect(w, r, routepath.AppCampaignInvites(campaignID))
 }
 
+// parseAppCharacterKind parses inbound values into package-safe forms.
 func parseAppCharacterKind(value string) (CharacterKind, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "pc", "character_kind_pc":

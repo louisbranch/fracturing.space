@@ -34,6 +34,7 @@ type viewerResolver struct {
 	resolveUserID      func(*http.Request) string
 }
 
+// newViewerResolver builds package wiring for this web seam.
 func newViewerResolver(
 	socialClient PrincipalSocialClient,
 	notificationClient PrincipalNotificationClient,
@@ -48,6 +49,7 @@ func newViewerResolver(
 	}
 }
 
+// resolveViewerUncached resolves request-scoped values needed by this package.
 func (r viewerResolver) resolveViewerUncached(request *http.Request) module.Viewer {
 	userID := r.resolveUserID(request)
 	if userID == "" {
@@ -96,6 +98,7 @@ func (r viewerResolver) resolveViewerUncached(request *http.Request) module.View
 	return viewer
 }
 
+// resolveHasUnreadNotifications resolves request-scoped values needed by this package.
 func (r viewerResolver) resolveHasUnreadNotifications(ctx context.Context, userID string) bool {
 	if r.notificationClient == nil {
 		return false
@@ -117,6 +120,7 @@ func (r viewerResolver) resolveHasUnreadNotifications(ctx context.Context, userI
 	return resp.GetUnreadCount() > 0
 }
 
+// resolveViewer resolves request-scoped values needed by this package.
 func (r viewerResolver) resolveViewer(request *http.Request) module.Viewer {
 	if state := requestPrincipalStateFromRequest(request); state != nil {
 		state.viewerOnce.Do(func() {

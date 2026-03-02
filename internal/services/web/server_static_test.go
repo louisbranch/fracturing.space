@@ -189,13 +189,12 @@ func TestStaticAppShellScriptIncludesRouteMetadataContract(t *testing.T) {
 	}
 }
 
-func TestCampaignGamePageIsExposedOnExperimentalCampaignSurface(t *testing.T) {
+func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
-		EnableExperimentalModules: true,
-		ChatHTTPAddr:              "localhost:8086",
+		ChatHTTPAddr: "localhost:8086",
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{SessionClient: auth},
 			modules.Dependencies{

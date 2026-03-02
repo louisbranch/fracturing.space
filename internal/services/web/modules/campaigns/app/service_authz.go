@@ -65,12 +65,26 @@ const (
 // Compatibility aliases keep package-local service/test names stable while the
 // exported contracts are consumed by sibling packages.
 type campaignAuthorizationDecision = AuthorizationDecision
+
+// campaignAuthorizationTarget defines an internal contract used at this web package boundary.
 type campaignAuthorizationTarget = AuthorizationTarget
+
+// campaignAuthorizationCheck defines an internal contract used at this web package boundary.
 type campaignAuthorizationCheck = AuthorizationCheck
+
+// campaignAuthorizationGateway defines an internal contract used at this web package boundary.
 type campaignAuthorizationGateway = AuthorizationGateway
+
+// campaignBatchAuthorizationGateway defines an internal contract used at this web package boundary.
 type campaignBatchAuthorizationGateway = BatchAuthorizationGateway
+
+// campaignAuthzGateway defines an internal contract used at this web package boundary.
 type campaignAuthzGateway = AuthzGateway
+
+// campaignAuthorizationAction defines an internal contract used at this web package boundary.
 type campaignAuthorizationAction = AuthorizationAction
+
+// campaignAuthorizationResource defines an internal contract used at this web package boundary.
 type campaignAuthorizationResource = AuthorizationResource
 
 // mutationAuthzPolicy declares the authorization requirement for a single
@@ -125,6 +139,7 @@ func (s service) requirePolicyWithTarget(ctx context.Context, campaignID string,
 	return s.requireCampaignActionAccess(ctx, campaignID, p.action, p.resource, &campaignAuthorizationTarget{ResourceID: resourceID}, p.denyKey, p.denyMsg)
 }
 
+// requireCampaignActionAccess enforces this package invariant before continuing flow.
 func (s service) requireCampaignActionAccess(
 	ctx context.Context,
 	campaignID string,
@@ -157,6 +172,7 @@ func (s service) requireCampaignActionAccess(
 	return nil
 }
 
+// hydrateCharacterEditability centralizes this web behavior in one helper seam.
 func (s service) hydrateCharacterEditability(ctx context.Context, campaignID string, characters []CampaignCharacter) {
 	if len(characters) == 0 {
 		return

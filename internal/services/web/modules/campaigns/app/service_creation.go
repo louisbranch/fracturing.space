@@ -8,6 +8,7 @@ import (
 	"golang.org/x/text/language"
 )
 
+// campaignCharacterCreation centralizes this web behavior in one helper seam.
 func (s service) campaignCharacterCreation(ctx context.Context, campaignID string, characterID string, locale language.Tag, workflow CharacterCreationWorkflow) (CampaignCharacterCreation, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
@@ -36,6 +37,7 @@ func (s service) campaignCharacterCreation(ctx context.Context, campaignID strin
 	return workflow.AssembleCatalog(progress, catalog, profile), nil
 }
 
+// campaignCharacterCreationProgress centralizes this web behavior in one helper seam.
 func (s service) campaignCharacterCreationProgress(ctx context.Context, campaignID string, characterID string) (CampaignCharacterCreationProgress, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
@@ -48,6 +50,7 @@ func (s service) campaignCharacterCreationProgress(ctx context.Context, campaign
 	return s.readGateway.CharacterCreationProgress(ctx, campaignID, characterID)
 }
 
+// applyCharacterCreationStep applies this package workflow transition.
 func (s service) applyCharacterCreationStep(ctx context.Context, campaignID string, characterID string, step *CampaignCharacterCreationStepInput) error {
 	characterID = strings.TrimSpace(characterID)
 	if characterID == "" {
@@ -62,6 +65,7 @@ func (s service) applyCharacterCreationStep(ctx context.Context, campaignID stri
 	return s.mutationGateway.ApplyCharacterCreationStep(ctx, campaignID, characterID, step)
 }
 
+// resetCharacterCreationWorkflow applies this package workflow transition.
 func (s service) resetCharacterCreationWorkflow(ctx context.Context, campaignID string, characterID string) error {
 	characterID = strings.TrimSpace(characterID)
 	if characterID == "" {

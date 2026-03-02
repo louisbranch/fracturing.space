@@ -8,6 +8,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// service defines an internal contract used at this web package boundary.
 type service struct {
 	assetBaseURL string
 	gateway      Gateway
@@ -21,6 +22,7 @@ func NewService(gateway Gateway, assetBaseURL string) Service {
 	return service{gateway: gateway, assetBaseURL: strings.TrimSpace(assetBaseURL)}
 }
 
+// LoadProfile loads the package state needed for this request path.
 func (s service) LoadProfile(ctx context.Context, username string) (Profile, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {

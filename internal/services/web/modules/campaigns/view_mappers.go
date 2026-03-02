@@ -71,6 +71,7 @@ func mapCampaignListItems(items []CampaignSummary, now time.Time, loc webtemplat
 	return result
 }
 
+// campaignListItemUpdatedAt centralizes this web behavior in one helper seam.
 func campaignListItemUpdatedAt(updatedAtUnixNano int64, now time.Time, loc webtemplates.Localizer) string {
 	if now.IsZero() {
 		now = time.Now().UTC()

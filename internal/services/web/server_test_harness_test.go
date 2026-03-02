@@ -57,7 +57,6 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 	}}
 	social := defaultSocialClient()
 	return Config{
-		EnableExperimentalModules: true,
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{
 				SessionClient: auth,
@@ -91,37 +90,6 @@ func newDependencyBundle(principal PrincipalDependencies, moduleDeps modules.Dep
 
 func newDefaultDependencyBundle(moduleDeps modules.Dependencies) *DependencyBundle {
 	return newDependencyBundle(PrincipalDependencies{}, moduleDeps)
-}
-
-func defaultStableProtectedConfig(auth *fakeWebAuthClient) Config {
-	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
-		Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
-	}}
-	social := defaultSocialClient()
-	return Config{
-		EnableExperimentalModules: false,
-		Dependencies: newDependencyBundle(
-			PrincipalDependencies{
-				SessionClient: auth,
-				AccountClient: account,
-				SocialClient:  social,
-			},
-			modules.Dependencies{
-				AuthClient:               auth,
-				CampaignClient:           defaultCampaignClient(),
-				ParticipantClient:        defaultParticipantClient(),
-				CharacterClient:          defaultCharacterClient(),
-				DaggerheartContentClient: defaultDaggerheartContentClient(),
-				SessionClient:            defaultSessionClient(),
-				InviteClient:             defaultInviteClient(),
-				AuthorizationClient:      defaultAuthorizationClient(),
-				AccountClient:            account,
-				ProfileSocialClient:      social,
-				SettingsSocialClient:     social,
-				CredentialClient:         fakeCredentialClient{},
-			},
-		),
-	}
 }
 
 func defaultSocialClient() *fakeSocialClient {

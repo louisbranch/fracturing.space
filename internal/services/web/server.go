@@ -19,9 +19,8 @@ import (
 
 // Config defines startup inputs for the web service.
 type Config struct {
-	HTTPAddr                  string
-	ChatHTTPAddr              string
-	EnableExperimentalModules bool
+	HTTPAddr     string
+	ChatHTTPAddr string
 
 	// RequestSchemePolicy controls scheme resolution for proxy headers.
 	RequestSchemePolicy requestmeta.SchemePolicy
@@ -55,10 +54,9 @@ func NewHandler(cfg Config) (http.Handler, error) {
 			ResolveUserID:   session.resolveRequestUserID,
 			ResolveLanguage: lang.resolveRequestLanguage,
 		},
-		ModuleDependencies:        deps.Modules,
-		EnableExperimentalModules: cfg.EnableExperimentalModules,
-		ChatHTTPAddr:              cfg.ChatHTTPAddr,
-		RequestSchemePolicy:       cfg.RequestSchemePolicy,
+		ModuleDependencies:  deps.Modules,
+		ChatHTTPAddr:        cfg.ChatHTTPAddr,
+		RequestSchemePolicy: cfg.RequestSchemePolicy,
 	})
 	if err != nil {
 		return nil, err
@@ -73,6 +71,8 @@ func NewHandler(cfg Config) (http.Handler, error) {
 		observability.RequestLogger(log.Default()),
 	), nil
 }
+
+// withRequestPrincipalState centralizes this web behavior in one helper seam.
 func withRequestPrincipalState() httpx.Middleware {
 	return func(next http.Handler) http.Handler {
 		if next == nil {
@@ -90,6 +90,7 @@ func withRequestPrincipalState() httpx.Middleware {
 	}
 }
 
+// requestPrincipalStateFromRequest centralizes this web behavior in one helper seam.
 func requestPrincipalStateFromRequest(r *http.Request) *requestPrincipalState {
 	if r == nil {
 		return nil
@@ -97,6 +98,7 @@ func requestPrincipalStateFromRequest(r *http.Request) *requestPrincipalState {
 	return requestPrincipalStateFromContext(r.Context())
 }
 
+// requestPrincipalStateFromContext centralizes this web behavior in one helper seam.
 func requestPrincipalStateFromContext(ctx context.Context) *requestPrincipalState {
 	if ctx == nil {
 		return nil

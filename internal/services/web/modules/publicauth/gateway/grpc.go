@@ -37,14 +37,17 @@ func NewGRPCGateway(client AuthClient) publicauthapp.Gateway {
 	return newGRPCGateway(client)
 }
 
+// newGRPCGateway builds package wiring for this web seam.
 func newGRPCGateway(client AuthClient) GRPCGateway {
 	return GRPCGateway{Client: client}
 }
 
+// mapGRPCError maps values across transport and domain boundaries.
 func mapGRPCError(err error, fallbackKind apperrors.Kind, fallbackMessage string) error {
 	return mapGRPCErrorWithKey(err, fallbackKind, "", fallbackMessage)
 }
 
+// mapGRPCErrorWithKey maps values across transport and domain boundaries.
 func mapGRPCErrorWithKey(err error, fallbackKind apperrors.Kind, fallbackKey string, fallbackMessage string) error {
 	return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 		FallbackKind:    fallbackKind,
@@ -53,6 +56,7 @@ func mapGRPCErrorWithKey(err error, fallbackKind apperrors.Kind, fallbackKey str
 	})
 }
 
+// CreateUser executes package-scoped creation behavior for this flow.
 func (g GRPCGateway) CreateUser(ctx context.Context, email string) (string, error) {
 	resp, err := g.Client.CreateUser(ctx, &authv1.CreateUserRequest{
 		Email:  email,
@@ -68,6 +72,7 @@ func (g GRPCGateway) CreateUser(ctx context.Context, email string) (string, erro
 	return userID, nil
 }
 
+// BeginPasskeyRegistration centralizes this web behavior in one helper seam.
 func (g GRPCGateway) BeginPasskeyRegistration(ctx context.Context, userID string) (publicauthapp.PasskeyChallenge, error) {
 	resp, err := g.Client.BeginPasskeyRegistration(ctx, &authv1.BeginPasskeyRegistrationRequest{UserId: userID})
 	if err != nil {
@@ -80,6 +85,7 @@ func (g GRPCGateway) BeginPasskeyRegistration(ctx context.Context, userID string
 	return publicauthapp.PasskeyChallenge{SessionID: sessionID, PublicKey: json.RawMessage(resp.GetCredentialCreationOptionsJson())}, nil
 }
 
+// FinishPasskeyRegistration centralizes this web behavior in one helper seam.
 func (g GRPCGateway) FinishPasskeyRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (string, error) {
 	resp, err := g.Client.FinishPasskeyRegistration(ctx, &authv1.FinishPasskeyRegistrationRequest{
 		SessionId:              sessionID,
@@ -95,6 +101,7 @@ func (g GRPCGateway) FinishPasskeyRegistration(ctx context.Context, sessionID st
 	return userID, nil
 }
 
+// BeginPasskeyLogin centralizes this web behavior in one helper seam.
 func (g GRPCGateway) BeginPasskeyLogin(ctx context.Context) (publicauthapp.PasskeyChallenge, error) {
 	resp, err := g.Client.BeginPasskeyLogin(ctx, &authv1.BeginPasskeyLoginRequest{})
 	if err != nil {
@@ -107,6 +114,7 @@ func (g GRPCGateway) BeginPasskeyLogin(ctx context.Context) (publicauthapp.Passk
 	return publicauthapp.PasskeyChallenge{SessionID: sessionID, PublicKey: json.RawMessage(resp.GetCredentialRequestOptionsJson())}, nil
 }
 
+// FinishPasskeyLogin centralizes this web behavior in one helper seam.
 func (g GRPCGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, credential json.RawMessage) (string, error) {
 	resp, err := g.Client.FinishPasskeyLogin(ctx, &authv1.FinishPasskeyLoginRequest{
 		SessionId:              sessionID,
@@ -122,6 +130,7 @@ func (g GRPCGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, c
 	return userID, nil
 }
 
+// CreateWebSession executes package-scoped creation behavior for this flow.
 func (g GRPCGateway) CreateWebSession(ctx context.Context, userID string) (string, error) {
 	resp, err := g.Client.CreateWebSession(ctx, &authv1.CreateWebSessionRequest{UserId: userID})
 	if err != nil {
@@ -134,6 +143,7 @@ func (g GRPCGateway) CreateWebSession(ctx context.Context, userID string) (strin
 	return sessionID, nil
 }
 
+// HasValidWebSession reports whether this package condition is satisfied.
 func (g GRPCGateway) HasValidWebSession(ctx context.Context, sessionID string) bool {
 	resp, err := g.Client.GetWebSession(ctx, &authv1.GetWebSessionRequest{SessionId: sessionID})
 	if err != nil || resp == nil || resp.GetSession() == nil {
@@ -142,6 +152,7 @@ func (g GRPCGateway) HasValidWebSession(ctx context.Context, sessionID string) b
 	return strings.TrimSpace(resp.GetSession().GetId()) != ""
 }
 
+// RevokeWebSession applies this package workflow transition.
 func (g GRPCGateway) RevokeWebSession(ctx context.Context, sessionID string) error {
 	_, err := g.Client.RevokeWebSession(ctx, &authv1.RevokeWebSessionRequest{SessionId: sessionID})
 	return mapGRPCError(err, apperrors.KindUnknown, "failed to revoke web session")

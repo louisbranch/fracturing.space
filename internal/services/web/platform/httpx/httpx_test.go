@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -153,6 +154,24 @@ func TestWriteJSONSetsContentTypeAndBody(t *testing.T) {
 	}
 }
 
+func TestWriteJSONErrorSetsErrorPayload(t *testing.T) {
+	t.Parallel()
+
+	rr := httptest.NewRecorder()
+	if err := WriteJSONError(rr, http.StatusBadRequest, "invalid input"); err != nil {
+		t.Fatalf("WriteJSONError() error = %v", err)
+	}
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	}
+	if got := rr.Header().Get("Content-Type"); got != "application/json; charset=utf-8" {
+		t.Fatalf("content-type = %q, want %q", got, "application/json; charset=utf-8")
+	}
+	if body := rr.Body.String(); !strings.Contains(body, "\"error\":\"invalid input\"") {
+		t.Fatalf("body = %q, want encoded error payload", body)
+	}
+}
+
 func TestWriteErrorUsesTypedStatus(t *testing.T) {
 	t.Parallel()
 
@@ -288,6 +307,23 @@ func TestIsHTMXRequestHandlesNilRequest(t *testing.T) {
 
 	if IsHTMXRequest(nil) {
 		t.Fatalf("expected nil request to be non-HTMX")
+	}
+}
+
+func TestRequestContextIsNilSafe(t *testing.T) {
+	t.Parallel()
+
+	if ctx := RequestContext(nil); ctx == nil {
+		t.Fatalf("RequestContext(nil) = nil, want background context")
+	}
+
+	type ctxKey struct{}
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	withValue := context.WithValue(req.Context(), ctxKey{}, "req-value")
+	req = req.WithContext(withValue)
+
+	if got := RequestContext(req).Value(ctxKey{}); got != "req-value" {
+		t.Fatalf("RequestContext(req) value = %v, want %q", got, "req-value")
 	}
 }
 

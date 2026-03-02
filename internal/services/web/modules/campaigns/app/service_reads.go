@@ -8,6 +8,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// listCampaigns returns the package view collection for this workflow.
 func (s service) listCampaigns(ctx context.Context) ([]CampaignSummary, error) {
 	items, err := s.readGateway.ListCampaigns(ctx)
 	if err != nil {
@@ -23,6 +24,7 @@ func (s service) listCampaigns(ctx context.Context) ([]CampaignSummary, error) {
 	return sorted, nil
 }
 
+// campaignName centralizes this web behavior in one helper seam.
 func (s service) campaignName(ctx context.Context, campaignID string) string {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
@@ -39,6 +41,7 @@ func (s service) campaignName(ctx context.Context, campaignID string) string {
 	return name
 }
 
+// campaignWorkspace centralizes this web behavior in one helper seam.
 func (s service) campaignWorkspace(ctx context.Context, campaignID string) (CampaignWorkspace, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {

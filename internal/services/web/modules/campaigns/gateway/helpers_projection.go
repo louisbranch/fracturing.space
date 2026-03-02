@@ -10,6 +10,7 @@ func campaignCreatedAtUnixNano(campaign *statev1.Campaign) int64 {
 	return campaign.GetCreatedAt().AsTime().UTC().UnixNano()
 }
 
+// campaignUpdatedAtUnixNano centralizes this web behavior in one helper seam.
 func campaignUpdatedAtUnixNano(campaign *statev1.Campaign) int64 {
 	if campaign == nil {
 		return 0
