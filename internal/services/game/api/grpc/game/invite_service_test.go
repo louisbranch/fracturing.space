@@ -444,6 +444,74 @@ func TestClaimInvite_UsesDomainEngine(t *testing.T) {
 	}
 }
 
+func TestClaimInvite_RejectsAIControlledSeatBinding(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {
+			ID:             "participant-1",
+			CampaignID:     "campaign-1",
+			Role:           participant.RoleGM,
+			Controller:     participant.ControllerAI,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
+		ID:            "invite-1",
+		CampaignID:    "campaign-1",
+		ParticipantID: "participant-1",
+		Status:        invite.StatusPending,
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.bind"): {
+			Decision: command.Reject(command.Rejection{
+				Code:    "PARTICIPANT_AI_IDENTITY_LOCKED",
+				Message: "ai-controlled participants cannot change user identity bindings",
+			}),
+		},
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Domain:      domain,
+		},
+		clock: fixedClock(now),
+	}
+
+	signer := newJoinGrantSigner(t)
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	ctx := contextWithUserID("user-1")
+	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
+		CampaignId: "campaign-1",
+		InviteId:   "invite-1",
+		JoinGrant:  joinGrant,
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("domain command count = %d, want 1", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("participant.bind") {
+		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, command.Type("participant.bind"))
+	}
+	if len(eventStore.events["campaign-1"]) != 0 {
+		t.Fatalf("event count = %d, want 0", len(eventStore.events["campaign-1"]))
+	}
+}
+
 func TestClaimInvite_MissingUserID(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()

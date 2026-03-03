@@ -219,6 +219,66 @@ func TestDecideParticipantJoin_InvalidAccess_ReturnsRejection(t *testing.T) {
 	}
 }
 
+func TestDecideParticipantJoin_AIControllerRequiresGMRole(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.join"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Oracle","role":"PLAYER","controller":"AI","campaign_access":"MEMBER"}`),
+	}
+
+	decision := Decide(State{}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantAIRoleRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAIRoleRequired)
+	}
+}
+
+func TestDecideParticipantJoin_AIControllerRequiresMemberAccess(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.join"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Oracle","role":"GM","controller":"AI","campaign_access":"OWNER"}`),
+	}
+
+	decision := Decide(State{}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantAIAccessRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAIAccessRequired)
+	}
+}
+
+func TestDecideParticipantJoin_AIControllerForbidsUserID(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.join"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-1","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MEMBER"}`),
+	}
+
+	decision := Decide(State{}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantAIUserIDForbidden {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAIUserIDForbidden)
+	}
+}
+
 func TestDecideParticipantUpdate_EmitsParticipantUpdatedEvent(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
@@ -268,6 +328,140 @@ func TestDecideParticipantUpdate_EmitsParticipantUpdatedEvent(t *testing.T) {
 	}
 	if payload.Fields["campaign_access"] != "member" {
 		t.Fatalf("payload campaign access = %s, want %s", payload.Fields["campaign_access"], "member")
+	}
+}
+
+func TestDecideParticipantUpdate_AIControllerRequiresGMRole(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.update"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"controller":"AI"}}`),
+	}
+
+	decision := Decide(State{
+		Joined:         true,
+		Role:           "player",
+		Controller:     "human",
+		CampaignAccess: "member",
+	}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantAIRoleRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAIRoleRequired)
+	}
+}
+
+func TestDecideParticipantUpdate_AIControllerRequiresMemberAccess(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.update"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"controller":"AI"}}`),
+	}
+
+	decision := Decide(State{
+		Joined:         true,
+		Role:           "gm",
+		Controller:     "human",
+		CampaignAccess: "owner",
+	}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantAIAccessRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAIAccessRequired)
+	}
+}
+
+func TestDecideParticipantUpdate_AIControllerForbidsUserID(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.update"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"controller":"AI"}}`),
+	}
+
+	decision := Decide(State{
+		Joined:         true,
+		UserID:         "user-1",
+		Role:           "gm",
+		Controller:     "human",
+		CampaignAccess: "member",
+	}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantAIUserIDForbidden {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAIUserIDForbidden)
+	}
+}
+
+func TestDecideParticipantUpdate_CanTransitionToCompliantAIState(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.update"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"controller":"AI"}}`),
+	}
+
+	decision := Decide(State{
+		Joined:         true,
+		Role:           "gm",
+		Controller:     "human",
+		CampaignAccess: "member",
+	}, cmd, nil)
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+	var payload UpdatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.Fields["controller"] != "ai" {
+		t.Fatalf("payload controller = %s, want %s", payload.Fields["controller"], "ai")
+	}
+}
+
+func TestDecideParticipantUpdate_CanTransitionFromAIToHuman(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.update"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"controller":"HUMAN"}}`),
+	}
+
+	decision := Decide(State{
+		Joined:         true,
+		Role:           "gm",
+		Controller:     "ai",
+		CampaignAccess: "member",
+	}, cmd, nil)
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+	var payload UpdatePayload
+	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.Fields["controller"] != "human" {
+		t.Fatalf("payload controller = %s, want %s", payload.Fields["controller"], "human")
 	}
 }
 
@@ -488,6 +682,26 @@ func TestDecideParticipantBind_WhenNotJoinedRejected(t *testing.T) {
 	}
 }
 
+func TestDecideParticipantBind_AIControllerIdentityLocked(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.bind"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-2"}`),
+	}
+
+	decision := Decide(State{Joined: true, Controller: "AI"}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantAIIdentityLocked {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAIIdentityLocked)
+	}
+}
+
 func TestDecideParticipantUnbind_EmitsParticipantUnboundEvent(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
@@ -545,6 +759,26 @@ func TestDecideParticipantUnbind_UserIDMismatchRejected(t *testing.T) {
 	}
 	if decision.Rejections[0].Code != rejectionCodeParticipantUserIDMismatch {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantUserIDMismatch)
+	}
+}
+
+func TestDecideParticipantUnbind_AIControllerIdentityLocked(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.unbind"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-1"}`),
+	}
+
+	decision := Decide(State{Joined: true, Controller: "AI", UserID: "user-1"}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantAIIdentityLocked {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAIIdentityLocked)
 	}
 }
 
@@ -650,6 +884,34 @@ func TestDecideSeatReassign_MissingUserIDRejected(t *testing.T) {
 			}
 			if decision.Rejections[0].Code != rejectionCodeParticipantUserIDRequired {
 				t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantUserIDRequired)
+			}
+		})
+	}
+}
+
+func TestDecideSeatReassign_AIControllerIdentityLocked(t *testing.T) {
+	commandTypes := []command.Type{
+		command.Type("seat.reassign"),
+		command.Type("participant.seat.reassign"),
+	}
+	for _, cmdType := range commandTypes {
+		t.Run(string(cmdType), func(t *testing.T) {
+			cmd := command.Command{
+				CampaignID:  "camp-1",
+				Type:        cmdType,
+				ActorType:   command.ActorTypeSystem,
+				PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-2"}`),
+			}
+
+			decision := Decide(State{Joined: true, Controller: "AI"}, cmd, nil)
+			if len(decision.Events) != 0 {
+				t.Fatalf("expected no events, got %d", len(decision.Events))
+			}
+			if len(decision.Rejections) != 1 {
+				t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+			}
+			if decision.Rejections[0].Code != rejectionCodeParticipantAIIdentityLocked {
+				t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAIIdentityLocked)
 			}
 		})
 	}

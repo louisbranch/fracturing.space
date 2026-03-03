@@ -39,6 +39,10 @@ const (
 	rejectionCodeParticipantUpdateFieldInvalid = "PARTICIPANT_UPDATE_FIELD_INVALID"
 	rejectionCodeParticipantUserIDRequired     = "PARTICIPANT_USER_ID_REQUIRED"
 	rejectionCodeParticipantUserIDMismatch     = "PARTICIPANT_USER_ID_MISMATCH"
+	rejectionCodeParticipantAIRoleRequired     = "PARTICIPANT_AI_ROLE_REQUIRED"
+	rejectionCodeParticipantAIAccessRequired   = "PARTICIPANT_AI_ACCESS_REQUIRED"
+	rejectionCodeParticipantAIUserIDForbidden  = "PARTICIPANT_AI_USER_ID_FORBIDDEN"
+	rejectionCodeParticipantAIIdentityLocked   = "PARTICIPANT_AI_IDENTITY_LOCKED"
 )
 
 type participantDecisionHandler func(State, command.Command, func() time.Time) command.Decision
@@ -143,6 +147,9 @@ func decideJoin(state State, cmd command.Command, now func() time.Time) command.
 			})
 		}
 		access = "member"
+	}
+	if rejection, ok := validateAISeatInvariant(userID, role, controller, access); !ok {
+		return command.Reject(rejection)
 	}
 	avatarSetID, avatarAssetID, err := resolveParticipantAvatarSelection(
 		participantID,
@@ -293,6 +300,25 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 			normalizedFields["avatar_asset_id"] = resolvedAssetID
 		}
 	}
+	effectiveUserID := strings.TrimSpace(state.UserID)
+	if value, ok := normalizedFields["user_id"]; ok {
+		effectiveUserID = strings.TrimSpace(value)
+	}
+	effectiveRole := strings.TrimSpace(state.Role)
+	if value, ok := normalizedFields["role"]; ok {
+		effectiveRole = strings.TrimSpace(value)
+	}
+	effectiveController := strings.TrimSpace(state.Controller)
+	if value, ok := normalizedFields["controller"]; ok {
+		effectiveController = strings.TrimSpace(value)
+	}
+	effectiveAccess := strings.TrimSpace(state.CampaignAccess)
+	if value, ok := normalizedFields["campaign_access"]; ok {
+		effectiveAccess = strings.TrimSpace(value)
+	}
+	if rejection, ok := validateAISeatInvariant(effectiveUserID, effectiveRole, effectiveController, effectiveAccess); !ok {
+		return command.Reject(rejection)
+	}
 	if now == nil {
 		now = time.Now
 	}
@@ -339,6 +365,12 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
 	}
+	if isAIController(state.Controller) {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantAIIdentityLocked,
+			Message: "ai-controlled participants cannot change user identity bindings",
+		})
+	}
 	payload, err := decodeCommandPayload[BindPayload](cmd)
 	if err != nil {
 		return command.Reject(command.Rejection{
@@ -373,6 +405,12 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 func decideUnbind(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
+	}
+	if isAIController(state.Controller) {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantAIIdentityLocked,
+			Message: "ai-controlled participants cannot change user identity bindings",
+		})
 	}
 	payload, err := decodeCommandPayload[UnbindPayload](cmd)
 	if err != nil {
@@ -409,6 +447,12 @@ func decideUnbind(state State, cmd command.Command, now func() time.Time) comman
 func decideSeatReassign(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
+	}
+	if isAIController(state.Controller) {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantAIIdentityLocked,
+			Message: "ai-controlled participants cannot change user identity bindings",
+		})
 	}
 	payload, err := decodeCommandPayload[SeatReassignPayload](cmd)
 	if err != nil {
@@ -452,6 +496,39 @@ func decideSeatReassign(state State, cmd command.Command, now func() time.Time) 
 	payloadJSON, _ := json.Marshal(normalizedPayload)
 	evt := command.NewEvent(cmd, EventTypeSeatReassigned, "participant", participantID, payloadJSON, now().UTC())
 	return command.Accept(evt)
+}
+
+func validateAISeatInvariant(userID, role, controller, access string) (command.Rejection, bool) {
+	normalizedController, ok := normalizeControllerLabel(controller)
+	if !ok || normalizedController != "ai" {
+		return command.Rejection{}, true
+	}
+	normalizedRole, ok := normalizeRoleLabel(role)
+	if !ok || normalizedRole != "gm" {
+		return command.Rejection{
+			Code:    rejectionCodeParticipantAIRoleRequired,
+			Message: "ai-controlled participants must use gm role",
+		}, false
+	}
+	normalizedAccess, ok := normalizeCampaignAccessLabel(access)
+	if !ok || normalizedAccess != "member" {
+		return command.Rejection{
+			Code:    rejectionCodeParticipantAIAccessRequired,
+			Message: "ai-controlled participants must use member campaign access",
+		}, false
+	}
+	if strings.TrimSpace(userID) != "" {
+		return command.Rejection{
+			Code:    rejectionCodeParticipantAIUserIDForbidden,
+			Message: "ai-controlled participants must not have a user id",
+		}, false
+	}
+	return command.Rejection{}, true
+}
+
+func isAIController(controller string) bool {
+	normalized, ok := normalizeControllerLabel(controller)
+	return ok && normalized == "ai"
 }
 
 // normalizeRoleLabel returns a canonical role label.
