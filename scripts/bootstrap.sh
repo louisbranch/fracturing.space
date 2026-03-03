@@ -137,9 +137,27 @@ generate_ai_encryption_key() {
   printf 'Generated AI encryption key\n'
 }
 
+generate_ai_session_grant_hmac_key() {
+  local value
+
+  value="$(dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d '\r\n')"
+  if [[ -z "$value" ]]; then
+    printf 'Error: failed to generate FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY.\n' >&2
+    exit 1
+  fi
+
+  set_env_value "FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY" "$value"
+  printf 'Generated AI session grant HMAC key\n'
+}
+
 ai_encryption_key="$(get_env_value FRACTURING_SPACE_AI_ENCRYPTION_KEY)"
 if [[ -z "$ai_encryption_key" || "$ai_encryption_key" == "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY" ]]; then
   generate_ai_encryption_key
+fi
+
+ai_session_grant_hmac_key="$(get_env_value FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY)"
+if [[ -z "$ai_session_grant_hmac_key" || "$ai_session_grant_hmac_key" == "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY" ]]; then
+  generate_ai_session_grant_hmac_key
 fi
 
 join_public="$(get_env_value FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY)"
