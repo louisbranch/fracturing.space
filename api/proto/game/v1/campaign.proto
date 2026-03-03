@@ -38,6 +38,8 @@ message Campaign {
   google.protobuf.Timestamp completed_at = 17;
   // Timestamp when the campaign was archived.
   google.protobuf.Timestamp archived_at = 18;
+  // Opaque AI agent identifier bound for AI/HYBRID GM modes.
+  string ai_agent_id = 19;
 }
 
 enum CampaignStatus {
@@ -91,6 +93,24 @@ service CampaignService {
 
   // Set the selected built-in cover asset for a campaign.
   rpc SetCampaignCover(SetCampaignCoverRequest) returns (SetCampaignCoverResponse);
+
+  // Bind an AI agent to a campaign (owner-only).
+  rpc SetCampaignAIBinding(SetCampaignAIBindingRequest) returns (SetCampaignAIBindingResponse);
+
+  // Clear the AI agent binding from a campaign (owner-only).
+  rpc ClearCampaignAIBinding(ClearCampaignAIBindingRequest) returns (ClearCampaignAIBindingResponse);
+}
+
+// CampaignAIService provides internal-only Game<=>AI/Game<=>Chat campaign AI contracts.
+service CampaignAIService {
+  // Issues a session-scoped grant for AI turn relay.
+  rpc IssueCampaignAISessionGrant(IssueCampaignAISessionGrantRequest) returns (IssueCampaignAISessionGrantResponse);
+
+  // Internal read for AI-service usage guards.
+  rpc GetCampaignAIBindingUsage(GetCampaignAIBindingUsageRequest) returns (GetCampaignAIBindingUsageResponse);
+
+  // Returns current campaign AI auth state for local AI validation caches.
+  rpc GetCampaignAIAuthState(GetCampaignAIAuthStateRequest) returns (GetCampaignAIAuthStateResponse);
 }
 
 message CreateCampaignRequest {
@@ -185,4 +205,79 @@ message SetCampaignCoverRequest {
 
 message SetCampaignCoverResponse {
   Campaign campaign = 1;
+}
+
+message SetCampaignAIBindingRequest {
+  // The campaign ID to update.
+  string campaign_id = 1;
+
+  // The AI service opaque agent identifier to bind.
+  string ai_agent_id = 2;
+}
+
+message SetCampaignAIBindingResponse {
+  Campaign campaign = 1;
+}
+
+message ClearCampaignAIBindingRequest {
+  // The campaign ID to update.
+  string campaign_id = 1;
+}
+
+message ClearCampaignAIBindingResponse {
+  Campaign campaign = 1;
+}
+
+message IssueCampaignAISessionGrantRequest {
+  // The campaign ID to issue the grant for.
+  string campaign_id = 1;
+
+  // Expected active session ID.
+  string session_id = 2;
+
+  // Expected bound AI agent ID.
+  string ai_agent_id = 3;
+}
+
+message IssueCampaignAISessionGrantResponse {
+  AISessionGrant grant = 1;
+}
+
+message AISessionGrant {
+  // Opaque signed token consumed by AI invocation endpoints.
+  string token = 1;
+
+  string grant_id = 2;
+  string campaign_id = 3;
+  string session_id = 4;
+  string ai_agent_id = 5;
+  uint64 auth_epoch = 6;
+  google.protobuf.Timestamp issued_at = 7;
+  google.protobuf.Timestamp expires_at = 8;
+  // User ID context at issuance time when available.
+  string issued_for_user_id = 9;
+}
+
+message GetCampaignAIBindingUsageRequest {
+  // The AI service opaque agent identifier.
+  string ai_agent_id = 1;
+}
+
+message GetCampaignAIBindingUsageResponse {
+  // Number of campaigns in DRAFT/ACTIVE bound to this agent.
+  int32 active_campaign_count = 1;
+  // Campaign IDs in DRAFT/ACTIVE bound to this agent.
+  repeated string campaign_ids = 2;
+}
+
+message GetCampaignAIAuthStateRequest {
+  // The campaign ID to read auth state for.
+  string campaign_id = 1;
+}
+
+message GetCampaignAIAuthStateResponse {
+  string campaign_id = 1;
+  string ai_agent_id = 2;
+  string active_session_id = 3;
+  uint64 auth_epoch = 4;
 }

@@ -76,3 +76,105 @@ func TestFoldCampaignUpdatedSetsFields(t *testing.T) {
 		t.Fatalf("cover asset id = %s, want %s", updated.CoverAssetID, "camp-cover-04")
 	}
 }
+
+func TestFoldCampaignUpdatedSetsCoverSetID(t *testing.T) {
+	state := State{Created: true, CoverSetID: "old-cover-set"}
+	updated, err := Fold(state, event.Event{
+		Type:        event.Type("campaign.updated"),
+		PayloadJSON: []byte(`{"fields":{"cover_set_id":"  campaign-covers-v1  "}}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.CoverSetID != "campaign-covers-v1" {
+		t.Fatalf("cover set id = %s, want %s", updated.CoverSetID, "campaign-covers-v1")
+	}
+}
+
+func TestFoldCampaignUpdated_ReturnsErrorOnCorruptPayload(t *testing.T) {
+	_, err := Fold(State{}, event.Event{
+		Type:        EventTypeUpdated,
+		PayloadJSON: []byte(`{`),
+	})
+	if err == nil {
+		t.Fatal("expected error for corrupt update payload")
+	}
+}
+
+func TestFoldCampaignAIBoundSetsAgentID(t *testing.T) {
+	updated, err := Fold(State{}, event.Event{
+		Type:        EventTypeAIBound,
+		PayloadJSON: []byte(`{"ai_agent_id":"  agent-1  "}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AIAgentID != "agent-1" {
+		t.Fatalf("ai agent id = %q, want %q", updated.AIAgentID, "agent-1")
+	}
+}
+
+func TestFoldCampaignAIBound_ReturnsErrorOnCorruptPayload(t *testing.T) {
+	_, err := Fold(State{}, event.Event{
+		Type:        EventTypeAIBound,
+		PayloadJSON: []byte(`{`),
+	})
+	if err == nil {
+		t.Fatal("expected error for corrupt ai_bound payload")
+	}
+}
+
+func TestFoldCampaignAIUnboundClearsAgentID(t *testing.T) {
+	updated, err := Fold(State{AIAgentID: "agent-1"}, event.Event{
+		Type:        EventTypeAIUnbound,
+		PayloadJSON: []byte(`{}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AIAgentID != "" {
+		t.Fatalf("ai agent id = %q, want empty", updated.AIAgentID)
+	}
+}
+
+func TestFoldCampaignAIAuthRotatedSetsEpoch(t *testing.T) {
+	updated, err := Fold(State{AIAuthEpoch: 1}, event.Event{
+		Type:        EventTypeAIAuthRotated,
+		PayloadJSON: []byte(`{"epoch_after":5,"reason":"rotate"}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.AIAuthEpoch != 5 {
+		t.Fatalf("ai auth epoch = %d, want %d", updated.AIAuthEpoch, 5)
+	}
+}
+
+func TestFoldCampaignAIAuthRotated_ReturnsErrorOnCorruptPayload(t *testing.T) {
+	_, err := Fold(State{}, event.Event{
+		Type:        EventTypeAIAuthRotated,
+		PayloadJSON: []byte(`{`),
+	})
+	if err == nil {
+		t.Fatal("expected error for corrupt ai_auth_rotated payload")
+	}
+}
+
+func TestFoldCampaignForked_NoStateMutation(t *testing.T) {
+	initial := State{
+		Created:     true,
+		Name:        "Sunfall",
+		AIAgentID:   "agent-1",
+		AIAuthEpoch: 3,
+	}
+	updated, err := Fold(initial, event.Event{
+		Type:        EventTypeForked,
+		PayloadJSON: []byte(`{"parent_campaign_id":"camp-0","origin_campaign_id":"camp-root"}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated != initial {
+		t.Fatalf("fork event mutated state: got %#v, want %#v", updated, initial)
+	}
+}

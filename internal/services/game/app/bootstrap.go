@@ -5,7 +5,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
+	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -20,6 +23,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -41,7 +45,8 @@ type serverBootstrapConfig struct {
 	validateSystemRegistration      func([]module.Module, *bridge.MetadataRegistry, *bridge.AdapterRegistry) error
 	dialAuthGRPC                    func(context.Context, string) (authGRPCClients, error)
 	dialSocialGRPC                  func(context.Context, string) (socialGRPCClients, error)
-	newGRPCServer                   func(*storageBundle) *grpc.Server
+	dialAIGRPC                      func(context.Context, string) (aiGRPCClients, error)
+	newGRPCServer                   func(*storageBundle, serverEnv) *grpc.Server
 	newHealthServer                 func() *health.Server
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
 	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
@@ -99,17 +104,26 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	if cfg.dialSocialGRPC == nil {
 		cfg.dialSocialGRPC = dialSocialGRPC
 	}
+	if cfg.dialAIGRPC == nil {
+		cfg.dialAIGRPC = dialAIGRPC
+	}
 	if cfg.newGRPCServer == nil {
-		cfg.newGRPCServer = func(bundle *storageBundle) *grpc.Server {
+		cfg.newGRPCServer = func(bundle *storageBundle, srvEnv serverEnv) *grpc.Server {
+			internalIdentity := interceptors.InternalServiceIdentityConfig{
+				MethodPrefixes:    []string{"/game.v1.CampaignAIService/"},
+				AllowedServiceIDs: parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
+			}
 			return grpc.NewServer(
 				grpc.StatsHandler(otelgrpc.NewServerHandler()),
 				grpc.ChainUnaryInterceptor(
 					grpcmeta.UnaryServerInterceptor(nil),
+					interceptors.InternalServiceIdentityUnaryInterceptor(internalIdentity),
 					interceptors.AuditInterceptor(bundle.events),
 					interceptors.SessionLockInterceptor(bundle.projections),
 				),
 				grpc.ChainStreamInterceptor(
 					grpcmeta.StreamServerInterceptor(nil),
+					interceptors.InternalServiceIdentityStreamInterceptor(internalIdentity),
 				),
 			)
 		}
@@ -221,11 +235,37 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 			_ = socialClients.conn.Close()
 		}
 	}()
+	aiClients, aiErr := b.config.dialAIGRPC(context.Background(), srvEnv.AIAddr)
+	if aiErr != nil {
+		log.Printf("ai client unavailable; campaign ai binding operations will be unavailable: %v", aiErr)
+		aiClients = aiGRPCClients{}
+	}
+	defer func() {
+		if err == nil {
+			return
+		}
+		if aiClients.conn != nil {
+			_ = aiClients.conn.Close()
+		}
+	}()
 	stores.Social = socialClients.socialClient
 
-	grpcServer := b.config.newGRPCServer(bundle)
+	grpcServer := b.config.newGRPCServer(bundle, srvEnv)
 	healthServer := b.config.newHealthServer()
-	if err := b.registerServices(grpcServer, healthServer, stores, bundle, authClients.authClient, systemRegistry); err != nil {
+	sessionGrantConfig, err := aisessiongrant.LoadConfigFromEnv(time.Now)
+	if err != nil {
+		return nil, fmt.Errorf("load ai session grant config: %w", err)
+	}
+	if err := b.registerServices(
+		grpcServer,
+		healthServer,
+		stores,
+		bundle,
+		authClients.authClient,
+		aiClients.agentClient,
+		systemRegistry,
+		sessionGrantConfig,
+	); err != nil {
 		return nil, err
 	}
 
@@ -252,6 +292,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		stores:                                   bundle,
 		authConn:                                 authClients.conn,
 		socialConn:                               socialClients.conn,
+		aiConn:                                   aiClients.conn,
 		projectionApplyOutboxWorkerEnabled:       enableApplyWorker,
 		projectionApplyOutboxApply:               b.config.buildProjectionApplyOutboxApply(bundle.projections, projectionRegistries),
 		projectionApplyOutboxShadowWorkerEnabled: enableShadowWorker,
@@ -261,14 +302,18 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	bundle = nil
 	authClients.conn = nil
 	socialClients.conn = nil
+	aiClients.conn = nil
 	return server, nil
 }
 
 func (b *serverBootstrap) registerServices(
 	grpcServer *grpc.Server, healthServer *health.Server,
 	stores gamegrpc.Stores,
-	bundle *storageBundle, authClient authv1.AuthServiceClient,
+	bundle *storageBundle,
+	authClient authv1.AuthServiceClient,
+	aiAgentClient aiv1.AgentServiceClient,
 	systemRegistry *bridge.MetadataRegistry,
+	sessionGrantConfig aisessiongrant.Config,
 ) error {
 	daggerheartStores := daggerheartservice.Stores{
 		Campaign:           bundle.projections,
@@ -289,7 +334,7 @@ func (b *serverBootstrap) registerServices(
 	if err != nil {
 		return fmt.Errorf("create daggerheart content service: %w", err)
 	}
-	campaignService := gamegrpc.NewCampaignServiceWithAuth(stores, authClient)
+	campaignService := gamegrpc.NewCampaignServiceWithAuthAndAI(stores, authClient, aiAgentClient)
 	participantService := gamegrpc.NewParticipantService(stores)
 	inviteService := gamegrpc.NewInviteServiceWithAuth(stores, authClient)
 	characterService := gamegrpc.NewCharacterService(stores)
@@ -300,10 +345,12 @@ func (b *serverBootstrap) registerServices(
 	statisticsService := gamegrpc.NewStatisticsService(stores)
 	systemService := gamegrpc.NewSystemService(systemRegistry)
 	authorizationService := gamegrpc.NewAuthorizationService(stores)
+	campaignAIService := gamegrpc.NewCampaignAIService(stores, sessionGrantConfig)
 
 	daggerheartv1.RegisterDaggerheartServiceServer(grpcServer, daggerheartService)
 	daggerheartv1.RegisterDaggerheartContentServiceServer(grpcServer, contentService)
 	statev1.RegisterCampaignServiceServer(grpcServer, campaignService)
+	statev1.RegisterCampaignAIServiceServer(grpcServer, campaignAIService)
 	statev1.RegisterParticipantServiceServer(grpcServer, participantService)
 	statev1.RegisterInviteServiceServer(grpcServer, inviteService)
 	statev1.RegisterCharacterServiceServer(grpcServer, characterService)
@@ -328,6 +375,20 @@ func (b *serverBootstrap) registerServices(
 	healthServer.SetServingStatus("game.v1.EventService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.StatisticsService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.SystemService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("game.v1.CampaignAIService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("game.v1.AuthorizationService", grpc_health_v1.HealthCheckResponse_SERVING)
 	return nil
+}
+
+func parseInternalServiceAllowlist(raw string) map[string]struct{} {
+	values := strings.Split(strings.TrimSpace(raw), ",")
+	allowlist := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		serviceID := strings.ToLower(strings.TrimSpace(value))
+		if serviceID == "" {
+			continue
+		}
+		allowlist[serviceID] = struct{}{}
+	}
+	return allowlist
 }

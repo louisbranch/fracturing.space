@@ -50,6 +50,18 @@ func (f *fakeCampaignClient) SetCampaignCover(context.Context, *gamev1.SetCampai
 	return nil, unimplemented("SetCampaignCover")
 }
 
+func (f *fakeCampaignClient) SetCampaignAIBinding(context.Context, *gamev1.SetCampaignAIBindingRequest, ...grpc.CallOption) (*gamev1.SetCampaignAIBindingResponse, error) {
+	return nil, unimplemented("SetCampaignAIBinding")
+}
+
+func (f *fakeCampaignClient) ClearCampaignAIBinding(context.Context, *gamev1.ClearCampaignAIBindingRequest, ...grpc.CallOption) (*gamev1.ClearCampaignAIBindingResponse, error) {
+	return nil, unimplemented("ClearCampaignAIBinding")
+}
+
+func (f *fakeCampaignClient) GetCampaignAIBindingUsage(context.Context, *gamev1.GetCampaignAIBindingUsageRequest, ...grpc.CallOption) (*gamev1.GetCampaignAIBindingUsageResponse, error) {
+	return nil, unimplemented("GetCampaignAIBindingUsage")
+}
+
 type fakeParticipantClient struct {
 	create func(context.Context, *gamev1.CreateParticipantRequest, ...grpc.CallOption) (*gamev1.CreateParticipantResponse, error)
 }

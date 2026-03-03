@@ -175,6 +175,9 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 	return map[command.Type]coreCommandRoute{
 		campaign.CommandTypeCreate:                campaignRoute,
 		campaign.CommandTypeUpdate:                campaignRoute,
+		campaign.CommandTypeAIBind:                campaignRoute,
+		campaign.CommandTypeAIUnbind:              campaignRoute,
+		campaign.CommandTypeAIAuthRotate:          campaignRoute,
 		campaign.CommandTypeFork:                  campaignRoute,
 		campaign.CommandTypeEnd:                   campaignRoute,
 		campaign.CommandTypeArchive:               campaignRoute,

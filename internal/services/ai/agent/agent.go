@@ -7,6 +7,7 @@ package agent
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -44,13 +45,18 @@ var (
 	ErrMissingAuthReference = errors.New("agent auth reference is required")
 	// ErrMultipleAuthReferences indicates auth references are mutually exclusive.
 	ErrMultipleAuthReferences = errors.New("exactly one agent auth reference is allowed")
+	// ErrInvalidHandle indicates agent handle failed normalization/validation rules.
+	ErrInvalidHandle = errors.New("agent handle is invalid")
 )
+
+var handlePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{2,31}$`)
 
 // Agent is the phase 1 domain model for an AI profile configuration.
 type Agent struct {
 	ID              string
 	OwnerUserID     string
 	Name            string
+	Handle          string
 	Provider        Provider
 	Model           string
 	CredentialID    string
@@ -64,6 +70,7 @@ type Agent struct {
 type CreateInput struct {
 	OwnerUserID     string
 	Name            string
+	Handle          string
 	Provider        Provider
 	Model           string
 	CredentialID    string
@@ -91,6 +98,11 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 	if input.Name == "" {
 		return CreateInput{}, ErrEmptyName
 	}
+	normalizedHandle, err := normalizeHandle(input.Handle, input.Name)
+	if err != nil {
+		return CreateInput{}, err
+	}
+	input.Handle = normalizedHandle
 
 	input.Provider = Provider(strings.ToLower(strings.TrimSpace(string(input.Provider))))
 	if input.Provider != ProviderOpenAI {
@@ -160,6 +172,7 @@ func Create(input CreateInput, now func() time.Time, idGenerator func() (string,
 		ID:              agentID,
 		OwnerUserID:     normalized.OwnerUserID,
 		Name:            normalized.Name,
+		Handle:          normalized.Handle,
 		Provider:        normalized.Provider,
 		Model:           normalized.Model,
 		CredentialID:    normalized.CredentialID,
@@ -188,4 +201,40 @@ func normalizeAuthReference(credentialID string, providerGrantID string, require
 		return "", "", nil
 	}
 	return credentialID, providerGrantID, nil
+}
+
+func normalizeHandle(raw string, fallbackName string) (string, error) {
+	handle := strings.ToLower(strings.TrimSpace(raw))
+	if handle == "" {
+		handle = strings.ToLower(strings.TrimSpace(fallbackName))
+	}
+	if handle == "" {
+		return "", ErrInvalidHandle
+	}
+
+	builder := strings.Builder{}
+	lastUnderscore := false
+	for _, r := range handle {
+		switch {
+		case r >= 'a' && r <= 'z':
+			builder.WriteRune(r)
+			lastUnderscore = false
+		case r >= '0' && r <= '9':
+			builder.WriteRune(r)
+			lastUnderscore = false
+		case r == '-' || r == '_':
+			builder.WriteRune(r)
+			lastUnderscore = false
+		case r == ' ':
+			if !lastUnderscore {
+				builder.WriteRune('_')
+				lastUnderscore = true
+			}
+		}
+	}
+	normalized := strings.Trim(builder.String(), "_-")
+	if !handlePattern.MatchString(normalized) {
+		return "", ErrInvalidHandle
+	}
+	return normalized, nil
 }

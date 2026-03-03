@@ -13,10 +13,16 @@ import (
 	"sync"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
+	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
 	aisqlite "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -26,6 +32,7 @@ import (
 type serverEnv struct {
 	DBPath        string `env:"FRACTURING_SPACE_AI_DB_PATH"`
 	EncryptionKey string `env:"FRACTURING_SPACE_AI_ENCRYPTION_KEY"`
+	GameAddr      string `env:"FRACTURING_SPACE_GAME_ADDR"`
 
 	OpenAIOAuthAuthURL      string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL"`
 	OpenAIOAuthTokenURL     string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL"`
@@ -38,6 +45,7 @@ type serverEnv struct {
 func loadServerEnv() serverEnv {
 	var cfg serverEnv
 	_ = config.ParseEnv(&cfg)
+	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
 	if cfg.DBPath == "" {
 		cfg.DBPath = filepath.Join("data", "ai.db")
 	}
@@ -99,6 +107,7 @@ type Server struct {
 	grpcServer *grpc.Server
 	health     *health.Server
 	store      *aisqlite.Store
+	gameConn   *grpc.ClientConn
 	closeOnce  sync.Once
 }
 
@@ -148,10 +157,29 @@ func NewWithAddr(addr string) (*Server, error) {
 
 	grpcServer := grpc.NewServer()
 	service := aiservice.NewService(store, store, sealer)
+	gameConn, gameClient, gameErr := dialGameGRPC(context.Background(), srvEnv.GameAddr)
+	if gameErr != nil {
+		log.Printf("ai: game client unavailable; agent usage guard disabled: %v", gameErr)
+	} else {
+		service.SetGameCampaignAIClient(gameClient)
+	}
+	sessionGrantConfig, err := aisessiongrant.LoadConfigFromEnv(nil)
+	if err != nil {
+		_ = listener.Close()
+		_ = store.Close()
+		if gameConn != nil {
+			_ = gameConn.Close()
+		}
+		return nil, fmt.Errorf("load ai session grant config: %w", err)
+	}
+	service.SetSessionGrantConfig(sessionGrantConfig)
 	openAIOAuthConfig, err := openAIOAuthConfigFromEnv()
 	if err != nil {
 		_ = listener.Close()
 		_ = store.Close()
+		if gameConn != nil {
+			_ = gameConn.Close()
+		}
 		return nil, fmt.Errorf("load OpenAI OAuth config: %w", err)
 	}
 	if openAIOAuthConfig != nil {
@@ -181,6 +209,7 @@ func NewWithAddr(addr string) (*Server, error) {
 		grpcServer: grpcServer,
 		health:     healthServer,
 		store:      store,
+		gameConn:   gameConn,
 	}, nil
 }
 
@@ -268,6 +297,11 @@ func (s *Server) Close() {
 				log.Printf("close ai store: %v", err)
 			}
 		}
+		if s.gameConn != nil {
+			if err := s.gameConn.Close(); err != nil {
+				log.Printf("close ai game conn: %v", err)
+			}
+		}
 	})
 }
 
@@ -296,4 +330,33 @@ func decodeBase64Key(value string) ([]byte, error) {
 		return key, nil
 	}
 	return nil, rawErr
+}
+
+func dialGameGRPC(ctx context.Context, gameAddr string) (*grpc.ClientConn, gamev1.CampaignAIServiceClient, error) {
+	gameAddr = strings.TrimSpace(gameAddr)
+	if gameAddr == "" {
+		return nil, nil, errors.New("game address is required")
+	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("ai game %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		gameAddr,
+		timeouts.GRPCDial,
+		logf,
+		append(
+			platformgrpc.DefaultClientDialOptions(),
+			grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(discovery.ServiceAI)),
+			grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(discovery.ServiceAI)),
+		)...,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	return conn, gamev1.NewCampaignAIServiceClient(conn), nil
 }

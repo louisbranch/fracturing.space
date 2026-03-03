@@ -20,18 +20,23 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.AuthAddr != "auth:8083" {
 		t.Fatalf("expected default auth addr, got %q", cfg.AuthAddr)
 	}
+	if cfg.AIAddr != "ai:8087" {
+		t.Fatalf("expected default ai addr, got %q", cfg.AIAddr)
+	}
 }
 
 func TestParseConfigOverrides(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_CHAT_HTTP_ADDR", "env-chat")
 	t.Setenv("FRACTURING_SPACE_GAME_ADDR", "env-game")
 	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", "env-auth")
+	t.Setenv("FRACTURING_SPACE_AI_ADDR", "env-ai")
 
 	fs := flag.NewFlagSet("chat", flag.ContinueOnError)
 	args := []string{
 		"-http-addr", "flag-chat",
 		"-game-addr", "flag-game",
 		"-auth-addr", "flag-auth",
+		"-ai-addr", "flag-ai",
 	}
 	cfg, err := ParseConfig(fs, args)
 	if err != nil {
@@ -45,5 +50,8 @@ func TestParseConfigOverrides(t *testing.T) {
 	}
 	if cfg.AuthAddr != "flag-auth" {
 		t.Fatalf("expected flag auth addr, got %q", cfg.AuthAddr)
+	}
+	if cfg.AIAddr != "flag-ai" {
+		t.Fatalf("expected flag ai addr, got %q", cfg.AIAddr)
 	}
 }

@@ -52,6 +52,18 @@ func (c *dashboardActivityCampaignClient) SetCampaignCover(context.Context, *sta
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (c *dashboardActivityCampaignClient) SetCampaignAIBinding(context.Context, *statev1.SetCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (c *dashboardActivityCampaignClient) ClearCampaignAIBinding(context.Context, *statev1.ClearCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (c *dashboardActivityCampaignClient) GetCampaignAIBindingUsage(context.Context, *statev1.GetCampaignAIBindingUsageRequest, ...grpc.CallOption) (*statev1.GetCampaignAIBindingUsageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 type dashboardActivityEventClient struct {
 	responses map[string]*statev1.ListEventsResponse
 	errs      map[string]error

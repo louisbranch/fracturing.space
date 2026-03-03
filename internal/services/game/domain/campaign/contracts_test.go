@@ -22,7 +22,14 @@ func TestRegisterRequiresRegistry(t *testing.T) {
 
 func TestCampaignContractTypeLists(t *testing.T) {
 	emittable := EmittableEventTypes()
-	wantEmittable := []event.Type{EventTypeCreated, EventTypeUpdated, EventTypeForked}
+	wantEmittable := []event.Type{
+		EventTypeCreated,
+		EventTypeUpdated,
+		EventTypeAIBound,
+		EventTypeAIUnbound,
+		EventTypeAIAuthRotated,
+		EventTypeForked,
+	}
 	if !testcontracts.EqualSlices(emittable, wantEmittable) {
 		t.Fatalf("EmittableEventTypes() = %v, want %v", emittable, wantEmittable)
 	}
@@ -31,6 +38,9 @@ func TestCampaignContractTypeLists(t *testing.T) {
 	wantCommands := []command.Type{
 		CommandTypeCreate,
 		CommandTypeUpdate,
+		CommandTypeAIBind,
+		CommandTypeAIUnbind,
+		CommandTypeAIAuthRotate,
 		CommandTypeFork,
 		CommandTypeEnd,
 		CommandTypeArchive,

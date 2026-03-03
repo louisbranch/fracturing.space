@@ -7,9 +7,18 @@ import (
 	"testing"
 )
 
+func setAISessionGrantEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER", "fracturing-space-game")
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE", "fracturing-space-ai")
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_TTL", "10m")
+}
+
 func TestNewRequiresEncryptionKey(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", "")
+	setAISessionGrantEnv(t)
 
 	if _, err := New(0); err == nil {
 		t.Fatal("expected error for missing encryption key")
@@ -19,6 +28,7 @@ func TestNewRequiresEncryptionKey(t *testing.T) {
 func TestNewRejectsInvalidEncryptionKey(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", "not-base64")
+	setAISessionGrantEnv(t)
 
 	if _, err := New(0); err == nil {
 		t.Fatal("expected error for invalid encryption key")
@@ -28,6 +38,7 @@ func TestNewRejectsInvalidEncryptionKey(t *testing.T) {
 func TestNewSuccess(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
+	setAISessionGrantEnv(t)
 
 	srv, err := New(0)
 	if err != nil {
@@ -44,6 +55,7 @@ func TestNewSuccess(t *testing.T) {
 func TestServerCloseReleasesListener(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
+	setAISessionGrantEnv(t)
 
 	srv, err := New(0)
 	if err != nil {

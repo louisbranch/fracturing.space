@@ -127,3 +127,94 @@ func TestAdminOverrideStreamClientInterceptorAddsMetadata(t *testing.T) {
 		t.Fatalf("interceptor returned error: %v", err)
 	}
 }
+
+func TestWithServiceIDAppendsMetadataWhenPresent(t *testing.T) {
+	ctx := WithServiceID(context.Background(), "chat")
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		t.Fatalf("expected outgoing metadata context")
+	}
+	values := md.Get(grpcmeta.ServiceIDHeader)
+	if len(values) != 1 || values[0] != "chat" {
+		t.Fatalf("metadata %s = %v, want [chat]", grpcmeta.ServiceIDHeader, values)
+	}
+}
+
+func TestWithServiceIDNoopWhenEmpty(t *testing.T) {
+	ctx := WithServiceID(context.Background(), "   ")
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if ok && len(md.Get(grpcmeta.ServiceIDHeader)) > 0 {
+		t.Fatalf("expected no %s metadata, got %v", grpcmeta.ServiceIDHeader, md.Get(grpcmeta.ServiceIDHeader))
+	}
+}
+
+func TestWithHelpersSupportNilContext(t *testing.T) {
+	ctx := WithUserID(nil, "user-1")
+	if md, ok := metadata.FromOutgoingContext(ctx); !ok || len(md.Get(grpcmeta.UserIDHeader)) != 1 {
+		t.Fatalf("expected user id metadata with nil base context")
+	}
+
+	ctx = WithParticipantID(nil, "participant-1")
+	if md, ok := metadata.FromOutgoingContext(ctx); !ok || len(md.Get(grpcmeta.ParticipantIDHeader)) != 1 {
+		t.Fatalf("expected participant id metadata with nil base context")
+	}
+
+	ctx = WithAdminOverride(nil, "reason")
+	if md, ok := metadata.FromOutgoingContext(ctx); !ok || len(md.Get(grpcmeta.PlatformRoleHeader)) != 1 {
+		t.Fatalf("expected admin override metadata with nil base context")
+	}
+
+	ctx = WithServiceID(nil, "chat")
+	if md, ok := metadata.FromOutgoingContext(ctx); !ok || len(md.Get(grpcmeta.ServiceIDHeader)) != 1 {
+		t.Fatalf("expected service id metadata with nil base context")
+	}
+}
+
+func TestServiceIDUnaryClientInterceptorAddsMetadata(t *testing.T) {
+	interceptor := ServiceIDUnaryClientInterceptor("chat")
+
+	err := interceptor(
+		context.Background(),
+		"/game.v1.CampaignAIService/GetCampaignAIAuthState",
+		nil,
+		nil,
+		nil,
+		func(ctx context.Context, _ string, _, _ any, _ *grpc.ClientConn, _ ...grpc.CallOption) error {
+			md, ok := metadata.FromOutgoingContext(ctx)
+			if !ok {
+				t.Fatalf("expected outgoing metadata context")
+			}
+			if got := md.Get(grpcmeta.ServiceIDHeader); len(got) != 1 || got[0] != "chat" {
+				t.Fatalf("metadata %s = %v, want [chat]", grpcmeta.ServiceIDHeader, got)
+			}
+			return nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("interceptor returned error: %v", err)
+	}
+}
+
+func TestServiceIDStreamClientInterceptorAddsMetadata(t *testing.T) {
+	interceptor := ServiceIDStreamClientInterceptor("chat")
+
+	_, err := interceptor(
+		context.Background(),
+		&grpc.StreamDesc{},
+		nil,
+		"/game.v1.CampaignAIService/GetCampaignAIAuthState",
+		func(ctx context.Context, _ *grpc.StreamDesc, _ *grpc.ClientConn, _ string, _ ...grpc.CallOption) (grpc.ClientStream, error) {
+			md, ok := metadata.FromOutgoingContext(ctx)
+			if !ok {
+				t.Fatalf("expected outgoing metadata context")
+			}
+			if got := md.Get(grpcmeta.ServiceIDHeader); len(got) != 1 || got[0] != "chat" {
+				t.Fatalf("metadata %s = %v, want [chat]", grpcmeta.ServiceIDHeader, got)
+			}
+			return nil, nil
+		},
+	)
+	if err != nil {
+		t.Fatalf("interceptor returned error: %v", err)
+	}
+}

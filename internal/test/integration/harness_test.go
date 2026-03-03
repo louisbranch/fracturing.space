@@ -86,6 +86,13 @@ var (
 	sharedFixtureData suiteFixture
 )
 
+const (
+	testAISessionGrantIssuer   = "fracturing-space-game"
+	testAISessionGrantAudience = "fracturing-space-ai"
+	testAISessionGrantTTL      = "10m"
+	testAISessionGrantHMACKey  = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY"
+)
+
 // integrationTimeout returns the default timeout for integration calls.
 func integrationTimeout() time.Duration {
 	return 10 * time.Second
@@ -103,6 +110,7 @@ func startGRPCServer(t *testing.T) (string, string, func()) {
 	setTempAuthDBPath(t)
 	seedDaggerheartContent(t)
 	setJoinGrantEnv(t)
+	setAISessionGrantEnv(t)
 	authAddr, stopAuth := startAuthServer(t)
 	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr)
 
@@ -163,6 +171,7 @@ func sharedSuiteFixture(t *testing.T) suiteFixture {
 
 		seedDaggerheartContent(t)
 		setJoinGrantProcessEnv(t)
+		setAISessionGrantProcessEnv(t)
 
 		authAddr, _ := startAuthServer(t)
 		if err := os.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr); err != nil {
@@ -236,6 +245,30 @@ func setJoinGrantProcessEnv(t *testing.T) {
 	}
 	if err := os.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPrivateKey)); err != nil {
 		t.Fatalf("set join grant private key: %v", err)
+	}
+}
+
+func setAISessionGrantEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER", testAISessionGrantIssuer)
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE", testAISessionGrantAudience)
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY", testAISessionGrantHMACKey)
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_TTL", testAISessionGrantTTL)
+}
+
+func setAISessionGrantProcessEnv(t *testing.T) {
+	t.Helper()
+	if err := os.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER", testAISessionGrantIssuer); err != nil {
+		t.Fatalf("set ai session grant issuer: %v", err)
+	}
+	if err := os.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE", testAISessionGrantAudience); err != nil {
+		t.Fatalf("set ai session grant audience: %v", err)
+	}
+	if err := os.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY", testAISessionGrantHMACKey); err != nil {
+		t.Fatalf("set ai session grant hmac key: %v", err)
+	}
+	if err := os.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_TTL", testAISessionGrantTTL); err != nil {
+		t.Fatalf("set ai session grant ttl: %v", err)
 	}
 }
 

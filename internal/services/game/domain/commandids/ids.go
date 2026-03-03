@@ -6,6 +6,9 @@ const (
 	// Core commands.
 	CampaignCreate          command.Type = "campaign.create"
 	CampaignUpdate          command.Type = "campaign.update"
+	CampaignAIBind          command.Type = "campaign.ai_bind"
+	CampaignAIUnbind        command.Type = "campaign.ai_unbind"
+	CampaignAIAuthRotate    command.Type = "campaign.ai_auth_rotate"
 	CampaignFork            command.Type = "campaign.fork"
 	CampaignEnd             command.Type = "campaign.end"
 	CampaignArchive         command.Type = "campaign.archive"

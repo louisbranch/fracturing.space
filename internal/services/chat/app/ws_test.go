@@ -463,7 +463,7 @@ func TestWebSocketJoinRequiresParticipantMembership(t *testing.T) {
 	}
 }
 
-func TestWebSocketJoinActiveSessionFailureReturnsFailedPrecondition(t *testing.T) {
+func TestWebSocketJoinMembershipLookupFailureReturnsUnavailable(t *testing.T) {
 	authorizer := fakeWSAuthorizer{
 		userID:         "user-1",
 		participantErr: errCampaignSessionInactive,
@@ -482,8 +482,8 @@ func TestWebSocketJoinActiveSessionFailureReturnsFailedPrecondition(t *testing.T
 	if got.Type != "chat.error" {
 		t.Fatalf("frame type = %q, want %q", got.Type, "chat.error")
 	}
-	if !strings.Contains(string(got.Payload), "FAILED_PRECONDITION") {
-		t.Fatalf("error payload = %s, expected FAILED_PRECONDITION", string(got.Payload))
+	if !strings.Contains(string(got.Payload), "UNAVAILABLE") {
+		t.Fatalf("error payload = %s, expected UNAVAILABLE", string(got.Payload))
 	}
 }
 
@@ -578,9 +578,19 @@ func TestLocalizedJoinWelcomeBodyOmitsSessionWhenUnavailable(t *testing.T) {
 
 func TestWebSocketDisconnectReleasesCampaignUpdateSubscriptionWhenRoomEmpty(t *testing.T) {
 	released := make(chan string, 1)
-	handler := newHandler(nil, false, nil, func(campaignID string) {
-		released <- campaignID
-	})
+	handler := newHandler(
+		nil,
+		false,
+		nil,
+		nil,
+		func(campaignID string) {
+			released <- campaignID
+		},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 
 	conn := dialWSWithHandler(t, handler, "/ws", "")
 	joinCampaign(t, conn, "camp-1")
@@ -598,9 +608,19 @@ func TestWebSocketDisconnectReleasesCampaignUpdateSubscriptionWhenRoomEmpty(t *t
 
 func TestWebSocketDisconnectDoesNotReleaseUntilLastSubscriberLeaves(t *testing.T) {
 	released := make(chan string, 2)
-	handler := newHandler(nil, false, nil, func(campaignID string) {
-		released <- campaignID
-	})
+	handler := newHandler(
+		nil,
+		false,
+		nil,
+		nil,
+		func(campaignID string) {
+			released <- campaignID
+		},
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
 

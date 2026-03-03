@@ -72,6 +72,8 @@ func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 	switch evt.Type {
 	case eventTypeCampaignCreated, eventTypeCampaignForked:
 		return false, nil
+	case eventTypeCampaignAIBound, eventTypeCampaignAIUnbound:
+		return false, nil
 	case eventTypeParticipantJoined, eventTypeParticipantUpdated, eventTypeParticipantLeft:
 		return copyParticipants, nil
 	case eventTypeCharacterUpdated:

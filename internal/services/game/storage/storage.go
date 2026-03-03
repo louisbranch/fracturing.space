@@ -39,6 +39,8 @@ type CampaignRecord struct {
 	ThemePrompt      string
 	CoverAssetID     string
 	CoverSetID       string
+	AIAgentID        string
+	AIAuthEpoch      uint64
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
 	CompletedAt      *time.Time
@@ -106,6 +108,11 @@ type CampaignReader interface {
 	Get(ctx context.Context, id string) (CampaignRecord, error)
 	// List returns a page of campaign records starting after the page token.
 	List(ctx context.Context, pageSize int, pageToken string) (CampaignPage, error)
+}
+
+// CampaignAIBindingReader provides AI-binding usage lookups for internal guard rails.
+type CampaignAIBindingReader interface {
+	ListCampaignIDsByAIAgent(ctx context.Context, aiAgentID string) ([]string, error)
 }
 
 // CampaignStore owns the campaign-level projection used by list/detail screens and

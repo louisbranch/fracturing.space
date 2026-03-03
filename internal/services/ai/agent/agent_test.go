@@ -41,12 +41,12 @@ func TestNormalizeCreateInput(t *testing.T) {
 		{
 			name:  "normalizes fields",
 			input: CreateInput{OwnerUserID: " user-1 ", Name: "  Narrator  ", Provider: ProviderOpenAI, Model: "  gpt-4o-mini  ", CredentialID: " cred-1 "},
-			want:  CreateInput{OwnerUserID: "user-1", Name: "Narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
+			want:  CreateInput{OwnerUserID: "user-1", Name: "Narrator", Handle: "narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
 		},
 		{
 			name:  "normalizes provider grant auth reference",
 			input: CreateInput{OwnerUserID: " user-1 ", Name: "  Narrator  ", Provider: ProviderOpenAI, Model: "  gpt-4o-mini  ", ProviderGrantID: " grant-1 "},
-			want:  CreateInput{OwnerUserID: "user-1", Name: "Narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", ProviderGrantID: "grant-1"},
+			want:  CreateInput{OwnerUserID: "user-1", Name: "Narrator", Handle: "narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", ProviderGrantID: "grant-1"},
 		},
 	}
 
@@ -100,6 +100,9 @@ func TestCreateAgent(t *testing.T) {
 	}
 	if created.ProviderGrantID != "grant-1" {
 		t.Fatalf("ProviderGrantID = %q, want %q", created.ProviderGrantID, "grant-1")
+	}
+	if created.Handle != "narrator" {
+		t.Fatalf("Handle = %q, want %q", created.Handle, "narrator")
 	}
 	if created.CredentialID != "" {
 		t.Fatalf("CredentialID = %q, want empty", created.CredentialID)

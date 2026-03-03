@@ -12,23 +12,37 @@ import (
 	"time"
 	"unicode/utf8"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"golang.org/x/net/websocket"
 )
 
 // NewHandler creates chat routes for tests and offline paths.
 // WebSocket auth is intentionally disabled in this constructor.
 func NewHandler() http.Handler {
-	return newHandler(nil, false, nil, nil)
+	return newHandler(nil, false, nil, nil, nil, nil, nil, nil, nil)
 }
 
 // NewHandlerWithAuthorizer creates chat routes with enforced websocket identity checks.
 func NewHandlerWithAuthorizer(authorizer wsAuthorizer) http.Handler {
-	return newHandler(authorizer, true, nil, nil)
+	return newHandler(authorizer, true, nil, nil, nil, nil, nil, nil, nil)
 }
 
-func newHandler(authorizer wsAuthorizer, requireAuth bool, ensureCampaignUpdateSubscription func(string), releaseCampaignUpdateSubscription func(string)) http.Handler {
-	hub := newRoomHub()
+func newHandler(
+	authorizer wsAuthorizer,
+	requireAuth bool,
+	hub *roomHub,
+	ensureCampaignUpdateSubscription func(string),
+	releaseCampaignUpdateSubscription func(string),
+	ensureAITurnSubscription func(string, string, string),
+	releaseAITurnSubscription func(string),
+	issueAISessionGrant func(context.Context, *campaignRoom, string) error,
+	aiInvocationClient aiv1.InvocationServiceClient,
+) http.Handler {
+	if hub == nil {
+		hub = newRoomHub()
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/up", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -36,7 +50,17 @@ func newHandler(authorizer wsAuthorizer, requireAuth bool, ensureCampaignUpdateS
 	})
 
 	wsHandler := websocket.Handler(func(conn *websocket.Conn) {
-		handleWSConn(conn, hub, authorizer, ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription)
+		handleWSConn(
+			conn,
+			hub,
+			authorizer,
+			ensureCampaignUpdateSubscription,
+			releaseCampaignUpdateSubscription,
+			ensureAITurnSubscription,
+			releaseAITurnSubscription,
+			issueAISessionGrant,
+			aiInvocationClient,
+		)
 	})
 
 	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
@@ -100,7 +124,17 @@ func accessTokenFromRequest(r *http.Request) string {
 	return ""
 }
 
-func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer, ensureCampaignUpdateSubscription func(string), releaseCampaignUpdateSubscription func(string)) {
+func handleWSConn(
+	conn *websocket.Conn,
+	hub *roomHub,
+	authorizer wsAuthorizer,
+	ensureCampaignUpdateSubscription func(string),
+	releaseCampaignUpdateSubscription func(string),
+	ensureAITurnSubscription func(string, string, string),
+	releaseAITurnSubscription func(string),
+	issueAISessionGrant func(context.Context, *campaignRoom, string) error,
+	aiInvocationClient aiv1.InvocationServiceClient,
+) {
 	defer func() {
 		_ = conn.Close()
 	}()
@@ -116,7 +150,7 @@ func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer, e
 	session := newWSSession(userID, peer)
 	defer func() {
 		if room := session.currentRoom(); room != nil {
-			leaveCampaignRoom(room, session.peer, releaseCampaignUpdateSubscription)
+			leaveCampaignRoom(room, session.peer, releaseCampaignUpdateSubscription, releaseAITurnSubscription)
 		}
 	}()
 
@@ -157,9 +191,27 @@ func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer, e
 
 		switch frame.Type {
 		case "chat.join":
-			handleJoinFrame(conn.Request().Context(), session, hub, authorizer, frame, ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription)
+			handleJoinFrame(
+				conn.Request().Context(),
+				session,
+				hub,
+				authorizer,
+				frame,
+				ensureCampaignUpdateSubscription,
+				releaseCampaignUpdateSubscription,
+				ensureAITurnSubscription,
+				releaseAITurnSubscription,
+				issueAISessionGrant,
+			)
 		case "chat.send":
-			handleSendFrame(session, frame)
+			handleSendFrame(
+				conn.Request().Context(),
+				session,
+				frame,
+				aiInvocationClient,
+				ensureAITurnSubscription,
+				issueAISessionGrant,
+			)
 		case "chat.history.before":
 			handleHistoryBeforeFrame(session, frame)
 		default:
@@ -168,16 +220,37 @@ func handleWSConn(conn *websocket.Conn, hub *roomHub, authorizer wsAuthorizer, e
 	}
 }
 
-func leaveCampaignRoom(room *campaignRoom, peer *wsPeer, releaseCampaignUpdateSubscription func(string)) {
+func leaveCampaignRoom(
+	room *campaignRoom,
+	peer *wsPeer,
+	releaseCampaignUpdateSubscription func(string),
+	releaseAITurnSubscription func(string),
+) {
 	if room == nil || peer == nil {
 		return
 	}
-	if room.leave(peer) && releaseCampaignUpdateSubscription != nil {
-		releaseCampaignUpdateSubscription(room.campaignID)
+	if room.leave(peer) {
+		if releaseCampaignUpdateSubscription != nil {
+			releaseCampaignUpdateSubscription(room.campaignID)
+		}
+		if releaseAITurnSubscription != nil {
+			releaseAITurnSubscription(room.campaignID)
+		}
 	}
 }
 
-func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, authorizer wsAuthorizer, frame wsFrame, ensureCampaignUpdateSubscription func(string), releaseCampaignUpdateSubscription func(string)) {
+func handleJoinFrame(
+	ctx context.Context,
+	session *wsSession,
+	hub *roomHub,
+	authorizer wsAuthorizer,
+	frame wsFrame,
+	ensureCampaignUpdateSubscription func(string),
+	releaseCampaignUpdateSubscription func(string),
+	ensureAITurnSubscription func(string, string, string),
+	releaseAITurnSubscription func(string),
+	issueAISessionGrant func(context.Context, *campaignRoom, string) error,
+) {
 	var payload joinPayload
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 		_ = writeWSError(session.peer, frame.RequestID, "INVALID_ARGUMENT", "invalid join payload")
@@ -195,6 +268,8 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 		CampaignName:    campaignID,
 		SessionID:       "",
 		SessionName:     "",
+		GmMode:          "",
+		AIAgentID:       "",
 		Locale:          commonv1.Locale_LOCALE_EN_US,
 	}
 	if provider, ok := authorizer.(wsJoinWelcomeProvider); ok {
@@ -205,11 +280,6 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 				_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", "participant access required for campaign")
 				return
 			}
-			if errors.Is(err, errCampaignSessionInactive) {
-				log.Printf("chat: campaign has no active session for user=%q campaign=%q", session.userID, campaignID)
-				_ = writeWSError(session.peer, frame.RequestID, "FAILED_PRECONDITION", "campaign session is not active")
-				return
-			}
 			log.Printf("chat: failed to resolve campaign context user=%q campaign=%q err=%v", session.userID, campaignID, err)
 			_ = writeWSError(session.peer, frame.RequestID, "UNAVAILABLE", "campaign context lookup unavailable")
 			return
@@ -218,11 +288,6 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 	} else if authorizer != nil {
 		allowed, err := authorizer.IsCampaignParticipant(ctx, campaignID, session.userID)
 		if err != nil {
-			if errors.Is(err, errCampaignSessionInactive) {
-				log.Printf("chat: campaign session inactive during membership check for user=%q campaign=%q", session.userID, campaignID)
-				_ = writeWSError(session.peer, frame.RequestID, "FAILED_PRECONDITION", "campaign session is not active")
-				return
-			}
 			log.Printf("chat: campaign membership check failed user=%q campaign=%q err=%v", session.userID, campaignID, err)
 			_ = writeWSError(session.peer, frame.RequestID, "UNAVAILABLE", "campaign membership verification unavailable")
 			return
@@ -232,18 +297,32 @@ func handleJoinFrame(ctx context.Context, session *wsSession, hub *roomHub, auth
 			return
 		}
 	}
+	if gmModeRequiresAIBinding(welcome.GmMode) && strings.TrimSpace(welcome.AIAgentID) == "" {
+		_ = writeWSError(session.peer, frame.RequestID, "FAILED_PRECONDITION", "campaign ai binding is required")
+		return
+	}
 	if ensureCampaignUpdateSubscription != nil {
 		ensureCampaignUpdateSubscription(campaignID)
 	}
 
 	room := hub.room(campaignID)
 	room.setSessionID(welcome.SessionID)
+	room.setAIBinding(welcome.GmMode, welcome.AIAgentID)
+	if room.aiRelayEnabled() && issueAISessionGrant != nil {
+		if err := issueAISessionGrant(ctx, room, session.userID); err != nil {
+			log.Printf("chat: failed to issue ai session grant campaign=%q err=%v", campaignID, err)
+			room.clearAISessionGrant()
+		}
+	}
+	if room.aiRelayReady() && ensureAITurnSubscription != nil {
+		ensureAITurnSubscription(campaignID, room.currentSessionID(), welcome.AIAgentID)
+	}
 	if strings.TrimSpace(welcome.SessionName) == "" {
 		welcome.SessionName = room.currentSessionID()
 	}
 	previous := session.setRoom(room)
 	if previous != nil && previous != room {
-		leaveCampaignRoom(previous, session.peer, releaseCampaignUpdateSubscription)
+		leaveCampaignRoom(previous, session.peer, releaseCampaignUpdateSubscription, releaseAITurnSubscription)
 	}
 	latest := room.join(session.peer)
 
@@ -313,7 +392,14 @@ func localizedJoinWelcomeBody(welcome joinWelcome) string {
 	}
 }
 
-func handleSendFrame(session *wsSession, frame wsFrame) {
+func handleSendFrame(
+	ctx context.Context,
+	session *wsSession,
+	frame wsFrame,
+	aiInvocationClient aiv1.InvocationServiceClient,
+	ensureAITurnSubscription func(string, string, string),
+	issueAISessionGrant func(context.Context, *campaignRoom, string) error,
+) {
 	var payload sendPayload
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 		_ = writeWSError(session.peer, frame.RequestID, "INVALID_ARGUMENT", "invalid send payload")
@@ -371,6 +457,24 @@ func handleSendFrame(session *wsSession, frame wsFrame) {
 	for _, subscriber := range subscribers {
 		_ = subscriber.writeFrame(messageFrame)
 	}
+
+	if aiInvocationClient != nil && room.aiRelayEnabled() {
+		if !room.aiRelayReady() && issueAISessionGrant != nil {
+			if err := issueAISessionGrant(ctx, room, session.userID); err != nil {
+				log.Printf("chat: refresh ai session grant on send failed campaign=%q err=%v", room.campaignID, err)
+				room.clearAISessionGrant()
+			}
+			if room.aiRelayReady() && ensureAITurnSubscription != nil {
+				ensureAITurnSubscription(room.campaignID, room.currentSessionID(), room.aiAgentIDValue())
+			}
+		}
+	}
+
+	if aiInvocationClient != nil && room.aiRelayReady() {
+		if err := submitCampaignTurnToAI(ctx, aiInvocationClient, room, session, msg); err != nil {
+			log.Printf("chat: submit campaign turn to ai failed campaign=%q err=%v", room.campaignID, err)
+		}
+	}
 }
 
 func handleHistoryBeforeFrame(session *wsSession, frame wsFrame) {
@@ -427,6 +531,37 @@ func writeWSError(peer *wsPeer, requestID string, code string, message string) e
 			},
 		}),
 	})
+}
+
+func submitCampaignTurnToAI(ctx context.Context, invocationClient aiv1.InvocationServiceClient, room *campaignRoom, session *wsSession, msg chatMessage) error {
+	if invocationClient == nil || room == nil || session == nil {
+		return nil
+	}
+	aiAgentID := room.aiAgentIDValue()
+	if aiAgentID == "" {
+		return nil
+	}
+	callCtx := grpcauthctx.WithUserID(ctx, session.userID)
+	_, err := invocationClient.SubmitCampaignTurn(callCtx, &aiv1.SubmitCampaignTurnRequest{
+		CampaignId:      room.campaignID,
+		SessionId:       room.currentSessionID(),
+		AgentId:         aiAgentID,
+		ParticipantId:   msg.Actor.ParticipantID,
+		ParticipantName: msg.Actor.Name,
+		MessageId:       msg.MessageID,
+		Body:            msg.Body,
+		SessionGrant:    room.aiSessionGrantValue(),
+	})
+	return err
+}
+
+func gmModeRequiresAIBinding(mode string) bool {
+	switch strings.ToUpper(strings.TrimSpace(mode)) {
+	case "AI", "HYBRID", "GM_MODE_AI", "GM_MODE_HYBRID":
+		return true
+	default:
+		return false
+	}
 }
 
 func mustJSON(v any) json.RawMessage {

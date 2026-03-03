@@ -232,7 +232,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Dashboard Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-			GmMode: statev1.GmMode_AI,
+			GmMode: statev1.GmMode_HUMAN,
 		})
 		if err != nil {
 			t.Fatalf("create campaign: %v", err)
@@ -327,7 +327,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Sessions Table Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-			GmMode: statev1.GmMode_AI,
+			GmMode: statev1.GmMode_HUMAN,
 		})
 		if err != nil {
 			t.Fatalf("create campaign: %v", err)
@@ -360,7 +360,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Session Detail Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-			GmMode: statev1.GmMode_AI,
+			GmMode: statev1.GmMode_HUMAN,
 		})
 		if err != nil {
 			t.Fatalf("create campaign: %v", err)
@@ -411,7 +411,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Session Detail HTMX Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-			GmMode: statev1.GmMode_AI,
+			GmMode: statev1.GmMode_HUMAN,
 		})
 		if err != nil {
 			t.Fatalf("create campaign: %v", err)
@@ -446,7 +446,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Session Events Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-			GmMode: statev1.GmMode_AI,
+			GmMode: statev1.GmMode_HUMAN,
 		})
 		if err != nil {
 			t.Fatalf("create campaign: %v", err)
@@ -871,7 +871,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		createResp, err := campaignClient.CreateCampaign(ctxWithUser, &statev1.CreateCampaignRequest{
 			Name:   "Event Table Data Test Campaign",
 			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-			GmMode: statev1.GmMode_AI,
+			GmMode: statev1.GmMode_HUMAN,
 		})
 		if err != nil {
 			t.Fatalf("create campaign: %v", err)

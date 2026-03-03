@@ -198,12 +198,13 @@ var CredentialService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	AgentService_CreateAgent_FullMethodName          = "/ai.v1.AgentService/CreateAgent"
-	AgentService_ListAgents_FullMethodName           = "/ai.v1.AgentService/ListAgents"
-	AgentService_ListAccessibleAgents_FullMethodName = "/ai.v1.AgentService/ListAccessibleAgents"
-	AgentService_GetAccessibleAgent_FullMethodName   = "/ai.v1.AgentService/GetAccessibleAgent"
-	AgentService_UpdateAgent_FullMethodName          = "/ai.v1.AgentService/UpdateAgent"
-	AgentService_DeleteAgent_FullMethodName          = "/ai.v1.AgentService/DeleteAgent"
+	AgentService_CreateAgent_FullMethodName                  = "/ai.v1.AgentService/CreateAgent"
+	AgentService_ListAgents_FullMethodName                   = "/ai.v1.AgentService/ListAgents"
+	AgentService_ListAccessibleAgents_FullMethodName         = "/ai.v1.AgentService/ListAccessibleAgents"
+	AgentService_GetAccessibleAgent_FullMethodName           = "/ai.v1.AgentService/GetAccessibleAgent"
+	AgentService_ValidateCampaignAgentBinding_FullMethodName = "/ai.v1.AgentService/ValidateCampaignAgentBinding"
+	AgentService_UpdateAgent_FullMethodName                  = "/ai.v1.AgentService/UpdateAgent"
+	AgentService_DeleteAgent_FullMethodName                  = "/ai.v1.AgentService/DeleteAgent"
 )
 
 // AgentServiceClient is the client API for AgentService service.
@@ -214,6 +215,7 @@ type AgentServiceClient interface {
 	ListAgents(ctx context.Context, in *ListAgentsRequest, opts ...grpc.CallOption) (*ListAgentsResponse, error)
 	ListAccessibleAgents(ctx context.Context, in *ListAccessibleAgentsRequest, opts ...grpc.CallOption) (*ListAccessibleAgentsResponse, error)
 	GetAccessibleAgent(ctx context.Context, in *GetAccessibleAgentRequest, opts ...grpc.CallOption) (*GetAccessibleAgentResponse, error)
+	ValidateCampaignAgentBinding(ctx context.Context, in *ValidateCampaignAgentBindingRequest, opts ...grpc.CallOption) (*ValidateCampaignAgentBindingResponse, error)
 	UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*UpdateAgentResponse, error)
 	DeleteAgent(ctx context.Context, in *DeleteAgentRequest, opts ...grpc.CallOption) (*DeleteAgentResponse, error)
 }
@@ -266,6 +268,16 @@ func (c *agentServiceClient) GetAccessibleAgent(ctx context.Context, in *GetAcce
 	return out, nil
 }
 
+func (c *agentServiceClient) ValidateCampaignAgentBinding(ctx context.Context, in *ValidateCampaignAgentBindingRequest, opts ...grpc.CallOption) (*ValidateCampaignAgentBindingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ValidateCampaignAgentBindingResponse)
+	err := c.cc.Invoke(ctx, AgentService_ValidateCampaignAgentBinding_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *agentServiceClient) UpdateAgent(ctx context.Context, in *UpdateAgentRequest, opts ...grpc.CallOption) (*UpdateAgentResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(UpdateAgentResponse)
@@ -294,6 +306,7 @@ type AgentServiceServer interface {
 	ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error)
 	ListAccessibleAgents(context.Context, *ListAccessibleAgentsRequest) (*ListAccessibleAgentsResponse, error)
 	GetAccessibleAgent(context.Context, *GetAccessibleAgentRequest) (*GetAccessibleAgentResponse, error)
+	ValidateCampaignAgentBinding(context.Context, *ValidateCampaignAgentBindingRequest) (*ValidateCampaignAgentBindingResponse, error)
 	UpdateAgent(context.Context, *UpdateAgentRequest) (*UpdateAgentResponse, error)
 	DeleteAgent(context.Context, *DeleteAgentRequest) (*DeleteAgentResponse, error)
 	mustEmbedUnimplementedAgentServiceServer()
@@ -317,6 +330,9 @@ func (UnimplementedAgentServiceServer) ListAccessibleAgents(context.Context, *Li
 }
 func (UnimplementedAgentServiceServer) GetAccessibleAgent(context.Context, *GetAccessibleAgentRequest) (*GetAccessibleAgentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAccessibleAgent not implemented")
+}
+func (UnimplementedAgentServiceServer) ValidateCampaignAgentBinding(context.Context, *ValidateCampaignAgentBindingRequest) (*ValidateCampaignAgentBindingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ValidateCampaignAgentBinding not implemented")
 }
 func (UnimplementedAgentServiceServer) UpdateAgent(context.Context, *UpdateAgentRequest) (*UpdateAgentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateAgent not implemented")
@@ -417,6 +433,24 @@ func _AgentService_GetAccessibleAgent_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AgentService_ValidateCampaignAgentBinding_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ValidateCampaignAgentBindingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ValidateCampaignAgentBinding(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_ValidateCampaignAgentBinding_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ValidateCampaignAgentBinding(ctx, req.(*ValidateCampaignAgentBindingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AgentService_UpdateAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(UpdateAgentRequest)
 	if err := dec(in); err != nil {
@@ -477,6 +511,10 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AgentService_GetAccessibleAgent_Handler,
 		},
 		{
+			MethodName: "ValidateCampaignAgentBinding",
+			Handler:    _AgentService_ValidateCampaignAgentBinding_Handler,
+		},
+		{
 			MethodName: "UpdateAgent",
 			Handler:    _AgentService_UpdateAgent_Handler,
 		},
@@ -490,7 +528,9 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	InvocationService_InvokeAgent_FullMethodName = "/ai.v1.InvocationService/InvokeAgent"
+	InvocationService_InvokeAgent_FullMethodName                 = "/ai.v1.InvocationService/InvokeAgent"
+	InvocationService_SubmitCampaignTurn_FullMethodName          = "/ai.v1.InvocationService/SubmitCampaignTurn"
+	InvocationService_SubscribeCampaignTurnEvents_FullMethodName = "/ai.v1.InvocationService/SubscribeCampaignTurnEvents"
 )
 
 // InvocationServiceClient is the client API for InvocationService service.
@@ -498,6 +538,8 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type InvocationServiceClient interface {
 	InvokeAgent(ctx context.Context, in *InvokeAgentRequest, opts ...grpc.CallOption) (*InvokeAgentResponse, error)
+	SubmitCampaignTurn(ctx context.Context, in *SubmitCampaignTurnRequest, opts ...grpc.CallOption) (*SubmitCampaignTurnResponse, error)
+	SubscribeCampaignTurnEvents(ctx context.Context, in *SubscribeCampaignTurnEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CampaignTurnEvent], error)
 }
 
 type invocationServiceClient struct {
@@ -518,11 +560,42 @@ func (c *invocationServiceClient) InvokeAgent(ctx context.Context, in *InvokeAge
 	return out, nil
 }
 
+func (c *invocationServiceClient) SubmitCampaignTurn(ctx context.Context, in *SubmitCampaignTurnRequest, opts ...grpc.CallOption) (*SubmitCampaignTurnResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SubmitCampaignTurnResponse)
+	err := c.cc.Invoke(ctx, InvocationService_SubmitCampaignTurn_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *invocationServiceClient) SubscribeCampaignTurnEvents(ctx context.Context, in *SubscribeCampaignTurnEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CampaignTurnEvent], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &InvocationService_ServiceDesc.Streams[0], InvocationService_SubscribeCampaignTurnEvents_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[SubscribeCampaignTurnEventsRequest, CampaignTurnEvent]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type InvocationService_SubscribeCampaignTurnEventsClient = grpc.ServerStreamingClient[CampaignTurnEvent]
+
 // InvocationServiceServer is the server API for InvocationService service.
 // All implementations must embed UnimplementedInvocationServiceServer
 // for forward compatibility.
 type InvocationServiceServer interface {
 	InvokeAgent(context.Context, *InvokeAgentRequest) (*InvokeAgentResponse, error)
+	SubmitCampaignTurn(context.Context, *SubmitCampaignTurnRequest) (*SubmitCampaignTurnResponse, error)
+	SubscribeCampaignTurnEvents(*SubscribeCampaignTurnEventsRequest, grpc.ServerStreamingServer[CampaignTurnEvent]) error
 	mustEmbedUnimplementedInvocationServiceServer()
 }
 
@@ -535,6 +608,12 @@ type UnimplementedInvocationServiceServer struct{}
 
 func (UnimplementedInvocationServiceServer) InvokeAgent(context.Context, *InvokeAgentRequest) (*InvokeAgentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InvokeAgent not implemented")
+}
+func (UnimplementedInvocationServiceServer) SubmitCampaignTurn(context.Context, *SubmitCampaignTurnRequest) (*SubmitCampaignTurnResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitCampaignTurn not implemented")
+}
+func (UnimplementedInvocationServiceServer) SubscribeCampaignTurnEvents(*SubscribeCampaignTurnEventsRequest, grpc.ServerStreamingServer[CampaignTurnEvent]) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeCampaignTurnEvents not implemented")
 }
 func (UnimplementedInvocationServiceServer) mustEmbedUnimplementedInvocationServiceServer() {}
 func (UnimplementedInvocationServiceServer) testEmbeddedByValue()                           {}
@@ -575,6 +654,35 @@ func _InvocationService_InvokeAgent_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InvocationService_SubmitCampaignTurn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitCampaignTurnRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InvocationServiceServer).SubmitCampaignTurn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InvocationService_SubmitCampaignTurn_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InvocationServiceServer).SubmitCampaignTurn(ctx, req.(*SubmitCampaignTurnRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InvocationService_SubscribeCampaignTurnEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeCampaignTurnEventsRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(InvocationServiceServer).SubscribeCampaignTurnEvents(m, &grpc.GenericServerStream[SubscribeCampaignTurnEventsRequest, CampaignTurnEvent]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type InvocationService_SubscribeCampaignTurnEventsServer = grpc.ServerStreamingServer[CampaignTurnEvent]
+
 // InvocationService_ServiceDesc is the grpc.ServiceDesc for InvocationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -586,8 +694,18 @@ var InvocationService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "InvokeAgent",
 			Handler:    _InvocationService_InvokeAgent_Handler,
 		},
+		{
+			MethodName: "SubmitCampaignTurn",
+			Handler:    _InvocationService_SubmitCampaignTurn_Handler,
+		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeCampaignTurnEvents",
+			Handler:       _InvocationService_SubscribeCampaignTurnEvents_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "ai/v1/service.proto",
 }
 

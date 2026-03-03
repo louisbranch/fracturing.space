@@ -104,6 +104,11 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	if err != nil {
 		return storage.SessionRecord{}, err
 	}
+	if strings.TrimSpace(c.AIAgentID) != "" {
+		if err := rotateCampaignAIAuthEpoch(ctx, a.stores, campaignID, aiAuthRotateReasonSessionStarted, actorID, actorType); err != nil {
+			return storage.SessionRecord{}, err
+		}
+	}
 
 	sess, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
@@ -167,6 +172,11 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 	)
 	if err != nil {
 		return storage.SessionRecord{}, err
+	}
+	if strings.TrimSpace(c.AIAgentID) != "" {
+		if err := rotateCampaignAIAuthEpoch(ctx, a.stores, campaignID, aiAuthRotateReasonSessionEnded, actorID, actorType); err != nil {
+			return storage.SessionRecord{}, err
+		}
 	}
 
 	updated, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)

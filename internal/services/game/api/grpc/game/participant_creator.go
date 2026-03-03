@@ -314,6 +314,26 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load participant: %v", err)
 	}
 
+	if shouldClearCampaignAIBindingOnAccessChange(targetAccessBefore, updated.CampaignAccess) {
+		campaignRecord, campaignErr := c.stores.Campaign.Get(ctx, campaignID)
+		if campaignErr != nil {
+			return storage.ParticipantRecord{}, campaignErr
+		}
+		if strings.TrimSpace(campaignRecord.AIAgentID) != "" {
+			if _, clearErr := clearCampaignAIBindingByCommand(
+				ctx,
+				c.stores,
+				campaignID,
+				actorID,
+				actorType,
+				grpcmeta.RequestIDFromContext(ctx),
+				grpcmeta.InvocationIDFromContext(ctx),
+			); clearErr != nil {
+				return storage.ParticipantRecord{}, clearErr
+			}
+		}
+	}
+
 	return updated, nil
 }
 
@@ -411,7 +431,34 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, err
 	}
 
+	if current.CampaignAccess == participant.CampaignAccessOwner {
+		campaignRecord, campaignErr := c.stores.Campaign.Get(ctx, campaignID)
+		if campaignErr != nil {
+			return storage.ParticipantRecord{}, campaignErr
+		}
+		if strings.TrimSpace(campaignRecord.AIAgentID) != "" {
+			if _, clearErr := clearCampaignAIBindingByCommand(
+				ctx,
+				c.stores,
+				campaignID,
+				actorID,
+				actorType,
+				grpcmeta.RequestIDFromContext(ctx),
+				grpcmeta.InvocationIDFromContext(ctx),
+			); clearErr != nil {
+				return storage.ParticipantRecord{}, clearErr
+			}
+		}
+	}
+
 	return current, nil
+}
+
+func shouldClearCampaignAIBindingOnAccessChange(before participant.CampaignAccess, after participant.CampaignAccess) bool {
+	if before == after {
+		return false
+	}
+	return before == participant.CampaignAccessOwner || after == participant.CampaignAccessOwner
 }
 
 // ensureParticipantHasNoOwnedCharacters scans projection-backed character state

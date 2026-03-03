@@ -144,6 +144,7 @@ func agentToProto(record storage.AgentRecord) *aiv1.Agent {
 		Id:              record.ID,
 		OwnerUserId:     record.OwnerUserID,
 		Name:            record.Name,
+		Handle:          record.Handle,
 		Provider:        providerToProto(record.Provider),
 		Model:           record.Model,
 		CredentialId:    record.CredentialID,

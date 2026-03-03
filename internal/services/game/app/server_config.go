@@ -11,6 +11,7 @@ import (
 type serverEnv struct {
 	AuthAddr                                 string `env:"FRACTURING_SPACE_AUTH_ADDR"`
 	SocialAddr                               string `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
+	AIAddr                                   string `env:"FRACTURING_SPACE_AI_ADDR"`
 	EventsDBPath                             string `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
 	ProjectionsDBPath                        string `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
 	ContentDBPath                            string `env:"FRACTURING_SPACE_GAME_CONTENT_DB_PATH"`
@@ -19,6 +20,7 @@ type serverEnv struct {
 	ProjectionApplyOutboxEnabled             bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED"     envDefault:"false"`
 	ProjectionApplyOutboxShadowWorkerEnabled bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED" envDefault:"false"`
 	ProjectionApplyOutboxWorkerEnabled       bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED" envDefault:"false"`
+	InternalServiceAllowlist                 string `env:"FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,chat"`
 }
 
 const (
@@ -32,6 +34,7 @@ func loadServerEnv() serverEnv {
 	_ = config.ParseEnv(&cfg)
 	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
 	cfg.SocialAddr = discovery.OrDefaultGRPCAddr(cfg.SocialAddr, discovery.ServiceSocial)
+	cfg.AIAddr = discovery.OrDefaultGRPCAddr(cfg.AIAddr, discovery.ServiceAI)
 	if cfg.EventsDBPath == "" {
 		cfg.EventsDBPath = filepath.Join("data", "game-events.db")
 	}

@@ -1156,6 +1156,18 @@ func (c *testCampaignClient) SetCampaignCover(ctx context.Context, in *statev1.S
 	return &statev1.SetCampaignCoverResponse{}, nil
 }
 
+func (c *testCampaignClient) SetCampaignAIBinding(ctx context.Context, in *statev1.SetCampaignAIBindingRequest, opts ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error) {
+	return &statev1.SetCampaignAIBindingResponse{}, nil
+}
+
+func (c *testCampaignClient) ClearCampaignAIBinding(ctx context.Context, in *statev1.ClearCampaignAIBindingRequest, opts ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error) {
+	return &statev1.ClearCampaignAIBindingResponse{}, nil
+}
+
+func (c *testCampaignClient) GetCampaignAIBindingUsage(ctx context.Context, in *statev1.GetCampaignAIBindingUsageRequest, opts ...grpc.CallOption) (*statev1.GetCampaignAIBindingUsageResponse, error) {
+	return &statev1.GetCampaignAIBindingUsageResponse{}, nil
+}
+
 type testParticipantClient struct {
 	participants []*statev1.Participant
 	listErr      error

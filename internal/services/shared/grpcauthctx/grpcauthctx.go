@@ -49,6 +49,18 @@ func WithAdminOverride(ctx context.Context, reason string) context.Context {
 	)
 }
 
+// WithServiceID returns a context with internal service identity metadata.
+func WithServiceID(ctx context.Context, serviceID string) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	serviceID = strings.TrimSpace(serviceID)
+	if serviceID == "" {
+		return ctx
+	}
+	return metadata.AppendToOutgoingContext(ctx, grpcmeta.ServiceIDHeader, serviceID)
+}
+
 // AdminOverrideUnaryClientInterceptor appends ADMIN override metadata to unary calls.
 func AdminOverrideUnaryClientInterceptor(reason string) grpc.UnaryClientInterceptor {
 	reason = strings.TrimSpace(reason)
@@ -77,5 +89,36 @@ func AdminOverrideStreamClientInterceptor(reason string) grpc.StreamClientInterc
 		opts ...grpc.CallOption,
 	) (grpc.ClientStream, error) {
 		return streamer(WithAdminOverride(ctx, reason), desc, cc, method, opts...)
+	}
+}
+
+// ServiceIDUnaryClientInterceptor appends internal service-id metadata to unary calls.
+func ServiceIDUnaryClientInterceptor(serviceID string) grpc.UnaryClientInterceptor {
+	serviceID = strings.TrimSpace(serviceID)
+	return func(
+		ctx context.Context,
+		method string,
+		req any,
+		reply any,
+		cc *grpc.ClientConn,
+		invoker grpc.UnaryInvoker,
+		opts ...grpc.CallOption,
+	) error {
+		return invoker(WithServiceID(ctx, serviceID), method, req, reply, cc, opts...)
+	}
+}
+
+// ServiceIDStreamClientInterceptor appends internal service-id metadata to stream calls.
+func ServiceIDStreamClientInterceptor(serviceID string) grpc.StreamClientInterceptor {
+	serviceID = strings.TrimSpace(serviceID)
+	return func(
+		ctx context.Context,
+		desc *grpc.StreamDesc,
+		cc *grpc.ClientConn,
+		method string,
+		streamer grpc.Streamer,
+		opts ...grpc.CallOption,
+	) (grpc.ClientStream, error) {
+		return streamer(WithServiceID(ctx, serviceID), desc, cc, method, opts...)
 	}
 }

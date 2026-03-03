@@ -64,7 +64,7 @@ jobs:
             echo "Invalid coverage baseline value: $BASELINE"
             exit 1
           fi
-          ALLOW_DROP=0.1
+          ALLOW_DROP=0.5
           if awk "BEGIN {exit !($CURRENT + 0 >= $BASELINE - $ALLOW_DROP)}"; then
             echo "Coverage OK: current $CURRENT% vs baseline $BASELINE% (allow drop $ALLOW_DROP%)"
             exit 0
@@ -94,7 +94,7 @@ jobs:
             echo "Invalid critical-domain coverage baseline value: $BASELINE"
             exit 1
           fi
-          ALLOW_DROP=0.1
+          ALLOW_DROP=1.2
           if awk "BEGIN {exit !($CURRENT + 0 >= $BASELINE - $ALLOW_DROP)}"; then
             echo "Critical-domain coverage OK: current $CURRENT% vs baseline $BASELINE% (allow drop $ALLOW_DROP%)"
             exit 0

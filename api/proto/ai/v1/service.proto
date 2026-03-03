@@ -50,6 +50,13 @@ enum AccessRequestDecision {
   ACCESS_REQUEST_DECISION_DENY = 2;
 }
 
+enum CampaignTurnEventKind {
+  CAMPAIGN_TURN_EVENT_KIND_UNSPECIFIED = 0;
+  CAMPAIGN_TURN_EVENT_KIND_TURN_ACCEPTED = 1;
+  CAMPAIGN_TURN_EVENT_KIND_MODEL_OUTPUT = 2;
+  CAMPAIGN_TURN_EVENT_KIND_ERROR = 3;
+}
+
 message Credential {
   string id = 1;
   string owner_user_id = 2;
@@ -72,6 +79,7 @@ message Agent {
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
   string provider_grant_id = 10;
+  string handle = 11;
 }
 
 message ProviderGrant {
@@ -155,12 +163,15 @@ service AgentService {
   rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
   rpc ListAccessibleAgents(ListAccessibleAgentsRequest) returns (ListAccessibleAgentsResponse);
   rpc GetAccessibleAgent(GetAccessibleAgentRequest) returns (GetAccessibleAgentResponse);
+  rpc ValidateCampaignAgentBinding(ValidateCampaignAgentBindingRequest) returns (ValidateCampaignAgentBindingResponse);
   rpc UpdateAgent(UpdateAgentRequest) returns (UpdateAgentResponse);
   rpc DeleteAgent(DeleteAgentRequest) returns (DeleteAgentResponse);
 }
 
 service InvocationService {
   rpc InvokeAgent(InvokeAgentRequest) returns (InvokeAgentResponse);
+  rpc SubmitCampaignTurn(SubmitCampaignTurnRequest) returns (SubmitCampaignTurnResponse);
+  rpc SubscribeCampaignTurnEvents(SubscribeCampaignTurnEventsRequest) returns (stream CampaignTurnEvent);
 }
 
 service ProviderGrantService {
@@ -184,6 +195,7 @@ message CreateAgentRequest {
   string model = 3;
   string credential_id = 4;
   string provider_grant_id = 5;
+  string handle = 6;
 }
 
 message CreateAgentResponse {
@@ -218,6 +230,15 @@ message GetAccessibleAgentResponse {
   Agent agent = 1;
 }
 
+message ValidateCampaignAgentBindingRequest {
+  string agent_id = 1;
+  string campaign_id = 2;
+}
+
+message ValidateCampaignAgentBindingResponse {
+  Agent agent = 1;
+}
+
 message UpdateAgentRequest {
   string agent_id = 1;
   string name = 2;
@@ -245,6 +266,41 @@ message InvokeAgentResponse {
   string output_text = 1;
   Provider provider = 2;
   string model = 3;
+}
+
+message SubmitCampaignTurnRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string agent_id = 3;
+  string participant_id = 4;
+  string participant_name = 5;
+  string message_id = 6;
+  string body = 7;
+  // Opaque signed session grant issued by game.v1.CampaignAIService.
+  string session_grant = 8;
+}
+
+message SubmitCampaignTurnResponse {
+  string turn_id = 1;
+}
+
+message SubscribeCampaignTurnEventsRequest {
+  string campaign_id = 1;
+  uint64 after_sequence_id = 2;
+  // Opaque signed session grant issued by game.v1.CampaignAIService.
+  string session_grant = 3;
+}
+
+message CampaignTurnEvent {
+  string campaign_id = 1;
+  string session_id = 2;
+  string turn_id = 3;
+  uint64 sequence_id = 4;
+  CampaignTurnEventKind kind = 5;
+  string content = 6;
+  bool participant_visible = 7;
+  string correlation_message_id = 8;
+  google.protobuf.Timestamp created_at = 9;
 }
 
 message StartProviderConnectRequest {

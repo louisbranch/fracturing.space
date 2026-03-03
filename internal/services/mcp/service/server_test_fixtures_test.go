@@ -187,6 +187,21 @@ func (f *fakeCampaignClient) SetCampaignCover(ctx context.Context, req *statev1.
 	return f.setCampaignCoverResponse, f.setCampaignCoverErr
 }
 
+// SetCampaignAIBinding is a stub so fakeCampaignClient satisfies CampaignServiceClient.
+func (f *fakeCampaignClient) SetCampaignAIBinding(context.Context, *statev1.SetCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error) {
+	return &statev1.SetCampaignAIBindingResponse{}, nil
+}
+
+// ClearCampaignAIBinding is a stub so fakeCampaignClient satisfies CampaignServiceClient.
+func (f *fakeCampaignClient) ClearCampaignAIBinding(context.Context, *statev1.ClearCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error) {
+	return &statev1.ClearCampaignAIBindingResponse{}, nil
+}
+
+// GetCampaignAIBindingUsage is a stub so fakeCampaignClient satisfies CampaignServiceClient.
+func (f *fakeCampaignClient) GetCampaignAIBindingUsage(context.Context, *statev1.GetCampaignAIBindingUsageRequest, ...grpc.CallOption) (*statev1.GetCampaignAIBindingUsageResponse, error) {
+	return &statev1.GetCampaignAIBindingUsageResponse{}, nil
+}
+
 // CreateParticipant records the request and returns the configured response.
 func (f *fakeParticipantClient) CreateParticipant(ctx context.Context, req *statev1.CreateParticipantRequest, opts ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
 	f.lastCreateParticipantRequest = req
