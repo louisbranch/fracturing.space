@@ -214,6 +214,7 @@ function syncAppChromeState(currentPath) {
 	syncAppNavActiveLinks(currentPath);
 	syncMainStateForRoute(currentPath);
 	initAppToasts();
+	initAppImageFallbacks();
 }
 
 var defaultToastHideAfterMs = 4500;
@@ -263,6 +264,24 @@ function initAppToasts() {
 			dismissAppToast(toast);
 		}, toastHideAfterMs(toast));
 	});
+}
+
+function initAppImageFallbacks() {
+	if (window.__appImageFallbacksInitialized === true) {
+		return;
+	}
+	window.__appImageFallbacksInitialized = true;
+	// Capture image resource failures and keep skeletons visible by hiding only the failed img node.
+	document.addEventListener("error", function(event) {
+		var target = event && event.target;
+		if (!target || target.tagName !== "IMG") {
+			return;
+		}
+		if (target.getAttribute("data-image-el") !== "true") {
+			return;
+		}
+		target.style.display = "none";
+	}, true);
 }
 
 syncAppChromeState();
