@@ -36,6 +36,8 @@ type campaignGatewayStub struct {
 	campaignWorkspaceErr              error
 	campaignParticipants              []CampaignParticipant
 	campaignParticipantsErr           error
+	campaignParticipant               CampaignParticipant
+	campaignParticipantErr            error
 	campaignCharacters                []CampaignCharacter
 	campaignCharactersErr             error
 	campaignSessions                  []CampaignSession
@@ -67,6 +69,7 @@ type campaignGatewayStub struct {
 	lastEndSessionInput               EndSessionInput
 	lastCreateInviteInput             CreateInviteInput
 	lastRevokeInviteInput             RevokeInviteInput
+	lastUpdateParticipantInput        UpdateParticipantInput
 	applyCharacterCreationStepErr     error
 	resetCharacterCreationWorkflowErr error
 	calls                             []string
@@ -108,6 +111,21 @@ func (f *campaignGatewayStub) CampaignParticipants(context.Context, string) ([]C
 		return nil, f.campaignParticipantsErr
 	}
 	return f.campaignParticipants, nil
+}
+
+func (f *campaignGatewayStub) CampaignParticipant(_ context.Context, _ string, participantID string) (CampaignParticipant, error) {
+	if f.campaignParticipantErr != nil {
+		return CampaignParticipant{}, f.campaignParticipantErr
+	}
+	if strings.TrimSpace(f.campaignParticipant.ID) != "" {
+		return f.campaignParticipant, nil
+	}
+	for _, participant := range f.campaignParticipants {
+		if strings.TrimSpace(participant.ID) == strings.TrimSpace(participantID) {
+			return participant, nil
+		}
+	}
+	return CampaignParticipant{ID: strings.TrimSpace(participantID)}, nil
 }
 
 func (f *campaignGatewayStub) CampaignCharacters(context.Context, string) ([]CampaignCharacter, error) {
@@ -188,6 +206,12 @@ func (f *campaignGatewayStub) CreateCharacter(context.Context, string, CreateCha
 		return CreateCharacterResult{CharacterID: "char-created"}, nil
 	}
 	return f.createCharacterResult, nil
+}
+
+func (f *campaignGatewayStub) UpdateParticipant(_ context.Context, _ string, input UpdateParticipantInput) error {
+	f.lastUpdateParticipantInput = input
+	f.calls = append(f.calls, "update-participant")
+	return nil
 }
 
 func (f *campaignGatewayStub) CreateInvite(_ context.Context, _ string, input CreateInviteInput) error {

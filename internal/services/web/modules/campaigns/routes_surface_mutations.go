@@ -29,4 +29,5 @@ func registerStableCampaignMutationRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignInvitesPattern, h.withCampaignID(h.handleInvites))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteCreatePattern, h.handleInviteCreateRoute)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteRevokePattern, h.handleInviteRevokeRoute)
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignParticipantEditPattern, h.handleParticipantUpdateRoute)
 }

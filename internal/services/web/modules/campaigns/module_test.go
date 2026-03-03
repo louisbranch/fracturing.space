@@ -642,6 +642,8 @@ type fakeGateway struct {
 	workspaceAccessPolicy             string
 	participants                      []CampaignParticipant
 	participantsErr                   error
+	participant                       CampaignParticipant
+	participantErr                    error
 	characters                        []CampaignCharacter
 	charactersErr                     error
 	sessions                          []CampaignSession
@@ -654,12 +656,15 @@ type fakeGateway struct {
 	characterCreationCatalogErr       error
 	characterCreationProfile          CampaignCharacterCreationProfile
 	characterCreationProfileErr       error
+	authorizationDecision             campaignapp.AuthorizationDecision
+	authorizationErr                  error
 	batchAuthorizationDecisions       []campaignapp.AuthorizationDecision
 	batchAuthorizationErr             error
 	applyCharacterCreationStepErr     error
 	resetCharacterCreationWorkflowErr error
 	createCharacterErr                error
 	createdCharacterID                string
+	updateParticipantErr              error
 	err                               error
 	createErr                         error
 	createdCampaignID                 string
@@ -758,6 +763,19 @@ func (f fakeGateway) CampaignParticipants(context.Context, string) ([]CampaignPa
 	return f.participants, nil
 }
 
+func (f fakeGateway) CampaignParticipant(context.Context, string, string) (CampaignParticipant, error) {
+	if f.participantErr != nil {
+		return CampaignParticipant{}, f.participantErr
+	}
+	if strings.TrimSpace(f.participant.ID) != "" {
+		return f.participant, nil
+	}
+	if len(f.participants) > 0 {
+		return f.participants[0], nil
+	}
+	return CampaignParticipant{}, nil
+}
+
 func (f fakeGateway) CampaignCharacters(context.Context, string) ([]CampaignCharacter, error) {
 	if f.charactersErr != nil {
 		return nil, f.charactersErr
@@ -823,6 +841,9 @@ func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInp
 	}
 	return CreateCharacterResult{CharacterID: createdCharacterID}, nil
 }
+func (f fakeGateway) UpdateParticipant(context.Context, string, UpdateParticipantInput) error {
+	return f.updateParticipantErr
+}
 func (fakeGateway) CreateInvite(context.Context, string, CreateInviteInput) error { return nil }
 func (fakeGateway) RevokeInvite(context.Context, string, RevokeInviteInput) error { return nil }
 func (f fakeGateway) ApplyCharacterCreationStep(context.Context, string, string, *CampaignCharacterCreationStepInput) error {
@@ -831,7 +852,13 @@ func (f fakeGateway) ApplyCharacterCreationStep(context.Context, string, string,
 func (f fakeGateway) ResetCharacterCreationWorkflow(context.Context, string, string) error {
 	return f.resetCharacterCreationWorkflowErr
 }
-func (fakeGateway) CanCampaignAction(context.Context, string, campaignapp.AuthorizationAction, campaignapp.AuthorizationResource, *campaignapp.AuthorizationTarget) (campaignapp.AuthorizationDecision, error) {
+func (f fakeGateway) CanCampaignAction(context.Context, string, campaignapp.AuthorizationAction, campaignapp.AuthorizationResource, *campaignapp.AuthorizationTarget) (campaignapp.AuthorizationDecision, error) {
+	if f.authorizationErr != nil {
+		return campaignapp.AuthorizationDecision{}, f.authorizationErr
+	}
+	if f.authorizationDecision.Evaluated || f.authorizationDecision.Allowed || strings.TrimSpace(f.authorizationDecision.ReasonCode) != "" {
+		return f.authorizationDecision, nil
+	}
 	return campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"}, nil
 }
 

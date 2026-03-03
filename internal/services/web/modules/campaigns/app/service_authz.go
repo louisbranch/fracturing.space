@@ -15,9 +15,24 @@ type AuthorizationDecision struct {
 	ReasonCode string
 }
 
+// ParticipantGovernanceOperation scopes participant authz intent for policy evaluation.
+type ParticipantGovernanceOperation string
+
+const (
+	ParticipantGovernanceOperationUnspecified  ParticipantGovernanceOperation = ""
+	ParticipantGovernanceOperationMutate       ParticipantGovernanceOperation = "mutate"
+	ParticipantGovernanceOperationAccessChange ParticipantGovernanceOperation = "access_change"
+	ParticipantGovernanceOperationRemove       ParticipantGovernanceOperation = "remove"
+)
+
 // AuthorizationTarget scopes a check to a specific resource instance.
 type AuthorizationTarget struct {
-	ResourceID string
+	ResourceID              string
+	OwnerParticipantID      string
+	TargetParticipantID     string
+	TargetCampaignAccess    string
+	RequestedCampaignAccess string
+	ParticipantOperation    ParticipantGovernanceOperation
 }
 
 // AuthorizationCheck describes one authz request in batch evaluation.
@@ -124,6 +139,12 @@ var (
 		resource: campaignAuthzResourceInvite,
 		denyKey:  "error.web.message.manager_or_owner_access_required_for_invite_action",
 		denyMsg:  "manager or owner access required for invite action",
+	}
+	policyManageParticipant = mutationAuthzPolicy{
+		action:   campaignAuthzActionManage,
+		resource: campaignAuthzResourceParticipant,
+		denyKey:  "error.web.message.manager_or_owner_access_required_for_participant_action",
+		denyMsg:  "manager or owner access required for participant action",
 	}
 )
 

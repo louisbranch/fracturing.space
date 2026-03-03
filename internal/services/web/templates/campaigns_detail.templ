@@ -81,10 +81,70 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 									<dd>{ participantPronounsLabel(loc, participant.Pronouns) }</dd>
 								</div>
 							</dl>
+							if participant.CanEdit && campaignParticipantEditURL(view, participant) != "" {
+								<div class="card-actions justify-end">
+									<a class="btn btn-outline btn-sm" href={ campaignParticipantEditURL(view, participant) } data-campaign-participant-edit-link="true">{ T(loc, "game.participants.action_edit") }</a>
+								</div>
+							}
 						</div>
 					</div>
 				}
 			</div>
+			</div>
+		} else if view.Marker == "campaign-participant-edit" {
+			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participant-edit-form="true">
+				<div class="card-body gap-4 p-4">
+					<h2 class="card-title">{ T(loc, "game.participants.action_edit") }</h2>
+					<form method="post" action={ routepath.AppCampaignParticipantEdit(view.CampaignID, view.ParticipantID) } class="space-y-4" data-campaign-participant-edit-submit="true">
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.participants.field_name") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="name" required value={ view.ParticipantEditor.Name }/>
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.participants.field_role") }</span>
+							</label>
+							<select class="select select-bordered w-full" name="role">
+								<option value="gm" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "gm" }>{ campaignParticipantRoleLabel(loc, "gm") }</option>
+								<option value="player" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "player" }>{ campaignParticipantRoleLabel(loc, "player") }</option>
+							</select>
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "web.settings.user_profile.field_pronouns") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="pronouns" value={ view.ParticipantEditor.Pronouns } list="campaign-participant-pronouns-presets"/>
+							<datalist id="campaign-participant-pronouns-presets">
+								for _, preset := range campaignParticipantPronounPresets(view.ParticipantEditor) {
+									<option value={ preset }></option>
+								}
+							</datalist>
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.participants.field_access") }</span>
+							</label>
+							if view.ParticipantEditor.AccessReadOnly {
+								<select class="select select-bordered w-full" disabled data-campaign-participant-access-readonly="true">
+									for _, option := range view.ParticipantEditor.AccessOptions {
+										<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantEditor.CampaignAccess) == option.Value } disabled>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
+									}
+								</select>
+							} else {
+								<select class="select select-bordered w-full" name="campaign_access">
+									for _, option := range view.ParticipantEditor.AccessOptions {
+										<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantEditor.CampaignAccess) == option.Value } disabled?={ !option.Allowed }>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
+									}
+								</select>
+							}
+						</div>
+						<div class="card-actions justify-end">
+							<button class="btn btn-primary" type="submit">{ T(loc, "game.participants.submit_save") }</button>
+						</div>
+					</form>
+				</div>
 			</div>
 		} else if view.Marker == "campaign-characters" {
 			<div class="mb-4 rounded border border-base-300 bg-base-100 p-4" data-campaign-character-create-entry="true">
@@ -531,4 +591,3 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 		}
 	</section>
 }
-

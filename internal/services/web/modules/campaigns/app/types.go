@@ -68,6 +68,21 @@ type CampaignParticipant struct {
 	Controller     string `json:"controller"`
 	Pronouns       string `json:"pronouns"`
 	AvatarURL      string `json:"avatarUrl"`
+	CanEdit        bool   `json:"canEdit"`
+	EditReasonCode string `json:"editReasonCode"`
+}
+
+// CampaignParticipantAccessOption stores one campaign-access option state.
+type CampaignParticipantAccessOption struct {
+	Value   string `json:"value"`
+	Allowed bool   `json:"allowed"`
+}
+
+// CampaignParticipantEditor stores participant edit page data.
+type CampaignParticipantEditor struct {
+	Participant    CampaignParticipant               `json:"participant"`
+	AccessOptions  []CampaignParticipantAccessOption `json:"accessOptions"`
+	AccessReadOnly bool                              `json:"accessReadOnly"`
 }
 
 // CampaignCharacter stores character details used by campaign characters pages.
@@ -325,6 +340,15 @@ type RevokeInviteInput struct {
 type CreateCharacterInput struct {
 	Name string
 	Kind CharacterKind
+}
+
+// UpdateParticipantInput stores participant update form values.
+type UpdateParticipantInput struct {
+	ParticipantID  string
+	Name           string
+	Role           string
+	Pronouns       string
+	CampaignAccess string
 }
 
 // CreateCharacterResult stores create-character response values.

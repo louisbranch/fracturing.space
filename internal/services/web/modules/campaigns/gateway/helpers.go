@@ -276,3 +276,29 @@ func mapCharacterKindToProto(k campaignapp.CharacterKind) statev1.CharacterKind 
 		return statev1.CharacterKind_CHARACTER_KIND_UNSPECIFIED
 	}
 }
+
+// mapParticipantRoleToProto maps participant role labels into game service enums.
+func mapParticipantRoleToProto(value string) statev1.ParticipantRole {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "gm", "participant_role_gm", "role_gm":
+		return statev1.ParticipantRole_GM
+	case "player", "participant_role_player", "role_player":
+		return statev1.ParticipantRole_PLAYER
+	default:
+		return statev1.ParticipantRole_ROLE_UNSPECIFIED
+	}
+}
+
+// mapParticipantAccessToProto maps participant access labels into game service enums.
+func mapParticipantAccessToProto(value string) statev1.CampaignAccess {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "member", "campaign_access_member":
+		return statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER
+	case "manager", "campaign_access_manager":
+		return statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER
+	case "owner", "campaign_access_owner":
+		return statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
+	default:
+		return statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED
+	}
+}

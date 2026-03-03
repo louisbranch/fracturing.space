@@ -34,6 +34,28 @@ func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, cam
 	})
 }
 
+// handleParticipantEdit handles this route in the module transport layer.
+func (h handlers) handleParticipantEdit(w http.ResponseWriter, r *http.Request, campaignID, participantID string) {
+	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
+		marker: markerParticipantEdit,
+		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+			return []sharedtemplates.BreadcrumbItem{
+				{Label: webtemplates.T(loc, "game.participants.title"), URL: routepath.AppCampaignParticipants(campaignID)},
+				{Label: webtemplates.T(loc, "game.participants.action_edit")},
+			}
+		},
+		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
+			editor, err := h.service.CampaignParticipantEditor(ctx, campaignID, participantID)
+			if err != nil {
+				return err
+			}
+			view.ParticipantID = participantID
+			view.ParticipantEditor = mapParticipantEditorView(editor)
+			return nil
+		},
+	})
+}
+
 // handleCharacters handles this route in the module transport layer.
 func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{

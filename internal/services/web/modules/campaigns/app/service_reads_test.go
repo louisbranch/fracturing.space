@@ -227,6 +227,120 @@ func TestCampaignParticipantsSortByName(t *testing.T) {
 	}
 }
 
+func TestCampaignParticipantsHydratesEditabilityFromBatchAuthorization(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipants: []CampaignParticipant{
+			{ID: "p-a", Name: "Aria", Role: "GM", CampaignAccess: "Owner"},
+			{ID: "p-b", Name: "Bram", Role: "Player", CampaignAccess: "Member"},
+		},
+		batchAuthorizationDecisions: []campaignAuthorizationDecision{
+			{CheckID: "p-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+			{CheckID: "p-b", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+		},
+	}
+	svc := newService(gateway)
+
+	participants, err := svc.campaignParticipants(context.Background(), "c-1")
+	if err != nil {
+		t.Fatalf("campaignParticipants() error = %v", err)
+	}
+	if len(participants) != 2 {
+		t.Fatalf("len(participants) = %d, want 2", len(participants))
+	}
+	if !participants[0].CanEdit {
+		t.Fatalf("participants[0].CanEdit = %v, want true", participants[0].CanEdit)
+	}
+	if got := participants[0].EditReasonCode; got != "AUTHZ_ALLOW_ACCESS_LEVEL" {
+		t.Fatalf("participants[0].EditReasonCode = %q, want %q", got, "AUTHZ_ALLOW_ACCESS_LEVEL")
+	}
+	if participants[1].CanEdit {
+		t.Fatalf("participants[1].CanEdit = %v, want false", participants[1].CanEdit)
+	}
+	if got := participants[1].EditReasonCode; got != "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED" {
+		t.Fatalf("participants[1].EditReasonCode = %q, want %q", got, "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED")
+	}
+	if gateway.batchAuthorizationCalls != 1 {
+		t.Fatalf("batch authorization calls = %d, want 1", gateway.batchAuthorizationCalls)
+	}
+	if len(gateway.batchAuthorizationRequests) != 2 {
+		t.Fatalf("batch authorization requests = %d, want 2", len(gateway.batchAuthorizationRequests))
+	}
+	for _, req := range gateway.batchAuthorizationRequests {
+		if req.Action != campaignAuthzActionManage {
+			t.Fatalf("batch authorization action = %v, want %v", req.Action, campaignAuthzActionManage)
+		}
+		if req.Resource != campaignAuthzResourceParticipant {
+			t.Fatalf("batch authorization resource = %v, want %v", req.Resource, campaignAuthzResourceParticipant)
+		}
+		if req.Target == nil || strings.TrimSpace(req.Target.TargetParticipantID) == "" {
+			t.Fatalf("batch authorization target participant id was empty")
+		}
+	}
+}
+
+func TestCampaignParticipantEditorLoadsAccessOptions(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-a",
+			Name:           "Aria",
+			Role:           "GM",
+			CampaignAccess: "Owner",
+			Pronouns:       "she/her",
+		},
+		authorizationDecision: campaignAuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    true,
+			ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL",
+		},
+		batchAuthorizationDecisions: []campaignAuthorizationDecision{
+			{CheckID: "member", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_LAST_OWNER_GUARD"},
+			{CheckID: "manager", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_LAST_OWNER_GUARD"},
+			{CheckID: "owner", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		},
+	}
+	svc := newService(gateway)
+
+	editor, err := svc.campaignParticipantEditor(context.Background(), "c-1", "p-a")
+	if err != nil {
+		t.Fatalf("campaignParticipantEditor() error = %v", err)
+	}
+	if editor.Participant.ID != "p-a" {
+		t.Fatalf("editor participant id = %q, want %q", editor.Participant.ID, "p-a")
+	}
+	if len(editor.AccessOptions) != 3 {
+		t.Fatalf("len(editor.AccessOptions) = %d, want 3", len(editor.AccessOptions))
+	}
+	if !editor.AccessReadOnly {
+		t.Fatalf("editor.AccessReadOnly = %v, want true", editor.AccessReadOnly)
+	}
+}
+
+func TestCampaignParticipantEditorDeniesWhenManageParticipantForbidden(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipant: CampaignParticipant{ID: "p-a", Name: "Aria", Role: "GM", CampaignAccess: "Owner"},
+		authorizationDecision: campaignAuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    false,
+			ReasonCode: "AUTHZ_DENY_TARGET_IS_OWNER",
+		},
+	}
+	svc := newService(gateway)
+
+	_, err := svc.campaignParticipantEditor(context.Background(), "c-1", "p-a")
+	if err == nil {
+		t.Fatalf("expected campaignParticipantEditor() forbidden error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
+	}
+}
+
 func TestCampaignCharactersSortByName(t *testing.T) {
 	t.Parallel()
 

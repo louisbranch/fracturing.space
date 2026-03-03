@@ -137,8 +137,44 @@ func mapCampaignAuthorizationTargetToProto(target *campaignapp.AuthorizationTarg
 		return nil
 	}
 	resourceID := strings.TrimSpace(target.ResourceID)
-	if resourceID == "" {
+	ownerParticipantID := strings.TrimSpace(target.OwnerParticipantID)
+	targetParticipantID := strings.TrimSpace(target.TargetParticipantID)
+	targetCampaignAccess := mapParticipantAccessToProto(target.TargetCampaignAccess)
+	requestedCampaignAccess := mapParticipantAccessToProto(target.RequestedCampaignAccess)
+	participantOperation := mapParticipantGovernanceOperationToProto(target.ParticipantOperation)
+	if resourceID == "" &&
+		ownerParticipantID == "" &&
+		targetParticipantID == "" &&
+		targetCampaignAccess == statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED &&
+		requestedCampaignAccess == statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED &&
+		participantOperation == statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_UNSPECIFIED {
 		return nil
 	}
-	return &statev1.AuthorizationTarget{ResourceId: resourceID}
+	protoTarget := &statev1.AuthorizationTarget{
+		ResourceId:           resourceID,
+		OwnerParticipantId:   ownerParticipantID,
+		TargetParticipantId:  targetParticipantID,
+		ParticipantOperation: participantOperation,
+	}
+	if targetCampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
+		protoTarget.TargetCampaignAccess = targetCampaignAccess
+	}
+	if requestedCampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
+		protoTarget.RequestedCampaignAccess = requestedCampaignAccess
+	}
+	return protoTarget
+}
+
+// mapParticipantGovernanceOperationToProto maps participant-governance operation labels to proto enums.
+func mapParticipantGovernanceOperationToProto(operation campaignapp.ParticipantGovernanceOperation) statev1.ParticipantGovernanceOperation {
+	switch strings.ToLower(strings.TrimSpace(string(operation))) {
+	case "mutate":
+		return statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_MUTATE
+	case "access_change":
+		return statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_ACCESS_CHANGE
+	case "remove":
+		return statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_REMOVE
+	default:
+		return statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_UNSPECIFIED
+	}
 }

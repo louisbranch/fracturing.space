@@ -35,6 +35,11 @@ func (unavailableGateway) CampaignParticipants(context.Context, string) ([]Campa
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+// CampaignParticipant centralizes this web behavior in one helper seam.
+func (unavailableGateway) CampaignParticipant(context.Context, string, string) (CampaignParticipant, error) {
+	return CampaignParticipant{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
 // CampaignCharacters centralizes this web behavior in one helper seam.
 func (unavailableGateway) CampaignCharacters(context.Context, string) ([]CampaignCharacter, error) {
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
@@ -83,6 +88,11 @@ func (unavailableGateway) EndSession(context.Context, string, EndSessionInput) e
 // CreateCharacter executes package-scoped creation behavior for this flow.
 func (unavailableGateway) CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error) {
 	return CreateCharacterResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+// UpdateParticipant applies this package workflow transition.
+func (unavailableGateway) UpdateParticipant(context.Context, string, UpdateParticipantInput) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
 // CreateInvite executes package-scoped creation behavior for this flow.

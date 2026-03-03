@@ -21,6 +21,7 @@ type CampaignDetailView struct {
 	Marker        string
 	CampaignID    string
 	SessionID     string
+	ParticipantID string
 	CharacterID   string
 	Name          string
 	Theme         string
@@ -31,6 +32,7 @@ type CampaignDetailView struct {
 	Intent        string
 	AccessPolicy  string
 	Participants  []CampaignParticipantView
+	ParticipantEditor CampaignParticipantEditorView
 	Characters    []CampaignCharacterView
 	Sessions      []CampaignSessionView
 	Invites       []CampaignInviteView
@@ -53,6 +55,24 @@ type CampaignParticipantView struct {
 	Controller     string
 	Pronouns       string
 	AvatarURL      string
+	CanEdit        bool
+	EditReasonCode string
+}
+
+type CampaignParticipantAccessOptionView struct {
+	Value   string
+	Allowed bool
+}
+
+type CampaignParticipantEditorView struct {
+	ID             string
+	Name           string
+	Role           string
+	Controller     string
+	Pronouns       string
+	CampaignAccess string
+	AccessOptions  []CampaignParticipantAccessOptionView
+	AccessReadOnly bool
 }
 
 type CampaignCharacterView struct {
@@ -74,6 +94,15 @@ func campaignCharacterDetailURL(view CampaignDetailView, character CampaignChara
 		return ""
 	}
 	return routepath.AppCampaignCharacter(campaignID, characterID)
+}
+
+func campaignParticipantEditURL(view CampaignDetailView, participant CampaignParticipantView) string {
+	campaignID := strings.TrimSpace(view.CampaignID)
+	participantID := strings.TrimSpace(participant.ID)
+	if campaignID == "" || participantID == "" {
+		return ""
+	}
+	return routepath.AppCampaignParticipantEdit(campaignID, participantID)
 }
 
 func campaignSupportsCharacterCreation(view CampaignDetailView) bool {
@@ -421,6 +450,38 @@ func campaignParticipantControllerLabel(loc Localizer, value string) string {
 	}
 }
 
+func campaignParticipantPronounPresets(editor CampaignParticipantEditorView) []string {
+	presets := []string{"she/her", "he/him", "they/them"}
+	if strings.EqualFold(strings.TrimSpace(editor.Controller), "ai") {
+		return append(presets, "it/its")
+	}
+	return presets
+}
+
+func campaignParticipantRoleCanonical(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "gm", "participant_role_gm", "role_gm":
+		return "gm"
+	case "player", "participant_role_player", "role_player":
+		return "player"
+	default:
+		return ""
+	}
+}
+
+func campaignParticipantAccessCanonical(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "member", "campaign_access_member":
+		return "member"
+	case "manager", "campaign_access_manager":
+		return "manager"
+	case "owner", "campaign_access_owner":
+		return "owner"
+	default:
+		return ""
+	}
+}
+
 func campaignCharacterKindLabel(loc Localizer, value string) string {
 	raw := strings.TrimSpace(value)
 	value = strings.ToLower(raw)
@@ -600,4 +661,3 @@ templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
 		}
 	</div>
 }
-

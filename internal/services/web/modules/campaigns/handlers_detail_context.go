@@ -17,6 +17,7 @@ const (
 	markerSessions        = "campaign-sessions"
 	markerSessionDetail   = "campaign-session-detail"
 	markerParticipants    = "campaign-participants"
+	markerParticipantEdit = "campaign-participant-edit"
 	markerCharacters      = "campaign-characters"
 	markerCharacterDetail = "campaign-character-detail"
 	markerInvites         = "campaign-invites"
@@ -148,6 +149,15 @@ func (h handlers) routeCharacterID(r *http.Request) (string, bool) {
 		return "", false
 	}
 	return characterID, true
+}
+
+// routeParticipantID centralizes this web behavior in one helper seam.
+func (h handlers) routeParticipantID(r *http.Request) (string, bool) {
+	participantID := strings.TrimSpace(r.PathValue("participantID"))
+	if participantID == "" {
+		return "", false
+	}
+	return participantID, true
 }
 
 // withCampaignID extracts the campaign ID path param and delegates to fn,

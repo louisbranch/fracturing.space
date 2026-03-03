@@ -35,43 +35,82 @@ func (s service) campaignParticipants(ctx context.Context, campaignID string) ([
 
 	normalized := make([]CampaignParticipant, 0, len(participants))
 	for _, participant := range participants {
-		participantID := strings.TrimSpace(participant.ID)
-		participantUserID := strings.TrimSpace(participant.UserID)
-		participantName := strings.TrimSpace(participant.Name)
-		if participantName == "" {
-			if participantID != "" {
-				participantName = participantID
-			} else {
-				participantName = "Unknown participant"
-			}
-		}
-		role := strings.TrimSpace(participant.Role)
-		if role == "" {
-			role = "Unspecified"
-		}
-		campaignAccess := strings.TrimSpace(participant.CampaignAccess)
-		if campaignAccess == "" {
-			campaignAccess = "Unspecified"
-		}
-		controller := strings.TrimSpace(participant.Controller)
-		if controller == "" {
-			controller = "Unspecified"
-		}
-		normalized = append(normalized, CampaignParticipant{
-			ID:             participantID,
-			UserID:         participantUserID,
-			Name:           participantName,
-			Role:           role,
-			CampaignAccess: campaignAccess,
-			Controller:     controller,
-			Pronouns:       strings.TrimSpace(participant.Pronouns),
-			AvatarURL:      strings.TrimSpace(participant.AvatarURL),
-		})
+		normalized = append(normalized, normalizeCampaignParticipant(participant))
 	}
+
+	s.hydrateParticipantEditability(ctx, campaignID, normalized)
 
 	sortByName(normalized, func(p CampaignParticipant) string { return p.Name }, func(p CampaignParticipant) string { return p.ID })
 
 	return normalized, nil
+}
+
+// campaignParticipant centralizes this web behavior in one helper seam.
+func (s service) campaignParticipant(ctx context.Context, campaignID string, participantID string) (CampaignParticipant, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	participantID = strings.TrimSpace(participantID)
+	if campaignID == "" || participantID == "" {
+		return CampaignParticipant{}, nil
+	}
+
+	participant, err := s.readGateway.CampaignParticipant(ctx, campaignID, participantID)
+	if err != nil {
+		return CampaignParticipant{}, err
+	}
+	normalized := normalizeCampaignParticipant(participant)
+	if strings.TrimSpace(normalized.ID) == "" {
+		normalized.ID = participantID
+	}
+	if strings.TrimSpace(normalized.Name) == "Unknown participant" {
+		normalized.Name = participantID
+	}
+	return normalized, nil
+}
+
+// campaignParticipantEditor centralizes this web behavior in one helper seam.
+func (s service) campaignParticipantEditor(ctx context.Context, campaignID string, participantID string) (CampaignParticipantEditor, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	participantID = strings.TrimSpace(participantID)
+	if campaignID == "" || participantID == "" {
+		return CampaignParticipantEditor{}, nil
+	}
+
+	participant, err := s.campaignParticipant(ctx, campaignID, participantID)
+	if err != nil {
+		return CampaignParticipantEditor{}, err
+	}
+	currentAccess := participantAccessCanonical(participant.CampaignAccess)
+	target := &campaignAuthorizationTarget{
+		ResourceID:           participantID,
+		TargetParticipantID:  participantID,
+		TargetCampaignAccess: currentAccess,
+		ParticipantOperation: ParticipantGovernanceOperationMutate,
+	}
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		campaignAuthzActionManage,
+		campaignAuthzResourceParticipant,
+		target,
+		policyManageParticipant.denyKey,
+		policyManageParticipant.denyMsg,
+	); err != nil {
+		return CampaignParticipantEditor{}, err
+	}
+
+	options := s.participantAccessOptions(ctx, campaignID, participant.ID, currentAccess)
+	accessReadOnly := true
+	for _, option := range options {
+		if option.Allowed && option.Value != currentAccess {
+			accessReadOnly = false
+			break
+		}
+	}
+	return CampaignParticipantEditor{
+		Participant:    participant,
+		AccessOptions:  options,
+		AccessReadOnly: accessReadOnly,
+	}, nil
 }
 
 // campaignCharacters centralizes this web behavior in one helper seam.
@@ -214,4 +253,153 @@ func (s service) campaignInvites(ctx context.Context, campaignID string) ([]Camp
 	})
 
 	return normalized, nil
+}
+
+// normalizeCampaignParticipant centralizes this web behavior in one helper seam.
+func normalizeCampaignParticipant(participant CampaignParticipant) CampaignParticipant {
+	participantID := strings.TrimSpace(participant.ID)
+	participantUserID := strings.TrimSpace(participant.UserID)
+	participantName := strings.TrimSpace(participant.Name)
+	if participantName == "" {
+		if participantID != "" {
+			participantName = participantID
+		} else {
+			participantName = "Unknown participant"
+		}
+	}
+	role := strings.TrimSpace(participant.Role)
+	if role == "" {
+		role = "Unspecified"
+	}
+	campaignAccess := strings.TrimSpace(participant.CampaignAccess)
+	if campaignAccess == "" {
+		campaignAccess = "Unspecified"
+	}
+	controller := strings.TrimSpace(participant.Controller)
+	if controller == "" {
+		controller = "Unspecified"
+	}
+	return CampaignParticipant{
+		ID:             participantID,
+		UserID:         participantUserID,
+		Name:           participantName,
+		Role:           role,
+		CampaignAccess: campaignAccess,
+		Controller:     controller,
+		Pronouns:       strings.TrimSpace(participant.Pronouns),
+		AvatarURL:      strings.TrimSpace(participant.AvatarURL),
+		CanEdit:        participant.CanEdit,
+		EditReasonCode: strings.TrimSpace(participant.EditReasonCode),
+	}
+}
+
+// hydrateParticipantEditability centralizes this web behavior in one helper seam.
+func (s service) hydrateParticipantEditability(ctx context.Context, campaignID string, participants []CampaignParticipant) {
+	if len(participants) == 0 {
+		return
+	}
+	if s.authzGateway == nil {
+		return
+	}
+
+	checks := make([]campaignAuthorizationCheck, 0, len(participants))
+	indexesByCheckID := make(map[string][]int, len(participants))
+	for idx := range participants {
+		participantID := strings.TrimSpace(participants[idx].ID)
+		if participantID == "" {
+			continue
+		}
+		indexesByCheckID[participantID] = append(indexesByCheckID[participantID], idx)
+		if len(indexesByCheckID[participantID]) > 1 {
+			continue
+		}
+		checks = append(checks, campaignAuthorizationCheck{
+			CheckID:  participantID,
+			Action:   campaignAuthzActionManage,
+			Resource: campaignAuthzResourceParticipant,
+			Target: &campaignAuthorizationTarget{
+				ResourceID:           participantID,
+				TargetParticipantID:  participantID,
+				TargetCampaignAccess: participantAccessCanonical(participants[idx].CampaignAccess),
+				ParticipantOperation: ParticipantGovernanceOperationMutate,
+			},
+		})
+	}
+	if len(checks) == 0 {
+		return
+	}
+
+	decisions, err := s.authzGateway.BatchCanCampaignAction(ctx, campaignID, checks)
+	if err != nil {
+		return
+	}
+
+	for idx, decision := range decisions {
+		checkID := strings.TrimSpace(decision.CheckID)
+		if checkID == "" && idx < len(checks) {
+			checkID = strings.TrimSpace(checks[idx].CheckID)
+		}
+		if checkID == "" {
+			continue
+		}
+		participantIndexes, found := indexesByCheckID[checkID]
+		if !found {
+			continue
+		}
+		for _, participantIndex := range participantIndexes {
+			participants[participantIndex].EditReasonCode = strings.TrimSpace(decision.ReasonCode)
+			if decision.Evaluated && decision.Allowed {
+				participants[participantIndex].CanEdit = true
+			}
+		}
+	}
+}
+
+// participantAccessOptions centralizes this web behavior in one helper seam.
+func (s service) participantAccessOptions(ctx context.Context, campaignID string, participantID string, targetAccess string) []CampaignParticipantAccessOption {
+	options := make([]CampaignParticipantAccessOption, 0, len(participantAccessValues))
+	for _, value := range participantAccessValues {
+		options = append(options, CampaignParticipantAccessOption{Value: value})
+	}
+	if s.authzGateway == nil {
+		return options
+	}
+
+	checks := make([]campaignAuthorizationCheck, 0, len(participantAccessValues))
+	for _, value := range participantAccessValues {
+		checks = append(checks, campaignAuthorizationCheck{
+			CheckID:  value,
+			Action:   campaignAuthzActionManage,
+			Resource: campaignAuthzResourceParticipant,
+			Target: &campaignAuthorizationTarget{
+				ResourceID:              strings.TrimSpace(participantID),
+				TargetParticipantID:     strings.TrimSpace(participantID),
+				TargetCampaignAccess:    strings.TrimSpace(targetAccess),
+				RequestedCampaignAccess: value,
+				ParticipantOperation:    ParticipantGovernanceOperationAccessChange,
+			},
+		})
+	}
+
+	decisions, err := s.authzGateway.BatchCanCampaignAction(ctx, campaignID, checks)
+	if err != nil {
+		return options
+	}
+	allowedByCheckID := map[string]bool{}
+	for idx, decision := range decisions {
+		checkID := strings.TrimSpace(decision.CheckID)
+		if checkID == "" && idx < len(checks) {
+			checkID = strings.TrimSpace(checks[idx].CheckID)
+		}
+		if checkID == "" {
+			continue
+		}
+		if decision.Evaluated && decision.Allowed {
+			allowedByCheckID[checkID] = true
+		}
+	}
+	for idx := range options {
+		options[idx].Allowed = allowedByCheckID[options[idx].Value]
+	}
+	return options
 }

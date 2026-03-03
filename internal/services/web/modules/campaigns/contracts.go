@@ -13,6 +13,8 @@ type (
 	CampaignSummary                            = campaignapp.CampaignSummary
 	CampaignWorkspace                          = campaignapp.CampaignWorkspace
 	CampaignParticipant                        = campaignapp.CampaignParticipant
+	CampaignParticipantAccessOption            = campaignapp.CampaignParticipantAccessOption
+	CampaignParticipantEditor                  = campaignapp.CampaignParticipantEditor
 	CampaignCharacter                          = campaignapp.CampaignCharacter
 	CampaignSession                            = campaignapp.CampaignSession
 	CampaignInvite                             = campaignapp.CampaignInvite
@@ -47,6 +49,7 @@ type (
 	RevokeInviteInput                          = campaignapp.RevokeInviteInput
 	CreateCharacterInput                       = campaignapp.CreateCharacterInput
 	CreateCharacterResult                      = campaignapp.CreateCharacterResult
+	UpdateParticipantInput                     = campaignapp.UpdateParticipantInput
 	CampaignGateway                            = campaignapp.CampaignGateway
 )
 

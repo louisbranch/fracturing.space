@@ -67,6 +67,9 @@ func TestCampaignRouteBuilders(t *testing.T) {
 	if got := AppCampaignParticipants("camp-1"); got != "/app/campaigns/camp-1/participants" {
 		t.Fatalf("AppCampaignParticipants() = %q", got)
 	}
+	if got := AppCampaignParticipantEdit("camp-1", "part-1"); got != "/app/campaigns/camp-1/participants/part-1/edit" {
+		t.Fatalf("AppCampaignParticipantEdit() = %q", got)
+	}
 	if got := AppCampaignCharacters("camp-1"); got != "/app/campaigns/camp-1/characters" {
 		t.Fatalf("AppCampaignCharacters() = %q", got)
 	}
@@ -110,6 +113,9 @@ func TestServeMuxPatternConstants(t *testing.T) {
 	}
 	if AppCampaignParticipantsPattern != "/app/campaigns/{campaignID}/participants" {
 		t.Fatalf("AppCampaignParticipantsPattern = %q", AppCampaignParticipantsPattern)
+	}
+	if AppCampaignParticipantEditPattern != "/app/campaigns/{campaignID}/participants/{participantID}/edit" {
+		t.Fatalf("AppCampaignParticipantEditPattern = %q", AppCampaignParticipantEditPattern)
 	}
 	if AppCampaignCharactersPattern != "/app/campaigns/{campaignID}/characters" {
 		t.Fatalf("AppCampaignCharactersPattern = %q", AppCampaignCharactersPattern)
@@ -189,6 +195,9 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	}
 	if got := AppCampaignGame("camp/1"); got != "/app/campaigns/camp%2F1/game" {
 		t.Fatalf("AppCampaignGame() escaped = %q", got)
+	}
+	if got := AppCampaignParticipantEdit("camp/1", "part/1"); got != "/app/campaigns/camp%2F1/participants/part%2F1/edit" {
+		t.Fatalf("AppCampaignParticipantEdit() escaped = %q", got)
 	}
 	if got := AppCampaignCharacter("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1" {
 		t.Fatalf("AppCampaignCharacter() escaped = %q", got)

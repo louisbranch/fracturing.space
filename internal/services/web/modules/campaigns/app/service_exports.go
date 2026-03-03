@@ -31,6 +31,11 @@ func (s service) CampaignParticipants(ctx context.Context, campaignID string) ([
 	return s.campaignParticipants(ctx, campaignID)
 }
 
+// CampaignParticipantEditor centralizes this web behavior in one helper seam.
+func (s service) CampaignParticipantEditor(ctx context.Context, campaignID string, participantID string) (CampaignParticipantEditor, error) {
+	return s.campaignParticipantEditor(ctx, campaignID, participantID)
+}
+
 // CampaignCharacters centralizes this web behavior in one helper seam.
 func (s service) CampaignCharacters(ctx context.Context, campaignID string) ([]CampaignCharacter, error) {
 	return s.campaignCharacters(ctx, campaignID)
@@ -59,6 +64,11 @@ func (s service) EndSession(ctx context.Context, campaignID string, input EndSes
 // CreateCharacter executes package-scoped creation behavior for this flow.
 func (s service) CreateCharacter(ctx context.Context, campaignID string, input CreateCharacterInput) (CreateCharacterResult, error) {
 	return s.createCharacter(ctx, campaignID, input)
+}
+
+// UpdateParticipant applies this package workflow transition.
+func (s service) UpdateParticipant(ctx context.Context, campaignID string, input UpdateParticipantInput) error {
+	return s.updateParticipant(ctx, campaignID, input)
 }
 
 // CreateInvite executes package-scoped creation behavior for this flow.

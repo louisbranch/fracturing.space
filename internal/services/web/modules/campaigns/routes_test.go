@@ -117,9 +117,11 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		mux,
 		newHandlers(
 			newService(fakeGateway{
-				items:    []CampaignSummary{{ID: "c1", Name: "Campaign"}},
-				sessions: []CampaignSession{{ID: "sess-1", Name: "Session One"}},
-				invites:  []CampaignInvite{{ID: "inv-1", ParticipantID: "p-1", RecipientUserID: "user-123", Status: "Pending"}},
+				items:        []CampaignSummary{{ID: "c1", Name: "Campaign"}},
+				participants: []CampaignParticipant{{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"}},
+				participant:  CampaignParticipant{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},
+				sessions:     []CampaignSession{{ID: "sess-1", Name: "Session One"}},
+				invites:      []CampaignInvite{{ID: "inv-1", ParticipantID: "p-1", RecipientUserID: "user-123", Status: "Pending"}},
 				characterCreationProgress: CampaignCharacterCreationProgress{
 					Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 					NextStep: 1,
@@ -139,12 +141,14 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 	}{
 		{name: "overview", method: http.MethodGet, path: routepath.AppCampaign("c1"), wantStatus: http.StatusOK},
 		{name: "participants", method: http.MethodGet, path: routepath.AppCampaignParticipants("c1"), wantStatus: http.StatusOK},
+		{name: "participant edit", method: http.MethodGet, path: routepath.AppCampaignParticipantEdit("c1", "p-1"), wantStatus: http.StatusOK},
 		{name: "characters", method: http.MethodGet, path: routepath.AppCampaignCharacters("c1"), wantStatus: http.StatusOK},
 		{name: "character detail", method: http.MethodGet, path: routepath.AppCampaignCharacter("c1", "char-1"), wantStatus: http.StatusOK},
 		{name: "sessions", method: http.MethodGet, path: routepath.AppCampaignSessions("c1"), wantStatus: http.StatusOK},
 		{name: "session detail", method: http.MethodGet, path: routepath.AppCampaignSession("c1", "sess-1"), wantStatus: http.StatusOK},
 		{name: "invites", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusOK},
 		{name: "game", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusOK},
+		{name: "participant update", method: http.MethodPost, path: routepath.AppCampaignParticipantEdit("c1", "p-1"), body: "name=Owner&role=gm&pronouns=they%2Fthem", wantStatus: http.StatusFound},
 		{name: "session start", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+Two", wantStatus: http.StatusFound},
 		{name: "session end", method: http.MethodPost, path: routepath.AppCampaignSessionEnd("c1"), body: "session_id=sess-1", wantStatus: http.StatusFound},
 		{name: "invite create", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), body: "participant_id=p-1&recipient_user_id=user-123", wantStatus: http.StatusFound},

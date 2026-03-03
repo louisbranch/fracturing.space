@@ -24,6 +24,9 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 			_, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 			return err
 		}},
+		{name: "update participant", run: func() error {
+			return svc.updateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player One", Role: "player"})
+		}},
 		{name: "create invite", run: func() error {
 			return svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"})
 		}},
@@ -62,6 +65,15 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	if _, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
 		t.Fatalf("createCharacter() error = %v", err)
 	}
+	gateway.campaignParticipant = CampaignParticipant{
+		ID:             "p-1",
+		Name:           "Player One",
+		Role:           "Player",
+		CampaignAccess: "Member",
+	}
+	if err := svc.updateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player Prime", Role: "gm"}); err != nil {
+		t.Fatalf("UpdateParticipant() error = %v", err)
+	}
 	if err := svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"}); err != nil {
 		t.Fatalf("CreateInvite() error = %v", err)
 	}
@@ -69,7 +81,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 		t.Fatalf("RevokeInvite() error = %v", err)
 	}
 
-	want := []string{"start", "end", "create-character", "create-invite", "revoke-invite"}
+	want := []string{"start", "end", "create-character", "update-participant", "create-invite", "revoke-invite"}
 	if len(gateway.calls) != len(want) {
 		t.Fatalf("len(calls) = %d, want %d (%v)", len(gateway.calls), len(want), gateway.calls)
 	}
@@ -249,6 +261,19 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 			wantAction:   campaignAuthzActionManage,
 			wantResource: campaignAuthzResourceInvite,
 		},
+		{
+			name: "update participant",
+			run: func(s service) error {
+				return s.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{
+					ParticipantID: "p-1",
+					Name:          "Player Prime",
+					Role:          "gm",
+					Pronouns:      "they/them",
+				})
+			},
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceParticipant,
+		},
 	}
 
 	for _, tc := range tests {
@@ -257,6 +282,12 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 			t.Parallel()
 			gateway := &campaignGatewayStub{
 				authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+				campaignParticipant: CampaignParticipant{
+					ID:             "p-1",
+					Name:           "Player One",
+					Role:           "Player",
+					CampaignAccess: "Member",
+				},
 			}
 			svc := newService(gateway)
 			if err := tc.run(svc); err != nil {
@@ -301,6 +332,94 @@ func TestCreateCharacterValidatesRequiredFields(t *testing.T) {
 	}
 	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindUnspecified}); err == nil {
 		t.Fatalf("expected validation error for unspecified kind")
+	}
+}
+
+func TestUpdateParticipantDelegatesToGateway(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-1",
+			Name:           "Player One",
+			Role:           "Player",
+			CampaignAccess: "Member",
+			Pronouns:       "they/them",
+		},
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+	}
+	svc := newService(gateway)
+
+	err := svc.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{
+		ParticipantID:  "p-1",
+		Name:           "Player Prime",
+		Role:           "gm",
+		Pronouns:       "she/her",
+		CampaignAccess: "manager",
+	})
+	if err != nil {
+		t.Fatalf("updateParticipant() error = %v", err)
+	}
+	if len(gateway.calls) != 1 || gateway.calls[0] != "update-participant" {
+		t.Fatalf("mutation gateway calls = %v, want [update-participant]", gateway.calls)
+	}
+	if gateway.lastUpdateParticipantInput.Role != "gm" {
+		t.Fatalf("updated role = %q, want %q", gateway.lastUpdateParticipantInput.Role, "gm")
+	}
+	if gateway.lastUpdateParticipantInput.CampaignAccess != "manager" {
+		t.Fatalf("updated access = %q, want %q", gateway.lastUpdateParticipantInput.CampaignAccess, "manager")
+	}
+}
+
+func TestUpdateParticipantValidatesRoleAndAccess(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-1",
+			Name:           "Player One",
+			Role:           "Player",
+			CampaignAccess: "Member",
+		},
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+	}
+	svc := newService(gateway)
+
+	if err := svc.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player One", Role: "invalid"}); err == nil {
+		t.Fatalf("expected role validation error")
+	}
+	if err := svc.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player One", Role: "player", CampaignAccess: "invalid"}); err == nil {
+		t.Fatalf("expected access validation error")
+	}
+}
+
+func TestUpdateParticipantRequiresMeaningfulChange(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-1",
+			Name:           "Player One",
+			Role:           "Player",
+			CampaignAccess: "Member",
+			Pronouns:       "they/them",
+		},
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+	}
+	svc := newService(gateway)
+
+	err := svc.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{
+		ParticipantID:  "p-1",
+		Name:           "Player One",
+		Role:           "player",
+		Pronouns:       "they/them",
+		CampaignAccess: "member",
+	})
+	if err == nil {
+		t.Fatalf("expected at least-one-field error")
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.at_least_one_participant_field_is_required" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.at_least_one_participant_field_is_required")
 	}
 }
 
