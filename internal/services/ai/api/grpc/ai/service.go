@@ -5,9 +5,11 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 )
 
 const (
@@ -101,15 +103,19 @@ type Service struct {
 	connectSessionStore        storage.ProviderConnectSessionStore
 	accessRequestStore         storage.AccessRequestStore
 	auditEventStore            storage.AuditEventStore
+	campaignTurnStore          storage.CampaignTurnStore
+	gameCampaignAIClient       gamev1.CampaignAIServiceClient
 	providerOAuthAdapters      map[providergrant.Provider]ProviderOAuthAdapter
 	providerInvocationAdapters map[providergrant.Provider]ProviderInvocationAdapter
 	sealer                     SecretSealer
+	sessionGrantConfig         aisessiongrant.Config
 
 	clock       func() time.Time
 	idGenerator func() (string, error)
 	// codeVerifierGenerator is injectable for tests; production uses
 	// cryptographic randomness for PKCE verifier generation.
-	codeVerifierGenerator func() (string, error)
+	codeVerifierGenerator  func() (string, error)
+	campaignAuthStateCache *campaignAIAuthStateCache
 }
 
 // NewService builds a new ai.v1 service implementation.
@@ -153,6 +159,15 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 			auditEventStore = store
 		}
 	}
+	var campaignTurnStore storage.CampaignTurnStore
+	if store, ok := credentialStore.(storage.CampaignTurnStore); ok {
+		campaignTurnStore = store
+	}
+	if campaignTurnStore == nil {
+		if store, ok := agentStore.(storage.CampaignTurnStore); ok {
+			campaignTurnStore = store
+		}
+	}
 	return &Service{
 		credentialStore:     credentialStore,
 		agentStore:          agentStore,
@@ -160,6 +175,7 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 		connectSessionStore: connectSessionStore,
 		accessRequestStore:  accessRequestStore,
 		auditEventStore:     auditEventStore,
+		campaignTurnStore:   campaignTurnStore,
 		providerOAuthAdapters: map[providergrant.Provider]ProviderOAuthAdapter{
 			providergrant.ProviderOpenAI: &defaultOpenAIOAuthAdapter{},
 		},
@@ -172,7 +188,24 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 		codeVerifierGenerator: func() (string, error) {
 			return generatePKCECodeVerifier()
 		},
+		campaignAuthStateCache: newCampaignAIAuthStateCache(),
 	}
+}
+
+// SetGameCampaignAIClient sets the game internal campaign AI client.
+func (s *Service) SetGameCampaignAIClient(client gamev1.CampaignAIServiceClient) {
+	if s == nil {
+		return
+	}
+	s.gameCampaignAIClient = client
+}
+
+// SetSessionGrantConfig sets the AI session grant validation config.
+func (s *Service) SetSessionGrantConfig(cfg aisessiongrant.Config) {
+	if s == nil {
+		return
+	}
+	s.sessionGrantConfig = cfg
 }
 
 // SetOpenAIOAuthAdapter overrides the OpenAI OAuth adapter implementation.

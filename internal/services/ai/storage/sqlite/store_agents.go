@@ -26,6 +26,9 @@ func (s *Store) PutAgent(ctx context.Context, record storage.AgentRecord) error 
 	if strings.TrimSpace(record.Name) == "" {
 		return fmt.Errorf("name is required")
 	}
+	if strings.TrimSpace(record.Handle) == "" {
+		return fmt.Errorf("handle is required")
+	}
 	if strings.TrimSpace(record.Provider) == "" {
 		return fmt.Errorf("provider is required")
 	}
@@ -47,11 +50,12 @@ func (s *Store) PutAgent(ctx context.Context, record storage.AgentRecord) error 
 
 	_, err := s.sqlDB.ExecContext(ctx, `
 INSERT INTO ai_agents (
-	id, owner_user_id, name, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	id, owner_user_id, name, handle, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
 	owner_user_id = excluded.owner_user_id,
 	name = excluded.name,
+	handle = excluded.handle,
 	provider = excluded.provider,
 	model = excluded.model,
 	credential_id = excluded.credential_id,
@@ -62,6 +66,7 @@ ON CONFLICT(id) DO UPDATE SET
 		record.ID,
 		record.OwnerUserID,
 		record.Name,
+		record.Handle,
 		record.Provider,
 		record.Model,
 		record.CredentialID,
@@ -90,7 +95,7 @@ func (s *Store) GetAgent(ctx context.Context, agentID string) (storage.AgentReco
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
-SELECT id, owner_user_id, name, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
+SELECT id, owner_user_id, name, handle, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
 FROM ai_agents
 WHERE id = ?
 `, agentID)
@@ -102,6 +107,7 @@ WHERE id = ?
 		&rec.ID,
 		&rec.OwnerUserID,
 		&rec.Name,
+		&rec.Handle,
 		&rec.Provider,
 		&rec.Model,
 		&rec.CredentialID,
@@ -143,7 +149,7 @@ func (s *Store) ListAgentsByOwner(ctx context.Context, ownerUserID string, pageS
 	)
 	if strings.TrimSpace(pageToken) == "" {
 		rows, err = s.sqlDB.QueryContext(ctx, `
-SELECT id, owner_user_id, name, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
+SELECT id, owner_user_id, name, handle, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
 FROM ai_agents
 WHERE owner_user_id = ?
 ORDER BY id
@@ -151,7 +157,7 @@ LIMIT ?
 `, ownerUserID, limit)
 	} else {
 		rows, err = s.sqlDB.QueryContext(ctx, `
-SELECT id, owner_user_id, name, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
+SELECT id, owner_user_id, name, handle, provider, model, credential_id, provider_grant_id, status, created_at, updated_at
 FROM ai_agents
 WHERE owner_user_id = ? AND id > ?
 ORDER BY id
@@ -172,6 +178,7 @@ LIMIT ?
 			&rec.ID,
 			&rec.OwnerUserID,
 			&rec.Name,
+			&rec.Handle,
 			&rec.Provider,
 			&rec.Model,
 			&rec.CredentialID,

@@ -11,11 +11,14 @@ import (
 	"sync"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	gogrpc "google.golang.org/grpc"
 )
 
@@ -49,6 +52,7 @@ type Config struct {
 	HTTPAddr            string
 	AuthAddr            string
 	GameAddr            string
+	AIAddr              string
 	AuthBaseURL         string
 	OAuthResourceSecret string
 	GRPCDialTimeout     time.Duration
@@ -66,8 +70,11 @@ type Server struct {
 	httpServer                     *http.Server
 	gameConn                       *gogrpc.ClientConn
 	authConn                       *gogrpc.ClientConn
+	aiConn                         *gogrpc.ClientConn
 	campaignUpdateSubscriptionDone chan struct{}
 	campaignUpdateSubscriptionStop context.CancelFunc
+	aiTurnSubscriptionDone         chan struct{}
+	aiTurnSubscriptionStop         context.CancelFunc
 }
 
 type wsFrame struct {
@@ -90,7 +97,13 @@ type wsError struct {
 type gameGRPCClients struct {
 	conn              *gogrpc.ClientConn
 	participantClient statev1.ParticipantServiceClient
+	campaignAIClient  statev1.CampaignAIServiceClient
 	eventClient       statev1.EventServiceClient
+}
+
+type aiGRPCClients struct {
+	conn             *gogrpc.ClientConn
+	invocationClient aiv1.InvocationServiceClient
 }
 
 type webSessionAuthClient interface {
@@ -172,6 +185,8 @@ type joinWelcome struct {
 	CampaignName    string
 	SessionID       string
 	SessionName     string
+	GmMode          string
+	AIAgentID       string
 	Locale          commonv1.Locale
 }
 
@@ -220,9 +235,12 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	var participantClient statev1.ParticipantServiceClient
 	var sessionClient statev1.SessionServiceClient
 	var campaignClient statev1.CampaignServiceClient
+	var campaignAIClient statev1.CampaignAIServiceClient
 	var eventClient statev1.EventServiceClient
 	var authConn *gogrpc.ClientConn
 	var authSessionClient webSessionAuthClient
+	var aiConn *gogrpc.ClientConn
+	var aiInvocationClient aiv1.InvocationServiceClient
 	if strings.TrimSpace(config.GameAddr) != "" {
 		clients, err := dialGameGRPC(ctx, config)
 		if err != nil {
@@ -232,7 +250,17 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 			participantClient = clients.participantClient
 			sessionClient = statev1.NewSessionServiceClient(clients.conn)
 			campaignClient = statev1.NewCampaignServiceClient(clients.conn)
+			campaignAIClient = clients.campaignAIClient
 			eventClient = clients.eventClient
+		}
+	}
+	if strings.TrimSpace(config.AIAddr) != "" {
+		clients, err := dialAIGRPC(ctx, config)
+		if err != nil {
+			log.Printf("ai gRPC dial failed, campaign ai relay unavailable: %v", err)
+		} else {
+			aiConn = clients.conn
+			aiInvocationClient = clients.invocationClient
 		}
 	}
 	if authAddr := strings.TrimSpace(config.AuthAddr); authAddr != "" {
@@ -256,10 +284,52 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	}
 
 	authorizer := newCampaignAuthorizer(config, participantClient, sessionClient, campaignClient, authSessionClient)
-	ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription, campaignUpdateStop, campaignUpdateDone := startCampaignEventCommittedSubscriptionWorker(eventClient)
+	roomHub := newRoomHub()
+	issueAISessionGrant := func(callCtx context.Context, room *campaignRoom, userID string) error {
+		return issueAISessionGrantForRoom(callCtx, campaignAIClient, room, userID)
+	}
+	var ensureAITurnSubscription func(string, string, string)
+	onCampaignEvent := func(campaignID string, eventType string) {
+		if !isAICampaignContextEvent(eventType) {
+			return
+		}
+		room := roomHub.roomIfExists(campaignID)
+		if room == nil {
+			return
+		}
+		if err := syncRoomAIContextFromGame(context.Background(), campaignAIClient, room); err != nil {
+			log.Printf("chat: sync ai room context failed campaign=%q event=%q err=%v", campaignID, eventType, err)
+			room.clearAISessionGrant()
+			return
+		}
+		if !room.aiRelayEnabled() {
+			room.clearAISessionGrant()
+			return
+		}
+		if err := issueAISessionGrantForRoom(context.Background(), campaignAIClient, room, ""); err != nil {
+			log.Printf("chat: refresh ai session grant failed campaign=%q event=%q err=%v", campaignID, eventType, err)
+			room.clearAISessionGrant()
+			return
+		}
+		if ensureAITurnSubscription != nil {
+			ensureAITurnSubscription(campaignID, room.currentSessionID(), room.aiAgentIDValue())
+		}
+	}
+	ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription, campaignUpdateStop, campaignUpdateDone := startCampaignEventCommittedSubscriptionWorker(eventClient, onCampaignEvent)
+	ensureAITurnSubscription, releaseAITurnSubscription, aiTurnStop, aiTurnDone := startCampaignAITurnSubscriptionWorker(aiInvocationClient, roomHub)
 	httpServer := &http.Server{
-		Addr:              httpAddr,
-		Handler:           newHandler(authorizer, true, ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription),
+		Addr: httpAddr,
+		Handler: newHandler(
+			authorizer,
+			true,
+			roomHub,
+			ensureCampaignUpdateSubscription,
+			releaseCampaignUpdateSubscription,
+			ensureAITurnSubscription,
+			releaseAITurnSubscription,
+			issueAISessionGrant,
+			aiInvocationClient,
+		),
 		ReadHeaderTimeout: config.ReadHeaderTimeout,
 	}
 
@@ -269,8 +339,11 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		httpServer:                     httpServer,
 		gameConn:                       gameConn,
 		authConn:                       authConn,
+		aiConn:                         aiConn,
 		campaignUpdateSubscriptionDone: campaignUpdateDone,
 		campaignUpdateSubscriptionStop: campaignUpdateStop,
+		aiTurnSubscriptionDone:         aiTurnDone,
+		aiTurnSubscriptionStop:         aiTurnStop,
 	}, nil
 }
 
@@ -333,6 +406,12 @@ func (s *Server) Close() {
 	if s.campaignUpdateSubscriptionDone != nil {
 		<-s.campaignUpdateSubscriptionDone
 	}
+	if s.aiTurnSubscriptionStop != nil {
+		s.aiTurnSubscriptionStop()
+	}
+	if s.aiTurnSubscriptionDone != nil {
+		<-s.aiTurnSubscriptionDone
+	}
 	if s.gameConn != nil {
 		if err := s.gameConn.Close(); err != nil {
 			log.Printf("close game gRPC connection: %v", err)
@@ -341,6 +420,11 @@ func (s *Server) Close() {
 	if s.authConn != nil {
 		if err := s.authConn.Close(); err != nil {
 			log.Printf("close auth gRPC connection: %v", err)
+		}
+	}
+	if s.aiConn != nil {
+		if err := s.aiConn.Close(); err != nil {
+			log.Printf("close ai gRPC connection: %v", err)
 		}
 	}
 }
@@ -367,7 +451,11 @@ func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 		gameAddr,
 		config.GRPCDialTimeout,
 		logf,
-		platformgrpc.DefaultClientDialOptions()...,
+		append(
+			platformgrpc.DefaultClientDialOptions(),
+			gogrpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(discovery.ServiceChat)),
+			gogrpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(discovery.ServiceChat)),
+		)...,
 	)
 	if err != nil {
 		return gameGRPCClients{}, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
@@ -375,6 +463,40 @@ func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 	return gameGRPCClients{
 		conn:              conn,
 		participantClient: statev1.NewParticipantServiceClient(conn),
+		campaignAIClient:  statev1.NewCampaignAIServiceClient(conn),
 		eventClient:       statev1.NewEventServiceClient(conn),
+	}, nil
+}
+
+func dialAIGRPC(ctx context.Context, config Config) (aiGRPCClients, error) {
+	aiAddr := strings.TrimSpace(config.AIAddr)
+	if aiAddr == "" {
+		return aiGRPCClients{}, nil
+	}
+	if ctx == nil {
+		return aiGRPCClients{}, errors.New("context is required")
+	}
+	if config.GRPCDialTimeout <= 0 {
+		config.GRPCDialTimeout = timeouts.GRPCDial
+	}
+
+	logf := func(format string, args ...any) {
+		log.Printf("ai %s", fmt.Sprintf(format, args...))
+	}
+
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		aiAddr,
+		config.GRPCDialTimeout,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, err)
+	}
+	return aiGRPCClients{
+		conn:             conn,
+		invocationClient: aiv1.NewInvocationServiceClient(conn),
 	}, nil
 }

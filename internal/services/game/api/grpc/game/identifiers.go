@@ -11,6 +11,9 @@ const (
 	commandTypeActionOutcomeReject            command.Type = commandids.ActionOutcomeReject
 	commandTypeActionRollResolve              command.Type = commandids.ActionRollResolve
 	commandTypeCampaignArchive                command.Type = commandids.CampaignArchive
+	commandTypeCampaignAIBind                 command.Type = commandids.CampaignAIBind
+	commandTypeCampaignAIUnbind               command.Type = commandids.CampaignAIUnbind
+	commandTypeCampaignAIAuthRotate           command.Type = commandids.CampaignAIAuthRotate
 	commandTypeCampaignCreate                 command.Type = commandids.CampaignCreate
 	commandTypeCampaignEnd                    command.Type = commandids.CampaignEnd
 	commandTypeCampaignFork                   command.Type = commandids.CampaignFork
@@ -45,6 +48,9 @@ const (
 	eventTypeActionOutcomeRejected            event.Type = "action.outcome_rejected"
 	eventTypeActionRollResolved               event.Type = "action.roll_resolved"
 	eventTypeCampaignCreated                  event.Type = "campaign.created"
+	eventTypeCampaignAIBound                  event.Type = "campaign.ai_bound"
+	eventTypeCampaignAIUnbound                event.Type = "campaign.ai_unbound"
+	eventTypeCampaignAIAuthRotated            event.Type = "campaign.ai_auth_rotated"
 	eventTypeCampaignForked                   event.Type = "campaign.forked"
 	eventTypeCharacterCreated                 event.Type = "character.created"
 	eventTypeCharacterDeleted                 event.Type = "character.deleted"

@@ -161,6 +161,8 @@ func (a *campaignAuthorizer) ResolveJoinWelcome(ctx context.Context, campaignID 
 	}
 
 	campaignName := campaignID
+	gmMode := ""
+	aiAgentID := ""
 	locale := commonv1.Locale_LOCALE_EN_US
 	if a.campaignClient != nil {
 		callCtx, cancel := context.WithTimeout(grpcauthctx.WithUserID(ctx, userID), 3*time.Second)
@@ -173,6 +175,8 @@ func (a *campaignAuthorizer) ResolveJoinWelcome(ctx context.Context, campaignID 
 			if name := strings.TrimSpace(campaign.GetName()); name != "" {
 				campaignName = name
 			}
+			gmMode = campaign.GetGmMode().String()
+			aiAgentID = strings.TrimSpace(campaign.GetAiAgentId())
 			if campaign.GetLocale() != commonv1.Locale_LOCALE_UNSPECIFIED {
 				locale = campaign.GetLocale()
 			}
@@ -194,6 +198,8 @@ func (a *campaignAuthorizer) ResolveJoinWelcome(ctx context.Context, campaignID 
 		CampaignName:    campaignName,
 		SessionID:       sessionID,
 		SessionName:     sessionName,
+		GmMode:          gmMode,
+		AIAgentID:       aiAgentID,
 		Locale:          locale,
 	}, nil
 }

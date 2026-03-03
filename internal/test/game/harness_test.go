@@ -33,6 +33,13 @@ var (
 	joinGrantPublicKey  ed25519.PublicKey
 )
 
+const (
+	testAISessionGrantIssuer   = "fracturing-space-game"
+	testAISessionGrantAudience = "fracturing-space-ai"
+	testAISessionGrantTTL      = "10m"
+	testAISessionGrantHMACKey  = "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY"
+)
+
 func scenarioTimeout() time.Duration {
 	return 10 * time.Second
 }
@@ -44,6 +51,7 @@ func startGRPCServer(t *testing.T) (string, string, func()) {
 	seedScenarioContent(t)
 	setTempAuthDBPath(t)
 	setJoinGrantEnv(t)
+	setAISessionGrantEnv(t)
 	authAddr, stopAuth := startAuthServer(t)
 	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", authAddr)
 
@@ -94,6 +102,14 @@ func setJoinGrantEnv(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_AUDIENCE", joinGrantAudience)
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PUBLIC_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPublicKey))
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY", base64.RawStdEncoding.EncodeToString(joinGrantPrivateKey))
+}
+
+func setAISessionGrantEnv(t *testing.T) {
+	t.Helper()
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER", testAISessionGrantIssuer)
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE", testAISessionGrantAudience)
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY", testAISessionGrantHMACKey)
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_TTL", testAISessionGrantTTL)
 }
 
 func startAuthServer(t *testing.T) (string, func()) {

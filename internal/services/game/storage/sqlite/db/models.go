@@ -45,6 +45,8 @@ type Campaign struct {
 	ArchivedAt       sql.NullInt64  `json:"archived_at"`
 	CoverAssetID     string         `json:"cover_asset_id"`
 	CoverSetID       string         `json:"cover_set_id"`
+	AiAgentID        string         `json:"ai_agent_id"`
+	AiAuthEpoch      int64          `json:"ai_auth_epoch"`
 }
 
 type CampaignActiveSession struct {
@@ -160,13 +162,13 @@ type DaggerheartCharacterProfile struct {
 	AncestryID            string `json:"ancestry_id"`
 	CommunityID           string `json:"community_id"`
 	TraitsAssigned        int64  `json:"traits_assigned"`
-	Background            string `json:"background"`
-	DomainCardIdsJson     string `json:"domain_card_ids_json"`
-	Connections           string `json:"connections"`
 	DetailsRecorded       int64  `json:"details_recorded"`
 	StartingWeaponIdsJson string `json:"starting_weapon_ids_json"`
 	StartingArmorID       string `json:"starting_armor_id"`
 	StartingPotionItemID  string `json:"starting_potion_item_id"`
+	Background            string `json:"background"`
+	DomainCardIdsJson     string `json:"domain_card_ids_json"`
+	Connections           string `json:"connections"`
 }
 
 type DaggerheartCharacterState struct {

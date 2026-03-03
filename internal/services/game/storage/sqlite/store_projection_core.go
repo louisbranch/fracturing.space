@@ -41,6 +41,8 @@ func (s *Store) Put(ctx context.Context, c storage.CampaignRecord) error {
 		ThemePrompt:      c.ThemePrompt,
 		CoverAssetID:     c.CoverAssetID,
 		CoverSetID:       c.CoverSetID,
+		AiAgentID:        c.AIAgentID,
+		AiAuthEpoch:      int64(c.AIAuthEpoch),
 		CreatedAt:        toMillis(c.CreatedAt),
 		UpdatedAt:        toMillis(c.UpdatedAt),
 		CompletedAt:      completedAt,
@@ -125,4 +127,28 @@ func (s *Store) List(ctx context.Context, pageSize int, pageToken string) (stora
 	}
 
 	return page, nil
+}
+
+// ListCampaignIDsByAIAgent returns campaign IDs bound to one AI agent.
+func (s *Store) ListCampaignIDsByAIAgent(ctx context.Context, aiAgentID string) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	aiAgentID = strings.TrimSpace(aiAgentID)
+	if aiAgentID == "" {
+		return nil, fmt.Errorf("ai agent id is required")
+	}
+
+	rows, err := s.q.ListCampaignIDsByAIAgent(ctx, aiAgentID)
+	if err != nil {
+		return nil, fmt.Errorf("list campaign ids by ai agent: %w", err)
+	}
+	campaignIDs := make([]string, 0, len(rows))
+	for _, campaignID := range rows {
+		campaignIDs = append(campaignIDs, campaignID)
+	}
+	return campaignIDs, nil
 }

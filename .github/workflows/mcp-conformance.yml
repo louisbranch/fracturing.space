@@ -34,27 +34,52 @@ jobs:
           GOFLAGS: "-tags=conformance"
           FRACTURING_SPACE_GAME_EVENT_HMAC_KEY: "test-key"
           FRACTURING_SPACE_AUTH_ADDR: "127.0.0.1:8083"
+          FRACTURING_SPACE_SOCIAL_ADDR: "127.0.0.1:65535"
+          FRACTURING_SPACE_AI_ADDR: "127.0.0.1:65534"
+          FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER: "fracturing-space-game"
+          FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE: "fracturing-space-ai"
+          FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY"
+          FRACTURING_SPACE_AI_SESSION_GRANT_TTL: "10m"
         run: |
-          ./bin/auth -port=8083 &
+          set -euo pipefail
+          GAME_ADDR=127.0.0.1:18080
+          MCP_HTTP_ADDR=127.0.0.1:13001
+
+          dump_logs() {
+            for log in .tmp/auth.log .tmp/game.log .tmp/mcp.log; do
+              echo "--- ${log} (tail) ---"
+              tail -n 120 "${log}" 2>/dev/null || true
+            done
+          }
+
+          mkdir -p .tmp
+          ./bin/auth -port=8083 -http-addr=127.0.0.1:18084 >.tmp/auth.log 2>&1 &
           AUTH_PID=$!
-          ./bin/game -addr=127.0.0.1:8080 &
+          AUTH_PID="$AUTH_PID" timeout 60 bash -c 'until (echo > /dev/tcp/127.0.0.1/8083) >/dev/null 2>&1; do if ! kill -0 "$AUTH_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done' || { dump_logs; exit 1; }
+
+          ./bin/game -addr="$GAME_ADDR" >.tmp/game.log 2>&1 &
           GAME_PID=$!
-          GAME_PID="$GAME_PID" timeout 60 bash -c 'until (echo > /dev/tcp/127.0.0.1/8080) >/dev/null 2>&1; do if ! kill -0 "$GAME_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done'
-          ./bin/mcp -transport=http -http-addr=127.0.0.1:3001 -addr=127.0.0.1:8080 &
+          GAME_PID="$GAME_PID" timeout 90 bash -c 'until grep -q "game server listening at" .tmp/game.log 2>/dev/null; do if ! kill -0 "$GAME_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done' || { dump_logs; exit 1; }
+          GAME_PID="$GAME_PID" GAME_ADDR="$GAME_ADDR" timeout 60 bash -c 'until (echo > /dev/tcp/${GAME_ADDR%:*}/${GAME_ADDR##*:}) >/dev/null 2>&1; do if ! kill -0 "$GAME_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done' || { dump_logs; exit 1; }
+
+          ./bin/mcp -transport=http -http-addr="$MCP_HTTP_ADDR" -addr="$GAME_ADDR" >.tmp/mcp.log 2>&1 &
           MCP_PID=$!
-          GAME_PID="$GAME_PID" MCP_PID="$MCP_PID" timeout 60 bash -c 'until curl -fsS http://127.0.0.1:3001/mcp/health >/dev/null; do if ! kill -0 "$GAME_PID" 2>/dev/null; then exit 1; fi; if ! kill -0 "$MCP_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done'
+          GAME_PID="$GAME_PID" MCP_PID="$MCP_PID" MCP_HTTP_ADDR="$MCP_HTTP_ADDR" timeout 90 bash -c 'until curl -fsS http://${MCP_HTTP_ADDR}/mcp/health >/dev/null; do if ! kill -0 "$GAME_PID" 2>/dev/null; then exit 1; fi; if ! kill -0 "$MCP_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done' || { dump_logs; exit 1; }
 
       - name: Run conformance
         uses: modelcontextprotocol/conformance@v0.1.11
         with:
           mode: server
-          url: http://127.0.0.1:3001/mcp
+          url: http://127.0.0.1:13001/mcp
           verbose: true
           expected-failures: ./conformance-baseline.yml
 
       - name: Stop MCP endpoint
         if: always()
         run: |
+          tail -n 120 .tmp/auth.log 2>/dev/null || true
+          tail -n 120 .tmp/game.log 2>/dev/null || true
+          tail -n 120 .tmp/mcp.log 2>/dev/null || true
           pkill -f "./bin/mcp" 2>/dev/null || true
           pkill -f "./bin/game" 2>/dev/null || true
           pkill -f "./bin/auth" 2>/dev/null || true

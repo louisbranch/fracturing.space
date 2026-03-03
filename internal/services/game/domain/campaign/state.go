@@ -21,4 +21,8 @@ type State struct {
 	CoverAssetID string
 	// CoverSetID stores the selected built-in campaign cover set identifier.
 	CoverSetID string
+	// AIAgentID stores the bound AI service opaque agent identifier.
+	AIAgentID string
+	// AIAuthEpoch stores the current AI authorization epoch for session grants.
+	AIAuthEpoch uint64
 }

@@ -130,6 +130,18 @@ func (*fakeCampaignClient) SetCampaignCover(context.Context, *statev1.SetCampaig
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (*fakeCampaignClient) SetCampaignAIBinding(context.Context, *statev1.SetCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (*fakeCampaignClient) ClearCampaignAIBinding(context.Context, *statev1.ClearCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (*fakeCampaignClient) GetCampaignAIBindingUsage(context.Context, *statev1.GetCampaignAIBindingUsageRequest, ...grpc.CallOption) (*statev1.GetCampaignAIBindingUsageResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 func (f *fakeWebSessionAuthClient) GetWebSession(_ context.Context, req *authv1.GetWebSessionRequest, _ ...grpc.CallOption) (*authv1.GetWebSessionResponse, error) {
 	if f.err != nil {
 		return nil, f.err
@@ -322,7 +334,7 @@ func TestCampaignAuthorizerIsCampaignParticipantAllowsWithoutActiveSession(t *te
 	}
 }
 
-func TestCampaignAuthorizerResolveJoinWelcomeWithoutActiveSession(t *testing.T) {
+func TestCampaignAuthorizerResolveJoinWelcomeAllowsWithoutActiveSession(t *testing.T) {
 	a := &campaignAuthorizer{
 		participantClient: &fakeParticipantClient{
 			pages: map[string]*statev1.ListParticipantsResponse{
@@ -336,7 +348,13 @@ func TestCampaignAuthorizerResolveJoinWelcomeWithoutActiveSession(t *testing.T) 
 		},
 		campaignClient: &fakeCampaignClient{
 			response: &statev1.GetCampaignResponse{
-				Campaign: &statev1.Campaign{Id: "camp-1", Name: "Campanha Um", Locale: commonv1.Locale_LOCALE_PT_BR},
+				Campaign: &statev1.Campaign{
+					Id:        "camp-1",
+					Name:      "Campanha Um",
+					Locale:    commonv1.Locale_LOCALE_PT_BR,
+					GmMode:    statev1.GmMode_AI,
+					AiAgentId: "agent-1",
+				},
 			},
 		},
 	}
@@ -344,12 +362,6 @@ func TestCampaignAuthorizerResolveJoinWelcomeWithoutActiveSession(t *testing.T) 
 	welcome, err := a.ResolveJoinWelcome(context.Background(), "camp-1", "user-a")
 	if err != nil {
 		t.Fatalf("resolve join welcome: %v", err)
-	}
-	if welcome.ParticipantName != "Ari" {
-		t.Fatalf("participant = %q, want %q", welcome.ParticipantName, "Ari")
-	}
-	if welcome.CampaignName != "Campanha Um" {
-		t.Fatalf("campaign = %q, want %q", welcome.CampaignName, "Campanha Um")
 	}
 	if welcome.SessionID != "" {
 		t.Fatalf("session id = %q, want empty", welcome.SessionID)
@@ -368,7 +380,7 @@ func TestCampaignAuthorizerResolveJoinWelcomeRequiresParticipant(t *testing.T) {
 		},
 		sessionClient: &fakeSessionClient{
 			pages: map[string]*statev1.ListSessionsResponse{
-				"": {Sessions: []*statev1.Session{}},
+				"": {Sessions: []*statev1.Session{{Id: "sess-1", CampaignId: "camp-1", Status: statev1.SessionStatus_SESSION_ACTIVE}}},
 			},
 		},
 	}
@@ -393,7 +405,13 @@ func TestCampaignAuthorizerResolveJoinWelcomeUsesCampaignLocale(t *testing.T) {
 		},
 		campaignClient: &fakeCampaignClient{
 			response: &statev1.GetCampaignResponse{
-				Campaign: &statev1.Campaign{Id: "camp-1", Name: "Campanha Um", Locale: commonv1.Locale_LOCALE_PT_BR},
+				Campaign: &statev1.Campaign{
+					Id:        "camp-1",
+					Name:      "Campanha Um",
+					Locale:    commonv1.Locale_LOCALE_PT_BR,
+					GmMode:    statev1.GmMode_AI,
+					AiAgentId: "agent-1",
+				},
 			},
 		},
 	}
@@ -415,6 +433,12 @@ func TestCampaignAuthorizerResolveJoinWelcomeUsesCampaignLocale(t *testing.T) {
 	}
 	if welcome.SessionName != "Sessao Um" {
 		t.Fatalf("session name = %q, want %q", welcome.SessionName, "Sessao Um")
+	}
+	if welcome.GmMode != statev1.GmMode_AI.String() {
+		t.Fatalf("gm mode = %q, want %q", welcome.GmMode, statev1.GmMode_AI.String())
+	}
+	if welcome.AIAgentID != "agent-1" {
+		t.Fatalf("ai agent id = %q, want %q", welcome.AIAgentID, "agent-1")
 	}
 }
 

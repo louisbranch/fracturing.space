@@ -676,6 +676,189 @@ func TestDecideCampaignFork_NotCreatedRejected(t *testing.T) {
 	}
 }
 
+func TestDecideCampaignAIBind_EmitsAIBoundEvent(t *testing.T) {
+	now := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
+	decision := Decide(State{Created: true}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.ai_bind"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"ai_agent_id":"  agent-123  "}`),
+	}, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+	evt := decision.Events[0]
+	if evt.Type != event.Type("campaign.ai_bound") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "campaign.ai_bound")
+	}
+	if !evt.Timestamp.Equal(now) {
+		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
+	}
+	var payload AIBindPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.AIAgentID != "agent-123" {
+		t.Fatalf("ai_agent_id = %q, want %q", payload.AIAgentID, "agent-123")
+	}
+}
+
+func TestDecideCampaignAIBind_NotCreatedRejected(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.ai_bind"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"ai_agent_id":"agent-123"}`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignNotCreated {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignNotCreated)
+	}
+}
+
+func TestDecideCampaignAIBind_EmptyAgentIDRejected(t *testing.T) {
+	decision := Decide(State{Created: true}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.ai_bind"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"ai_agent_id":"   "}`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignAIAgentIDRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignAIAgentIDRequired)
+	}
+}
+
+func TestDecideCampaignAIUnbind_EmitsAIUnboundEvent(t *testing.T) {
+	now := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
+	decision := Decide(State{Created: true}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.ai_unbind"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{}`),
+	}, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+	evt := decision.Events[0]
+	if evt.Type != event.Type("campaign.ai_unbound") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "campaign.ai_unbound")
+	}
+	if !evt.Timestamp.Equal(now) {
+		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
+	}
+	var payload AIUnbindPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+}
+
+func TestDecideCampaignAIUnbind_NotCreatedRejected(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.ai_unbind"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{}`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignNotCreated {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignNotCreated)
+	}
+}
+
+func TestDecideCampaignAIAuthRotate_EmitsAIAuthRotatedEvent(t *testing.T) {
+	now := time.Date(2026, 2, 15, 0, 0, 0, 0, time.UTC)
+	decision := Decide(State{
+		Created:     true,
+		AIAuthEpoch: 7,
+	}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.ai_auth_rotate"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"reason":"  provider key rotated  ","epoch_after":1}`),
+	}, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+	evt := decision.Events[0]
+	if evt.Type != event.Type("campaign.ai_auth_rotated") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "campaign.ai_auth_rotated")
+	}
+	if !evt.Timestamp.Equal(now) {
+		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
+	}
+	var payload AIAuthRotatePayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.EpochAfter != 8 {
+		t.Fatalf("epoch_after = %d, want %d", payload.EpochAfter, 8)
+	}
+	if payload.Reason != "provider key rotated" {
+		t.Fatalf("reason = %q, want %q", payload.Reason, "provider key rotated")
+	}
+}
+
+func TestDecideCampaignAIAuthRotate_NotCreatedRejected(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.ai_auth_rotate"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"reason":"rotate"}`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignNotCreated {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignNotCreated)
+	}
+}
+
+func TestDecideCampaignAIAuthRotate_MalformedPayloadRejected(t *testing.T) {
+	decision := Decide(State{Created: true}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.ai_auth_rotate"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodePayloadDecodeFailed {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodePayloadDecodeFailed)
+	}
+}
+
 func TestDecide_UnrecognizedCommandTypeRejected(t *testing.T) {
 	decision := Decide(State{}, command.Command{
 		CampaignID: "camp-1",

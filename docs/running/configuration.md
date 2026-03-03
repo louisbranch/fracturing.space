@@ -30,6 +30,7 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY`: root secret used to sign event chain hashes. Required. Generate with `go run ./cmd/hmac-key`.
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS`: optional comma-separated key ring (`key_id=secret`).
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID`: active key id when using the key ring. Default: `v1`.
+- `FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST`: comma-separated internal service IDs allowed to call internal game APIs (currently `game.v1.CampaignAIService`). Default: `ai,chat`.
 
 ### Auth + OAuth
 
@@ -62,6 +63,10 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_AI_PORT`: gRPC port for AI service. Default: `8087`.
 - `FRACTURING_SPACE_AI_DB_PATH`: AI SQLite path. Default: `data/ai.db`.
 - `FRACTURING_SPACE_AI_ENCRYPTION_KEY`: base64-encoded AES key used to encrypt provider secrets at rest (must decode to 16/24/32 bytes).
+- `FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER`: issuer claim used by game to sign and AI to validate campaign AI session grants.
+- `FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE`: audience claim used by game to sign and AI to validate campaign AI session grants.
+- `FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY`: base64 HMAC key for campaign AI session grant signing/verification (must decode to at least 32 bytes).
+- `FRACTURING_SPACE_AI_SESSION_GRANT_TTL`: campaign AI session grant TTL. Default: `10m`.
 
 ### Notifications
 
@@ -122,7 +127,7 @@ For web-login-first local flows, many contributors set
 
 Internal gRPC dependencies default to Compose service DNS names (`service:port`). For direct local binary workflows, override these values to `localhost` in `.env.local`.
 
-- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, and web. Default: `game:8082`.
+- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, web, chat, and AI services. Default: `game:8082`.
 - `FRACTURING_SPACE_MCP_HTTP_ADDR`: HTTP bind address for MCP when using HTTP transport. Default: `localhost:8085`.
 - `FRACTURING_SPACE_MCP_TRANSPORT`: transport type (`stdio` or `http`). Default: `stdio`.
 - `FRACTURING_SPACE_MCP_ALLOWED_HOSTS`: comma-separated allowed Host/Origin values for MCP HTTP. Defaults to loopback-only when unset.
@@ -237,6 +242,29 @@ set, they provide defaults when matching flags are omitted. Asset URL defaults c
 `FRACTURING_SPACE_ASSET_BASE_URL`. Command-line flags take precedence over env
 values.
 
+## Chat Service Configuration
+
+### Command-line Flags
+
+The chat service (`cmd/chat`) accepts the following flags:
+
+- `-http-addr`: Chat HTTP server address. Default: `:8086`
+- `-auth-addr`: auth gRPC dependency address. Default: `auth:8083`
+- `-game-addr`: game gRPC dependency address. Default: `game:8082`
+- `-ai-addr`: AI gRPC dependency address. Default: `ai:8087`
+- `-auth-base-url`: auth HTTP base URL used for token introspection fallback. Default: `http://localhost:8084`
+- `-oauth-resource-secret`: OAuth introspection resource secret.
+
+### Address Overrides
+
+The chat service accepts flags for HTTP and upstream dependency addresses. If
+`FRACTURING_SPACE_CHAT_HTTP_ADDR`, `FRACTURING_SPACE_AUTH_ADDR`,
+`FRACTURING_SPACE_GAME_ADDR`, `FRACTURING_SPACE_AI_ADDR`,
+`FRACTURING_SPACE_WEB_AUTH_BASE_URL`, or
+`FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET` are set, they provide defaults
+when matching flags are omitted. Command-line flags take precedence over env
+values.
+
 ## AI Service Configuration
 
 ### Command-line Flags
@@ -250,6 +278,10 @@ The AI service (`cmd/ai`) accepts the following flags:
 The AI service accepts the `-port` flag. If `FRACTURING_SPACE_AI_PORT` is set,
 it provides the default when the flag is omitted. Command-line flags take
 precedence over env values.
+
+The AI service also reads `FRACTURING_SPACE_GAME_ADDR` for its game dependency
+and requires the `FRACTURING_SPACE_AI_SESSION_GRANT_*` values to validate
+campaign AI session grants.
 
 ## Notifications Service Configuration
 

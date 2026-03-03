@@ -14,13 +14,14 @@ const campaignEventSubscriptionRetryDelay = time.Second
 type campaignEventCommittedSubscriptionWorker struct {
 	ctx         context.Context
 	eventClient statev1.EventServiceClient
+	onEvent     func(string, string)
 
 	mu          sync.Mutex
 	subscribers map[string]context.CancelFunc
 	wg          sync.WaitGroup
 }
 
-func startCampaignEventCommittedSubscriptionWorker(eventClient statev1.EventServiceClient) (func(string), func(string), context.CancelFunc, chan struct{}) {
+func startCampaignEventCommittedSubscriptionWorker(eventClient statev1.EventServiceClient, onEvent func(string, string)) (func(string), func(string), context.CancelFunc, chan struct{}) {
 	if eventClient == nil {
 		return nil, nil, nil, nil
 	}
@@ -29,6 +30,7 @@ func startCampaignEventCommittedSubscriptionWorker(eventClient statev1.EventServ
 	worker := &campaignEventCommittedSubscriptionWorker{
 		ctx:         ctx,
 		eventClient: eventClient,
+		onEvent:     onEvent,
 		subscribers: make(map[string]context.CancelFunc),
 	}
 	done := make(chan struct{})
@@ -67,7 +69,7 @@ func (w *campaignEventCommittedSubscriptionWorker) ensureCampaignSubscription(ca
 
 	go func() {
 		defer w.wg.Done()
-		consumeCampaignEventCommittedUpdates(subCtx, w.eventClient, campaignID)
+		consumeCampaignEventCommittedUpdates(subCtx, w.eventClient, campaignID, w.onEvent)
 	}()
 }
 
@@ -91,7 +93,7 @@ func (w *campaignEventCommittedSubscriptionWorker) releaseCampaignSubscription(c
 	}
 }
 
-func consumeCampaignEventCommittedUpdates(ctx context.Context, eventClient statev1.EventServiceClient, campaignID string) {
+func consumeCampaignEventCommittedUpdates(ctx context.Context, eventClient statev1.EventServiceClient, campaignID string, onEvent func(string, string)) {
 	afterSeq := campaignEventCommittedInitialAfterSeq(ctx, eventClient, campaignID)
 
 	for {
@@ -118,9 +120,14 @@ func consumeCampaignEventCommittedUpdates(ctx context.Context, eventClient state
 			if recvErr != nil {
 				break
 			}
-			// Wiring phase only: track cursor and intentionally ignore update payload content.
-			if update != nil && update.GetSeq() > afterSeq {
+			if update == nil {
+				continue
+			}
+			if update.GetSeq() > afterSeq {
 				afterSeq = update.GetSeq()
+			}
+			if onEvent != nil {
+				onEvent(campaignID, strings.TrimSpace(update.GetEventType()))
 			}
 		}
 

@@ -45,6 +45,10 @@ jobs:
           FRACTURING_SPACE_GAME_EVENTS_DB_PATH: ".tmp/game-events-web-smoke.db"
           FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH: ".tmp/game-projections-web-smoke.db"
           FRACTURING_SPACE_GAME_CONTENT_DB_PATH: ".tmp/game-content-web-smoke.db"
+          FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER: "fracturing-space-game"
+          FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE: "fracturing-space-ai"
+          FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY"
+          FRACTURING_SPACE_AI_SESSION_GRANT_TTL: "10m"
         run: |
           set -euo pipefail
 

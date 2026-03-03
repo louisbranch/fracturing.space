@@ -1,0 +1,69 @@
+package game
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+const (
+	aiAuthRotateReasonCampaignAIBound   = "campaign_ai_bound"
+	aiAuthRotateReasonCampaignAIUnbound = "campaign_ai_unbound"
+	aiAuthRotateReasonSessionStarted    = "session_started"
+	aiAuthRotateReasonSessionEnded      = "session_ended"
+)
+
+func rotateCampaignAIAuthEpoch(
+	ctx context.Context,
+	stores Stores,
+	campaignID string,
+	reason string,
+	actorID string,
+	actorType command.ActorType,
+) error {
+	if stores.Domain == nil {
+		return status.Error(codes.Internal, "domain engine is not configured")
+	}
+
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return status.Error(codes.InvalidArgument, "ai auth rotate reason is required")
+	}
+
+	payloadJSON, err := json.Marshal(campaign.AIAuthRotatePayload{Reason: reason})
+	if err != nil {
+		return status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		stores.Domain,
+		stores.Applier(),
+		commandbuild.Core(commandbuild.CoreInput{
+			CampaignID:   campaignID,
+			Type:         commandTypeCampaignAIAuthRotate,
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+			PayloadJSON:  payloadJSON,
+		}),
+		domainCommandApplyOptions{},
+	)
+	if err != nil {
+		return err
+	}
+	return nil
+}

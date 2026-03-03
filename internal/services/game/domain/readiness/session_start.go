@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	// RejectionCodeSessionReadinessAIAgentRequired indicates AI/HYBRID campaigns require a bound AI agent.
+	RejectionCodeSessionReadinessAIAgentRequired = "SESSION_READINESS_AI_AGENT_REQUIRED"
 	// RejectionCodeSessionReadinessGMRequired indicates there is no active GM participant.
 	RejectionCodeSessionReadinessGMRequired = "SESSION_READINESS_GM_REQUIRED"
 	// RejectionCodeSessionReadinessPlayerRequired indicates there is no active player participant.
@@ -45,6 +47,13 @@ type CharacterSystemReadiness func(systemProfile map[string]any) (ready bool, re
 //  4. every active character has a controller,
 //  5. optional system-specific readiness for every active character.
 func EvaluateSessionStart(state aggregate.State, systemReadiness CharacterSystemReadiness) *Rejection {
+	if isAIGMMode(state.Campaign.GmMode) && strings.TrimSpace(state.Campaign.AIAgentID) == "" {
+		return &Rejection{
+			Code:    RejectionCodeSessionReadinessAIAgentRequired,
+			Message: "campaign readiness requires ai agent binding for ai gm mode",
+		}
+	}
+
 	activeParticipants := activeParticipantsByID(state)
 	if len(activeParticipants.gmIDs) == 0 {
 		return &Rejection{
@@ -111,6 +120,15 @@ func EvaluateSessionStart(state aggregate.State, systemReadiness CharacterSystem
 	}
 
 	return nil
+}
+
+func isAIGMMode(mode string) bool {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "ai", "hybrid":
+		return true
+	default:
+		return false
+	}
 }
 
 type participantIndex struct {

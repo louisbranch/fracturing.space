@@ -36,6 +36,27 @@ var campaignCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
+			Type:            CommandTypeAIBind,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateAIBindPayload,
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeAIUnbind,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateAIUnbindPayload,
+		},
+	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeAIAuthRotate,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateAIAuthRotatePayload,
+		},
+	},
+	{
+		definition: command.Definition{
 			Type:            CommandTypeFork,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateForkPayload,
@@ -81,6 +102,36 @@ var campaignEventContracts = []eventProjectionContract{
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateUpdatePayload,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeAIBound,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateAIBindPayload,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeAIUnbound,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateAIUnbindPayload,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeAIAuthRotated,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateAIAuthRotatePayload,
 		},
 		emittable:  true,
 		projection: true,
@@ -171,6 +222,39 @@ func validateUpdatePayload(raw json.RawMessage) error {
 	var payload UpdatePayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
+	}
+	return nil
+}
+
+// validateAIBindPayload ensures bind payloads include ai_agent_id.
+func validateAIBindPayload(raw json.RawMessage) error {
+	var payload AIBindPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.AIAgentID) == "" {
+		return errors.New("ai_agent_id is required")
+	}
+	return nil
+}
+
+// validateAIUnbindPayload ensures unbind payload shape is accepted.
+func validateAIUnbindPayload(raw json.RawMessage) error {
+	var payload AIUnbindPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateAIAuthRotatePayload ensures rotate payloads include a reason string.
+func validateAIAuthRotatePayload(raw json.RawMessage) error {
+	var payload AIAuthRotatePayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.Reason) == "" {
+		return errors.New("reason is required")
 	}
 	return nil
 }

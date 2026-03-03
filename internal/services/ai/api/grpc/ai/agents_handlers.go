@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
@@ -35,6 +36,7 @@ func (s *Service) CreateAgent(ctx context.Context, in *aiv1.CreateAgentRequest) 
 	createInput, err := agent.NormalizeCreateInput(agent.CreateInput{
 		OwnerUserID:     userID,
 		Name:            in.GetName(),
+		Handle:          in.GetHandle(),
 		Provider:        provider,
 		Model:           in.GetModel(),
 		CredentialID:    in.GetCredentialId(),
@@ -56,6 +58,7 @@ func (s *Service) CreateAgent(ctx context.Context, in *aiv1.CreateAgentRequest) 
 		ID:              created.ID,
 		OwnerUserID:     created.OwnerUserID,
 		Name:            created.Name,
+		Handle:          created.Handle,
 		Provider:        string(created.Provider),
 		Model:           created.Model,
 		CredentialID:    created.CredentialID,
@@ -183,6 +186,40 @@ func (s *Service) GetAccessibleAgent(ctx context.Context, in *aiv1.GetAccessible
 	return &aiv1.GetAccessibleAgentResponse{Agent: agentToProto(agentRecord)}, nil
 }
 
+// ValidateCampaignAgentBinding verifies owner-scoped bind eligibility for one agent.
+func (s *Service) ValidateCampaignAgentBinding(ctx context.Context, in *aiv1.ValidateCampaignAgentBindingRequest) (*aiv1.ValidateCampaignAgentBindingResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "validate campaign agent binding request is required")
+	}
+	if s.agentStore == nil {
+		return nil, status.Error(codes.Internal, "agent store is not configured")
+	}
+
+	userID := userIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	}
+	agentID := strings.TrimSpace(in.GetAgentId())
+	if agentID == "" {
+		return nil, status.Error(codes.InvalidArgument, "agent_id is required")
+	}
+
+	agentRecord, err := s.agentStore.GetAgent(ctx, agentID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return nil, status.Error(codes.NotFound, "agent not found")
+		}
+		return nil, status.Errorf(codes.Internal, "get agent: %v", err)
+	}
+	if strings.TrimSpace(agentRecord.OwnerUserID) != userID {
+		return nil, status.Error(codes.NotFound, "agent not found")
+	}
+	if agentStatusToProto(agentRecord.Status) != aiv1.AgentStatus_AGENT_STATUS_ACTIVE {
+		return nil, status.Error(codes.FailedPrecondition, "agent is not active")
+	}
+	return &aiv1.ValidateCampaignAgentBindingResponse{Agent: agentToProto(agentRecord)}, nil
+}
+
 // UpdateAgent updates mutable fields on one user-owned agent.
 func (s *Service) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentRequest) (*aiv1.UpdateAgentResponse, error) {
 	if in == nil {
@@ -211,6 +248,9 @@ func (s *Service) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentRequest) 
 	}
 	if strings.TrimSpace(existing.OwnerUserID) != userID {
 		return nil, status.Error(codes.NotFound, "agent not found")
+	}
+	if err := s.ensureAgentNotBoundToActiveCampaigns(ctx, existing.ID); err != nil {
+		return nil, err
 	}
 
 	name := firstNonEmpty(strings.TrimSpace(in.GetName()), existing.Name)
@@ -267,6 +307,9 @@ func (s *Service) DeleteAgent(ctx context.Context, in *aiv1.DeleteAgentRequest) 
 	agentID := strings.TrimSpace(in.GetAgentId())
 	if agentID == "" {
 		return nil, status.Error(codes.InvalidArgument, "agent_id is required")
+	}
+	if err := s.ensureAgentNotBoundToActiveCampaigns(ctx, agentID); err != nil {
+		return nil, err
 	}
 
 	if err := s.agentStore.DeleteAgent(ctx, userID, agentID); err != nil {
@@ -394,6 +437,28 @@ func mapValues(values map[string]storage.AgentRecord) []storage.AgentRecord {
 	}
 	return items
 }
+
+func (s *Service) ensureAgentNotBoundToActiveCampaigns(ctx context.Context, agentID string) error {
+	if s == nil || s.gameCampaignAIClient == nil {
+		return nil
+	}
+	agentID = strings.TrimSpace(agentID)
+	if agentID == "" {
+		return status.Error(codes.InvalidArgument, "agent_id is required")
+	}
+
+	usage, err := s.gameCampaignAIClient.GetCampaignAIBindingUsage(ctx, &gamev1.GetCampaignAIBindingUsageRequest{
+		AiAgentId: agentID,
+	})
+	if err != nil {
+		return status.Errorf(codes.Internal, "get campaign ai binding usage: %v", err)
+	}
+	if usage.GetActiveCampaignCount() > 0 {
+		return status.Error(codes.FailedPrecondition, "agent is bound to active campaigns")
+	}
+	return nil
+}
+
 func (s *Service) validateAgentAuthReferenceForProvider(ctx context.Context, ownerUserID string, provider string, credentialID string, providerGrantID string) error {
 	credentialID = strings.TrimSpace(credentialID)
 	providerGrantID = strings.TrimSpace(providerGrantID)

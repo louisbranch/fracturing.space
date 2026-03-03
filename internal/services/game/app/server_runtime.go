@@ -263,4 +263,9 @@ func (s *Server) closeResources() {
 			log.Printf("close social conn: %v", err)
 		}
 	}
+	if s.aiConn != nil {
+		if err := s.aiConn.Close(); err != nil {
+			log.Printf("close ai conn: %v", err)
+		}
+	}
 }

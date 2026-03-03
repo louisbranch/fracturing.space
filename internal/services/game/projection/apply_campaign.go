@@ -66,6 +66,8 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event, payl
 		ThemePrompt:      normalized.ThemePrompt,
 		CoverAssetID:     strings.TrimSpace(payload.CoverAssetID),
 		CoverSetID:       strings.TrimSpace(payload.CoverSetID),
+		AIAgentID:        "",
+		AIAuthEpoch:      0,
 		CreatedAt:        createdAt,
 		UpdatedAt:        createdAt,
 	})
@@ -127,4 +129,46 @@ func (a Applier) applyCampaignForked(ctx context.Context, evt event.Event, paylo
 		ForkEventSeq:     payload.ForkEventSeq,
 		OriginCampaignID: payload.OriginCampaignID,
 	})
+}
+
+func (a Applier) applyCampaignAIBound(ctx context.Context, evt event.Event, payload campaign.AIBindPayload) error {
+	current, err := a.Campaign.Get(ctx, evt.CampaignID)
+	if err != nil {
+		return err
+	}
+	current.AIAgentID = strings.TrimSpace(payload.AIAgentID)
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+	current.UpdatedAt = updatedAt
+	return a.Campaign.Put(ctx, current)
+}
+
+func (a Applier) applyCampaignAIUnbound(ctx context.Context, evt event.Event, _ campaign.AIUnbindPayload) error {
+	current, err := a.Campaign.Get(ctx, evt.CampaignID)
+	if err != nil {
+		return err
+	}
+	current.AIAgentID = ""
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+	current.UpdatedAt = updatedAt
+	return a.Campaign.Put(ctx, current)
+}
+
+func (a Applier) applyCampaignAIAuthRotated(ctx context.Context, evt event.Event, payload campaign.AIAuthRotatePayload) error {
+	current, err := a.Campaign.Get(ctx, evt.CampaignID)
+	if err != nil {
+		return err
+	}
+	current.AIAuthEpoch = payload.EpochAfter
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+	current.UpdatedAt = updatedAt
+	return a.Campaign.Put(ctx, current)
 }

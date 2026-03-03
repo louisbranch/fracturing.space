@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -178,6 +179,38 @@ func dialSocialGRPC(ctx context.Context, socialAddr string) (socialGRPCClients, 
 	return socialGRPCClients{
 		conn:         conn,
 		socialClient: socialv1.NewSocialServiceClient(conn),
+	}, nil
+}
+
+// dialAIGRPC opens a gRPC client to ai service.
+func dialAIGRPC(ctx context.Context, aiAddr string) (aiGRPCClients, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	logf := func(format string, args ...any) {
+		log.Printf("ai %s", fmt.Sprintf(format, args...))
+	}
+	conn, err := platformgrpc.DialWithHealth(
+		ctx,
+		nil,
+		aiAddr,
+		timeouts.GRPCDial,
+		logf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
+		var dialErr *platformgrpc.DialError
+		if errors.As(err, &dialErr) {
+			if dialErr.Stage == platformgrpc.DialStageHealth {
+				return aiGRPCClients{}, fmt.Errorf("ai gRPC health check failed for %s: %w", aiAddr, dialErr.Err)
+			}
+			return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, dialErr.Err)
+		}
+		return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, err)
+	}
+	return aiGRPCClients{
+		conn:        conn,
+		agentClient: aiv1.NewAgentServiceClient(conn),
 	}, nil
 }
 

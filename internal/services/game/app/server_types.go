@@ -6,6 +6,7 @@ import (
 	"net"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -21,6 +22,7 @@ type Server struct {
 	stores                                   *storageBundle
 	authConn                                 *grpc.ClientConn
 	socialConn                               *grpc.ClientConn
+	aiConn                                   *grpc.ClientConn
 	projectionApplyOutboxWorkerEnabled       bool
 	projectionApplyOutboxApply               func(context.Context, event.Event) error
 	projectionApplyOutboxShadowWorkerEnabled bool
@@ -34,6 +36,11 @@ type authGRPCClients struct {
 type socialGRPCClients struct {
 	conn         *grpc.ClientConn
 	socialClient socialv1.SocialServiceClient
+}
+
+type aiGRPCClients struct {
+	conn        *grpc.ClientConn
+	agentClient aiv1.AgentServiceClient
 }
 
 // projectionApplyOutboxShadowProcessor drains queue rows for environments where the

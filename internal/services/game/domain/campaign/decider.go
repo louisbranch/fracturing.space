@@ -12,15 +12,21 @@ import (
 )
 
 const (
-	CommandTypeCreate  command.Type = "campaign.create"
-	CommandTypeUpdate  command.Type = "campaign.update"
-	CommandTypeFork    command.Type = "campaign.fork"
-	CommandTypeEnd     command.Type = "campaign.end"
-	CommandTypeArchive command.Type = "campaign.archive"
-	CommandTypeRestore command.Type = "campaign.restore"
-	EventTypeCreated   event.Type   = "campaign.created"
-	EventTypeUpdated   event.Type   = "campaign.updated"
-	EventTypeForked    event.Type   = "campaign.forked"
+	CommandTypeCreate       command.Type = "campaign.create"
+	CommandTypeUpdate       command.Type = "campaign.update"
+	CommandTypeAIBind       command.Type = "campaign.ai_bind"
+	CommandTypeAIUnbind     command.Type = "campaign.ai_unbind"
+	CommandTypeAIAuthRotate command.Type = "campaign.ai_auth_rotate"
+	CommandTypeFork         command.Type = "campaign.fork"
+	CommandTypeEnd          command.Type = "campaign.end"
+	CommandTypeArchive      command.Type = "campaign.archive"
+	CommandTypeRestore      command.Type = "campaign.restore"
+	EventTypeCreated        event.Type   = "campaign.created"
+	EventTypeUpdated        event.Type   = "campaign.updated"
+	EventTypeAIBound        event.Type   = "campaign.ai_bound"
+	EventTypeAIUnbound      event.Type   = "campaign.ai_unbound"
+	EventTypeAIAuthRotated  event.Type   = "campaign.ai_auth_rotated"
+	EventTypeForked         event.Type   = "campaign.forked"
 
 	rejectionCodeCampaignAlreadyExists      = "CAMPAIGN_ALREADY_EXISTS"
 	rejectionCodeCampaignNotCreated         = "CAMPAIGN_NOT_CREATED"
@@ -33,6 +39,7 @@ const (
 	rejectionCodeCampaignUpdateFieldInvalid = "CAMPAIGN_UPDATE_FIELD_INVALID"
 	rejectionCodeCampaignCoverAssetInvalid  = "CAMPAIGN_COVER_ASSET_INVALID"
 	rejectionCodeCampaignCoverSetInvalid    = "CAMPAIGN_COVER_SET_INVALID"
+	rejectionCodeCampaignAIAgentIDRequired  = "CAMPAIGN_AI_AGENT_ID_REQUIRED"
 	rejectionCodeCommandTypeUnsupported     = "COMMAND_TYPE_UNSUPPORTED"
 	rejectionCodePayloadDecodeFailed        = "PAYLOAD_DECODE_FAILED"
 )
@@ -93,6 +100,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		return decideCreate(state, cmd, now)
 	case CommandTypeUpdate:
 		return decideUpdate(state, cmd, now)
+	case CommandTypeAIBind:
+		return decideAIBind(state, cmd, now)
+	case CommandTypeAIUnbind:
+		return decideAIUnbind(state, cmd, now)
+	case CommandTypeAIAuthRotate:
+		return decideAIAuthRotate(state, cmd, now)
 	case CommandTypeFork:
 		return decideFork(state, cmd, now)
 	case CommandTypeEnd, CommandTypeArchive, CommandTypeRestore:
@@ -226,6 +239,69 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 	normalizedPayload := UpdatePayload{Fields: normalizedFields}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
 	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	return command.Accept(evt)
+}
+
+func decideAIBind(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Created {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignNotCreated,
+			Message: "campaign does not exist",
+		})
+	}
+	var payload AIBindPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	agentID := strings.TrimSpace(payload.AIAgentID)
+	if agentID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignAIAgentIDRequired,
+			Message: "ai agent id is required",
+		})
+	}
+
+	normalizedPayload := AIBindPayload{AIAgentID: agentID}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeAIBound, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	return command.Accept(evt)
+}
+
+func decideAIUnbind(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Created {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignNotCreated,
+			Message: "campaign does not exist",
+		})
+	}
+	payloadJSON, _ := json.Marshal(AIUnbindPayload{})
+	evt := command.NewEvent(cmd, EventTypeAIUnbound, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	return command.Accept(evt)
+}
+
+func decideAIAuthRotate(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Created {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignNotCreated,
+			Message: "campaign does not exist",
+		})
+	}
+
+	var payload AIAuthRotatePayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+
+	payload.EpochAfter = state.AIAuthEpoch + 1
+	payload.Reason = strings.TrimSpace(payload.Reason)
+	payloadJSON, _ := json.Marshal(payload)
+	evt := command.NewEvent(cmd, EventTypeAIAuthRotated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 

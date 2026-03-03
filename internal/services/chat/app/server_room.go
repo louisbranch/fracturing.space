@@ -8,6 +8,8 @@ import (
 	"time"
 )
 
+const aiSessionGrantRefreshLead = 5 * time.Second
+
 func newWSSession(userID string, peer *wsPeer) *wsSession {
 	return &wsSession{
 		userID: userID,
@@ -68,10 +70,22 @@ func (h *roomHub) room(campaignID string) *campaignRoom {
 	return room
 }
 
+func (h *roomHub) roomIfExists(campaignID string) *campaignRoom {
+	h.mu.Lock()
+	room := h.rooms[campaignID]
+	h.mu.Unlock()
+	return room
+}
+
 type campaignRoom struct {
 	mu               sync.Mutex
 	campaignID       string
 	sessionID        string
+	gmMode           string
+	aiAgentID        string
+	aiAuthEpoch      uint64
+	aiSessionGrant   string
+	aiGrantExpiresAt time.Time
 	nextSequence     int64
 	messages         []chatMessage
 	idempotencyBy    map[string]chatMessage
@@ -98,12 +112,90 @@ func (r *campaignRoom) join(peer *wsPeer) int64 {
 
 func (r *campaignRoom) setSessionID(sessionID string) {
 	sessionID = strings.TrimSpace(sessionID)
-	if sessionID == "" {
-		return
-	}
 	r.mu.Lock()
+	if r.sessionID != sessionID {
+		r.aiSessionGrant = ""
+		r.aiGrantExpiresAt = time.Time{}
+	}
 	r.sessionID = sessionID
 	r.mu.Unlock()
+}
+
+func (r *campaignRoom) setAIBinding(gmMode string, aiAgentID string) {
+	r.mu.Lock()
+	normalizedMode := strings.ToLower(strings.TrimSpace(gmMode))
+	normalizedAgentID := strings.TrimSpace(aiAgentID)
+	if r.gmMode != normalizedMode || r.aiAgentID != normalizedAgentID {
+		r.aiSessionGrant = ""
+		r.aiGrantExpiresAt = time.Time{}
+	}
+	r.gmMode = normalizedMode
+	r.aiAgentID = normalizedAgentID
+	r.mu.Unlock()
+}
+
+func (r *campaignRoom) aiRelayEnabled() bool {
+	r.mu.Lock()
+	enabled := r.aiAgentID != "" && (r.gmMode == "ai" || r.gmMode == "hybrid" || r.gmMode == "gm_mode_ai" || r.gmMode == "gm_mode_hybrid")
+	r.mu.Unlock()
+	return enabled
+}
+
+func (r *campaignRoom) aiAgentIDValue() string {
+	r.mu.Lock()
+	value := r.aiAgentID
+	r.mu.Unlock()
+	return value
+}
+
+func (r *campaignRoom) gmModeValue() string {
+	r.mu.Lock()
+	value := r.gmMode
+	r.mu.Unlock()
+	return value
+}
+
+func (r *campaignRoom) setAISessionGrant(token string, authEpoch uint64, expiresAt time.Time) {
+	r.mu.Lock()
+	r.aiSessionGrant = strings.TrimSpace(token)
+	r.aiAuthEpoch = authEpoch
+	if expiresAt.IsZero() {
+		r.aiGrantExpiresAt = time.Time{}
+	} else {
+		r.aiGrantExpiresAt = expiresAt.UTC()
+	}
+	r.mu.Unlock()
+}
+
+func (r *campaignRoom) clearAISessionGrant() {
+	r.mu.Lock()
+	r.aiSessionGrant = ""
+	r.aiGrantExpiresAt = time.Time{}
+	r.mu.Unlock()
+}
+
+func (r *campaignRoom) aiSessionGrantValue() string {
+	r.mu.Lock()
+	value := r.aiSessionGrant
+	r.mu.Unlock()
+	return value
+}
+
+func (r *campaignRoom) aiRelayReady() bool {
+	r.mu.Lock()
+	enabled := r.aiAgentID != "" &&
+		(r.gmMode == "ai" || r.gmMode == "hybrid" || r.gmMode == "gm_mode_ai" || r.gmMode == "gm_mode_hybrid") &&
+		strings.TrimSpace(r.aiSessionGrant) != ""
+	if enabled && !r.aiGrantExpiresAt.IsZero() {
+		refreshAt := r.aiGrantExpiresAt.Add(-aiSessionGrantRefreshLead)
+		if !time.Now().UTC().Before(refreshAt) {
+			r.aiSessionGrant = ""
+			r.aiGrantExpiresAt = time.Time{}
+			enabled = false
+		}
+	}
+	r.mu.Unlock()
+	return enabled
 }
 
 func (r *campaignRoom) currentSessionID() string {
@@ -162,6 +254,59 @@ func (r *campaignRoom) appendMessage(actorID string, body string, clientMessageI
 		delete(r.idempotencyBy, evict)
 	}
 
+	subscribers := make([]*wsPeer, 0, len(r.subscribers))
+	for subscriber := range r.subscribers {
+		subscribers = append(subscribers, subscriber)
+	}
+	return msg, false, subscribers
+}
+
+func (r *campaignRoom) appendAIGMMessage(sessionID string, body string, correlationMessageID string) (chatMessage, bool, []*wsPeer) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	key := ""
+	if strings.TrimSpace(correlationMessageID) != "" {
+		key = "ai:" + strings.TrimSpace(correlationMessageID)
+		if existing, ok := r.idempotencyBy[key]; ok {
+			return existing, true, nil
+		}
+	}
+
+	r.nextSequence++
+	normalizedSessionID := strings.TrimSpace(sessionID)
+	if normalizedSessionID == "" {
+		normalizedSessionID = r.sessionID
+	}
+	if normalizedSessionID == "" {
+		normalizedSessionID = defaultSessionID
+	}
+	msg := chatMessage{
+		MessageID:  fmt.Sprintf("ai_%d", time.Now().UnixNano()),
+		CampaignID: r.campaignID,
+		SessionID:  normalizedSessionID,
+		SequenceID: r.nextSequence,
+		SentAt:     time.Now().UTC().Format(time.RFC3339),
+		Kind:       "ai",
+		Actor: messageActor{
+			ParticipantID: "ai_gm",
+			Name:          "AI GM",
+		},
+		Body: body,
+	}
+	r.messages = append(r.messages, msg)
+	if len(r.messages) > maxRoomMessages {
+		r.messages = r.messages[len(r.messages)-maxRoomMessages:]
+	}
+	if key != "" {
+		r.idempotencyBy[key] = msg
+		r.idempotencyOrder = append(r.idempotencyOrder, key)
+		if len(r.idempotencyOrder) > maxIdempotencyRecord {
+			evict := r.idempotencyOrder[0]
+			r.idempotencyOrder = r.idempotencyOrder[1:]
+			delete(r.idempotencyBy, evict)
+		}
+	}
 	subscribers := make([]*wsPeer, 0, len(r.subscribers))
 	for subscriber := range r.subscribers {
 		subscribers = append(subscribers, subscriber)

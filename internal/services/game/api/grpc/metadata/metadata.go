@@ -45,6 +45,9 @@ const PlatformRoleHeader = "x-fracturing-space-platform-role"
 // AuthzOverrideReasonHeader is the metadata key for admin override reason text.
 const AuthzOverrideReasonHeader = "x-fracturing-space-authz-override-reason"
 
+// ServiceIDHeader is the gRPC metadata key for internal service identity.
+const ServiceIDHeader = "x-fracturing-space-service-id"
+
 // PlatformRoleAdmin identifies platform administrators.
 const PlatformRoleAdmin = "ADMIN"
 
@@ -94,6 +97,11 @@ func CampaignIDFromContext(ctx context.Context) string {
 // SessionIDFromContext returns the session ID from incoming metadata.
 func SessionIDFromContext(ctx context.Context) string {
 	return metadataValueFromIncomingContext(ctx, SessionIDHeader)
+}
+
+// ServiceIDFromContext returns the internal service ID from incoming metadata.
+func ServiceIDFromContext(ctx context.Context) string {
+	return metadataValueFromIncomingContext(ctx, ServiceIDHeader)
 }
 
 // WithRequestID stores the request ID in context.

@@ -60,6 +60,9 @@ func buildCoreRouter() *CoreRouter {
 	// campaign
 	HandleProjection(r, campaign.EventTypeCreated, needCampaign, requireEntityID, Applier.applyCampaignCreated)
 	HandleProjection(r, campaign.EventTypeUpdated, needCampaign, requireCampaignID, Applier.applyCampaignUpdated)
+	HandleProjection(r, campaign.EventTypeAIBound, needCampaign, requireCampaignID, Applier.applyCampaignAIBound)
+	HandleProjection(r, campaign.EventTypeAIUnbound, needCampaign, requireCampaignID, Applier.applyCampaignAIUnbound)
+	HandleProjection(r, campaign.EventTypeAIAuthRotated, needCampaign, requireCampaignID, Applier.applyCampaignAIAuthRotated)
 	HandleProjection(r, campaign.EventTypeForked, needCampaignFork, requireCampaignID, Applier.applyCampaignForked)
 
 	// participant

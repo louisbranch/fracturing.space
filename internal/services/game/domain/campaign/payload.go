@@ -18,6 +18,20 @@ type UpdatePayload struct {
 	Fields map[string]string `json:"fields"`
 }
 
+// AIBindPayload captures the payload for campaign.ai_bind commands/events.
+type AIBindPayload struct {
+	AIAgentID string `json:"ai_agent_id"`
+}
+
+// AIUnbindPayload captures the payload for campaign.ai_unbind commands/events.
+type AIUnbindPayload struct{}
+
+// AIAuthRotatePayload captures the payload for campaign.ai_auth_rotate commands/events.
+type AIAuthRotatePayload struct {
+	EpochAfter uint64 `json:"epoch_after"`
+	Reason     string `json:"reason"`
+}
+
 // ForkPayload captures the payload for campaign.fork commands and campaign.forked events.
 type ForkPayload struct {
 	ParentCampaignID string `json:"parent_campaign_id"`

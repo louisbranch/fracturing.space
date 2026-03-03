@@ -26,6 +26,7 @@ func campaignToProto(c storage.CampaignRecord) *campaignv1.Campaign {
 		ThemePrompt:      c.ThemePrompt,
 		CoverAssetId:     c.CoverAssetID,
 		CoverSetId:       c.CoverSetID,
+		AiAgentId:        c.AIAgentID,
 		CreatedAt:        timestamppb.New(c.CreatedAt),
 		UpdatedAt:        timestamppb.New(c.UpdatedAt),
 		CompletedAt:      timestampOrNil(c.CompletedAt),

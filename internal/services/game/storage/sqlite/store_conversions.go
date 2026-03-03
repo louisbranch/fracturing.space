@@ -314,6 +314,8 @@ type campaignRowData struct {
 	ThemePrompt      string
 	CoverAssetID     string
 	CoverSetID       string
+	AIAgentID        string
+	AIAuthEpoch      int64
 	CreatedAt        int64
 	UpdatedAt        int64
 	CompletedAt      sql.NullInt64
@@ -340,6 +342,8 @@ func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
 		CoverSetID:       row.CoverSetID,
+		AIAgentID:        row.AIAgentID,
+		AIAuthEpoch:      uint64(row.AIAuthEpoch),
 		CreatedAt:        fromMillis(row.CreatedAt),
 		UpdatedAt:        fromMillis(row.UpdatedAt),
 	}
@@ -365,6 +369,8 @@ func dbGetCampaignRowToDomain(row db.GetCampaignRow) (storage.CampaignRecord, er
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
 		CoverSetID:       row.CoverSetID,
+		AIAgentID:        row.AiAgentID,
+		AIAuthEpoch:      row.AiAuthEpoch,
 		CreatedAt:        row.CreatedAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
@@ -388,6 +394,8 @@ func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (storage.CampaignRecord
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
 		CoverSetID:       row.CoverSetID,
+		AIAgentID:        row.AiAgentID,
+		AIAuthEpoch:      row.AiAuthEpoch,
 		CreatedAt:        row.CreatedAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,
@@ -410,6 +418,8 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (storage.Campaign
 		ThemePrompt:      row.ThemePrompt,
 		CoverAssetID:     row.CoverAssetID,
 		CoverSetID:       row.CoverSetID,
+		AIAgentID:        row.AiAgentID,
+		AIAuthEpoch:      row.AiAuthEpoch,
 		CreatedAt:        row.CreatedAt,
 		UpdatedAt:        row.UpdatedAt,
 		CompletedAt:      row.CompletedAt,

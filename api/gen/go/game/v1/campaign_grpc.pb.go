@@ -20,13 +20,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CampaignService_CreateCampaign_FullMethodName   = "/game.v1.CampaignService/CreateCampaign"
-	CampaignService_ListCampaigns_FullMethodName    = "/game.v1.CampaignService/ListCampaigns"
-	CampaignService_GetCampaign_FullMethodName      = "/game.v1.CampaignService/GetCampaign"
-	CampaignService_EndCampaign_FullMethodName      = "/game.v1.CampaignService/EndCampaign"
-	CampaignService_ArchiveCampaign_FullMethodName  = "/game.v1.CampaignService/ArchiveCampaign"
-	CampaignService_RestoreCampaign_FullMethodName  = "/game.v1.CampaignService/RestoreCampaign"
-	CampaignService_SetCampaignCover_FullMethodName = "/game.v1.CampaignService/SetCampaignCover"
+	CampaignService_CreateCampaign_FullMethodName         = "/game.v1.CampaignService/CreateCampaign"
+	CampaignService_ListCampaigns_FullMethodName          = "/game.v1.CampaignService/ListCampaigns"
+	CampaignService_GetCampaign_FullMethodName            = "/game.v1.CampaignService/GetCampaign"
+	CampaignService_EndCampaign_FullMethodName            = "/game.v1.CampaignService/EndCampaign"
+	CampaignService_ArchiveCampaign_FullMethodName        = "/game.v1.CampaignService/ArchiveCampaign"
+	CampaignService_RestoreCampaign_FullMethodName        = "/game.v1.CampaignService/RestoreCampaign"
+	CampaignService_SetCampaignCover_FullMethodName       = "/game.v1.CampaignService/SetCampaignCover"
+	CampaignService_SetCampaignAIBinding_FullMethodName   = "/game.v1.CampaignService/SetCampaignAIBinding"
+	CampaignService_ClearCampaignAIBinding_FullMethodName = "/game.v1.CampaignService/ClearCampaignAIBinding"
 )
 
 // CampaignServiceClient is the client API for CampaignService service.
@@ -49,6 +51,10 @@ type CampaignServiceClient interface {
 	RestoreCampaign(ctx context.Context, in *RestoreCampaignRequest, opts ...grpc.CallOption) (*RestoreCampaignResponse, error)
 	// Set the selected built-in cover asset for a campaign.
 	SetCampaignCover(ctx context.Context, in *SetCampaignCoverRequest, opts ...grpc.CallOption) (*SetCampaignCoverResponse, error)
+	// Bind an AI agent to a campaign (owner-only).
+	SetCampaignAIBinding(ctx context.Context, in *SetCampaignAIBindingRequest, opts ...grpc.CallOption) (*SetCampaignAIBindingResponse, error)
+	// Clear the AI agent binding from a campaign (owner-only).
+	ClearCampaignAIBinding(ctx context.Context, in *ClearCampaignAIBindingRequest, opts ...grpc.CallOption) (*ClearCampaignAIBindingResponse, error)
 }
 
 type campaignServiceClient struct {
@@ -129,6 +135,26 @@ func (c *campaignServiceClient) SetCampaignCover(ctx context.Context, in *SetCam
 	return out, nil
 }
 
+func (c *campaignServiceClient) SetCampaignAIBinding(ctx context.Context, in *SetCampaignAIBindingRequest, opts ...grpc.CallOption) (*SetCampaignAIBindingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SetCampaignAIBindingResponse)
+	err := c.cc.Invoke(ctx, CampaignService_SetCampaignAIBinding_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignServiceClient) ClearCampaignAIBinding(ctx context.Context, in *ClearCampaignAIBindingRequest, opts ...grpc.CallOption) (*ClearCampaignAIBindingResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ClearCampaignAIBindingResponse)
+	err := c.cc.Invoke(ctx, CampaignService_ClearCampaignAIBinding_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CampaignServiceServer is the server API for CampaignService service.
 // All implementations must embed UnimplementedCampaignServiceServer
 // for forward compatibility.
@@ -149,6 +175,10 @@ type CampaignServiceServer interface {
 	RestoreCampaign(context.Context, *RestoreCampaignRequest) (*RestoreCampaignResponse, error)
 	// Set the selected built-in cover asset for a campaign.
 	SetCampaignCover(context.Context, *SetCampaignCoverRequest) (*SetCampaignCoverResponse, error)
+	// Bind an AI agent to a campaign (owner-only).
+	SetCampaignAIBinding(context.Context, *SetCampaignAIBindingRequest) (*SetCampaignAIBindingResponse, error)
+	// Clear the AI agent binding from a campaign (owner-only).
+	ClearCampaignAIBinding(context.Context, *ClearCampaignAIBindingRequest) (*ClearCampaignAIBindingResponse, error)
 	mustEmbedUnimplementedCampaignServiceServer()
 }
 
@@ -179,6 +209,12 @@ func (UnimplementedCampaignServiceServer) RestoreCampaign(context.Context, *Rest
 }
 func (UnimplementedCampaignServiceServer) SetCampaignCover(context.Context, *SetCampaignCoverRequest) (*SetCampaignCoverResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetCampaignCover not implemented")
+}
+func (UnimplementedCampaignServiceServer) SetCampaignAIBinding(context.Context, *SetCampaignAIBindingRequest) (*SetCampaignAIBindingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SetCampaignAIBinding not implemented")
+}
+func (UnimplementedCampaignServiceServer) ClearCampaignAIBinding(context.Context, *ClearCampaignAIBindingRequest) (*ClearCampaignAIBindingResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClearCampaignAIBinding not implemented")
 }
 func (UnimplementedCampaignServiceServer) mustEmbedUnimplementedCampaignServiceServer() {}
 func (UnimplementedCampaignServiceServer) testEmbeddedByValue()                         {}
@@ -327,6 +363,42 @@ func _CampaignService_SetCampaignCover_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _CampaignService_SetCampaignAIBinding_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SetCampaignAIBindingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).SetCampaignAIBinding(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_SetCampaignAIBinding_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).SetCampaignAIBinding(ctx, req.(*SetCampaignAIBindingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignService_ClearCampaignAIBinding_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClearCampaignAIBindingRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).ClearCampaignAIBinding(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_ClearCampaignAIBinding_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).ClearCampaignAIBinding(ctx, req.(*ClearCampaignAIBindingRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // CampaignService_ServiceDesc is the grpc.ServiceDesc for CampaignService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -361,6 +433,202 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetCampaignCover",
 			Handler:    _CampaignService_SetCampaignCover_Handler,
+		},
+		{
+			MethodName: "SetCampaignAIBinding",
+			Handler:    _CampaignService_SetCampaignAIBinding_Handler,
+		},
+		{
+			MethodName: "ClearCampaignAIBinding",
+			Handler:    _CampaignService_ClearCampaignAIBinding_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "game/v1/campaign.proto",
+}
+
+const (
+	CampaignAIService_IssueCampaignAISessionGrant_FullMethodName = "/game.v1.CampaignAIService/IssueCampaignAISessionGrant"
+	CampaignAIService_GetCampaignAIBindingUsage_FullMethodName   = "/game.v1.CampaignAIService/GetCampaignAIBindingUsage"
+	CampaignAIService_GetCampaignAIAuthState_FullMethodName      = "/game.v1.CampaignAIService/GetCampaignAIAuthState"
+)
+
+// CampaignAIServiceClient is the client API for CampaignAIService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// CampaignAIService provides internal-only Game<=>AI/Game<=>Chat campaign AI contracts.
+type CampaignAIServiceClient interface {
+	// Issues a session-scoped grant for AI turn relay.
+	IssueCampaignAISessionGrant(ctx context.Context, in *IssueCampaignAISessionGrantRequest, opts ...grpc.CallOption) (*IssueCampaignAISessionGrantResponse, error)
+	// Internal read for AI-service usage guards.
+	GetCampaignAIBindingUsage(ctx context.Context, in *GetCampaignAIBindingUsageRequest, opts ...grpc.CallOption) (*GetCampaignAIBindingUsageResponse, error)
+	// Returns current campaign AI auth state for local AI validation caches.
+	GetCampaignAIAuthState(ctx context.Context, in *GetCampaignAIAuthStateRequest, opts ...grpc.CallOption) (*GetCampaignAIAuthStateResponse, error)
+}
+
+type campaignAIServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCampaignAIServiceClient(cc grpc.ClientConnInterface) CampaignAIServiceClient {
+	return &campaignAIServiceClient{cc}
+}
+
+func (c *campaignAIServiceClient) IssueCampaignAISessionGrant(ctx context.Context, in *IssueCampaignAISessionGrantRequest, opts ...grpc.CallOption) (*IssueCampaignAISessionGrantResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IssueCampaignAISessionGrantResponse)
+	err := c.cc.Invoke(ctx, CampaignAIService_IssueCampaignAISessionGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignAIServiceClient) GetCampaignAIBindingUsage(ctx context.Context, in *GetCampaignAIBindingUsageRequest, opts ...grpc.CallOption) (*GetCampaignAIBindingUsageResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCampaignAIBindingUsageResponse)
+	err := c.cc.Invoke(ctx, CampaignAIService_GetCampaignAIBindingUsage_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignAIServiceClient) GetCampaignAIAuthState(ctx context.Context, in *GetCampaignAIAuthStateRequest, opts ...grpc.CallOption) (*GetCampaignAIAuthStateResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCampaignAIAuthStateResponse)
+	err := c.cc.Invoke(ctx, CampaignAIService_GetCampaignAIAuthState_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CampaignAIServiceServer is the server API for CampaignAIService service.
+// All implementations must embed UnimplementedCampaignAIServiceServer
+// for forward compatibility.
+//
+// CampaignAIService provides internal-only Game<=>AI/Game<=>Chat campaign AI contracts.
+type CampaignAIServiceServer interface {
+	// Issues a session-scoped grant for AI turn relay.
+	IssueCampaignAISessionGrant(context.Context, *IssueCampaignAISessionGrantRequest) (*IssueCampaignAISessionGrantResponse, error)
+	// Internal read for AI-service usage guards.
+	GetCampaignAIBindingUsage(context.Context, *GetCampaignAIBindingUsageRequest) (*GetCampaignAIBindingUsageResponse, error)
+	// Returns current campaign AI auth state for local AI validation caches.
+	GetCampaignAIAuthState(context.Context, *GetCampaignAIAuthStateRequest) (*GetCampaignAIAuthStateResponse, error)
+	mustEmbedUnimplementedCampaignAIServiceServer()
+}
+
+// UnimplementedCampaignAIServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedCampaignAIServiceServer struct{}
+
+func (UnimplementedCampaignAIServiceServer) IssueCampaignAISessionGrant(context.Context, *IssueCampaignAISessionGrantRequest) (*IssueCampaignAISessionGrantResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method IssueCampaignAISessionGrant not implemented")
+}
+func (UnimplementedCampaignAIServiceServer) GetCampaignAIBindingUsage(context.Context, *GetCampaignAIBindingUsageRequest) (*GetCampaignAIBindingUsageResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCampaignAIBindingUsage not implemented")
+}
+func (UnimplementedCampaignAIServiceServer) GetCampaignAIAuthState(context.Context, *GetCampaignAIAuthStateRequest) (*GetCampaignAIAuthStateResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCampaignAIAuthState not implemented")
+}
+func (UnimplementedCampaignAIServiceServer) mustEmbedUnimplementedCampaignAIServiceServer() {}
+func (UnimplementedCampaignAIServiceServer) testEmbeddedByValue()                           {}
+
+// UnsafeCampaignAIServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CampaignAIServiceServer will
+// result in compilation errors.
+type UnsafeCampaignAIServiceServer interface {
+	mustEmbedUnimplementedCampaignAIServiceServer()
+}
+
+func RegisterCampaignAIServiceServer(s grpc.ServiceRegistrar, srv CampaignAIServiceServer) {
+	// If the following call pancis, it indicates UnimplementedCampaignAIServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&CampaignAIService_ServiceDesc, srv)
+}
+
+func _CampaignAIService_IssueCampaignAISessionGrant_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IssueCampaignAISessionGrantRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignAIServiceServer).IssueCampaignAISessionGrant(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignAIService_IssueCampaignAISessionGrant_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignAIServiceServer).IssueCampaignAISessionGrant(ctx, req.(*IssueCampaignAISessionGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignAIService_GetCampaignAIBindingUsage_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCampaignAIBindingUsageRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignAIServiceServer).GetCampaignAIBindingUsage(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignAIService_GetCampaignAIBindingUsage_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignAIServiceServer).GetCampaignAIBindingUsage(ctx, req.(*GetCampaignAIBindingUsageRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignAIService_GetCampaignAIAuthState_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCampaignAIAuthStateRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignAIServiceServer).GetCampaignAIAuthState(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignAIService_GetCampaignAIAuthState_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignAIServiceServer).GetCampaignAIAuthState(ctx, req.(*GetCampaignAIAuthStateRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// CampaignAIService_ServiceDesc is the grpc.ServiceDesc for CampaignAIService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var CampaignAIService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "game.v1.CampaignAIService",
+	HandlerType: (*CampaignAIServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "IssueCampaignAISessionGrant",
+			Handler:    _CampaignAIService_IssueCampaignAISessionGrant_Handler,
+		},
+		{
+			MethodName: "GetCampaignAIBindingUsage",
+			Handler:    _CampaignAIService_GetCampaignAIBindingUsage_Handler,
+		},
+		{
+			MethodName: "GetCampaignAIAuthState",
+			Handler:    _CampaignAIService_GetCampaignAIAuthState_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

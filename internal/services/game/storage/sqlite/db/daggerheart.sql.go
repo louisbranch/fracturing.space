@@ -330,7 +330,7 @@ func (q *Queries) GetDaggerheartBeastform(ctx context.Context, id string) (Dagge
 const getDaggerheartCharacterProfile = `-- name: GetDaggerheartCharacterProfile :one
 
 
-SELECT campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold, agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max, experiences_json, class_id, subclass_id, ancestry_id, community_id, traits_assigned, background, domain_card_ids_json, connections, details_recorded, starting_weapon_ids_json, starting_armor_id, starting_potion_item_id FROM daggerheart_character_profiles
+SELECT campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold, agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max, experiences_json, class_id, subclass_id, ancestry_id, community_id, traits_assigned, details_recorded, starting_weapon_ids_json, starting_armor_id, starting_potion_item_id, background, domain_card_ids_json, connections FROM daggerheart_character_profiles
 WHERE campaign_id = ? AND character_id = ?
 `
 
@@ -368,13 +368,13 @@ func (q *Queries) GetDaggerheartCharacterProfile(ctx context.Context, arg GetDag
 		&i.AncestryID,
 		&i.CommunityID,
 		&i.TraitsAssigned,
-		&i.Background,
-		&i.DomainCardIdsJson,
-		&i.Connections,
 		&i.DetailsRecorded,
 		&i.StartingWeaponIdsJson,
 		&i.StartingArmorID,
 		&i.StartingPotionItemID,
+		&i.Background,
+		&i.DomainCardIdsJson,
+		&i.Connections,
 	)
 	return i, err
 }

@@ -38,6 +38,7 @@ type AgentRecord struct {
 	ID              string
 	OwnerUserID     string
 	Name            string
+	Handle          string
 	Provider        string
 	Model           string
 	CredentialID    string
@@ -51,6 +52,35 @@ type AgentRecord struct {
 type AgentPage struct {
 	Agents        []AgentRecord
 	NextPageToken string
+}
+
+// CampaignTurnRecord stores one campaign relay turn submission.
+type CampaignTurnRecord struct {
+	ID                 string
+	CampaignID         string
+	SessionID          string
+	AgentID            string
+	RequesterUserID    string
+	ParticipantID      string
+	ParticipantName    string
+	CorrelationMessage string
+	InputText          string
+	Status             string
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
+}
+
+// CampaignTurnEventRecord stores one campaign turn stream event.
+type CampaignTurnEventRecord struct {
+	SequenceID         uint64
+	CampaignID         string
+	SessionID          string
+	TurnID             string
+	Kind               string
+	Content            string
+	ParticipantVisible bool
+	CorrelationMessage string
+	CreatedAt          time.Time
 }
 
 // ProviderGrantRecord stores a persisted provider OAuth grant.
@@ -186,6 +216,15 @@ type AgentStore interface {
 	GetAgent(ctx context.Context, agentID string) (AgentRecord, error)
 	ListAgentsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string) (AgentPage, error)
 	DeleteAgent(ctx context.Context, ownerUserID string, agentID string) error
+}
+
+// CampaignTurnStore persists campaign turn relay state and event stream rows.
+type CampaignTurnStore interface {
+	PutCampaignTurn(ctx context.Context, record CampaignTurnRecord) error
+	UpdateCampaignTurnStatus(ctx context.Context, turnID string, status string, updatedAt time.Time) error
+	AppendCampaignTurnEvent(ctx context.Context, record CampaignTurnEventRecord) (CampaignTurnEventRecord, error)
+	ListCampaignTurnEvents(ctx context.Context, campaignID string, afterSequenceID uint64, limit int) ([]CampaignTurnEventRecord, error)
+	GetLatestCampaignTurnEventSequence(ctx context.Context, campaignID string) (uint64, error)
 }
 
 // ProviderGrantStore persists provider grant records.

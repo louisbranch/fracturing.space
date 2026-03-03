@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
@@ -31,6 +32,7 @@ type CampaignService struct {
 	clock       func() time.Time
 	idGenerator func() (string, error)
 	authClient  authv1.AuthServiceClient
+	aiClient    aiv1.AgentServiceClient
 }
 
 // NewCampaignService creates a CampaignService with default dependencies.
@@ -46,6 +48,13 @@ func NewCampaignService(stores Stores) *CampaignService {
 func NewCampaignServiceWithAuth(stores Stores, authClient authv1.AuthServiceClient) *CampaignService {
 	service := NewCampaignService(stores)
 	service.authClient = authClient
+	return service
+}
+
+// NewCampaignServiceWithAuthAndAI creates a CampaignService with auth and AI clients.
+func NewCampaignServiceWithAuthAndAI(stores Stores, authClient authv1.AuthServiceClient, aiClient aiv1.AgentServiceClient) *CampaignService {
+	service := NewCampaignServiceWithAuth(stores, authClient)
+	service.aiClient = aiClient
 	return service
 }
 
@@ -331,6 +340,52 @@ func (s *CampaignService) SetCampaignCover(ctx context.Context, in *campaignv1.S
 	}
 
 	return &campaignv1.SetCampaignCoverResponse{Campaign: campaignToProto(updated)}, nil
+}
+
+// SetCampaignAIBinding binds an AI agent to a campaign.
+func (s *CampaignService) SetCampaignAIBinding(ctx context.Context, in *campaignv1.SetCampaignAIBindingRequest) (*campaignv1.SetCampaignAIBindingResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "set campaign ai binding request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	aiAgentID := strings.TrimSpace(in.GetAiAgentId())
+	if aiAgentID == "" {
+		return nil, status.Error(codes.InvalidArgument, "ai agent id is required")
+	}
+
+	updated, err := newCampaignApplication(s).SetCampaignAIBinding(ctx, campaignID, aiAgentID)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+	return &campaignv1.SetCampaignAIBindingResponse{Campaign: campaignToProto(updated)}, nil
+}
+
+// ClearCampaignAIBinding clears the AI agent binding from a campaign.
+func (s *CampaignService) ClearCampaignAIBinding(ctx context.Context, in *campaignv1.ClearCampaignAIBindingRequest) (*campaignv1.ClearCampaignAIBindingResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "clear campaign ai binding request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	updated, err := newCampaignApplication(s).ClearCampaignAIBinding(ctx, campaignID)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+	return &campaignv1.ClearCampaignAIBindingResponse{Campaign: campaignToProto(updated)}, nil
 }
 
 func ensureNoActiveSession(ctx context.Context, store storage.SessionStore, campaignID string) error {

@@ -95,7 +95,7 @@ func TestStartSession_RequiresDomainEngine(t *testing.T) {
 	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusDraft, CanStartSession: true}
 
 	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
 	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
@@ -110,11 +110,12 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Name:   "Test Campaign",
-		Status: campaign.StatusDraft,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: campaign.GmModeHuman,
+		ID:              "c1",
+		Name:            "Test Campaign",
+		Status:          campaign.StatusDraft,
+		System:          commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:          campaign.GmModeHuman,
+		CanStartSession: true,
 	}
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
 		Decision: command.Accept(
@@ -190,8 +191,9 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
+		ID:              "c1",
+		Status:          campaign.StatusActive,
+		CanStartSession: true,
 	}
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
 		Decision: command.Accept(event.Event{
@@ -235,8 +237,9 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
+		ID:              "c1",
+		Status:          campaign.StatusActive,
+		CanStartSession: true,
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{

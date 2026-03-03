@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
@@ -167,5 +168,72 @@ func TestEvaluateSessionStart_ReadyCampaignAccepted(t *testing.T) {
 
 	if rejection != nil {
 		t.Fatalf("rejection = %#v, want nil", rejection)
+	}
+}
+
+func TestEvaluateSessionStart_AIGMModeRequiresBoundAgent(t *testing.T) {
+	rejection := EvaluateSessionStart(aggregate.State{
+		Campaign: campaign.State{
+			GmMode: "ai",
+		},
+	}, nil)
+	if rejection == nil {
+		t.Fatal("expected rejection")
+	}
+	if rejection.Code != RejectionCodeSessionReadinessAIAgentRequired {
+		t.Fatalf("rejection code = %s, want %s", rejection.Code, RejectionCodeSessionReadinessAIAgentRequired)
+	}
+}
+
+func TestEvaluateSessionStart_AIGMModeWithBoundAgentAccepted(t *testing.T) {
+	rejection := EvaluateSessionStart(aggregate.State{
+		Campaign: campaign.State{
+			GmMode:    "  HYBRID  ",
+			AIAgentID: "agent-1",
+		},
+		Participants: map[string]participant.State{
+			"gm-1": {
+				ParticipantID: "gm-1",
+				Joined:        true,
+				Role:          string(participant.RoleGM),
+			},
+			"player-1": {
+				ParticipantID: "player-1",
+				Joined:        true,
+				Role:          string(participant.RolePlayer),
+			},
+		},
+		Characters: map[string]character.State{
+			"char-1": {
+				CharacterID:   "char-1",
+				Created:       true,
+				ParticipantID: "player-1",
+			},
+		},
+	}, nil)
+	if rejection != nil {
+		t.Fatalf("rejection = %#v, want nil", rejection)
+	}
+}
+
+func TestIsAIGMMode(t *testing.T) {
+	tests := []struct {
+		name string
+		mode string
+		want bool
+	}{
+		{name: "ai", mode: "ai", want: true},
+		{name: "hybrid", mode: "hybrid", want: true},
+		{name: "human", mode: "human", want: false},
+		{name: "empty", mode: "  ", want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isAIGMMode(tt.mode)
+			if got != tt.want {
+				t.Fatalf("isAIGMMode(%q) = %v, want %v", tt.mode, got, tt.want)
+			}
+		})
 	}
 }
