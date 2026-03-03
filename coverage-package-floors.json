@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-03T06:22:07Z",
+  "updated_at": "2026-03-03T06:50:53Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -55,7 +55,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign",
-      "floor": 93.6,
+      "floor": 93.8,
       "description": "Campaign lifecycle domain behavior."
     },
     {
