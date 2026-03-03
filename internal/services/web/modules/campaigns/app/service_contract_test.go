@@ -39,6 +39,7 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 		campaignName:              "Campaign",
 		campaignWorkspace:         CampaignWorkspace{Name: "Campaign", System: "Daggerheart", GMMode: "Human", Status: "Active", Locale: "English (US)", Intent: "Standard", AccessPolicy: "Private", ParticipantCount: "1", CharacterCount: "1", CoverImageURL: "https://cdn.example.com/cover.png"},
 		campaignParticipants:      []CampaignParticipant{{ID: "p1", Name: "Owner"}},
+		campaignParticipant:       CampaignParticipant{ID: "p1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},
 		campaignCharacters:        []CampaignCharacter{{ID: "char-1", Name: "Hero"}},
 		campaignSessions:          []CampaignSession{{ID: "sess-1", Name: "Session One"}},
 		campaignInvites:           []CampaignInvite{{ID: "inv-1", ParticipantID: "p1", RecipientUserID: "user-2", Status: "Pending"}},
@@ -65,6 +66,9 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	if _, err := svc.CampaignParticipants(ctx, "c1"); err != nil {
 		t.Fatalf("CampaignParticipants() error = %v", err)
 	}
+	if _, err := svc.CampaignParticipantEditor(ctx, "c1", "p1"); err != nil {
+		t.Fatalf("CampaignParticipantEditor() error = %v", err)
+	}
 	if _, err := svc.CampaignCharacters(ctx, "c1"); err != nil {
 		t.Fatalf("CampaignCharacters() error = %v", err)
 	}
@@ -82,6 +86,9 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	}
 	if _, err := svc.CreateCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
 		t.Fatalf("CreateCharacter() error = %v", err)
+	}
+	if err := svc.UpdateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p1", Name: "Owner Prime", Role: "gm", Pronouns: "they/them"}); err != nil {
+		t.Fatalf("UpdateParticipant() error = %v", err)
 	}
 	if err := svc.CreateInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p1", RecipientUserID: "user-2"}); err != nil {
 		t.Fatalf("CreateInvite() error = %v", err)
@@ -131,6 +138,9 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	if _, err := gw.CampaignParticipants(ctx, "c1"); err != nil {
 		assertUnavailable(t, err, "CampaignParticipants")
 	}
+	if _, err := gw.CampaignParticipant(ctx, "c1", "p1"); err != nil {
+		assertUnavailable(t, err, "CampaignParticipant")
+	}
 	if _, err := gw.CampaignCharacters(ctx, "c1"); err != nil {
 		assertUnavailable(t, err, "CampaignCharacters")
 	}
@@ -157,6 +167,7 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	if _, err := gw.CreateCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
 		assertUnavailable(t, err, "CreateCharacter")
 	}
+	assertUnavailable(t, gw.UpdateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p1"}), "UpdateParticipant")
 	assertUnavailable(t, gw.CreateInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p1", RecipientUserID: "user-2"}), "CreateInvite")
 	assertUnavailable(t, gw.RevokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}), "RevokeInvite")
 	assertUnavailable(t, gw.ApplyCharacterCreationStep(ctx, "c1", "char-1", &CampaignCharacterCreationStepInput{}), "ApplyCharacterCreationStep")

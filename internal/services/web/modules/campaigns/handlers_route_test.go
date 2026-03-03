@@ -179,6 +179,26 @@ func TestHandleParticipantsReturnsErrorWhenLookupFails(t *testing.T) {
 	}
 }
 
+func TestHandleParticipantEditReturnsErrorWhenLookupFails(t *testing.T) {
+	t.Parallel()
+
+	gw := fakeGateway{
+		items:          []CampaignSummary{{ID: "c1", Name: "Remote"}},
+		participantErr: apperrors.E(apperrors.KindUnavailable, "participant down"),
+	}
+	h := newTestHandlers(gw)
+	mux := http.NewServeMux()
+	registerStableRoutes(mux, h)
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantEdit("c1", "p1"), nil)
+	rr := httptest.NewRecorder()
+	mux.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusServiceUnavailable)
+	}
+}
+
 // --- handleCharacters ---
 
 func TestHandleCharactersReturnsErrorWhenLookupFails(t *testing.T) {

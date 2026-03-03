@@ -24,6 +24,8 @@ type CampaignClient interface {
 // ParticipantClient exposes participant listing for campaign workspace pages.
 type ParticipantClient interface {
 	ListParticipants(context.Context, *statev1.ListParticipantsRequest, ...grpc.CallOption) (*statev1.ListParticipantsResponse, error)
+	GetParticipant(context.Context, *statev1.GetParticipantRequest, ...grpc.CallOption) (*statev1.GetParticipantResponse, error)
+	UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error)
 }
 
 // CharacterClient exposes character operations for campaign workspace pages.

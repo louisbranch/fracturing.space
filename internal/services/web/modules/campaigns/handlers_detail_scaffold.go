@@ -32,6 +32,21 @@ func (h handlers) handleCharacterDetailRoute(w http.ResponseWriter, r *http.Requ
 	h.handleCharacterDetail(w, r, campaignID, characterID)
 }
 
+// handleParticipantEditRoute handles this route in the module transport layer.
+func (h handlers) handleParticipantEditRoute(w http.ResponseWriter, r *http.Request) {
+	campaignID, ok := h.routeCampaignID(r)
+	if !ok {
+		h.WriteNotFound(w, r)
+		return
+	}
+	participantID, ok := h.routeParticipantID(r)
+	if !ok {
+		h.WriteNotFound(w, r)
+		return
+	}
+	h.handleParticipantEdit(w, r, campaignID, participantID)
+}
+
 // handleSessionDetailRoute handles this route in the module transport layer.
 func (h handlers) handleSessionDetailRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)

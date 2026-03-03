@@ -89,3 +89,71 @@ func (s service) createCharacter(ctx context.Context, campaignID string, input C
 	}
 	return created, nil
 }
+
+// updateParticipant applies this package workflow transition.
+func (s service) updateParticipant(ctx context.Context, campaignID string, input UpdateParticipantInput) error {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+
+	participantID := strings.TrimSpace(input.ParticipantID)
+	if participantID == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_id_is_required", "participant id is required")
+	}
+	role, ok := participantRoleCanonical(input.Role)
+	if !ok {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_role_value_is_invalid", "participant role value is invalid")
+	}
+	name := strings.TrimSpace(input.Name)
+	pronouns := strings.TrimSpace(input.Pronouns)
+	requestedAccess := participantAccessCanonical(input.CampaignAccess)
+	if strings.TrimSpace(input.CampaignAccess) != "" && requestedAccess == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_access_value_is_invalid", "campaign access value is invalid")
+	}
+
+	target := &campaignAuthorizationTarget{
+		ResourceID:           participantID,
+		TargetParticipantID:  participantID,
+		ParticipantOperation: ParticipantGovernanceOperationMutate,
+	}
+	if requestedAccess != "" {
+		target.RequestedCampaignAccess = requestedAccess
+		target.ParticipantOperation = ParticipantGovernanceOperationAccessChange
+	}
+	if err := s.requireCampaignActionAccess(
+		ctx,
+		campaignID,
+		campaignAuthzActionManage,
+		campaignAuthzResourceParticipant,
+		target,
+		policyManageParticipant.denyKey,
+		policyManageParticipant.denyMsg,
+	); err != nil {
+		return err
+	}
+
+	current, err := s.campaignParticipant(ctx, campaignID, participantID)
+	if err != nil {
+		return err
+	}
+	currentRole, _ := participantRoleCanonical(current.Role)
+	currentAccess := participantAccessCanonical(current.CampaignAccess)
+	if requestedAccess == currentAccess {
+		requestedAccess = ""
+	}
+	if name == strings.TrimSpace(current.Name) &&
+		role == currentRole &&
+		pronouns == strings.TrimSpace(current.Pronouns) &&
+		requestedAccess == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.at_least_one_participant_field_is_required", "at least one participant field is required")
+	}
+
+	return s.mutationGateway.UpdateParticipant(ctx, campaignID, UpdateParticipantInput{
+		ParticipantID:  participantID,
+		Name:           name,
+		Role:           role,
+		Pronouns:       pronouns,
+		CampaignAccess: requestedAccess,
+	})
+}

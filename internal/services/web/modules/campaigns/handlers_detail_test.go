@@ -22,10 +22,11 @@ func TestMountServesCampaignDetailRoutes(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 	paths := map[string]string{
-		routepath.AppCampaign("c1"):                 "campaign-overview",
-		routepath.AppCampaignParticipants("c1"):     "campaign-participants",
-		routepath.AppCampaignCharacters("c1"):       "campaign-characters",
-		routepath.AppCampaignCharacter("c1", "pc1"): "campaign-character-detail",
+		routepath.AppCampaign("c1"):                      "campaign-overview",
+		routepath.AppCampaignParticipants("c1"):          "campaign-participants",
+		routepath.AppCampaignParticipantEdit("c1", "p1"): "campaign-participant-edit",
+		routepath.AppCampaignCharacters("c1"):            "campaign-characters",
+		routepath.AppCampaignCharacter("c1", "pc1"):      "campaign-character-detail",
 	}
 	for path, marker := range paths {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -534,6 +535,85 @@ func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 	}
 	if !strings.Contains(body, `href="#lucide-square-user"`) {
 		t.Fatalf("expected characters side-menu icon in output: %q", body)
+	}
+}
+
+func TestMountCampaignParticipantsShowsEditLinkForEditableParticipants(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		participants: []CampaignParticipant{
+			{ID: "p-a", Name: "Aria", Role: "GM", CampaignAccess: "Owner", Controller: "Human", AvatarURL: "/static/avatars/aria.png"},
+			{ID: "p-b", Name: "Bram", Role: "Player", CampaignAccess: "Member", Controller: "Human", AvatarURL: "/static/avatars/bram.png"},
+		},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "p-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+			{CheckID: "p-b", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+		},
+	}, modulehandler.NewTestBase(), "", nil)
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipants("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `href="/app/campaigns/c1/participants/p-a/edit"`) {
+		t.Fatalf("expected editable participant link in output: %q", body)
+	}
+	if strings.Contains(body, `href="/app/campaigns/c1/participants/p-b/edit"`) {
+		t.Fatalf("unexpected edit link for read-only participant: %q", body)
+	}
+}
+
+func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		participant: CampaignParticipant{
+			ID:             "p-a",
+			Name:           "Aria",
+			Role:           "GM",
+			CampaignAccess: "Owner",
+			Pronouns:       "she/her",
+		},
+		authorizationDecision: campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "member", Evaluated: true, Allowed: true},
+			{CheckID: "manager", Evaluated: true, Allowed: true},
+			{CheckID: "owner", Evaluated: true, Allowed: true},
+		},
+	}, modulehandler.NewTestBase(), "", nil)
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantEdit("c1", "p-a"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`campaign-participant-edit`,
+		`data-campaign-participant-edit-form="true"`,
+		`action="/app/campaigns/c1/participants/p-a/edit"`,
+		`name="role"`,
+		`name="pronouns"`,
+		`name="campaign_access"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing participant edit marker %q: %q", marker, body)
+		}
 	}
 }
 

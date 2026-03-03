@@ -132,9 +132,32 @@ func mapParticipantsView(items []CampaignParticipant) []webtemplates.CampaignPar
 			Controller:     p.Controller,
 			Pronouns:       p.Pronouns,
 			AvatarURL:      p.AvatarURL,
+			CanEdit:        p.CanEdit,
+			EditReasonCode: p.EditReasonCode,
 		})
 	}
 	return result
+}
+
+// mapParticipantEditorView converts domain editor state to template view state.
+func mapParticipantEditorView(editor CampaignParticipantEditor) webtemplates.CampaignParticipantEditorView {
+	accessOptions := make([]webtemplates.CampaignParticipantAccessOptionView, 0, len(editor.AccessOptions))
+	for _, option := range editor.AccessOptions {
+		accessOptions = append(accessOptions, webtemplates.CampaignParticipantAccessOptionView{
+			Value:   option.Value,
+			Allowed: option.Allowed,
+		})
+	}
+	return webtemplates.CampaignParticipantEditorView{
+		ID:             editor.Participant.ID,
+		Name:           editor.Participant.Name,
+		Role:           editor.Participant.Role,
+		Controller:     editor.Participant.Controller,
+		Pronouns:       editor.Participant.Pronouns,
+		CampaignAccess: editor.Participant.CampaignAccess,
+		AccessOptions:  accessOptions,
+		AccessReadOnly: editor.AccessReadOnly,
+	}
 }
 
 // mapCharactersView converts domain characters to template view items.

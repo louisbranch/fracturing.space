@@ -133,6 +133,36 @@ func (h handlers) handleInviteRevokeRoute(w http.ResponseWriter, r *http.Request
 	httpx.WriteRedirect(w, r, routepath.AppCampaignInvites(campaignID))
 }
 
+// handleParticipantUpdateRoute handles this route in the module transport layer.
+func (h handlers) handleParticipantUpdateRoute(w http.ResponseWriter, r *http.Request) {
+	campaignID, ok := h.routeCampaignID(r)
+	if !ok {
+		h.WriteNotFound(w, r)
+		return
+	}
+	participantID, ok := h.routeParticipantID(r)
+	if !ok {
+		h.WriteNotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_participant_update_form", "failed to parse participant update form"))
+		return
+	}
+	ctx, _ := h.RequestContextAndUserID(r)
+	if err := h.service.UpdateParticipant(ctx, campaignID, UpdateParticipantInput{
+		ParticipantID:  participantID,
+		Name:           strings.TrimSpace(r.Form.Get("name")),
+		Role:           strings.TrimSpace(r.Form.Get("role")),
+		Pronouns:       strings.TrimSpace(r.Form.Get("pronouns")),
+		CampaignAccess: strings.TrimSpace(r.Form.Get("campaign_access")),
+	}); err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteRedirect(w, r, routepath.AppCampaignParticipants(campaignID))
+}
+
 // parseAppCharacterKind parses inbound values into package-safe forms.
 func parseAppCharacterKind(value string) (CharacterKind, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {

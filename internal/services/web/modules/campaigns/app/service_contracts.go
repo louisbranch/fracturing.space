@@ -13,6 +13,7 @@ type campaignReadGateway interface {
 	CampaignName(context.Context, string) (string, error)
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
 	CampaignParticipants(context.Context, string) ([]CampaignParticipant, error)
+	CampaignParticipant(context.Context, string, string) (CampaignParticipant, error)
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
@@ -25,6 +26,7 @@ type campaignReadGateway interface {
 type campaignMutationGateway interface {
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
+	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	StartSession(context.Context, string, StartSessionInput) error
 	EndSession(context.Context, string, EndSessionInput) error
 	CreateInvite(context.Context, string, CreateInviteInput) error
@@ -46,12 +48,14 @@ type Service interface {
 	CampaignName(context.Context, string) string
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
 	CampaignParticipants(context.Context, string) ([]CampaignParticipant, error)
+	CampaignParticipantEditor(context.Context, string, string) (CampaignParticipantEditor, error)
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
 	StartSession(context.Context, string, StartSessionInput) error
 	EndSession(context.Context, string, EndSessionInput) error
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
+	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	CreateInvite(context.Context, string, CreateInviteInput) error
 	RevokeInvite(context.Context, string, RevokeInviteInput) error
 	ResolveWorkflow(string) CharacterCreationWorkflow

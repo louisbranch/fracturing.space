@@ -199,6 +199,77 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	}
 }
 
+func TestCampaignParticipantMapsSingleResponse(t *testing.T) {
+	t.Parallel()
+
+	participantClient := &contractParticipantClient{
+		getResp: &statev1.GetParticipantResponse{Participant: &statev1.Participant{
+			Id:             "p1",
+			UserId:         "user-1",
+			Name:           "Lead",
+			Role:           statev1.ParticipantRole_GM,
+			CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+			Controller:     statev1.Controller_CONTROLLER_HUMAN,
+		}},
+	}
+	gateway := GRPCGateway{ParticipantClient: participantClient, AssetBaseURL: "https://cdn.example.com"}
+
+	participant, err := gateway.CampaignParticipant(context.Background(), "c1", "p1")
+	if err != nil {
+		t.Fatalf("CampaignParticipant() error = %v", err)
+	}
+	if participant.ID != "p1" || participant.Name != "Lead" || participant.Role != "GM" || participant.CampaignAccess != "Owner" {
+		t.Fatalf("participant = %#v", participant)
+	}
+}
+
+func TestUpdateParticipantMapsInputAndErrors(t *testing.T) {
+	t.Parallel()
+
+	participantClient := &contractParticipantClient{}
+	gateway := GRPCGateway{ParticipantClient: participantClient}
+
+	err := gateway.UpdateParticipant(context.Background(), "c1", campaignapp.UpdateParticipantInput{
+		ParticipantID:  "p1",
+		Name:           "Lead Prime",
+		Role:           "gm",
+		Pronouns:       "they/them",
+		CampaignAccess: "manager",
+	})
+	if err != nil {
+		t.Fatalf("UpdateParticipant() error = %v", err)
+	}
+	if participantClient.updateReq == nil {
+		t.Fatalf("expected UpdateParticipant request")
+	}
+	if participantClient.updateReq.GetCampaignId() != "c1" || participantClient.updateReq.GetParticipantId() != "p1" {
+		t.Fatalf("update request ids = %#v", participantClient.updateReq)
+	}
+	if participantClient.updateReq.GetRole() != statev1.ParticipantRole_GM {
+		t.Fatalf("update role = %v, want %v", participantClient.updateReq.GetRole(), statev1.ParticipantRole_GM)
+	}
+	if participantClient.updateReq.GetCampaignAccess() != statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER {
+		t.Fatalf("update access = %v, want %v", participantClient.updateReq.GetCampaignAccess(), statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER)
+	}
+	if got := strings.TrimSpace(participantClient.updateReq.GetName().GetValue()); got != "Lead Prime" {
+		t.Fatalf("update name = %q, want %q", got, "Lead Prime")
+	}
+
+	if err := gateway.UpdateParticipant(context.Background(), "c1", campaignapp.UpdateParticipantInput{ParticipantID: "p1", Role: "bad"}); err == nil {
+		t.Fatalf("expected role validation error")
+	}
+	if err := gateway.UpdateParticipant(context.Background(), "c1", campaignapp.UpdateParticipantInput{ParticipantID: "p1", Role: "gm", CampaignAccess: "bad"}); err == nil {
+		t.Fatalf("expected access validation error")
+	}
+
+	participantClient.updateErr = status.Error(codes.InvalidArgument, "invalid update")
+	if err := gateway.UpdateParticipant(context.Background(), "c1", campaignapp.UpdateParticipantInput{ParticipantID: "p1", Name: "Lead Prime", Role: "gm"}); err == nil {
+		t.Fatalf("expected update transport error")
+	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_update_participant" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.failed_to_update_participant")
+	}
+}
+
 func TestCreateCampaignMapsInputAndValidatesResponse(t *testing.T) {
 	t.Parallel()
 
@@ -632,8 +703,12 @@ func (c *contractCampaignClient) CreateCampaign(_ context.Context, req *statev1.
 }
 
 type contractParticipantClient struct {
-	listResp *statev1.ListParticipantsResponse
-	listErr  error
+	listResp  *statev1.ListParticipantsResponse
+	listErr   error
+	getResp   *statev1.GetParticipantResponse
+	getErr    error
+	updateReq *statev1.UpdateParticipantRequest
+	updateErr error
 }
 
 func (c *contractParticipantClient) ListParticipants(context.Context, *statev1.ListParticipantsRequest, ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
@@ -644,6 +719,24 @@ func (c *contractParticipantClient) ListParticipants(context.Context, *statev1.L
 		return c.listResp, nil
 	}
 	return &statev1.ListParticipantsResponse{}, nil
+}
+
+func (c *contractParticipantClient) GetParticipant(context.Context, *statev1.GetParticipantRequest, ...grpc.CallOption) (*statev1.GetParticipantResponse, error) {
+	if c.getErr != nil {
+		return nil, c.getErr
+	}
+	if c.getResp != nil {
+		return c.getResp, nil
+	}
+	return &statev1.GetParticipantResponse{}, nil
+}
+
+func (c *contractParticipantClient) UpdateParticipant(_ context.Context, req *statev1.UpdateParticipantRequest, _ ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
+	c.updateReq = req
+	if c.updateErr != nil {
+		return nil, c.updateErr
+	}
+	return &statev1.UpdateParticipantResponse{Participant: &statev1.Participant{Id: strings.TrimSpace(req.GetParticipantId())}}, nil
 }
 
 type contractSessionClient struct {
@@ -876,5 +969,27 @@ func TestAuthorizationProtoMappers(t *testing.T) {
 	}
 	if got := mapCampaignAuthorizationTargetToProto(&campaignapp.AuthorizationTarget{ResourceID: " char-1 "}); got == nil || strings.TrimSpace(got.GetResourceId()) != "char-1" {
 		t.Fatalf("mapCampaignAuthorizationTargetToProto(valid) = %#v", got)
+	}
+	target := mapCampaignAuthorizationTargetToProto(&campaignapp.AuthorizationTarget{
+		ResourceID:              " part-1 ",
+		TargetParticipantID:     " part-1 ",
+		TargetCampaignAccess:    "owner",
+		RequestedCampaignAccess: "manager",
+		ParticipantOperation:    campaignapp.ParticipantGovernanceOperationAccessChange,
+	})
+	if target == nil {
+		t.Fatalf("mapCampaignAuthorizationTargetToProto(participant governance) = nil")
+	}
+	if strings.TrimSpace(target.GetTargetParticipantId()) != "part-1" {
+		t.Fatalf("target participant id = %q, want %q", target.GetTargetParticipantId(), "part-1")
+	}
+	if target.GetTargetCampaignAccess() != statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER {
+		t.Fatalf("target campaign access = %v, want %v", target.GetTargetCampaignAccess(), statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER)
+	}
+	if target.GetRequestedCampaignAccess() != statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER {
+		t.Fatalf("requested campaign access = %v, want %v", target.GetRequestedCampaignAccess(), statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER)
+	}
+	if target.GetParticipantOperation() != statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_ACCESS_CHANGE {
+		t.Fatalf("participant operation = %v, want %v", target.GetParticipantOperation(), statev1.ParticipantGovernanceOperation_PARTICIPANT_GOVERNANCE_OPERATION_ACCESS_CHANGE)
 	}
 }

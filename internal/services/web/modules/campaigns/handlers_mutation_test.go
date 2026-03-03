@@ -93,6 +93,12 @@ func TestStableMutationRoutesReturnParseErrorLocalizationKeys(t *testing.T) {
 			wantMarkerA: "error.web.message.failed_to_parse_invite_revoke_form",
 			wantMarkerB: "failed to parse invite revoke form",
 		},
+		{
+			name:        "participant update parse error",
+			path:        routepath.AppCampaignParticipantEdit("c1", "p-manager"),
+			wantMarkerA: "error.web.message.failed_to_parse_participant_update_form",
+			wantMarkerB: "failed to parse participant update form",
+		},
 	}
 
 	for _, tc := range tests {
@@ -205,6 +211,12 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			body:         "invite_id=inv-1",
 			wantLocation: routepath.AppCampaignInvites("c1"),
 		},
+		{
+			name:         "participant update",
+			path:         routepath.AppCampaignParticipantEdit("c1", "p-manager"),
+			body:         "name=Manager+One&role=player&pronouns=they%2Fthem",
+			wantLocation: routepath.AppCampaignParticipants("c1"),
+		},
 	}
 
 	for _, tc := range tests {
@@ -235,6 +247,51 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			}
 			if got := rr.Header().Get("HX-Redirect"); got != tc.wantLocation {
 				t.Fatalf("HX-Redirect = %q, want %q", got, tc.wantLocation)
+			}
+		})
+	}
+}
+
+func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	mount, _ := m.Mount()
+
+	tests := []struct {
+		name        string
+		body        string
+		wantMarkerA string
+		wantMarkerB string
+	}{
+		{
+			name:        "invalid role",
+			body:        "name=Manager+One&role=invalid&pronouns=they%2Fthem",
+			wantMarkerA: "error.web.message.participant_role_value_is_invalid",
+			wantMarkerB: "participant role value is invalid",
+		},
+		{
+			name:        "invalid access",
+			body:        "name=Manager+One&role=player&campaign_access=invalid",
+			wantMarkerA: "error.web.message.campaign_access_value_is_invalid",
+			wantMarkerB: "campaign access value is invalid",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignParticipantEdit("c1", "p-manager"), strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			rr := httptest.NewRecorder()
+			mount.Handler.ServeHTTP(rr, req)
+			if rr.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+			}
+			body := rr.Body.String()
+			if !strings.Contains(body, tc.wantMarkerA) && !strings.Contains(body, tc.wantMarkerB) {
+				t.Fatalf("body missing validation marker %q or %q: %q", tc.wantMarkerA, tc.wantMarkerB, body)
 			}
 		})
 	}

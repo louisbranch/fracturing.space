@@ -31,5 +31,6 @@ func registerStableCampaignCoreRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignPattern, h.handleOverviewMethodNotAllowed)
 
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignParticipantsPattern, h.withCampaignID(h.handleParticipants))
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignParticipantEditPattern, h.handleParticipantEditRoute)
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignCharactersPattern, h.withCampaignID(h.handleCharacters))
 }

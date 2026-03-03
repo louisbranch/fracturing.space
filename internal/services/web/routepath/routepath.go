@@ -37,6 +37,7 @@ const (
 	AppCampaignSessionStartPattern           = CampaignsPrefix + "{campaignID}/sessions/start"
 	AppCampaignSessionEndPattern             = CampaignsPrefix + "{campaignID}/sessions/end"
 	AppCampaignParticipantsPattern           = CampaignsPrefix + "{campaignID}/participants"
+	AppCampaignParticipantEditPattern        = CampaignsPrefix + "{campaignID}/participants/{participantID}/edit"
 	AppCampaignCharactersPattern             = CampaignsPrefix + "{campaignID}/characters"
 	AppCampaignCharacterPattern              = CampaignsPrefix + "{campaignID}/characters/{characterID}"
 	AppCampaignCharacterCreatePattern        = CampaignsPrefix + "{campaignID}/characters/create"
@@ -92,6 +93,11 @@ func AppCampaignSession(campaignID string, sessionID string) string {
 // AppCampaignParticipants returns the campaign participants route.
 func AppCampaignParticipants(campaignID string) string {
 	return AppCampaign(campaignID) + "/participants"
+}
+
+// AppCampaignParticipantEdit returns the campaign participant-edit route.
+func AppCampaignParticipantEdit(campaignID string, participantID string) string {
+	return AppCampaignParticipants(campaignID) + "/" + escapeSegment(participantID) + "/edit"
 }
 
 // AppCampaignCharacters returns the campaign characters route.

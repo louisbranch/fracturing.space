@@ -11,6 +11,7 @@ import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/grpcpaging"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // CampaignParticipants centralizes this web behavior in one helper seam.
@@ -69,4 +70,102 @@ func (g GRPCGateway) CampaignParticipants(ctx context.Context, campaignID string
 			}, true
 		},
 	)
+}
+
+// CampaignParticipant centralizes this web behavior in one helper seam.
+func (g GRPCGateway) CampaignParticipant(ctx context.Context, campaignID string, participantID string) (campaignapp.CampaignParticipant, error) {
+	if g.ParticipantClient == nil {
+		return campaignapp.CampaignParticipant{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.participant_service_client_is_not_configured", "participant service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return campaignapp.CampaignParticipant{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	participantID = strings.TrimSpace(participantID)
+	if participantID == "" {
+		return campaignapp.CampaignParticipant{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_id_is_required", "participant id is required")
+	}
+
+	resp, err := g.ParticipantClient.GetParticipant(ctx, &statev1.GetParticipantRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
+	})
+	if err != nil {
+		return campaignapp.CampaignParticipant{}, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackMessage: "failed to load participant",
+		})
+	}
+	participant := resp.GetParticipant()
+	if participant == nil {
+		return campaignapp.CampaignParticipant{}, apperrors.E(apperrors.KindNotFound, "participant not found")
+	}
+
+	avatarEntityID := strings.TrimSpace(participant.GetId())
+	if avatarEntityID == "" {
+		avatarEntityID = strings.TrimSpace(participant.GetUserId())
+	}
+	if avatarEntityID == "" {
+		avatarEntityID = campaignID
+	}
+	return campaignapp.CampaignParticipant{
+		ID:             strings.TrimSpace(participant.GetId()),
+		UserID:         strings.TrimSpace(participant.GetUserId()),
+		Name:           participantDisplayName(participant),
+		Role:           participantRoleLabel(participant.GetRole()),
+		CampaignAccess: participantCampaignAccessLabel(participant.GetCampaignAccess()),
+		Controller:     participantControllerLabel(participant.GetController()),
+		Pronouns:       pronouns.FromProto(participant.GetPronouns()),
+		AvatarURL: websupport.AvatarImageURL(
+			g.AssetBaseURL,
+			catalog.AvatarRoleParticipant,
+			avatarEntityID,
+			strings.TrimSpace(participant.GetAvatarSetId()),
+			strings.TrimSpace(participant.GetAvatarAssetId()),
+		),
+	}, nil
+}
+
+// UpdateParticipant applies this package workflow transition.
+func (g GRPCGateway) UpdateParticipant(ctx context.Context, campaignID string, input campaignapp.UpdateParticipantInput) error {
+	if g.ParticipantClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.participant_service_client_is_not_configured", "participant service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	participantID := strings.TrimSpace(input.ParticipantID)
+	if participantID == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_id_is_required", "participant id is required")
+	}
+	role := mapParticipantRoleToProto(input.Role)
+	if role == statev1.ParticipantRole_ROLE_UNSPECIFIED {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_role_value_is_invalid", "participant role value is invalid")
+	}
+	access := mapParticipantAccessToProto(input.CampaignAccess)
+	if strings.TrimSpace(input.CampaignAccess) != "" && access == statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_access_value_is_invalid", "campaign access value is invalid")
+	}
+
+	request := &statev1.UpdateParticipantRequest{
+		CampaignId:    campaignID,
+		ParticipantId: participantID,
+		Name:          wrapperspb.String(strings.TrimSpace(input.Name)),
+		Role:          role,
+		Pronouns:      pronouns.ToProto(strings.TrimSpace(input.Pronouns)),
+	}
+	if access != statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
+		request.CampaignAccess = access
+	}
+
+	_, err := g.ParticipantClient.UpdateParticipant(ctx, request)
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_update_participant",
+			FallbackMessage: "failed to update participant",
+		})
+	}
+	return nil
 }

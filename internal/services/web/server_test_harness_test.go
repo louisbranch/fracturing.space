@@ -168,6 +168,27 @@ func (f fakeWebParticipantClient) ListParticipants(context.Context, *statev1.Lis
 	return &statev1.ListParticipantsResponse{}, nil
 }
 
+func (f fakeWebParticipantClient) GetParticipant(context.Context, *statev1.GetParticipantRequest, ...grpc.CallOption) (*statev1.GetParticipantResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.response != nil {
+		for _, participant := range f.response.GetParticipants() {
+			if participant != nil {
+				return &statev1.GetParticipantResponse{Participant: participant}, nil
+			}
+		}
+	}
+	return &statev1.GetParticipantResponse{}, nil
+}
+
+func (f fakeWebParticipantClient) UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.UpdateParticipantResponse{}, nil
+}
+
 type fakeWebCharacterClient struct {
 	response *statev1.ListCharactersResponse
 	err      error
