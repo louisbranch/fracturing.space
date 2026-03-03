@@ -57,12 +57,12 @@ func TestMount(t *testing.T) {
 		wantSection string
 		wantEntry   string
 	}{
-		{path: "/catalog", wantCode: http.StatusNoContent, wantCall: "catalog_page"},
-		{path: "/catalog/daggerheart/classes", wantCode: http.StatusNoContent, wantCall: "catalog_section", wantSection: "classes"},
-		{path: "/catalog/daggerheart/classes/_rows", wantCode: http.StatusNoContent, wantCall: "catalog_section_table", wantSection: "classes"},
-		{path: "/catalog/daggerheart/classes/class-1", wantCode: http.StatusNoContent, wantCall: "catalog_section_detail", wantSection: "classes", wantEntry: "class-1"},
-		{path: "/catalog/unknown/classes/_rows", wantCode: http.StatusNotFound},
-		{path: "/catalog/daggerheart/classes/table", wantCode: http.StatusNotFound},
+		{path: "/app/catalog", wantCode: http.StatusNoContent, wantCall: "catalog_page"},
+		{path: "/app/catalog/daggerheart/classes", wantCode: http.StatusNoContent, wantCall: "catalog_section", wantSection: "classes"},
+		{path: "/app/catalog/daggerheart/classes?fragment=rows", wantCode: http.StatusNoContent, wantCall: "catalog_section_table", wantSection: "classes"},
+		{path: "/app/catalog/daggerheart/classes/class-1", wantCode: http.StatusNoContent, wantCall: "catalog_section_detail", wantSection: "classes", wantEntry: "class-1"},
+		{path: "/app/catalog/unknown/classes?fragment=rows", wantCode: http.StatusNotFound},
+		{path: "/app/catalog/daggerheart/classes/table", wantCode: http.StatusNotFound},
 	}
 
 	for _, tc := range tests {
@@ -98,7 +98,7 @@ func TestMountNilService(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/catalog/daggerheart/classes/_rows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/catalog/daggerheart/classes?fragment=rows", nil)
 	rec := httptest.NewRecorder()
 	m.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {

@@ -14,55 +14,104 @@ const (
 )
 
 const (
-	Dashboard        = "/dashboard"
-	DashboardAlt     = "/dashboard/"
-	DashboardStats   = "/dashboard/_stats"
+	AppPrefix = "/app/"
+)
+
+const (
+	FragmentQueryKey = "fragment"
+	FragmentRows     = "rows"
+)
+
+const (
+	AppDashboard     = "/app/dashboard"
+	DashboardPrefix  = "/app/dashboard/"
+	Dashboard        = AppDashboard
+	DashboardAlt     = DashboardPrefix
+	DashboardStats   = "/app/dashboard?fragment=rows"
 	DashboardContent = DashboardStats
 )
 
 const (
-	Campaigns       = "/campaigns"
-	CampaignsRows   = "/campaigns/_rows"
+	AppCampaigns    = "/app/campaigns"
+	Campaigns       = AppCampaigns
+	CampaignsRows   = "/app/campaigns?fragment=rows"
 	CampaignsTable  = CampaignsRows
-	CampaignsPrefix = "/campaigns/"
+	CampaignsPrefix = "/app/campaigns/"
 )
 
 const (
-	Systems       = "/systems"
-	SystemsRows   = "/systems/_rows"
+	AppSystems    = "/app/systems"
+	Systems       = AppSystems
+	SystemsRows   = "/app/systems?fragment=rows"
 	SystemsTable  = SystemsRows
-	SystemsPrefix = "/systems/"
+	SystemsPrefix = "/app/systems/"
 )
 
 const (
-	Catalog       = "/catalog"
-	CatalogPrefix = "/catalog/"
+	AppCatalog    = "/app/catalog"
+	Catalog       = AppCatalog
+	CatalogPrefix = "/app/catalog/"
 )
 
 const (
-	Icons       = "/icons"
-	IconsPrefix = "/icons/"
-	IconsRows   = "/icons/_rows"
+	AppIcons    = "/app/icons"
+	Icons       = AppIcons
+	IconsPrefix = "/app/icons/"
+	IconsRows   = "/app/icons?fragment=rows"
 	IconsTable  = IconsRows
 )
 
 const (
-	Users       = "/users"
-	UsersRows   = "/users/_rows"
+	AppUsers    = "/app/users"
+	Users       = AppUsers
+	UsersRows   = "/app/users?fragment=rows"
 	UsersTable  = UsersRows
-	UsersLookup = "/users/lookup"
-	UsersCreate = "/users/create"
-	UsersPrefix = "/users/"
+	UsersLookup = "/app/users/lookup"
+	UsersCreate = "/app/users/create"
+	UsersPrefix = "/app/users/"
 )
 
 const (
-	Scenarios       = "/scenarios"
-	ScenariosRun    = "/scenarios/run"
-	ScenariosPrefix = "/scenarios/"
+	AppScenarios    = "/app/scenarios"
+	Scenarios       = AppScenarios
+	ScenariosRun    = "/app/scenarios/run"
+	ScenariosPrefix = "/app/scenarios/"
+)
+
+const (
+	AppCampaignPattern                  = CampaignsPrefix + "{campaignID}"
+	AppCampaignCharactersPattern        = CampaignsPrefix + "{campaignID}/characters"
+	AppCampaignCharacterPattern         = CampaignsPrefix + "{campaignID}/characters/{characterID}"
+	AppCampaignCharacterActivityPattern = CampaignsPrefix + "{campaignID}/characters/{characterID}/activity"
+	AppCampaignParticipantsPattern      = CampaignsPrefix + "{campaignID}/participants"
+	AppCampaignInvitesPattern           = CampaignsPrefix + "{campaignID}/invites"
+	AppCampaignSessionsPattern          = CampaignsPrefix + "{campaignID}/sessions"
+	AppCampaignSessionPattern           = CampaignsPrefix + "{campaignID}/sessions/{sessionID}"
+	AppCampaignSessionEventsPattern     = CampaignsPrefix + "{campaignID}/sessions/{sessionID}/events"
+	AppCampaignEventsPattern            = CampaignsPrefix + "{campaignID}/events"
+)
+
+const (
+	AppSystemPattern = SystemsPrefix + "{systemID}"
+)
+
+const (
+	AppCatalogSectionPattern = CatalogPrefix + "{systemID}/{sectionID}"
+	AppCatalogEntryPattern   = CatalogPrefix + "{systemID}/{sectionID}/{entryID}"
+)
+
+const (
+	AppUserPattern        = UsersPrefix + "{userID}"
+	AppUserInvitesPattern = UsersPrefix + "{userID}/invites"
+)
+
+const (
+	AppScenarioEventsPattern   = ScenariosPrefix + "{campaignID}/events"
+	AppScenarioTimelinePattern = ScenariosPrefix + "{campaignID}/timeline"
 )
 
 func Campaign(campaignID string) string {
-	return Campaigns + "/" + escapeSegment(campaignID)
+	return AppCampaigns + "/" + escapeSegment(campaignID)
 }
 
 func CampaignCharacters(campaignID string) string {
@@ -70,7 +119,7 @@ func CampaignCharacters(campaignID string) string {
 }
 
 func CampaignCharactersRows(campaignID string) string {
-	return CampaignCharacters(campaignID) + "/_rows"
+	return withRowsFragment(CampaignCharacters(campaignID))
 }
 
 func CampaignCharactersTable(campaignID string) string {
@@ -90,7 +139,7 @@ func CampaignParticipants(campaignID string) string {
 }
 
 func CampaignParticipantsRows(campaignID string) string {
-	return CampaignParticipants(campaignID) + "/_rows"
+	return withRowsFragment(CampaignParticipants(campaignID))
 }
 
 func CampaignParticipantsTable(campaignID string) string {
@@ -102,7 +151,7 @@ func CampaignInvites(campaignID string) string {
 }
 
 func CampaignInvitesRows(campaignID string) string {
-	return CampaignInvites(campaignID) + "/_rows"
+	return withRowsFragment(CampaignInvites(campaignID))
 }
 
 func CampaignInvitesTable(campaignID string) string {
@@ -114,7 +163,7 @@ func CampaignSessions(campaignID string) string {
 }
 
 func CampaignSessionsRows(campaignID string) string {
-	return CampaignSessions(campaignID) + "/_rows"
+	return withRowsFragment(CampaignSessions(campaignID))
 }
 
 func CampaignSessionsTable(campaignID string) string {
@@ -134,7 +183,7 @@ func CampaignEvents(campaignID string) string {
 }
 
 func CampaignEventsRows(campaignID string) string {
-	return CampaignEvents(campaignID) + "/_rows"
+	return withRowsFragment(CampaignEvents(campaignID))
 }
 
 func CampaignEventsTable(campaignID string) string {
@@ -142,15 +191,15 @@ func CampaignEventsTable(campaignID string) string {
 }
 
 func System(systemID string) string {
-	return Systems + "/" + escapeSegment(systemID)
+	return AppSystems + "/" + escapeSegment(systemID)
 }
 
 func CatalogSection(systemID string, sectionID string) string {
-	return Catalog + "/" + escapeSegment(systemID) + "/" + escapeSegment(sectionID)
+	return AppCatalog + "/" + escapeSegment(systemID) + "/" + escapeSegment(sectionID)
 }
 
 func CatalogSectionRows(systemID string, sectionID string) string {
-	return CatalogSection(systemID, sectionID) + "/_rows"
+	return withRowsFragment(CatalogSection(systemID, sectionID))
 }
 
 func CatalogSectionTable(systemID string, sectionID string) string {
@@ -162,7 +211,7 @@ func CatalogEntry(systemID string, sectionID string, entryID string) string {
 }
 
 func UserDetail(userID string) string {
-	return Users + "/" + escapeSegment(userID)
+	return AppUsers + "/" + escapeSegment(userID)
 }
 
 func UserInvites(userID string) string {
@@ -170,23 +219,46 @@ func UserInvites(userID string) string {
 }
 
 func ScenarioEvents(campaignID string) string {
-	return Scenarios + "/" + escapeSegment(campaignID) + "/events"
+	return AppScenarios + "/" + escapeSegment(campaignID) + "/events"
 }
 
 func ScenarioEventsRows(campaignID string) string {
-	return ScenarioEvents(campaignID) + "/_rows"
+	return withRowsFragment(ScenarioEvents(campaignID))
 }
 
 func ScenarioEventsTable(campaignID string) string {
 	return ScenarioEventsRows(campaignID)
 }
 
+func ScenarioTimeline(campaignID string) string {
+	return AppScenarios + "/" + escapeSegment(campaignID) + "/timeline"
+}
+
 func ScenarioTimelineRows(campaignID string) string {
-	return Scenarios + "/" + escapeSegment(campaignID) + "/timeline/_rows"
+	return withRowsFragment(ScenarioTimeline(campaignID))
 }
 
 func ScenarioTimelineTable(campaignID string) string {
 	return ScenarioTimelineRows(campaignID)
+}
+
+func withRowsFragment(path string) string {
+	return withQueryParam(path, FragmentQueryKey, FragmentRows)
+}
+
+func withQueryParam(path string, key string, value string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return ""
+	}
+	parsed, err := url.Parse(path)
+	if err != nil {
+		return path
+	}
+	q := parsed.Query()
+	q.Set(strings.TrimSpace(key), strings.TrimSpace(value))
+	parsed.RawQuery = q.Encode()
+	return parsed.String()
 }
 
 func escapeSegment(raw string) string {

@@ -75,7 +75,7 @@ templ CatalogSectionPanel(activeSection string, loc Localizer) {
 
 // CatalogTableLoading renders the HTMX loading placeholder for catalog tables.
 templ CatalogTableLoading(sectionID string, loc Localizer) {
-	@LazyLoad("/catalog/daggerheart/"+sectionID+"/_rows", T(loc, "catalog.loading"))
+	@LazyLoad("/app/catalog/daggerheart/"+sectionID+"?fragment=rows", T(loc, "catalog.loading"))
 }
 
 // CatalogTable renders a catalog table with pagination.

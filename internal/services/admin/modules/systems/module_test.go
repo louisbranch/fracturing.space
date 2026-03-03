@@ -47,10 +47,10 @@ func TestMount(t *testing.T) {
 		wantCall   string
 		wantSystem string
 	}{
-		{path: "/systems", wantCode: http.StatusNoContent, wantCall: "systems_page"},
-		{path: "/systems/_rows", wantCode: http.StatusNoContent, wantCall: "systems_table"},
-		{path: "/systems/daggerheart", wantCode: http.StatusNoContent, wantCall: "systems_detail", wantSystem: "daggerheart"},
-		{path: "/systems/daggerheart/version", wantCode: http.StatusNotFound},
+		{path: "/app/systems", wantCode: http.StatusNoContent, wantCall: "systems_page"},
+		{path: "/app/systems?fragment=rows", wantCode: http.StatusNoContent, wantCall: "systems_table"},
+		{path: "/app/systems/daggerheart", wantCode: http.StatusNoContent, wantCall: "systems_detail", wantSystem: "daggerheart"},
+		{path: "/app/systems/daggerheart/version", wantCode: http.StatusNotFound},
 	}
 
 	for _, tc := range tests {
@@ -82,7 +82,7 @@ func TestMountNilService(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/systems/_rows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/systems?fragment=rows", nil)
 	rec := httptest.NewRecorder()
 	m.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {

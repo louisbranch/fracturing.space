@@ -39,9 +39,9 @@ func TestMount(t *testing.T) {
 		wantCode int
 		wantCall string
 	}{
-		{path: "/icons", wantCode: http.StatusNoContent, wantCall: "icons_page"},
-		{path: "/icons/_rows", wantCode: http.StatusNoContent, wantCall: "icons_table"},
-		{path: "/icons/unknown", wantCode: http.StatusNotFound},
+		{path: "/app/icons", wantCode: http.StatusNoContent, wantCall: "icons_page"},
+		{path: "/app/icons?fragment=rows", wantCode: http.StatusNoContent, wantCall: "icons_table"},
+		{path: "/app/icons/unknown", wantCode: http.StatusNotFound},
 	}
 
 	for _, tc := range tests {
@@ -69,7 +69,7 @@ func TestMountNilService(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/icons/_rows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/icons?fragment=rows", nil)
 	rec := httptest.NewRecorder()
 	m.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {

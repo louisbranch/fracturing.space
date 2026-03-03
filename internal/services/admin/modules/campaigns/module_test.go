@@ -137,11 +137,11 @@ func TestMount(t *testing.T) {
 		wantCall     string
 		wantCampaign string
 	}{
-		{path: "/campaigns", wantCode: http.StatusNoContent, wantCall: "campaigns_page"},
-		{path: "/campaigns/_rows", wantCode: http.StatusNoContent, wantCall: "campaigns_table"},
-		{path: "/campaigns/camp-1/characters/_rows", wantCode: http.StatusNoContent, wantCall: "characters_table", wantCampaign: "camp-1"},
-		{path: "/campaigns/camp-1/events/_rows", wantCode: http.StatusNoContent, wantCall: "event_log_table", wantCampaign: "camp-1"},
-		{path: "/campaigns/camp-1/characters/table", wantCode: http.StatusNotFound},
+		{path: "/app/campaigns", wantCode: http.StatusNoContent, wantCall: "campaigns_page"},
+		{path: "/app/campaigns?fragment=rows", wantCode: http.StatusNoContent, wantCall: "campaigns_table"},
+		{path: "/app/campaigns/camp-1/characters?fragment=rows", wantCode: http.StatusNoContent, wantCall: "characters_table", wantCampaign: "camp-1"},
+		{path: "/app/campaigns/camp-1/events?fragment=rows", wantCode: http.StatusNoContent, wantCall: "event_log_table", wantCampaign: "camp-1"},
+		{path: "/app/campaigns/camp-1/characters/table", wantCode: http.StatusNotFound},
 	}
 
 	for _, tc := range tests {
@@ -173,7 +173,7 @@ func TestMountNilService(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns/camp-1/events/_rows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/camp-1/events?fragment=rows", nil)
 	rec := httptest.NewRecorder()
 	m.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {

@@ -110,7 +110,7 @@ func CampaignsLoading(loc Localizer) templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/campaigns/_rows", T(loc, "campaigns.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/campaigns?fragment=rows", T(loc, "campaigns.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -269,7 +269,7 @@ func CampaignsTable(rows []CampaignRow, message string, loc Localizer) templ.Com
 				}
 				return nil
 			})
-			templ_7745c5c3_Err = NavLink("/campaigns/"+row.ID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var13), templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = NavLink("/app/campaigns/"+row.ID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var13), templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -563,7 +563,7 @@ func CampaignSessionsLoading(campaignID string, loc Localizer) templ.Component {
 			templ_7745c5c3_Var28 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/campaigns/"+campaignID+"/sessions", T(loc, "campaigns.sessions.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/campaigns/"+campaignID+"/sessions", T(loc, "campaigns.sessions.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -683,7 +683,7 @@ func CampaignSessionsList(rows []CampaignSessionRow, message string, loc Localiz
 					}
 					return nil
 				})
-				templ_7745c5c3_Err = NavLink("/campaigns/"+row.CampaignID+"/sessions/"+row.ID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var34), templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = NavLink("/app/campaigns/"+row.CampaignID+"/sessions/"+row.ID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var34), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -776,7 +776,7 @@ func CampaignDetailFullPage(detail CampaignDetail, message string, page PageCont
 			return nil
 		})
 		templ_7745c5c3_Err = Layout(T(page.Loc, "title.campaign", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-			{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+			{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
 			{Label: detail.Name, URL: ""},
 		}...).Render(templ.WithChildren(ctx, templ_7745c5c3_Var39), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {

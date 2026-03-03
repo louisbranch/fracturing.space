@@ -110,7 +110,7 @@ func DashboardLoading(loc Localizer) templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/dashboard/_stats", T(loc, "dashboard.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/dashboard?fragment=rows", T(loc, "dashboard.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -326,7 +326,7 @@ func RecentActivityFeed(activities []ActivityEvent, loc Localizer) templ.Compone
 					}
 					return nil
 				})
-				templ_7745c5c3_Err = NavLink("/campaigns/"+activity.CampaignID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var12), templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = NavLink("/app/campaigns/"+activity.CampaignID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var12), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

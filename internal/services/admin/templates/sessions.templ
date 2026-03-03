@@ -5,7 +5,7 @@ import "strconv"
 // SessionsListFullPage renders the sessions list in the base layout.
 templ SessionsListFullPage(campaignID string, campaignName string, page PageContext) {
 	@Layout(T(page.Loc, "title.sessions", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
 		{Label: campaignName, URL: ""},
 	}...) {
 		@SessionsListPage(campaignID, campaignName, page.Loc)
@@ -21,14 +21,14 @@ templ SessionsListPage(campaignID string, campaignName string, loc Localizer) {
 
 // SessionsLoading renders the HTMX loading placeholder for sessions.
 templ SessionsLoading(campaignID string, loc Localizer) {
-	@LazyLoad("/campaigns/"+campaignID+"/sessions/_rows", T(loc, "sessions.loading"))
+	@LazyLoad("/app/campaigns/"+campaignID+"/sessions?fragment=rows", T(loc, "sessions.loading"))
 }
 
 // SessionDetailFullPage renders the session detail in the base layout.
 templ SessionDetailFullPage(session SessionDetail, page PageContext) {
 	@Layout(T(page.Loc, "title.session", session.Name, AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
-		{Label: session.CampaignName, URL: "/campaigns/" + session.CampaignID},
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
+		{Label: session.CampaignName, URL: "/app/campaigns/" + session.CampaignID},
 		{Label: session.Name, URL: ""},
 	}...) {
 		@SessionDetailPage(session, page.Loc)
@@ -64,7 +64,7 @@ templ SessionDetailPage(session SessionDetail, loc Localizer) {
 
 // SessionEventsLoading renders the HTMX loading placeholder for session events.
 templ SessionEventsLoading(campaignID string, sessionID string, loc Localizer) {
-	@LazyLoad("/campaigns/"+campaignID+"/sessions/"+sessionID+"/events", T(loc, "sessions.events.loading"))
+	@LazyLoad("/app/campaigns/"+campaignID+"/sessions/"+sessionID+"/events", T(loc, "sessions.events.loading"))
 }
 
 // SessionEventsContent renders the events timeline for a session.
@@ -91,8 +91,8 @@ templ SessionEventsContent(session SessionDetail, loc Localizer) {
 			@PaginationTargeted(
 				session.NextToken,
 				session.PrevToken,
-				"/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
-				"/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
+				"/app/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
+				"/app/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
 				"#session-events",
 				false,
 				loc,

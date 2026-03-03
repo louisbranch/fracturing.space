@@ -16,6 +16,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/composition"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
@@ -171,7 +173,12 @@ func (h *Handler) routes() http.Handler {
 	} else {
 		log.Printf("admin: failed to initialize static assets: %v", err)
 	}
-	composed, err := composition.ComposeAppHandler(composition.ComposeInput{Service: h})
+	composed, err := composition.ComposeAppHandler(composition.ComposeInput{
+		Modules: modules.BuildInput{
+			Base:     modulehandler.NewBase(h.clientProvider),
+			GRPCAddr: h.grpcAddr,
+		},
+	})
 	if err != nil {
 		log.Printf("admin: failed to compose app handler: %v", err)
 		composed = http.NotFoundHandler()
@@ -225,5 +232,3 @@ func (h *Handler) ensureGameClients(ctx context.Context) {
 		h.gameClientInitMu.Unlock()
 	}()
 }
-
-// handleCampaignsTable returns the first page of campaign rows for HTMX.

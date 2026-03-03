@@ -5,8 +5,8 @@ import "fmt"
 // EventLogFullPage renders the event log in the base layout.
 templ EventLogFullPage(view EventLogView, page PageContext) {
 	@Layout(T(page.Loc, "title.events", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
-		{Label: view.CampaignName, URL: "/campaigns/" + view.CampaignID},
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
+		{Label: view.CampaignName, URL: "/app/campaigns/" + view.CampaignID},
 		{Label: T(page.Loc, "events.heading"), URL: ""},
 	}...) {
 		@EventLogPage(view, page.Loc)
@@ -29,7 +29,7 @@ templ EventLogPage(view EventLogView, loc Localizer) {
 templ EventFilterForm(campaignID string, sessionID string, filters EventFilterOptions, loc Localizer) {
 	<form
 		class="border border-base-300 rounded-lg p-4"
-		hx-get={ "/campaigns/" + campaignID + "/events/_rows" }
+		hx-get={ "/app/campaigns/" + campaignID + "/events?fragment=rows" }
 		hx-target="#event-timeline-container"
 		hx-swap="innerHTML"
 		hx-push-url="true"
@@ -95,8 +95,8 @@ templ EventTimelineContent(view EventLogView, loc Localizer) {
 		@PaginationTargeted(
 			view.NextToken,
 			view.PrevToken,
-			EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events", view.Filters),
-			EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events/_rows", view.Filters),
+			EventFilterBaseURL("/app/campaigns/"+view.CampaignID+"/events", view.Filters),
+			EventFilterBaseURL("/app/campaigns/"+view.CampaignID+"/events?fragment=rows", view.Filters),
 			"#event-timeline-container",
 			true,
 			loc,

@@ -59,14 +59,14 @@ func TestMount(t *testing.T) {
 		wantCall string
 		wantUser string
 	}{
-		{path: "/users", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_page"},
-		{path: "/users/_rows", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_table"},
-		{path: "/users/lookup", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_lookup"},
-		{path: "/users/u-1", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_detail", wantUser: "u-1"},
-		{path: "/users/u-1/invites", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_invites", wantUser: "u-1"},
-		{path: "/users/magic-link", method: http.MethodPost, wantCode: http.StatusNotFound},
-		{path: "/users/table", method: http.MethodGet, wantCode: http.StatusNotFound},
-		{path: "/users/create", method: http.MethodGet, wantCode: http.StatusNotFound},
+		{path: "/app/users", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_page"},
+		{path: "/app/users?fragment=rows", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_table"},
+		{path: "/app/users/lookup", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_lookup"},
+		{path: "/app/users/u-1", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_detail", wantUser: "u-1"},
+		{path: "/app/users/u-1/invites", method: http.MethodGet, wantCode: http.StatusNoContent, wantCall: "users_invites", wantUser: "u-1"},
+		{path: "/app/users/magic-link", method: http.MethodPost, wantCode: http.StatusMethodNotAllowed},
+		{path: "/app/users/table", method: http.MethodGet, wantCode: http.StatusNotFound},
+		{path: "/app/users/create", method: http.MethodGet, wantCode: http.StatusNotFound},
 	}
 
 	for _, tc := range tests {
@@ -98,7 +98,7 @@ func TestMountNilService(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/users/_rows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/users?fragment=rows", nil)
 	rec := httptest.NewRecorder()
 	m.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {

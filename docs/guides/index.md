@@ -12,3 +12,4 @@ How-to documentation and operational workflows.
 - Playwright CLI: [playwright-cli.md](playwright-cli.md)
 - Docs quality checks: [docs-quality-checks.md](docs-quality-checks.md)
 - Web module playbook: [web-module-playbook.md](web-module-playbook.md)
+- Admin module playbook: [admin-module-playbook.md](admin-module-playbook.md)

@@ -14,7 +14,7 @@ templ CampaignsPage(loc Localizer) {
 
 // CampaignsLoading renders the HTMX loading placeholder.
 templ CampaignsLoading(loc Localizer) {
-	@LazyLoad("/campaigns/_rows", T(loc, "campaigns.loading"))
+	@LazyLoad("/app/campaigns?fragment=rows", T(loc, "campaigns.loading"))
 }
 
 // CampaignsTable renders a campaigns table or a message when empty.
@@ -39,7 +39,7 @@ templ CampaignsTable(rows []CampaignRow, message string, loc Localizer) {
 			for _, row := range rows {
 				<tr>
 					<td>
-						@NavLink("/campaigns/" + row.ID) {
+						@NavLink("/app/campaigns/" + row.ID) {
 							{row.Name}
 						}
 					</td>
@@ -94,7 +94,7 @@ templ CampaignOverviewTab(detail CampaignDetail, loc Localizer) {
 
 // CampaignSessionsLoading renders the HTMX loading placeholder for sessions.
 templ CampaignSessionsLoading(campaignID string, loc Localizer) {
-	@LazyLoad("/campaigns/"+campaignID+"/sessions", T(loc, "campaigns.sessions.loading"))
+	@LazyLoad("/app/campaigns/"+campaignID+"/sessions", T(loc, "campaigns.sessions.loading"))
 }
 
 // CampaignSessionsList renders the list of sessions for a campaign.
@@ -115,7 +115,7 @@ templ CampaignSessionsList(rows []CampaignSessionRow, message string, loc Locali
 				for _, row := range rows {
 					<tr>
 						<td>
-							@NavLink("/campaigns/" + row.CampaignID + "/sessions/" + row.ID) {
+							@NavLink("/app/campaigns/" + row.CampaignID + "/sessions/" + row.ID) {
 								{row.Name}
 							}
 						</td>
@@ -132,7 +132,7 @@ templ CampaignSessionsList(rows []CampaignSessionRow, message string, loc Locali
 // CampaignDetailFullPage renders campaign detail content in the base layout.
 templ CampaignDetailFullPage(detail CampaignDetail, message string, page PageContext) {
 	@Layout(T(page.Loc, "title.campaign", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
 		{Label: detail.Name, URL: ""},
 	}...) {
 		@CampaignDetailPage(detail, message, page.Loc)

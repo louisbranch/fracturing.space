@@ -114,7 +114,7 @@ func ScenarioScriptPanel(view ScenarioPageView, loc Localizer) templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"scenario-script-panel\" class=\"space-y-6\"><div class=\"grid grid-cols-1 lg:grid-cols-2 gap-6\"><div class=\"space-y-6\"><form class=\"space-y-4\" hx-post=\"/scenarios\" hx-target=\"#scenario-script-panel\" hx-swap=\"innerHTML\"><div><textarea id=\"scenario-script\" name=\"script\" class=\"textarea textarea-bordered w-full font-mono text-sm leading-relaxed min-h-[420px]\" spellcheck=\"false\" autocapitalize=\"off\" autocomplete=\"off\" autocorrect=\"off\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div id=\"scenario-script-panel\" class=\"space-y-6\"><div class=\"grid grid-cols-1 lg:grid-cols-2 gap-6\"><div class=\"space-y-6\"><form class=\"space-y-4\" hx-post=\"/app/scenarios/run\" hx-target=\"#scenario-script-panel\" hx-swap=\"innerHTML\"><div><textarea id=\"scenario-script\" name=\"script\" class=\"textarea textarea-bordered w-full font-mono text-sm leading-relaxed min-h-[420px]\" spellcheck=\"false\" autocapitalize=\"off\" autocomplete=\"off\" autocorrect=\"off\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -406,7 +406,7 @@ func ScenarioTimelinePanel(campaignID string, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = LazyLoad("/scenarios/"+campaignID+"/timeline/_rows", T(loc, "common.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/scenarios/"+campaignID+"/timeline?fragment=rows", T(loc, "common.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -488,8 +488,8 @@ func ScenarioTimelineTableContent(view ScenarioTimelineView, loc Localizer) temp
 				templ_7745c5c3_Err = PaginationTargeted(
 					view.NextToken,
 					view.PrevToken,
-					"/scenarios/"+view.CampaignID+"/timeline/_rows",
-					"/scenarios/"+view.CampaignID+"/timeline/_rows",
+					"/app/scenarios/"+view.CampaignID+"/timeline?fragment=rows",
+					"/app/scenarios/"+view.CampaignID+"/timeline?fragment=rows",
 					"#scenario-timeline-container",
 					false,
 					loc,
@@ -776,7 +776,7 @@ func ScenarioEventsFullPage(view ScenarioEventsView, page PageContext) templ.Com
 			return nil
 		})
 		templ_7745c5c3_Err = Layout(T(page.Loc, "title.scenarios", AppName()), "Scenarios", page.Loc, page, []Breadcrumb{
-			{Label: T(page.Loc, "nav.scenarios"), URL: "/scenarios"},
+			{Label: T(page.Loc, "nav.scenarios"), URL: "/app/scenarios"},
 			{Label: view.CampaignName, URL: ""},
 		}...).Render(templ.WithChildren(ctx, templ_7745c5c3_Var32), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
@@ -904,9 +904,9 @@ func ScenarioEventFilterForm(campaignID string, filters EventFilterOptions, loc 
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var37 string
-		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs("/scenarios/" + campaignID + "/events/_rows")
+		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs("/app/scenarios/" + campaignID + "/events?fragment=rows")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/scenarios.templ`, Line: 285, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/scenarios.templ`, Line: 285, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -1251,8 +1251,8 @@ func ScenarioEventsTableContent(view ScenarioEventsView, loc Localizer) templ.Co
 			templ_7745c5c3_Err = PaginationTargeted(
 				view.NextToken,
 				view.PrevToken,
-				EventFilterBaseURL("/scenarios/"+view.CampaignID+"/events", view.Filters),
-				EventFilterBaseURL("/scenarios/"+view.CampaignID+"/events/_rows", view.Filters),
+				EventFilterBaseURL("/app/scenarios/"+view.CampaignID+"/events", view.Filters),
+				EventFilterBaseURL("/app/scenarios/"+view.CampaignID+"/events?fragment=rows", view.Filters),
 				"#scenario-events-container",
 				true,
 				loc,

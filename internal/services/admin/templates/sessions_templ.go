@@ -53,7 +53,7 @@ func SessionsListFullPage(campaignID string, campaignName string, page PageConte
 			return nil
 		})
 		templ_7745c5c3_Err = Layout(T(page.Loc, "title.sessions", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-			{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+			{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
 			{Label: campaignName, URL: ""},
 		}...).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
@@ -133,7 +133,7 @@ func SessionsLoading(campaignID string, loc Localizer) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/campaigns/"+campaignID+"/sessions/_rows", T(loc, "sessions.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/campaigns/"+campaignID+"/sessions?fragment=rows", T(loc, "sessions.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -182,8 +182,8 @@ func SessionDetailFullPage(session SessionDetail, page PageContext) templ.Compon
 			return nil
 		})
 		templ_7745c5c3_Err = Layout(T(page.Loc, "title.session", session.Name, AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-			{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
-			{Label: session.CampaignName, URL: "/campaigns/" + session.CampaignID},
+			{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
+			{Label: session.CampaignName, URL: "/app/campaigns/" + session.CampaignID},
 			{Label: session.Name, URL: ""},
 		}...).Render(templ.WithChildren(ctx, templ_7745c5c3_Var7), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
@@ -352,7 +352,7 @@ func SessionEventsLoading(campaignID string, sessionID string, loc Localizer) te
 			templ_7745c5c3_Var14 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/campaigns/"+campaignID+"/sessions/"+sessionID+"/events", T(loc, "sessions.events.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/campaigns/"+campaignID+"/sessions/"+sessionID+"/events", T(loc, "sessions.events.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -458,8 +458,8 @@ func SessionEventsContent(session SessionDetail, loc Localizer) templ.Component 
 				templ_7745c5c3_Err = PaginationTargeted(
 					session.NextToken,
 					session.PrevToken,
-					"/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
-					"/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
+					"/app/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
+					"/app/campaigns/"+session.CampaignID+"/sessions/"+session.ID+"/events",
 					"#session-events",
 					false,
 					loc,

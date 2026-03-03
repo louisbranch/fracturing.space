@@ -16,6 +16,7 @@ Service-boundary and transport-boundary architecture documentation.
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
 - [Identity and OAuth](identity-and-oauth.md)
 - [Web architecture](web-architecture.md)
+- [Admin architecture](admin-architecture.md)
 - [I18n and l10n architecture](i18n-l10n-architecture.md)
 - [Asset catalog ownership](asset-catalog-ownership.md)
 
@@ -24,3 +25,4 @@ Operational/reference addenda:
 - [Campaign authorization policy reference](../../reference/campaign-authorization-policy-reference.md)
 - [Campaign authorization audit and telemetry](../../reference/campaign-authorization-audit.md)
 - [Web module playbook](../../guides/web-module-playbook.md)
+- [Admin module playbook](../../guides/admin-module-playbook.md)

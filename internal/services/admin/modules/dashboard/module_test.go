@@ -34,8 +34,8 @@ func TestMount(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	if m.Prefix != routepath.Root {
-		t.Fatalf("prefix = %q, want %q", m.Prefix, routepath.Root)
+	if m.Prefix != routepath.DashboardPrefix {
+		t.Fatalf("prefix = %q, want %q", m.Prefix, routepath.DashboardPrefix)
 	}
 
 	tests := []struct {
@@ -44,11 +44,10 @@ func TestMount(t *testing.T) {
 		wantCall string
 		wantPath string
 	}{
-		{path: "/", wantCode: http.StatusNoContent, wantCall: "dashboard", wantPath: "/"},
-		{path: "/dashboard", wantCode: http.StatusNoContent, wantCall: "dashboard", wantPath: "/"},
-		{path: "/dashboard/", wantCode: http.StatusNoContent, wantCall: "dashboard", wantPath: "/"},
-		{path: "/dashboard/_stats", wantCode: http.StatusNoContent, wantCall: "dashboard_content"},
-		{path: "/unknown", wantCode: http.StatusNotFound},
+		{path: "/app/dashboard", wantCode: http.StatusNoContent, wantCall: "dashboard", wantPath: "/app/dashboard"},
+		{path: "/app/dashboard/", wantCode: http.StatusNoContent, wantCall: "dashboard", wantPath: "/app/dashboard/"},
+		{path: "/app/dashboard?fragment=rows", wantCode: http.StatusNoContent, wantCall: "dashboard_content"},
+		{path: "/app/dashboard/unknown", wantCode: http.StatusNotFound},
 	}
 
 	for _, tc := range tests {
@@ -80,7 +79,7 @@ func TestMountNilService(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
 	rec := httptest.NewRecorder()
 	m.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {

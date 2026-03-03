@@ -51,7 +51,7 @@ func InvitesListFullPage(campaignID string, campaignName string, page PageContex
 			return nil
 		})
 		templ_7745c5c3_Err = Layout(T(page.Loc, "title.invites", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-			{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+			{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
 			{Label: campaignName, URL: ""},
 		}...).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
@@ -131,7 +131,7 @@ func InvitesLoading(campaignID string, loc Localizer) templ.Component {
 			templ_7745c5c3_Var5 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/campaigns/"+campaignID+"/invites/_rows", T(loc, "invites.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/campaigns/"+campaignID+"/invites?fragment=rows", T(loc, "invites.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

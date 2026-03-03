@@ -347,7 +347,7 @@ func CatalogTableLoading(sectionID string, loc Localizer) templ.Component {
 			templ_7745c5c3_Var13 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/catalog/daggerheart/"+sectionID+"/_rows", T(loc, "catalog.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/catalog/daggerheart/"+sectionID+"?fragment=rows", T(loc, "catalog.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
