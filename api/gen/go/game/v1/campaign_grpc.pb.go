@@ -23,6 +23,7 @@ const (
 	CampaignService_CreateCampaign_FullMethodName         = "/game.v1.CampaignService/CreateCampaign"
 	CampaignService_ListCampaigns_FullMethodName          = "/game.v1.CampaignService/ListCampaigns"
 	CampaignService_GetCampaign_FullMethodName            = "/game.v1.CampaignService/GetCampaign"
+	CampaignService_UpdateCampaign_FullMethodName         = "/game.v1.CampaignService/UpdateCampaign"
 	CampaignService_EndCampaign_FullMethodName            = "/game.v1.CampaignService/EndCampaign"
 	CampaignService_ArchiveCampaign_FullMethodName        = "/game.v1.CampaignService/ArchiveCampaign"
 	CampaignService_RestoreCampaign_FullMethodName        = "/game.v1.CampaignService/RestoreCampaign"
@@ -43,6 +44,8 @@ type CampaignServiceClient interface {
 	ListCampaigns(ctx context.Context, in *ListCampaignsRequest, opts ...grpc.CallOption) (*ListCampaignsResponse, error)
 	// Get a campaign metadata record by ID.
 	GetCampaign(ctx context.Context, in *GetCampaignRequest, opts ...grpc.CallOption) (*GetCampaignResponse, error)
+	// Update mutable campaign metadata fields.
+	UpdateCampaign(ctx context.Context, in *UpdateCampaignRequest, opts ...grpc.CallOption) (*UpdateCampaignResponse, error)
 	// End a campaign.
 	EndCampaign(ctx context.Context, in *EndCampaignRequest, opts ...grpc.CallOption) (*EndCampaignResponse, error)
 	// Archive a campaign.
@@ -89,6 +92,16 @@ func (c *campaignServiceClient) GetCampaign(ctx context.Context, in *GetCampaign
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCampaignResponse)
 	err := c.cc.Invoke(ctx, CampaignService_GetCampaign_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignServiceClient) UpdateCampaign(ctx context.Context, in *UpdateCampaignRequest, opts ...grpc.CallOption) (*UpdateCampaignResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpdateCampaignResponse)
+	err := c.cc.Invoke(ctx, CampaignService_UpdateCampaign_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -167,6 +180,8 @@ type CampaignServiceServer interface {
 	ListCampaigns(context.Context, *ListCampaignsRequest) (*ListCampaignsResponse, error)
 	// Get a campaign metadata record by ID.
 	GetCampaign(context.Context, *GetCampaignRequest) (*GetCampaignResponse, error)
+	// Update mutable campaign metadata fields.
+	UpdateCampaign(context.Context, *UpdateCampaignRequest) (*UpdateCampaignResponse, error)
 	// End a campaign.
 	EndCampaign(context.Context, *EndCampaignRequest) (*EndCampaignResponse, error)
 	// Archive a campaign.
@@ -197,6 +212,9 @@ func (UnimplementedCampaignServiceServer) ListCampaigns(context.Context, *ListCa
 }
 func (UnimplementedCampaignServiceServer) GetCampaign(context.Context, *GetCampaignRequest) (*GetCampaignResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCampaign not implemented")
+}
+func (UnimplementedCampaignServiceServer) UpdateCampaign(context.Context, *UpdateCampaignRequest) (*UpdateCampaignResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateCampaign not implemented")
 }
 func (UnimplementedCampaignServiceServer) EndCampaign(context.Context, *EndCampaignRequest) (*EndCampaignResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EndCampaign not implemented")
@@ -287,6 +305,24 @@ func _CampaignService_GetCampaign_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CampaignServiceServer).GetCampaign(ctx, req.(*GetCampaignRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignService_UpdateCampaign_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpdateCampaignRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).UpdateCampaign(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_UpdateCampaign_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).UpdateCampaign(ctx, req.(*UpdateCampaignRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -417,6 +453,10 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCampaign",
 			Handler:    _CampaignService_GetCampaign_Handler,
+		},
+		{
+			MethodName: "UpdateCampaign",
+			Handler:    _CampaignService_UpdateCampaign_Handler,
 		},
 		{
 			MethodName: "EndCampaign",

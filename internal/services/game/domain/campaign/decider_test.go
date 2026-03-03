@@ -53,6 +53,9 @@ func TestDecideCampaignCreate_EmitsCampaignCreatedEvent(t *testing.T) {
 	if payload.GmMode != "human" {
 		t.Fatalf("payload gm mode = %s, want %s", payload.GmMode, "human")
 	}
+	if payload.Locale != "en-US" {
+		t.Fatalf("payload locale = %s, want %s", payload.Locale, "en-US")
+	}
 }
 
 func TestDecideCampaignCreate_NormalizesPayloadValues(t *testing.T) {
@@ -342,7 +345,7 @@ func TestDecideCampaignUpdate_EmitsCampaignUpdatedEvent(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("campaign.update"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"fields":{"name":"  Sunfall  ","status":"CAMPAIGN_STATUS_ACTIVE","theme_prompt":"  new theme  "}}`),
+		PayloadJSON: []byte(`{"fields":{"name":"  Sunfall  ","status":"CAMPAIGN_STATUS_ACTIVE","theme_prompt":"  new theme  ","locale":"pt"}}`),
 	}
 
 	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, func() time.Time { return now })
@@ -373,6 +376,9 @@ func TestDecideCampaignUpdate_EmitsCampaignUpdatedEvent(t *testing.T) {
 	}
 	if payload.Fields["theme_prompt"] != "new theme" {
 		t.Fatalf("payload theme_prompt = %s, want %s", payload.Fields["theme_prompt"], "new theme")
+	}
+	if payload.Fields["locale"] != "pt-BR" {
+		t.Fatalf("payload locale = %s, want %s", payload.Fields["locale"], "pt-BR")
 	}
 }
 
@@ -438,6 +444,26 @@ func TestDecideCampaignUpdate_InvalidStatusRejected(t *testing.T) {
 	}
 	if decision.Rejections[0].Code != "CAMPAIGN_INVALID_STATUS" {
 		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "CAMPAIGN_INVALID_STATUS")
+	}
+}
+
+func TestDecideCampaignUpdate_InvalidLocaleRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.update"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"fields":{"locale":"es-ES"}}`),
+	}
+
+	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignLocaleInvalid {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignLocaleInvalid)
 	}
 }
 

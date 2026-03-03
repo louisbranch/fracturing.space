@@ -51,6 +51,16 @@ func (s service) CampaignInvites(ctx context.Context, campaignID string) ([]Camp
 	return s.campaignInvites(ctx, campaignID)
 }
 
+// RequireManageCampaign enforces owner/manager campaign access.
+func (s service) RequireManageCampaign(ctx context.Context, campaignID string) error {
+	return s.requireManageCampaign(ctx, campaignID)
+}
+
+// UpdateCampaign applies this package workflow transition.
+func (s service) UpdateCampaign(ctx context.Context, campaignID string, input UpdateCampaignInput) error {
+	return s.updateCampaign(ctx, campaignID, input)
+}
+
 // StartSession applies this package workflow transition.
 func (s service) StartSession(ctx context.Context, campaignID string, input StartSessionInput) error {
 	return s.startSession(ctx, campaignID, input)

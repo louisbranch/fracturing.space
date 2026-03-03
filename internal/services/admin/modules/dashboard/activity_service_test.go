@@ -36,6 +36,10 @@ func (c *activityCampaignClient) GetCampaign(context.Context, *statev1.GetCampai
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (c *activityCampaignClient) UpdateCampaign(context.Context, *statev1.UpdateCampaignRequest, ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 func (c *activityCampaignClient) EndCampaign(context.Context, *statev1.EndCampaignRequest, ...grpc.CallOption) (*statev1.EndCampaignResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }

@@ -664,6 +664,7 @@ type fakeGateway struct {
 	resetCharacterCreationWorkflowErr error
 	createCharacterErr                error
 	createdCharacterID                string
+	updateCampaignErr                 error
 	updateParticipantErr              error
 	err                               error
 	createErr                         error
@@ -829,6 +830,10 @@ func (f fakeGateway) CreateCampaign(context.Context, CreateCampaignInput) (Creat
 	return CreateCampaignResult{CampaignID: createdID}, nil
 }
 
+func (f fakeGateway) UpdateCampaign(context.Context, string, UpdateCampaignInput) error {
+	return f.updateCampaignErr
+}
+
 func (fakeGateway) StartSession(context.Context, string, StartSessionInput) error { return nil }
 func (fakeGateway) EndSession(context.Context, string, EndSessionInput) error     { return nil }
 func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error) {
@@ -876,10 +881,13 @@ type fakeCampaignClient struct {
 	getErr     error
 	createResp *statev1.CreateCampaignResponse
 	createErr  error
+	updateResp *statev1.UpdateCampaignResponse
+	updateErr  error
 }
 
 type capturingCampaignClient struct {
 	lastCreateReq *statev1.CreateCampaignRequest
+	lastUpdateReq *statev1.UpdateCampaignRequest
 }
 
 type fakeSessionClient struct {
@@ -971,6 +979,11 @@ func (c *capturingCampaignClient) CreateCampaign(_ context.Context, req *statev1
 	return &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{Id: "camp-pt"}}, nil
 }
 
+func (c *capturingCampaignClient) UpdateCampaign(_ context.Context, req *statev1.UpdateCampaignRequest, _ ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error) {
+	c.lastUpdateReq = req
+	return &statev1.UpdateCampaignResponse{Campaign: &statev1.Campaign{Id: strings.TrimSpace(req.GetCampaignId())}}, nil
+}
+
 func (f fakeCampaignClient) ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
 	if f.err != nil {
 		return nil, f.err
@@ -996,6 +1009,16 @@ func (f fakeCampaignClient) CreateCampaign(context.Context, *statev1.CreateCampa
 		return f.createResp, nil
 	}
 	return &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{Id: "created"}}, nil
+}
+
+func (f fakeCampaignClient) UpdateCampaign(context.Context, *statev1.UpdateCampaignRequest, ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error) {
+	if f.updateErr != nil {
+		return nil, f.updateErr
+	}
+	if f.updateResp != nil {
+		return f.updateResp, nil
+	}
+	return &statev1.UpdateCampaignResponse{Campaign: &statev1.Campaign{Id: "updated"}}, nil
 }
 
 type errorReader struct {

@@ -31,6 +31,12 @@ type campaignApplication struct {
 	aiClient    aiv1.AgentServiceClient
 }
 
+type campaignUpdateInput struct {
+	Name        *string
+	ThemePrompt *string
+	Locale      *commonv1.Locale
+}
+
 func newCampaignApplication(service *CampaignService) campaignApplication {
 	app := campaignApplication{
 		stores:      service.stores,
@@ -208,6 +214,75 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	}
 
 	return created, ownerParticipant, nil
+}
+
+func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID string, input campaignUpdateInput) (storage.CampaignRecord, error) {
+	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+		return storage.CampaignRecord{}, err
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
+		return storage.CampaignRecord{}, err
+	}
+
+	fields := make(map[string]string, 3)
+	if input.Name != nil {
+		normalizedName := strings.TrimSpace(*input.Name)
+		if normalizedName != strings.TrimSpace(campaignRecord.Name) {
+			fields["name"] = normalizedName
+		}
+	}
+	if input.ThemePrompt != nil {
+		normalizedThemePrompt := strings.TrimSpace(*input.ThemePrompt)
+		if normalizedThemePrompt != strings.TrimSpace(campaignRecord.ThemePrompt) {
+			fields["theme_prompt"] = normalizedThemePrompt
+		}
+	}
+	if input.Locale != nil && *input.Locale != campaignRecord.Locale {
+		fields["locale"] = platformi18n.LocaleString(*input.Locale)
+	}
+	if len(fields) == 0 {
+		return campaignRecord, nil
+	}
+
+	if c.stores.Domain == nil {
+		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
+	}
+	actorID, actorType := resolveCommandActor(ctx)
+	payloadJSON, err := json.Marshal(campaign.UpdatePayload{Fields: fields})
+	if err != nil {
+		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores.Domain,
+		c.stores.Applier(),
+		commandbuild.Core(commandbuild.CoreInput{
+			CampaignID:   campaignID,
+			Type:         commandTypeCampaignUpdate,
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+			PayloadJSON:  payloadJSON,
+		}),
+		domainCommandApplyOptions{},
+	)
+	if err != nil {
+		return storage.CampaignRecord{}, err
+	}
+
+	updated, err := c.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+	}
+	return updated, nil
 }
 
 func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, error) {

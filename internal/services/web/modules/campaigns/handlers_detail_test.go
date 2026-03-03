@@ -23,6 +23,7 @@ func TestMountServesCampaignDetailRoutes(t *testing.T) {
 	}
 	paths := map[string]string{
 		routepath.AppCampaign("c1"):                      "campaign-overview",
+		routepath.AppCampaignEdit("c1"):                  "campaign-edit",
 		routepath.AppCampaignParticipants("c1"):          "campaign-participants",
 		routepath.AppCampaignParticipantEdit("c1", "p1"): "campaign-participant-edit",
 		routepath.AppCampaignCharacters("c1"):            "campaign-characters",
@@ -423,6 +424,8 @@ func TestMountCampaignOverviewRendersWorkspaceDetailsAndMenu(t *testing.T) {
 		`data-campaign-overview-locale="English (US)"`,
 		`data-campaign-overview-intent="Standard"`,
 		`data-campaign-overview-access-policy="Public"`,
+		`data-campaign-overview-edit-link="true"`,
+		`href="/app/campaigns/c1/edit"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing campaign workspace marker %q: %q", marker, body)
@@ -448,6 +451,30 @@ func TestMountCampaignOverviewAllowsHead(t *testing.T) {
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+}
+
+func TestMountCampaignEditRequiresManagerOrOwnerAccess(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    false,
+			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
+		},
+	}, modulehandler.NewTestBase(), "", nil)
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignEdit("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusForbidden)
 	}
 }
 

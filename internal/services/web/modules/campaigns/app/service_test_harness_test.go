@@ -47,6 +47,8 @@ type campaignGatewayStub struct {
 	createCampaignResult              CreateCampaignResult
 	createCampaignErr                 error
 	lastCreateInput                   CreateCampaignInput
+	updateCampaignErr                 error
+	lastUpdateCampaignInput           UpdateCampaignInput
 	authorizationDecision             campaignAuthorizationDecision
 	authorizationErr                  error
 	authorizationCalls                int
@@ -183,6 +185,12 @@ func (f *campaignGatewayStub) CreateCampaign(_ context.Context, input CreateCamp
 		return CreateCampaignResult{CampaignID: "created"}, nil
 	}
 	return f.createCampaignResult, nil
+}
+
+func (f *campaignGatewayStub) UpdateCampaign(_ context.Context, _ string, input UpdateCampaignInput) error {
+	f.lastUpdateCampaignInput = input
+	f.calls = append(f.calls, "update-campaign")
+	return f.updateCampaignErr
 }
 
 func (f *campaignGatewayStub) StartSession(_ context.Context, _ string, input StartSessionInput) error {

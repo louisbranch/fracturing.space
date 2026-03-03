@@ -14,6 +14,7 @@ import (
 // Detail view markers. The template uses these to select which section to render.
 const (
 	markerOverview        = "campaign-overview"
+	markerCampaignEdit    = "campaign-edit"
 	markerSessions        = "campaign-sessions"
 	markerSessionDetail   = "campaign-session-detail"
 	markerParticipants    = "campaign-participants"
@@ -103,6 +104,7 @@ func (p *campaignPageContext) detailView(campaignID, marker string) webtemplates
 		GMMode:       p.workspace.GMMode,
 		Status:       p.workspace.Status,
 		Locale:       p.workspace.Locale,
+		LocaleValue:  campaignWorkspaceLocaleFormValue(p.workspace.Locale),
 		Intent:       p.workspace.Intent,
 		AccessPolicy: p.workspace.AccessPolicy,
 	}

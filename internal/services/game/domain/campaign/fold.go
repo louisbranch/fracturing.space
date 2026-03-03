@@ -33,6 +33,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("campaign fold %s: %w", evt.Type, err)
 		}
 		state.Name = payload.Name
+		state.Locale = normalizeCampaignLocale(payload.Locale)
 		state.GameSystem = payload.GameSystem
 		state.GmMode = payload.GmMode
 		state.Status = StatusDraft
@@ -51,6 +52,8 @@ func Fold(state State, evt event.Event) (State, error) {
 				state.Status = Status(strings.TrimSpace(value))
 			case "theme_prompt":
 				state.ThemePrompt = strings.TrimSpace(value)
+			case "locale":
+				state.Locale = normalizeCampaignLocale(value)
 			case "cover_asset_id":
 				state.CoverAssetID = strings.TrimSpace(value)
 			case "cover_set_id":

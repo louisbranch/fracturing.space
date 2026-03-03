@@ -54,6 +54,16 @@ func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, loc 
 	}
 }
 
+// campaignWorkspaceLocaleFormValue maps campaign locale labels/tags to form values.
+func campaignWorkspaceLocaleFormValue(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "pt", "pt-br", "portuguese (brazil)":
+		return "pt-BR"
+	default:
+		return "en-US"
+	}
+}
+
 // mapCampaignListItems converts domain summaries to template list items.
 func mapCampaignListItems(items []CampaignSummary, now time.Time, loc webtemplates.Localizer) []webtemplates.CampaignListItem {
 	result := make([]webtemplates.CampaignListItem, 0, len(items))

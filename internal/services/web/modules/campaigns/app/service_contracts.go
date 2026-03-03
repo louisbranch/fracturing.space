@@ -25,6 +25,7 @@ type campaignReadGateway interface {
 // campaignMutationGateway defines an internal contract used at this web package boundary.
 type campaignMutationGateway interface {
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
+	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	StartSession(context.Context, string, StartSessionInput) error
@@ -52,6 +53,8 @@ type Service interface {
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
+	RequireManageCampaign(context.Context, string) error
+	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
 	StartSession(context.Context, string, StartSessionInput) error
 	EndSession(context.Context, string, EndSessionInput) error
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)

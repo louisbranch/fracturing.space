@@ -9,6 +9,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -1967,6 +1968,29 @@ func TestApplyCampaignUpdated_ThemePrompt(t *testing.T) {
 	}
 }
 
+func TestApplyCampaignUpdated_Locale(t *testing.T) {
+	ctx := context.Background()
+	store := newProjectionCampaignStore()
+	store.campaigns["camp-1"] = storage.CampaignRecord{
+		ID:     "camp-1",
+		Status: campaign.StatusDraft,
+		Locale: platformi18n.DefaultLocale(),
+	}
+	applier := Applier{Campaign: store}
+
+	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"locale": "pt-BR"}}
+	data, _ := json.Marshal(payload)
+	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data, Timestamp: time.Now()}
+
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	c, _ := store.Get(ctx, "camp-1")
+	if c.Locale != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("Locale = %v, want %v", c.Locale, commonv1.Locale_LOCALE_PT_BR)
+	}
+}
+
 func TestApplyCampaignUpdated_EmptyFields(t *testing.T) {
 	ctx := context.Background()
 	store := newProjectionCampaignStore()
@@ -2058,6 +2082,21 @@ func TestApplyCampaignUpdated_InvalidThemePromptType(t *testing.T) {
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid theme_prompt type")
+	}
+}
+
+func TestApplyCampaignUpdated_InvalidLocaleValue(t *testing.T) {
+	ctx := context.Background()
+	store := newProjectionCampaignStore()
+	store.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1"}
+	applier := Applier{Campaign: store}
+
+	payload := testevent.CampaignUpdatedPayload{Fields: map[string]any{"locale": "es-ES"}}
+	data, _ := json.Marshal(payload)
+	evt := testevent.Event{CampaignID: "camp-1", Type: testevent.TypeCampaignUpdated, PayloadJSON: data}
+
+	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
+		t.Fatal("expected error for invalid locale value")
 	}
 }
 

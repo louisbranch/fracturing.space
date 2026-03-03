@@ -310,6 +310,13 @@ type CreateCampaignInput struct {
 	ThemePrompt string
 }
 
+// UpdateCampaignInput stores campaign update form values.
+type UpdateCampaignInput struct {
+	Name        *string
+	ThemePrompt *string
+	Locale      *string
+}
+
 // CreateCampaignResult stores create-campaign response values.
 type CreateCampaignResult struct {
 	CampaignID string

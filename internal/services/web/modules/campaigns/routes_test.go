@@ -77,6 +77,8 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 		{name: "campaign create get", method: http.MethodGet, path: routepath.AppCampaignsCreate, wantStatus: http.StatusOK},
 		{name: "campaign overview head", method: http.MethodHead, path: routepath.AppCampaign("c1"), wantStatus: http.StatusOK},
 		{name: "campaign overview post rejected", method: http.MethodPost, path: routepath.AppCampaign("c1"), wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodGet + ", HEAD"},
+		{name: "campaign edit get", method: http.MethodGet, path: routepath.AppCampaignEdit("c1"), wantStatus: http.StatusOK},
+		{name: "campaign edit post", method: http.MethodPost, path: routepath.AppCampaignEdit("c1"), body: "name=Updated&theme_prompt=Theme&locale=en-US", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaign("c1")},
 		{name: "campaign session start get resolves session detail route", method: http.MethodGet, path: routepath.AppCampaignSessionStart("c1"), wantStatus: http.StatusOK},
 		{name: "campaign session start post", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+One", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaignSessions("c1")},
 		{name: "campaign unknown subpath", method: http.MethodGet, path: routepath.AppCampaign("c1") + "/unknown", wantStatus: http.StatusNotFound},
@@ -140,6 +142,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		wantStatus int
 	}{
 		{name: "overview", method: http.MethodGet, path: routepath.AppCampaign("c1"), wantStatus: http.StatusOK},
+		{name: "campaign edit", method: http.MethodGet, path: routepath.AppCampaignEdit("c1"), wantStatus: http.StatusOK},
 		{name: "participants", method: http.MethodGet, path: routepath.AppCampaignParticipants("c1"), wantStatus: http.StatusOK},
 		{name: "participant edit", method: http.MethodGet, path: routepath.AppCampaignParticipantEdit("c1", "p-1"), wantStatus: http.StatusOK},
 		{name: "characters", method: http.MethodGet, path: routepath.AppCampaignCharacters("c1"), wantStatus: http.StatusOK},
@@ -149,6 +152,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		{name: "invites", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusOK},
 		{name: "game", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusOK},
 		{name: "participant update", method: http.MethodPost, path: routepath.AppCampaignParticipantEdit("c1", "p-1"), body: "name=Owner&role=gm&pronouns=they%2Fthem", wantStatus: http.StatusFound},
+		{name: "campaign update", method: http.MethodPost, path: routepath.AppCampaignEdit("c1"), body: "name=Updated&theme_prompt=Theme&locale=en-US", wantStatus: http.StatusFound},
 		{name: "session start", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+Two", wantStatus: http.StatusFound},
 		{name: "session end", method: http.MethodPost, path: routepath.AppCampaignSessionEnd("c1"), body: "session_id=sess-1", wantStatus: http.StatusFound},
 		{name: "invite create", method: http.MethodPost, path: routepath.AppCampaignInviteCreate("c1"), body: "participant_id=p-1&recipient_user_id=user-123", wantStatus: http.StatusFound},

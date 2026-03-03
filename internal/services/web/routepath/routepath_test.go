@@ -52,6 +52,9 @@ func TestCampaignRouteBuilders(t *testing.T) {
 	if got := AppCampaign("camp-1"); got != "/app/campaigns/camp-1" {
 		t.Fatalf("AppCampaign() = %q", got)
 	}
+	if got := AppCampaignEdit("camp-1"); got != "/app/campaigns/camp-1/edit" {
+		t.Fatalf("AppCampaignEdit() = %q", got)
+	}
 	if got := AppCampaignSessions("camp-1"); got != "/app/campaigns/camp-1/sessions" {
 		t.Fatalf("AppCampaignSessions() = %q", got)
 	}
@@ -104,6 +107,9 @@ func TestServeMuxPatternConstants(t *testing.T) {
 
 	if AppCampaignPattern != "/app/campaigns/{campaignID}" {
 		t.Fatalf("AppCampaignPattern = %q", AppCampaignPattern)
+	}
+	if AppCampaignEditPattern != "/app/campaigns/{campaignID}/edit" {
+		t.Fatalf("AppCampaignEditPattern = %q", AppCampaignEditPattern)
 	}
 	if AppCampaignSessionsPattern != "/app/campaigns/{campaignID}/sessions" {
 		t.Fatalf("AppCampaignSessionsPattern = %q", AppCampaignSessionsPattern)
@@ -189,6 +195,9 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 
 	if got := AppCampaign("camp/1"); got != "/app/campaigns/camp%2F1" {
 		t.Fatalf("AppCampaign() escaped = %q", got)
+	}
+	if got := AppCampaignEdit("camp/1"); got != "/app/campaigns/camp%2F1/edit" {
+		t.Fatalf("AppCampaignEdit() escaped = %q", got)
 	}
 	if got := AppCampaignSession("camp-1", "sess/1"); got != "/app/campaigns/camp-1/sessions/sess%2F1" {
 		t.Fatalf("AppCampaignSession() escaped = %q", got)

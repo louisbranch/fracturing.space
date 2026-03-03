@@ -13,7 +13,36 @@ import (
 
 // handleOverview renders the default campaign detail overview section.
 func (h handlers) handleOverview(w http.ResponseWriter, r *http.Request, campaignID string) {
-	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{marker: markerOverview})
+	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
+		marker: markerOverview,
+		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
+			if err := h.service.RequireManageCampaign(ctx, campaignID); err == nil {
+				view.CanEditCampaign = true
+			}
+			return nil
+		},
+	})
+}
+
+// handleCampaignEdit handles this route in the module transport layer.
+func (h handlers) handleCampaignEdit(w http.ResponseWriter, r *http.Request, campaignID string) {
+	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
+		marker: markerCampaignEdit,
+		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+			return []sharedtemplates.BreadcrumbItem{
+				{Label: webtemplates.T(loc, "game.campaign.menu.overview"), URL: routepath.AppCampaign(campaignID)},
+				{Label: webtemplates.T(loc, "game.campaign.action_edit")},
+			}
+		},
+		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
+			if err := h.service.RequireManageCampaign(ctx, campaignID); err != nil {
+				return err
+			}
+			view.CanEditCampaign = true
+			view.LocaleValue = campaignWorkspaceLocaleFormValue(view.Locale)
+			return nil
+		},
+	})
 }
 
 // handleParticipants handles this route in the module transport layer.

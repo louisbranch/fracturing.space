@@ -18,6 +18,7 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 		name string
 		run  func() error
 	}{
+		{name: "update campaign", run: func() error { return svc.updateCampaign(ctx, "c1", UpdateCampaignInput{}) }},
 		{name: "start session", run: func() error { return svc.startSession(ctx, "c1", StartSessionInput{Name: "Session One"}) }},
 		{name: "end session", run: func() error { return svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}) }},
 		{name: "create character", run: func() error {
@@ -59,6 +60,10 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	if err := svc.startSession(ctx, "c1", StartSessionInput{Name: "Session One"}); err != nil {
 		t.Fatalf("StartSession() error = %v", err)
 	}
+	updatedName := "Campaign One"
+	if err := svc.updateCampaign(ctx, "c1", UpdateCampaignInput{Name: &updatedName}); err != nil {
+		t.Fatalf("UpdateCampaign() error = %v", err)
+	}
 	if err := svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}); err != nil {
 		t.Fatalf("EndSession() error = %v", err)
 	}
@@ -81,7 +86,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 		t.Fatalf("RevokeInvite() error = %v", err)
 	}
 
-	want := []string{"start", "end", "create-character", "update-participant", "create-invite", "revoke-invite"}
+	want := []string{"start", "update-campaign", "end", "create-character", "update-participant", "create-invite", "revoke-invite"}
 	if len(gateway.calls) != len(want) {
 		t.Fatalf("len(calls) = %d, want %d (%v)", len(gateway.calls), len(want), gateway.calls)
 	}
@@ -220,6 +225,21 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		wantAction   campaignAuthorizationAction
 		wantResource campaignAuthorizationResource
 	}{
+		{
+			name: "update campaign",
+			run: func(s service) error {
+				name := "Campaign Prime"
+				theme := "New theme"
+				locale := "pt-BR"
+				return s.updateCampaign(contextWithResolvedUserID("user-1"), "c1", UpdateCampaignInput{
+					Name:        &name,
+					ThemePrompt: &theme,
+					Locale:      &locale,
+				})
+			},
+			wantAction:   campaignAuthzActionManage,
+			wantResource: campaignAuthzResourceCampaign,
+		},
 		{
 			name: "start session",
 			run: func(s service) error {
@@ -420,6 +440,100 @@ func TestUpdateParticipantRequiresMeaningfulChange(t *testing.T) {
 	}
 	if got := apperrors.LocalizationKey(err); got != "error.web.message.at_least_one_participant_field_is_required" {
 		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.at_least_one_participant_field_is_required")
+	}
+}
+
+func TestUpdateCampaignDelegatesToGateway(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{
+			ID:     "c1",
+			Name:   "Campaign One",
+			Theme:  "Old Theme",
+			Locale: "English (US)",
+		},
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+	}
+	svc := newService(gateway)
+
+	name := "Campaign Prime"
+	theme := "New Theme"
+	locale := "pt"
+	err := svc.updateCampaign(contextWithResolvedUserID("user-1"), "c1", UpdateCampaignInput{
+		Name:        &name,
+		ThemePrompt: &theme,
+		Locale:      &locale,
+	})
+	if err != nil {
+		t.Fatalf("updateCampaign() error = %v", err)
+	}
+	if len(gateway.calls) != 1 || gateway.calls[0] != "update-campaign" {
+		t.Fatalf("mutation gateway calls = %v, want [update-campaign]", gateway.calls)
+	}
+	if gateway.lastUpdateCampaignInput.Locale == nil || *gateway.lastUpdateCampaignInput.Locale != "pt-BR" {
+		t.Fatalf("updated locale = %#v, want %q", gateway.lastUpdateCampaignInput.Locale, "pt-BR")
+	}
+	if gateway.lastUpdateCampaignInput.Name == nil || *gateway.lastUpdateCampaignInput.Name != "Campaign Prime" {
+		t.Fatalf("updated name = %#v, want %q", gateway.lastUpdateCampaignInput.Name, "Campaign Prime")
+	}
+	if gateway.lastUpdateCampaignInput.ThemePrompt == nil || *gateway.lastUpdateCampaignInput.ThemePrompt != "New Theme" {
+		t.Fatalf("updated theme = %#v, want %q", gateway.lastUpdateCampaignInput.ThemePrompt, "New Theme")
+	}
+}
+
+func TestUpdateCampaignNoOpReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{
+			ID:     "c1",
+			Name:   "Campaign One",
+			Theme:  "Old Theme",
+			Locale: "English (US)",
+		},
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+	}
+	svc := newService(gateway)
+
+	name := "Campaign One"
+	theme := "Old Theme"
+	locale := "en-US"
+	err := svc.updateCampaign(contextWithResolvedUserID("user-1"), "c1", UpdateCampaignInput{
+		Name:        &name,
+		ThemePrompt: &theme,
+		Locale:      &locale,
+	})
+	if err != nil {
+		t.Fatalf("updateCampaign() error = %v", err)
+	}
+	if len(gateway.calls) != 0 {
+		t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+	}
+}
+
+func TestUpdateCampaignValidatesLocale(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace:     CampaignWorkspace{ID: "c1", Name: "Campaign One", Locale: "English (US)"},
+		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+	}
+	svc := newService(gateway)
+
+	name := "Campaign Prime"
+	theme := "New Theme"
+	locale := "es-ES"
+	err := svc.updateCampaign(contextWithResolvedUserID("user-1"), "c1", UpdateCampaignInput{
+		Name:        &name,
+		ThemePrompt: &theme,
+		Locale:      &locale,
+	})
+	if err == nil {
+		t.Fatalf("expected locale validation error")
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.campaign_locale_value_is_invalid" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.campaign_locale_value_is_invalid")
 	}
 }
 

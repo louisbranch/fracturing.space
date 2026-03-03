@@ -34,6 +34,10 @@ func (f *fakeCampaignClient) GetCampaign(context.Context, *gamev1.GetCampaignReq
 	return nil, unimplemented("GetCampaign")
 }
 
+func (f *fakeCampaignClient) UpdateCampaign(context.Context, *gamev1.UpdateCampaignRequest, ...grpc.CallOption) (*gamev1.UpdateCampaignResponse, error) {
+	return nil, unimplemented("UpdateCampaign")
+}
+
 func (f *fakeCampaignClient) EndCampaign(context.Context, *gamev1.EndCampaignRequest, ...grpc.CallOption) (*gamev1.EndCampaignResponse, error) {
 	return nil, unimplemented("EndCampaign")
 }
