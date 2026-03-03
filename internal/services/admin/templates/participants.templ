@@ -3,7 +3,7 @@ package templates
 // ParticipantsListFullPage renders the participants list in the base layout.
 templ ParticipantsListFullPage(campaignID string, campaignName string, page PageContext) {
 	@Layout(T(page.Loc, "title.participants", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
 		{Label: campaignName, URL: ""},
 	}...) {
 		@ParticipantsListPage(campaignID, campaignName, page.Loc)
@@ -19,7 +19,7 @@ templ ParticipantsListPage(campaignID string, campaignName string, loc Localizer
 
 // ParticipantsLoading renders the HTMX loading placeholder.
 templ ParticipantsLoading(campaignID string, loc Localizer) {
-	@LazyLoad("/campaigns/"+campaignID+"/participants/_rows", T(loc, "participants.loading"))
+	@LazyLoad("/app/campaigns/"+campaignID+"/participants?fragment=rows", T(loc, "participants.loading"))
 }
 
 // ParticipantsTable renders the participants table.

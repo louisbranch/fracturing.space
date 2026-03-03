@@ -101,7 +101,7 @@ func TestRequireAuthNoCookie(t *testing.T) {
 	})
 	mw := requireAuth(inner, &fakeIntrospector{}, testLoginURL)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	w := httptest.NewRecorder()
 	mw.ServeHTTP(w, req)
 
@@ -119,7 +119,7 @@ func TestRequireAuthEmptyCookie(t *testing.T) {
 	})
 	mw := requireAuth(inner, &fakeIntrospector{}, testLoginURL)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: "fs_token", Value: ""})
 	w := httptest.NewRecorder()
 	mw.ServeHTTP(w, req)
@@ -136,7 +136,7 @@ func TestRequireAuthInactiveToken(t *testing.T) {
 	intr := &fakeIntrospector{result: introspectResponse{Active: false}}
 	mw := requireAuth(inner, intr, testLoginURL)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: "fs_token", Value: "expired-token"})
 	w := httptest.NewRecorder()
 	mw.ServeHTTP(w, req)
@@ -153,7 +153,7 @@ func TestRequireAuthIntrospectError(t *testing.T) {
 	intr := &fakeIntrospector{err: fmt.Errorf("connection refused")}
 	mw := requireAuth(inner, intr, testLoginURL)
 
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: "fs_token", Value: "some-token"})
 	w := httptest.NewRecorder()
 	mw.ServeHTTP(w, req)
@@ -172,7 +172,7 @@ func TestRequireAuthValidToken(t *testing.T) {
 	intr := &fakeIntrospector{result: introspectResponse{Active: true, UserID: "user-42"}}
 	mw := requireAuth(inner, intr, testLoginURL)
 
-	req := httptest.NewRequest(http.MethodGet, "/campaigns", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: "fs_token", Value: "valid-token"})
 	w := httptest.NewRecorder()
 	mw.ServeHTTP(w, req)
@@ -192,7 +192,7 @@ func TestRequireAuthExemptPaths(t *testing.T) {
 	// Use nil introspector to prove it's never called.
 	mw := requireAuth(inner, nil, testLoginURL)
 
-	paths := []string{"/static/css/style.css", "/static/js/app.js"}
+	paths := []string{"/", "/campaigns", "/static/css/style.css", "/static/js/app.js"}
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, path, nil)

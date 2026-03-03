@@ -99,7 +99,7 @@ func UserDetailFullPage(view UserDetailPageView, activePage string, page PageCon
 			return nil
 		})
 		templ_7745c5c3_Err = Layout(T(page.Loc, "title.user", AppName()), "Users", page.Loc, page, []Breadcrumb{
-			{Label: T(page.Loc, "nav.users"), URL: "/users"},
+			{Label: T(page.Loc, "nav.users"), URL: "/app/users"},
 			{Label: userDetailBreadcrumbLabel(view, page.Loc), URL: ""},
 		}...).Render(templ.WithChildren(ctx, templ_7745c5c3_Var4), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
@@ -231,7 +231,7 @@ func UsersPage(view UsersPageView, loc Localizer) templ.Component {
 		}
 		templ_7745c5c3_Err = UserFormCard(UserFormCardView{
 			Title:       T(loc, "users.get.heading"),
-			Action:      "/users/lookup",
+			Action:      "/app/users/lookup",
 			Method:      "get",
 			FieldLabel:  T(loc, "users.get.user_id"),
 			FieldName:   "user_id",
@@ -471,7 +471,7 @@ func UsersLoading(loc Localizer) templ.Component {
 			templ_7745c5c3_Var22 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/users/_rows", T(loc, "users.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/users?fragment=rows", T(loc, "users.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -599,7 +599,7 @@ func UsersTable(rows []UserRow, message string, loc Localizer) templ.Component {
 					}
 					return nil
 				})
-				templ_7745c5c3_Err = NavLink("/users/"+row.ID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var28), templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = NavLink("/app/users/"+row.ID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var28), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -630,7 +630,7 @@ func UsersTable(rows []UserRow, message string, loc Localizer) templ.Component {
 					}
 					return nil
 				})
-				templ_7745c5c3_Err = NavLink("/users/"+row.ID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var30), templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = NavLink("/app/users/"+row.ID).Render(templ.WithChildren(ctx, templ_7745c5c3_Var30), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -1060,7 +1060,7 @@ func UserPendingInvitesTable(rows []InviteRow, message string, loc Localizer) te
 					}
 					return nil
 				})
-				templ_7745c5c3_Err = NavLink("/campaigns/"+row.CampaignID+"/invites").Render(templ.WithChildren(ctx, templ_7745c5c3_Var54), templ_7745c5c3_Buffer)
+				templ_7745c5c3_Err = NavLink("/app/campaigns/"+row.CampaignID+"/invites").Render(templ.WithChildren(ctx, templ_7745c5c3_Var54), templ_7745c5c3_Buffer)
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

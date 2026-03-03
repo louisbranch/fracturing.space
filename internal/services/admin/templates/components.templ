@@ -6,14 +6,14 @@ import sharedtemplates "github.com/louisbranch/fracturing.space/internal/service
 templ TopNav(activePage string, page PageContext, loc Localizer) {
 	<nav class="navbar bg-base-200 fixed top-0 w-full z-50">
 		<div class="navbar-start w-auto">
-			<a href="/" id="nav-logo" class="text-lg font-bold">{AppName()}</a>
+			<a href="/app/dashboard" id="nav-logo" class="text-lg font-bold">{AppName()}</a>
 		</div>
 		<div class="navbar-end w-full hidden md:flex">
 			<ul class="menu menu-horizontal">
 				<li>
 					<a
-						href="/"
-						hx-get="/"
+						href="/app/dashboard"
+						hx-get="/app/dashboard"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -22,8 +22,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 				<li>
 					<a
-						href="/systems"
-						hx-get="/systems"
+						href="/app/systems"
+						hx-get="/app/systems"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -32,8 +32,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 				<li>
 					<a
-						href="/catalog"
-						hx-get="/catalog"
+						href="/app/catalog"
+						hx-get="/app/catalog"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -42,8 +42,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 				<li>
 					<a
-						href="/icons"
-						hx-get="/icons"
+						href="/app/icons"
+						hx-get="/app/icons"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -52,8 +52,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 				<li>
 					<a
-						href="/scenarios?prefill=1"
-						hx-get="/scenarios?prefill=1"
+						href="/app/scenarios?prefill=1"
+						hx-get="/app/scenarios?prefill=1"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -62,8 +62,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 				<li>
 					<a
-						href="/users"
-						hx-get="/users"
+						href="/app/users"
+						hx-get="/app/users"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -72,8 +72,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 				<li>
 					<a
-						href="/campaigns"
-						hx-get="/campaigns"
+						href="/app/campaigns"
+						hx-get="/app/campaigns"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -108,8 +108,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				<ul tabindex="0" class="menu menu-sm dropdown-content bg-base-200 rounded-box z-10 mt-3 w-52 p-2 shadow">
 					<li>
 					<a
-						href="/"
-						hx-get="/"
+						href="/app/dashboard"
+						hx-get="/app/dashboard"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -118,8 +118,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 					<li>
 				<a
-						href="/systems"
-						hx-get="/systems"
+						href="/app/systems"
+						hx-get="/app/systems"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -128,8 +128,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 					<li>
 				<a
-						href="/catalog"
-						hx-get="/catalog"
+						href="/app/catalog"
+						hx-get="/app/catalog"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -138,8 +138,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 					<li>
 				<a
-						href="/icons"
-						hx-get="/icons"
+						href="/app/icons"
+						hx-get="/app/icons"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -148,8 +148,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 					<li>
 				<a
-						href="/scenarios?prefill=1"
-						hx-get="/scenarios?prefill=1"
+						href="/app/scenarios?prefill=1"
+						hx-get="/app/scenarios?prefill=1"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -158,8 +158,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 					<li>
 				<a
-						href="/users"
-						hx-get="/users"
+						href="/app/users"
+						hx-get="/app/users"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -168,8 +168,8 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 				</li>
 					<li>
 				<a
-						href="/campaigns"
-						hx-get="/campaigns"
+						href="/app/campaigns"
+						hx-get="/app/campaigns"
 						hx-target="#main"
 						hx-swap="innerHTML"
 						hx-push-url="true"
@@ -200,7 +200,7 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 // The active tab's content is rendered inside a tab-content panel via children.
 templ CampaignSubNav(campaignID string, activePage string, loc Localizer) {
 	<div class="tabs tabs-box">
-		@campaignTabInput(campaignID, "overview", activePage, "/campaigns/"+campaignID, T(loc, "tab.overview"))
+		@campaignTabInput(campaignID, "overview", activePage, "/app/campaigns/"+campaignID, T(loc, "tab.overview"))
 		if activePage == "overview" {
 			<div class="tab-content p-4">
 				{ children... }
@@ -208,7 +208,7 @@ templ CampaignSubNav(campaignID string, activePage string, loc Localizer) {
 		} else {
 			<div class="tab-content"></div>
 		}
-		@campaignTabInput(campaignID, "sessions", activePage, "/campaigns/"+campaignID+"/sessions", T(loc, "tab.sessions"))
+		@campaignTabInput(campaignID, "sessions", activePage, "/app/campaigns/"+campaignID+"/sessions", T(loc, "tab.sessions"))
 		if activePage == "sessions" {
 			<div class="tab-content p-4">
 				{ children... }
@@ -216,7 +216,7 @@ templ CampaignSubNav(campaignID string, activePage string, loc Localizer) {
 		} else {
 			<div class="tab-content"></div>
 		}
-		@campaignTabInput(campaignID, "characters", activePage, "/campaigns/"+campaignID+"/characters", T(loc, "tab.characters"))
+		@campaignTabInput(campaignID, "characters", activePage, "/app/campaigns/"+campaignID+"/characters", T(loc, "tab.characters"))
 		if activePage == "characters" {
 			<div class="tab-content p-4">
 				{ children... }
@@ -224,7 +224,7 @@ templ CampaignSubNav(campaignID string, activePage string, loc Localizer) {
 		} else {
 			<div class="tab-content"></div>
 		}
-		@campaignTabInput(campaignID, "participants", activePage, "/campaigns/"+campaignID+"/participants", T(loc, "tab.participants"))
+		@campaignTabInput(campaignID, "participants", activePage, "/app/campaigns/"+campaignID+"/participants", T(loc, "tab.participants"))
 		if activePage == "participants" {
 			<div class="tab-content p-4">
 				{ children... }
@@ -232,7 +232,7 @@ templ CampaignSubNav(campaignID string, activePage string, loc Localizer) {
 		} else {
 			<div class="tab-content"></div>
 		}
-		@campaignTabInput(campaignID, "invites", activePage, "/campaigns/"+campaignID+"/invites", T(loc, "tab.invites"))
+		@campaignTabInput(campaignID, "invites", activePage, "/app/campaigns/"+campaignID+"/invites", T(loc, "tab.invites"))
 		if activePage == "invites" {
 			<div class="tab-content p-4">
 				{ children... }
@@ -240,7 +240,7 @@ templ CampaignSubNav(campaignID string, activePage string, loc Localizer) {
 		} else {
 			<div class="tab-content"></div>
 		}
-		@campaignTabInput(campaignID, "events", activePage, "/campaigns/"+campaignID+"/events", T(loc, "tab.events"))
+		@campaignTabInput(campaignID, "events", activePage, "/app/campaigns/"+campaignID+"/events", T(loc, "tab.events"))
 		if activePage == "events" {
 			<div class="tab-content p-4">
 				{ children... }
@@ -280,7 +280,7 @@ templ campaignTabInput(campaignID string, page string, activePage string, url st
 // The active tab's content is rendered inside a tab-content panel via children.
 templ UserSubNav(userID string, activePage string, loc Localizer) {
 	<div class="tabs tabs-box">
-		@userTabInput(userID, "details", activePage, "/users/"+userID, T(loc, "tab.details"))
+		@userTabInput(userID, "details", activePage, "/app/users/"+userID, T(loc, "tab.details"))
 		if activePage == "details" {
 			<div class="tab-content p-4">
 				{ children... }
@@ -288,7 +288,7 @@ templ UserSubNav(userID string, activePage string, loc Localizer) {
 		} else {
 			<div class="tab-content"></div>
 		}
-		@userTabInput(userID, "invites", activePage, "/users/"+userID+"/invites", T(loc, "tab.pending_invites"))
+		@userTabInput(userID, "invites", activePage, "/app/users/"+userID+"/invites", T(loc, "tab.pending_invites"))
 		if activePage == "invites" {
 			<div class="tab-content p-4">
 				{ children... }
@@ -328,7 +328,7 @@ templ userTabInput(userID string, page string, activePage string, url string, la
 // The active tab's content is rendered inside a tab-content panel via children.
 templ CharacterSubNav(campaignID string, characterID string, activePage string, loc Localizer) {
 	<div class="tabs tabs-box">
-		@characterTabInput(campaignID, characterID, "info", activePage, "/campaigns/"+campaignID+"/characters/"+characterID, T(loc, "tab.info"))
+		@characterTabInput(campaignID, characterID, "info", activePage, "/app/campaigns/"+campaignID+"/characters/"+characterID, T(loc, "tab.info"))
 		if activePage == "info" {
 			<div class="tab-content p-4">
 				{ children... }
@@ -336,7 +336,7 @@ templ CharacterSubNav(campaignID string, characterID string, activePage string, 
 		} else {
 			<div class="tab-content"></div>
 		}
-		@characterTabInput(campaignID, characterID, "activity", activePage, "/campaigns/"+campaignID+"/characters/"+characterID+"/activity", T(loc, "tab.activity"))
+		@characterTabInput(campaignID, characterID, "activity", activePage, "/app/campaigns/"+campaignID+"/characters/"+characterID+"/activity", T(loc, "tab.activity"))
 		if activePage == "activity" {
 			<div class="tab-content p-4">
 				{ children... }

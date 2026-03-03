@@ -53,8 +53,8 @@ func EventLogFullPage(view EventLogView, page PageContext) templ.Component {
 			return nil
 		})
 		templ_7745c5c3_Err = Layout(T(page.Loc, "title.events", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-			{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
-			{Label: view.CampaignName, URL: "/campaigns/" + view.CampaignID},
+			{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
+			{Label: view.CampaignName, URL: "/app/campaigns/" + view.CampaignID},
 			{Label: T(page.Loc, "events.heading"), URL: ""},
 		}...).Render(templ.WithChildren(ctx, templ_7745c5c3_Var2), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
@@ -181,9 +181,9 @@ func EventFilterForm(campaignID string, sessionID string, filters EventFilterOpt
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs("/campaigns/" + campaignID + "/events/_rows")
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs("/app/campaigns/" + campaignID + "/events?fragment=rows")
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/events.templ`, Line: 32, Col: 55}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/admin/templates/events.templ`, Line: 32, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -523,8 +523,8 @@ func EventTimelineContent(view EventLogView, loc Localizer) templ.Component {
 			templ_7745c5c3_Err = PaginationTargeted(
 				view.NextToken,
 				view.PrevToken,
-				EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events", view.Filters),
-				EventFilterBaseURL("/campaigns/"+view.CampaignID+"/events/_rows", view.Filters),
+				EventFilterBaseURL("/app/campaigns/"+view.CampaignID+"/events", view.Filters),
+				EventFilterBaseURL("/app/campaigns/"+view.CampaignID+"/events?fragment=rows", view.Filters),
 				"#event-timeline-container",
 				true,
 				loc,

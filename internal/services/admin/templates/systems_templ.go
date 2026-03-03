@@ -110,7 +110,7 @@ func SystemsLoading(loc Localizer) templ.Component {
 			templ_7745c5c3_Var4 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = LazyLoad("/systems/_rows", T(loc, "systems.loading")).Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = LazyLoad("/app/systems?fragment=rows", T(loc, "systems.loading")).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -389,7 +389,7 @@ func SystemDetailFullPage(detail SystemDetail, message string, page PageContext)
 			return nil
 		})
 		templ_7745c5c3_Err = Layout(T(page.Loc, "title.system", AppName()), "Systems", page.Loc, page, []Breadcrumb{
-			{Label: T(page.Loc, "nav.systems"), URL: "/systems"},
+			{Label: T(page.Loc, "nav.systems"), URL: "/app/systems"},
 			{Label: detail.Name, URL: ""},
 		}...).Render(templ.WithChildren(ctx, templ_7745c5c3_Var20), templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {

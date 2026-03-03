@@ -9,11 +9,11 @@ import (
 
 func TestLazyLoadUsesSharedLoadingTemplate(t *testing.T) {
 	var buf bytes.Buffer
-	if err := LazyLoad("/dashboard/_stats", "Loading dashboard...").Render(context.Background(), &buf); err != nil {
+	if err := LazyLoad("/app/dashboard?fragment=rows", "Loading dashboard...").Render(context.Background(), &buf); err != nil {
 		t.Fatalf("render LazyLoad: %v", err)
 	}
 	got := buf.String()
-	if !strings.Contains(got, `hx-get="/dashboard/_stats"`) {
+	if !strings.Contains(got, `hx-get="/app/dashboard?fragment=rows"`) {
 		t.Fatalf("LazyLoad output missing hx-get URL: %q", got)
 	}
 	if !strings.Contains(got, `class="loading loading-ring loading-md"`) {

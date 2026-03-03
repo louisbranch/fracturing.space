@@ -50,7 +50,7 @@ async page => {
     const text = document.body.innerText || "";
     return table || text.includes("No users yet.") || text.includes("Users unavailable.") || text.includes("User service unavailable.");
   });
-  const lookupForm = page.locator("form[action=\"/users/lookup\"]");
+  const lookupForm = page.locator("form[action=\"/app/users/lookup\"]");
   await lookupForm.waitFor();
   await lookupForm.locator("input[name=\"user_id\"]").waitFor();
 

@@ -22,5 +22,5 @@ Durable architecture, domain, and policy documentation.
 
 - I am new to the codebase: [Foundations](foundations/)
 - I am adding mechanics or a new system: [System extension](systems/)
-- I am changing auth/web/i18n/integration boundaries: [Platform surfaces](platform/)
+- I am changing auth/web/admin/i18n/integration boundaries: [Platform surfaces](platform/)
 - I am changing testing or compatibility policy: [Policy and quality](policy/)

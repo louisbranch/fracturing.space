@@ -60,13 +60,14 @@ func TestMount(t *testing.T) {
 		wantCall     string
 		wantCampaign string
 		wantPath     string
+		wantAllow    string
 	}{
-		{name: "page", method: http.MethodGet, path: "/scenarios", wantCode: http.StatusNoContent, wantCall: "scenarios_page", wantPath: "/scenarios"},
-		{name: "run post", method: http.MethodPost, path: "/scenarios/run", wantCode: http.StatusNoContent, wantCall: "scenarios_page", wantPath: "/scenarios"},
-		{name: "run method not allowed", method: http.MethodGet, path: "/scenarios/run", wantCode: http.StatusMethodNotAllowed},
-		{name: "events table", method: http.MethodGet, path: "/scenarios/camp-1/events/_rows", wantCode: http.StatusNoContent, wantCall: "scenarios_events_table", wantCampaign: "camp-1"},
-		{name: "timeline table", method: http.MethodGet, path: "/scenarios/camp-1/timeline/_rows", wantCode: http.StatusNoContent, wantCall: "scenarios_timeline_table", wantCampaign: "camp-1"},
-		{name: "legacy table blocked", method: http.MethodGet, path: "/scenarios/camp-1/events/table", wantCode: http.StatusNotFound},
+		{name: "page", method: http.MethodGet, path: "/app/scenarios", wantCode: http.StatusNoContent, wantCall: "scenarios_page", wantPath: "/app/scenarios"},
+		{name: "run post", method: http.MethodPost, path: "/app/scenarios/run", wantCode: http.StatusNoContent, wantCall: "scenarios_page", wantPath: "/app/scenarios/run"},
+		{name: "run method not allowed", method: http.MethodGet, path: "/app/scenarios/run", wantCode: http.StatusMethodNotAllowed, wantAllow: http.MethodPost},
+		{name: "events table", method: http.MethodGet, path: "/app/scenarios/camp-1/events?fragment=rows", wantCode: http.StatusNoContent, wantCall: "scenarios_events_table", wantCampaign: "camp-1"},
+		{name: "timeline table", method: http.MethodGet, path: "/app/scenarios/camp-1/timeline?fragment=rows", wantCode: http.StatusNoContent, wantCall: "scenarios_timeline_table", wantCampaign: "camp-1"},
+		{name: "legacy table blocked", method: http.MethodGet, path: "/app/scenarios/camp-1/events/table", wantCode: http.StatusNotFound},
 	}
 
 	for _, tc := range tests {
@@ -90,6 +91,11 @@ func TestMount(t *testing.T) {
 			if tc.wantPath != "" && svc.lastPath != tc.wantPath {
 				t.Fatalf("lastPath = %q, want %q", svc.lastPath, tc.wantPath)
 			}
+			if tc.wantAllow != "" {
+				if got := rec.Header().Get("Allow"); got != tc.wantAllow {
+					t.Fatalf("Allow header = %q, want %q", got, tc.wantAllow)
+				}
+			}
 		})
 	}
 }
@@ -102,7 +108,7 @@ func TestMountNilService(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/scenarios/camp-1/events/_rows", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/scenarios/camp-1/events?fragment=rows", nil)
 	rec := httptest.NewRecorder()
 	m.Handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusNotFound {

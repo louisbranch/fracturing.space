@@ -11,13 +11,13 @@ import (
 
 func TestComposeAppHandlerBuildsRegistryModules(t *testing.T) {
 	reg := &stubRegistry{output: modules.BuildOutput{Modules: []modules.Module{
-		stubModule{id: "ok", mount: mod.Mount{Prefix: "/", Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })}},
+		stubModule{id: "ok", mount: mod.Mount{Prefix: "/app/ok/", Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) })}},
 	}}}
 	h, err := ComposeAppHandler(ComposeInput{Registry: reg})
 	if err != nil {
 		t.Fatalf("ComposeAppHandler() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/ok/example", nil)
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusNoContent {

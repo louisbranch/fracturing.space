@@ -14,7 +14,7 @@ templ DashboardPage(loc Localizer) {
 
 // DashboardLoading renders the HTMX loading placeholder.
 templ DashboardLoading(loc Localizer) {
-	@LazyLoad("/dashboard/_stats", T(loc, "dashboard.loading"))
+	@LazyLoad("/app/dashboard?fragment=rows", T(loc, "dashboard.loading"))
 }
 
 // DashboardContent renders the main dashboard content.
@@ -53,7 +53,7 @@ templ RecentActivityFeed(activities []ActivityEvent, loc Localizer) {
 				for _, activity := range activities {
 					<tr>
 						<td>
-							@NavLink("/campaigns/" + activity.CampaignID) {
+							@NavLink("/app/campaigns/" + activity.CampaignID) {
 								{activity.CampaignName}
 							}
 						</td>

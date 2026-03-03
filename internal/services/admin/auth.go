@@ -27,7 +27,11 @@ type AuthConfig struct {
 // static assets and login handoff paths unauthenticated.
 func requireAuth(next http.Handler, introspector TokenIntrospector, loginURL string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if isAuthExempt(r.URL.Path) {
+		if r == nil || r.URL == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if !strings.HasPrefix(r.URL.Path, routepath.AppPrefix) || isAuthExempt(r.URL.Path) {
 			next.ServeHTTP(w, r)
 			return
 		}

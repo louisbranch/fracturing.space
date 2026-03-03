@@ -14,7 +14,7 @@ type Registry interface {
 
 // ComposeInput describes contracts needed to compose the admin handler.
 type ComposeInput struct {
-	Service  modules.Service
+	Modules  modules.BuildInput
 	Registry Registry
 }
 
@@ -25,6 +25,6 @@ func ComposeAppHandler(input ComposeInput) (http.Handler, error) {
 		defaultRegistry := modules.NewRegistry()
 		registry = defaultRegistry
 	}
-	built := registry.Build(modules.BuildInput{Service: input.Service})
+	built := registry.Build(input.Modules)
 	return app.Compose(app.ComposeInput{Modules: built.Modules})
 }

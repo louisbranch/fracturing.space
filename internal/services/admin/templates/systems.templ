@@ -14,7 +14,7 @@ templ SystemsPage(loc Localizer) {
 
 // SystemsLoading renders the HTMX loading placeholder.
 templ SystemsLoading(loc Localizer) {
-	@LazyLoad("/systems/_rows", T(loc, "systems.loading"))
+	@LazyLoad("/app/systems?fragment=rows", T(loc, "systems.loading"))
 }
 
 // SystemsTable renders a systems table or a message when empty.
@@ -60,7 +60,7 @@ templ SystemsTable(rows []SystemRow, message string, loc Localizer) {
 // SystemDetailFullPage renders system detail content in the base layout.
 templ SystemDetailFullPage(detail SystemDetail, message string, page PageContext) {
 	@Layout(T(page.Loc, "title.system", AppName()), "Systems", page.Loc, page, []Breadcrumb{
-		{Label: T(page.Loc, "nav.systems"), URL: "/systems"},
+		{Label: T(page.Loc, "nav.systems"), URL: "/app/systems"},
 		{Label: detail.Name, URL: ""},
 	}...) {
 		@SystemDetailPage(detail, message, page.Loc)

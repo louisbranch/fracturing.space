@@ -16,7 +16,7 @@ templ IconsPage(loc Localizer) {
 
 // IconsLoading renders the HTMX loading placeholder.
 templ IconsLoading(loc Localizer) {
-	@LazyLoad("/icons/_rows", T(loc, "icons.loading"))
+	@LazyLoad("/app/icons?fragment=rows", T(loc, "icons.loading"))
 }
 
 // IconsTable renders the icon catalog table.

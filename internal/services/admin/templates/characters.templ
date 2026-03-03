@@ -3,7 +3,7 @@ package templates
 // CharactersListFullPage renders the characters list in the base layout.
 templ CharactersListFullPage(campaignID string, campaignName string, page PageContext) {
 	@Layout(T(page.Loc, "title.characters", AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
 		{Label: campaignName, URL: ""},
 	}...) {
 		@CharactersListPage(campaignID, campaignName, page.Loc)
@@ -19,7 +19,7 @@ templ CharactersListPage(campaignID string, campaignName string, loc Localizer) 
 
 // CharactersLoading renders the HTMX loading placeholder.
 templ CharactersLoading(campaignID string, loc Localizer) {
-	@LazyLoad("/campaigns/"+campaignID+"/characters/_rows", T(loc, "characters.loading"))
+	@LazyLoad("/app/campaigns/"+campaignID+"/characters?fragment=rows", T(loc, "characters.loading"))
 }
 
 // CharactersTable renders the characters table.
@@ -39,7 +39,7 @@ templ CharactersTable(rows []CharacterRow, message string, loc Localizer) {
 				for _, row := range rows {
 					<tr>
 						<td>
-							@NavLink("/campaigns/" + row.CampaignID + "/characters/" + row.ID) {
+							@NavLink("/app/campaigns/" + row.CampaignID + "/characters/" + row.ID) {
 								{row.Name}
 							}
 						</td>
@@ -55,9 +55,9 @@ templ CharactersTable(rows []CharacterRow, message string, loc Localizer) {
 // CharacterSheetFullPage renders the character sheet in the base layout.
 templ CharacterSheetFullPage(sheet CharacterSheetView, activePage string, page PageContext) {
 	@Layout(T(page.Loc, "title.character_sheet", sheet.Character.GetName(), AppName()), "Campaigns", page.Loc, page, []Breadcrumb{
-		{Label: T(page.Loc, "nav.campaigns"), URL: "/campaigns"},
-		{Label: sheet.CampaignName, URL: "/campaigns/" + sheet.CampaignID},
-		{Label: T(page.Loc, "characters.heading"), URL: "/campaigns/" + sheet.CampaignID + "/characters"},
+		{Label: T(page.Loc, "nav.campaigns"), URL: "/app/campaigns"},
+		{Label: sheet.CampaignName, URL: "/app/campaigns/" + sheet.CampaignID},
+		{Label: T(page.Loc, "characters.heading"), URL: "/app/campaigns/" + sheet.CampaignID + "/characters"},
 		{Label: sheet.Character.GetName(), URL: ""},
 	}...) {
 		@CharacterSheetPage(sheet, activePage, page.Loc)

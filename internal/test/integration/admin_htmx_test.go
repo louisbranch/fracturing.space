@@ -51,7 +51,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	baseURL := "http://" + adminAddr
 
 	t.Run("campaigns table empty", func(t *testing.T) {
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/_rows")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -73,7 +73,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/_rows")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -81,7 +81,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 		assertHTMLContains(t, body,
 			"Admin Test Campaign",
-			"/campaigns/"+campaignID,
+			"/app/campaigns/"+campaignID,
 			"Human",
 		)
 		assertHTMXFragmentInvariant(t, body)
@@ -98,7 +98,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/campaigns/"+campaignID, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/campaigns/"+campaignID, nil)
 		if err != nil {
 			t.Fatalf("create request: %v", err)
 		}
@@ -138,7 +138,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID)
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID)
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -162,7 +162,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/sessions")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -171,13 +171,13 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		// The HTMX fragment returns the sessions page with a loading placeholder
 		assertHTMLContains(t, body,
 			"<title>Sessions - Admin | "+branding.AppName+"</title>",
-			"/sessions/_rows",
+			"/sessions?fragment=rows",
 		)
 		assertHTMXFragmentInvariant(t, body)
 	})
 
 	t.Run("campaign not found", func(t *testing.T) {
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/nonexistent-campaign-id")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/nonexistent-campaign-id")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200 (graceful degradation), got %d", status)
@@ -188,7 +188,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 	// Dashboard tests
 	t.Run("dashboard full page", func(t *testing.T) {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/dashboard/", nil)
 		if err != nil {
 			t.Fatalf("create request: %v", err)
 		}
@@ -217,7 +217,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 	})
 
 	t.Run("dashboard htmx fragment", func(t *testing.T) {
-		status, body := htmxGet(t, httpClient, baseURL+"/")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/dashboard/")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -248,7 +248,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/dashboard/_stats")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/dashboard/?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -274,7 +274,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/campaigns/"+campaignID+"/sessions", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/campaigns/"+campaignID+"/sessions", nil)
 		if err != nil {
 			t.Fatalf("create request: %v", err)
 		}
@@ -313,7 +313,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions/_rows")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/sessions?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -343,7 +343,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions/_rows")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/sessions?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -378,7 +378,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		sessionID := sessionResp.Session.Id
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/campaigns/"+campaignID+"/sessions/"+sessionID, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/campaigns/"+campaignID+"/sessions/"+sessionID, nil)
 		if err != nil {
 			t.Fatalf("create request: %v", err)
 		}
@@ -428,7 +428,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		sessionID := sessionResp.Session.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions/"+sessionID)
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/sessions/"+sessionID)
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -464,7 +464,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		sessionID := sessionResp.Session.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/sessions/"+sessionID+"/events")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/sessions/"+sessionID+"/events")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -486,7 +486,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/campaigns/"+campaignID+"/characters", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/campaigns/"+campaignID+"/characters", nil)
 		if err != nil {
 			t.Fatalf("create request: %v", err)
 		}
@@ -525,7 +525,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/characters")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/characters")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -533,7 +533,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 		assertHTMLContains(t, body,
 			"<title>Characters - Admin | "+branding.AppName+"</title>",
-			"/characters/_rows",
+			"/characters?fragment=rows",
 		)
 		assertHTMXFragmentInvariant(t, body)
 	})
@@ -549,7 +549,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/characters/_rows")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/characters?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -578,7 +578,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create character: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/characters/_rows")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/characters?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -611,7 +611,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		characterID := charResp.Character.Id
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/campaigns/"+campaignID+"/characters/"+characterID, nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/campaigns/"+campaignID+"/characters/"+characterID, nil)
 		if err != nil {
 			t.Fatalf("create request: %v", err)
 		}
@@ -660,7 +660,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		characterID := charResp.Character.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/characters/"+characterID)
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/characters/"+characterID)
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -685,7 +685,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/campaigns/"+campaignID+"/participants", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/campaigns/"+campaignID+"/participants", nil)
 		if err != nil {
 			t.Fatalf("create request: %v", err)
 		}
@@ -724,7 +724,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/participants")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/participants")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -732,7 +732,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 
 		assertHTMLContains(t, body,
 			"<title>Participants - Admin | "+branding.AppName+"</title>",
-			"/participants/_rows",
+			"/participants?fragment=rows",
 		)
 		assertHTMXFragmentInvariant(t, body)
 	})
@@ -748,7 +748,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/participants/_rows")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/participants?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -790,7 +790,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("create participant: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/participants/_rows")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/participants?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -815,7 +815,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/campaigns/"+campaignID+"/events", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/campaigns/"+campaignID+"/events", nil)
 		if err != nil {
 			t.Fatalf("create request: %v", err)
 		}
@@ -854,7 +854,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		}
 		campaignID := createResp.Campaign.Id
 
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/events")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/events")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -888,7 +888,7 @@ func TestAdminHTMXIntegration(t *testing.T) {
 		if err != nil {
 			t.Fatalf("start session: %v", err)
 		}
-		status, body := htmxGet(t, httpClient, baseURL+"/campaigns/"+campaignID+"/events/_rows")
+		status, body := htmxGet(t, httpClient, baseURL+"/app/campaigns/"+campaignID+"/events?fragment=rows")
 
 		if status != http.StatusOK {
 			t.Fatalf("expected status 200, got %d", status)
@@ -940,7 +940,7 @@ func waitForAdminHealth(t *testing.T, baseURL string) {
 	backoff := 100 * time.Millisecond
 
 	for {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/", nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/app/dashboard/", nil)
 		if err != nil {
 			t.Fatalf("create health request: %v", err)
 		}

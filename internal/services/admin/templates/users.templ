@@ -10,7 +10,7 @@ templ UsersFullPage(view UsersPageView, page PageContext) {
 // UserDetailFullPage renders the user detail page in the base layout.
 templ UserDetailFullPage(view UserDetailPageView, activePage string, page PageContext) {
 	@Layout(T(page.Loc, "title.user", AppName()), "Users", page.Loc, page, []Breadcrumb{
-		{Label: T(page.Loc, "nav.users"), URL: "/users"},
+		{Label: T(page.Loc, "nav.users"), URL: "/app/users"},
 		{Label: userDetailBreadcrumbLabel(view, page.Loc), URL: ""},
 	}...) {
 		@UserDetailPage(view, activePage, page.Loc)
@@ -40,7 +40,7 @@ templ UsersPage(view UsersPageView, loc Localizer) {
 	<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 		@UserFormCard(UserFormCardView{
 			Title:       T(loc, "users.get.heading"),
-			Action:      "/users/lookup",
+			Action:      "/app/users/lookup",
 			Method:      "get",
 			FieldLabel:  T(loc, "users.get.user_id"),
 			FieldName:   "user_id",
@@ -85,7 +85,7 @@ templ UserFormCard(view UserFormCardView) {
 
 // UsersLoading renders the HTMX loading placeholder.
 templ UsersLoading(loc Localizer) {
-	@LazyLoad("/users/_rows", T(loc, "users.loading"))
+	@LazyLoad("/app/users?fragment=rows", T(loc, "users.loading"))
 }
 
 // UsersTable renders the users table.
@@ -106,12 +106,12 @@ templ UsersTable(rows []UserRow, message string, loc Localizer) {
 				for _, row := range rows {
 					<tr>
 						<td>
-							@NavLink("/users/" + row.ID) {
+							@NavLink("/app/users/" + row.ID) {
 								<code>{row.ID}</code>
 							}
 						</td>
 						<td>
-							@NavLink("/users/" + row.ID) {
+							@NavLink("/app/users/" + row.ID) {
 								{row.Email}
 							}
 						</td>
@@ -188,7 +188,7 @@ templ UserPendingInvitesTable(rows []InviteRow, message string, loc Localizer) {
 				for _, row := range rows {
 					<tr>
 						<td>
-							@NavLink("/campaigns/" + row.CampaignID + "/invites") {
+							@NavLink("/app/campaigns/" + row.CampaignID + "/invites") {
 								{row.CampaignName}
 							}
 						</td>
