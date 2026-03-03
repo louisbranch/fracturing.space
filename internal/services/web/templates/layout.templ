@@ -492,9 +492,13 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 					<div class="dropdown dropdown-end">
 						<button type="button" class="btn btn-ghost btn-circle avatar">
 							if strings.TrimSpace(viewer.AvatarURL) != "" {
-								<div class="w-10 rounded-full">
-									<img src={ viewer.AvatarURL } alt={ viewerLocalizedName(viewer, loc) } class="rounded-full"/>
-								</div>
+								@AppImage(AppImageView{
+									Src:           viewer.AvatarURL,
+									Alt:           viewerLocalizedName(viewer, loc),
+									FrameClass:    "w-10 rounded-full",
+									ImageClass:    "h-full w-full object-cover rounded-full",
+									SkeletonClass: "rounded-full",
+								})
 							} else {
 								<div class="avatar placeholder">
 									<div class="bg-neutral text-neutral-content rounded-full w-10"><span class="text-sm">{ viewerInitials(viewer, loc) }</span></div>

@@ -68,8 +68,14 @@ templ PublicProfilePage(view PublicProfileView, loc Localizer) {
 						}
 					</dl>
 				</div>
-				<figure class="order-1 lg:order-2 h-72 lg:h-full bg-base-300">
-					<img src={ publicProfileValue(view.AvatarURL) } alt={ publicProfileAvatarAlt(view) } class="h-full w-full object-cover"/>
+				<figure class="order-1 lg:order-2 w-full bg-base-300 self-start">
+					@AppImage(AppImageView{
+						Src:        publicProfileValue(view.AvatarURL),
+						Alt:        publicProfileAvatarAlt(view),
+						FrameClass: "w-full",
+						FrameStyle: "aspect-ratio: 1 / 1;",
+						ImageClass: "h-full w-full object-cover",
+					})
 				</figure>
 			</div>
 		</div>

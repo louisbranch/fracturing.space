@@ -58,7 +58,10 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4"`,
-		`<a href="/app/campaigns/camp-new" class="group block"><img`,
+		`<a href="/app/campaigns/camp-new" class="group block w-full">`,
+		`data-image-frame="true"`,
+		`data-image-skeleton="true"`,
+		`aspect-ratio: 16 / 9;`,
 		`/static/campaign-cover-fallback.svg?asset_id=abandoned_castle_courtyard`,
 		`Participants: 12`,
 		`Characters: 7`,

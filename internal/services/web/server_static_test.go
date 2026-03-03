@@ -189,6 +189,34 @@ func TestStaticAppShellScriptIncludesRouteMetadataContract(t *testing.T) {
 	}
 }
 
+func TestStaticAppShellScriptIncludesImageFallbackContract(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+	})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/static/app-shell.js", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`initAppImageFallbacks`,
+		`document.addEventListener("error"`,
+		`data-image-el`,
+		`target.style.display = "none"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("app-shell.js missing image fallback marker %q", marker)
+		}
+	}
+}
+
 func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 	t.Parallel()
 

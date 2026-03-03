@@ -1,0 +1,65 @@
+package templates
+
+import "strings"
+
+// AppImageView defines configurable classes for shared image rendering.
+type AppImageView struct {
+	Src           string
+	Alt           string
+	FrameClass    string
+	FrameStyle    string
+	ImageClass    string
+	SkeletonClass string
+}
+
+func appImageValue(value string) string {
+	return strings.TrimSpace(value)
+}
+
+func appImageFrameClass(view AppImageView) string {
+	base := "relative overflow-hidden"
+	frameClass := appImageValue(view.FrameClass)
+	if frameClass == "" {
+		return base
+	}
+	return base + " " + frameClass
+}
+
+func appImageFrameStyle(view AppImageView) string {
+	return appImageValue(view.FrameStyle)
+}
+
+func appImageSkeletonClass(view AppImageView) string {
+	base := "skeleton absolute inset-0"
+	skeletonClass := appImageValue(view.SkeletonClass)
+	if skeletonClass == "" {
+		return base
+	}
+	return base + " " + skeletonClass
+}
+
+func appImageClass(view AppImageView) string {
+	imageClass := appImageValue(view.ImageClass)
+	if imageClass == "" {
+		return "h-full w-full object-cover"
+	}
+	return imageClass
+}
+
+templ AppImage(view AppImageView) {
+	if appImageFrameStyle(view) != "" {
+		<div class={ appImageFrameClass(view) } style={ appImageFrameStyle(view) } data-image-frame="true">
+			<div class={ appImageSkeletonClass(view) } aria-hidden="true" data-image-skeleton="true"></div>
+			if appImageValue(view.Src) != "" {
+				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) } data-image-el="true"/>
+			}
+		</div>
+	} else {
+		<div class={ appImageFrameClass(view) } data-image-frame="true">
+			<div class={ appImageSkeletonClass(view) } aria-hidden="true" data-image-skeleton="true"></div>
+			if appImageValue(view.Src) != "" {
+				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) } data-image-el="true"/>
+			}
+		</div>
+	}
+}

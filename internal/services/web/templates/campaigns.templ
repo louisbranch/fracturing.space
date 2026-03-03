@@ -623,15 +623,27 @@ templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
 		if len(items) == 0 {
 			<p>{ T(loc, "game.campaigns.empty") }</p>
 		}
-		for _, item := range items {
-			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-id={ item.ID }>
-				<figure>
-					if campaignListItemURL(item) != "" {
-						<a href={ campaignListItemURL(item) } class="group block">
-							<img src={ item.CoverImageURL } alt={ item.Name + " cover" } class="w-full object-cover"/>
+			for _, item := range items {
+				<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-id={ item.ID }>
+					<figure class="w-full">
+						if campaignListItemURL(item) != "" {
+							<a href={ campaignListItemURL(item) } class="group block w-full">
+								@AppImage(AppImageView{
+									Src:        item.CoverImageURL,
+									Alt:        item.Name + " cover",
+									FrameClass: "w-full",
+									FrameStyle: "aspect-ratio: 16 / 9;",
+									ImageClass: "h-full w-full object-cover",
+								})
 						</a>
 					} else {
-						<img src={ item.CoverImageURL } alt={ item.Name + " cover" } class="w-full object-cover"/>
+						@AppImage(AppImageView{
+							Src:        item.CoverImageURL,
+							Alt:        item.Name + " cover",
+							FrameClass: "w-full",
+							FrameStyle: "aspect-ratio: 16 / 9;",
+							ImageClass: "h-full w-full object-cover",
+						})
 					}
 				</figure>
 				<div class="card-body">

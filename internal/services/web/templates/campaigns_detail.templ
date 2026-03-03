@@ -96,7 +96,12 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 				for _, participant := range view.Participants {
 					<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side overflow-hidden" data-campaign-participant-card-id={ participant.ID }>
 						<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0">
-							<img src={ participant.AvatarURL } alt={ participant.Name + " avatar" } class="h-full w-full object-cover"/>
+							@AppImage(AppImageView{
+								Src:        participant.AvatarURL,
+								Alt:        participant.Name + " avatar",
+								FrameClass: "h-full w-full",
+								ImageClass: "h-full w-full object-cover",
+							})
 						</figure>
 						<div class="card-body gap-2 p-4">
 							<h2 class="card-title" data-campaign-participant-name={ participant.Name }>{ participant.Name }</h2>
@@ -202,7 +207,12 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 					for _, character := range view.Characters {
 						<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side overflow-hidden" data-campaign-character-card-id={ character.ID }>
 							<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0">
-								<img src={ character.AvatarURL } alt={ character.Name + " avatar" } class="h-full w-full object-cover"/>
+								@AppImage(AppImageView{
+									Src:        character.AvatarURL,
+									Alt:        character.Name + " avatar",
+									FrameClass: "h-full w-full",
+									ImageClass: "h-full w-full object-cover",
+								})
 							</figure>
 							<div class="card-body gap-2 p-4">
 								<h2 class="card-title" data-campaign-character-name={ character.Name }>

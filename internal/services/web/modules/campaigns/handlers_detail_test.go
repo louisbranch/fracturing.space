@@ -527,6 +527,8 @@ func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 		`data-campaign-participant-role="GM"`,
 		`data-campaign-participant-access="Owner"`,
 		`data-campaign-participant-controller="AI"`,
+		`data-image-frame="true"`,
+		`data-image-skeleton="true"`,
 		`src="/static/avatars/aria.png"`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -742,6 +744,8 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 		`data-campaign-character-creation-entry="false"`,
 		`data-campaign-character-kind="PC"`,
 		`data-campaign-character-controller="Ariadne"`,
+		`data-image-frame="true"`,
+		`data-image-skeleton="true"`,
 		`src="/static/avatars/aria.png"`,
 	} {
 		if !strings.Contains(body, marker) {
