@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-02T05:22:59Z",
+  "updated_at": "2026-03-03T04:06:35Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -55,7 +55,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign",
-      "floor": 93.5,
+      "floor": 93.6,
       "description": "Campaign lifecycle domain behavior."
     },
     {
@@ -110,7 +110,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness",
-      "floor": 96.9,
+      "floor": 97.1,
       "description": "Session-start readiness invariants from aggregate state."
     },
     {
