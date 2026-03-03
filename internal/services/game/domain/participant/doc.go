@@ -8,4 +8,8 @@
 //   - command validation for join/leave/profile updates/seating changes,
 //   - replaying participant events into compact membership state,
 //   - and keeping access/identity fields aligned with campaign authorization.
+//
+// Security invariant:
+//   - AI-controlled seats are restricted to GM role, member access, no bound user ID,
+//     and immutable identity binding commands.
 package participant

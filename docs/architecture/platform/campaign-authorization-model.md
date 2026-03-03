@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 1
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-03"
 ---
 
 # Campaign Authorization Model
@@ -55,6 +55,8 @@ invariants.
 3. Members cannot self-escalate campaign access.
 4. Ownership transfer is explicit and audited.
 5. Participant removal is blocked when active owned resources exist.
+6. AI-controlled participants are restricted to `GM` + `MEMBER`, must not have a
+   bound user identity, and cannot be rebound or seat-reassigned.
 
 ## Character ownership contract
 

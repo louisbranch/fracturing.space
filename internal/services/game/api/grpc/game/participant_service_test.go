@@ -112,6 +112,40 @@ func TestCreateParticipant_InvalidRole(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestCreateParticipant_DomainRejectsAIInvariant(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+	}
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusDraft,
+	}
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Reject(command.Rejection{
+				Code:    "PARTICIPANT_AI_ROLE_REQUIRED",
+				Message: "ai-controlled participants must use gm role",
+			}),
+		},
+	}}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "AI Seat",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_AI,
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	}
+}
+
 func TestCreateParticipant_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -738,6 +772,45 @@ func TestUpdateParticipant_RequiresDomainEngine(t *testing.T) {
 		Name:          wrapperspb.String("Player Uno"),
 	})
 	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestUpdateParticipant_DomainRejectsAIInvariant(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "Player One",
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Reject(command.Rejection{
+				Code:    "PARTICIPANT_AI_ROLE_REQUIRED",
+				Message: "ai-controlled participants must use gm role",
+			}),
+		},
+	}}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Controller:    statev1.Controller_CONTROLLER_AI,
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	}
 }
 
 func TestUpdateParticipant_Success(t *testing.T) {
