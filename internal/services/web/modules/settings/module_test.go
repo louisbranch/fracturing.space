@@ -494,6 +494,9 @@ func TestMountServesSettingsSubpaths(t *testing.T) {
 				t.Fatalf("path %q body missing menu href %q", path, href)
 			}
 		}
+		if !strings.Contains(body, `href="#lucide-languages"`) {
+			t.Fatalf("path %q body missing locale menu icon", path)
+		}
 	}
 }
 

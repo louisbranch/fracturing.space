@@ -47,6 +47,7 @@ var lucideIconNames = map[commonv1.IconId]string{
 	commonv1.IconId_ICON_ID_KEY:                 "key",
 	commonv1.IconId_ICON_ID_LOG_OUT:             "log-out",
 	commonv1.IconId_ICON_ID_SETTINGS:            "settings",
+	commonv1.IconId_ICON_ID_LOCALE:              "languages",
 }
 
 // LucideName returns the Lucide icon name for a core icon identifier.

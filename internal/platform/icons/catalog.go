@@ -214,6 +214,11 @@ var catalog = []Definition{
 		Name:        "Settings",
 		Description: "Application settings and configuration.",
 	},
+	{
+		ID:          commonv1.IconId_ICON_ID_LOCALE,
+		Name:        "Locale",
+		Description: "Locale and language preference actions.",
+	},
 }
 
 // Catalog returns a copy of the icon catalog definitions.
