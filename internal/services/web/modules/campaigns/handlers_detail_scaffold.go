@@ -47,6 +47,16 @@ func (h handlers) handleParticipantEditRoute(w http.ResponseWriter, r *http.Requ
 	h.handleParticipantEdit(w, r, campaignID, participantID)
 }
 
+// handleCampaignEditRoute handles this route in the module transport layer.
+func (h handlers) handleCampaignEditRoute(w http.ResponseWriter, r *http.Request) {
+	campaignID, ok := h.routeCampaignID(r)
+	if !ok {
+		h.WriteNotFound(w, r)
+		return
+	}
+	h.handleCampaignEdit(w, r, campaignID)
+}
+
 // handleSessionDetailRoute handles this route in the module transport layer.
 func (h handlers) handleSessionDetailRoute(w http.ResponseWriter, r *http.Request) {
 	campaignID, ok := h.routeCampaignID(r)

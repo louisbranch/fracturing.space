@@ -8,6 +8,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
@@ -247,6 +248,47 @@ func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCam
 	return &campaignv1.GetCampaignResponse{
 		Campaign: campaignToProto(c),
 	}, nil
+}
+
+// UpdateCampaign updates mutable campaign metadata fields.
+func (s *CampaignService) UpdateCampaign(ctx context.Context, in *campaignv1.UpdateCampaignRequest) (*campaignv1.UpdateCampaignResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "update campaign request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	var update campaignUpdateInput
+	if name := in.GetName(); name != nil {
+		value := name.GetValue()
+		update.Name = &value
+	}
+	if themePrompt := in.GetThemePrompt(); themePrompt != nil {
+		value := themePrompt.GetValue()
+		update.ThemePrompt = &value
+	}
+	switch locale := in.GetLocale(); locale {
+	case commonv1.Locale_LOCALE_UNSPECIFIED:
+		// optional field omitted
+	case commonv1.Locale_LOCALE_EN_US, commonv1.Locale_LOCALE_PT_BR:
+		value := locale
+		update.Locale = &value
+	default:
+		return nil, status.Error(codes.InvalidArgument, "locale is invalid")
+	}
+
+	updated, err := newCampaignApplication(s).UpdateCampaign(ctx, campaignID, update)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+
+	return &campaignv1.UpdateCampaignResponse{Campaign: campaignToProto(updated)}, nil
 }
 
 // EndCampaign marks a campaign as completed.

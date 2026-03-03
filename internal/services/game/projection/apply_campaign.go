@@ -107,6 +107,12 @@ func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event, payl
 			updated.Name = name
 		case "theme_prompt":
 			updated.ThemePrompt = strings.TrimSpace(value)
+		case "locale":
+			locale, ok := platformi18n.ParseLocale(value)
+			if !ok {
+				return fmt.Errorf("campaign locale is invalid")
+			}
+			updated.Locale = locale
 		case "cover_asset_id":
 			updated.CoverAssetID = strings.TrimSpace(value)
 		case "cover_set_id":

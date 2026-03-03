@@ -32,6 +32,7 @@ const (
 	CampaignsPrefix                          = "/app/campaigns/"
 	AppCampaignPattern                       = CampaignsPrefix + "{campaignID}"
 	AppCampaignRestPattern                   = CampaignsPrefix + "{campaignID}/{rest...}"
+	AppCampaignEditPattern                   = CampaignsPrefix + "{campaignID}/edit"
 	AppCampaignSessionsPattern               = CampaignsPrefix + "{campaignID}/sessions"
 	AppCampaignSessionPattern                = CampaignsPrefix + "{campaignID}/sessions/{sessionID}"
 	AppCampaignSessionStartPattern           = CampaignsPrefix + "{campaignID}/sessions/start"
@@ -68,6 +69,11 @@ func UserProfile(username string) string {
 // AppCampaign returns the campaign overview route.
 func AppCampaign(campaignID string) string {
 	return CampaignsPrefix + escapeSegment(campaignID)
+}
+
+// AppCampaignEdit returns the campaign edit route.
+func AppCampaignEdit(campaignID string) string {
+	return AppCampaign(campaignID) + "/edit"
 }
 
 // AppCampaignSessions returns the campaign sessions route.

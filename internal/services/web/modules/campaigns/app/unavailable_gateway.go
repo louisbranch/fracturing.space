@@ -75,6 +75,11 @@ func (unavailableGateway) CreateCampaign(context.Context, CreateCampaignInput) (
 	return CreateCampaignResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+// UpdateCampaign applies this package workflow transition.
+func (unavailableGateway) UpdateCampaign(context.Context, string, UpdateCampaignInput) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
 // StartSession applies this package workflow transition.
 func (unavailableGateway) StartSession(context.Context, string, StartSessionInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")

@@ -78,6 +78,19 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	if _, err := svc.CampaignInvites(ctx, "c1"); err != nil {
 		t.Fatalf("CampaignInvites() error = %v", err)
 	}
+	if err := svc.RequireManageCampaign(ctx, "c1"); err != nil {
+		t.Fatalf("RequireManageCampaign() error = %v", err)
+	}
+	updatedName := "Updated Campaign"
+	updatedTheme := "Updated Theme"
+	updatedLocale := "pt-BR"
+	if err := svc.UpdateCampaign(ctx, "c1", UpdateCampaignInput{
+		Name:        &updatedName,
+		ThemePrompt: &updatedTheme,
+		Locale:      &updatedLocale,
+	}); err != nil {
+		t.Fatalf("UpdateCampaign() error = %v", err)
+	}
 	if err := svc.StartSession(ctx, "c1", StartSessionInput{Name: "Session"}); err != nil {
 		t.Fatalf("StartSession() error = %v", err)
 	}
@@ -162,6 +175,7 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	if _, err := gw.CreateCampaign(ctx, CreateCampaignInput{Name: "Campaign"}); err != nil {
 		assertUnavailable(t, err, "CreateCampaign")
 	}
+	assertUnavailable(t, gw.UpdateCampaign(ctx, "c1", UpdateCampaignInput{}), "UpdateCampaign")
 	assertUnavailable(t, gw.StartSession(ctx, "c1", StartSessionInput{Name: "Session"}), "StartSession")
 	assertUnavailable(t, gw.EndSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}), "EndSession")
 	if _, err := gw.CreateCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {

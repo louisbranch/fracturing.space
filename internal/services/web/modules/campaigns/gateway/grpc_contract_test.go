@@ -318,6 +318,52 @@ func TestCreateCampaignMapsInputAndValidatesResponse(t *testing.T) {
 	}
 }
 
+func TestUpdateCampaignMapsInputAndErrors(t *testing.T) {
+	t.Parallel()
+
+	client := &contractCampaignClient{}
+	gateway := GRPCGateway{Client: client}
+
+	name := "Campaign Prime"
+	theme := "Updated theme"
+	locale := "pt-BR"
+	err := gateway.UpdateCampaign(context.Background(), "c1", campaignapp.UpdateCampaignInput{
+		Name:        &name,
+		ThemePrompt: &theme,
+		Locale:      &locale,
+	})
+	if err != nil {
+		t.Fatalf("UpdateCampaign() error = %v", err)
+	}
+	if client.lastUpdateReq == nil {
+		t.Fatalf("expected UpdateCampaign request")
+	}
+	if client.lastUpdateReq.GetCampaignId() != "c1" {
+		t.Fatalf("request campaign id = %q, want %q", client.lastUpdateReq.GetCampaignId(), "c1")
+	}
+	if got := strings.TrimSpace(client.lastUpdateReq.GetName().GetValue()); got != "Campaign Prime" {
+		t.Fatalf("request name = %q, want %q", got, "Campaign Prime")
+	}
+	if got := strings.TrimSpace(client.lastUpdateReq.GetThemePrompt().GetValue()); got != "Updated theme" {
+		t.Fatalf("request theme prompt = %q, want %q", got, "Updated theme")
+	}
+	if client.lastUpdateReq.GetLocale() != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("request locale = %v, want %v", client.lastUpdateReq.GetLocale(), commonv1.Locale_LOCALE_PT_BR)
+	}
+
+	invalidLocale := "es-ES"
+	if err := gateway.UpdateCampaign(context.Background(), "c1", campaignapp.UpdateCampaignInput{Locale: &invalidLocale}); err == nil {
+		t.Fatalf("expected locale validation error")
+	}
+
+	client.updateErr = status.Error(codes.InvalidArgument, "invalid update")
+	if err := gateway.UpdateCampaign(context.Background(), "c1", campaignapp.UpdateCampaignInput{}); err == nil {
+		t.Fatalf("expected UpdateCampaign transport error")
+	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_update_campaign" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.failed_to_update_campaign")
+	}
+}
+
 func TestMutationReadersValidateAndMapTransportErrors(t *testing.T) {
 	t.Parallel()
 
@@ -669,6 +715,9 @@ type contractCampaignClient struct {
 	createResp    *statev1.CreateCampaignResponse
 	createErr     error
 	lastCreateReq *statev1.CreateCampaignRequest
+	updateResp    *statev1.UpdateCampaignResponse
+	updateErr     error
+	lastUpdateReq *statev1.UpdateCampaignRequest
 }
 
 func (c *contractCampaignClient) ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
@@ -700,6 +749,17 @@ func (c *contractCampaignClient) CreateCampaign(_ context.Context, req *statev1.
 		return c.createResp, nil
 	}
 	return &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{Id: "c-created"}}, nil
+}
+
+func (c *contractCampaignClient) UpdateCampaign(_ context.Context, req *statev1.UpdateCampaignRequest, _ ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error) {
+	c.lastUpdateReq = req
+	if c.updateErr != nil {
+		return nil, c.updateErr
+	}
+	if c.updateResp != nil {
+		return c.updateResp, nil
+	}
+	return &statev1.UpdateCampaignResponse{Campaign: &statev1.Campaign{Id: strings.TrimSpace(req.GetCampaignId())}}, nil
 }
 
 type contractParticipantClient struct {
@@ -951,6 +1011,9 @@ func TestAuthorizationProtoMappers(t *testing.T) {
 	}
 	if got := mapCampaignAuthorizationActionToProto(campaignapp.AuthorizationActionMutate); got != statev1.AuthorizationAction_AUTHORIZATION_ACTION_MUTATE {
 		t.Fatalf("mapCampaignAuthorizationActionToProto(mutate) = %v", got)
+	}
+	if got := mapCampaignAuthorizationResourceToProto(campaignapp.AuthorizationResourceCampaign); got != statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CAMPAIGN {
+		t.Fatalf("mapCampaignAuthorizationResourceToProto(campaign) = %v", got)
 	}
 	if got := mapCampaignAuthorizationResourceToProto(campaignapp.AuthorizationResourceSession); got != statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION {
 		t.Fatalf("mapCampaignAuthorizationResourceToProto(session) = %v", got)

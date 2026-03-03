@@ -118,6 +118,8 @@ func mapCampaignAuthorizationActionToProto(action campaignapp.AuthorizationActio
 // mapCampaignAuthorizationResourceToProto maps values across transport and domain boundaries.
 func mapCampaignAuthorizationResourceToProto(resource campaignapp.AuthorizationResource) statev1.AuthorizationResource {
 	switch campaignapp.AuthorizationResource(strings.TrimSpace(string(resource))) {
+	case campaignapp.AuthorizationResourceCampaign:
+		return statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CAMPAIGN
 	case campaignapp.AuthorizationResourceSession:
 		return statev1.AuthorizationResource_AUTHORIZATION_RESOURCE_SESSION
 	case campaignapp.AuthorizationResourceParticipant:

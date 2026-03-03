@@ -42,6 +42,7 @@ type (
 	CampaignCharacterCreationStepConnections   = campaignapp.CampaignCharacterCreationStepConnections
 	CampaignCharacterCreation                  = campaignapp.CampaignCharacterCreation
 	CreateCampaignInput                        = campaignapp.CreateCampaignInput
+	UpdateCampaignInput                        = campaignapp.UpdateCampaignInput
 	CreateCampaignResult                       = campaignapp.CreateCampaignResult
 	StartSessionInput                          = campaignapp.StartSessionInput
 	EndSessionInput                            = campaignapp.EndSessionInput

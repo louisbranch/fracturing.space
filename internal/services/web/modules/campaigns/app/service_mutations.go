@@ -22,6 +22,60 @@ func (s service) createCampaign(ctx context.Context, input CreateCampaignInput) 
 	return created, nil
 }
 
+// updateCampaign applies this package workflow transition.
+func (s service) updateCampaign(ctx context.Context, campaignID string, input UpdateCampaignInput) error {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	if err := s.requireManageCampaign(ctx, campaignID); err != nil {
+		return err
+	}
+
+	current, err := s.campaignWorkspace(ctx, campaignID)
+	if err != nil {
+		return err
+	}
+
+	patch := UpdateCampaignInput{}
+	changed := false
+
+	if input.Name != nil {
+		name := strings.TrimSpace(*input.Name)
+		if name == "" {
+			return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_name_is_required", "campaign name is required")
+		}
+		if name != strings.TrimSpace(current.Name) {
+			patch.Name = &name
+			changed = true
+		}
+	}
+
+	if input.ThemePrompt != nil {
+		themePrompt := strings.TrimSpace(*input.ThemePrompt)
+		if themePrompt != strings.TrimSpace(current.Theme) {
+			patch.ThemePrompt = &themePrompt
+			changed = true
+		}
+	}
+
+	if input.Locale != nil {
+		locale := campaignLocaleCanonical(*input.Locale)
+		if locale == "" {
+			return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_locale_value_is_invalid", "campaign locale value is invalid")
+		}
+		if locale != campaignLocaleCanonical(current.Locale) {
+			patch.Locale = &locale
+			changed = true
+		}
+	}
+
+	if !changed {
+		return nil
+	}
+	return s.mutationGateway.UpdateCampaign(ctx, campaignID, patch)
+}
+
 // startSession applies this package workflow transition.
 func (s service) startSession(ctx context.Context, campaignID string, input StartSessionInput) error {
 	if err := s.requirePolicy(ctx, campaignID, policyManageSession); err != nil {

@@ -114,6 +114,10 @@ func (*fakeCampaignClient) ListCampaigns(context.Context, *statev1.ListCampaigns
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (*fakeCampaignClient) UpdateCampaign(context.Context, *statev1.UpdateCampaignRequest, ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 func (*fakeCampaignClient) EndCampaign(context.Context, *statev1.EndCampaignRequest, ...grpc.CallOption) (*statev1.EndCampaignResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }

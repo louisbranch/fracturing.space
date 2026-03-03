@@ -9,6 +9,8 @@ type State struct {
 	Created bool
 	// Name is the campaign display name chosen by its creator.
 	Name string
+	// Locale stores the campaign language preference as a BCP-47 tag.
+	Locale string
 	// GameSystem is the chosen ruleset, used to route system-owned behavior.
 	GameSystem string
 	// GmMode captures who is allowed to lead game decisions.

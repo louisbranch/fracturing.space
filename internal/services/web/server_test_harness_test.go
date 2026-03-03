@@ -494,3 +494,10 @@ func (f fakeCampaignClient) CreateCampaign(context.Context, *statev1.CreateCampa
 	}
 	return &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{Id: "created"}}, nil
 }
+
+func (f fakeCampaignClient) UpdateCampaign(context.Context, *statev1.UpdateCampaignRequest, ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.UpdateCampaignResponse{}, nil
+}

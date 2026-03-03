@@ -70,6 +70,12 @@ func TestStableMutationRoutesReturnParseErrorLocalizationKeys(t *testing.T) {
 		wantMarkerB string
 	}{
 		{
+			name:        "campaign update parse error",
+			path:        routepath.AppCampaignEdit("c1"),
+			wantMarkerA: "error.web.message.failed_to_parse_campaign_update_form",
+			wantMarkerB: "failed to parse campaign update form",
+		},
+		{
 			name:        "session start parse error",
 			path:        routepath.AppCampaignSessionStart("c1"),
 			wantMarkerA: "error.web.message.failed_to_parse_session_start_form",
@@ -188,6 +194,12 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 		wantLocation string
 	}{
 		{
+			name:         "campaign update",
+			path:         routepath.AppCampaignEdit("c1"),
+			body:         "name=Campaign+One&theme_prompt=Updated+theme&locale=en-US",
+			wantLocation: routepath.AppCampaign("c1"),
+		},
+		{
 			name:         "session start",
 			path:         routepath.AppCampaignSessionStart("c1"),
 			body:         "name=Session+Two",
@@ -294,6 +306,25 @@ func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
 				t.Fatalf("body missing validation marker %q or %q: %q", tc.wantMarkerA, tc.wantMarkerB, body)
 			}
 		})
+	}
+}
+
+func TestCampaignUpdateRouteValidatesLocale(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	mount, _ := m.Mount()
+
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignEdit("c1"), strings.NewReader("name=Campaign+One&theme_prompt=Theme&locale=es-ES"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, "error.web.message.campaign_locale_value_is_invalid") && !strings.Contains(body, "campaign locale value is invalid") {
+		t.Fatalf("body missing locale validation marker: %q", body)
 	}
 }
 

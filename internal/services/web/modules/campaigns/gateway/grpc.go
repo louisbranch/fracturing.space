@@ -12,6 +12,7 @@ import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // CampaignClient exposes campaign listing, lookup, and creation from the game service.
@@ -19,6 +20,7 @@ type CampaignClient interface {
 	ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error)
 	GetCampaign(context.Context, *statev1.GetCampaignRequest, ...grpc.CallOption) (*statev1.GetCampaignResponse, error)
 	CreateCampaign(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error)
+	UpdateCampaign(context.Context, *statev1.UpdateCampaignRequest, ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error)
 }
 
 // ParticipantClient exposes participant listing for campaign workspace pages.
@@ -205,4 +207,40 @@ func (g GRPCGateway) CreateCampaign(ctx context.Context, input campaignapp.Creat
 		return campaignapp.CreateCampaignResult{}, apperrors.E(apperrors.KindUnknown, "created campaign id was empty")
 	}
 	return campaignapp.CreateCampaignResult{CampaignID: campaignID}, nil
+}
+
+// UpdateCampaign applies this package workflow transition.
+func (g GRPCGateway) UpdateCampaign(ctx context.Context, campaignID string, input campaignapp.UpdateCampaignInput) error {
+	if g.Client == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.campaign_service_client_is_not_configured", "campaign service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+
+	req := &statev1.UpdateCampaignRequest{CampaignId: campaignID}
+	if input.Name != nil {
+		req.Name = wrapperspb.String(strings.TrimSpace(*input.Name))
+	}
+	if input.ThemePrompt != nil {
+		req.ThemePrompt = wrapperspb.String(strings.TrimSpace(*input.ThemePrompt))
+	}
+	if input.Locale != nil {
+		locale, ok := platformi18n.ParseLocale(strings.TrimSpace(*input.Locale))
+		if !ok {
+			return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_locale_value_is_invalid", "campaign locale value is invalid")
+		}
+		req.Locale = locale
+	}
+
+	_, err := g.Client.UpdateCampaign(ctx, req)
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_update_campaign",
+			FallbackMessage: "failed to update campaign",
+		})
+	}
+	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
@@ -37,6 +38,7 @@ const (
 	rejectionCodeCampaignStatusInvalid      = "CAMPAIGN_INVALID_STATUS"
 	rejectionCodeCampaignStatusTransition   = "CAMPAIGN_INVALID_STATUS_TRANSITION"
 	rejectionCodeCampaignUpdateFieldInvalid = "CAMPAIGN_UPDATE_FIELD_INVALID"
+	rejectionCodeCampaignLocaleInvalid      = "CAMPAIGN_LOCALE_INVALID"
 	rejectionCodeCampaignCoverAssetInvalid  = "CAMPAIGN_COVER_ASSET_INVALID"
 	rejectionCodeCampaignCoverSetInvalid    = "CAMPAIGN_COVER_SET_INVALID"
 	rejectionCodeCampaignAIAgentIDRequired  = "CAMPAIGN_AI_AGENT_ID_REQUIRED"
@@ -72,6 +74,13 @@ var campaignUpdateFieldNormalizers = map[string]updateFieldNormalizer{
 	},
 	"theme_prompt": func(_ Status, value string) (string, *command.Rejection) {
 		return strings.TrimSpace(value), nil
+	},
+	"locale": func(_ Status, value string) (string, *command.Rejection) {
+		locale, ok := platformi18n.ParseLocale(value)
+		if !ok {
+			return "", &command.Rejection{Code: rejectionCodeCampaignLocaleInvalid, Message: "campaign locale is invalid"}
+		}
+		return platformi18n.LocaleString(locale), nil
 	},
 	"cover_asset_id": func(_ Status, value string) (string, *command.Rejection) {
 		normalizedCoverAssetID, ok := normalizeCampaignCoverAssetID(value)
@@ -180,7 +189,7 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 
 	normalizedPayload := CreatePayload{
 		Name:         normalizedName,
-		Locale:       strings.TrimSpace(payload.Locale),
+		Locale:       normalizeCampaignLocale(payload.Locale),
 		GameSystem:   normalizedGameSystem,
 		GmMode:       normalizedGmMode,
 		Intent:       strings.TrimSpace(payload.Intent),
@@ -193,6 +202,16 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 
 	evt := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
 	return command.Accept(evt)
+}
+
+// normalizeCampaignLocale canonicalizes known locale labels/tags and falls
+// back to the platform default so create-event payloads remain replay-safe.
+func normalizeCampaignLocale(value string) string {
+	locale, ok := platformi18n.ParseLocale(value)
+	if !ok {
+		return platformi18n.LocaleString(platformi18n.DefaultLocale())
+	}
+	return platformi18n.LocaleString(locale)
 }
 
 func decideUpdate(state State, cmd command.Command, now func() time.Time) command.Decision {

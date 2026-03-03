@@ -163,6 +163,11 @@ func (f *fakeCampaignClient) GetCampaign(ctx context.Context, req *statev1.GetCa
 	return f.getCampaignResponse, f.getCampaignErr
 }
 
+// UpdateCampaign records the request and returns a default successful response.
+func (f *fakeCampaignClient) UpdateCampaign(ctx context.Context, req *statev1.UpdateCampaignRequest, opts ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error) {
+	return &statev1.UpdateCampaignResponse{}, nil
+}
+
 // EndCampaign records the request and returns the configured response.
 func (f *fakeCampaignClient) EndCampaign(ctx context.Context, req *statev1.EndCampaignRequest, opts ...grpc.CallOption) (*statev1.EndCampaignResponse, error) {
 	f.lastEndCampaignRequest = req

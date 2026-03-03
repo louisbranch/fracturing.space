@@ -72,6 +72,7 @@ const (
 	AuthorizationActionMutate AuthorizationAction = "mutate"
 
 	AuthorizationResourceSession     AuthorizationResource = "session"
+	AuthorizationResourceCampaign    AuthorizationResource = "campaign"
 	AuthorizationResourceParticipant AuthorizationResource = "participant"
 	AuthorizationResourceCharacter   AuthorizationResource = "character"
 	AuthorizationResourceInvite      AuthorizationResource = "invite"
@@ -116,6 +117,7 @@ const (
 	campaignAuthzActionMutate campaignAuthorizationAction = AuthorizationActionMutate
 
 	campaignAuthzResourceSession     campaignAuthorizationResource = AuthorizationResourceSession
+	campaignAuthzResourceCampaign    campaignAuthorizationResource = AuthorizationResourceCampaign
 	campaignAuthzResourceParticipant campaignAuthorizationResource = AuthorizationResourceParticipant
 	campaignAuthzResourceCharacter   campaignAuthorizationResource = AuthorizationResourceCharacter
 	campaignAuthzResourceInvite      campaignAuthorizationResource = AuthorizationResourceInvite
@@ -127,6 +129,12 @@ var (
 		resource: campaignAuthzResourceSession,
 		denyKey:  "error.web.message.manager_or_owner_access_required_for_session_action",
 		denyMsg:  "manager or owner access required for session action",
+	}
+	policyManageCampaign = mutationAuthzPolicy{
+		action:   campaignAuthzActionManage,
+		resource: campaignAuthzResourceCampaign,
+		denyKey:  "error.web.message.manager_or_owner_access_required_for_campaign_action",
+		denyMsg:  "manager or owner access required for campaign action",
 	}
 	policyMutateCharacter = mutationAuthzPolicy{
 		action:   campaignAuthzActionMutate,
@@ -149,6 +157,11 @@ var (
 )
 
 // --- Service-level authz helpers ---
+
+// requireManageCampaign enforces campaign-manage access for owner/manager workflows.
+func (s service) requireManageCampaign(ctx context.Context, campaignID string) error {
+	return s.requirePolicy(ctx, campaignID, policyManageCampaign)
+}
 
 // requirePolicy enforces a policy-table authorization check for a mutation.
 func (s service) requirePolicy(ctx context.Context, campaignID string, p mutationAuthzPolicy) error {

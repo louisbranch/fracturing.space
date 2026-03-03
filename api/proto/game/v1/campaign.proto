@@ -4,6 +4,7 @@ package game.v1;
 
 import "common/v1/locale.proto";
 import "google/protobuf/timestamp.proto";
+import "google/protobuf/wrappers.proto";
 import "common/v1/game_system.proto";
 import "game/v1/participant.proto";
 
@@ -81,6 +82,9 @@ service CampaignService {
 
   // Get a campaign metadata record by ID.
   rpc GetCampaign(GetCampaignRequest) returns (GetCampaignResponse);
+
+  // Update mutable campaign metadata fields.
+  rpc UpdateCampaign(UpdateCampaignRequest) returns (UpdateCampaignResponse);
 
   // End a campaign.
   rpc EndCampaign(EndCampaignRequest) returns (EndCampaignResponse);
@@ -162,6 +166,24 @@ message GetCampaignRequest {
 }
 
 message GetCampaignResponse {
+  Campaign campaign = 1;
+}
+
+message UpdateCampaignRequest {
+  // The campaign ID to update.
+  string campaign_id = 1;
+
+  // Optional updated display name.
+  google.protobuf.StringValue name = 2;
+
+  // Optional updated free-form theme prompt.
+  google.protobuf.StringValue theme_prompt = 3;
+
+  // Optional updated locale.
+  common.v1.Locale locale = 4;
+}
+
+message UpdateCampaignResponse {
   Campaign campaign = 1;
 }
 

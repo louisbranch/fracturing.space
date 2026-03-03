@@ -48,6 +48,43 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 							<dd data-campaign-overview-theme={ campaignOverviewTheme(loc, view) }>{ campaignOverviewTheme(loc, view) }</dd>
 						</div>
 					</dl>
+					if view.CanEditCampaign {
+						<div class="card-actions justify-end mt-4">
+							<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignEdit(view.CampaignID) } data-campaign-overview-edit-link="true">{ T(loc, "game.campaign.action_edit") }</a>
+						</div>
+					}
+				</div>
+			</div>
+		} else if view.Marker == "campaign-edit" {
+			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-edit-form="true">
+				<div class="card-body gap-4 p-4">
+					<h2 class="card-title">{ T(loc, "game.campaign.action_edit") }</h2>
+					<form method="post" action={ routepath.AppCampaignEdit(view.CampaignID) } class="space-y-4" data-campaign-edit-submit="true">
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.campaign.overview.label_campaign_name") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="name" required value={ view.Name }/>
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.campaign.overview.label_theme_prompt") }</span>
+							</label>
+							<textarea class="textarea textarea-bordered w-full" name="theme_prompt" rows="4">{ view.Theme }</textarea>
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.campaign.overview.label_locale") }</span>
+							</label>
+							<select class="select select-bordered w-full" name="locale">
+								<option value="en-US" selected?={ view.LocaleValue == "en-US" }>{ T(loc, "game.campaign.overview.value_locale_en_us") }</option>
+								<option value="pt-BR" selected?={ view.LocaleValue == "pt-BR" }>{ T(loc, "game.campaign.overview.value_locale_pt_br") }</option>
+							</select>
+						</div>
+						<div class="card-actions justify-end">
+							<button class="btn btn-primary" type="submit">{ T(loc, "game.campaign.edit.submit_save") }</button>
+						</div>
+					</form>
 				</div>
 			</div>
 		} else if view.Marker == "campaign-participants" {
