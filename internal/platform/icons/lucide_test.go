@@ -1,6 +1,7 @@
 package icons
 
 import (
+	"strings"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -47,5 +48,21 @@ func TestLucideNameNotificationIcons(t *testing.T) {
 				t.Fatalf("LucideName(%s) = %q, want %q", tc.id.String(), got, tc.want)
 			}
 		})
+	}
+}
+
+func TestLucideNameLocaleIcon(t *testing.T) {
+	got, ok := LucideName(commonv1.IconId_ICON_ID_LOCALE)
+	if !ok {
+		t.Fatalf("LucideName(%s) missing mapping", commonv1.IconId_ICON_ID_LOCALE.String())
+	}
+	if got != "languages" {
+		t.Fatalf("LucideName(%s) = %q, want %q", commonv1.IconId_ICON_ID_LOCALE.String(), got, "languages")
+	}
+}
+
+func TestLucideSpriteIncludesLocaleSymbol(t *testing.T) {
+	if !strings.Contains(LucideSprite(), `id="lucide-languages"`) {
+		t.Fatalf("LucideSprite() missing locale icon symbol")
 	}
 }

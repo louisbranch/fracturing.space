@@ -21,7 +21,7 @@ func settingsSideMenu(currentPath string, loc webtemplates.Localizer) *webtempla
 				Label:      webtemplates.T(loc, "layout.locale"),
 				URL:        routepath.AppSettingsLocale,
 				MatchExact: true,
-				IconID:     commonv1.IconId_ICON_ID_SETTINGS,
+				IconID:     commonv1.IconId_ICON_ID_LOCALE,
 			},
 			{
 				Label:      webtemplates.T(loc, "layout.settings_ai_keys"),
