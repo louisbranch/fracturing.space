@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-07T13:07:38Z",
+  "updated_at": "2026-03-07T13:48:01Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -130,7 +130,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/app",
-      "floor": 87,
+      "floor": 88,
       "description": "Web app composition and auth/csrf wrapper routing behavior."
     },
     {
@@ -145,7 +145,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx",
-      "floor": 94.3,
+      "floor": 100,
       "description": "Shared web HTTP middleware and redirect/method helper contracts."
     },
     {
