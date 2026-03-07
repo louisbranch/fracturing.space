@@ -23,10 +23,9 @@ func TestAppImageRendersSkeletonAndImage(t *testing.T) {
 	}
 	got := buf.String()
 	for _, marker := range []string{
-		`data-image-frame="true"`,
-		`data-image-skeleton="true"`,
-		`data-image-el="true"`,
 		`class="relative overflow-hidden aspect-[16/9] w-full"`,
+		`class="skeleton absolute inset-0 z-0 pointer-events-none"`,
+		`class="relative z-10 h-full w-full object-cover"`,
 		`style="aspect-ratio: 16 / 9;"`,
 		`src="https://cdn.example.com/covers/shipyard.png"`,
 		`alt="Shipyard cover"`,
@@ -71,9 +70,7 @@ func TestAppImageRendersSkeletonWhenSourceMissing(t *testing.T) {
 	}
 	got := buf.String()
 	for _, marker := range []string{
-		`data-image-frame="true"`,
-		`data-image-skeleton="true"`,
-		`class="skeleton absolute inset-0 rounded-full"`,
+		`class="skeleton absolute inset-0 z-0 pointer-events-none rounded-full"`,
 	} {
 		if !strings.Contains(got, marker) {
 			t.Fatalf("AppImage output missing marker %q: %q", marker, got)
@@ -82,5 +79,25 @@ func TestAppImageRendersSkeletonWhenSourceMissing(t *testing.T) {
 	// Invariant: missing source keeps skeleton-only rendering and avoids a broken image request.
 	if strings.Contains(got, "<img") {
 		t.Fatalf("AppImage output unexpectedly rendered img element without source: %q", got)
+	}
+}
+
+func TestAppImageAlwaysPrefixesImageClassWithForegroundLayer(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	err := AppImage(AppImageView{
+		Src:        "https://cdn.example.com/avatars/001.png",
+		Alt:        "avatar",
+		FrameClass: "w-10 rounded-full",
+		ImageClass: "h-full w-full object-cover rounded-full",
+	}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render AppImage with custom image class: %v", err)
+	}
+	got := buf.String()
+	// Invariant: skeleton must always render below loaded images regardless of custom class input.
+	if !strings.Contains(got, `class="relative z-10 h-full w-full object-cover rounded-full"`) {
+		t.Fatalf("AppImage output missing foreground image layer contract: %q", got)
 	}
 }

@@ -30,7 +30,7 @@ func appImageFrameStyle(view AppImageView) string {
 }
 
 func appImageSkeletonClass(view AppImageView) string {
-	base := "skeleton absolute inset-0"
+	base := "skeleton absolute inset-0 z-0 pointer-events-none"
 	skeletonClass := appImageValue(view.SkeletonClass)
 	if skeletonClass == "" {
 		return base
@@ -39,26 +39,27 @@ func appImageSkeletonClass(view AppImageView) string {
 }
 
 func appImageClass(view AppImageView) string {
+	base := "relative z-10"
 	imageClass := appImageValue(view.ImageClass)
 	if imageClass == "" {
-		return "h-full w-full object-cover"
+		return base + " h-full w-full object-cover"
 	}
-	return imageClass
+	return base + " " + imageClass
 }
 
 templ AppImage(view AppImageView) {
 	if appImageFrameStyle(view) != "" {
-		<div class={ appImageFrameClass(view) } style={ appImageFrameStyle(view) } data-image-frame="true">
-			<div class={ appImageSkeletonClass(view) } aria-hidden="true" data-image-skeleton="true"></div>
+		<div class={ appImageFrameClass(view) } style={ appImageFrameStyle(view) }>
+			<div class={ appImageSkeletonClass(view) } aria-hidden="true"></div>
 			if appImageValue(view.Src) != "" {
-				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) } data-image-el="true"/>
+				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) }/>
 			}
 		</div>
 	} else {
-		<div class={ appImageFrameClass(view) } data-image-frame="true">
-			<div class={ appImageSkeletonClass(view) } aria-hidden="true" data-image-skeleton="true"></div>
+		<div class={ appImageFrameClass(view) }>
+			<div class={ appImageSkeletonClass(view) } aria-hidden="true"></div>
 			if appImageValue(view.Src) != "" {
-				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) } data-image-el="true"/>
+				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) }/>
 			}
 		</div>
 	}
