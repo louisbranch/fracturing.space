@@ -84,9 +84,11 @@ func (Workflow) AssembleCatalog(
 		}
 		classDomainsByID[classID] = domains
 		creation.Classes = append(creation.Classes, campaignapp.CatalogClass{
-			ID:        classID,
-			Name:      className,
-			DomainIDs: domainIDs,
+			ID:           classID,
+			Name:         className,
+			DomainIDs:    domainIDs,
+			Illustration: class.Illustration,
+			Icon:         class.Icon,
 		})
 	}
 	sortByName(creation.Classes, func(c campaignapp.CatalogClass) string { return c.Name }, func(c campaignapp.CatalogClass) string { return c.ID })
@@ -106,9 +108,10 @@ func (Workflow) AssembleCatalog(
 			subclassName = subclassID
 		}
 		creation.Subclasses = append(creation.Subclasses, campaignapp.CatalogSubclass{
-			ID:      subclassID,
-			Name:    subclassName,
-			ClassID: subclassClassID,
+			ID:           subclassID,
+			Name:         subclassName,
+			ClassID:      subclassClassID,
+			Illustration: subclass.Illustration,
 		})
 	}
 	sortByName(creation.Subclasses, func(s campaignapp.CatalogSubclass) string { return s.Name }, func(s campaignapp.CatalogSubclass) string { return s.ID })
@@ -123,9 +126,10 @@ func (Workflow) AssembleCatalog(
 			heritageName = heritageID
 		}
 		entry := campaignapp.CatalogHeritage{
-			ID:   heritageID,
-			Name: heritageName,
-			Kind: strings.TrimSpace(heritage.Kind),
+			ID:           heritageID,
+			Name:         heritageName,
+			Kind:         strings.TrimSpace(heritage.Kind),
+			Illustration: heritage.Illustration,
 		}
 		switch strings.ToLower(strings.TrimSpace(heritage.Kind)) {
 		case "ancestry":
@@ -212,10 +216,11 @@ func (Workflow) AssembleCatalog(
 			domainCardName = domainCardID
 		}
 		creation.DomainCards = append(creation.DomainCards, campaignapp.CatalogDomainCard{
-			ID:       domainCardID,
-			Name:     domainCardName,
-			DomainID: domainID,
-			Level:    domainCard.Level,
+			ID:           domainCardID,
+			Name:         domainCardName,
+			DomainID:     domainID,
+			Level:        domainCard.Level,
+			Illustration: domainCard.Illustration,
 		})
 	}
 	sort.SliceStable(creation.DomainCards, func(i, j int) bool {

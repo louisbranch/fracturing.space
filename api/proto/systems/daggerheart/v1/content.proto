@@ -10,6 +10,7 @@ option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/systems/
 
 service DaggerheartContentService {
   rpc GetContentCatalog(GetDaggerheartContentCatalogRequest) returns (GetDaggerheartContentCatalogResponse);
+  rpc GetContentAssetMap(GetDaggerheartContentAssetMapRequest) returns (GetDaggerheartContentAssetMapResponse);
 
   rpc GetClass(GetDaggerheartClassRequest) returns (GetDaggerheartClassResponse);
   rpc ListClasses(ListDaggerheartClassesRequest) returns (ListDaggerheartClassesResponse);
@@ -64,6 +65,15 @@ message GetDaggerheartContentCatalogRequest {
 
 message GetDaggerheartContentCatalogResponse {
   DaggerheartContentCatalog catalog = 1;
+}
+
+message GetDaggerheartContentAssetMapRequest {
+  // Optional locale for localized text fields.
+  common.v1.Locale locale = 1;
+}
+
+message GetDaggerheartContentAssetMapResponse {
+  DaggerheartContentAssetMap asset_map = 1;
 }
 
 message GetDaggerheartClassRequest {
@@ -592,6 +602,46 @@ message ListDaggerheartEnvironmentsResponse {
   string next_page_token = 2;
   string previous_page_token = 3;
   int32 total_size = 4;
+}
+
+enum DaggerheartContentAssetType {
+  DAGGERHEART_CONTENT_ASSET_TYPE_UNSPECIFIED = 0;
+  DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION = 1;
+  DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ICON = 2;
+  DAGGERHEART_CONTENT_ASSET_TYPE_SUBCLASS_ILLUSTRATION = 3;
+  DAGGERHEART_CONTENT_ASSET_TYPE_ANCESTRY_ILLUSTRATION = 4;
+  DAGGERHEART_CONTENT_ASSET_TYPE_COMMUNITY_ILLUSTRATION = 5;
+  DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ILLUSTRATION = 6;
+  DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ICON = 7;
+  DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION = 8;
+  DAGGERHEART_CONTENT_ASSET_TYPE_ADVERSARY_ILLUSTRATION = 9;
+  DAGGERHEART_CONTENT_ASSET_TYPE_ENVIRONMENT_ILLUSTRATION = 10;
+}
+
+enum DaggerheartContentAssetResolutionStatus {
+  DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_UNSPECIFIED = 0;
+  DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED = 1;
+  DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_SET_DEFAULT = 2;
+  DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_UNAVAILABLE = 3;
+}
+
+message DaggerheartContentAssetRef {
+  DaggerheartContentAssetType type = 1;
+  DaggerheartContentAssetResolutionStatus status = 2;
+  string entity_type = 3;
+  string entity_id = 4;
+  string set_id = 5;
+  string asset_id = 6;
+  string cdn_asset_id = 7;
+}
+
+message DaggerheartContentAssetMap {
+  string id = 1;
+  string system_id = 2;
+  string system_version = 3;
+  common.v1.Locale locale = 4;
+  string theme = 5;
+  repeated DaggerheartContentAssetRef assets = 6;
 }
 
 message DaggerheartFeature {

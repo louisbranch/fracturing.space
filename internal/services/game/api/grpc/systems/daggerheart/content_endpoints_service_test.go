@@ -43,6 +43,100 @@ func TestGetContentCatalog_Success(t *testing.T) {
 	}
 }
 
+func TestGetContentAssetMap_NoStore(t *testing.T) {
+	svc := &DaggerheartContentService{}
+	_, err := svc.GetContentAssetMap(context.Background(), &pb.GetDaggerheartContentAssetMapRequest{})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestGetContentAssetMap_NilRequest(t *testing.T) {
+	svc := newContentTestService()
+	_, err := svc.GetContentAssetMap(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestGetContentAssetMap_Success(t *testing.T) {
+	svc := newContentTestService()
+	resp, err := svc.GetContentAssetMap(context.Background(), &pb.GetDaggerheartContentAssetMapRequest{})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	assetMap := resp.GetAssetMap()
+	if assetMap == nil {
+		t.Fatal("expected non-nil asset map")
+	}
+	if assetMap.GetSystemId() != "daggerheart" {
+		t.Fatalf("system id = %q, want %q", assetMap.GetSystemId(), "daggerheart")
+	}
+	if assetMap.GetLocale() != commonv1.Locale_LOCALE_EN_US {
+		t.Fatalf("asset map locale = %v, want %v", assetMap.GetLocale(), commonv1.Locale_LOCALE_EN_US)
+	}
+	if len(assetMap.GetAssets()) == 0 {
+		t.Fatal("expected non-empty content asset refs")
+	}
+
+	classIllustration := findContentAssetRef(
+		assetMap.GetAssets(),
+		pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION,
+		"class",
+		"class-1",
+	)
+	if classIllustration == nil {
+		t.Fatal("expected class illustration asset ref for class-1")
+	}
+	if classIllustration.GetStatus() == pb.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_UNSPECIFIED {
+		t.Fatal("expected class illustration asset status to be populated")
+	}
+
+	domainIcon := findContentAssetRef(
+		assetMap.GetAssets(),
+		pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ICON,
+		"domain",
+		"dom-1",
+	)
+	if domainIcon == nil {
+		t.Fatal("expected domain icon asset ref for dom-1")
+	}
+	if domainIcon.GetStatus() == pb.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_UNSPECIFIED {
+		t.Fatal("expected domain icon asset status to be populated")
+	}
+}
+
+func TestGetContentAssetMap_UsesRequestedLocale(t *testing.T) {
+	svc := newContentTestService()
+	resp, err := svc.GetContentAssetMap(context.Background(), &pb.GetDaggerheartContentAssetMapRequest{
+		Locale: commonv1.Locale_LOCALE_PT_BR,
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got := resp.GetAssetMap().GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("asset map locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
+	}
+}
+
+func findContentAssetRef(
+	assets []*pb.DaggerheartContentAssetRef,
+	assetType pb.DaggerheartContentAssetType,
+	entityType string,
+	entityID string,
+) *pb.DaggerheartContentAssetRef {
+	for _, asset := range assets {
+		if asset == nil {
+			continue
+		}
+		if asset.GetType() != assetType {
+			continue
+		}
+		if asset.GetEntityType() != entityType || asset.GetEntityId() != entityID {
+			continue
+		}
+		return asset
+	}
+	return nil
+}
+
 // --- GetClass / ListClasses ---
 
 func TestGetClass_NilRequest(t *testing.T) {

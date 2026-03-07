@@ -21,6 +21,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	DaggerheartContentService_GetContentCatalog_FullMethodName        = "/systems.daggerheart.v1.DaggerheartContentService/GetContentCatalog"
+	DaggerheartContentService_GetContentAssetMap_FullMethodName       = "/systems.daggerheart.v1.DaggerheartContentService/GetContentAssetMap"
 	DaggerheartContentService_GetClass_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartContentService/GetClass"
 	DaggerheartContentService_ListClasses_FullMethodName              = "/systems.daggerheart.v1.DaggerheartContentService/ListClasses"
 	DaggerheartContentService_GetSubclass_FullMethodName              = "/systems.daggerheart.v1.DaggerheartContentService/GetSubclass"
@@ -58,6 +59,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DaggerheartContentServiceClient interface {
 	GetContentCatalog(ctx context.Context, in *GetDaggerheartContentCatalogRequest, opts ...grpc.CallOption) (*GetDaggerheartContentCatalogResponse, error)
+	GetContentAssetMap(ctx context.Context, in *GetDaggerheartContentAssetMapRequest, opts ...grpc.CallOption) (*GetDaggerheartContentAssetMapResponse, error)
 	GetClass(ctx context.Context, in *GetDaggerheartClassRequest, opts ...grpc.CallOption) (*GetDaggerheartClassResponse, error)
 	ListClasses(ctx context.Context, in *ListDaggerheartClassesRequest, opts ...grpc.CallOption) (*ListDaggerheartClassesResponse, error)
 	GetSubclass(ctx context.Context, in *GetDaggerheartSubclassRequest, opts ...grpc.CallOption) (*GetDaggerheartSubclassResponse, error)
@@ -102,6 +104,16 @@ func (c *daggerheartContentServiceClient) GetContentCatalog(ctx context.Context,
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetDaggerheartContentCatalogResponse)
 	err := c.cc.Invoke(ctx, DaggerheartContentService_GetContentCatalog_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartContentServiceClient) GetContentAssetMap(ctx context.Context, in *GetDaggerheartContentAssetMapRequest, opts ...grpc.CallOption) (*GetDaggerheartContentAssetMapResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDaggerheartContentAssetMapResponse)
+	err := c.cc.Invoke(ctx, DaggerheartContentService_GetContentAssetMap_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -413,6 +425,7 @@ func (c *daggerheartContentServiceClient) ListEnvironments(ctx context.Context, 
 // for forward compatibility.
 type DaggerheartContentServiceServer interface {
 	GetContentCatalog(context.Context, *GetDaggerheartContentCatalogRequest) (*GetDaggerheartContentCatalogResponse, error)
+	GetContentAssetMap(context.Context, *GetDaggerheartContentAssetMapRequest) (*GetDaggerheartContentAssetMapResponse, error)
 	GetClass(context.Context, *GetDaggerheartClassRequest) (*GetDaggerheartClassResponse, error)
 	ListClasses(context.Context, *ListDaggerheartClassesRequest) (*ListDaggerheartClassesResponse, error)
 	GetSubclass(context.Context, *GetDaggerheartSubclassRequest) (*GetDaggerheartSubclassResponse, error)
@@ -455,6 +468,9 @@ type UnimplementedDaggerheartContentServiceServer struct{}
 
 func (UnimplementedDaggerheartContentServiceServer) GetContentCatalog(context.Context, *GetDaggerheartContentCatalogRequest) (*GetDaggerheartContentCatalogResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetContentCatalog not implemented")
+}
+func (UnimplementedDaggerheartContentServiceServer) GetContentAssetMap(context.Context, *GetDaggerheartContentAssetMapRequest) (*GetDaggerheartContentAssetMapResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetContentAssetMap not implemented")
 }
 func (UnimplementedDaggerheartContentServiceServer) GetClass(context.Context, *GetDaggerheartClassRequest) (*GetDaggerheartClassResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetClass not implemented")
@@ -582,6 +598,24 @@ func _DaggerheartContentService_GetContentCatalog_Handler(srv interface{}, ctx c
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaggerheartContentServiceServer).GetContentCatalog(ctx, req.(*GetDaggerheartContentCatalogRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartContentService_GetContentAssetMap_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDaggerheartContentAssetMapRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartContentServiceServer).GetContentAssetMap(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartContentService_GetContentAssetMap_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartContentServiceServer).GetContentAssetMap(ctx, req.(*GetDaggerheartContentAssetMapRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1136,6 +1170,10 @@ var DaggerheartContentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetContentCatalog",
 			Handler:    _DaggerheartContentService_GetContentCatalog_Handler,
+		},
+		{
+			MethodName: "GetContentAssetMap",
+			Handler:    _DaggerheartContentService_GetContentAssetMap_Handler,
 		},
 		{
 			MethodName: "GetClass",
