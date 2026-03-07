@@ -65,6 +65,7 @@ export FRACTURING_SPACE_JOIN_GRANT_TTL="${FRACTURING_SPACE_JOIN_GRANT_TTL:-5m}"
 export FRACTURING_SPACE_GAME_EVENT_HMAC_KEY="${FRACTURING_SPACE_GAME_EVENT_HMAC_KEY:-dev-secret}"
 export FRACTURING_SPACE_GAME_PORT="${FRACTURING_SPACE_GAME_PORT:-8082}"
 export FRACTURING_SPACE_GAME_ADDR="${FRACTURING_SPACE_GAME_ADDR:-localhost:8082}"
+export FRACTURING_SPACE_GAME_CONTENT_DB_PATH="${FRACTURING_SPACE_GAME_CONTENT_DB_PATH:-data/game-content.db}"
 export FRACTURING_SPACE_AUTH_ADDR="${FRACTURING_SPACE_AUTH_ADDR:-localhost:8083}"
 export FRACTURING_SPACE_AUTH_HTTP_ADDR="${FRACTURING_SPACE_AUTH_HTTP_ADDR:-0.0.0.0:8084}"
 export FRACTURING_SPACE_SOCIAL_PORT="${FRACTURING_SPACE_SOCIAL_PORT:-8090}"
@@ -97,6 +98,7 @@ export FRACTURING_SPACE_STATUS_ADDR="${FRACTURING_SPACE_STATUS_ADDR:-localhost:8
 export FRACTURING_SPACE_STATUS_DB_PATH="${FRACTURING_SPACE_STATUS_DB_PATH:-data/status.db}"
 
 pids=()
+cleanup_pids=()
 
 start_service() {
   local name="$1"
@@ -104,6 +106,7 @@ start_service() {
   : > ".tmp/dev/${name}.log"
   env "$@" air -c ".devcontainer/air/${name}.toml" >> ".tmp/dev/${name}.log" 2>&1 &
   pids+=("$!")
+  cleanup_pids+=("$!")
   printf 'started %s watcher (pid %s)\n' "$name" "$!"
 }
 
@@ -142,9 +145,29 @@ wait_for_service_log_marker() {
   return 1
 }
 
+run_catalog_importer_async() {
+  local log_file=".tmp/dev/catalog-importer.log"
+  : > "$log_file"
+  (
+    {
+      printf '[%s] starting async catalog importer\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+      go run ./cmd/catalog-importer \
+        -dir internal/tools/importer/content/daggerheart/v1 \
+        -db-path "${FRACTURING_SPACE_GAME_CONTENT_DB_PATH}" \
+        -skip-if-ready
+      printf '[%s] catalog importer finished successfully\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    } >> "$log_file" 2>&1 || {
+      printf '[%s] catalog importer failed\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')" >> "$log_file"
+      printf 'catalog importer failed; check %s\n' "$log_file" >&2
+    }
+  ) &
+  cleanup_pids+=("$!")
+  printf 'started catalog importer (pid %s)\n' "$!"
+}
+
 cleanup() {
   trap - EXIT INT TERM
-  for pid in "${pids[@]}"; do
+  for pid in "${cleanup_pids[@]}"; do
     if kill -0 "$pid" 2>/dev/null; then
       kill "$pid" 2>/dev/null || true
     fi
@@ -164,6 +187,7 @@ start_service ai
 start_service notifications
 wait_for_service_log_marker "status" "status server listening at"
 wait_for_service_log_marker "game" "game server listening at"
+run_catalog_importer_async
 wait_for_service_log_marker "auth" "auth server listening at"
 wait_for_service_log_marker "social" "social server listening at"
 wait_for_service_log_marker "listing" "listing server listening at"

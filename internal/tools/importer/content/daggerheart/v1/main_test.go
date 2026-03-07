@@ -1,11 +1,17 @@
 package catalogimporter
 
 import (
+	"bytes"
+	"context"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 )
 
 func TestListLocaleDirs(t *testing.T) {
@@ -89,5 +95,89 @@ func TestUpsertLocaleRequiresStore(t *testing.T) {
 	err := upsertLocale(nil, nil, "en-US", true, localePayloads{}, time.Now())
 	if err == nil {
 		t.Fatal("expected error when content store is nil")
+	}
+}
+
+func TestRunSkipIfReadySkipsWritesWhenCatalogAlreadyReady(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "content.db")
+	cfg := Config{
+		Dir:        ".",
+		DBPath:     dbPath,
+		BaseLocale: defaultBaseLocale,
+	}
+
+	if err := Run(context.Background(), cfg, io.Discard); err != nil {
+		t.Fatalf("initial Run() error = %v", err)
+	}
+
+	store, err := storagesqlite.OpenContent(dbPath)
+	if err != nil {
+		t.Fatalf("OpenContent() error = %v", err)
+	}
+	defer func() {
+		if closeErr := store.Close(); closeErr != nil {
+			t.Fatalf("Close() error = %v", closeErr)
+		}
+	}()
+
+	before, err := store.GetDaggerheartClass(context.Background(), "class.guardian")
+	if err != nil {
+		t.Fatalf("GetDaggerheartClass(before) error = %v", err)
+	}
+
+	time.Sleep(5 * time.Millisecond)
+
+	out := &bytes.Buffer{}
+	skipCfg := cfg
+	skipCfg.SkipIfReady = true
+	if err := Run(context.Background(), skipCfg, out); err != nil {
+		t.Fatalf("skip Run() error = %v", err)
+	}
+	if !strings.Contains(out.String(), "catalog already ready") {
+		t.Fatalf("output = %q, want readiness skip message", out.String())
+	}
+
+	after, err := store.GetDaggerheartClass(context.Background(), "class.guardian")
+	if err != nil {
+		t.Fatalf("GetDaggerheartClass(after) error = %v", err)
+	}
+	if !before.UpdatedAt.Equal(after.UpdatedAt) {
+		t.Fatalf("UpdatedAt changed on skipped run: before=%v after=%v", before.UpdatedAt, after.UpdatedAt)
+	}
+}
+
+func TestRunSkipIfReadyImportsWhenCatalogNotReady(t *testing.T) {
+	dbPath := filepath.Join(t.TempDir(), "content.db")
+	out := &bytes.Buffer{}
+	cfg := Config{
+		Dir:         ".",
+		DBPath:      dbPath,
+		BaseLocale:  defaultBaseLocale,
+		SkipIfReady: true,
+	}
+
+	if err := Run(context.Background(), cfg, out); err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	if !strings.Contains(out.String(), "imported") {
+		t.Fatalf("output = %q, want import message", out.String())
+	}
+
+	store, err := storagesqlite.OpenContent(dbPath)
+	if err != nil {
+		t.Fatalf("OpenContent() error = %v", err)
+	}
+	defer func() {
+		if closeErr := store.Close(); closeErr != nil {
+			t.Fatalf("Close() error = %v", closeErr)
+		}
+	}()
+
+	readiness, err := storage.EvaluateDaggerheartCatalogReadiness(context.Background(), store)
+	if err != nil {
+		t.Fatalf("EvaluateDaggerheartCatalogReadiness() error = %v", err)
+	}
+	if !readiness.Ready {
+		t.Fatalf("readiness.Ready = false, missing %v", readiness.MissingSections)
 	}
 }

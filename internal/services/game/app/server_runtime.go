@@ -48,6 +48,8 @@ func (s *Server) Serve(ctx context.Context) error {
 	defer stopOutboxShadowWorker()
 	stopStatusReporter := s.startStatusReporter(ctx)
 	defer stopStatusReporter()
+	stopCatalogAvailabilityMonitor := s.startCatalogAvailabilityMonitor(ctx)
+	defer stopCatalogAvailabilityMonitor()
 
 	log.Printf("game server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)

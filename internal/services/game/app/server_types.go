@@ -29,6 +29,7 @@ type Server struct {
 	projectionApplyOutboxApply               func(context.Context, event.Event) error
 	projectionApplyOutboxShadowWorkerEnabled bool
 	statusReporter                           *platformstatus.Reporter
+	catalogReadyAtStartup                    bool
 }
 
 type authGRPCClients struct {
