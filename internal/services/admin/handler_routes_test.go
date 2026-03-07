@@ -11,7 +11,7 @@ import (
 func TestRoutesRedirectRootToDashboard(t *testing.T) {
 	t.Parallel()
 
-	handler := NewServiceHandler(nil, "", nil).routes()
+	handler := NewServiceHandler(nil, "", nil, nil).routes()
 	req := httptest.NewRequest(http.MethodGet, routepath.Root, nil)
 	rec := httptest.NewRecorder()
 
