@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -57,17 +56,6 @@ func TestApplyGmMove_NegativeFearSpent(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestApplyGmMove_RequiresDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 3}
-	ctx := context.Background()
-	_, err := svc.ApplyGmMove(ctx, &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", Move: "change_environment", FearSpent: 1,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestApplyGmMove_Success(t *testing.T) {
 	svc := newActionTestService()
 	domain := &fakeDomainEngine{}
@@ -103,7 +91,7 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.gm_fear_changed"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-gm-move-fear",
@@ -145,7 +133,7 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 2}
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("sys.daggerheart.gm_fear.set"): {

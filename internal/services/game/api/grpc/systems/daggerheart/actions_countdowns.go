@@ -7,17 +7,17 @@ import (
 )
 
 func (s *DaggerheartService) CreateCountdown(ctx context.Context, in *pb.DaggerheartCreateCountdownRequest) (*pb.DaggerheartCreateCountdownResponse, error) {
-	return newCountdownApplication(s).runCreateCountdown(ctx, in)
+	return s.runCreateCountdown(ctx, in)
 }
 
 func (s *DaggerheartService) UpdateCountdown(ctx context.Context, in *pb.DaggerheartUpdateCountdownRequest) (*pb.DaggerheartUpdateCountdownResponse, error) {
-	return newCountdownApplication(s).runUpdateCountdown(ctx, in)
+	return s.runUpdateCountdown(ctx, in)
 }
 
 func (s *DaggerheartService) DeleteCountdown(ctx context.Context, in *pb.DaggerheartDeleteCountdownRequest) (*pb.DaggerheartDeleteCountdownResponse, error) {
-	return newCountdownApplication(s).runDeleteCountdown(ctx, in)
+	return s.runDeleteCountdown(ctx, in)
 }
 
 func (s *DaggerheartService) ResolveBlazeOfGlory(ctx context.Context, in *pb.DaggerheartResolveBlazeOfGloryRequest) (*pb.DaggerheartResolveBlazeOfGloryResponse, error) {
-	return newCountdownApplication(s).runResolveBlazeOfGlory(ctx, in)
+	return s.runResolveBlazeOfGlory(ctx, in)
 }

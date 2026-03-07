@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -19,29 +20,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type countdownApplication struct {
-	service *DaggerheartService
-}
-
-func newCountdownApplication(service *DaggerheartService) countdownApplication {
-	return countdownApplication{service: service}
-}
-
-func (a countdownApplication) runCreateCountdown(ctx context.Context, in *pb.DaggerheartCreateCountdownRequest) (*pb.DaggerheartCreateCountdownResponse, error) {
+func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.DaggerheartCreateCountdownRequest) (*pb.DaggerheartCreateCountdownResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create countdown request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencySessionStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -74,7 +58,7 @@ func (a countdownApplication) runCreateCountdown(ctx context.Context, in *pb.Dag
 		return nil, status.Errorf(codes.InvalidArgument, "current must be in range 0..%d", max)
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -85,14 +69,14 @@ func (a countdownApplication) runCreateCountdown(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart countdowns")
 	}
 
-	sess, err := a.service.stores.Session.GetSession(ctx, campaignID, sessionID)
+	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -103,7 +87,7 @@ func (a countdownApplication) runCreateCountdown(ctx context.Context, in *pb.Dag
 			return nil, status.Errorf(codes.Internal, "generate countdown id: %v", err)
 		}
 	}
-	if _, err := a.service.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err == nil {
+	if _, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err == nil {
 		return nil, status.Error(codes.FailedPrecondition, "countdown already exists")
 	} else if !errors.Is(err, storage.ErrNotFound) {
 		return nil, handleDomainError(err)
@@ -123,13 +107,10 @@ func (a countdownApplication) runCreateCountdown(ctx context.Context, in *pb.Dag
 		return nil, status.Errorf(codes.Internal, "encode countdown payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartCountdownCreate,
 		ActorType:     command.ActorTypeSystem,
@@ -141,17 +122,12 @@ func (a countdownApplication) runCreateCountdown(ctx context.Context, in *pb.Dag
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "countdown create did not emit an event",
-		applyErrMessage: "apply countdown created event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("countdown create did not emit an event", "apply countdown created event"))
 	if err != nil {
 		return nil, err
 	}
 
-	countdown, err := a.service.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
+	countdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load countdown: %v", err)
 	}
@@ -161,21 +137,12 @@ func (a countdownApplication) runCreateCountdown(ctx context.Context, in *pb.Dag
 	}, nil
 }
 
-func (a countdownApplication) runUpdateCountdown(ctx context.Context, in *pb.DaggerheartUpdateCountdownRequest) (*pb.DaggerheartUpdateCountdownResponse, error) {
+func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.DaggerheartUpdateCountdownRequest) (*pb.DaggerheartUpdateCountdownResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "update countdown request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencySessionStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -195,7 +162,7 @@ func (a countdownApplication) runUpdateCountdown(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.InvalidArgument, "delta or current is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -206,18 +173,18 @@ func (a countdownApplication) runUpdateCountdown(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart countdowns")
 	}
 
-	sess, err := a.service.stores.Session.GetSession(ctx, campaignID, sessionID)
+	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
-	storedCountdown, err := a.service.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
+	storedCountdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -255,13 +222,10 @@ func (a countdownApplication) runUpdateCountdown(ctx context.Context, in *pb.Dag
 		return nil, status.Errorf(codes.Internal, "encode countdown update payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartCountdownUpdate,
 		ActorType:     command.ActorTypeSystem,
@@ -273,17 +237,12 @@ func (a countdownApplication) runUpdateCountdown(ctx context.Context, in *pb.Dag
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "countdown update did not emit an event",
-		applyErrMessage: "apply countdown update event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("countdown update did not emit an event", "apply countdown update event"))
 	if err != nil {
 		return nil, err
 	}
 
-	updatedCountdown, err := a.service.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
+	updatedCountdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load countdown: %v", err)
 	}
@@ -296,21 +255,12 @@ func (a countdownApplication) runUpdateCountdown(ctx context.Context, in *pb.Dag
 	}, nil
 }
 
-func (a countdownApplication) runDeleteCountdown(ctx context.Context, in *pb.DaggerheartDeleteCountdownRequest) (*pb.DaggerheartDeleteCountdownResponse, error) {
+func (s *DaggerheartService) runDeleteCountdown(ctx context.Context, in *pb.DaggerheartDeleteCountdownRequest) (*pb.DaggerheartDeleteCountdownResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "delete countdown request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Session == nil {
-		return nil, status.Error(codes.Internal, "session store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencySessionStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -326,7 +276,7 @@ func (a countdownApplication) runDeleteCountdown(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.InvalidArgument, "countdown id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -337,18 +287,18 @@ func (a countdownApplication) runDeleteCountdown(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart countdowns")
 	}
 
-	sess, err := a.service.stores.Session.GetSession(ctx, campaignID, sessionID)
+	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
-	if _, err := a.service.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err != nil {
+	if _, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err != nil {
 		return nil, handleDomainError(err)
 	}
 
@@ -361,13 +311,10 @@ func (a countdownApplication) runDeleteCountdown(ctx context.Context, in *pb.Dag
 		return nil, status.Errorf(codes.Internal, "encode countdown delete payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartCountdownDelete,
 		ActorType:     command.ActorTypeSystem,
@@ -379,12 +326,7 @@ func (a countdownApplication) runDeleteCountdown(ctx context.Context, in *pb.Dag
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "countdown delete did not emit an event",
-		applyErrMessage: "apply countdown delete event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("countdown delete did not emit an event", "apply countdown delete event"))
 	if err != nil {
 		return nil, err
 	}
@@ -392,21 +334,12 @@ func (a countdownApplication) runDeleteCountdown(ctx context.Context, in *pb.Dag
 	return &pb.DaggerheartDeleteCountdownResponse{CountdownId: countdownID}, nil
 }
 
-func (a countdownApplication) runResolveBlazeOfGlory(ctx context.Context, in *pb.DaggerheartResolveBlazeOfGloryRequest) (*pb.DaggerheartResolveBlazeOfGloryResponse, error) {
+func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.DaggerheartResolveBlazeOfGloryRequest) (*pb.DaggerheartResolveBlazeOfGloryResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "resolve blaze of glory request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -418,7 +351,7 @@ func (a countdownApplication) runResolveBlazeOfGlory(ctx context.Context, in *pb
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -433,11 +366,11 @@ func (a countdownApplication) runResolveBlazeOfGlory(ctx context.Context, in *pb
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
-	state, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -463,13 +396,10 @@ func (a countdownApplication) runResolveBlazeOfGlory(ctx context.Context, in *pb
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartCharacterStatePatch,
 		ActorType:     command.ActorTypeSystem,
@@ -481,20 +411,15 @@ func (a countdownApplication) runResolveBlazeOfGlory(ctx context.Context, in *pb
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "blaze of glory did not emit an event",
-		applyErrMessage: "apply character state event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("blaze of glory did not emit an event", "apply character state event"))
 	if err != nil {
 		return nil, err
 	}
-	updated, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
 	}
-	if err := a.service.appendCharacterDeletedEvent(ctx, campaignID, characterID, daggerheart.LifeStateBlazeOfGlory); err != nil {
+	if err := s.appendCharacterDeletedEvent(ctx, campaignID, characterID, daggerheart.LifeStateBlazeOfGlory); err != nil {
 		return nil, err
 	}
 

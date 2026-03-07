@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -21,7 +19,7 @@ import (
 func TestApplyRollOutcome_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-roll-1",
@@ -29,9 +27,9 @@ func TestApplyRollOutcome_Success(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    true,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+			sdKeyHopeFear:    true,
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -109,7 +107,7 @@ func TestApplyRollOutcome_Success(t *testing.T) {
 		},
 	}}
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -127,7 +125,7 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	state := dhStore.States["camp-1:char-1"]
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-roll-1",
@@ -135,7 +133,7 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
+			sdKeyCharacterID: "char-1",
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -212,7 +210,7 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -256,7 +254,7 @@ func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	state := dhStore.States["camp-1:char-1"]
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-roll-single-boundary",
@@ -264,7 +262,7 @@ func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
+			sdKeyCharacterID: "char-1",
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -330,10 +328,7 @@ func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(
-		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
-		"req-roll-single-boundary",
-	)
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-single-boundary")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -360,7 +355,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 1}
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-roll-1",
@@ -368,7 +363,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 		Results:   map[string]any{"d20": 1},
 		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
+			sdKeyCharacterID: "char-1",
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -463,7 +458,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,

@@ -35,7 +35,8 @@ var defaultCampaignProjectionScopes = []string{
 // EventService implements the game.v1.EventService gRPC API.
 type EventService struct {
 	campaignv1.UnimplementedEventServiceServer
-	stores Stores
+	stores                     Stores
+	compatibilityAppendEnabled bool
 }
 
 type normalizedListEventsRequest struct {
@@ -67,6 +68,13 @@ func NewEventService(stores Stores) *EventService {
 	return &EventService{
 		stores: stores,
 	}
+}
+
+// SetCompatibilityAppendEnabled controls whether the compatibility append path
+// (direct event append without the domain engine) is available. Call this once
+// at server startup.
+func (s *EventService) SetCompatibilityAppendEnabled(enabled bool) {
+	s.compatibilityAppendEnabled = enabled
 }
 
 // AppendEvent appends a new event to the campaign journal.

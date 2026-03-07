@@ -7,5 +7,5 @@ import (
 )
 
 func (s *DaggerheartService) ApplyLevelUp(ctx context.Context, in *pb.DaggerheartApplyLevelUpRequest) (*pb.DaggerheartApplyLevelUpResponse, error) {
-	return newProgressionApplication(s).runApplyLevelUp(ctx, in)
+	return s.runApplyLevelUp(ctx, in)
 }

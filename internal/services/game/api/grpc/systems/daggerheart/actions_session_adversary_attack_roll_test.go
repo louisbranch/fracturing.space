@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -50,17 +49,6 @@ func TestSessionAdversaryAttackRoll_MissingAdversaryId(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestSessionAdversaryAttackRoll_RequiresDomainEngine(t *testing.T) {
-	svc := newAdversaryDamageTestService()
-	svc.stores.Domain = nil
-	_, err := svc.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
-		CampaignId:  "camp-1",
-		SessionId:   "sess-1",
-		AdversaryId: "adv-1",
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestSessionAdversaryAttackRoll_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
@@ -70,21 +58,21 @@ func TestSessionAdversaryAttackRoll_Success(t *testing.T) {
 		RollSeq:   1,
 		Results: map[string]any{
 			"rolls":        []int{7},
-			"roll":         7,
-			"modifier":     0,
-			"total":        7,
+			sdKeyRoll:      7,
+			sdKeyModifier:  0,
+			sdKeyTotal:     7,
 			"advantage":    0,
 			"disadvantage": 0,
 		},
 		SystemData: map[string]any{
-			"character_id": "adv-1",
-			"adversary_id": "adv-1",
-			"roll_kind":    "adversary_roll",
-			"roll":         7,
-			"modifier":     0,
-			"total":        7,
-			"advantage":    0,
-			"disadvantage": 0,
+			sdKeyCharacterID: "adv-1",
+			sdKeyAdversaryID: "adv-1",
+			sdKeyRollKind:    "adversary_roll",
+			sdKeyRoll:        7,
+			sdKeyModifier:    0,
+			sdKeyTotal:       7,
+			"advantage":      0,
+			"disadvantage":   0,
 		},
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -97,7 +85,7 @@ func TestSessionAdversaryAttackRoll_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("action.roll_resolved"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-adv-roll-success",
@@ -133,21 +121,21 @@ func TestSessionAdversaryAttackRoll_UsesDomainEngine(t *testing.T) {
 		RollSeq:   1,
 		Results: map[string]any{
 			"rolls":        []int{12, 18},
-			"roll":         18,
-			"modifier":     2,
-			"total":        20,
+			sdKeyRoll:      18,
+			sdKeyModifier:  2,
+			sdKeyTotal:     20,
 			"advantage":    1,
 			"disadvantage": 0,
 		},
 		SystemData: map[string]any{
-			"character_id": "adv-1",
-			"adversary_id": "adv-1",
-			"roll_kind":    "adversary_roll",
-			"roll":         18,
-			"modifier":     2,
-			"total":        20,
-			"advantage":    1,
-			"disadvantage": 0,
+			sdKeyCharacterID: "adv-1",
+			sdKeyAdversaryID: "adv-1",
+			sdKeyRollKind:    "adversary_roll",
+			sdKeyRoll:        18,
+			sdKeyModifier:    2,
+			sdKeyTotal:       20,
+			"advantage":      1,
+			"disadvantage":   0,
 		},
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -160,7 +148,7 @@ func TestSessionAdversaryAttackRoll_UsesDomainEngine(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("action.roll_resolved"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-adv-roll",

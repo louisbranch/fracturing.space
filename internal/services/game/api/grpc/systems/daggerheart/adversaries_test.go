@@ -157,12 +157,13 @@ func newAdversaryTestService() *DaggerheartService {
 
 	return &DaggerheartService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Daggerheart: dhStore,
-			Event:       eventStore,
-			Domain:      &dynamicDomainEngine{store: eventStore},
-			SessionGate: &fakeSessionGateStore{},
-			Session:     sessStore,
+			Campaign:     campaignStore,
+			Daggerheart:  dhStore,
+			Event:        eventStore,
+			Domain:       &dynamicDomainEngine{store: eventStore},
+			SessionGate:  &fakeSessionGateStore{},
+			Session:      sessStore,
+			WriteRuntime: testRuntime,
 		},
 		seedFunc: func() (int64, error) { return 42, nil },
 	}
@@ -205,7 +206,7 @@ func TestCreateAdversary_CampaignNotFound(t *testing.T) {
 	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
 		CampaignId: "nonexistent", Name: "Goblin",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestCreateAdversary_NonDaggerheartCampaign(t *testing.T) {
@@ -315,7 +316,7 @@ func TestCreateAdversary_SessionNotFound(t *testing.T) {
 		Name:       "Goblin",
 		SessionId:  wrapperspb.String("nonexistent"),
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestCreateAdversary_InvalidStats(t *testing.T) {
@@ -357,7 +358,7 @@ func TestGetAdversary_NotFound(t *testing.T) {
 	_, err := svc.GetAdversary(context.Background(), &pb.DaggerheartGetAdversaryRequest{
 		CampaignId: "camp-1", AdversaryId: "nonexistent",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestGetAdversary_NonDaggerheartCampaign(t *testing.T) {
@@ -578,7 +579,7 @@ func TestUpdateAdversary_NotFound(t *testing.T) {
 		AdversaryId: "nonexistent",
 		Name:        wrapperspb.String("New Name"),
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 }
 
 // --- DeleteAdversary tests ---
@@ -610,7 +611,7 @@ func TestDeleteAdversary_NotFound(t *testing.T) {
 	_, err := svc.DeleteAdversary(context.Background(), &pb.DaggerheartDeleteAdversaryRequest{
 		CampaignId: "camp-1", AdversaryId: "nonexistent",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestDeleteAdversary_Success(t *testing.T) {
@@ -639,7 +640,7 @@ func TestDeleteAdversary_Success(t *testing.T) {
 	_, err = svc.GetAdversary(context.Background(), &pb.DaggerheartGetAdversaryRequest{
 		CampaignId: "camp-1", AdversaryId: createResp.Adversary.Id,
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestDeleteAdversary_UsesDomainEngine(t *testing.T) {

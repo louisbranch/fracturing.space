@@ -3,67 +3,80 @@ package daggerheart
 import (
 	"context"
 
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
-
-var writeRuntime = domainwrite.NewRuntime()
 
 type eventApplier interface {
 	Apply(context.Context, event.Event) error
-}
-
-type domainCommandApplyOptions struct {
-	requireEvents   bool
-	missingEventMsg string
-	applyErrMessage string
-	executeErrMsg   string
-	applyErr        func(error) error
-	executeErr      func(error) error
-	rejectErr       func(string) error
-}
-
-// SetInlineProjectionApplyEnabled controls whether request-path helpers apply
-// emitted domain events to projections inline.
-func SetInlineProjectionApplyEnabled(enabled bool) {
-	writeRuntime.SetInlineApplyEnabled(enabled)
-}
-
-// SetIntentFilter configures the event intent filter built from the event
-// registry. Call this once at server startup; the filter is used by every
-// request-path domain command helper.
-func SetIntentFilter(registry *event.Registry) {
-	writeRuntime.SetIntentFilter(registry)
 }
 
 func (s *DaggerheartService) executeAndApplyDomainCommand(
 	ctx context.Context,
 	cmd command.Command,
 	applier eventApplier,
-	options domainCommandApplyOptions,
+	options domainwrite.Options,
 ) (engine.Result, error) {
-	options = normalizeDomainCommandOptions(options)
-	return writeRuntime.ExecuteAndApply(ctx, s.stores.Domain, applier, cmd, domainwrite.Options{
-		RequireEvents:   options.requireEvents,
-		MissingEventMsg: options.missingEventMsg,
-		ExecuteErr:      options.executeErr,
-		ApplyErr:        options.applyErr,
-		RejectErr:       options.rejectErr,
-	})
+	normalizeGRPCDefaults(&options)
+	result, err := s.stores.WriteRuntime.ExecuteAndApply(ctx, s.stores.Domain, applier, cmd, options)
+	if err != nil {
+		return result, ensureGRPCStatus(err)
+	}
+	return result, nil
 }
 
-func normalizeDomainCommandOptions(options domainCommandApplyOptions) domainCommandApplyOptions {
-	executeErr, applyErr, rejectErr := domainwrite.NormalizeErrorHandlers(domainwrite.ErrorHandlerOptions{
-		ExecuteErr:        options.executeErr,
-		ApplyErr:          options.applyErr,
-		RejectErr:         options.rejectErr,
-		ExecuteErrMessage: options.executeErrMsg,
-		ApplyErrMessage:   options.applyErrMessage,
-	})
-	options.executeErr = executeErr
-	options.applyErr = applyErr
-	options.rejectErr = rejectErr
-	return options
+// ensureGRPCStatus wraps plain errors with codes.Internal so callers always
+// receive gRPC status errors at the transport boundary. Domain errors
+// (apperrors) are converted using their code-to-gRPC mapping.
+func ensureGRPCStatus(err error) error {
+	if _, ok := status.FromError(err); ok {
+		return err
+	}
+	if apperrors.GetCode(err) != apperrors.CodeUnknown {
+		return handleDomainError(err)
+	}
+	return status.Error(codes.Internal, err.Error())
+}
+
+// normalizeGRPCDefaults sets gRPC-status-aware error handlers at the transport
+// boundary so the domainwrite package stays transport-agnostic.
+func normalizeGRPCDefaults(options *domainwrite.Options) {
+	if options.ExecuteErr == nil {
+		message := options.ExecuteErrMessage
+		if message == "" {
+			message = "execute domain command"
+		}
+		options.ExecuteErr = func(err error) error {
+			return status.Errorf(codes.Internal, "%s: %v", message, err)
+		}
+	}
+	if options.ApplyErr == nil {
+		message := options.ApplyErrMessage
+		if message == "" {
+			message = "apply event"
+		}
+		options.ApplyErr = domainApplyErrorWithCodePreserve(message)
+	}
+	if options.RejectErr == nil {
+		options.RejectErr = func(message string) error {
+			return status.Error(codes.FailedPrecondition, message)
+		}
+	}
+}
+
+// domainApplyErrorWithCodePreserve returns an error handler that preserves
+// domain error codes (apperrors) through the apply path instead of flattening
+// them to codes.Internal.
+func domainApplyErrorWithCodePreserve(message string) func(error) error {
+	return func(err error) error {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return err
+		}
+		return status.Errorf(codes.Internal, "%s: %v", message, err)
+	}
 }

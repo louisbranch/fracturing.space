@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -20,31 +21,13 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-type adversaryApplication struct {
-	service *DaggerheartService
-}
-
-func newAdversaryApplication(service *DaggerheartService) adversaryApplication {
-	return adversaryApplication{service: service}
-}
-
-func (a adversaryApplication) runCreateAdversary(ctx context.Context, in *pb.DaggerheartCreateAdversaryRequest) (*pb.DaggerheartCreateAdversaryResponse, error) {
+func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.DaggerheartCreateAdversaryRequest) (*pb.DaggerheartCreateAdversaryResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create adversary request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -75,7 +58,7 @@ func (a adversaryApplication) runCreateAdversary(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -87,13 +70,13 @@ func (a adversaryApplication) runCreateAdversary(ctx context.Context, in *pb.Dag
 	}
 
 	if sessionID != "" {
-		if a.service.stores.Session == nil {
-			return nil, status.Error(codes.Internal, "session store is not configured")
+		if err := s.requireDependencies(dependencySessionStore); err != nil {
+			return nil, err
 		}
-		if _, err := a.service.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
+		if _, err := s.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
 			return nil, handleDomainError(err)
 		}
-		if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+		if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 			return nil, err
 		}
 	}
@@ -123,10 +106,10 @@ func (a adversaryApplication) runCreateAdversary(ctx context.Context, in *pb.Dag
 		return nil, status.Errorf(codes.Internal, "encode adversary payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartAdversaryCreate,
 		ActorType:     command.ActorTypeSystem,
@@ -138,17 +121,12 @@ func (a adversaryApplication) runCreateAdversary(ctx context.Context, in *pb.Dag
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "adversary create did not emit an event",
-		applyErrMessage: "apply adversary created event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("adversary create did not emit an event", "apply adversary created event"))
 	if err != nil {
 		return nil, err
 	}
 
-	created, err := a.service.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+	created, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load adversary: %v", err)
 	}
@@ -158,18 +136,12 @@ func (a adversaryApplication) runCreateAdversary(ctx context.Context, in *pb.Dag
 	}, nil
 }
 
-func (a adversaryApplication) runUpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateAdversaryRequest) (*pb.DaggerheartUpdateAdversaryResponse, error) {
+func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateAdversaryRequest) (*pb.DaggerheartUpdateAdversaryResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "update adversary request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -186,7 +158,7 @@ func (a adversaryApplication) runUpdateAdversary(ctx context.Context, in *pb.Dag
 		}
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -197,14 +169,14 @@ func (a adversaryApplication) runUpdateAdversary(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversaries")
 	}
 
-	current, err := a.service.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+	current, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
 
 	currentSessionID := strings.TrimSpace(current.SessionID)
 	if currentSessionID != "" {
-		if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, currentSessionID); err != nil {
+		if err := s.ensureNoOpenSessionGate(ctx, campaignID, currentSessionID); err != nil {
 			return nil, err
 		}
 	}
@@ -246,13 +218,13 @@ func (a adversaryApplication) runUpdateAdversary(ctx context.Context, in *pb.Dag
 	}
 
 	if sessionID != "" {
-		if a.service.stores.Session == nil {
-			return nil, status.Error(codes.Internal, "session store is not configured")
+		if err := s.requireDependencies(dependencySessionStore); err != nil {
+			return nil, err
 		}
-		if _, err := a.service.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
+		if _, err := s.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
 			return nil, handleDomainError(err)
 		}
-		if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+		if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 			return nil, err
 		}
 	}
@@ -277,10 +249,10 @@ func (a adversaryApplication) runUpdateAdversary(ctx context.Context, in *pb.Dag
 		return nil, status.Errorf(codes.Internal, "encode adversary payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartAdversaryUpdate,
 		ActorType:     command.ActorTypeSystem,
@@ -292,17 +264,12 @@ func (a adversaryApplication) runUpdateAdversary(ctx context.Context, in *pb.Dag
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "adversary update did not emit an event",
-		applyErrMessage: "apply adversary updated event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("adversary update did not emit an event", "apply adversary updated event"))
 	if err != nil {
 		return nil, err
 	}
 
-	updated, err := a.service.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load adversary: %v", err)
 	}
@@ -312,18 +279,12 @@ func (a adversaryApplication) runUpdateAdversary(ctx context.Context, in *pb.Dag
 	}, nil
 }
 
-func (a adversaryApplication) runDeleteAdversary(ctx context.Context, in *pb.DaggerheartDeleteAdversaryRequest) (*pb.DaggerheartDeleteAdversaryResponse, error) {
+func (s *DaggerheartService) runDeleteAdversary(ctx context.Context, in *pb.DaggerheartDeleteAdversaryRequest) (*pb.DaggerheartDeleteAdversaryResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "delete adversary request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -335,7 +296,7 @@ func (a adversaryApplication) runDeleteAdversary(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -346,14 +307,14 @@ func (a adversaryApplication) runDeleteAdversary(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversaries")
 	}
 
-	current, err := a.service.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+	current, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
 
 	sessionID := strings.TrimSpace(current.SessionID)
 	if sessionID != "" {
-		if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+		if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 			return nil, err
 		}
 	}
@@ -367,10 +328,10 @@ func (a adversaryApplication) runDeleteAdversary(ctx context.Context, in *pb.Dag
 		return nil, status.Errorf(codes.Internal, "encode adversary payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartAdversaryDelete,
 		ActorType:     command.ActorTypeSystem,
@@ -382,12 +343,7 @@ func (a adversaryApplication) runDeleteAdversary(ctx context.Context, in *pb.Dag
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "adversary delete did not emit an event",
-		applyErrMessage: "apply adversary deleted event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("adversary delete did not emit an event", "apply adversary deleted event"))
 	if err != nil {
 		return nil, err
 	}
@@ -397,15 +353,12 @@ func (a adversaryApplication) runDeleteAdversary(ctx context.Context, in *pb.Dag
 	}, nil
 }
 
-func (a adversaryApplication) runGetAdversary(ctx context.Context, in *pb.DaggerheartGetAdversaryRequest) (*pb.DaggerheartGetAdversaryResponse, error) {
+func (s *DaggerheartService) runGetAdversary(ctx context.Context, in *pb.DaggerheartGetAdversaryRequest) (*pb.DaggerheartGetAdversaryResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get adversary request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -417,7 +370,7 @@ func (a adversaryApplication) runGetAdversary(ctx context.Context, in *pb.Dagger
 		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -428,7 +381,7 @@ func (a adversaryApplication) runGetAdversary(ctx context.Context, in *pb.Dagger
 		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversaries")
 	}
 
-	adversary, err := a.service.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+	adversary, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -438,15 +391,12 @@ func (a adversaryApplication) runGetAdversary(ctx context.Context, in *pb.Dagger
 	}, nil
 }
 
-func (a adversaryApplication) runListAdversaries(ctx context.Context, in *pb.DaggerheartListAdversariesRequest) (*pb.DaggerheartListAdversariesResponse, error) {
+func (s *DaggerheartService) runListAdversaries(ctx context.Context, in *pb.DaggerheartListAdversariesRequest) (*pb.DaggerheartListAdversariesResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list adversaries request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -454,7 +404,7 @@ func (a adversaryApplication) runListAdversaries(ctx context.Context, in *pb.Dag
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -470,7 +420,7 @@ func (a adversaryApplication) runListAdversaries(ctx context.Context, in *pb.Dag
 		sessionID = strings.TrimSpace(in.SessionId.GetValue())
 	}
 
-	adversaries, err := a.service.stores.Daggerheart.ListDaggerheartAdversaries(ctx, campaignID, sessionID)
+	adversaries, err := s.stores.Daggerheart.ListDaggerheartAdversaries(ctx, campaignID, sessionID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -483,14 +433,6 @@ func (a adversaryApplication) runListAdversaries(ctx context.Context, in *pb.Dag
 	}
 
 	return response, nil
-}
-
-func (a adversaryApplication) runLoadAdversaryForSession(ctx context.Context, campaignID, sessionID, adversaryID string) (storage.DaggerheartAdversary, error) {
-	return a.service.loadAdversaryForSession(ctx, campaignID, sessionID, adversaryID)
-}
-
-func (a adversaryApplication) runDaggerheartAdversaryToProto(adversary storage.DaggerheartAdversary) *pb.DaggerheartAdversary {
-	return daggerheartAdversaryToProto(adversary)
 }
 
 func daggerheartAdversaryToProto(adversary storage.DaggerheartAdversary) *pb.DaggerheartAdversary {

@@ -10,7 +10,6 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -23,18 +22,14 @@ import (
 )
 
 func TestCreateCharacter_InheritsControllerIdentityWhenAutoAssigned(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"part-1": {
 			ID:             "part-1",
 			CampaignID:     "c1",
@@ -49,7 +44,7 @@ func TestCreateCharacter_InheritsControllerIdentityWhenAutoAssigned(t *testing.T
 	}
 
 	domain := &fakeDomainEngine{
-		store: eventStore,
+		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
 			command.Type("character.create"): {
 				Decision: command.Accept(event.Event{
@@ -93,14 +88,7 @@ func TestCreateCharacter_InheritsControllerIdentityWhenAutoAssigned(t *testing.T
 	}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			Domain:       domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),
 	}
@@ -142,18 +130,14 @@ func TestCreateCharacter_InheritsControllerIdentityWhenAutoAssigned(t *testing.T
 }
 
 func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"part-1": {
 			ID:             "part-1",
 			CampaignID:     "c1",
@@ -168,7 +152,7 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 	}
 
 	domain := &fakeDomainEngine{
-		store: eventStore,
+		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
 			command.Type("character.create"): {
 				Decision: command.Accept(event.Event{
@@ -212,14 +196,7 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 	}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			Domain:       domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-456"),
 	}
@@ -264,18 +241,14 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 }
 
 func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"part-1": {
 			ID:             "part-1",
 			CampaignID:     "c1",
@@ -290,7 +263,7 @@ func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t
 	}
 
 	domain := &fakeDomainEngine{
-		store: eventStore,
+		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
 			command.Type("character.create"): {
 				Decision: command.Accept(event.Event{
@@ -334,14 +307,7 @@ func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t
 	}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			Domain:       domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-789"),
 	}

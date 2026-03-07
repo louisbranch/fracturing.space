@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -17,8 +17,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var compatibilityAppendEnabled atomic.Bool
-
 const (
 	appendEventScopeHeader      = "x-fracturing-space-append-event-scope"
 	appendEventScopeMaintenance = "maintenance"
@@ -26,17 +24,15 @@ const (
 )
 
 type eventApplication struct {
-	stores Stores
+	stores                     Stores
+	compatibilityAppendEnabled bool
 }
 
 func newEventApplication(service *EventService) eventApplication {
-	return eventApplication{stores: service.stores}
-}
-
-// SetCompatibilityAppendEnabled toggles direct event-store append in
-// EventService.AppendEvent when the domain engine is not configured.
-func SetCompatibilityAppendEnabled(enabled bool) {
-	compatibilityAppendEnabled.Store(enabled)
+	return eventApplication{
+		stores:                     service.stores,
+		compatibilityAppendEnabled: service.compatibilityAppendEnabled,
+	}
 }
 
 func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.AppendEventRequest) (event.Event, error) {
@@ -70,10 +66,10 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 				EntityID:     input.EntityID,
 				PayloadJSON:  input.PayloadJSON,
 			})
-			result, err := executeDomainCommandWithoutInlineApply(ctx, a.stores.Domain, cmd, domainCommandApplyOptions{
-				requireEvents:   true,
-				missingEventMsg: "append event did not emit an event",
-				executeErr: func(err error) error {
+			result, err := executeDomainCommandWithoutInlineApply(ctx, a.stores, cmd, domainwrite.Options{
+				RequireEvents:   true,
+				MissingEventMsg: "append event did not emit an event",
+				ExecuteErr: func(err error) error {
 					return status.Errorf(codes.Internal, "execute domain command: %v", err)
 				},
 			})
@@ -94,7 +90,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		return event.Event{}, status.Error(codes.FailedPrecondition, "event type is not supported for append")
 	}
 
-	if !compatibilityAppendEnabled.Load() {
+	if !a.compatibilityAppendEnabled {
 		return event.Event{}, status.Error(codes.FailedPrecondition, "append event compatibility mode is disabled")
 	}
 

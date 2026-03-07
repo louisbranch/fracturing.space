@@ -132,7 +132,7 @@ func TestCreateParticipant_DomainRejectsAIInvariant(t *testing.T) {
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
@@ -194,7 +194,7 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 		},
 	}}
 	svc := &ParticipantService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
 	}
@@ -273,7 +273,7 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 		},
 	}}
 	svc := &ParticipantService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-456"),
 	}
@@ -329,10 +329,11 @@ func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
 
 	svc := &ParticipantService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
@@ -403,11 +404,12 @@ func TestCreateParticipant_UserLinkedRequestFieldsTakePrecedenceOverSocial(t *te
 
 	svc := &ParticipantService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
-			Social:      socialClient,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
+			Social:       socialClient,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
@@ -485,11 +487,12 @@ func TestCreateParticipant_UserLinkedMissingFieldsHydrateFromSocial(t *testing.T
 
 	svc := &ParticipantService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
-			Social:      socialClient,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
+			Social:       socialClient,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
@@ -550,10 +553,11 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToMysteriousPerson(t *t
 
 	svc := &ParticipantService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
@@ -619,11 +623,12 @@ func TestCreateParticipant_UserLinkedMissingPronounsFallsBackToTheyThem(t *testi
 
 	svc := &ParticipantService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
-			Social:      socialClient,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
+			Social:       socialClient,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
@@ -689,10 +694,11 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToLocalizedNameForLocal
 
 	svc := &ParticipantService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
@@ -746,7 +752,7 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
@@ -800,7 +806,7 @@ func TestUpdateParticipant_DomainRejectsAIInvariant(t *testing.T) {
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
@@ -839,7 +845,7 @@ func TestUpdateParticipant_Success(t *testing.T) {
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
@@ -901,10 +907,11 @@ func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
 
 	svc := &ParticipantService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -972,7 +979,7 @@ func TestUpdateParticipant_CampaignAccess(t *testing.T) {
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:     "c1",
@@ -1148,7 +1155,7 @@ func TestDeleteParticipant_Success(t *testing.T) {
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -1225,7 +1232,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -1283,7 +1290,7 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -1349,7 +1356,7 @@ func TestDeleteParticipant_AllowsWhenOwnedCharacterAlreadyDeleted(t *testing.T) 
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -1424,7 +1431,7 @@ func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testin
 		},
 	}}
 
-	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
 		CampaignId:    "c1",
@@ -1491,11 +1498,12 @@ func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
 
 	svc := &ParticipantService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Character:   characterStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}

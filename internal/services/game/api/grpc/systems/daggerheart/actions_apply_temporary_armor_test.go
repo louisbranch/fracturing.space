@@ -3,7 +3,6 @@ package daggerheart
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -29,7 +28,7 @@ func TestApplyTemporaryArmor_MissingArmor(t *testing.T) {
 func TestApplyTemporaryArmor_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 	ctx := contextWithSessionID("sess-1")
 
 	tempPayload := struct {

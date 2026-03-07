@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -32,13 +33,9 @@ func testDecisionEvent() event.Event {
 	}
 }
 
-// setTestIntentFilter configures the package-level intent filter with a
-// registry containing common test event types and restores the previous
-// filter on cleanup.
-func setTestIntentFilter(t *testing.T) {
+func testWriteRuntime(t *testing.T) *domainwrite.Runtime {
 	t.Helper()
-	prev := writeRuntime.ShouldApply()
-	t.Cleanup(func() { writeRuntime.SetShouldApply(prev) })
+	runtime := domainwrite.NewRuntime()
 
 	registry := event.NewRegistry()
 	for _, def := range []event.Definition{
@@ -49,23 +46,25 @@ func setTestIntentFilter(t *testing.T) {
 			t.Fatalf("register event: %v", err)
 		}
 	}
-	SetIntentFilter(registry)
+	runtime.SetIntentFilter(registry)
+	return runtime
 }
 
 func TestExecuteAndApplyDomainCommand_AppliesEventsByDefault(t *testing.T) {
-	setTestIntentFilter(t)
-	SetInlineProjectionApplyEnabled(true)
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
 	domain := fakeDomainExecutor{
 		result: engine.Result{
 			Decision: command.Decision{Events: []event.Event{testDecisionEvent()}},
 		},
 	}
+	stores := Stores{Domain: domain, WriteRuntime: runtime}
 	_, err := executeAndApplyDomainCommand(
 		context.Background(),
-		domain,
+		stores,
 		projection.Applier{},
 		command.Command{CampaignID: "camp-1", Type: command.Type("campaign.create")},
-		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
 	)
 	if err == nil {
 		t.Fatal("expected apply error when inline apply is enabled with unconfigured stores")
@@ -73,21 +72,20 @@ func TestExecuteAndApplyDomainCommand_AppliesEventsByDefault(t *testing.T) {
 }
 
 func TestExecuteAndApplyDomainCommand_SkipsInlineApplyWhenDisabled(t *testing.T) {
-	setTestIntentFilter(t)
-	SetInlineProjectionApplyEnabled(false)
-	t.Cleanup(func() { SetInlineProjectionApplyEnabled(true) })
-
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(false)
 	domain := fakeDomainExecutor{
 		result: engine.Result{
 			Decision: command.Decision{Events: []event.Event{testDecisionEvent()}},
 		},
 	}
+	stores := Stores{Domain: domain, WriteRuntime: runtime}
 	_, err := executeAndApplyDomainCommand(
 		context.Background(),
-		domain,
+		stores,
 		projection.Applier{},
 		command.Command{CampaignID: "camp-1", Type: command.Type("campaign.create")},
-		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
 	)
 	if err != nil {
 		t.Fatalf("expected inline apply skip with no error, got %v", err)
@@ -95,8 +93,8 @@ func TestExecuteAndApplyDomainCommand_SkipsInlineApplyWhenDisabled(t *testing.T)
 }
 
 func TestExecuteAndApplyDomainCommand_SkipsJournalOnlyInlineApply(t *testing.T) {
-	setTestIntentFilter(t)
-	SetInlineProjectionApplyEnabled(true)
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
 	domain := fakeDomainExecutor{
 		result: engine.Result{
 			Decision: command.Decision{Events: []event.Event{
@@ -112,12 +110,13 @@ func TestExecuteAndApplyDomainCommand_SkipsJournalOnlyInlineApply(t *testing.T) 
 			}},
 		},
 	}
+	stores := Stores{Domain: domain, WriteRuntime: runtime}
 	_, err := executeAndApplyDomainCommand(
 		context.Background(),
-		domain,
+		stores,
 		projection.Applier{},
 		command.Command{CampaignID: "camp-1", Type: command.Type("story.note.add")},
-		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
 	)
 	if err != nil {
 		t.Fatalf("expected journal-only inline apply skip with no error, got %v", err)

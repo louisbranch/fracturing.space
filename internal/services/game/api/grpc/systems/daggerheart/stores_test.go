@@ -3,6 +3,7 @@ package daggerheart
 import (
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 )
 
@@ -16,6 +17,7 @@ func TestStoresApplier(t *testing.T) {
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      &fakeDaggerheartStore{},
 		Event:            &fakeEventStore{},
+		WriteRuntime:     domainwrite.NewRuntime(),
 	}
 	if err := s.Validate(); err != nil {
 		t.Fatalf("validate stores: %v", err)
@@ -56,6 +58,7 @@ func TestStoresAdapterRegistryMatchesManifest(t *testing.T) {
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      daggerheartStore,
 		Event:            &fakeEventStore{},
+		WriteRuntime:     domainwrite.NewRuntime(),
 	}
 	if err := s.Validate(); err != nil {
 		t.Fatalf("validate stores: %v", err)

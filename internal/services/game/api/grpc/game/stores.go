@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -42,11 +43,23 @@ type Stores struct {
 
 	Domain Domain
 
+	// WriteRuntime owns request-path write execution flags (inline apply,
+	// intent filtering). Injected at service construction; used by
+	// executeAndApplyDomainCommand instead of package-level global state.
+	WriteRuntime *domainwrite.Runtime
+
 	// Events is the event registry used for intent filtering at request time.
 	Events *event.Registry
 
 	// adapters is built eagerly during Validate and cached for Applier.
 	adapters *bridge.AdapterRegistry
+}
+
+// NewWriteRuntime creates a new write-path runtime for use by service startup.
+// This factory avoids leaking the internal domainwrite package to callers
+// outside the gRPC package tree.
+func NewWriteRuntime() *domainwrite.Runtime {
+	return domainwrite.NewRuntime()
 }
 
 // Applier returns a projection Applier wired to the stores in this bundle.
@@ -139,6 +152,12 @@ func (s *Stores) Validate() error {
 	}
 	if s.DaggerheartContent == nil {
 		missing = append(missing, "DaggerheartContent")
+	}
+	if s.Domain == nil {
+		missing = append(missing, "Domain")
+	}
+	if s.WriteRuntime == nil {
+		missing = append(missing, "WriteRuntime")
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))

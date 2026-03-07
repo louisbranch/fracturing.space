@@ -175,13 +175,13 @@ func TestOutcomeFlavorFromCode(t *testing.T) {
 		code string
 		want string
 	}{
-		{pb.Outcome_ROLL_WITH_HOPE.String(), "HOPE"},
-		{pb.Outcome_SUCCESS_WITH_HOPE.String(), "HOPE"},
-		{pb.Outcome_FAILURE_WITH_HOPE.String(), "HOPE"},
-		{pb.Outcome_CRITICAL_SUCCESS.String(), "HOPE"},
-		{pb.Outcome_ROLL_WITH_FEAR.String(), "FEAR"},
-		{pb.Outcome_SUCCESS_WITH_FEAR.String(), "FEAR"},
-		{pb.Outcome_FAILURE_WITH_FEAR.String(), "FEAR"},
+		{pb.Outcome_ROLL_WITH_HOPE.String(), outcomeFlavorHope},
+		{pb.Outcome_SUCCESS_WITH_HOPE.String(), outcomeFlavorHope},
+		{pb.Outcome_FAILURE_WITH_HOPE.String(), outcomeFlavorHope},
+		{pb.Outcome_CRITICAL_SUCCESS.String(), outcomeFlavorHope},
+		{pb.Outcome_ROLL_WITH_FEAR.String(), outcomeFlavorFear},
+		{pb.Outcome_SUCCESS_WITH_FEAR.String(), outcomeFlavorFear},
+		{pb.Outcome_FAILURE_WITH_FEAR.String(), outcomeFlavorFear},
 		{"unknown", ""},
 		{"", ""},
 	}
@@ -254,8 +254,8 @@ func TestOutcomeFromSystemData(t *testing.T) {
 	}{
 		{"nil data uses fallback", nil, "fallback", "fallback"},
 		{"missing key uses fallback", map[string]any{"other": "x"}, "fallback", "fallback"},
-		{"found outcome", map[string]any{"outcome": "ROLL_WITH_HOPE"}, "", "ROLL_WITH_HOPE"},
-		{"wrong type uses fallback", map[string]any{"outcome": 42}, "default", "default"},
+		{"found outcome", map[string]any{sdKeyOutcome: "ROLL_WITH_HOPE"}, "", "ROLL_WITH_HOPE"},
+		{"wrong type uses fallback", map[string]any{sdKeyOutcome: 42}, "default", "default"},
 		{"trims fallback", nil, "  trimme  ", "trimme"},
 	}
 	for _, tc := range tests {
@@ -275,9 +275,9 @@ func TestRollKindFromSystemData(t *testing.T) {
 	}{
 		{"nil data", nil, pb.RollKind_ROLL_KIND_ACTION},
 		{"missing key", map[string]any{}, pb.RollKind_ROLL_KIND_ACTION},
-		{"wrong type", map[string]any{"roll_kind": 42}, pb.RollKind_ROLL_KIND_ACTION},
-		{"action", map[string]any{"roll_kind": pb.RollKind_ROLL_KIND_ACTION.String()}, pb.RollKind_ROLL_KIND_ACTION},
-		{"reaction", map[string]any{"roll_kind": pb.RollKind_ROLL_KIND_REACTION.String()}, pb.RollKind_ROLL_KIND_REACTION},
+		{"wrong type", map[string]any{sdKeyRollKind: 42}, pb.RollKind_ROLL_KIND_ACTION},
+		{"action", map[string]any{sdKeyRollKind: pb.RollKind_ROLL_KIND_ACTION.String()}, pb.RollKind_ROLL_KIND_ACTION},
+		{"reaction", map[string]any{sdKeyRollKind: pb.RollKind_ROLL_KIND_REACTION.String()}, pb.RollKind_ROLL_KIND_REACTION},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -318,12 +318,12 @@ func TestCritFromSystemData(t *testing.T) {
 		outcome string
 		want    bool
 	}{
-		{"from data", map[string]any{"crit": true}, "", true},
-		{"from data false", map[string]any{"crit": false}, pb.Outcome_CRITICAL_SUCCESS.String(), false},
+		{"from data", map[string]any{sdKeyCrit: true}, "", true},
+		{"from data false", map[string]any{sdKeyCrit: false}, pb.Outcome_CRITICAL_SUCCESS.String(), false},
 		{"from outcome string", nil, pb.Outcome_CRITICAL_SUCCESS.String(), true},
 		{"from outcome short string", nil, "CRITICAL_SUCCESS", true},
 		{"neither", nil, "ROLL_WITH_HOPE", false},
-		{"wrong type in data", map[string]any{"crit": "yes"}, pb.Outcome_CRITICAL_SUCCESS.String(), true},
+		{"wrong type in data", map[string]any{sdKeyCrit: "yes"}, pb.Outcome_CRITICAL_SUCCESS.String(), true},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

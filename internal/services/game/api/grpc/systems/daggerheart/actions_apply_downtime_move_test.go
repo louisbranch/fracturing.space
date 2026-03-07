@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -49,7 +48,7 @@ func TestApplyDowntimeMove_CampaignNotFound(t *testing.T) {
 	_, err := svc.ApplyDowntimeMove(ctx, &pb.DaggerheartApplyDowntimeMoveRequest{
 		CampaignId: "nonexistent", CharacterId: "ch1",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestApplyDowntimeMove_MissingSessionId(t *testing.T) {
@@ -82,24 +81,11 @@ func TestApplyDowntimeMove_UnspecifiedMove(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestApplyDowntimeMove_RequiresDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	ctx := contextWithSessionID("sess-1")
-	_, err := svc.ApplyDowntimeMove(ctx, &pb.DaggerheartApplyDowntimeMoveRequest{
-		CampaignId:  "camp-1",
-		CharacterId: "char-1",
-		Move: &pb.DaggerheartDowntimeRequest{
-			Move: pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS,
-		},
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestApplyDowntimeMove_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	current := dhStore.States["camp-1:char-1"]
 	profile := dhStore.Profiles["camp-1:char-1"]
@@ -182,7 +168,7 @@ func TestApplyDowntimeMove_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	current := dhStore.States["camp-1:char-1"]
 	profile := dhStore.Profiles["camp-1:char-1"]

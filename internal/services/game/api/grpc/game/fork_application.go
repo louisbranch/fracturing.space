@@ -11,6 +11,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -119,13 +120,10 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 	applier := a.stores.Applier()
-	if a.stores.Domain == nil {
-		return storage.CampaignRecord{}, nil, 0, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
@@ -138,8 +136,8 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 			EntityID:     f.NewCampaignID,
 			PayloadJSON:  campaignJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErrMessage: "apply campaign.created",
+		domainwrite.Options{
+			ApplyErrMessage: "apply campaign.created",
 		},
 	)
 	if err != nil {
@@ -162,7 +160,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
@@ -175,8 +173,8 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 			EntityID:     f.NewCampaignID,
 			PayloadJSON:  forkJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErrMessage: "apply campaign.forked",
+		domainwrite.Options{
+			ApplyErrMessage: "apply campaign.forked",
 		},
 	)
 	if err != nil {
@@ -211,8 +209,8 @@ func (a forkApplication) copyForkEvents(ctx context.Context, sourceCampaignID, f
 		return time.Time{}, nil
 	}
 
-	inlineApplyEnabled := writeRuntime.InlineApplyEnabled()
-	shouldApply := writeRuntime.ShouldApply()
+	inlineApplyEnabled := a.stores.WriteRuntime.InlineApplyEnabled()
+	shouldApply := a.stores.WriteRuntime.ShouldApply()
 
 	afterSeq := uint64(0)
 	var lastEventAt time.Time

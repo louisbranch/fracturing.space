@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -65,7 +64,7 @@ func TestSessionReactionFlow_MissingTrait(t *testing.T) {
 func TestSessionReactionFlow_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-reaction-1",
@@ -73,9 +72,9 @@ func TestSessionReactionFlow_Success(t *testing.T) {
 		Results:   map[string]any{"d20": 12},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_REACTION.String(),
-			"hope_fear":    false,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    pb.RollKind_ROLL_KIND_REACTION.String(),
+			sdKeyHopeFear:    false,
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -154,12 +153,12 @@ func TestSessionReactionFlow_ForwardsAdvantageDisadvantage(t *testing.T) {
 		},
 		Outcome: pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_REACTION.String(),
-			"hope_fear":    false,
-			"advantage":    0,
-			"disadvantage": 0,
-			"outcome":      pb.Outcome_SUCCESS_WITH_HOPE.String(),
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    pb.RollKind_ROLL_KIND_REACTION.String(),
+			sdKeyHopeFear:    false,
+			"advantage":      0,
+			"disadvantage":   0,
+			sdKeyOutcome:     pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -181,7 +180,7 @@ func TestSessionReactionFlow_ForwardsAdvantageDisadvantage(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.roll_resolved"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-reaction-forward-adv",
@@ -194,7 +193,7 @@ func TestSessionReactionFlow_ForwardsAdvantageDisadvantage(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.outcome_applied"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-reaction-forward-adv",

@@ -7,9 +7,9 @@ import (
 )
 
 func (s *DaggerheartService) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamageRequest) (*pb.DaggerheartApplyDamageResponse, error) {
-	return newDamageApplication(s).runApplyDamage(ctx, in)
+	return s.runApplyDamage(ctx, in)
 }
 
 func (s *DaggerheartService) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartApplyAdversaryDamageRequest) (*pb.DaggerheartApplyAdversaryDamageResponse, error) {
-	return newDamageApplication(s).runApplyAdversaryDamage(ctx, in)
+	return s.runApplyAdversaryDamage(ctx, in)
 }

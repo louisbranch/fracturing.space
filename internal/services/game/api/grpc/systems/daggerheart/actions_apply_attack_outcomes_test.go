@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -20,7 +19,7 @@ import (
 func TestSessionAttackFlow_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-attack-1",
@@ -28,10 +27,10 @@ func TestSessionAttackFlow_Success(t *testing.T) {
 		Results:   map[string]any{"d20": 8},
 		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    false,
-			"gm_move":      false,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+			sdKeyHopeFear:    false,
+			"gm_move":        false,
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -110,22 +109,22 @@ func TestSessionAdversaryAttackFlow_Success(t *testing.T) {
 		RollSeq:   1,
 		Results: map[string]any{
 			"rolls":        []int{1},
-			"roll":         1,
-			"modifier":     0,
-			"total":        1,
+			sdKeyRoll:      1,
+			sdKeyModifier:  0,
+			sdKeyTotal:     1,
 			"advantage":    0,
 			"disadvantage": 0,
 		},
 		Outcome: pb.Outcome_FAILURE_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "adv-1",
-			"adversary_id": "adv-1",
-			"roll_kind":    "adversary_roll",
-			"roll":         1,
-			"modifier":     0,
-			"total":        1,
-			"advantage":    0,
-			"disadvantage": 0,
+			sdKeyCharacterID: "adv-1",
+			sdKeyAdversaryID: "adv-1",
+			sdKeyRollKind:    "adversary_roll",
+			sdKeyRoll:        1,
+			sdKeyModifier:    0,
+			sdKeyTotal:       1,
+			"advantage":      0,
+			"disadvantage":   0,
 		},
 	}
 	rollPayloadJSON, err := json.Marshal(rollPayload)
@@ -138,7 +137,7 @@ func TestSessionAdversaryAttackFlow_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("action.roll_resolved"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-adv-attack-1",
@@ -184,9 +183,9 @@ func TestSessionGroupActionFlow_Success(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    false,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+			sdKeyHopeFear:    false,
 		},
 	})
 	if err != nil {
@@ -201,7 +200,7 @@ func TestSessionGroupActionFlow_Success(t *testing.T) {
 		t.Fatalf("encode outcome payload: %v", err)
 	}
 
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
@@ -263,9 +262,9 @@ func TestSessionTagTeamFlow_Success(t *testing.T) {
 		Results:   map[string]any{"d20": 18},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    false,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+			sdKeyHopeFear:    false,
 		},
 	})
 	if err != nil {
@@ -280,7 +279,7 @@ func TestSessionTagTeamFlow_Success(t *testing.T) {
 		t.Fatalf("encode outcome payload: %v", err)
 	}
 
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
@@ -340,9 +339,9 @@ func TestSessionGroupActionFlow_UsesDomainEngine(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    false,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+			sdKeyHopeFear:    false,
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -363,7 +362,7 @@ func TestSessionGroupActionFlow_UsesDomainEngine(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.roll_resolved"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-group-action",
@@ -376,7 +375,7 @@ func TestSessionGroupActionFlow_UsesDomainEngine(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.outcome_applied"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-group-action",
@@ -426,9 +425,9 @@ func TestSessionTagTeamFlow_UsesDomainEngine(t *testing.T) {
 		Results:   map[string]any{"d20": 18},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    false,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+			sdKeyHopeFear:    false,
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -449,7 +448,7 @@ func TestSessionTagTeamFlow_UsesDomainEngine(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.roll_resolved"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-tag-team",
@@ -462,7 +461,7 @@ func TestSessionTagTeamFlow_UsesDomainEngine(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.outcome_applied"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-tag-team",
@@ -503,7 +502,7 @@ func TestSessionTagTeamFlow_UsesDomainEngine(t *testing.T) {
 func TestApplyAttackOutcome_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-atk-outcome-1",
@@ -511,9 +510,9 @@ func TestApplyAttackOutcome_Success(t *testing.T) {
 		Results:   map[string]any{"d20": 18},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    true,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+			sdKeyHopeFear:    true,
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -567,29 +566,29 @@ func TestApplyAttackOutcome_Success(t *testing.T) {
 func TestApplyAdversaryAttackOutcome_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-adv-atk-outcome-1",
 		RollSeq:   1,
 		Results: map[string]any{
 			"rolls":        []int{3},
-			"roll":         3,
-			"modifier":     0,
-			"total":        3,
+			sdKeyRoll:      3,
+			sdKeyModifier:  0,
+			sdKeyTotal:     3,
 			"advantage":    0,
 			"disadvantage": 0,
 		},
 		Outcome: pb.Outcome_FAILURE_WITH_FEAR.String(),
 		SystemData: map[string]any{
-			"character_id": "adv-1",
-			"adversary_id": "adv-1",
-			"roll_kind":    "adversary_roll",
-			"roll":         3,
-			"modifier":     0,
-			"total":        3,
-			"advantage":    0,
-			"disadvantage": 0,
+			sdKeyCharacterID: "adv-1",
+			sdKeyAdversaryID: "adv-1",
+			sdKeyRollKind:    "adversary_roll",
+			sdKeyRoll:        3,
+			sdKeyModifier:    0,
+			sdKeyTotal:       3,
+			"advantage":      0,
+			"disadvantage":   0,
 		},
 	}
 	rollPayloadJSON, err := json.Marshal(rollPayload)

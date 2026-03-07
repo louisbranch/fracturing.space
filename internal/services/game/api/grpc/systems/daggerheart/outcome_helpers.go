@@ -9,6 +9,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -95,12 +96,7 @@ func (s *DaggerheartService) executeAndApplyDaggerheartSystemCommand(ctx context
 		EntityID:      in.entityID,
 		PayloadJSON:   in.payloadJSON,
 	})
-	_, err := s.executeAndApplyDomainCommand(ctx, cmd, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: in.missingEventMsg,
-		applyErrMessage: in.applyErrMessage,
-		executeErrMsg:   "execute domain command",
-	})
+	_, err := s.executeAndApplyDomainCommand(ctx, cmd, adapter, domainwrite.RequireEventsWithDiagnostics(in.missingEventMsg, in.applyErrMessage))
 	if err != nil {
 		return err
 	}
@@ -149,38 +145,46 @@ func (s *DaggerheartService) buildApplyRollOutcomeIdempotentResponse(
 	return response, nil
 }
 
-func (s *DaggerheartService) buildGMConsequenceOutcomeEffects(
+// gmConsequenceResolution describes what gate/spotlight changes are needed
+// when a GM consequence triggers. Both buildGMConsequenceOutcomeEffects and
+// openGMConsequenceGate share this resolution to avoid duplicate logic.
+type gmConsequenceResolution struct {
+	needsGate            bool
+	gateID               string
+	gatePayloadJSON      []byte
+	needsSpotlight       bool
+	spotlightPayloadJSON []byte
+}
+
+func (s *DaggerheartService) resolveGMConsequence(
 	ctx context.Context,
-	campaignID string,
-	sessionID string,
+	campaignID, sessionID string,
 	rollSeq uint64,
 	rollRequestID string,
-) ([]action.OutcomeAppliedEffect, error) {
-	if s.stores.SessionGate == nil {
-		return nil, status.Error(codes.Internal, "session gate store is not configured")
-	}
-	if s.stores.SessionSpotlight == nil {
-		return nil, status.Error(codes.Internal, "session spotlight store is not configured")
+) (gmConsequenceResolution, error) {
+	if err := s.requireDependencies(dependencySessionGateStore, dependencySessionSpotlightStore); err != nil {
+		return gmConsequenceResolution{}, err
 	}
 
-	effects := make([]action.OutcomeAppliedEffect, 0, 2)
+	var res gmConsequenceResolution
 
+	// Check whether a session gate is already open.
 	gateOpen := false
 	if _, err := s.stores.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID); err == nil {
 		gateOpen = true
 	} else if !errors.Is(err, storage.ErrNotFound) {
-		return nil, status.Errorf(codes.Internal, "check session gate: %v", err)
+		return res, status.Errorf(codes.Internal, "check session gate: %v", err)
 	}
 	if !gateOpen {
 		gateID, err := id.NewID()
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "generate gate id: %v", err)
+			return res, status.Errorf(codes.Internal, "generate gate id: %v", err)
 		}
 		gateType, err := session.NormalizeGateType("gm_consequence")
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "normalize gate type: %v", err)
+			return res, status.Errorf(codes.Internal, "normalize gate type: %v", err)
 		}
-		gatePayload := session.GateOpenedPayload{
+		payload := session.GateOpenedPayload{
 			GateID:   gateID,
 			GateType: gateType,
 			Reason:   "gm_consequence",
@@ -189,25 +193,23 @@ func (s *DaggerheartService) buildGMConsequenceOutcomeEffects(
 				"request_id": rollRequestID,
 			},
 		}
-		payloadJSON, err := json.Marshal(gatePayload)
+		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "encode session gate payload: %v", err)
+			return res, status.Errorf(codes.Internal, "encode session gate payload: %v", err)
 		}
-		effects = append(effects, action.OutcomeAppliedEffect{
-			Type:        "session.gate_opened",
-			EntityType:  "session_gate",
-			EntityID:    gateID,
-			PayloadJSON: payloadJSON,
-		})
+		res.needsGate = true
+		res.gateID = gateID
+		res.gatePayloadJSON = payloadJSON
 	}
 
+	// Check whether the spotlight is already GM-focused.
 	spotlight, err := s.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
 	if err == nil {
 		if spotlight.SpotlightType == session.SpotlightTypeGM && strings.TrimSpace(spotlight.CharacterID) == "" {
-			return effects, nil
+			return res, nil
 		}
 	} else if !errors.Is(err, storage.ErrNotFound) {
-		return nil, status.Errorf(codes.Internal, "check session spotlight: %v", err)
+		return res, status.Errorf(codes.Internal, "check session spotlight: %v", err)
 	}
 
 	spotlightPayload := session.SpotlightSetPayload{
@@ -215,59 +217,52 @@ func (s *DaggerheartService) buildGMConsequenceOutcomeEffects(
 	}
 	payloadJSON, err := json.Marshal(spotlightPayload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode spotlight payload: %v", err)
+		return res, status.Errorf(codes.Internal, "encode spotlight payload: %v", err)
 	}
-	effects = append(effects, action.OutcomeAppliedEffect{
-		Type:        "session.spotlight_set",
-		EntityType:  "session_spotlight",
-		EntityID:    sessionID,
-		PayloadJSON: payloadJSON,
-	})
+	res.needsSpotlight = true
+	res.spotlightPayloadJSON = payloadJSON
+	return res, nil
+}
 
+func (s *DaggerheartService) buildGMConsequenceOutcomeEffects(
+	ctx context.Context,
+	campaignID string,
+	sessionID string,
+	rollSeq uint64,
+	rollRequestID string,
+) ([]action.OutcomeAppliedEffect, error) {
+	res, err := s.resolveGMConsequence(ctx, campaignID, sessionID, rollSeq, rollRequestID)
+	if err != nil {
+		return nil, err
+	}
+
+	effects := make([]action.OutcomeAppliedEffect, 0, 2)
+	if res.needsGate {
+		effects = append(effects, action.OutcomeAppliedEffect{
+			Type:        "session.gate_opened",
+			EntityType:  "session_gate",
+			EntityID:    res.gateID,
+			PayloadJSON: res.gatePayloadJSON,
+		})
+	}
+	if res.needsSpotlight {
+		effects = append(effects, action.OutcomeAppliedEffect{
+			Type:        "session.spotlight_set",
+			EntityType:  "session_spotlight",
+			EntityID:    sessionID,
+			PayloadJSON: res.spotlightPayloadJSON,
+		})
+	}
 	return effects, nil
 }
 
 func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaignID, sessionID string, rollSeq uint64, rollRequestID string) error {
-	if s.stores.SessionGate == nil {
-		return status.Error(codes.Internal, "session gate store is not configured")
-	}
-	if s.stores.SessionSpotlight == nil {
-		return status.Error(codes.Internal, "session spotlight store is not configured")
-	}
-	if s.stores.Domain == nil {
-		return status.Error(codes.Internal, "domain engine is not configured")
+	res, err := s.resolveGMConsequence(ctx, campaignID, sessionID, rollSeq, rollRequestID)
+	if err != nil {
+		return err
 	}
 
-	gateOpen := false
-	if _, err := s.stores.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID); err == nil {
-		gateOpen = true
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		return status.Errorf(codes.Internal, "check session gate: %v", err)
-	}
-
-	if !gateOpen {
-		gateID, err := id.NewID()
-		if err != nil {
-			return status.Errorf(codes.Internal, "generate gate id: %v", err)
-		}
-		gateType, err := session.NormalizeGateType("gm_consequence")
-		if err != nil {
-			return status.Errorf(codes.Internal, "normalize gate type: %v", err)
-		}
-		metadata := map[string]any{
-			"roll_seq":   rollSeq,
-			"request_id": rollRequestID,
-		}
-		payload := session.GateOpenedPayload{
-			GateID:   gateID,
-			GateType: gateType,
-			Reason:   "gm_consequence",
-			Metadata: metadata,
-		}
-		payloadJSON, err := json.Marshal(payload)
-		if err != nil {
-			return status.Errorf(codes.Internal, "encode session gate payload: %v", err)
-		}
+	if res.needsGate {
 		gateApplier := s.stores.Applier()
 		gateCmd := commandbuild.CoreSystem(commandbuild.CoreSystemInput{
 			CampaignID:   campaignID,
@@ -276,55 +271,29 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 			RequestID:    rollRequestID,
 			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 			EntityType:   "session_gate",
-			EntityID:     gateID,
-			PayloadJSON:  payloadJSON,
+			EntityID:     res.gateID,
+			PayloadJSON:  res.gatePayloadJSON,
 		})
-		_, err = s.executeAndApplyDomainCommand(ctx, gateCmd, gateApplier, domainCommandApplyOptions{
-			requireEvents:   true,
-			missingEventMsg: "session gate open did not emit an event",
-			applyErrMessage: "apply session gate event",
-			executeErrMsg:   "execute domain command",
-		})
-		if err != nil {
+		if _, err := s.executeAndApplyDomainCommand(ctx, gateCmd, gateApplier, domainwrite.RequireEventsWithDiagnostics("session gate open did not emit an event", "apply session gate event")); err != nil {
 			return err
 		}
 	}
 
-	spotlight, err := s.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
-	if err == nil {
-		if spotlight.SpotlightType == session.SpotlightTypeGM && strings.TrimSpace(spotlight.CharacterID) == "" {
-			return nil
+	if res.needsSpotlight {
+		spotlightApplier := s.stores.Applier()
+		spotlightCmd := commandbuild.CoreSystem(commandbuild.CoreSystemInput{
+			CampaignID:   campaignID,
+			Type:         commandTypeSessionSpotlightSet,
+			SessionID:    sessionID,
+			RequestID:    rollRequestID,
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "session_spotlight",
+			EntityID:     sessionID,
+			PayloadJSON:  res.spotlightPayloadJSON,
+		})
+		if _, err := s.executeAndApplyDomainCommand(ctx, spotlightCmd, spotlightApplier, domainwrite.RequireEventsWithDiagnostics("session spotlight set did not emit an event", "apply spotlight event")); err != nil {
+			return err
 		}
-	} else if !errors.Is(err, storage.ErrNotFound) {
-		return status.Errorf(codes.Internal, "check session spotlight: %v", err)
-	}
-
-	spotlightPayload := session.SpotlightSetPayload{
-		SpotlightType: string(session.SpotlightTypeGM),
-	}
-	spotlightPayloadJSON, err := json.Marshal(spotlightPayload)
-	if err != nil {
-		return status.Errorf(codes.Internal, "encode spotlight payload: %v", err)
-	}
-	spotlightApplier := s.stores.Applier()
-	spotlightCmd := commandbuild.CoreSystem(commandbuild.CoreSystemInput{
-		CampaignID:   campaignID,
-		Type:         commandTypeSessionSpotlightSet,
-		SessionID:    sessionID,
-		RequestID:    rollRequestID,
-		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-		EntityType:   "session_spotlight",
-		EntityID:     sessionID,
-		PayloadJSON:  spotlightPayloadJSON,
-	})
-	_, err = s.executeAndApplyDomainCommand(ctx, spotlightCmd, spotlightApplier, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "session spotlight set did not emit an event",
-		applyErrMessage: "apply spotlight event",
-		executeErrMsg:   "execute domain command",
-	})
-	if err != nil {
-		return err
 	}
 
 	return nil

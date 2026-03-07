@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -19,19 +20,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type outcomeApplication struct {
-	service *DaggerheartService
-}
-
-func newOutcomeApplication(service *DaggerheartService) outcomeApplication {
-	return outcomeApplication{service: service}
-}
-
-func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeRequest) (*pb.ApplyRollOutcomeResponse, error) {
+func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.ApplyRollOutcomeRequest) (*pb.ApplyRollOutcomeResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply roll outcome request is required")
 	}
-	if err := a.service.requireDependencies(
+	if err := s.requireDependencies(
 		dependencyCampaignStore,
 		dependencySessionStore,
 		dependencyDaggerheartStore,
@@ -56,7 +49,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 		return nil, status.Error(codes.InvalidArgument, "roll seq is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -67,7 +60,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart outcomes")
 	}
 
-	sess, err := a.service.stores.Session.GetSession(ctx, campaignID, sessionID)
+	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -75,7 +68,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
 
-	rollEvent, err := a.service.stores.Event.GetEventBySeq(ctx, campaignID, in.GetRollSeq())
+	rollEvent, err := s.stores.Event.GetEventBySeq(ctx, campaignID, in.GetRollSeq())
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -102,7 +95,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 
 	rollSystemData := rollPayload.SystemData
 	rollKind := rollKindFromSystemData(rollSystemData)
-	generateHopeFear := boolFromSystemData(rollSystemData, "hope_fear", rollKind != pb.RollKind_ROLL_KIND_REACTION)
+	generateHopeFear := boolFromSystemData(rollSystemData, sdKeyHopeFear, rollKind != pb.RollKind_ROLL_KIND_REACTION)
 	triggerGMMove := boolFromSystemData(rollSystemData, "gm_move", rollKind != pb.RollKind_ROLL_KIND_REACTION)
 	rollOutcome := outcomeFromSystemData(rollSystemData, rollPayload.Outcome)
 	if rollOutcome == "" {
@@ -119,7 +112,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 
 	targets := normalizeTargets(in.GetTargets())
 	if len(targets) == 0 {
-		rollerID := stringFromSystemData(rollSystemData, "character_id")
+		rollerID := stringFromSystemData(rollSystemData, sdKeyCharacterID)
 		if strings.TrimSpace(rollerID) == "" {
 			return nil, status.Error(codes.InvalidArgument, "targets are required")
 		}
@@ -127,24 +120,24 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 	}
 
 	gmFearDelta := 0
-	if triggerGMMove && flavor == "FEAR" && !crit {
+	if triggerGMMove && flavor == outcomeFlavorFear && !crit {
 		gmFearDelta = len(targets)
 	}
-	requiresComplication := flavor == "FEAR" && !crit && triggerGMMove
+	requiresComplication := flavor == outcomeFlavorFear && !crit && triggerGMMove
 
-	alreadyApplied, err := a.service.outcomeAlreadyAppliedForSessionRequest(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID)
+	alreadyApplied, err := s.outcomeAlreadyAppliedForSessionRequest(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "check outcome applied: %v", err)
 	}
 	if alreadyApplied {
 		if requiresComplication {
-			if err := a.service.openGMConsequenceGate(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID); err != nil {
+			if err := s.openGMConsequenceGate(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID); err != nil {
 				return nil, err
 			}
 		}
-		return a.service.buildApplyRollOutcomeIdempotentResponse(ctx, campaignID, in.GetRollSeq(), targets, requiresComplication, gmFearDelta > 0)
+		return s.buildApplyRollOutcomeIdempotentResponse(ctx, campaignID, in.GetRollSeq(), targets, requiresComplication, gmFearDelta > 0)
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -154,7 +147,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 
 	gmFearAlreadyApplied := false
 	if gmFearDelta > 0 {
-		gmFearAlreadyApplied, err = a.service.sessionRequestEventExists(
+		gmFearAlreadyApplied, err = s.sessionRequestEventExists(
 			ctx,
 			campaignID,
 			sessionID,
@@ -169,7 +162,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 	}
 
 	if gmFearDelta > 0 && !gmFearAlreadyApplied {
-		currentSnap, err := a.service.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+		currentSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Errorf(codes.Internal, "load gm fear: %v", err)
 		}
@@ -185,7 +178,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 			return nil, status.Errorf(codes.Internal, "encode gm fear payload: %v", err)
 		}
 
-		if err := a.service.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
+		if err := s.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
 			campaignID:      campaignID,
 			commandType:     commandTypeDaggerheartGMFearSet,
 			sessionID:       sessionID,
@@ -205,11 +198,11 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 	}
 
 	for _, target := range targets {
-		profile, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, target)
+		profile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, target)
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
-		state, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, target)
+		state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, target)
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
@@ -222,7 +215,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 		}
 		hopeAfter := hopeBefore
 		stressAfter := stressBefore
-		if generateHopeFear && flavor == "HOPE" {
+		if generateHopeFear && flavor == outcomeFlavorHope {
 			hopeAfter = clamp(hopeBefore+1, daggerheart.HopeMin, hopeMax)
 		}
 		if generateHopeFear && crit {
@@ -230,7 +223,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 		}
 
 		if hopeAfter != hopeBefore || stressAfter != stressBefore {
-			characterPatchAlreadyApplied, err := a.service.sessionRequestEventExists(
+			characterPatchAlreadyApplied, err := s.sessionRequestEventExists(
 				ctx,
 				campaignID,
 				sessionID,
@@ -254,7 +247,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 				if err != nil {
 					return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
 				}
-				if err := a.service.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
+				if err := s.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
 					campaignID:      campaignID,
 					commandType:     commandTypeDaggerheartCharacterStatePatch,
 					sessionID:       sessionID,
@@ -271,7 +264,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 				}
 			}
 			rollSeq := in.GetRollSeq()
-			err = a.service.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
+			err = s.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
 				campaignID:    campaignID,
 				sessionID:     sessionID,
 				characterID:   target,
@@ -303,7 +296,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 	}
 
 	if requiresComplication {
-		postEffects, err = a.service.buildGMConsequenceOutcomeEffects(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID)
+		postEffects, err = s.buildGMConsequenceOutcomeEffects(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID)
 		if err != nil {
 			return nil, err
 		}
@@ -333,10 +326,10 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 		EntityID:      rollRequestID,
 		PayloadJSON:   payloadJSON,
 	})
-	_, err = a.service.executeAndApplyDomainCommand(ctx, cmd, a.service.stores.Applier(), domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "outcome did not emit an event",
-		executeErrMsg:   "execute domain command",
+	_, err = s.executeAndApplyDomainCommand(ctx, cmd, s.stores.Applier(), domainwrite.Options{
+		RequireEvents:     true,
+		MissingEventMsg:   "outcome did not emit an event",
+		ExecuteErrMessage: "execute domain command",
 	})
 	if err != nil {
 		return nil, err
@@ -350,7 +343,7 @@ func (a outcomeApplication) runApplyRollOutcome(ctx context.Context, in *pb.Appl
 		},
 	}
 	if gmFearDelta > 0 {
-		currentSnap, err := a.service.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+		currentSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "load gm fear snapshot: %v", err)
 		}

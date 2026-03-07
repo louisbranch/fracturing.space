@@ -7,6 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -16,26 +17,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type damageApplication struct {
-	service *DaggerheartService
-}
-
-func newDamageApplication(service *DaggerheartService) damageApplication {
-	return damageApplication{service: service}
-}
-
-func (a damageApplication) runApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamageRequest) (*pb.DaggerheartApplyDamageResponse, error) {
+func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamageRequest) (*pb.DaggerheartApplyDamageResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply damage request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
@@ -46,7 +33,7 @@ func (a damageApplication) runApplyDamage(ctx context.Context, in *pb.Daggerhear
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -61,7 +48,7 @@ func (a damageApplication) runApplyDamage(ctx context.Context, in *pb.Daggerhear
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -75,11 +62,11 @@ func (a damageApplication) runApplyDamage(ctx context.Context, in *pb.Daggerhear
 		return nil, status.Error(codes.InvalidArgument, "damage_type is required")
 	}
 
-	profile, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	profile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
-	state, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -104,7 +91,7 @@ func (a damageApplication) runApplyDamage(ctx context.Context, in *pb.Daggerhear
 		return nil, status.Error(codes.InvalidArgument, "roll_seq is required when require_damage_roll is true")
 	}
 	if rollSeq != nil {
-		rollEvent, err := a.service.stores.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
+		rollEvent, err := s.stores.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
@@ -115,8 +102,8 @@ func (a damageApplication) runApplyDamage(ctx context.Context, in *pb.Daggerhear
 		if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
 			return nil, status.Errorf(codes.Internal, "decode damage roll payload: %v", err)
 		}
-		rollCharacterID := stringFromSystemData(rollPayload.SystemData, "character_id")
-		if stringFromSystemData(rollPayload.SystemData, "roll_kind") != "damage_roll" {
+		rollCharacterID := stringFromSystemData(rollPayload.SystemData, sdKeyCharacterID)
+		if stringFromSystemData(rollPayload.SystemData, sdKeyRollKind) != "damage_roll" {
 			return nil, status.Error(codes.InvalidArgument, "roll_seq does not reference a damage roll")
 		}
 		if rollCharacterID != characterID && !containsString(sourceCharacterIDs, rollCharacterID) {
@@ -148,10 +135,10 @@ func (a damageApplication) runApplyDamage(ctx context.Context, in *pb.Daggerhear
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartDamageApply,
 		ActorType:     command.ActorTypeSystem,
@@ -163,17 +150,12 @@ func (a damageApplication) runApplyDamage(ctx context.Context, in *pb.Daggerhear
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "damage did not emit an event",
-		applyErrMessage: "apply damage event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("damage did not emit an event", "apply damage event"))
 	if err != nil {
 		return nil, err
 	}
 
-	updated, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
 	}
@@ -183,23 +165,13 @@ func (a damageApplication) runApplyDamage(ctx context.Context, in *pb.Daggerhear
 	}, nil
 }
 
-func (a damageApplication) runApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartApplyAdversaryDamageRequest) (*pb.DaggerheartApplyAdversaryDamageResponse, error) {
+func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartApplyAdversaryDamageRequest) (*pb.DaggerheartApplyAdversaryDamageResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply adversary damage request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -209,7 +181,7 @@ func (a damageApplication) runApplyAdversaryDamage(ctx context.Context, in *pb.D
 		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -224,7 +196,7 @@ func (a damageApplication) runApplyAdversaryDamage(ctx context.Context, in *pb.D
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -238,7 +210,7 @@ func (a damageApplication) runApplyAdversaryDamage(ctx context.Context, in *pb.D
 		return nil, status.Error(codes.InvalidArgument, "damage_type is required")
 	}
 
-	adversary, err := a.service.loadAdversaryForSession(ctx, campaignID, sessionID, adversaryID)
+	adversary, err := s.loadAdversaryForSession(ctx, campaignID, sessionID, adversaryID)
 	if err != nil {
 		return nil, err
 	}
@@ -263,7 +235,7 @@ func (a damageApplication) runApplyAdversaryDamage(ctx context.Context, in *pb.D
 		return nil, status.Error(codes.InvalidArgument, "roll_seq is required when require_damage_roll is true")
 	}
 	if rollSeq != nil {
-		rollEvent, err := a.service.stores.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
+		rollEvent, err := s.stores.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
@@ -274,11 +246,11 @@ func (a damageApplication) runApplyAdversaryDamage(ctx context.Context, in *pb.D
 		if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
 			return nil, status.Errorf(codes.Internal, "decode damage roll payload: %v", err)
 		}
-		if stringFromSystemData(rollPayload.SystemData, "roll_kind") != "damage_roll" {
+		if stringFromSystemData(rollPayload.SystemData, sdKeyRollKind) != "damage_roll" {
 			return nil, status.Error(codes.InvalidArgument, "roll_seq does not reference a damage roll")
 		}
 		if len(sourceCharacterIDs) > 0 {
-			rollCharacterID := stringFromSystemData(rollPayload.SystemData, "character_id")
+			rollCharacterID := stringFromSystemData(rollPayload.SystemData, sdKeyCharacterID)
 			if !containsString(sourceCharacterIDs, rollCharacterID) {
 				return nil, status.Error(codes.InvalidArgument, "roll_seq does not match source character")
 			}
@@ -310,10 +282,10 @@ func (a damageApplication) runApplyAdversaryDamage(ctx context.Context, in *pb.D
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartAdversaryDamageApply,
 		ActorType:     command.ActorTypeSystem,
@@ -325,17 +297,12 @@ func (a damageApplication) runApplyAdversaryDamage(ctx context.Context, in *pb.D
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "adversary damage did not emit an event",
-		applyErrMessage: "apply adversary damage event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("adversary damage did not emit an event", "apply adversary damage event"))
 	if err != nil {
 		return nil, err
 	}
 
-	updated, err := a.service.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart adversary: %v", err)
 	}

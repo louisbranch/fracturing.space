@@ -105,10 +105,7 @@ func TestCreateCampaign_NilRequest(t *testing.T) {
 }
 
 func TestCreateCampaign_MissingSystem(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore})
+	svc := NewCampaignService(newTestStores().build())
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		GmMode: statev1.GmMode_HUMAN,
@@ -117,10 +114,7 @@ func TestCreateCampaign_MissingSystem(t *testing.T) {
 }
 
 func TestCreateCampaign_EmptyName(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore})
+	svc := NewCampaignService(newTestStores().build())
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -130,10 +124,7 @@ func TestCreateCampaign_EmptyName(t *testing.T) {
 }
 
 func TestCreateCampaign_MissingGmMode(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore})
+	svc := NewCampaignService(newTestStores().build())
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -142,10 +133,7 @@ func TestCreateCampaign_MissingGmMode(t *testing.T) {
 }
 
 func TestCreateCampaign_MissingCreatorUserID(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
-	svc := NewCampaignServiceWithAuth(Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore}, &fakeAuthClient{})
+	svc := NewCampaignServiceWithAuth(newTestStores().build(), &fakeAuthClient{})
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -155,11 +143,8 @@ func TestCreateCampaign_MissingCreatorUserID(t *testing.T) {
 }
 
 func TestCreateCampaign_RequiresDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore},
+		stores:      newTestStores().build(),
 		clock:       fixedClock(time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
 	}
@@ -174,12 +159,10 @@ func TestCreateCampaign_RequiresDomainEngine(t *testing.T) {
 }
 
 func TestCreateCampaign_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{
-		store: eventStore,
+		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
 			command.Type("campaign.create"): {
 				Decision: command.Accept(event.Event{
@@ -206,7 +189,7 @@ func TestCreateCampaign_Success(t *testing.T) {
 		},
 	}
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore, Domain: domain},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
 	}
@@ -249,18 +232,18 @@ func TestCreateCampaign_Success(t *testing.T) {
 	if resp.OwnerParticipant.UserId != "user-123" {
 		t.Errorf("OwnerParticipant UserId = %q, want %q", resp.OwnerParticipant.UserId, "user-123")
 	}
-	if got := len(eventStore.events["campaign-123"]); got != 2 {
+	if got := len(ts.Event.events["campaign-123"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)
 	}
-	if eventStore.events["campaign-123"][0].Type != event.Type("campaign.created") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][0].Type, event.Type("campaign.created"))
+	if ts.Event.events["campaign-123"][0].Type != event.Type("campaign.created") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["campaign-123"][0].Type, event.Type("campaign.created"))
 	}
-	if eventStore.events["campaign-123"][1].Type != event.Type("participant.joined") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][1].Type, event.Type("participant.joined"))
+	if ts.Event.events["campaign-123"][1].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["campaign-123"][1].Type, event.Type("participant.joined"))
 	}
 
 	// Verify persisted
-	stored, err := campaignStore.Get(context.Background(), "campaign-123")
+	stored, err := ts.Campaign.Get(context.Background(), "campaign-123")
 	if err != nil {
 		t.Fatalf("Campaign not persisted: %v", err)
 	}
@@ -270,13 +253,11 @@ func TestCreateCampaign_Success(t *testing.T) {
 }
 
 func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{
-		store: eventStore,
+		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
 			command.Type("campaign.create"): {
 				Decision: command.Accept(event.Event{
@@ -304,12 +285,7 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 	}
 
 	svc := &CampaignService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Event:       eventStore,
-			Participant: participantStore,
-			Domain:      domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
 	}
@@ -345,14 +321,14 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 	if domain.commands[1].Type != command.Type("participant.join") {
 		t.Fatalf("second command type = %s, want %s", domain.commands[1].Type, "participant.join")
 	}
-	if got := len(eventStore.events["campaign-123"]); got != 2 {
+	if got := len(ts.Event.events["campaign-123"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)
 	}
-	if eventStore.events["campaign-123"][0].Type != event.Type("campaign.created") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][0].Type, event.Type("campaign.created"))
+	if ts.Event.events["campaign-123"][0].Type != event.Type("campaign.created") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["campaign-123"][0].Type, event.Type("campaign.created"))
 	}
-	if eventStore.events["campaign-123"][1].Type != event.Type("participant.joined") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-123"][1].Type, event.Type("participant.joined"))
+	if ts.Event.events["campaign-123"][1].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["campaign-123"][1].Type, event.Type("participant.joined"))
 	}
 }
 
@@ -379,9 +355,7 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			campaignStore := newFakeCampaignStore()
-			eventStore := newFakeEventStore()
-			participantStore := newFakeParticipantStore()
+			ts := newTestStores()
 			now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 			campaignPayload := fmt.Sprintf(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"%s","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`,
@@ -389,7 +363,7 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 			ownerJoinResultPayload := fmt.Sprintf(`{"participant_id":"participant-owner","user_id":"user-123","name":"Owner","role":"%s","controller":"HUMAN","campaign_access":"OWNER"}`,
 				tc.wantOwnerRole)
 			domain := &fakeDomainEngine{
-				store: eventStore,
+				store: ts.Event,
 				resultsByType: map[command.Type]engine.Result{
 					command.Type("campaign.create"): {
 						Decision: command.Accept(event.Event{
@@ -416,7 +390,7 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 				},
 			}
 			svc := &CampaignService{
-				stores:      Stores{Campaign: campaignStore, Event: eventStore, Participant: participantStore, Domain: domain},
+				stores:      ts.withDomain(domain).build(),
 				clock:       fixedClock(now),
 				idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
 			}
@@ -501,12 +475,10 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 }
 
 func TestCreateCampaign_OwnerParticipantHydratesFromSocialProfile(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("campaign.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "campaign-123",
@@ -538,14 +510,10 @@ func TestCreateCampaign_OwnerParticipantHydratesFromSocialProfile(t *testing.T) 
 		AvatarAssetId: "social-avatar",
 	}}
 
+	stores := ts.withDomain(domain).build()
+	stores.Social = socialClient
 	svc := &CampaignService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Event:       eventStore,
-			Participant: participantStore,
-			Domain:      domain,
-			Social:      socialClient,
-		},
+		stores:      stores,
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
 	}
@@ -585,12 +553,10 @@ func TestCreateCampaign_OwnerParticipantHydratesFromSocialProfile(t *testing.T) 
 }
 
 func TestCreateCampaign_OwnerParticipantFallsBackToDefaultPronounsWhenSocialPronounsMissing(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("campaign.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "campaign-123",
@@ -621,14 +587,10 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultPronounsWhenSocialPron
 		AvatarAssetId: "social-avatar",
 	}}
 
+	stores := ts.withDomain(domain).build()
+	stores.Social = socialClient
 	svc := &CampaignService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Event:       eventStore,
-			Participant: participantStore,
-			Domain:      domain,
-			Social:      socialClient,
-		},
+		stores:      stores,
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
 	}
@@ -652,12 +614,10 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultPronounsWhenSocialPron
 }
 
 func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameWithoutSocialOrAuth(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("campaign.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "campaign-123",
@@ -683,12 +643,7 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameWithoutSocialOrAut
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Event:       eventStore,
-			Participant: participantStore,
-			Domain:      domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
 	}
@@ -724,12 +679,10 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameWithoutSocialOrAut
 }
 
 func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameForLocale(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("campaign.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "campaign-123",
@@ -755,12 +708,7 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameForLocale(t *testi
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Event:       eventStore,
-			Participant: participantStore,
-			Domain:      domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
 	}
@@ -788,12 +736,10 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameForLocale(t *testi
 }
 
 func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("campaign.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "campaign-123",
@@ -819,12 +765,7 @@ func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Event:       eventStore,
-			Participant: participantStore,
-			Domain:      domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
 	}
@@ -873,9 +814,7 @@ func TestListCampaigns_NilRequest(t *testing.T) {
 }
 
 func TestListCampaigns_DeniesMissingIdentity(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	svc := NewCampaignService(newTestStores().build())
 
 	resp, err := svc.ListCampaigns(context.Background(), &statev1.ListCampaignsRequest{})
 	if status.Code(err) != codes.PermissionDenied {
@@ -887,23 +826,23 @@ func TestListCampaigns_DeniesMissingIdentity(t *testing.T) {
 }
 
 func TestListCampaigns_AllowsAdminOverride(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
+	ts := newTestStores()
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Campaign One",
 		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: now,
 	}
-	campaignStore.campaigns["c2"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c2"] = storage.CampaignRecord{
 		ID:        "c2",
 		Name:      "Campaign Two",
 		Status:    campaign.StatusDraft,
 		GmMode:    campaign.GmModeAI,
 		CreatedAt: now,
 	}
-	svc := NewCampaignService(Stores{Campaign: campaignStore})
+	svc := NewCampaignService(ts.build())
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
@@ -929,8 +868,7 @@ func TestListCampaigns_AllowsAdminOverride(t *testing.T) {
 }
 
 func TestListCampaigns_DeniesAdminOverrideWithoutReason(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore})
+	svc := NewCampaignService(newTestStores().build())
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
@@ -940,17 +878,16 @@ func TestListCampaigns_DeniesAdminOverrideWithoutReason(t *testing.T) {
 }
 
 func TestListCampaigns_WithParticipantIdentity(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Campaign One",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		Status: campaign.StatusDraft,
 		GmMode: campaign.GmModeHuman,
 	}
-	campaignStore.campaigns["c2"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c2"] = storage.CampaignRecord{
 		ID:        "c2",
 		Name:      "Campaign Two",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -958,14 +895,14 @@ func TestListCampaigns_WithParticipantIdentity(t *testing.T) {
 		GmMode:    campaign.GmModeAI,
 		CreatedAt: now,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "c1", UserID: "user-1", Name: "Alice"},
 	}
-	participantStore.participants["c2"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c2"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "c2", UserID: "user-1", Name: "Alice"},
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	svc := NewCampaignService(ts.build())
 
 	resp, err := svc.ListCampaigns(contextWithParticipantID("participant-1"), &statev1.ListCampaignsRequest{})
 	if err != nil {
@@ -974,16 +911,15 @@ func TestListCampaigns_WithParticipantIdentity(t *testing.T) {
 	if len(resp.Campaigns) != 2 {
 		t.Errorf("ListCampaigns returned %d campaigns, want 2", len(resp.Campaigns))
 	}
-	if participantStore.listCampaignIDsByParticipantCalls != 1 {
-		t.Fatalf("ListCampaignIDsByParticipant calls = %d, want 1", participantStore.listCampaignIDsByParticipantCalls)
+	if ts.Participant.listCampaignIDsByParticipantCalls != 1 {
+		t.Fatalf("ListCampaignIDsByParticipant calls = %d, want 1", ts.Participant.listCampaignIDsByParticipantCalls)
 	}
 }
 
 func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Campaign One",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -991,7 +927,7 @@ func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: now,
 	}
-	campaignStore.campaigns["c2"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c2"] = storage.CampaignRecord{
 		ID:        "c2",
 		Name:      "Campaign Two",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -999,14 +935,14 @@ func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
 		GmMode:    campaign.GmModeAI,
 		CreatedAt: now,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {ID: "p1", CampaignID: "c1", UserID: "user-123", Name: "Alice"},
 	}
-	participantStore.participants["c2"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c2"] = map[string]storage.ParticipantRecord{
 		"p2": {ID: "p2", CampaignID: "c2", UserID: "user-999", Name: "Bob"},
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	svc := NewCampaignService(ts.build())
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 
 	resp, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
@@ -1016,11 +952,11 @@ func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
 	if len(resp.Campaigns) != 1 {
 		t.Fatalf("ListCampaigns returned %d campaigns, want 1", len(resp.Campaigns))
 	}
-	if participantStore.listCampaignIDsByUserCalls != 1 {
-		t.Fatalf("ListCampaignIDsByUser calls = %d, want 1", participantStore.listCampaignIDsByUserCalls)
+	if ts.Participant.listCampaignIDsByUserCalls != 1 {
+		t.Fatalf("ListCampaignIDsByUser calls = %d, want 1", ts.Participant.listCampaignIDsByUserCalls)
 	}
-	if participantStore.listByCampaignCalls != 0 {
-		t.Fatalf("ListParticipantsByCampaign calls = %d, want 0", participantStore.listByCampaignCalls)
+	if ts.Participant.listByCampaignCalls != 0 {
+		t.Fatalf("ListParticipantsByCampaign calls = %d, want 0", ts.Participant.listByCampaignCalls)
 	}
 	if resp.Campaigns[0].GetId() != "c1" {
 		t.Fatalf("ListCampaigns campaign id = %q, want %q", resp.Campaigns[0].GetId(), "c1")
@@ -1028,11 +964,12 @@ func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
 }
 
 func TestListCampaigns_UserScopedByMetadataAfterPageBoundary(t *testing.T) {
-	campaignStore := &orderedCampaignStore{
+	ts := newTestStores()
+	orderedStore := &orderedCampaignStore{
 		campaigns: make([]storage.CampaignRecord, 12),
 	}
 	for i := 1; i <= 12; i++ {
-		campaignStore.campaigns[i-1] = storage.CampaignRecord{
+		orderedStore.campaigns[i-1] = storage.CampaignRecord{
 			ID:        fmt.Sprintf("campaign-%03d", i),
 			Name:      fmt.Sprintf("Campaign %d", i),
 			System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -1041,12 +978,13 @@ func TestListCampaigns_UserScopedByMetadataAfterPageBoundary(t *testing.T) {
 			CreatedAt: time.Now().UTC(),
 		}
 	}
-	participantStore := newFakeParticipantStore()
-	participantStore.participants["campaign-012"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["campaign-012"] = map[string]storage.ParticipantRecord{
 		"p1": {ID: "p1", CampaignID: "campaign-012", UserID: "user-123", Name: "Alice"},
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	stores := ts.build()
+	stores.Campaign = orderedStore
+	svc := NewCampaignService(stores)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 
 	resp, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
@@ -1059,15 +997,14 @@ func TestListCampaigns_UserScopedByMetadataAfterPageBoundary(t *testing.T) {
 	if resp.Campaigns[0].GetId() != "campaign-012" {
 		t.Fatalf("ListCampaigns campaign id = %q, want %q", resp.Campaigns[0].GetId(), "campaign-012")
 	}
-	if participantStore.listCampaignIDsByUserCalls != 1 {
-		t.Fatalf("ListCampaignIDsByUser calls = %d, want 1", participantStore.listCampaignIDsByUserCalls)
+	if ts.Participant.listCampaignIDsByUserCalls != 1 {
+		t.Fatalf("ListCampaignIDsByUser calls = %d, want 1", ts.Participant.listCampaignIDsByUserCalls)
 	}
 }
 
 func TestListCampaigns_UserScopedByMetadataQueryFailure(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts := newTestStores()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Campaign One",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -1075,8 +1012,8 @@ func TestListCampaigns_UserScopedByMetadataQueryFailure(t *testing.T) {
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: time.Now().UTC(),
 	}
-	participantStore.listCampaignIDsByUserErr = fmt.Errorf("campaign index unavailable")
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	ts.Participant.listCampaignIDsByUserErr = fmt.Errorf("campaign index unavailable")
+	svc := NewCampaignService(ts.build())
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 
 	_, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
@@ -1090,24 +1027,21 @@ func TestGetCampaign_NilRequest(t *testing.T) {
 }
 
 func TestGetCampaign_MissingCampaignId(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore})
+	svc := NewCampaignService(newTestStores().build())
 	_, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetCampaign_NotFound(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore})
+	svc := NewCampaignService(newTestStores().build())
 	_, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestGetCampaign_DeniesMissingIdentity(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Test Campaign",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -1116,16 +1050,15 @@ func TestGetCampaign_DeniesMissingIdentity(t *testing.T) {
 		CreatedAt: now,
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	svc := NewCampaignService(ts.build())
 	_, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestGetCampaign_DeniesNonMember(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Test Campaign",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -1134,16 +1067,15 @@ func TestGetCampaign_DeniesNonMember(t *testing.T) {
 		CreatedAt: now,
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	svc := NewCampaignService(ts.build())
 	_, err := svc.GetCampaign(contextWithParticipantID("outsider-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestGetCampaign_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Test Campaign",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -1151,7 +1083,7 @@ func TestGetCampaign_Success(t *testing.T) {
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: now,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {
 			ID:             "participant-1",
 			CampaignID:     "c1",
@@ -1160,7 +1092,7 @@ func TestGetCampaign_Success(t *testing.T) {
 		},
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	svc := NewCampaignService(ts.build())
 
 	resp, err := svc.GetCampaign(contextWithParticipantID("participant-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	if err != nil {
@@ -1178,10 +1110,9 @@ func TestGetCampaign_Success(t *testing.T) {
 }
 
 func TestGetCampaign_SuccessByUserIDFallback(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores()
 	now := time.Now().UTC()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Test Campaign",
 		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -1189,7 +1120,7 @@ func TestGetCampaign_SuccessByUserIDFallback(t *testing.T) {
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: now,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {
 			ID:             "participant-1",
 			CampaignID:     "c1",
@@ -1198,7 +1129,7 @@ func TestGetCampaign_SuccessByUserIDFallback(t *testing.T) {
 		},
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
+	svc := NewCampaignService(ts.build())
 	resp, err := svc.GetCampaign(contextWithUserID("user-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetCampaign returned error: %v", err)
@@ -1215,54 +1146,44 @@ func TestEndCampaign_NilRequest(t *testing.T) {
 }
 
 func TestEndCampaign_MissingCampaignId(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
+	svc := NewCampaignService(newTestStores().withSession().build())
 	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestEndCampaign_NotFound(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
+	svc := NewCampaignService(newTestStores().withSession().build())
 	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestEndCampaign_ActiveSessionBlocks(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores().withSession()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
 		Status: campaign.StatusActive,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: campaign.GmModeHuman,
 	}
-	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+	ts.Session.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
-	sessionStore.activeSession["c1"] = "s1"
+	ts.Session.activeSession["c1"] = "s1"
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	svc := NewCampaignService(ts.build())
 	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores().withSession()
+	ts.Participant = ownerParticipantStore("c1")
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
 		Status: campaign.StatusDraft,
@@ -1270,30 +1191,27 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 		GmMode: campaign.GmModeHuman,
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	svc := NewCampaignService(ts.build())
 	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestEndCampaign_AllowsManagerAccess(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores().withSession()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"manager-1": {
 			ID:             "manager-1",
 			CampaignID:     "c1",
 			CampaignAccess: "manager",
 		},
 	}
-	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
 			Type:        event.Type("campaign.updated"),
@@ -1305,14 +1223,8 @@ func TestEndCampaign_AllowsManagerAccess(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
-		},
-		clock: fixedClock(now),
+		stores: ts.withDomain(domain).build(),
+		clock:  fixedClock(now),
 	}
 
 	resp, err := svc.EndCampaign(contextWithParticipantID("manager-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
@@ -1325,32 +1237,28 @@ func TestEndCampaign_AllowsManagerAccess(t *testing.T) {
 }
 
 func TestEndCampaign_RequiresDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	sessionStore := newFakeSessionStore()
-	participantStore := ownerParticipantStore("c1")
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts := newTestStores().withSession()
+	ts.Participant = ownerParticipantStore("c1")
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Session: sessionStore, Participant: participantStore})
+	svc := NewCampaignService(ts.build())
 	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestEndCampaign_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores().withSession()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
 		Status: campaign.StatusActive,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: campaign.GmModeHuman,
 	}
-	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
 			Type:        event.Type("campaign.updated"),
@@ -1363,7 +1271,7 @@ func TestEndCampaign_Success(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("campaign-123"),
 	}
@@ -1380,26 +1288,24 @@ func TestEndCampaign_Success(t *testing.T) {
 	}
 
 	// Verify persisted
-	stored, _ := campaignStore.Get(context.Background(), "c1")
+	stored, _ := ts.Campaign.Get(context.Background(), "c1")
 	if stored.Status != campaign.StatusCompleted {
 		t.Errorf("Stored campaign Status = %v, want %v", stored.Status, campaign.StatusCompleted)
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("campaign.updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("campaign.updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("campaign.updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("campaign.updated"))
 	}
 }
 
 func TestEndCampaign_UsesDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores().withSession()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
 		Status: campaign.StatusActive,
@@ -1407,7 +1313,7 @@ func TestEndCampaign_UsesDomainEngine(t *testing.T) {
 		GmMode: campaign.GmModeHuman,
 	}
 
-	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
 			Type:        event.Type("campaign.updated"),
@@ -1420,7 +1326,7 @@ func TestEndCampaign_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores: ts.withDomain(domain).build(),
 		clock:  fixedClock(now),
 	}
 
@@ -1443,71 +1349,59 @@ func TestArchiveCampaign_NilRequest(t *testing.T) {
 }
 
 func TestArchiveCampaign_MissingCampaignId(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
+	svc := NewCampaignService(newTestStores().withSession().build())
 	_, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestArchiveCampaign_NotFound(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Event: eventStore})
+	svc := NewCampaignService(newTestStores().withSession().build())
 	_, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestArchiveCampaign_ActiveSessionBlocks(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores().withSession()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+	ts.Session.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
-	sessionStore.activeSession["c1"] = "s1"
+	ts.Session.activeSession["c1"] = "s1"
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	svc := NewCampaignService(ts.build())
 	_, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestArchiveCampaign_RequiresDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	sessionStore := newFakeSessionStore()
-	participantStore := ownerParticipantStore("c1")
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts := newTestStores().withSession()
+	ts.Participant = ownerParticipantStore("c1")
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore, Session: sessionStore, Participant: participantStore})
+	svc := NewCampaignService(ts.build())
 	_, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestArchiveCampaign_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores().withSession()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
 		Status: campaign.StatusCompleted,
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode: campaign.GmModeHuman,
 	}
-	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
 			Type:        event.Type("campaign.updated"),
@@ -1520,7 +1414,7 @@ func TestArchiveCampaign_Success(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("campaign-123"),
 	}
@@ -1535,22 +1429,20 @@ func TestArchiveCampaign_Success(t *testing.T) {
 	if resp.Campaign.ArchivedAt == nil {
 		t.Error("Campaign ArchivedAt is nil")
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("campaign.updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("campaign.updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("campaign.updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("campaign.updated"))
 	}
 }
 
 func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores().withSession()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Test Campaign",
 		Status: campaign.StatusCompleted,
@@ -1558,7 +1450,7 @@ func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
 		GmMode: campaign.GmModeHuman,
 	}
 
-	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
 			Type:        event.Type("campaign.updated"),
@@ -1571,7 +1463,7 @@ func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores: ts.withDomain(domain).build(),
 		clock:  fixedClock(now),
 	}
 
@@ -1594,54 +1486,47 @@ func TestRestoreCampaign_NilRequest(t *testing.T) {
 }
 
 func TestRestoreCampaign_MissingCampaignId(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
+	svc := NewCampaignService(newTestStores().build())
 	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRestoreCampaign_NotFound(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Event: eventStore})
+	svc := NewCampaignService(newTestStores().build())
 	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestRestoreCampaign_NotArchivedDisallowed(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts := newTestStores()
+	ts.Participant = ownerParticipantStore("c1")
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	svc := NewCampaignService(ts.build())
 	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestRestoreCampaign_RequiresDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusArchived}
+	ts := newTestStores()
+	ts.Participant = ownerParticipantStore("c1")
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusArchived}
 
-	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	svc := NewCampaignService(ts.build())
 	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestRestoreCampaign_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	archivedAt := now.Add(-24 * time.Hour)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:         "c1",
 		Name:       "Test Campaign",
 		Status:     campaign.StatusArchived,
@@ -1649,7 +1534,7 @@ func TestRestoreCampaign_Success(t *testing.T) {
 		System:     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 		GmMode:     campaign.GmModeHuman,
 	}
-	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
 			Type:        event.Type("campaign.updated"),
@@ -1662,7 +1547,7 @@ func TestRestoreCampaign_Success(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("campaign-123"),
 	}
@@ -1677,22 +1562,21 @@ func TestRestoreCampaign_Success(t *testing.T) {
 	if resp.Campaign.ArchivedAt != nil {
 		t.Error("Campaign ArchivedAt should be nil after restore")
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("campaign.updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("campaign.updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("campaign.updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("campaign.updated"))
 	}
 }
 
 func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	archivedAt := now.Add(-24 * time.Hour)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:         "c1",
 		Name:       "Test Campaign",
 		Status:     campaign.StatusArchived,
@@ -1701,7 +1585,7 @@ func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 		GmMode:     campaign.GmModeHuman,
 	}
 
-	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
 			Type:        event.Type("campaign.updated"),
@@ -1714,7 +1598,7 @@ func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores: ts.withDomain(domain).build(),
 		clock:  fixedClock(now),
 	}
 
@@ -1752,11 +1636,10 @@ func TestUpdateCampaign_InvalidLocaleRejected(t *testing.T) {
 }
 
 func TestUpdateCampaign_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2026, 2, 14, 12, 0, 0, 0, time.UTC)
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:          "c1",
 		Name:        "Old Name",
 		ThemePrompt: "Old theme",
@@ -1766,7 +1649,7 @@ func TestUpdateCampaign_Success(t *testing.T) {
 		GmMode:      campaign.GmModeHuman,
 	}
 
-	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
 			Type:        event.Type("campaign.updated"),
@@ -1779,7 +1662,7 @@ func TestUpdateCampaign_Success(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores: ts.withDomain(domain).build(),
 		clock:  fixedClock(now),
 	}
 
@@ -1824,11 +1707,10 @@ func TestUpdateCampaign_Success(t *testing.T) {
 }
 
 func TestUpdateCampaign_NoOpSkipsDomainCommand(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2026, 2, 14, 12, 0, 0, 0, time.UTC)
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:          "c1",
 		Name:        "Existing Name",
 		ThemePrompt: "Existing theme",
@@ -1838,9 +1720,9 @@ func TestUpdateCampaign_NoOpSkipsDomainCommand(t *testing.T) {
 		GmMode:      campaign.GmModeHuman,
 	}
 
-	domain := &fakeDomainEngine{store: eventStore}
+	domain := &fakeDomainEngine{store: ts.Event}
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores: ts.withDomain(domain).build(),
 		clock:  fixedClock(now),
 	}
 
@@ -1868,11 +1750,10 @@ func TestUpdateCampaign_NoOpSkipsDomainCommand(t *testing.T) {
 }
 
 func TestSetCampaignCover_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	eventStore := newFakeEventStore()
-	participantStore := ownerParticipantStore("c1")
+	ts := newTestStores()
+	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:           "c1",
 		Name:         "Test Campaign",
 		Status:       campaign.StatusActive,
@@ -1881,7 +1762,7 @@ func TestSetCampaignCover_Success(t *testing.T) {
 		GmMode:       campaign.GmModeHuman,
 	}
 
-	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
 			Type:        event.Type("campaign.updated"),
@@ -1894,7 +1775,7 @@ func TestSetCampaignCover_Success(t *testing.T) {
 	}}
 
 	svc := &CampaignService{
-		stores: Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores: ts.withDomain(domain).build(),
 		clock:  fixedClock(now),
 	}
 

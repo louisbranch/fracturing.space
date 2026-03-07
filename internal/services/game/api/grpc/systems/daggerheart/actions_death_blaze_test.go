@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -71,27 +70,6 @@ func TestApplyDeathMove_UnspecifiedMove(t *testing.T) {
 		Move:        pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_UNSPECIFIED,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestApplyDeathMove_RequiresDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
-		CampaignID:  "camp-1",
-		CharacterID: "char-1",
-		Hp:          0,
-		Hope:        2,
-		HopeMax:     daggerheart.HopeMax,
-		Stress:      1,
-		LifeState:   daggerheart.LifeStateAlive,
-	}
-	ctx := contextWithSessionID("sess-1")
-	_, err := svc.ApplyDeathMove(ctx, &pb.DaggerheartApplyDeathMoveRequest{
-		CampaignId:  "camp-1",
-		CharacterId: "char-1",
-		Move:        pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH,
-	})
-	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestApplyDeathMove_HpClearOnNonRiskItAll(t *testing.T) {
@@ -207,7 +185,7 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-death-success",
@@ -241,7 +219,7 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	state := storage.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
@@ -398,30 +376,6 @@ func TestResolveBlazeOfGlory_MissingSessionId(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestResolveBlazeOfGlory_RequiresDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
-		CampaignID:  "camp-1",
-		CharacterID: "char-1",
-		Hp:          0,
-		LifeState:   daggerheart.LifeStateBlazeOfGlory,
-	}
-	charStore := svc.stores.Character.(*fakeCharacterStore)
-	charStore.Characters["camp-1:char-1"] = storage.CharacterRecord{
-		ID:         "char-1",
-		CampaignID: "camp-1",
-		Name:       "Hero",
-		Kind:       character.KindPC,
-	}
-	ctx := contextWithSessionID("sess-1")
-	_, err := svc.ResolveBlazeOfGlory(ctx, &pb.DaggerheartResolveBlazeOfGloryRequest{
-		CampaignId:  "camp-1",
-		CharacterId: "char-1",
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestResolveBlazeOfGlory_CharacterAlreadyDead(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
@@ -483,7 +437,7 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-blaze-success",
@@ -498,7 +452,7 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("character.deleted"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-blaze-success",
@@ -566,7 +520,7 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-blaze",
@@ -581,7 +535,7 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("character.deleted"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-blaze",

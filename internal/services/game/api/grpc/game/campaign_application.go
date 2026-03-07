@@ -13,6 +13,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -83,9 +84,6 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	}
 
 	applier := c.stores.Applier()
-	if c.stores.Domain == nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := campaign.CreatePayload{
 		Name:         normalized.Name,
 		Locale:       platformi18n.LocaleString(normalized.Locale),
@@ -103,7 +101,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -116,7 +114,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 			EntityID:     campaignID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
@@ -181,7 +179,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 
 		_, err = executeAndApplyDomainCommand(
 			ctx,
-			c.stores.Domain,
+			c.stores,
 			applier,
 			commandbuild.Core(commandbuild.CoreInput{
 				CampaignID:   campaignID,
@@ -194,8 +192,8 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 				EntityID:     participantPayload.ParticipantID,
 				PayloadJSON:  participantPayloadJSON,
 			}),
-			domainCommandApplyOptions{
-				applyErrMessage: "apply participant event",
+			domainwrite.Options{
+				ApplyErrMessage: "apply participant event",
 			},
 		)
 		if err != nil {
@@ -248,9 +246,6 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 		return campaignRecord, nil
 	}
 
-	if c.stores.Domain == nil {
-		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	actorID, actorType := resolveCommandActor(ctx)
 	payloadJSON, err := json.Marshal(campaign.UpdatePayload{Fields: fields})
 	if err != nil {
@@ -259,7 +254,7 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -272,7 +267,7 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 			EntityID:     campaignID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CampaignRecord{}, err
@@ -300,13 +295,10 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusCompleted); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if c.stores.Domain == nil {
-		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -318,7 +310,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 			EntityType:   "campaign",
 			EntityID:     campaignID,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CampaignRecord{}, err
@@ -346,13 +338,10 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusArchived); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if c.stores.Domain == nil {
-		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -364,7 +353,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 			EntityType:   "campaign",
 			EntityID:     campaignID,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CampaignRecord{}, err
@@ -388,13 +377,10 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusDraft); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if c.stores.Domain == nil {
-		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -406,7 +392,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 			EntityType:   "campaign",
 			EntityID:     campaignID,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CampaignRecord{}, err
@@ -431,9 +417,6 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 		return storage.CampaignRecord{}, err
 	}
 
-	if c.stores.Domain == nil {
-		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	actorID, actorType := resolveCommandActor(ctx)
 
 	fields := map[string]string{"cover_asset_id": coverAssetID}
@@ -448,7 +431,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -461,7 +444,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 			EntityID:     campaignID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CampaignRecord{}, err
@@ -491,9 +474,6 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 		return storage.CampaignRecord{}, err
 	}
 
-	if c.stores.Domain == nil {
-		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payloadJSON, err := json.Marshal(campaign.AIBindPayload{AIAgentID: strings.TrimSpace(aiAgentID)})
 	if err != nil {
 		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
@@ -501,7 +481,7 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -514,7 +494,7 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 			EntityID:     campaignID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CampaignRecord{}, err
@@ -596,17 +576,13 @@ func clearCampaignAIBindingByCommand(
 	requestID string,
 	invocationID string,
 ) (storage.CampaignRecord, error) {
-	if stores.Domain == nil {
-		return storage.CampaignRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
-
 	payloadJSON, err := json.Marshal(campaign.AIUnbindPayload{})
 	if err != nil {
 		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		stores.Domain,
+		stores,
 		stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -619,7 +595,7 @@ func clearCampaignAIBindingByCommand(
 			EntityID:     campaignID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CampaignRecord{}, err

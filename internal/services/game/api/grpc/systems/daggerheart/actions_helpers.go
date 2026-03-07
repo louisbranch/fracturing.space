@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
@@ -185,11 +186,8 @@ func (s *DaggerheartService) advanceBreathCountdown(
 	if countdownID == "" {
 		return nil
 	}
-	if s.stores.Daggerheart == nil {
-		return status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if s.stores.Event == nil {
-		return status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return err
 	}
 
 	if _, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err != nil {
@@ -232,8 +230,8 @@ func (s *DaggerheartService) advanceBreathCountdown(
 }
 
 func (s *DaggerheartService) ensureNoOpenSessionGate(ctx context.Context, campaignID, sessionID string) error {
-	if s.stores.SessionGate == nil {
-		return status.Error(codes.Internal, "session gate store is not configured")
+	if err := s.requireDependencies(dependencySessionGateStore); err != nil {
+		return err
 	}
 	if strings.TrimSpace(campaignID) == "" || strings.TrimSpace(sessionID) == "" {
 		return nil
@@ -424,17 +422,22 @@ func normalizeHopeSpendSource(value string) string {
 	return replacer.Replace(normalized)
 }
 
+const (
+	outcomeFlavorHope = "HOPE"
+	outcomeFlavorFear = "FEAR"
+)
+
 func outcomeFlavorFromCode(code string) string {
 	switch strings.TrimSpace(code) {
 	case pb.Outcome_ROLL_WITH_HOPE.String(),
 		pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		pb.Outcome_FAILURE_WITH_HOPE.String(),
 		pb.Outcome_CRITICAL_SUCCESS.String():
-		return "HOPE"
+		return outcomeFlavorHope
 	case pb.Outcome_ROLL_WITH_FEAR.String(),
 		pb.Outcome_SUCCESS_WITH_FEAR.String(),
 		pb.Outcome_FAILURE_WITH_FEAR.String():
-		return "FEAR"
+		return outcomeFlavorFear
 	default:
 		return ""
 	}
@@ -477,11 +480,25 @@ func outcomeCodeToProto(code string) pb.Outcome {
 	}
 }
 
+// SystemData key constants for daggerheart roll payloads.
+const (
+	sdKeyCharacterID = "character_id"
+	sdKeyAdversaryID = "adversary_id"
+	sdKeyRollKind    = "roll_kind"
+	sdKeyOutcome     = "outcome"
+	sdKeyHopeFear    = "hope_fear"
+	sdKeyCrit        = "crit"
+	sdKeyCritNegates = "crit_negates"
+	sdKeyRoll        = "roll"
+	sdKeyModifier    = "modifier"
+	sdKeyTotal       = "total"
+)
+
 func outcomeFromSystemData(systemData map[string]any, fallback string) string {
 	if systemData == nil {
 		return strings.TrimSpace(fallback)
 	}
-	if value, ok := systemData["outcome"]; ok {
+	if value, ok := systemData[sdKeyOutcome]; ok {
 		if outcome, ok := value.(string); ok {
 			return strings.TrimSpace(outcome)
 		}
@@ -493,7 +510,7 @@ func rollKindFromSystemData(systemData map[string]any) pb.RollKind {
 	if systemData == nil {
 		return pb.RollKind_ROLL_KIND_ACTION
 	}
-	value, ok := systemData["roll_kind"]
+	value, ok := systemData[sdKeyRollKind]
 	if !ok {
 		return pb.RollKind_ROLL_KIND_ACTION
 	}
@@ -566,7 +583,7 @@ func intFromSystemData(systemData map[string]any, key string) (int, bool) {
 
 func critFromSystemData(systemData map[string]any, outcome string) bool {
 	if systemData != nil {
-		if value, ok := systemData["crit"]; ok {
+		if value, ok := systemData[sdKeyCrit]; ok {
 			if crit, ok := value.(bool); ok {
 				return crit
 			}
@@ -800,6 +817,9 @@ func optionalInt32(value *int) *int32 {
 	return &v
 }
 
+// handleDomainError maps domain errors to gRPC status errors with proper codes
+// (NotFound, InvalidArgument, FailedPrecondition, etc.) instead of flattening
+// everything to codes.Internal.
 func handleDomainError(err error) error {
-	return status.Errorf(codes.Internal, "%v", err)
+	return apperrors.HandleError(err, apperrors.DefaultLocale)
 }

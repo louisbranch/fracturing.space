@@ -22,7 +22,7 @@ func TestApplyGmMove_CampaignNotFound(t *testing.T) {
 	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "nonexistent", SessionId: "sess-1", Move: "test",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestApplyGmMove_SessionNotFound(t *testing.T) {
@@ -30,5 +30,5 @@ func TestApplyGmMove_SessionNotFound(t *testing.T) {
 	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "camp-1", SessionId: "nonexistent", Move: "test",
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 }

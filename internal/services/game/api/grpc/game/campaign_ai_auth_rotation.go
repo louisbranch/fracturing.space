@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -28,10 +29,6 @@ func rotateCampaignAIAuthEpoch(
 	actorID string,
 	actorType command.ActorType,
 ) error {
-	if stores.Domain == nil {
-		return status.Error(codes.Internal, "domain engine is not configured")
-	}
-
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return status.Error(codes.InvalidArgument, "campaign id is required")
@@ -47,7 +44,7 @@ func rotateCampaignAIAuthEpoch(
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		stores.Domain,
+		stores,
 		stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -60,7 +57,7 @@ func rotateCampaignAIAuthEpoch(
 			EntityID:     campaignID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return err

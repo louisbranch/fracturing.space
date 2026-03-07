@@ -10,6 +10,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// Tests below verify that NormalizeErrorHandlers defaults produce plain errors
+// (not gRPC status). Consumer packages are responsible for wrapping with gRPC
+// status at the transport boundary.
+
 func TestNewIntentFilter_SkipsAuditOnlyEvents(t *testing.T) {
 	registry := event.NewRegistry()
 	if err := registry.Register(event.Definition{
@@ -75,34 +79,22 @@ func TestNewIntentFilter_NilRegistryFailsClosed(t *testing.T) {
 func TestNormalizeErrorHandlers_DefaultMessages(t *testing.T) {
 	executeErr, applyErr, rejectErr := NormalizeErrorHandlers(ErrorHandlerOptions{})
 
-	executeStatus, ok := status.FromError(executeErr(errors.New("boom")))
-	if !ok {
-		t.Fatal("expected grpc status from execute error")
+	execResult := executeErr(errors.New("boom"))
+	if !strings.Contains(execResult.Error(), "execute domain command: boom") {
+		t.Fatalf("execute message = %q, want to contain %q", execResult.Error(), "execute domain command: boom")
 	}
-	if executeStatus.Code() != codes.Internal {
-		t.Fatalf("execute code = %s, want %s", executeStatus.Code(), codes.Internal)
-	}
-	if !strings.Contains(executeStatus.Message(), "execute domain command: boom") {
-		t.Fatalf("execute message = %q", executeStatus.Message())
+	if _, ok := status.FromError(execResult); ok && status.Code(execResult) != codes.OK {
+		t.Fatal("default execute error should be a plain error, not gRPC status")
 	}
 
-	applyStatus, ok := status.FromError(applyErr(errors.New("boom")))
-	if !ok {
-		t.Fatal("expected grpc status from apply error")
-	}
-	if applyStatus.Code() != codes.Internal {
-		t.Fatalf("apply code = %s, want %s", applyStatus.Code(), codes.Internal)
-	}
-	if !strings.Contains(applyStatus.Message(), "apply event: boom") {
-		t.Fatalf("apply message = %q", applyStatus.Message())
+	applyResult := applyErr(errors.New("boom"))
+	if !strings.Contains(applyResult.Error(), "apply event: boom") {
+		t.Fatalf("apply message = %q, want to contain %q", applyResult.Error(), "apply event: boom")
 	}
 
-	rejectStatus, ok := status.FromError(rejectErr("nope"))
-	if !ok {
-		t.Fatal("expected grpc status from reject error")
-	}
-	if rejectStatus.Code() != codes.FailedPrecondition {
-		t.Fatalf("reject code = %s, want %s", rejectStatus.Code(), codes.FailedPrecondition)
+	rejectResult := rejectErr("nope")
+	if rejectResult.Error() != "nope" {
+		t.Fatalf("reject message = %q, want %q", rejectResult.Error(), "nope")
 	}
 }
 
@@ -112,20 +104,14 @@ func TestNormalizeErrorHandlers_MessageOverrides(t *testing.T) {
 		ApplyErrMessage:   "apply custom",
 	})
 
-	executeStatus, ok := status.FromError(executeErr(errors.New("boom")))
-	if !ok {
-		t.Fatal("expected grpc status from execute error")
-	}
-	if !strings.Contains(executeStatus.Message(), "exec custom: boom") {
-		t.Fatalf("execute message = %q", executeStatus.Message())
+	execResult := executeErr(errors.New("boom"))
+	if !strings.Contains(execResult.Error(), "exec custom: boom") {
+		t.Fatalf("execute message = %q, want to contain %q", execResult.Error(), "exec custom: boom")
 	}
 
-	applyStatus, ok := status.FromError(applyErr(errors.New("boom")))
-	if !ok {
-		t.Fatal("expected grpc status from apply error")
-	}
-	if !strings.Contains(applyStatus.Message(), "apply custom: boom") {
-		t.Fatalf("apply message = %q", applyStatus.Message())
+	applyResult := applyErr(errors.New("boom"))
+	if !strings.Contains(applyResult.Error(), "apply custom: boom") {
+		t.Fatalf("apply message = %q, want to contain %q", applyResult.Error(), "apply custom: boom")
 	}
 }
 

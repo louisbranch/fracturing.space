@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -108,7 +107,7 @@ func TestApplyDamage_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	profile := dhStore.Profiles["camp-1:char-1"]
 	state := dhStore.States["camp-1:char-1"]
@@ -193,7 +192,7 @@ func TestApplyDamage_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	profile := dhStore.Profiles["camp-1:char-1"]
 	state := dhStore.States["camp-1:char-1"]
@@ -303,7 +302,7 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 	svc := newActionTestService()
 	ctx := contextWithSessionID("sess-1")
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	profile := dhStore.Profiles["camp-1:char-1"]
@@ -442,7 +441,7 @@ func TestApplyConditions_LifeStateOnly(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-conditions-life",
@@ -538,7 +537,7 @@ func TestApplyConditions_RequiresDomainEngine(t *testing.T) {
 func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	conditionPayload := daggerheart.ConditionChangedPayload{
 		CharacterID:      "char-1",
@@ -619,7 +618,7 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	before := daggerheart.LifeStateAlive
 	after := daggerheart.LifeStateUnconscious

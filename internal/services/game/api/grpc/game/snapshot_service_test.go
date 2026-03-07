@@ -442,6 +442,7 @@ func TestPatchCharacterState_Success(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 
 	resp, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
@@ -537,6 +538,7 @@ func TestPatchCharacterState_SetToZero(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 
 	resp, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
@@ -711,6 +713,7 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 
 	resp, err := svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
@@ -778,6 +781,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 
 	resp, err := svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
@@ -835,6 +839,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 
 	resp, err := svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
@@ -885,6 +890,7 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 
 	_, err = svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
@@ -962,6 +968,7 @@ func TestPatchCharacterState_UsesDomainEngine(t *testing.T) {
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 
 	_, err = svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{

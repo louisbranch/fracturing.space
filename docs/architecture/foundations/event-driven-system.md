@@ -96,6 +96,7 @@ When adding mechanics or systems:
 
 Use these pages for detailed mechanics and troubleshooting:
 
+- [gRPC write path](grpc-write-path.md) — transport-layer helpers, error boundaries, and Options
 - [Event system reference](../../reference/event-system-reference.md)
 - [Event replay architecture](event-replay.md)
 - [Event contracts catalog](../../events/index.md)

@@ -41,20 +41,6 @@ func TestSessionAdversaryActionCheck_MissingAdversaryId(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestSessionAdversaryActionCheck_RequiresDomainEngine(t *testing.T) {
-	svc := newAdversaryDamageTestService()
-	svc.stores.Domain = nil
-	_, err := svc.SessionAdversaryActionCheck(context.Background(), &pb.SessionAdversaryActionCheckRequest{
-		CampaignId:  "camp-1",
-		SessionId:   "sess-1",
-		AdversaryId: "adv-1",
-		Difficulty:  10,
-	})
-	if err != nil {
-		t.Fatalf("SessionAdversaryActionCheck returned error: %v", err)
-	}
-}
-
 func TestSessionAdversaryActionCheck_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-adv-action-success")

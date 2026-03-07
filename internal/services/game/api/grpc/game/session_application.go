@@ -9,6 +9,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -48,9 +49,6 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	sessionName := strings.TrimSpace(in.GetName())
 
 	applier := a.stores.Applier()
-	if a.stores.Domain == nil {
-		return storage.SessionRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	actorID, actorType := resolveCommandActor(ctx)
 
 	payload := session.StartPayload{
@@ -63,7 +61,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -77,10 +75,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 			EntityID:     sessionID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			requireEvents:   true,
-			missingEventMsg: "session.start did not emit an event",
-		},
+		domainwrite.RequireEvents("session.start did not emit an event"),
 	)
 	if err != nil {
 		return storage.SessionRecord{}, err
@@ -119,9 +114,6 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 	if current.Status == session.StatusEnded {
 		return current, nil
 	}
-	if a.stores.Domain == nil {
-		return storage.SessionRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := session.EndPayload{SessionID: sessionID}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -132,7 +124,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -146,10 +138,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 			EntityID:     sessionID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			requireEvents:   true,
-			missingEventMsg: "session.end did not emit an event",
-		},
+		domainwrite.RequireEvents("session.end did not emit an event"),
 	)
 	if err != nil {
 		return storage.SessionRecord{}, err
@@ -214,9 +203,6 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	if err := validateStructPayload(metadata); err != nil {
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	if a.stores.Domain == nil {
-		return storage.SessionGate{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := session.GateOpenedPayload{
 		GateID:   gateID,
 		GateType: gateType,
@@ -232,7 +218,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -246,10 +232,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 			EntityID:     gateID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			requireEvents:   true,
-			missingEventMsg: "session.gate_open did not emit an event",
-		},
+		domainwrite.RequireEvents("session.gate_open did not emit an event"),
 	)
 	if err != nil {
 		return storage.SessionGate{}, err
@@ -295,9 +278,6 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	if err := validateStructPayload(resolution); err != nil {
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, err.Error())
 	}
-	if a.stores.Domain == nil {
-		return storage.SessionGate{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := session.GateResolvedPayload{
 		GateID:     gateID,
 		Decision:   strings.TrimSpace(in.GetDecision()),
@@ -312,7 +292,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -326,10 +306,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 			EntityID:     gateID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			requireEvents:   true,
-			missingEventMsg: "session.gate_resolve did not emit an event",
-		},
+		domainwrite.RequireEvents("session.gate_resolve did not emit an event"),
 	)
 	if err != nil {
 		return storage.SessionGate{}, err
@@ -370,9 +347,6 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	if gate.Status != session.GateStatusOpen {
 		return gate, nil
 	}
-	if a.stores.Domain == nil {
-		return storage.SessionGate{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := session.GateAbandonedPayload{
 		GateID: gateID,
 		Reason: session.NormalizeGateReason(in.GetReason()),
@@ -386,7 +360,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -400,10 +374,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 			EntityID:     gateID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			requireEvents:   true,
-			missingEventMsg: "session.gate_abandon did not emit an event",
-		},
+		domainwrite.RequireEvents("session.gate_abandon did not emit an event"),
 	)
 	if err != nil {
 		return storage.SessionGate{}, err
@@ -447,9 +418,6 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	if sess.Status != session.StatusActive {
 		return storage.SessionSpotlight{}, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if a.stores.Domain == nil {
-		return storage.SessionSpotlight{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := session.SpotlightSetPayload{
 		SpotlightType: string(spotlightType),
 		CharacterID:   characterID,
@@ -463,7 +431,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -477,10 +445,10 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 			EntityID:     sessionID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErr:        domainApplyErrorWithCodePreserve("apply event"),
-			requireEvents:   true,
-			missingEventMsg: "session.spotlight_set did not emit an event",
+		domainwrite.Options{
+			ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			RequireEvents:   true,
+			MissingEventMsg: "session.spotlight_set did not emit an event",
 		},
 	)
 	if err != nil {
@@ -516,9 +484,6 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	if a.stores.Domain == nil {
-		return storage.SessionSpotlight{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := session.SpotlightClearedPayload{Reason: reason}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -529,7 +494,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -543,10 +508,10 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 			EntityID:     sessionID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErr:        domainApplyErrorWithCodePreserve("apply event"),
-			requireEvents:   true,
-			missingEventMsg: "session.spotlight_clear did not emit an event",
+		domainwrite.Options{
+			ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			RequireEvents:   true,
+			MissingEventMsg: "session.spotlight_clear did not emit an event",
 		},
 	)
 	if err != nil {

@@ -16,6 +16,7 @@ Core explanations for system model, vocabulary, and write-path behavior.
 - [System architecture](architecture.md)
 - [Domain language](domain-language.md)
 - [Event-driven system](event-driven-system.md)
+- [gRPC write path](grpc-write-path.md)
 - [Event replay](event-replay.md)
 
 Deep reference addenda:

@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
@@ -20,19 +21,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type sessionFlowApplication struct {
-	service *DaggerheartService
-}
-
-func newSessionFlowApplication(service *DaggerheartService) sessionFlowApplication {
-	return sessionFlowApplication{service: service}
-}
-
-func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb.SessionActionRollRequest) (*pb.SessionActionRollResponse, error) {
+func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.SessionActionRollRequest) (*pb.SessionActionRollResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "session action roll request is required")
 	}
-	if err := a.service.requireDependencies(
+	if err := s.requireDependencies(
 		dependencyCampaignStore,
 		dependencySessionStore,
 		dependencyDaggerheartStore,
@@ -60,7 +53,7 @@ func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb
 		return nil, status.Error(codes.InvalidArgument, "trait is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -71,18 +64,18 @@ func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb
 		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart rolls")
 	}
 
-	sess, err := a.service.stores.Session.GetSession(ctx, campaignID, sessionID)
+	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
-	state, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -113,7 +106,7 @@ func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb
 		return nil, status.Error(codes.InvalidArgument, "reaction rolls cannot spend hope")
 	}
 
-	latestSeq, err := a.service.stores.Event.GetLatestEventSeq(ctx, campaignID)
+	latestSeq, err := s.stores.Event.GetLatestEventSeq(ctx, campaignID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load latest event seq: %v", err)
 	}
@@ -122,7 +115,7 @@ func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb
 
 	seed, seedSource, rollMode, err := random.ResolveSeed(
 		in.GetRng(),
-		a.service.seedFunc,
+		s.seedFunc,
 		func(mode commonv1.RollMode) bool { return mode == commonv1.RollMode_REPLAY },
 	)
 	if err != nil {
@@ -159,7 +152,7 @@ func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb
 			}
 			requestID := grpcmeta.RequestIDFromContext(ctx)
 			invocationID := grpcmeta.InvocationIDFromContext(ctx)
-			adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+			adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 			cmd := commandbuild.DaggerheartSystemCommand(commandbuild.DaggerheartSystemCommandInput{
 				CampaignID:   campaignID,
 				Type:         commandTypeDaggerheartHopeSpend,
@@ -170,10 +163,10 @@ func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb
 				EntityID:     characterID,
 				PayloadJSON:  payloadJSON,
 			})
-			_, err = a.service.executeAndApplyDomainCommand(ctx, cmd, adapter, domainCommandApplyOptions{
-				requireEvents:   true,
-				missingEventMsg: "hope spend did not emit an event",
-				executeErrMsg:   "execute domain command",
+			_, err = s.executeAndApplyDomainCommand(ctx, cmd, adapter, domainwrite.Options{
+				RequireEvents:     true,
+				MissingEventMsg:   "hope spend did not emit an event",
+				ExecuteErrMessage: "execute domain command",
 			})
 			if err != nil {
 				return nil, err
@@ -219,30 +212,30 @@ func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb
 			"fear_die":      result.Fear,
 			"advantage_die": result.AdvantageDie,
 		},
-		"modifier":           result.Modifier,
+		sdKeyModifier:        result.Modifier,
 		"advantage_modifier": result.AdvantageModifier,
-		"total":              result.Total,
+		sdKeyTotal:           result.Total,
 		"difficulty":         difficulty,
 		"success":            result.MeetsDifficulty,
-		"crit":               result.IsCrit,
+		sdKeyCrit:            result.IsCrit,
 	}
 	if len(modifierList) > 0 {
 		results["modifiers"] = modifierList
 	}
 
 	systemData := map[string]any{
-		"character_id": characterID,
-		"trait":        trait,
-		"roll_kind":    rollKind.String(),
-		"outcome":      outcomeCode,
-		"flavor":       flavor,
-		"crit":         result.IsCrit,
-		"hope_fear":    generateHopeFear,
-		"gm_move":      triggerGMMove,
-		"crit_negates": critNegatesEffects,
-		"advantage":    advantage,
-		"disadvantage": disadvantage,
-		"underwater":   in.GetUnderwater(),
+		sdKeyCharacterID: characterID,
+		"trait":          trait,
+		sdKeyRollKind:    rollKind.String(),
+		sdKeyOutcome:     outcomeCode,
+		"flavor":         flavor,
+		sdKeyCrit:        result.IsCrit,
+		sdKeyHopeFear:    generateHopeFear,
+		"gm_move":        triggerGMMove,
+		sdKeyCritNegates: critNegatesEffects,
+		"advantage":      advantage,
+		"disadvantage":   disadvantage,
+		"underwater":     in.GetUnderwater(),
 	}
 	if len(modifierList) > 0 {
 		systemData["modifiers"] = modifierList
@@ -275,10 +268,10 @@ func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb
 		EntityID:     requestID,
 		PayloadJSON:  payloadJSON,
 	})
-	domainResult, err := a.service.executeAndApplyDomainCommand(ctx, cmd, a.service.stores.Applier(), domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "action roll did not emit an event",
-		executeErrMsg:   "execute domain command",
+	domainResult, err := s.executeAndApplyDomainCommand(ctx, cmd, s.stores.Applier(), domainwrite.Options{
+		RequireEvents:     true,
+		MissingEventMsg:   "action roll did not emit an event",
+		ExecuteErrMessage: "execute domain command",
 	})
 	if err != nil {
 		return nil, err
@@ -286,7 +279,7 @@ func (a sessionFlowApplication) runSessionActionRoll(ctx context.Context, in *pb
 	rollSeqValue = domainResult.Decision.Events[0].Seq
 
 	failed := result.Difficulty != nil && !result.MeetsDifficulty
-	if err := a.service.advanceBreathCountdown(ctx, campaignID, sessionID, strings.TrimSpace(in.GetBreathCountdownId()), failed); err != nil {
+	if err := s.advanceBreathCountdown(ctx, campaignID, sessionID, strings.TrimSpace(in.GetBreathCountdownId()), failed); err != nil {
 		return nil, err
 	}
 
