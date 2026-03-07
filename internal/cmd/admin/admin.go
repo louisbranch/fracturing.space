@@ -9,9 +9,7 @@ import (
 	"strings"
 	"time"
 
-	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
@@ -65,26 +63,6 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceAdmin, func(context.Context) error {
-		// Status reporter.
-		statusConn := platformgrpc.DialLenient(ctx, cfg.StatusAddr, log.Printf)
-		if statusConn != nil {
-			defer func() {
-				if err := statusConn.Close(); err != nil {
-					log.Printf("close status connection: %v", err)
-				}
-			}()
-		}
-		var statusClient statusv1.StatusServiceClient
-		if statusConn != nil {
-			statusClient = statusv1.NewStatusServiceClient(statusConn)
-		}
-		reporter := platformstatus.NewReporter("admin", statusClient)
-		reporter.Register("admin.dashboard", platformstatus.Operational)
-		reporter.Register("admin.game.integration", platformstatus.Operational)
-		reporter.Register("admin.auth.integration", platformstatus.Operational)
-		stopReporter := reporter.Start(ctx)
-		defer stopReporter()
-
 		server, err := admin.NewServer(ctx, admin.Config{
 			HTTPAddr:        cfg.HTTPAddr,
 			GRPCAddr:        cfg.GRPCAddr,
@@ -97,6 +75,19 @@ func Run(ctx context.Context, cfg Config) error {
 			return fmt.Errorf("init admin server: %w", err)
 		}
 		defer server.Close()
+
+		dependencyStatuses := server.DependencyStatuses()
+		for _, statusLine := range formatDependencyStatusLines(dependencyStatuses) {
+			log.Printf("admin startup: %s", statusLine)
+		}
+		for _, warning := range dependencyStatusWarnings(dependencyStatuses) {
+			log.Printf("admin startup: %s", warning)
+		}
+
+		reporter := platformstatus.NewReporter("admin", server.StatusClient())
+		registerDependencyCapabilities(reporter, dependencyStatuses)
+		stopReporter := reporter.Start(ctx)
+		defer stopReporter()
 
 		if err := server.ListenAndServe(ctx); err != nil {
 			return fmt.Errorf("serve admin: %w", err)

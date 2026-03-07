@@ -12,21 +12,35 @@ type gatewayStub struct {
 	list []NotificationSummary
 	item NotificationSummary
 	err  error
+
+	lastUserID       string
+	lastNotification string
+	getCalls         int
+	openCalls        int
+	listCalls        int
 }
 
-func (g gatewayStub) ListNotifications(context.Context, string) ([]NotificationSummary, error) {
+func (g *gatewayStub) ListNotifications(_ context.Context, userID string) ([]NotificationSummary, error) {
+	g.listCalls++
+	g.lastUserID = userID
 	if g.err != nil {
 		return nil, g.err
 	}
 	return g.list, nil
 }
-func (g gatewayStub) GetNotification(context.Context, string, string) (NotificationSummary, error) {
+func (g *gatewayStub) GetNotification(_ context.Context, userID string, notificationID string) (NotificationSummary, error) {
+	g.getCalls++
+	g.lastUserID = userID
+	g.lastNotification = notificationID
 	if g.err != nil {
 		return NotificationSummary{}, g.err
 	}
 	return g.item, nil
 }
-func (g gatewayStub) OpenNotification(context.Context, string, string) (NotificationSummary, error) {
+func (g *gatewayStub) OpenNotification(_ context.Context, userID string, notificationID string) (NotificationSummary, error) {
+	g.openCalls++
+	g.lastUserID = userID
+	g.lastNotification = notificationID
 	if g.err != nil {
 		return NotificationSummary{}, g.err
 	}
@@ -56,7 +70,7 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 	if IsGatewayHealthy(gateway) {
 		t.Fatalf("IsGatewayHealthy(unavailable) = true, want false")
 	}
-	if !IsGatewayHealthy(gatewayStub{}) {
+	if !IsGatewayHealthy(&gatewayStub{}) {
 		t.Fatalf("IsGatewayHealthy(stub) = false, want true")
 	}
 
@@ -87,7 +101,7 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 func TestServiceRequiresUserID(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(gatewayStub{})
+	svc := NewService(&gatewayStub{})
 	_, err := svc.ListNotifications(context.Background(), "   ")
 	if err == nil {
 		t.Fatalf("expected user-id error")
@@ -100,7 +114,7 @@ func TestServiceRequiresUserID(t *testing.T) {
 func TestGetAndOpenValidateNotificationID(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(gatewayStub{})
+	svc := NewService(&gatewayStub{})
 	_, err := svc.GetNotification(context.Background(), "user-1", "   ")
 	if err == nil {
 		t.Fatalf("expected not-found error")
@@ -120,7 +134,7 @@ func TestGetAndOpenValidateNotificationID(t *testing.T) {
 func TestGetAndOpenRequireGatewayReturnedID(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(gatewayStub{item: NotificationSummary{}})
+	svc := NewService(&gatewayStub{item: NotificationSummary{}})
 	_, err := svc.GetNotification(context.Background(), "user-1", "n1")
 	if err == nil {
 		t.Fatalf("expected not-found error when gateway id is empty")
@@ -141,12 +155,45 @@ func TestGetAndOpenRequireGatewayReturnedID(t *testing.T) {
 func TestListNotificationsReturnsEmptySliceForNilGatewayData(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(gatewayStub{list: nil})
+	svc := NewService(&gatewayStub{list: nil})
 	items, err := svc.ListNotifications(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("ListNotifications() error = %v", err)
 	}
 	if len(items) != 0 {
 		t.Fatalf("len(items) = %d, want 0", len(items))
+	}
+}
+
+func TestGetAndOpenNormalizeDelegatedIDs(t *testing.T) {
+	t.Parallel()
+
+	gateway := &gatewayStub{item: NotificationSummary{ID: "n1"}}
+	svc := NewService(gateway)
+
+	if _, err := svc.GetNotification(context.Background(), " user-1 ", " n1 "); err != nil {
+		t.Fatalf("GetNotification() error = %v", err)
+	}
+	if gateway.getCalls != 1 {
+		t.Fatalf("get calls = %d, want 1", gateway.getCalls)
+	}
+	if gateway.lastUserID != "user-1" {
+		t.Fatalf("delegated user id = %q, want %q", gateway.lastUserID, "user-1")
+	}
+	if gateway.lastNotification != "n1" {
+		t.Fatalf("delegated notification id = %q, want %q", gateway.lastNotification, "n1")
+	}
+
+	if _, err := svc.OpenNotification(context.Background(), " user-1 ", " n1 "); err != nil {
+		t.Fatalf("OpenNotification() error = %v", err)
+	}
+	if gateway.openCalls != 1 {
+		t.Fatalf("open calls = %d, want 1", gateway.openCalls)
+	}
+	if gateway.lastUserID != "user-1" {
+		t.Fatalf("delegated user id = %q, want %q", gateway.lastUserID, "user-1")
+	}
+	if gateway.lastNotification != "n1" {
+		t.Fatalf("delegated notification id = %q, want %q", gateway.lastNotification, "n1")
 	}
 }

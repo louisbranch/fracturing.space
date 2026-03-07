@@ -14,10 +14,12 @@ type gatewayStub struct {
 	snapshot DashboardSnapshot
 	err      error
 	calls    int
+	lastUser string
 }
 
-func (g *gatewayStub) LoadDashboard(context.Context, string, language.Tag) (DashboardSnapshot, error) {
+func (g *gatewayStub) LoadDashboard(_ context.Context, userID string, _ language.Tag) (DashboardSnapshot, error) {
 	g.calls++
+	g.lastUser = userID
 	if g.err != nil {
 		return DashboardSnapshot{}, g.err
 	}
@@ -38,6 +40,22 @@ func TestLoadDashboardSkipsBlankUserID(t *testing.T) {
 	}
 	if gw.calls != 0 {
 		t.Fatalf("gateway calls = %d, want 0", gw.calls)
+	}
+}
+
+func TestLoadDashboardNormalizesUserID(t *testing.T) {
+	t.Parallel()
+
+	gw := &gatewayStub{}
+	svc := NewService(gw, nil, nil)
+	if _, err := svc.LoadDashboard(context.Background(), " user-7 ", language.AmericanEnglish); err != nil {
+		t.Fatalf("LoadDashboard() error = %v", err)
+	}
+	if gw.calls != 1 {
+		t.Fatalf("gateway calls = %d, want 1", gw.calls)
+	}
+	if gw.lastUser != "user-7" {
+		t.Fatalf("gateway user id = %q, want %q", gw.lastUser, "user-7")
 	}
 }
 

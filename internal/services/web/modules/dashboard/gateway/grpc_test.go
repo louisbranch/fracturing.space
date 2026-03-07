@@ -103,3 +103,19 @@ func TestLoadDashboardSkipsBlankUserID(t *testing.T) {
 		t.Fatalf("client calls = %d, want 0", client.calls)
 	}
 }
+
+func TestLoadDashboardNormalizesUserID(t *testing.T) {
+	t.Parallel()
+
+	client := &userHubClientStub{resp: &userhubv1.GetDashboardResponse{}}
+	gateway := GRPCGateway{Client: client}
+	if _, err := gateway.LoadDashboard(context.Background(), " user-7 ", language.AmericanEnglish); err != nil {
+		t.Fatalf("LoadDashboard() error = %v", err)
+	}
+	if client.calls != 1 {
+		t.Fatalf("client calls = %d, want 1", client.calls)
+	}
+	if client.lastUserID != "user-7" {
+		t.Fatalf("user id = %q, want %q", client.lastUserID, "user-7")
+	}
+}

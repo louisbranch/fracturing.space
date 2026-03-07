@@ -147,6 +147,49 @@ func TestSaveProfileValidatesNameLength(t *testing.T) {
 	}
 }
 
+func TestLoadAndSaveProfileNormalizeFields(t *testing.T) {
+	t.Parallel()
+
+	gateway := &gatewayStub{
+		profile: SettingsProfile{
+			Username:      "  rhea  ",
+			Name:          "  Rhea Vale  ",
+			AvatarSetID:   "  portraits ",
+			AvatarAssetID: "  ranger ",
+			Pronouns:      " she/they ",
+			Bio:           "  cartographer ",
+		},
+	}
+	svc := NewService(gateway)
+
+	loaded, err := svc.LoadProfile(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("LoadProfile() error = %v", err)
+	}
+	if loaded.Username != "rhea" || loaded.Name != "Rhea Vale" {
+		t.Fatalf("LoadProfile() normalization failed: %+v", loaded)
+	}
+	if err := svc.SaveProfile(context.Background(), "user-1", SettingsProfile{
+		Username:      "  rhea  ",
+		Name:          "  Rhea Vale  ",
+		AvatarSetID:   "  portraits ",
+		AvatarAssetID: "  ranger ",
+		Pronouns:      " she/they ",
+		Bio:           "  cartographer ",
+	}); err != nil {
+		t.Fatalf("SaveProfile() error = %v", err)
+	}
+	if gateway.lastProfile.Username != "rhea" || gateway.lastProfile.Name != "Rhea Vale" {
+		t.Fatalf("SaveProfile() normalization failed: %+v", gateway.lastProfile)
+	}
+	if gateway.lastProfile.AvatarSetID != "portraits" || gateway.lastProfile.AvatarAssetID != "ranger" {
+		t.Fatalf("SaveProfile() avatar normalization failed: %+v", gateway.lastProfile)
+	}
+	if gateway.lastProfile.Pronouns != "she/they" || gateway.lastProfile.Bio != "cartographer" {
+		t.Fatalf("SaveProfile() text normalization failed: %+v", gateway.lastProfile)
+	}
+}
+
 func TestLocaleNormalizationAndParsing(t *testing.T) {
 	t.Parallel()
 
@@ -249,7 +292,7 @@ func TestCreateAndRevokeAIKeyValidationAndDelegation(t *testing.T) {
 	if err := svc.RevokeAIKey(context.Background(), "user-1", ""); err == nil {
 		t.Fatalf("expected revoke validation error")
 	}
-	if err := svc.RevokeAIKey(context.Background(), "user-1", "cred-1"); err != nil {
+	if err := svc.RevokeAIKey(context.Background(), "user-1", " cred-1 "); err != nil {
 		t.Fatalf("RevokeAIKey() error = %v", err)
 	}
 	if gateway.lastCredential != "cred-1" {

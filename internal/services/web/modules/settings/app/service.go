@@ -30,13 +30,7 @@ func (s service) LoadProfile(ctx context.Context, userID string) (SettingsProfil
 	if err != nil {
 		return SettingsProfile{}, err
 	}
-	profile.Username = strings.TrimSpace(profile.Username)
-	profile.Name = strings.TrimSpace(profile.Name)
-	profile.AvatarSetID = strings.TrimSpace(profile.AvatarSetID)
-	profile.AvatarAssetID = strings.TrimSpace(profile.AvatarAssetID)
-	profile.Bio = strings.TrimSpace(profile.Bio)
-	profile.Pronouns = strings.TrimSpace(profile.Pronouns)
-	return profile, nil
+	return normalizeSettingsProfile(profile), nil
 }
 
 // SaveProfile centralizes this web behavior in one helper seam.
@@ -45,12 +39,7 @@ func (s service) SaveProfile(ctx context.Context, userID string, profile Setting
 	if err != nil {
 		return err
 	}
-	profile.Username = strings.TrimSpace(profile.Username)
-	profile.Name = strings.TrimSpace(profile.Name)
-	profile.AvatarSetID = strings.TrimSpace(profile.AvatarSetID)
-	profile.AvatarAssetID = strings.TrimSpace(profile.AvatarAssetID)
-	profile.Bio = strings.TrimSpace(profile.Bio)
-	profile.Pronouns = strings.TrimSpace(profile.Pronouns)
+	profile = normalizeSettingsProfile(profile)
 	if err := validateNameLength(profile.Name); err != nil {
 		return err
 	}
@@ -99,30 +88,7 @@ func (s service) ListAIKeys(ctx context.Context, userID string) ([]SettingsAIKey
 
 	normalized := make([]SettingsAIKey, 0, len(keys))
 	for _, key := range keys {
-		key.ID = strings.TrimSpace(key.ID)
-		key.Label = strings.TrimSpace(key.Label)
-		key.Provider = strings.TrimSpace(key.Provider)
-		key.Status = strings.TrimSpace(key.Status)
-		key.CreatedAt = strings.TrimSpace(key.CreatedAt)
-		key.RevokedAt = strings.TrimSpace(key.RevokedAt)
-
-		if key.Provider == "" {
-			key.Provider = "Unknown"
-		}
-		if key.Status == "" {
-			key.Status = "Unspecified"
-		}
-		if key.CreatedAt == "" {
-			key.CreatedAt = "-"
-		}
-		if key.RevokedAt == "" {
-			key.RevokedAt = "-"
-		}
-		if !isSafeCredentialPathID(key.ID) {
-			key.ID = ""
-			key.CanRevoke = false
-		}
-		normalized = append(normalized, key)
+		normalized = append(normalized, normalizeSettingsAIKey(key))
 	}
 
 	return normalized, nil
@@ -148,8 +114,52 @@ func (s service) RevokeAIKey(ctx context.Context, userID string, credentialID st
 	if err != nil {
 		return err
 	}
-	if strings.TrimSpace(credentialID) == "" {
-		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.ai_key_id_is_required", "credential id is required")
+	resolvedCredentialID := strings.TrimSpace(credentialID)
+	if resolvedCredentialID == "" {
+		return apperrors.EK(
+			apperrors.KindInvalidInput,
+			"error.web.message.ai_key_id_is_required",
+			"credential id is required",
+		)
 	}
-	return s.gateway.RevokeAIKey(ctx, resolvedUserID, strings.TrimSpace(credentialID))
+	return s.gateway.RevokeAIKey(ctx, resolvedUserID, resolvedCredentialID)
+}
+
+// normalizeSettingsProfile centralizes profile field normalization before service flows.
+func normalizeSettingsProfile(profile SettingsProfile) SettingsProfile {
+	profile.Username = strings.TrimSpace(profile.Username)
+	profile.Name = strings.TrimSpace(profile.Name)
+	profile.AvatarSetID = strings.TrimSpace(profile.AvatarSetID)
+	profile.AvatarAssetID = strings.TrimSpace(profile.AvatarAssetID)
+	profile.Bio = strings.TrimSpace(profile.Bio)
+	profile.Pronouns = strings.TrimSpace(profile.Pronouns)
+	return profile
+}
+
+// normalizeSettingsAIKey normalizes one credential row for stable template rendering.
+func normalizeSettingsAIKey(key SettingsAIKey) SettingsAIKey {
+	key.ID = strings.TrimSpace(key.ID)
+	key.Label = strings.TrimSpace(key.Label)
+	key.Provider = strings.TrimSpace(key.Provider)
+	key.Status = strings.TrimSpace(key.Status)
+	key.CreatedAt = strings.TrimSpace(key.CreatedAt)
+	key.RevokedAt = strings.TrimSpace(key.RevokedAt)
+
+	if key.Provider == "" {
+		key.Provider = "Unknown"
+	}
+	if key.Status == "" {
+		key.Status = "Unspecified"
+	}
+	if key.CreatedAt == "" {
+		key.CreatedAt = "-"
+	}
+	if key.RevokedAt == "" {
+		key.RevokedAt = "-"
+	}
+	if !isSafeCredentialPathID(key.ID) {
+		key.ID = ""
+		key.CanRevoke = false
+	}
+	return key
 }

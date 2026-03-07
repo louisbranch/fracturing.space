@@ -36,12 +36,21 @@ type Config struct {
 
 // Server hosts the admin dashboard and manages authenticated gRPC clients.
 type Server struct {
-	httpAddr    string
-	grpcAddr    string
-	authAddr    string
-	grpcClients *grpcClients
-	statusConn  *grpc.ClientConn
-	httpServer  *http.Server
+	httpAddr     string
+	grpcAddr     string
+	authAddr     string
+	statusAddr   string
+	grpcClients  *grpcClients
+	statusClient statusv1.StatusServiceClient
+	statusConn   *grpc.ClientConn
+	httpServer   *http.Server
+}
+
+// DependencyStatus captures one startup dependency connectivity result.
+type DependencyStatus struct {
+	Name      string
+	Address   string
+	Connected bool
 }
 
 // grpcClients stores gRPC connections and clients for the admin server.
@@ -335,13 +344,55 @@ func NewServer(ctx context.Context, cfg Config) (*Server, error) {
 	}
 
 	return &Server{
-		httpAddr:    httpAddr,
-		grpcAddr:    cfg.GRPCAddr,
-		authAddr:    cfg.AuthAddr,
-		grpcClients: clients,
-		statusConn:  statusConn,
-		httpServer:  httpServer,
+		httpAddr:     httpAddr,
+		grpcAddr:     cfg.GRPCAddr,
+		authAddr:     cfg.AuthAddr,
+		statusAddr:   cfg.StatusAddr,
+		grpcClients:  clients,
+		statusClient: statusClient,
+		statusConn:   statusConn,
+		httpServer:   httpServer,
 	}, nil
+}
+
+// StatusClient returns the status service client used by the server.
+func (s *Server) StatusClient() statusv1.StatusServiceClient {
+	if s == nil {
+		return nil
+	}
+	return s.statusClient
+}
+
+// DependencyStatuses returns the current startup dependency connectivity view.
+func (s *Server) DependencyStatuses() []DependencyStatus {
+	if s == nil {
+		return nil
+	}
+	statuses := make([]DependencyStatus, 0, 3)
+	if addr := strings.TrimSpace(s.grpcAddr); addr != "" {
+		connected := s.grpcClients != nil && s.grpcClients.HasGameConnection()
+		statuses = append(statuses, DependencyStatus{
+			Name:      "game",
+			Address:   addr,
+			Connected: connected,
+		})
+	}
+	if addr := strings.TrimSpace(s.authAddr); addr != "" {
+		connected := s.grpcClients != nil && s.grpcClients.HasAuthConnection()
+		statuses = append(statuses, DependencyStatus{
+			Name:      "auth",
+			Address:   addr,
+			Connected: connected,
+		})
+	}
+	if addr := strings.TrimSpace(s.statusAddr); addr != "" {
+		statuses = append(statuses, DependencyStatus{
+			Name:      "status",
+			Address:   addr,
+			Connected: s.statusConn != nil,
+		})
+	}
+	return statuses
 }
 
 // ListenAndServe runs the HTTP server until the context ends.
@@ -388,7 +439,9 @@ func (s *Server) Close() {
 		if err := s.statusConn.Close(); err != nil {
 			log.Printf("close admin status gRPC connection: %v", err)
 		}
+		s.statusConn = nil
 	}
+	s.statusClient = nil
 	if s.httpServer != nil {
 		_ = s.httpServer.Close()
 	}

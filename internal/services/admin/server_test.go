@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	"google.golang.org/grpc"
 )
 
@@ -188,5 +189,53 @@ func TestListenAndServeStopsOnCancel(t *testing.T) {
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("server did not stop on cancel")
+	}
+}
+
+func TestServerDependencyStatuses(t *testing.T) {
+	t.Parallel()
+
+	s := &Server{
+		grpcAddr:   "game:8082",
+		authAddr:   "auth:8083",
+		statusAddr: "status:8093",
+		grpcClients: &grpcClients{
+			gameConn: &grpc.ClientConn{},
+		},
+	}
+	statuses := s.DependencyStatuses()
+	if len(statuses) != 3 {
+		t.Fatalf("len(statuses) = %d, want 3", len(statuses))
+	}
+	if statuses[0].Name != "game" || !statuses[0].Connected {
+		t.Fatalf("statuses[0] = %#v, want connected game status", statuses[0])
+	}
+	if statuses[1].Name != "auth" || statuses[1].Connected {
+		t.Fatalf("statuses[1] = %#v, want unavailable auth status", statuses[1])
+	}
+	if statuses[2].Name != "status" || statuses[2].Connected {
+		t.Fatalf("statuses[2] = %#v, want unavailable status status", statuses[2])
+	}
+}
+
+func TestServerDependencyStatusesNilSafe(t *testing.T) {
+	t.Parallel()
+
+	var s *Server
+	if statuses := s.DependencyStatuses(); statuses != nil {
+		t.Fatalf("nil server statuses = %#v, want nil", statuses)
+	}
+	if client := s.StatusClient(); client != nil {
+		t.Fatalf("nil server StatusClient() = %#v, want nil", client)
+	}
+}
+
+func TestServerStatusClient(t *testing.T) {
+	t.Parallel()
+
+	client := statusv1.NewStatusServiceClient(&grpc.ClientConn{})
+	s := &Server{statusClient: client}
+	if got := s.StatusClient(); got != client {
+		t.Fatalf("StatusClient() = %#v, want %#v", got, client)
 	}
 }

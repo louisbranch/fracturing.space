@@ -52,3 +52,18 @@ func TestWithResolvedUserIDInjectsOutgoingMetadata(t *testing.T) {
 		t.Fatalf("user id metadata = %v, want [user-123]", values)
 	}
 }
+
+func TestWithResolvedUserIDNormalizesResolverValue(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	ctx := WithResolvedUserID(req, func(*http.Request) string { return " user-123 " })
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		t.Fatalf("expected outgoing metadata")
+	}
+	values := md.Get(grpcmeta.UserIDHeader)
+	if len(values) != 1 || values[0] != "user-123" {
+		t.Fatalf("user id metadata = %v, want [user-123]", values)
+	}
+}

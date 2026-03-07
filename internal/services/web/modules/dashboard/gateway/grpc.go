@@ -8,6 +8,7 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 	"google.golang.org/grpc"
 
 	"golang.org/x/text/language"
@@ -38,7 +39,7 @@ func (g GRPCGateway) LoadDashboard(ctx context.Context, userID string, localeTag
 	if g.Client == nil {
 		return dashboardapp.DashboardSnapshot{}, nil
 	}
-	userID = strings.TrimSpace(userID)
+	userID = userid.Normalize(userID)
 	if userID == "" {
 		return dashboardapp.DashboardSnapshot{}, nil
 	}

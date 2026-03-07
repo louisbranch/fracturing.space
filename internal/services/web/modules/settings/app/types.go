@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 	"golang.org/x/text/language"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
@@ -75,11 +76,7 @@ type Service interface {
 // RequireUserID validates and returns a trimmed user ID, or returns an
 // unauthorized error if it is blank.
 func RequireUserID(userID string) (string, error) {
-	userID = strings.TrimSpace(userID)
-	if userID == "" {
-		return "", apperrors.EK(apperrors.KindUnauthorized, "error.web.message.user_id_is_required", "user id is required")
-	}
-	return userID, nil
+	return userid.Require(userID)
 }
 
 // parseSettingsLocale parses inbound values into package-safe forms.
