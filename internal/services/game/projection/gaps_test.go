@@ -163,15 +163,6 @@ type gapEventStore struct {
 	events []event.Event
 }
 
-func (s *gapEventStore) AppendEvent(context.Context, event.Event) (event.Event, error) {
-	return event.Event{}, nil
-}
-func (s *gapEventStore) GetEventByHash(context.Context, string) (event.Event, error) {
-	return event.Event{}, nil
-}
-func (s *gapEventStore) GetEventBySeq(context.Context, string, uint64) (event.Event, error) {
-	return event.Event{}, nil
-}
 func (s *gapEventStore) ListEvents(_ context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error) {
 	var results []event.Event
 	for _, evt := range s.events {
@@ -185,9 +176,6 @@ func (s *gapEventStore) ListEvents(_ context.Context, campaignID string, afterSe
 	}
 	return results, nil
 }
-func (s *gapEventStore) ListEventsBySession(context.Context, string, string, uint64, int) ([]event.Event, error) {
-	return nil, nil
-}
 func (s *gapEventStore) GetLatestEventSeq(_ context.Context, campaignID string) (uint64, error) {
 	return s.seqs[campaignID], nil
 }
@@ -197,9 +185,6 @@ func (s *gapEventStore) ListEventCampaignIDs(_ context.Context) ([]string, error
 		ids = append(ids, campaignID)
 	}
 	return ids, nil
-}
-func (s *gapEventStore) ListEventsPage(context.Context, storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
-	return storage.ListEventsPageResult{}, nil
 }
 
 func TestRepairProjectionGaps_ReplaysGaps(t *testing.T) {

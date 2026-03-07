@@ -64,6 +64,9 @@ func TestNormalizeServerBootstrapConfigDefaults(t *testing.T) {
 	if cfg.buildProjectionApplyOutboxApply == nil {
 		t.Fatal("expected default buildProjectionApplyOutboxApply")
 	}
+	if cfg.buildStatusRuntime == nil {
+		t.Fatal("expected default buildStatusRuntime")
+	}
 }
 
 func TestServerBootstrapListensAndClosesOnOpenStorageFailure(t *testing.T) {

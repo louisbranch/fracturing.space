@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/workflow"
 	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -38,7 +39,11 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		return "", storage.DaggerheartCharacterProfile{}, err
 	}
 
-	if err := c.executeCharacterProfileUpdate(ctx, campaignRecord, characterID, daggerheartgrpc.SystemProfileMap(dhProfile)); err != nil {
+	if err := c.executeCharacterProfileUpdate(ctx, workflow.CampaignContext{
+		ID:     campaignRecord.ID,
+		System: campaignRecord.System,
+		Status: campaignRecord.Status,
+	}, characterID, daggerheartgrpc.SystemProfileMap(dhProfile)); err != nil {
 		return "", storage.DaggerheartCharacterProfile{}, err
 	}
 

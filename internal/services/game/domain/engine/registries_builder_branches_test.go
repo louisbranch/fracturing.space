@@ -50,6 +50,9 @@ func TestBuildRegistries_PropagatesModuleCommandRegistrationError(t *testing.T) 
 	if !errors.Is(err, commandErr) {
 		t.Fatalf("expected command registration error, got %v", err)
 	}
+	if !strings.Contains(err.Error(), "system module system-bad@v1 register commands") {
+		t.Fatalf("expected command registration context, got %v", err)
+	}
 }
 
 func TestBuildRegistries_PropagatesModuleEventRegistrationError(t *testing.T) {
@@ -61,6 +64,9 @@ func TestBuildRegistries_PropagatesModuleEventRegistrationError(t *testing.T) {
 	})
 	if !errors.Is(err, eventErr) {
 		t.Fatalf("expected event registration error, got %v", err)
+	}
+	if !strings.Contains(err.Error(), "system module system-bad@v1 register events") {
+		t.Fatalf("expected event registration context, got %v", err)
 	}
 }
 

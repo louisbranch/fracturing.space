@@ -131,10 +131,7 @@ func (s *Server) startCatalogAvailabilityMonitor(ctx context.Context) func() {
 		return func() {}
 	}
 
-	workerCtx, cancel := context.WithCancel(ctx)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
+	return startCancelableLoop(ctx, func(workerCtx context.Context) {
 		runCatalogAvailabilityMonitor(
 			workerCtx,
 			s.statusReporter,
@@ -142,11 +139,7 @@ func (s *Server) startCatalogAvailabilityMonitor(ctx context.Context) func() {
 			catalogAvailabilityMonitorInterval,
 			log.Printf,
 		)
-	}()
-	return func() {
-		cancel()
-		<-done
-	}
+	})
 }
 
 // runCatalogAvailabilityMonitor re-checks catalog readiness until it becomes

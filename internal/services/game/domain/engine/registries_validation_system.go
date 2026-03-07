@@ -28,6 +28,7 @@ func validateEmittableEventTypes(mod module.Module, events *event.Registry) erro
 		}
 	}
 	if len(missing) > 0 {
+		sort.Strings(missing)
 		return fmt.Errorf("system module %s declares emittable event types not in registry: %s",
 			mod.ID(), strings.Join(missing, ", "))
 	}
@@ -93,6 +94,7 @@ func ValidateSystemFoldCoverage(modules *module.Registry, events *event.Registry
 		}
 	}
 	if len(missing) > 0 {
+		sort.Strings(missing)
 		return fmt.Errorf("system emittable events missing folder fold handlers: %s", strings.Join(missing, ", "))
 	}
 	return nil
@@ -105,31 +107,16 @@ func ValidateDeciderCommandCoverage(modules *module.Registry, commands *command.
 		return fmt.Errorf("module registry and command registry are required")
 	}
 
-	// Build a set of system-owned command types each module registered.
-	systemCommands := make(map[string]map[command.Type]struct{})
-	for _, def := range commands.ListDefinitions() {
-		if def.Owner != command.OwnerSystem {
-			continue
-		}
-		for _, mod := range modules.List() {
-			namespace := "sys." + naming.NormalizeSystemNamespace(mod.ID()) + "."
-			if strings.HasPrefix(string(def.Type), namespace) {
-				key := mod.ID() + "@" + mod.Version()
-				if systemCommands[key] == nil {
-					systemCommands[key] = make(map[command.Type]struct{})
-				}
-				systemCommands[key][def.Type] = struct{}{}
-			}
-		}
-	}
+	moduleList := modules.List()
+	systemCommands := collectSystemCommandsByModule(moduleList, commands.ListDefinitions())
 
 	var missing []string
-	for _, mod := range modules.List() {
+	for _, mod := range moduleList {
 		decider := mod.Decider()
 		if decider == nil {
 			continue
 		}
-		key := mod.ID() + "@" + mod.Version()
+		key := moduleVersionKey(mod)
 		typer, ok := decider.(module.CommandTyper)
 		if !ok {
 			// If the module has registered system commands but its decider
@@ -142,10 +129,7 @@ func ValidateDeciderCommandCoverage(modules *module.Registry, commands *command.
 			}
 			continue
 		}
-		handled := make(map[command.Type]struct{})
-		for _, t := range typer.DeciderHandledCommands() {
-			handled[t] = struct{}{}
-		}
+		handled := commandTypeSetFromSlice(typer.DeciderHandledCommands())
 		for ct := range systemCommands[key] {
 			if _, ok := handled[ct]; !ok {
 				missing = append(missing, string(ct))
@@ -153,6 +137,7 @@ func ValidateDeciderCommandCoverage(modules *module.Registry, commands *command.
 		}
 	}
 	if len(missing) > 0 {
+		sort.Strings(missing)
 		return fmt.Errorf("system commands missing decider handlers: %s", strings.Join(missing, ", "))
 	}
 	return nil
@@ -190,6 +175,7 @@ func ValidateAdapterEventCoverage(modules *module.Registry, adapters *bridge.Ada
 		}
 	}
 	if len(missing) > 0 {
+		sort.Strings(missing)
 		return fmt.Errorf("system emittable events missing adapter handlers: %s", strings.Join(missing, ", "))
 	}
 	return nil
@@ -230,6 +216,7 @@ func ValidateSystemMetadataConsistency(events *event.Registry, modules *module.R
 		}
 	}
 	if len(orphaned) > 0 {
+		sort.Strings(orphaned)
 		return fmt.Errorf("system event types without matching module: %s",
 			strings.Join(orphaned, ", "))
 	}
@@ -345,8 +332,51 @@ func ValidateSystemRouterDefinitionParity(
 	}
 
 	if len(orphaned) > 0 {
+		sort.Strings(orphaned)
 		return fmt.Errorf("system router handlers for types not in EmittableEventTypes: %s",
 			strings.Join(orphaned, ", "))
 	}
 	return nil
+}
+
+// collectSystemCommandsByModule maps each module (`id@version`) to the
+// system-owned command types currently registered for its namespace.
+func collectSystemCommandsByModule(
+	modules []module.Module,
+	definitions []command.Definition,
+) map[string]map[command.Type]struct{} {
+	modulePrefixes := make(map[string]string, len(modules))
+	for _, mod := range modules {
+		modulePrefixes[moduleVersionKey(mod)] = "sys." + naming.NormalizeSystemNamespace(mod.ID()) + "."
+	}
+
+	coverage := make(map[string]map[command.Type]struct{}, len(modules))
+	for _, definition := range definitions {
+		if definition.Owner != command.OwnerSystem {
+			continue
+		}
+		typeName := string(definition.Type)
+		for key, prefix := range modulePrefixes {
+			if !strings.HasPrefix(typeName, prefix) {
+				continue
+			}
+			if coverage[key] == nil {
+				coverage[key] = make(map[command.Type]struct{})
+			}
+			coverage[key][definition.Type] = struct{}{}
+		}
+	}
+	return coverage
+}
+
+func commandTypeSetFromSlice(types []command.Type) map[command.Type]struct{} {
+	set := make(map[command.Type]struct{}, len(types))
+	for _, commandType := range types {
+		set[commandType] = struct{}{}
+	}
+	return set
+}
+
+func moduleVersionKey(mod module.Module) string {
+	return mod.ID() + "@" + mod.Version()
 }

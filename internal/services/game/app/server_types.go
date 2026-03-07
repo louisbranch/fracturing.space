@@ -11,6 +11,7 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -47,18 +48,16 @@ type aiGRPCClients struct {
 	agentClient aiv1.AgentServiceClient
 }
 
-// projectionApplyOutboxShadowProcessor drains queue rows for environments where the
-// main apply worker is intentionally delayed or disabled.
-type projectionApplyOutboxShadowProcessor interface {
-	ProcessProjectionApplyOutboxShadow(context.Context, time.Time, int) (int, error)
-}
+// projectionApplyOutboxShadowProcessor and projectionApplyOutboxProcessor use
+// storage contracts directly so runtime worker orchestration does not depend on
+// SQLite-specific types.
+type projectionApplyOutboxShadowProcessor = storage.ProjectionApplyOutboxShadowProcessor
+type projectionApplyOutboxProcessor = storage.ProjectionApplyOutboxProcessor
 
-// projectionApplyOutboxProcessor is responsible for applying queued events to projections.
-//
-// It keeps event ingestion and projection side effects separated from request path
-// responsiveness while still converging read models in the background.
-type projectionApplyOutboxProcessor interface {
-	ProcessProjectionApplyOutbox(context.Context, time.Time, int, func(context.Context, event.Event) error) (int, error)
+// projectionApplyStore is the projection-store contract needed by outbox apply
+// wiring. It combines exactly-once apply with system-adapter store binding.
+type projectionApplyStore interface {
+	storage.ProjectionApplyExactlyOnceStore
 }
 
 // Projection worker defaults balance recovery speed versus DB churn.

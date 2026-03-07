@@ -87,3 +87,15 @@ type StoresFromProjectionConfig struct {
 func NewWriteRuntime() *domainwrite.Runtime {
 	return domainwrite.NewRuntime()
 }
+
+// DomainExecutor exposes the domain command executor dependency used by
+// write-path helpers.
+func (s Stores) DomainExecutor() domainwrite.Executor {
+	return s.Domain
+}
+
+// DomainWriteRuntime exposes the runtime write controls used by write-path
+// helpers.
+func (s Stores) DomainWriteRuntime() *domainwrite.Runtime {
+	return s.WriteRuntime
+}

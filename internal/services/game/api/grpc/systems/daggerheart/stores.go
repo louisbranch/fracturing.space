@@ -153,6 +153,18 @@ func (s Stores) runtimeRequirements() []dependencyRequirement {
 	}
 }
 
+// DomainExecutor exposes the domain command executor dependency used by
+// write-path helpers.
+func (s Stores) DomainExecutor() domainwrite.Executor {
+	return s.Domain
+}
+
+// DomainWriteRuntime exposes the runtime write controls used by write-path
+// helpers.
+func (s Stores) DomainWriteRuntime() *domainwrite.Runtime {
+	return s.WriteRuntime
+}
+
 // Applier returns a projection Applier wired to the stores in this bundle.
 // Only the stores available in the Daggerheart service are mapped; fields not
 // present (e.g., Invite, CampaignFork) remain nil and are unused by dispatch.

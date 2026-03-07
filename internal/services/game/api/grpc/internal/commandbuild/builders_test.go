@@ -3,7 +3,6 @@ package commandbuild
 import (
 	"testing"
 
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 )
 
@@ -30,25 +29,27 @@ func TestCoreSystem(t *testing.T) {
 	}
 }
 
-func TestDaggerheartSystemCommand(t *testing.T) {
-	cmd := DaggerheartSystemCommand(DaggerheartSystemCommandInput{
-		CampaignID:   "camp-1",
-		Type:         command.Type("sys.daggerheart.gm_fear.set"),
-		SessionID:    "sess-1",
-		RequestID:    "req-1",
-		InvocationID: "inv-1",
-		EntityType:   "campaign",
-		EntityID:     "camp-1",
-		PayloadJSON:  []byte(`{"after":3}`),
+func TestSystemCommand(t *testing.T) {
+	cmd := SystemCommand(SystemCommandInput{
+		CampaignID:    "camp-1",
+		Type:          command.Type("sys.daggerheart.gm_fear.set"),
+		SystemID:      "daggerheart",
+		SystemVersion: "1",
+		SessionID:     "sess-1",
+		RequestID:     "req-1",
+		InvocationID:  "inv-1",
+		EntityType:    "campaign",
+		EntityID:      "camp-1",
+		PayloadJSON:   []byte(`{"after":3}`),
 	})
 
 	if cmd.ActorType != command.ActorTypeSystem {
 		t.Fatalf("actor type = %q, want %q", cmd.ActorType, command.ActorTypeSystem)
 	}
-	if cmd.SystemID != daggerheart.SystemID {
-		t.Fatalf("system id = %q, want %q", cmd.SystemID, daggerheart.SystemID)
+	if cmd.SystemID != "daggerheart" {
+		t.Fatalf("system id = %q, want %q", cmd.SystemID, "daggerheart")
 	}
-	if cmd.SystemVersion != daggerheart.SystemVersion {
-		t.Fatalf("system version = %q, want %q", cmd.SystemVersion, daggerheart.SystemVersion)
+	if cmd.SystemVersion != "1" {
+		t.Fatalf("system version = %q, want %q", cmd.SystemVersion, "1")
 	}
 }

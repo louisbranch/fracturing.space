@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -93,38 +92,12 @@ func (b registryBootstrap) validateCoreRegistrations() error {
 	return validateCoreEmittableEventTypes(b.eventRegistry)
 }
 
-// registerSystemModules executes the module registration phase and validates
-// new system-owned command/event types against namespace and emit declarations.
-func (b registryBootstrap) registerSystemModules() error {
-	for _, mod := range b.modules {
-		if err := b.systemRegistry.Register(mod); err != nil {
-			return err
-		}
-		beforeCommands := commandTypeSet(b.commandRegistry.ListDefinitions())
-		if err := mod.RegisterCommands(b.commandRegistry); err != nil {
-			return err
-		}
-		beforeEvents := eventTypeSet(b.eventRegistry.ListDefinitions())
-		if err := mod.RegisterEvents(b.eventRegistry); err != nil {
-			return err
-		}
-		if err := validateModuleSystemTypePrefixes(
-			mod,
-			beforeCommands,
-			beforeEvents,
-			b.commandRegistry.ListDefinitions(),
-			b.eventRegistry.ListDefinitions(),
-		); err != nil {
-			return err
-		}
-		if err := validateEmittableEventTypes(mod, b.eventRegistry); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 type registryValidationStep func(registryBootstrap) error
+
+type namedRegistryValidationStep struct {
+	name string
+	run  registryValidationStep
+}
 
 // runRegistryValidationPipeline runs registry validators in order and short
 // circuits on first failure to preserve startup fail-fast behavior.
@@ -137,48 +110,63 @@ func runRegistryValidationPipeline(bootstrap registryBootstrap, steps ...registr
 	return nil
 }
 
+// runNamedRegistryValidationPipeline behaves like runRegistryValidationPipeline
+// but wraps failures with the explicit validation step name so startup errors
+// are easier to triage.
+func runNamedRegistryValidationPipeline(bootstrap registryBootstrap, steps ...namedRegistryValidationStep) error {
+	for _, step := range steps {
+		if step.run == nil {
+			continue
+		}
+		if err := step.run(bootstrap); err != nil {
+			return fmt.Errorf("registry validation %s: %w", step.name, err)
+		}
+	}
+	return nil
+}
+
 // validateRegistryContracts executes aggregate/runtime guardrails after all
 // command/event definitions are loaded into registries.
 func (b registryBootstrap) validateRegistryContracts(domains []CoreDomain) error {
 	allFoldHandled := collectFoldHandledTypes(domains, b.modules)
-	return runRegistryValidationPipeline(
+	return runNamedRegistryValidationPipeline(
 		b,
-		func(state registryBootstrap) error {
+		namedRegistryValidationStep{name: "system readiness checker coverage", run: func(state registryBootstrap) error {
 			return ValidateSystemReadinessCheckerCoverage(state.systemRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "system fold coverage", run: func(state registryBootstrap) error {
 			return ValidateSystemFoldCoverage(state.systemRegistry, state.eventRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "system decider command coverage", run: func(state registryBootstrap) error {
 			return ValidateDeciderCommandCoverage(state.systemRegistry, state.commandRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "core decider command coverage", run: func(state registryBootstrap) error {
 			return ValidateCoreDeciderCommandCoverage(state.commandRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "active session policy coverage", run: func(state registryBootstrap) error {
 			return ValidateActiveSessionPolicyCoverage(state.commandRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "fold coverage", run: func(state registryBootstrap) error {
 			return ValidateFoldCoverage(state.eventRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "alias fold coverage", run: func(state registryBootstrap) error {
 			return ValidateAliasFoldCoverage(state.eventRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "aggregate fold dispatch", run: func(state registryBootstrap) error {
 			return ValidateAggregateFoldDispatch(state.eventRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "entity keyed addressing", run: func(state registryBootstrap) error {
 			return ValidateEntityKeyedAddressing(state.eventRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "audit-only fold handler exclusion", run: func(state registryBootstrap) error {
 			return ValidateNoFoldHandlersForAuditOnlyEvents(state.eventRegistry, allFoldHandled)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "state factory determinism", run: func(state registryBootstrap) error {
 			return ValidateStateFactoryDeterminism(state.systemRegistry)
-		},
-		func(state registryBootstrap) error {
+		}},
+		namedRegistryValidationStep{name: "system metadata consistency", run: func(state registryBootstrap) error {
 			return ValidateSystemMetadataConsistency(state.eventRegistry, state.systemRegistry)
-		},
+		}},
 	)
 }
 
@@ -228,68 +216,4 @@ func collectProjectionHandledTypes(domains []CoreDomain) []event.Type {
 		}
 	}
 	return projectionHandled
-}
-
-// commandTypeSet creates a set view for prefix validation comparisons.
-func commandTypeSet(definitions []command.Definition) map[command.Type]struct{} {
-	result := make(map[command.Type]struct{}, len(definitions))
-	for _, definition := range definitions {
-		result[definition.Type] = struct{}{}
-	}
-	return result
-}
-
-// eventTypeSet creates a set view for prefix validation comparisons.
-func eventTypeSet(definitions []event.Definition) map[event.Type]struct{} {
-	result := make(map[event.Type]struct{}, len(definitions))
-	for _, definition := range definitions {
-		result[definition.Type] = struct{}{}
-	}
-	return result
-}
-
-// validateModuleSystemTypePrefixes enforces system namespace naming for system-owned
-// command/event types.
-func validateModuleSystemTypePrefixes(
-	mod module.Module,
-	knownCommands map[command.Type]struct{},
-	knownEvents map[event.Type]struct{},
-	commands []command.Definition,
-	events []event.Definition,
-) error {
-	moduleID := strings.TrimSpace(mod.ID())
-	namespace := naming.NormalizeSystemNamespace(moduleID)
-	if namespace == "" {
-		return fmt.Errorf("system module id is required for naming validation")
-	}
-	expectedPrefix := "sys." + namespace + "."
-
-	for _, definition := range commands {
-		if definition.Owner != command.OwnerSystem {
-			continue
-		}
-		if _, exists := knownCommands[definition.Type]; exists {
-			continue
-		}
-		name := string(definition.Type)
-		if strings.HasPrefix(name, expectedPrefix) {
-			continue
-		}
-		return fmt.Errorf("system module %s command %s must use %s prefix", moduleID, definition.Type, expectedPrefix)
-	}
-
-	for _, definition := range events {
-		if definition.Owner != event.OwnerSystem {
-			continue
-		}
-		if _, exists := knownEvents[definition.Type]; exists {
-			continue
-		}
-		name := string(definition.Type)
-		if strings.HasPrefix(name, expectedPrefix) {
-			continue
-		}
-		return fmt.Errorf("system module %s event %s must use %s prefix", moduleID, definition.Type, expectedPrefix)
-	}
-	return nil
 }

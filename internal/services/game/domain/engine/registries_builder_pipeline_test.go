@@ -11,6 +11,20 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
+type pipelineModule struct {
+	id      string
+	version string
+}
+
+func (m pipelineModule) ID() string                                 { return m.id }
+func (m pipelineModule) Version() string                            { return m.version }
+func (m pipelineModule) RegisterCommands(_ *command.Registry) error { return nil }
+func (m pipelineModule) RegisterEvents(_ *event.Registry) error     { return nil }
+func (m pipelineModule) EmittableEventTypes() []event.Type          { return nil }
+func (m pipelineModule) Decider() module.Decider                    { return nil }
+func (m pipelineModule) Folder() module.Folder                      { return nil }
+func (m pipelineModule) StateFactory() module.StateFactory          { return nil }
+
 func TestRunRegistryValidationPipeline_StopsAtFirstError(t *testing.T) {
 	bootstrap := newRegistryBootstrap(nil)
 	errExpected := errors.New("validation exploded")
@@ -36,6 +50,150 @@ func TestRunRegistryValidationPipeline_StopsAtFirstError(t *testing.T) {
 	}
 	if calls != 2 {
 		t.Fatalf("step calls = %d, want 2", calls)
+	}
+}
+
+func TestRunNamedRegistryValidationPipeline_WrapsStepNameAndStops(t *testing.T) {
+	bootstrap := newRegistryBootstrap(nil)
+	errExpected := errors.New("validation exploded")
+	calls := 0
+
+	err := runNamedRegistryValidationPipeline(
+		bootstrap,
+		namedRegistryValidationStep{
+			name: "first",
+			run: func(registryBootstrap) error {
+				calls++
+				return nil
+			},
+		},
+		namedRegistryValidationStep{
+			name: "second",
+			run: func(registryBootstrap) error {
+				calls++
+				return errExpected
+			},
+		},
+		namedRegistryValidationStep{
+			name: "third",
+			run: func(registryBootstrap) error {
+				calls++
+				return nil
+			},
+		},
+	)
+	if !errors.Is(err, errExpected) {
+		t.Fatalf("runNamedRegistryValidationPipeline() error = %v, want %v", err, errExpected)
+	}
+	if !strings.Contains(err.Error(), "registry validation second") {
+		t.Fatalf("runNamedRegistryValidationPipeline() error = %v, want step name context", err)
+	}
+	if calls != 2 {
+		t.Fatalf("step calls = %d, want 2", calls)
+	}
+}
+
+func TestRunNamedRegistryValidationPipeline_SkipsNilRun(t *testing.T) {
+	bootstrap := newRegistryBootstrap(nil)
+	calls := 0
+
+	err := runNamedRegistryValidationPipeline(
+		bootstrap,
+		namedRegistryValidationStep{name: "nil-step"},
+		namedRegistryValidationStep{
+			name: "active-step",
+			run: func(registryBootstrap) error {
+				calls++
+				return nil
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("runNamedRegistryValidationPipeline() unexpected error: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("step calls = %d, want 1", calls)
+	}
+}
+
+func TestRunNamedSystemModuleRegistrationPipeline_WrapsStepNameAndStops(t *testing.T) {
+	bootstrap := newRegistryBootstrap(nil)
+	errExpected := errors.New("registration exploded")
+	calls := 0
+	mod := pipelineModule{id: "alpha", version: "v2"}
+
+	err := runNamedSystemModuleRegistrationPipeline(
+		bootstrap,
+		mod,
+		moduleRegistrationBaseline{},
+		namedSystemModuleRegistrationStep{
+			name: "first",
+			run: func(registryBootstrap, module.Module, moduleRegistrationBaseline) error {
+				calls++
+				return nil
+			},
+		},
+		namedSystemModuleRegistrationStep{
+			name: "register events",
+			run: func(registryBootstrap, module.Module, moduleRegistrationBaseline) error {
+				calls++
+				return errExpected
+			},
+		},
+		namedSystemModuleRegistrationStep{
+			name: "third",
+			run: func(registryBootstrap, module.Module, moduleRegistrationBaseline) error {
+				calls++
+				return nil
+			},
+		},
+	)
+	if !errors.Is(err, errExpected) {
+		t.Fatalf("runNamedSystemModuleRegistrationPipeline() error = %v, want %v", err, errExpected)
+	}
+	if !strings.Contains(err.Error(), "system module alpha@v2 register events") {
+		t.Fatalf("runNamedSystemModuleRegistrationPipeline() error = %v, want module + step context", err)
+	}
+	if calls != 2 {
+		t.Fatalf("step calls = %d, want 2", calls)
+	}
+}
+
+func TestRunNamedSystemModuleRegistrationPipeline_SkipsNilRun(t *testing.T) {
+	bootstrap := newRegistryBootstrap(nil)
+	mod := pipelineModule{id: "alpha", version: "v2"}
+	calls := 0
+
+	err := runNamedSystemModuleRegistrationPipeline(
+		bootstrap,
+		mod,
+		moduleRegistrationBaseline{},
+		namedSystemModuleRegistrationStep{name: "nil-step"},
+		namedSystemModuleRegistrationStep{
+			name: "active-step",
+			run: func(registryBootstrap, module.Module, moduleRegistrationBaseline) error {
+				calls++
+				return nil
+			},
+		},
+	)
+	if err != nil {
+		t.Fatalf("runNamedSystemModuleRegistrationPipeline() unexpected error: %v", err)
+	}
+	if calls != 1 {
+		t.Fatalf("step calls = %d, want 1", calls)
+	}
+}
+
+func TestModuleVersionLabel_Fallbacks(t *testing.T) {
+	if got := moduleVersionLabel(pipelineModule{id: "alpha", version: "v2"}); got != "alpha@v2" {
+		t.Fatalf("moduleVersionLabel() = %q, want alpha@v2", got)
+	}
+	if got := moduleVersionLabel(pipelineModule{version: "v2"}); got != "<unknown>@v2" {
+		t.Fatalf("moduleVersionLabel() missing id = %q, want <unknown>@v2", got)
+	}
+	if got := moduleVersionLabel(nil); got != "<nil>" {
+		t.Fatalf("moduleVersionLabel() nil module = %q, want <nil>", got)
 	}
 }
 

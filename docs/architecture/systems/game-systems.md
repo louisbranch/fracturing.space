@@ -4,7 +4,7 @@ parent: "System extension"
 nav_order: 1
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-04"
+last_reviewed: "2026-03-07"
 ---
 
 # Game Systems Architecture
@@ -24,7 +24,6 @@ Canonical architecture for extending Fracturing.Space with a game system.
 
 Core campaign/session infrastructure stays system-agnostic while each ruleset owns
 its mechanics.
-
 This separation allows:
 
 - deterministic replay and projection behavior
@@ -73,10 +72,18 @@ present in one registry and missing in another, startup validation fails.
 `BuildRegistries()` in `domain/engine/registries_builder.go`:
 
 1. **Register core domains** — core commands, events, and aliases.
-2. **Register system modules** — validate `sys.<namespace>.*` naming and emittable event coverage.
+2. **Register system modules** — run module-scoped registration pipeline (`register commands`, `register events`, `validate type namespace`, `validate emittable events`).
 3. **Validate write-path contracts** — fold, decider, state factory, and readiness coverage.
 4. **Validate projection contracts** — handler coverage, no stale handlers, adapter events.
 5. **Three-way parity check** — module, metadata, and adapter registries must agree on which systems exist.
+
+### Startup failure diagnostics
+
+Registry startup failures should be actionable without tracing call stacks:
+
+- module registration failures are wrapped as `system module <id>@<version> <step>: <cause>`
+- registry validation failures are wrapped as `registry validation <step>: <cause>`
+- missing/orphaned type lists are sorted to keep messages deterministic across runs
 
 ### Common mistakes
 
@@ -110,7 +117,6 @@ Keep handlers thin and avoid transport logic in domain packages.
 - Event payloads should capture resulting state (absolute values), not deltas.
 - Rejection codes should be stable, machine-readable constants.
 - Multi-consequence mechanics should prefer single-command atomic emission patterns.
-
 Detailed Daggerheart examples and timeline contracts are maintained in:
 
 - [Daggerheart event timeline contract](../../reference/daggerheart-event-timeline-contract.md)
@@ -119,6 +125,10 @@ Detailed Daggerheart examples and timeline contracts are maintained in:
 
 Character creation workflow APIs are generic at transport level, while step semantics
 are owned by each system provider.
+
+Transport-to-provider workflow contracts use workflow-owned context models
+(`CampaignContext`, `CharacterContext`) instead of storage record structs so
+provider behavior stays decoupled from projection persistence shape.
 
 Daggerheart workflow and readiness behavior is specified in:
 
@@ -133,7 +143,6 @@ For any new system or mechanic:
 3. Mutating paths use shared command execution orchestration.
 4. Generated event catalogs are updated (`docs/events/`).
 5. At least one happy-path and one rejection-path test exists per new command/event pair.
-
 ## Related docs
 
 - [Event-driven system](../foundations/event-driven-system.md)

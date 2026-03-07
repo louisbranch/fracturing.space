@@ -154,16 +154,18 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 			requestID := grpcmeta.RequestIDFromContext(ctx)
 			invocationID := grpcmeta.InvocationIDFromContext(ctx)
 			adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-			cmd := commandbuild.DaggerheartSystemCommand(commandbuild.DaggerheartSystemCommandInput{
-				CampaignID:   campaignID,
-				Type:         commandTypeDaggerheartHopeSpend,
-				SessionID:    sessionID,
-				SceneID:      sceneID,
-				RequestID:    requestID,
-				InvocationID: invocationID,
-				EntityType:   "character",
-				EntityID:     characterID,
-				PayloadJSON:  payloadJSON,
+			cmd := commandbuild.SystemCommand(commandbuild.SystemCommandInput{
+				CampaignID:    campaignID,
+				Type:          commandTypeDaggerheartHopeSpend,
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				SessionID:     sessionID,
+				SceneID:       sceneID,
+				RequestID:     requestID,
+				InvocationID:  invocationID,
+				EntityType:    "character",
+				EntityID:      characterID,
+				PayloadJSON:   payloadJSON,
 			})
 			_, err = s.executeAndApplyDomainCommand(ctx, cmd, adapter, domainwrite.Options{
 				RequireEvents:     true,

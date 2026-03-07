@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
@@ -473,5 +473,5 @@ func daggerheartDowntimeMoveToString(m daggerheart.DowntimeMove) string {
 // (NotFound, InvalidArgument, FailedPrecondition, etc.) instead of flattening
 // everything to codes.Internal.
 func handleDomainError(err error) error {
-	return apperrors.HandleError(err, apperrors.DefaultLocale)
+	return grpcerror.HandleDomainError(err)
 }
