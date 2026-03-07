@@ -21,12 +21,14 @@ func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
-				AuthClient:           auth,
-				AccountClient:        account,
-				CampaignClient:       defaultCampaignClient(),
-				ProfileSocialClient:  defaultSocialClient(),
-				SettingsSocialClient: defaultSocialClient(),
-				CredentialClient:     fakeCredentialClient{},
+				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
+				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
+				Profile:    modules.ProfileDependencies{SocialClient: defaultSocialClient()},
+				Settings: modules.SettingsDependencies{
+					SocialClient:     defaultSocialClient(),
+					AccountClient:    account,
+					CredentialClient: fakeCredentialClient{},
+				},
 			},
 		),
 	})
@@ -67,12 +69,14 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
-				AuthClient:           auth,
-				AccountClient:        account,
-				CampaignClient:       defaultCampaignClient(),
-				ProfileSocialClient:  defaultSocialClient(),
-				SettingsSocialClient: defaultSocialClient(),
-				CredentialClient:     fakeCredentialClient{},
+				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
+				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
+				Profile:    modules.ProfileDependencies{SocialClient: defaultSocialClient()},
+				Settings: modules.SettingsDependencies{
+					SocialClient:     defaultSocialClient(),
+					AccountClient:    account,
+					CredentialClient: fakeCredentialClient{},
+				},
 			},
 		),
 	})
@@ -105,7 +109,10 @@ func TestLoginPageLocaleMenuUsesConsistentLabels(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDependencyBundle(PrincipalDependencies{}, modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{},
+			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
+		),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)

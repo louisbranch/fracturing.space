@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"context"
 	"net/http"
 	"strings"
 	"time"
@@ -27,43 +28,45 @@ func newHandlers(s notificationService, base modulehandler.Base) handlers {
 	return handlers{Base: base, service: s, nowFunc: time.Now}
 }
 
-// handleDetailRoute handles this route in the module transport layer.
-func (h handlers) handleDetailRoute(w http.ResponseWriter, r *http.Request) {
+// routeNotificationID extracts the canonical notification route parameter.
+func (h handlers) routeNotificationID(r *http.Request) (string, bool) {
 	notificationID := strings.TrimSpace(r.PathValue("notificationID"))
 	if notificationID == "" {
-		h.WriteNotFound(w, r)
-		return
+		return "", false
 	}
-	h.handleDetail(w, r, notificationID)
+	return notificationID, true
 }
 
-// handleOpenRoute handles this route in the module transport layer.
-func (h handlers) handleOpenRoute(w http.ResponseWriter, r *http.Request) {
-	notificationID := strings.TrimSpace(r.PathValue("notificationID"))
-	if notificationID == "" {
-		h.WriteNotFound(w, r)
-		return
+// withNotificationID extracts the notification ID path param and delegates to
+// fn, returning 404 when the param is missing.
+func (h handlers) withNotificationID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		notificationID, ok := h.routeNotificationID(r)
+		if !ok {
+			h.WriteNotFound(w, r)
+			return
+		}
+		fn(w, r, notificationID)
 	}
-	h.handleOpen(w, r, notificationID)
 }
 
 // handleIndex handles this route in the module transport layer.
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, userID := h.RequestContextAndUserID(r)
-	items, err := h.service.ListNotifications(ctx, userID)
+	listItems, err := h.loadNotificationListView(ctx, userID, loc)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	h.WritePage(w, r, webtemplates.T(loc, "game.notifications.title"), http.StatusOK, notificationsMainHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.NotificationsFragment(webtemplates.NotificationsPageView{Items: h.notificationListView(items, loc)}, loc))
+	h.writeNotificationsPage(w, r, loc, listItems, nil)
 }
 
 // handleDetail handles this route in the module transport layer.
 func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, notificationID string) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, userID := h.RequestContextAndUserID(r)
-	items, err := h.service.ListNotifications(ctx, userID)
+	listItems, err := h.loadNotificationListView(ctx, userID, loc)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -73,7 +76,7 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, notificat
 		h.WriteError(w, r, err)
 		return
 	}
-	h.WritePage(w, r, webtemplates.T(loc, "game.notifications.title"), http.StatusOK, notificationsMainHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.NotificationsFragment(webtemplates.NotificationsPageView{Items: h.notificationListView(items, loc), Selected: h.notificationDetailView(item, loc)}, loc))
+	h.writeNotificationsPage(w, r, loc, listItems, h.notificationDetailView(item, loc))
 }
 
 // handleOpen handles this route in the module transport layer.
@@ -89,6 +92,37 @@ func (h handlers) handleOpen(w http.ResponseWriter, r *http.Request, notificatio
 		openID = notificationID
 	}
 	httpx.WriteRedirect(w, r, routepath.AppNotification(openID))
+}
+
+// loadNotificationListView loads and maps notification list items for rendering.
+func (h handlers) loadNotificationListView(ctx context.Context, userID string, loc webtemplates.Localizer) ([]webtemplates.NotificationListItemView, error) {
+	items, err := h.service.ListNotifications(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return h.notificationListView(items, loc), nil
+}
+
+// writeNotificationsPage renders the list/detail notifications page.
+func (h handlers) writeNotificationsPage(
+	w http.ResponseWriter,
+	r *http.Request,
+	loc webtemplates.Localizer,
+	items []webtemplates.NotificationListItemView,
+	selected *webtemplates.NotificationDetailView,
+) {
+	h.WritePage(
+		w,
+		r,
+		webtemplates.T(loc, "game.notifications.title"),
+		http.StatusOK,
+		notificationsMainHeader(loc),
+		webtemplates.AppMainLayoutOptions{},
+		webtemplates.NotificationsFragment(webtemplates.NotificationsPageView{
+			Items:    items,
+			Selected: selected,
+		}, loc),
+	)
 }
 
 // notificationsMainHeader centralizes this web behavior in one helper seam.

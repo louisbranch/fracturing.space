@@ -12,8 +12,8 @@ import (
 
 // defaultPublicModules returns stable public web modules.
 func defaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicModuleOptions) []Module {
-	authGateway := publicauthgateway.NewGRPCGateway(deps.AuthClient)
-	discoveryGateway := discovery.NewGRPCGateway(deps.DiscoveryClient)
+	authGateway := publicauthgateway.NewGRPCGateway(deps.PublicAuth.AuthClient)
+	discoveryGateway := discovery.NewGRPCGateway(deps.Discovery.DiscoveryClient)
 	return []Module{
 		shell.New(shell.Config{
 			Gateway:     authGateway,
@@ -29,7 +29,7 @@ func defaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicMod
 		}),
 		discovery.New(discovery.Config{Gateway: discoveryGateway}),
 		profile.New(profile.Config{
-			Gateway:         profilegateway.NewGRPCGateway(deps.ProfileSocialClient),
+			Gateway:         profilegateway.NewGRPCGateway(deps.Profile.SocialClient),
 			AssetBaseURL:    deps.AssetBaseURL,
 			ResolveSignedIn: res.ResolveSignedIn,
 		}),

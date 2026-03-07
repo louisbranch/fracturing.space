@@ -176,6 +176,53 @@ func TestHandleOpenReturnsErrorWhenGatewayFails(t *testing.T) {
 	}
 }
 
+// --- withNotificationID ---
+
+func TestWithNotificationIDReturnsNotFoundForMissingPathValue(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHandlers(staticGateway{})
+	called := false
+	handler := h.withNotificationID(func(http.ResponseWriter, *http.Request, string) {
+		called = true
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if called {
+		t.Fatalf("expected delegate not to be called")
+	}
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+}
+
+func TestWithNotificationIDDelegatesResolvedID(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHandlers(staticGateway{})
+	called := false
+	var gotID string
+	handler := h.withNotificationID(func(_ http.ResponseWriter, _ *http.Request, notificationID string) {
+		called = true
+		gotID = notificationID
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.SetPathValue("notificationID", " notification-1 ")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if !called {
+		t.Fatalf("expected delegate to be called")
+	}
+	if gotID != "notification-1" {
+		t.Fatalf("notificationID = %q, want %q", gotID, "notification-1")
+	}
+}
+
 // --- helpers ---
 
 func newTestHandlers(gw NotificationGateway) handlers {

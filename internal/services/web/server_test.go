@@ -193,13 +193,15 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{SessionClient: auth},
 			modules.Dependencies{
-				AuthClient:          auth,
-				CampaignClient:      fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
-				ParticipantClient:   defaultParticipantClient(),
-				CharacterClient:     defaultCharacterClient(),
-				SessionClient:       defaultSessionClient(),
-				InviteClient:        defaultInviteClient(),
-				AuthorizationClient: defaultAuthorizationClient(),
+				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
+				Campaigns: modules.CampaignDependencies{
+					CampaignClient:      fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
+					ParticipantClient:   defaultParticipantClient(),
+					CharacterClient:     defaultCharacterClient(),
+					SessionClient:       defaultSessionClient(),
+					InviteClient:        defaultInviteClient(),
+					AuthorizationClient: defaultAuthorizationClient(),
+				},
 			},
 		),
 	})
@@ -226,7 +228,7 @@ func TestNewServerBuildsHTTPServer(t *testing.T) {
 		HTTPAddr: "127.0.0.1:0",
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{},
-			modules.Dependencies{AuthClient: newFakeWebAuthClient()},
+			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
 		),
 	})
 	if err != nil {

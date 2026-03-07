@@ -146,6 +146,86 @@ func TestWriteAppErrorAllowsNilWriter(t *testing.T) {
 	WriteAppError(nil, req, http.StatusInternalServerError, nil)
 }
 
+func TestWritePublicAppErrorRendersPublicShell(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
+	rr := httptest.NewRecorder()
+	WritePublicAppError(rr, req, http.StatusNotFound)
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `id="auth-shell"`) {
+		t.Fatalf("body missing public auth shell: %q", body)
+	}
+	if !strings.Contains(body, `id="app-error-state"`) {
+		t.Fatalf("body missing app error marker: %q", body)
+	}
+}
+
+func TestWritePublicAppErrorNormalizesNonAppStatusesToServerError(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
+	rr := httptest.NewRecorder()
+	WritePublicAppError(rr, req, http.StatusBadRequest)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
+	}
+}
+
+func TestWritePublicAppErrorAllowsNilWriter(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
+	WritePublicAppError(nil, req, http.StatusNotFound)
+}
+
+func TestWritePublicErrorRendersAppErrorForNotFound(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/u/missing", nil)
+	rr := httptest.NewRecorder()
+	WritePublicError(rr, req, apperrors.E(apperrors.KindNotFound, "missing profile"))
+
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, "missing profile") {
+		t.Fatalf("body leaked internal error text: %q", body)
+	}
+}
+
+func TestWritePublicErrorWritesPlainTextForBadRequest(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/start", nil)
+	rr := httptest.NewRecorder()
+	WritePublicError(rr, req, apperrors.E(apperrors.KindInvalidInput, "unsafe parser detail"))
+
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, http.StatusText(http.StatusBadRequest)) {
+		t.Fatalf("body = %q, want generic bad-request message", body)
+	}
+	if strings.Contains(body, "unsafe parser detail") {
+		t.Fatalf("body leaked internal error text: %q", body)
+	}
+}
+
+func TestWritePublicErrorAllowsNilWriter(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
+	WritePublicError(nil, req, apperrors.E(apperrors.KindInvalidInput, "invalid"))
+}
+
 func TestWriteModuleErrorAllowsNilWriter(t *testing.T) {
 	t.Parallel()
 

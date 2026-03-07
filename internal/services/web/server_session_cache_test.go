@@ -20,11 +20,13 @@ func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{SessionClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}},
 			modules.Dependencies{
-				AuthClient:           auth,
-				AccountClient:        &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
-				ProfileSocialClient:  defaultSocialClient(),
-				SettingsSocialClient: defaultSocialClient(),
-				CredentialClient:     fakeCredentialClient{},
+				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
+				Profile:    modules.ProfileDependencies{SocialClient: defaultSocialClient()},
+				Settings: modules.SettingsDependencies{
+					SocialClient:     defaultSocialClient(),
+					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+					CredentialClient: fakeCredentialClient{},
+				},
 			},
 		),
 	})

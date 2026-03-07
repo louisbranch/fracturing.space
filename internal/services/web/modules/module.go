@@ -39,7 +39,30 @@ type ModuleResolvers struct {
 type Dependencies struct {
 	AssetBaseURL string
 
-	// Campaign module clients.
+	// Campaigns owns all campaign/session/character/invite/authz clients.
+	Campaigns CampaignDependencies
+
+	// Dashboard owns userhub and status health dependencies.
+	Dashboard DashboardDependencies
+
+	// Profile owns public profile lookup dependencies.
+	Profile ProfileDependencies
+
+	// Settings owns profile/account/credential dependencies.
+	Settings SettingsDependencies
+
+	// PublicAuth owns authentication/session dependencies.
+	PublicAuth PublicAuthDependencies
+
+	// Notifications owns inbox notification dependencies.
+	Notifications NotificationDependencies
+
+	// Discovery owns starter/discovery list dependencies.
+	Discovery DiscoveryDependencies
+}
+
+// CampaignDependencies contains campaign feature clients.
+type CampaignDependencies struct {
 	CampaignClient           campaigns.CampaignClient
 	ParticipantClient        campaigns.ParticipantClient
 	CharacterClient          campaigns.CharacterClient
@@ -47,27 +70,37 @@ type Dependencies struct {
 	SessionClient            campaigns.SessionClient
 	InviteClient             campaigns.InviteClient
 	AuthorizationClient      campaigns.AuthorizationClient
+}
 
-	// Dashboard module client.
+// DashboardDependencies contains dashboard feature clients.
+type DashboardDependencies struct {
 	UserHubClient dashboard.UserHubClient
+	StatusClient  statusv1.StatusServiceClient
+}
 
-	// Profile module client.
-	ProfileSocialClient profile.SocialClient
+// ProfileDependencies contains profile feature clients.
+type ProfileDependencies struct {
+	SocialClient profile.SocialClient
+}
 
-	// Settings module clients.
-	SettingsSocialClient settings.SocialClient
-	AccountClient        settings.AccountClient
-	CredentialClient     settings.CredentialClient
+// SettingsDependencies contains settings feature clients.
+type SettingsDependencies struct {
+	SocialClient     settings.SocialClient
+	AccountClient    settings.AccountClient
+	CredentialClient settings.CredentialClient
+}
 
-	// Public auth module client.
+// PublicAuthDependencies contains public-auth feature clients.
+type PublicAuthDependencies struct {
 	AuthClient publicauthgateway.AuthClient
+}
 
-	// Notification module client.
+// NotificationDependencies contains notification feature clients.
+type NotificationDependencies struct {
 	NotificationClient notifications.NotificationClient
+}
 
-	// Discovery module client.
+// DiscoveryDependencies contains discovery feature clients.
+type DiscoveryDependencies struct {
 	DiscoveryClient discovery.DiscoveryClient
-
-	// Status service client for system-wide health queries.
-	StatusClient statusv1.StatusServiceClient
 }

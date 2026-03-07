@@ -31,19 +31,57 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 	if resp == nil || resp.GetCatalog() == nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, nil
 	}
+
 	assetMapResp, err := g.DaggerheartClient.GetContentAssetMap(ctx, &daggerheartv1.GetDaggerheartContentAssetMapRequest{Locale: locale})
 	if err != nil {
 		assetMapResp = nil
 	}
 	assetLookup := daggerheartContentAssetLookupFromResponse(assetMapResp)
 
-	catalogResp := resp.GetCatalog()
-	catalog := campaignapp.CampaignCharacterCreationCatalog{
-		AssetTheme: strings.TrimSpace(assetMapResp.GetAssetMap().GetTheme()),
-	}
+	return campaignCharacterCreationCatalogFromProto(resp.GetCatalog(), g.AssetBaseURL, assetLookup, assetMapResp), nil
+}
 
-	catalog.Classes = make([]campaignapp.CatalogClass, 0, len(catalogResp.GetClasses()))
-	for _, class := range catalogResp.GetClasses() {
+// campaignCharacterCreationCatalogFromProto maps the proto content catalog to web-facing domain catalog models.
+func campaignCharacterCreationCatalogFromProto(
+	catalogResp *daggerheartv1.DaggerheartContentCatalog,
+	assetBaseURL string,
+	assetLookup daggerheartContentAssetLookup,
+	assetMapResp *daggerheartv1.GetDaggerheartContentAssetMapResponse,
+) campaignapp.CampaignCharacterCreationCatalog {
+	if catalogResp == nil {
+		return campaignapp.CampaignCharacterCreationCatalog{}
+	}
+	return campaignapp.CampaignCharacterCreationCatalog{
+		AssetTheme:   catalogAssetTheme(assetMapResp),
+		Classes:      mapCatalogClasses(catalogResp.GetClasses(), assetBaseURL, assetLookup),
+		Subclasses:   mapCatalogSubclasses(catalogResp.GetSubclasses(), assetBaseURL, assetLookup),
+		Heritages:    mapCatalogHeritages(catalogResp.GetHeritages(), assetBaseURL, assetLookup),
+		Domains:      mapCatalogDomains(catalogResp.GetDomains(), assetBaseURL, assetLookup),
+		Weapons:      mapCatalogWeapons(catalogResp.GetWeapons()),
+		Armor:        mapCatalogArmor(catalogResp.GetArmor()),
+		Items:        mapCatalogItems(catalogResp.GetItems()),
+		DomainCards:  mapCatalogDomainCards(catalogResp.GetDomainCards(), assetBaseURL, assetLookup),
+		Adversaries:  mapCatalogAdversaries(catalogResp.GetAdversaries(), assetBaseURL, assetLookup),
+		Environments: mapCatalogEnvironments(catalogResp.GetEnvironments(), assetBaseURL, assetLookup),
+	}
+}
+
+// catalogAssetTheme resolves an optional asset-map theme value used by presentation workflows.
+func catalogAssetTheme(resp *daggerheartv1.GetDaggerheartContentAssetMapResponse) string {
+	if resp == nil || resp.GetAssetMap() == nil {
+		return ""
+	}
+	return strings.TrimSpace(resp.GetAssetMap().GetTheme())
+}
+
+// mapCatalogClasses projects class catalog records into web domain types.
+func mapCatalogClasses(
+	classes []*daggerheartv1.DaggerheartClass,
+	assetBaseURL string,
+	assetLookup daggerheartContentAssetLookup,
+) []campaignapp.CatalogClass {
+	mapped := make([]campaignapp.CatalogClass, 0, len(classes))
+	for _, class := range classes {
 		if class == nil {
 			continue
 		}
@@ -51,54 +89,46 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if classID == "" {
 			continue
 		}
-		domainIDs := make([]string, 0, len(class.GetDomainIds()))
-		for _, domainID := range class.GetDomainIds() {
-			trimmedDomainID := strings.TrimSpace(domainID)
-			if trimmedDomainID == "" {
-				continue
-			}
-			domainIDs = append(domainIDs, trimmedDomainID)
-		}
-		features := make([]campaignapp.CatalogFeature, 0, len(class.GetFeatures()))
-		for _, f := range class.GetFeatures() {
-			name := strings.TrimSpace(f.GetName())
-			if name != "" {
-				features = append(features, campaignapp.CatalogFeature{
-					Name:        name,
-					Description: strings.TrimSpace(f.GetDescription()),
-				})
-			}
-		}
-		hopeFeature := campaignapp.CatalogFeature{}
-		if hf := class.GetHopeFeature(); hf != nil {
-			hopeFeature = campaignapp.CatalogFeature{
-				Name:        strings.TrimSpace(hf.GetName()),
-				Description: strings.TrimSpace(hf.GetDescription()),
-			}
-		}
-		classIllustration := mapCatalogAssetReference(
-			g.AssetBaseURL,
-			assetLookup.get(classID, "class", daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION),
-		)
-		classIcon := mapCatalogAssetReference(
-			g.AssetBaseURL,
-			assetLookup.get(classID, "class", daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ICON),
-		)
-		catalog.Classes = append(catalog.Classes, campaignapp.CatalogClass{
+		mapped = append(mapped, campaignapp.CatalogClass{
 			ID:              classID,
 			Name:            strings.TrimSpace(class.GetName()),
-			DomainIDs:       domainIDs,
+			DomainIDs:       trimNonEmptyValues(class.GetDomainIds()),
 			StartingHP:      class.GetStartingHp(),
 			StartingEvasion: class.GetStartingEvasion(),
-			HopeFeature:     hopeFeature,
-			Features:        features,
-			Illustration:    classIllustration,
-			Icon:            classIcon,
+			HopeFeature:     mapCatalogHopeFeature(class.GetHopeFeature()),
+			Features:        mapCatalogFeatures(class.GetFeatures()),
+			Illustration: mapCatalogAssetReference(
+				assetBaseURL,
+				assetLookup.get(classID, "class", daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION),
+			),
+			Icon: mapCatalogAssetReference(
+				assetBaseURL,
+				assetLookup.get(classID, "class", daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ICON),
+			),
 		})
 	}
+	return mapped
+}
 
-	catalog.Subclasses = make([]campaignapp.CatalogSubclass, 0, len(catalogResp.GetSubclasses()))
-	for _, subclass := range catalogResp.GetSubclasses() {
+// mapCatalogHopeFeature projects one proto class hope feature into a web domain feature.
+func mapCatalogHopeFeature(feature *daggerheartv1.DaggerheartHopeFeature) campaignapp.CatalogFeature {
+	if feature == nil {
+		return campaignapp.CatalogFeature{}
+	}
+	return campaignapp.CatalogFeature{
+		Name:        strings.TrimSpace(feature.GetName()),
+		Description: strings.TrimSpace(feature.GetDescription()),
+	}
+}
+
+// mapCatalogSubclasses projects subclass catalog records into web domain types.
+func mapCatalogSubclasses(
+	subclasses []*daggerheartv1.DaggerheartSubclass,
+	assetBaseURL string,
+	assetLookup daggerheartContentAssetLookup,
+) []campaignapp.CatalogSubclass {
+	mapped := make([]campaignapp.CatalogSubclass, 0, len(subclasses))
+	for _, subclass := range subclasses {
 		if subclass == nil {
 			continue
 		}
@@ -106,24 +136,14 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if subclassID == "" {
 			continue
 		}
-		foundation := make([]campaignapp.CatalogFeature, 0, len(subclass.GetFoundationFeatures()))
-		for _, f := range subclass.GetFoundationFeatures() {
-			name := strings.TrimSpace(f.GetName())
-			if name != "" {
-				foundation = append(foundation, campaignapp.CatalogFeature{
-					Name:        name,
-					Description: strings.TrimSpace(f.GetDescription()),
-				})
-			}
-		}
-		catalog.Subclasses = append(catalog.Subclasses, campaignapp.CatalogSubclass{
+		mapped = append(mapped, campaignapp.CatalogSubclass{
 			ID:             subclassID,
 			Name:           strings.TrimSpace(subclass.GetName()),
 			ClassID:        strings.TrimSpace(subclass.GetClassId()),
 			SpellcastTrait: strings.TrimSpace(subclass.GetSpellcastTrait()),
-			Foundation:     foundation,
+			Foundation:     mapCatalogFeatures(subclass.GetFoundationFeatures()),
 			Illustration: mapCatalogAssetReference(
-				g.AssetBaseURL,
+				assetBaseURL,
 				assetLookup.get(
 					subclassID,
 					"subclass",
@@ -132,9 +152,17 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			),
 		})
 	}
+	return mapped
+}
 
-	catalog.Heritages = make([]campaignapp.CatalogHeritage, 0, len(catalogResp.GetHeritages()))
-	for _, heritage := range catalogResp.GetHeritages() {
+// mapCatalogHeritages projects heritage catalog records into web domain types.
+func mapCatalogHeritages(
+	heritages []*daggerheartv1.DaggerheartHeritage,
+	assetBaseURL string,
+	assetLookup daggerheartContentAssetLookup,
+) []campaignapp.CatalogHeritage {
+	mapped := make([]campaignapp.CatalogHeritage, 0, len(heritages))
+	for _, heritage := range heritages {
 		if heritage == nil {
 			continue
 		}
@@ -142,38 +170,41 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if heritageID == "" {
 			continue
 		}
-		heritageFeatures := make([]campaignapp.CatalogFeature, 0, len(heritage.GetFeatures()))
-		for _, f := range heritage.GetFeatures() {
-			name := strings.TrimSpace(f.GetName())
-			if name != "" {
-				heritageFeatures = append(heritageFeatures, campaignapp.CatalogFeature{
-					Name:        name,
-					Description: strings.TrimSpace(f.GetDescription()),
-				})
-			}
-		}
 		kind := daggerheartHeritageKindLabel(heritage.GetKind())
-		assetType := daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_UNSPECIFIED
-		switch kind {
-		case "ancestry":
-			assetType = daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ANCESTRY_ILLUSTRATION
-		case "community":
-			assetType = daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_COMMUNITY_ILLUSTRATION
-		}
-		catalog.Heritages = append(catalog.Heritages, campaignapp.CatalogHeritage{
+		mapped = append(mapped, campaignapp.CatalogHeritage{
 			ID:       heritageID,
 			Name:     strings.TrimSpace(heritage.GetName()),
 			Kind:     kind,
-			Features: heritageFeatures,
+			Features: mapCatalogFeatures(heritage.GetFeatures()),
 			Illustration: mapCatalogAssetReference(
-				g.AssetBaseURL,
-				assetLookup.get(heritageID, kind, assetType),
+				assetBaseURL,
+				assetLookup.get(heritageID, kind, heritageAssetType(kind)),
 			),
 		})
 	}
+	return mapped
+}
 
-	catalog.Domains = make([]campaignapp.CatalogDomain, 0, len(catalogResp.GetDomains()))
-	for _, domain := range catalogResp.GetDomains() {
+// heritageAssetType resolves the image asset type by normalized heritage kind.
+func heritageAssetType(kind string) daggerheartv1.DaggerheartContentAssetType {
+	switch kind {
+	case "ancestry":
+		return daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ANCESTRY_ILLUSTRATION
+	case "community":
+		return daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_COMMUNITY_ILLUSTRATION
+	default:
+		return daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_UNSPECIFIED
+	}
+}
+
+// mapCatalogDomains projects domain catalog records into web domain types.
+func mapCatalogDomains(
+	domains []*daggerheartv1.DaggerheartDomain,
+	assetBaseURL string,
+	assetLookup daggerheartContentAssetLookup,
+) []campaignapp.CatalogDomain {
+	mapped := make([]campaignapp.CatalogDomain, 0, len(domains))
+	for _, domain := range domains {
 		if domain == nil {
 			continue
 		}
@@ -181,11 +212,11 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if domainID == "" {
 			continue
 		}
-		catalog.Domains = append(catalog.Domains, campaignapp.CatalogDomain{
+		mapped = append(mapped, campaignapp.CatalogDomain{
 			ID:   domainID,
 			Name: strings.TrimSpace(domain.GetName()),
 			Illustration: mapCatalogAssetReference(
-				g.AssetBaseURL,
+				assetBaseURL,
 				assetLookup.get(
 					domainID,
 					"domain",
@@ -193,7 +224,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 				),
 			),
 			Icon: mapCatalogAssetReference(
-				g.AssetBaseURL,
+				assetBaseURL,
 				assetLookup.get(
 					domainID,
 					"domain",
@@ -202,9 +233,13 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			),
 		})
 	}
+	return mapped
+}
 
-	catalog.Weapons = make([]campaignapp.CatalogWeapon, 0, len(catalogResp.GetWeapons()))
-	for _, weapon := range catalogResp.GetWeapons() {
+// mapCatalogWeapons projects weapon catalog records into web domain types.
+func mapCatalogWeapons(weapons []*daggerheartv1.DaggerheartWeapon) []campaignapp.CatalogWeapon {
+	mapped := make([]campaignapp.CatalogWeapon, 0, len(weapons))
+	for _, weapon := range weapons {
 		if weapon == nil {
 			continue
 		}
@@ -212,7 +247,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if weaponID == "" {
 			continue
 		}
-		catalog.Weapons = append(catalog.Weapons, campaignapp.CatalogWeapon{
+		mapped = append(mapped, campaignapp.CatalogWeapon{
 			ID:       weaponID,
 			Name:     strings.TrimSpace(weapon.GetName()),
 			Category: daggerheartWeaponCategoryLabel(weapon.GetCategory()),
@@ -223,9 +258,13 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			Feature:  strings.TrimSpace(weapon.GetFeature()),
 		})
 	}
+	return mapped
+}
 
-	catalog.Armor = make([]campaignapp.CatalogArmor, 0, len(catalogResp.GetArmor()))
-	for _, armor := range catalogResp.GetArmor() {
+// mapCatalogArmor projects armor catalog records into web domain types.
+func mapCatalogArmor(armorSet []*daggerheartv1.DaggerheartArmor) []campaignapp.CatalogArmor {
+	mapped := make([]campaignapp.CatalogArmor, 0, len(armorSet))
+	for _, armor := range armorSet {
 		if armor == nil {
 			continue
 		}
@@ -233,7 +272,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if armorID == "" {
 			continue
 		}
-		catalog.Armor = append(catalog.Armor, campaignapp.CatalogArmor{
+		mapped = append(mapped, campaignapp.CatalogArmor{
 			ID:             armorID,
 			Name:           strings.TrimSpace(armor.GetName()),
 			Tier:           armor.GetTier(),
@@ -242,9 +281,13 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			Feature:        strings.TrimSpace(armor.GetFeature()),
 		})
 	}
+	return mapped
+}
 
-	catalog.Items = make([]campaignapp.CatalogItem, 0, len(catalogResp.GetItems()))
-	for _, item := range catalogResp.GetItems() {
+// mapCatalogItems projects item catalog records into web domain types.
+func mapCatalogItems(items []*daggerheartv1.DaggerheartItem) []campaignapp.CatalogItem {
+	mapped := make([]campaignapp.CatalogItem, 0, len(items))
+	for _, item := range items {
 		if item == nil {
 			continue
 		}
@@ -252,15 +295,23 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if itemID == "" {
 			continue
 		}
-		catalog.Items = append(catalog.Items, campaignapp.CatalogItem{
+		mapped = append(mapped, campaignapp.CatalogItem{
 			ID:          itemID,
 			Name:        strings.TrimSpace(item.GetName()),
 			Description: strings.TrimSpace(item.GetDescription()),
 		})
 	}
+	return mapped
+}
 
-	catalog.DomainCards = make([]campaignapp.CatalogDomainCard, 0, len(catalogResp.GetDomainCards()))
-	for _, domainCard := range catalogResp.GetDomainCards() {
+// mapCatalogDomainCards projects domain-card catalog records into web domain types.
+func mapCatalogDomainCards(
+	domainCards []*daggerheartv1.DaggerheartDomainCard,
+	assetBaseURL string,
+	assetLookup daggerheartContentAssetLookup,
+) []campaignapp.CatalogDomainCard {
+	mapped := make([]campaignapp.CatalogDomainCard, 0, len(domainCards))
+	for _, domainCard := range domainCards {
 		if domainCard == nil {
 			continue
 		}
@@ -268,7 +319,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if domainCardID == "" {
 			continue
 		}
-		catalog.DomainCards = append(catalog.DomainCards, campaignapp.CatalogDomainCard{
+		mapped = append(mapped, campaignapp.CatalogDomainCard{
 			ID:          domainCardID,
 			Name:        strings.TrimSpace(domainCard.GetName()),
 			DomainID:    strings.TrimSpace(domainCard.GetDomainId()),
@@ -277,7 +328,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			RecallCost:  domainCard.GetRecallCost(),
 			FeatureText: strings.TrimSpace(domainCard.GetFeatureText()),
 			Illustration: mapCatalogAssetReference(
-				g.AssetBaseURL,
+				assetBaseURL,
 				assetLookup.get(
 					domainCardID,
 					"domain_card",
@@ -286,9 +337,17 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			),
 		})
 	}
+	return mapped
+}
 
-	catalog.Adversaries = make([]campaignapp.CatalogAdversary, 0, len(catalogResp.GetAdversaries()))
-	for _, adversary := range catalogResp.GetAdversaries() {
+// mapCatalogAdversaries projects adversary catalog records into web domain types.
+func mapCatalogAdversaries(
+	adversaries []*daggerheartv1.DaggerheartAdversaryEntry,
+	assetBaseURL string,
+	assetLookup daggerheartContentAssetLookup,
+) []campaignapp.CatalogAdversary {
+	mapped := make([]campaignapp.CatalogAdversary, 0, len(adversaries))
+	for _, adversary := range adversaries {
 		if adversary == nil {
 			continue
 		}
@@ -296,11 +355,11 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if adversaryID == "" {
 			continue
 		}
-		catalog.Adversaries = append(catalog.Adversaries, campaignapp.CatalogAdversary{
+		mapped = append(mapped, campaignapp.CatalogAdversary{
 			ID:   adversaryID,
 			Name: strings.TrimSpace(adversary.GetName()),
 			Illustration: mapCatalogAssetReference(
-				g.AssetBaseURL,
+				assetBaseURL,
 				assetLookup.get(
 					adversaryID,
 					"adversary",
@@ -309,9 +368,17 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			),
 		})
 	}
+	return mapped
+}
 
-	catalog.Environments = make([]campaignapp.CatalogEnvironment, 0, len(catalogResp.GetEnvironments()))
-	for _, environment := range catalogResp.GetEnvironments() {
+// mapCatalogEnvironments projects environment catalog records into web domain types.
+func mapCatalogEnvironments(
+	environments []*daggerheartv1.DaggerheartEnvironment,
+	assetBaseURL string,
+	assetLookup daggerheartContentAssetLookup,
+) []campaignapp.CatalogEnvironment {
+	mapped := make([]campaignapp.CatalogEnvironment, 0, len(environments))
+	for _, environment := range environments {
 		if environment == nil {
 			continue
 		}
@@ -319,11 +386,11 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if environmentID == "" {
 			continue
 		}
-		catalog.Environments = append(catalog.Environments, campaignapp.CatalogEnvironment{
+		mapped = append(mapped, campaignapp.CatalogEnvironment{
 			ID:   environmentID,
 			Name: strings.TrimSpace(environment.GetName()),
 			Illustration: mapCatalogAssetReference(
-				g.AssetBaseURL,
+				assetBaseURL,
 				assetLookup.get(
 					environmentID,
 					"environment",
@@ -332,6 +399,42 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			),
 		})
 	}
+	return mapped
+}
 
-	return catalog, nil
+// mapCatalogFeatures filters and normalizes feature entries into web domain types.
+func mapCatalogFeatures(features []*daggerheartv1.DaggerheartFeature) []campaignapp.CatalogFeature {
+	mapped := make([]campaignapp.CatalogFeature, 0, len(features))
+	for _, feature := range features {
+		mappedFeature := mapCatalogFeature(feature)
+		if mappedFeature.Name == "" {
+			continue
+		}
+		mapped = append(mapped, mappedFeature)
+	}
+	return mapped
+}
+
+// mapCatalogFeature projects one proto feature into a web domain feature.
+func mapCatalogFeature(feature *daggerheartv1.DaggerheartFeature) campaignapp.CatalogFeature {
+	if feature == nil {
+		return campaignapp.CatalogFeature{}
+	}
+	return campaignapp.CatalogFeature{
+		Name:        strings.TrimSpace(feature.GetName()),
+		Description: strings.TrimSpace(feature.GetDescription()),
+	}
+}
+
+// trimNonEmptyValues keeps stable order while removing empty values.
+func trimNonEmptyValues(values []string) []string {
+	mapped := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		mapped = append(mapped, trimmed)
+	}
+	return mapped
 }

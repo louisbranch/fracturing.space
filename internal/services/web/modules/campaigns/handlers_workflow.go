@@ -11,20 +11,9 @@ import (
 
 // --- Character creation workflow routes ---
 
-// handleCharacterCreationStepRoute applies the next character creation workflow step.
-func (h handlers) handleCharacterCreationStepRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	characterID, ok := h.routeCharacterID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	if err := r.ParseForm(); err != nil {
-		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_character_creation_form", "failed to parse character creation form"))
+// handleCharacterCreationStep applies the next character creation workflow step.
+func (h handlers) handleCharacterCreationStep(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_character_creation_form", "failed to parse character creation form") {
 		return
 	}
 
@@ -75,18 +64,8 @@ func (h handlers) writeCreationStepError(w http.ResponseWriter, r *http.Request,
 	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacterCreation(campaignID, characterID))
 }
 
-// handleCharacterCreationResetRoute handles this route in the module transport layer.
-func (h handlers) handleCharacterCreationResetRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	characterID, ok := h.routeCharacterID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
+// handleCharacterCreationReset handles this route in the module transport layer.
+func (h handlers) handleCharacterCreationReset(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	ctx, _ := h.RequestContextAndUserID(r)
 	if err := h.service.ResetCharacterCreationWorkflow(ctx, campaignID, characterID); err != nil {
 		h.WriteError(w, r, err)

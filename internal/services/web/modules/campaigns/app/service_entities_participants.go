@@ -147,29 +147,23 @@ func (s service) hydrateParticipantEditability(ctx context.Context, campaignID s
 		return
 	}
 
-	checks := make([]AuthorizationCheck, 0, len(participants))
-	indexesByCheckID := make(map[string][]int, len(participants))
-	for idx := range participants {
-		participantID := strings.TrimSpace(participants[idx].ID)
-		if participantID == "" {
-			continue
-		}
-		indexesByCheckID[participantID] = append(indexesByCheckID[participantID], idx)
-		if len(indexesByCheckID[participantID]) > 1 {
-			continue
-		}
-		checks = append(checks, AuthorizationCheck{
-			CheckID:  participantID,
-			Action:   campaignAuthzActionManage,
-			Resource: campaignAuthzResourceParticipant,
-			Target: &AuthorizationTarget{
-				ResourceID:           participantID,
-				TargetParticipantID:  participantID,
-				TargetCampaignAccess: participantAccessCanonical(participants[idx].CampaignAccess),
-				ParticipantOperation: ParticipantGovernanceOperationMutate,
-			},
-		})
-	}
+	checks, indexesByCheckID := buildAuthorizationChecksByID(
+		len(participants),
+		func(idx int) string { return participants[idx].ID },
+		func(checkID string, idx int) AuthorizationCheck {
+			return AuthorizationCheck{
+				CheckID:  checkID,
+				Action:   campaignAuthzActionManage,
+				Resource: campaignAuthzResourceParticipant,
+				Target: &AuthorizationTarget{
+					ResourceID:           checkID,
+					TargetParticipantID:  checkID,
+					TargetCampaignAccess: participantAccessCanonical(participants[idx].CampaignAccess),
+					ParticipantOperation: ParticipantGovernanceOperationMutate,
+				},
+			}
+		},
+	)
 	if len(checks) == 0 {
 		return
 	}
@@ -179,25 +173,12 @@ func (s service) hydrateParticipantEditability(ctx context.Context, campaignID s
 		return
 	}
 
-	for idx, decision := range decisions {
-		checkID := strings.TrimSpace(decision.CheckID)
-		if checkID == "" && idx < len(checks) {
-			checkID = strings.TrimSpace(checks[idx].CheckID)
+	applyAuthorizationDecisions(checks, indexesByCheckID, decisions, func(participantIndex int, decision AuthorizationDecision) {
+		participants[participantIndex].EditReasonCode = strings.TrimSpace(decision.ReasonCode)
+		if decision.Evaluated && decision.Allowed {
+			participants[participantIndex].CanEdit = true
 		}
-		if checkID == "" {
-			continue
-		}
-		participantIndexes, found := indexesByCheckID[checkID]
-		if !found {
-			continue
-		}
-		for _, participantIndex := range participantIndexes {
-			participants[participantIndex].EditReasonCode = strings.TrimSpace(decision.ReasonCode)
-			if decision.Evaluated && decision.Allowed {
-				participants[participantIndex].CanEdit = true
-			}
-		}
-	}
+	})
 }
 
 // participantAccessOptions centralizes this web behavior in one helper seam.
@@ -230,21 +211,9 @@ func (s service) participantAccessOptions(ctx context.Context, campaignID string
 	if err != nil {
 		return options
 	}
-	allowedByCheckID := map[string]bool{}
-	for idx, decision := range decisions {
-		checkID := strings.TrimSpace(decision.CheckID)
-		if checkID == "" && idx < len(checks) {
-			checkID = strings.TrimSpace(checks[idx].CheckID)
-		}
-		if checkID == "" {
-			continue
-		}
-		if decision.Evaluated && decision.Allowed {
-			allowedByCheckID[checkID] = true
-		}
-	}
+	allowedChecks := allowedByCheckID(checks, decisions)
 	for idx := range options {
-		options[idx].Allowed = allowedByCheckID[options[idx].Value]
+		options[idx].Allowed = allowedChecks[options[idx].Value]
 	}
 	return options
 }

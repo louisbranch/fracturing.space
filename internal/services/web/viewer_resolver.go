@@ -62,47 +62,12 @@ func (r viewerResolver) resolveViewerUncached(request *http.Request) module.View
 	if userID == "" {
 		return module.Viewer{}
 	}
-	viewer := module.Viewer{
-		DisplayName:            "Adventurer",
-		AvatarURL:              websupport.AvatarImageURL(r.assetBaseURL, "user", userID, "", ""),
-		ProfileURL:             routepath.AppSettingsProfile,
-		HasUnreadNotifications: r.resolveHasUnreadNotifications(contextFromRequest(request), userID),
-	}
+	viewer := defaultViewer(r.assetBaseURL, contextFromRequest(request), userID, r.resolveHasUnreadNotifications)
 	if r.socialClient == nil {
 		return viewer
 	}
-	ctx := grpcauthctx.WithUserID(request.Context(), userID)
-	resp, err := r.socialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: userID})
-	if err != nil || resp == nil || resp.GetUserProfile() == nil {
-		if status.Code(err) == codes.NotFound {
-			viewer.ProfileURL = routepath.AppSettingsProfileRequired
-		}
-		return viewer
-	}
-	record := resp.GetUserProfile()
-	username := strings.TrimSpace(record.GetUsername())
-	if username != "" {
-		viewer.ProfileURL = routepath.UserProfile(username)
-	} else {
-		viewer.ProfileURL = routepath.AppSettingsProfileRequired
-	}
-	if name := strings.TrimSpace(record.GetName()); name != "" {
-		viewer.DisplayName = name
-	} else if username != "" {
-		viewer.DisplayName = username
-	}
-	avatarSetID := strings.TrimSpace(record.GetAvatarSetId())
-	avatarAssetID := strings.TrimSpace(record.GetAvatarAssetId())
-	if avatarSetID != "" || avatarAssetID != "" {
-		viewer.AvatarURL = websupport.AvatarImageURL(
-			r.assetBaseURL,
-			"user",
-			userID,
-			avatarSetID,
-			avatarAssetID,
-		)
-	}
-	return viewer
+	record, err := r.loadUserProfile(request.Context(), userID)
+	return applyUserProfile(viewer, r.assetBaseURL, userID, record, err)
 }
 
 // resolveHasUnreadNotifications resolves request-scoped values needed by this package.
@@ -136,4 +101,69 @@ func (r viewerResolver) resolveViewer(request *http.Request) module.Viewer {
 		return state.viewer
 	}
 	return r.resolveViewerUncached(request)
+}
+
+// defaultViewer returns the fallback viewer state used before optional social-profile enrichment.
+func defaultViewer(
+	assetBaseURL string,
+	ctx context.Context,
+	userID string,
+	resolveUnread func(context.Context, string) bool,
+) module.Viewer {
+	viewer := module.Viewer{
+		DisplayName: "Adventurer",
+		AvatarURL:   websupport.AvatarImageURL(assetBaseURL, "user", userID, "", ""),
+		ProfileURL:  routepath.AppSettingsProfile,
+	}
+	if resolveUnread != nil {
+		viewer.HasUnreadNotifications = resolveUnread(ctx, userID)
+	}
+	return viewer
+}
+
+// loadUserProfile fetches the profile record used to personalize viewer chrome.
+func (r viewerResolver) loadUserProfile(ctx context.Context, userID string) (*socialv1.UserProfile, error) {
+	ctx = grpcauthctx.WithUserID(ctx, userID)
+	resp, err := r.socialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: userID})
+	if err != nil || resp == nil {
+		return nil, err
+	}
+	return resp.GetUserProfile(), nil
+}
+
+// applyUserProfile merges social profile details into default viewer chrome.
+func applyUserProfile(
+	viewer module.Viewer,
+	assetBaseURL string,
+	userID string,
+	record *socialv1.UserProfile,
+	err error,
+) module.Viewer {
+	if record == nil {
+		if status.Code(err) == codes.NotFound {
+			viewer.ProfileURL = routepath.AppSettingsProfileRequired
+		}
+		return viewer
+	}
+
+	username := strings.TrimSpace(record.GetUsername())
+	if username != "" {
+		viewer.ProfileURL = routepath.UserProfile(username)
+	} else {
+		viewer.ProfileURL = routepath.AppSettingsProfileRequired
+	}
+
+	name := strings.TrimSpace(record.GetName())
+	if name != "" {
+		viewer.DisplayName = name
+	} else if username != "" {
+		viewer.DisplayName = username
+	}
+
+	avatarSetID := strings.TrimSpace(record.GetAvatarSetId())
+	avatarAssetID := strings.TrimSpace(record.GetAvatarAssetId())
+	if avatarSetID != "" || avatarAssetID != "" {
+		viewer.AvatarURL = websupport.AvatarImageURL(assetBaseURL, "user", userID, avatarSetID, avatarAssetID)
+	}
+	return viewer
 }

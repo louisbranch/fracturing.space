@@ -1,7 +1,6 @@
 package publicauth
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"path"
@@ -88,15 +87,12 @@ func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request
 
 // handlePasskeyLoginFinish handles this route in the module transport layer.
 func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		SessionID  string          `json:"session_id"`
-		Credential json.RawMessage `json:"credential"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		h.writeJSONError(w, r, apperrors.E(apperrors.KindInvalidInput, "invalid json body"))
+	input, err := parsePasskeyCredentialInput(r)
+	if err != nil {
+		h.writeJSONError(w, r, err)
 		return
 	}
-	finished, err := h.service.PasskeyLoginFinish(r.Context(), payload.SessionID, payload.Credential)
+	finished, err := h.service.PasskeyLoginFinish(r.Context(), input.SessionID, input.Credential)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -107,14 +103,12 @@ func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 
 // handlePasskeyRegisterStart handles this route in the module transport layer.
 func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		Email string `json:"email"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		h.writeJSONError(w, r, apperrors.E(apperrors.KindInvalidInput, "invalid json body"))
+	input, err := parsePasskeyRegisterStartInput(r)
+	if err != nil {
+		h.writeJSONError(w, r, err)
 		return
 	}
-	start, err := h.service.PasskeyRegisterStart(r.Context(), payload.Email)
+	start, err := h.service.PasskeyRegisterStart(r.Context(), input.Email)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -124,15 +118,12 @@ func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 
 // handlePasskeyRegisterFinish handles this route in the module transport layer.
 func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Request) {
-	var payload struct {
-		SessionID  string          `json:"session_id"`
-		Credential json.RawMessage `json:"credential"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		h.writeJSONError(w, r, apperrors.E(apperrors.KindInvalidInput, "invalid json body"))
+	input, err := parsePasskeyCredentialInput(r)
+	if err != nil {
+		h.writeJSONError(w, r, err)
 		return
 	}
-	finished, err := h.service.PasskeyRegisterFinish(r.Context(), payload.SessionID, payload.Credential)
+	finished, err := h.service.PasskeyRegisterFinish(r.Context(), input.SessionID, input.Credential)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return

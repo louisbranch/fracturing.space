@@ -34,20 +34,20 @@ func buildProtectedModules(
 	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
 	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort, defaultCampaignWorkflows(deps))
 	settingsMod := settings.New(settings.Config{
-		Gateway:   settingsgateway.NewGRPCGateway(deps.SettingsSocialClient, deps.AccountClient, deps.CredentialClient),
+		Gateway:   settingsgateway.NewGRPCGateway(deps.Settings.SocialClient, deps.Settings.AccountClient, deps.Settings.CredentialClient),
 		Base:      base,
 		FlashMeta: opts.RequestSchemePolicy,
 	})
 	notifMod := notifications.New(notifications.Config{
-		Gateway: notificationsgateway.NewGRPCGateway(deps.NotificationClient),
+		Gateway: notificationsgateway.NewGRPCGateway(deps.Notifications.NotificationClient),
 		Base:    base,
 	})
 
-	dashGw := dashboardgateway.NewGRPCGateway(deps.UserHubClient)
+	dashGw := dashboardgateway.NewGRPCGateway(deps.Dashboard.UserHubClient)
 	dashMod := dashboard.New(dashboard.Config{
 		Gateway:        dashGw,
 		Base:           base,
-		HealthProvider: statusHealthProvider(deps.StatusClient),
+		HealthProvider: statusHealthProvider(deps.Dashboard.StatusClient),
 	})
 	return []Module{dashMod, settingsMod, notifMod, campaignMod}
 }
@@ -116,13 +116,13 @@ func statusHealthProvider(client statusv1.StatusServiceClient) dashboardapp.Heal
 // newCampaignGateway builds package wiring for this web seam.
 func newCampaignGateway(deps Dependencies) campaigns.CampaignGateway {
 	return campaigns.NewGRPCGateway(campaigns.GRPCGatewayDeps{
-		CampaignClient:           deps.CampaignClient,
-		ParticipantClient:        deps.ParticipantClient,
-		CharacterClient:          deps.CharacterClient,
-		DaggerheartContentClient: deps.DaggerheartContentClient,
-		SessionClient:            deps.SessionClient,
-		InviteClient:             deps.InviteClient,
-		AuthorizationClient:      deps.AuthorizationClient,
+		CampaignClient:           deps.Campaigns.CampaignClient,
+		ParticipantClient:        deps.Campaigns.ParticipantClient,
+		CharacterClient:          deps.Campaigns.CharacterClient,
+		DaggerheartContentClient: deps.Campaigns.DaggerheartContentClient,
+		SessionClient:            deps.Campaigns.SessionClient,
+		InviteClient:             deps.Campaigns.InviteClient,
+		AuthorizationClient:      deps.Campaigns.AuthorizationClient,
 		AssetBaseURL:             deps.AssetBaseURL,
 	})
 }

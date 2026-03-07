@@ -23,7 +23,7 @@ func (g GRPCGateway) ApplyCharacterCreationStep(ctx context.Context, campaignID 
 	if step == nil {
 		return apperrors.E(apperrors.KindInvalidInput, "character creation step is required")
 	}
-	systemStep, err := mapCampaignCharacterCreationStepToProto(step)
+	mappedStep, err := mapCampaignCharacterCreationStepToProto(step)
 	if err != nil {
 		return err
 	}
@@ -31,7 +31,7 @@ func (g GRPCGateway) ApplyCharacterCreationStep(ctx context.Context, campaignID 
 	_, err = g.CharacterClient.ApplyCharacterCreationStep(ctx, &statev1.ApplyCharacterCreationStepRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
-		SystemStep:  &statev1.ApplyCharacterCreationStepRequest_Daggerheart{Daggerheart: systemStep},
+		SystemStep:  &statev1.ApplyCharacterCreationStepRequest_Daggerheart{Daggerheart: mappedStep},
 	})
 	return err
 }
@@ -41,136 +41,168 @@ func mapCampaignCharacterCreationStepToProto(step *campaignapp.CampaignCharacter
 	if step == nil {
 		return nil, apperrors.E(apperrors.KindInvalidInput, "character creation step is required")
 	}
-
-	active := 0
-	if step.ClassSubclass != nil {
-		active++
-	}
-	if step.Heritage != nil {
-		active++
-	}
-	if step.Traits != nil {
-		active++
-	}
-	if step.Details != nil {
-		active++
-	}
-	if step.Equipment != nil {
-		active++
-	}
-	if step.Background != nil {
-		active++
-	}
-	if step.Experiences != nil {
-		active++
-	}
-	if step.DomainCards != nil {
-		active++
-	}
-	if step.Connections != nil {
-		active++
-	}
-	if active != 1 {
+	if countActiveCreationStepInputs(step) != 1 {
 		return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_step_is_not_available", "character creation step is not available")
 	}
 
-	if step.ClassSubclass != nil {
-		return &daggerheartv1.DaggerheartCreationStepInput{
-			Step: &daggerheartv1.DaggerheartCreationStepInput_ClassSubclassInput{ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
-				ClassId:    strings.TrimSpace(step.ClassSubclass.ClassID),
-				SubclassId: strings.TrimSpace(step.ClassSubclass.SubclassID),
-			}},
-		}, nil
+	switch {
+	case step.ClassSubclass != nil:
+		return mapClassSubclassStep(step.ClassSubclass), nil
+	case step.Heritage != nil:
+		return mapHeritageStep(step.Heritage), nil
+	case step.Traits != nil:
+		return mapTraitsStep(step.Traits), nil
+	case step.Details != nil:
+		return mapDetailsStep(step.Details), nil
+	case step.Equipment != nil:
+		return mapEquipmentStep(step.Equipment), nil
+	case step.Background != nil:
+		return mapBackgroundStep(step.Background), nil
+	case step.Experiences != nil:
+		return mapExperiencesStep(step.Experiences), nil
+	case step.DomainCards != nil:
+		return mapDomainCardsStep(step.DomainCards), nil
+	default:
+		return mapConnectionsStep(step.Connections), nil
 	}
-	if step.Heritage != nil {
-		return &daggerheartv1.DaggerheartCreationStepInput{
-			Step: &daggerheartv1.DaggerheartCreationStepInput_HeritageInput{HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
-				AncestryId:  strings.TrimSpace(step.Heritage.AncestryID),
-				CommunityId: strings.TrimSpace(step.Heritage.CommunityID),
-			}},
-		}, nil
+}
+
+// countActiveCreationStepInputs returns how many oneof-style step inputs are set.
+func countActiveCreationStepInputs(step *campaignapp.CampaignCharacterCreationStepInput) int {
+	if step == nil {
+		return 0
 	}
-	if step.Traits != nil {
-		return &daggerheartv1.DaggerheartCreationStepInput{
-			Step: &daggerheartv1.DaggerheartCreationStepInput_TraitsInput{TraitsInput: &daggerheartv1.DaggerheartCreationStepTraitsInput{
-				Agility:   step.Traits.Agility,
-				Strength:  step.Traits.Strength,
-				Finesse:   step.Traits.Finesse,
-				Instinct:  step.Traits.Instinct,
-				Presence:  step.Traits.Presence,
-				Knowledge: step.Traits.Knowledge,
-			}},
-		}, nil
-	}
-	if step.Details != nil {
-		return &daggerheartv1.DaggerheartCreationStepInput{
-			Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{
-				Description: strings.TrimSpace(step.Details.Description),
-			}},
-		}, nil
-	}
-	if step.Equipment != nil {
-		weaponIDs := make([]string, 0, len(step.Equipment.WeaponIDs))
-		for _, weaponID := range step.Equipment.WeaponIDs {
-			trimmedWeaponID := strings.TrimSpace(weaponID)
-			if trimmedWeaponID == "" {
-				continue
-			}
-			weaponIDs = append(weaponIDs, trimmedWeaponID)
+	active := 0
+	for _, present := range []bool{
+		step.ClassSubclass != nil,
+		step.Heritage != nil,
+		step.Traits != nil,
+		step.Details != nil,
+		step.Equipment != nil,
+		step.Background != nil,
+		step.Experiences != nil,
+		step.DomainCards != nil,
+		step.Connections != nil,
+	} {
+		if present {
+			active++
 		}
-		return &daggerheartv1.DaggerheartCreationStepInput{
-			Step: &daggerheartv1.DaggerheartCreationStepInput_EquipmentInput{EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{
-				WeaponIds:    weaponIDs,
-				ArmorId:      strings.TrimSpace(step.Equipment.ArmorID),
-				PotionItemId: strings.TrimSpace(step.Equipment.PotionItemID),
-			}},
-		}, nil
 	}
-	if step.Background != nil {
-		return &daggerheartv1.DaggerheartCreationStepInput{
-			Step: &daggerheartv1.DaggerheartCreationStepInput_BackgroundInput{BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{
-				Background: strings.TrimSpace(step.Background.Background),
-			}},
-		}, nil
+	return active
+}
+
+// mapClassSubclassStep maps class/subclass selection to proto payload.
+func mapClassSubclassStep(step *campaignapp.CampaignCharacterCreationStepClassSubclass) *daggerheartv1.DaggerheartCreationStepInput {
+	return &daggerheartv1.DaggerheartCreationStepInput{
+		Step: &daggerheartv1.DaggerheartCreationStepInput_ClassSubclassInput{ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
+			ClassId:    strings.TrimSpace(step.ClassID),
+			SubclassId: strings.TrimSpace(step.SubclassID),
+		}},
 	}
-	if step.Experiences != nil {
-		experiences := make([]*daggerheartv1.DaggerheartExperience, 0, len(step.Experiences.Experiences))
-		for _, experience := range step.Experiences.Experiences {
-			experienceName := strings.TrimSpace(experience.Name)
-			if experienceName == "" {
-				continue
-			}
-			experiences = append(experiences, &daggerheartv1.DaggerheartExperience{
-				Name:     experienceName,
-				Modifier: experience.Modifier,
-			})
+}
+
+// mapHeritageStep maps heritage selection to proto payload.
+func mapHeritageStep(step *campaignapp.CampaignCharacterCreationStepHeritage) *daggerheartv1.DaggerheartCreationStepInput {
+	return &daggerheartv1.DaggerheartCreationStepInput{
+		Step: &daggerheartv1.DaggerheartCreationStepInput_HeritageInput{HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
+			AncestryId:  strings.TrimSpace(step.AncestryID),
+			CommunityId: strings.TrimSpace(step.CommunityID),
+		}},
+	}
+}
+
+// mapTraitsStep maps trait allocation to proto payload.
+func mapTraitsStep(step *campaignapp.CampaignCharacterCreationStepTraits) *daggerheartv1.DaggerheartCreationStepInput {
+	return &daggerheartv1.DaggerheartCreationStepInput{
+		Step: &daggerheartv1.DaggerheartCreationStepInput_TraitsInput{TraitsInput: &daggerheartv1.DaggerheartCreationStepTraitsInput{
+			Agility:   step.Agility,
+			Strength:  step.Strength,
+			Finesse:   step.Finesse,
+			Instinct:  step.Instinct,
+			Presence:  step.Presence,
+			Knowledge: step.Knowledge,
+		}},
+	}
+}
+
+// mapDetailsStep maps freeform character details to proto payload.
+func mapDetailsStep(step *campaignapp.CampaignCharacterCreationStepDetails) *daggerheartv1.DaggerheartCreationStepInput {
+	return &daggerheartv1.DaggerheartCreationStepInput{
+		Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{
+			Description: strings.TrimSpace(step.Description),
+		}},
+	}
+}
+
+// mapEquipmentStep maps equipment selection to proto payload.
+func mapEquipmentStep(step *campaignapp.CampaignCharacterCreationStepEquipment) *daggerheartv1.DaggerheartCreationStepInput {
+	return &daggerheartv1.DaggerheartCreationStepInput{
+		Step: &daggerheartv1.DaggerheartCreationStepInput_EquipmentInput{EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{
+			WeaponIds:    trimNonEmptyStepValues(step.WeaponIDs),
+			ArmorId:      strings.TrimSpace(step.ArmorID),
+			PotionItemId: strings.TrimSpace(step.PotionItemID),
+		}},
+	}
+}
+
+// mapBackgroundStep maps character background text to proto payload.
+func mapBackgroundStep(step *campaignapp.CampaignCharacterCreationStepBackground) *daggerheartv1.DaggerheartCreationStepInput {
+	return &daggerheartv1.DaggerheartCreationStepInput{
+		Step: &daggerheartv1.DaggerheartCreationStepInput_BackgroundInput{BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{
+			Background: strings.TrimSpace(step.Background),
+		}},
+	}
+}
+
+// mapExperiencesStep maps experience entries to proto payload.
+func mapExperiencesStep(step *campaignapp.CampaignCharacterCreationStepExperiences) *daggerheartv1.DaggerheartCreationStepInput {
+	experiences := make([]*daggerheartv1.DaggerheartExperience, 0, len(step.Experiences))
+	for _, experience := range step.Experiences {
+		experienceName := strings.TrimSpace(experience.Name)
+		if experienceName == "" {
+			continue
 		}
-		return &daggerheartv1.DaggerheartCreationStepInput{
-			Step: &daggerheartv1.DaggerheartCreationStepInput_ExperiencesInput{ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{
-				Experiences: experiences,
-			}},
-		}, nil
-	}
-	if step.DomainCards != nil {
-		domainCardIDs := make([]string, 0, len(step.DomainCards.DomainCardIDs))
-		for _, domainCardID := range step.DomainCards.DomainCardIDs {
-			trimmedDomainCardID := strings.TrimSpace(domainCardID)
-			if trimmedDomainCardID == "" {
-				continue
-			}
-			domainCardIDs = append(domainCardIDs, trimmedDomainCardID)
-		}
-		return &daggerheartv1.DaggerheartCreationStepInput{
-			Step: &daggerheartv1.DaggerheartCreationStepInput_DomainCardsInput{DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{
-				DomainCardIds: domainCardIDs,
-			}},
-		}, nil
+		experiences = append(experiences, &daggerheartv1.DaggerheartExperience{
+			Name:     experienceName,
+			Modifier: experience.Modifier,
+		})
 	}
 	return &daggerheartv1.DaggerheartCreationStepInput{
-		Step: &daggerheartv1.DaggerheartCreationStepInput_ConnectionsInput{ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{
-			Connections: strings.TrimSpace(step.Connections.Connections),
+		Step: &daggerheartv1.DaggerheartCreationStepInput_ExperiencesInput{ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{
+			Experiences: experiences,
 		}},
-	}, nil
+	}
+}
+
+// mapDomainCardsStep maps selected domain cards to proto payload.
+func mapDomainCardsStep(step *campaignapp.CampaignCharacterCreationStepDomainCards) *daggerheartv1.DaggerheartCreationStepInput {
+	return &daggerheartv1.DaggerheartCreationStepInput{
+		Step: &daggerheartv1.DaggerheartCreationStepInput_DomainCardsInput{DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{
+			DomainCardIds: trimNonEmptyStepValues(step.DomainCardIDs),
+		}},
+	}
+}
+
+// mapConnectionsStep maps relationship text to proto payload.
+func mapConnectionsStep(step *campaignapp.CampaignCharacterCreationStepConnections) *daggerheartv1.DaggerheartCreationStepInput {
+	return &daggerheartv1.DaggerheartCreationStepInput{
+		Step: &daggerheartv1.DaggerheartCreationStepInput_ConnectionsInput{ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{
+			Connections: strings.TrimSpace(step.Connections),
+		}},
+	}
+}
+
+// trimNonEmptyStepValues trims whitespace and drops empty values while preserving order.
+func trimNonEmptyStepValues(values []string) []string {
+	mapped := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		mapped = append(mapped, trimmed)
+	}
+	return mapped
 }
 
 // MapCampaignCharacterCreationStepToProto converts a domain step into the proto payload.

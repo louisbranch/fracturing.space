@@ -66,26 +66,20 @@ func (s service) hydrateCharacterEditability(ctx context.Context, campaignID str
 		return
 	}
 
-	checks := make([]AuthorizationCheck, 0, len(characters))
-	indexesByCheckID := make(map[string][]int, len(characters))
-	for idx := range characters {
-		characterID := strings.TrimSpace(characters[idx].ID)
-		if characterID == "" {
-			continue
-		}
-		indexesByCheckID[characterID] = append(indexesByCheckID[characterID], idx)
-		if len(indexesByCheckID[characterID]) > 1 {
-			continue
-		}
-		checks = append(checks, AuthorizationCheck{
-			CheckID:  characterID,
-			Action:   campaignAuthzActionMutate,
-			Resource: campaignAuthzResourceCharacter,
-			Target: &AuthorizationTarget{
-				ResourceID: characterID,
-			},
-		})
-	}
+	checks, indexesByCheckID := buildAuthorizationChecksByID(
+		len(characters),
+		func(idx int) string { return characters[idx].ID },
+		func(checkID string, _ int) AuthorizationCheck {
+			return AuthorizationCheck{
+				CheckID:  checkID,
+				Action:   campaignAuthzActionMutate,
+				Resource: campaignAuthzResourceCharacter,
+				Target: &AuthorizationTarget{
+					ResourceID: checkID,
+				},
+			}
+		},
+	)
 	if len(checks) == 0 {
 		return
 	}
@@ -95,23 +89,10 @@ func (s service) hydrateCharacterEditability(ctx context.Context, campaignID str
 		return
 	}
 
-	for idx, decision := range decisions {
-		checkID := strings.TrimSpace(decision.CheckID)
-		if checkID == "" && idx < len(checks) {
-			checkID = strings.TrimSpace(checks[idx].CheckID)
+	applyAuthorizationDecisions(checks, indexesByCheckID, decisions, func(characterIndex int, decision AuthorizationDecision) {
+		characters[characterIndex].EditReasonCode = strings.TrimSpace(decision.ReasonCode)
+		if decision.Evaluated && decision.Allowed {
+			characters[characterIndex].CanEdit = true
 		}
-		if checkID == "" {
-			continue
-		}
-		characterIndexes, found := indexesByCheckID[checkID]
-		if !found {
-			continue
-		}
-		for _, characterIndex := range characterIndexes {
-			characters[characterIndex].EditReasonCode = strings.TrimSpace(decision.ReasonCode)
-			if decision.Evaluated && decision.Allowed {
-				characters[characterIndex].CanEdit = true
-			}
-		}
-	}
+	})
 }

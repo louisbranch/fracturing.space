@@ -120,11 +120,16 @@ func TestModuleDependenciesSocialContractsAreSplit(t *testing.T) {
 
 	fields := dependenciesStructFields(t, "module.go")
 	if _, exists := fields["SocialClient"]; exists {
-		t.Fatalf("Dependencies still exposes legacy SocialClient; expected split ProfileSocialClient + SettingsSocialClient")
+		t.Fatalf("Dependencies still exposes legacy SocialClient; expected nested Profile.SocialClient + Settings.SocialClient")
 	}
-	for _, required := range []string{"ProfileSocialClient", "SettingsSocialClient"} {
+	for _, required := range []string{"Profile", "Settings"} {
 		if _, exists := fields[required]; !exists {
 			t.Fatalf("Dependencies missing required field %q", required)
+		}
+	}
+	for _, forbidden := range []string{"ProfileSocialClient", "SettingsSocialClient"} {
+		if _, exists := fields[forbidden]; exists {
+			t.Fatalf("Dependencies still exposes deprecated flat field %q", forbidden)
 		}
 	}
 }
@@ -137,8 +142,8 @@ func TestRegistryWiresSplitSocialContracts(t *testing.T) {
 			t.Fatalf("%s uses deps.SocialClient; expected split social contract fields", path)
 		}
 	}
-	assertRegistryGatewayCallUsesDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 0, "ProfileSocialClient")
-	assertRegistryGatewayCallUsesDepField(t, "registry_protected.go", "settingsgateway", "NewGRPCGateway", 0, "SettingsSocialClient")
+	assertRegistryGatewayCallUsesNestedDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 0, "Profile", "SocialClient")
+	assertRegistryGatewayCallUsesNestedDepField(t, "registry_protected.go", "settingsgateway", "NewGRPCGateway", 0, "Settings", "SocialClient")
 }
 
 func assertMountCallsSelector(t *testing.T, path, pkgName, methodName string) {
@@ -263,6 +268,54 @@ func assertRegistryGatewayCallUsesDepField(t *testing.T, path, pkgName, methodNa
 	if !found {
 		t.Fatalf("%s does not call %s.%s with deps.%s in argument %d", path, pkgName, methodName, depField, argIndex)
 	}
+}
+
+func assertRegistryGatewayCallUsesNestedDepField(t *testing.T, path, pkgName, methodName string, argIndex int, depFields ...string) {
+	t.Helper()
+
+	parsed := parseFile(t, path)
+	found := false
+	ast.Inspect(parsed, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || sel.Sel == nil || sel.Sel.Name != methodName {
+			return true
+		}
+		ident, ok := sel.X.(*ast.Ident)
+		if !ok || ident.Name != pkgName {
+			return true
+		}
+		if argIndex >= len(call.Args) {
+			return true
+		}
+		if matchesDepsSelectorChain(call.Args[argIndex], depFields...) {
+			found = true
+			return false
+		}
+		return true
+	})
+	if !found {
+		t.Fatalf("%s does not call %s.%s with deps.%v in argument %d", path, pkgName, methodName, depFields, argIndex)
+	}
+}
+
+func matchesDepsSelectorChain(expr ast.Expr, depFields ...string) bool {
+	if len(depFields) == 0 {
+		return false
+	}
+	current := expr
+	for i := len(depFields) - 1; i >= 0; i-- {
+		sel, ok := current.(*ast.SelectorExpr)
+		if !ok || sel.Sel == nil || sel.Sel.Name != depFields[i] {
+			return false
+		}
+		current = sel.X
+	}
+	ident, ok := current.(*ast.Ident)
+	return ok && ident.Name == "deps"
 }
 
 func parseFile(t *testing.T, path string) *ast.File {

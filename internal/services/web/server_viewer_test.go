@@ -137,7 +137,7 @@ func TestPrimaryNavigationUsesUnreadNotificationIconWhenUserHasUnread(t *testing
 		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{HasUnread: true, UnreadCount: 2},
 	}
 	cfg.Dependencies.Principal.NotificationClient = notifClient
-	cfg.Dependencies.Modules.NotificationClient = notifClient
+	cfg.Dependencies.Modules.Notifications.NotificationClient = notifClient
 	h, err := NewHandler(cfg)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -167,7 +167,7 @@ func TestPrimaryNavigationFallsBackToReadNotificationIconWhenUnreadLookupFails(t
 	cfg := defaultProtectedConfig(auth)
 	notifClient := fakeWebNotificationClient{unreadErr: context.Canceled}
 	cfg.Dependencies.Principal.NotificationClient = notifClient
-	cfg.Dependencies.Modules.NotificationClient = notifClient
+	cfg.Dependencies.Modules.Notifications.NotificationClient = notifClient
 	h, err := NewHandler(cfg)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -253,7 +253,10 @@ func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDependencyBundle(PrincipalDependencies{}, modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{},
+			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
+		),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -283,7 +286,10 @@ func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDependencyBundle(PrincipalDependencies{}, modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDependencyBundle(
+			PrincipalDependencies{},
+			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
+		),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -415,13 +421,15 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 				AssetBaseURL:  assetBaseURL,
 			},
 			modules.Dependencies{
-				AuthClient:           auth,
-				ProfileSocialClient:  social,
-				SettingsSocialClient: social,
-				AssetBaseURL:         assetBaseURL,
-				AccountClient:        &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
-				CampaignClient:       defaultCampaignClient(),
-				CredentialClient:     fakeCredentialClient{},
+				AssetBaseURL: assetBaseURL,
+				PublicAuth:   modules.PublicAuthDependencies{AuthClient: auth},
+				Profile:      modules.ProfileDependencies{SocialClient: social},
+				Settings: modules.SettingsDependencies{
+					SocialClient:     social,
+					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+					CredentialClient: fakeCredentialClient{},
+				},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 			},
 		),
 	})
@@ -468,13 +476,15 @@ func TestAppPageUserDropdownProfileFallsBackToSettingsNoticeWhenUsernameMissing(
 				AssetBaseURL:  "https://cdn.example.com/avatars",
 			},
 			modules.Dependencies{
-				AuthClient:           auth,
-				ProfileSocialClient:  social,
-				SettingsSocialClient: social,
-				AssetBaseURL:         "https://cdn.example.com/avatars",
-				AccountClient:        &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
-				CampaignClient:       defaultCampaignClient(),
-				CredentialClient:     fakeCredentialClient{},
+				AssetBaseURL: "https://cdn.example.com/avatars",
+				PublicAuth:   modules.PublicAuthDependencies{AuthClient: auth},
+				Profile:      modules.ProfileDependencies{SocialClient: social},
+				Settings: modules.SettingsDependencies{
+					SocialClient:     social,
+					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+					CredentialClient: fakeCredentialClient{},
+				},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 			},
 		),
 	})
@@ -509,13 +519,15 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 				AssetBaseURL:  assetBaseURL,
 			},
 			modules.Dependencies{
-				AuthClient:           auth,
-				ProfileSocialClient:  social,
-				SettingsSocialClient: social,
-				AssetBaseURL:         assetBaseURL,
-				AccountClient:        &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
-				CampaignClient:       defaultCampaignClient(),
-				CredentialClient:     fakeCredentialClient{},
+				AssetBaseURL: assetBaseURL,
+				PublicAuth:   modules.PublicAuthDependencies{AuthClient: auth},
+				Profile:      modules.ProfileDependencies{SocialClient: social},
+				Settings: modules.SettingsDependencies{
+					SocialClient:     social,
+					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+					CredentialClient: fakeCredentialClient{},
+				},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 			},
 		),
 	})

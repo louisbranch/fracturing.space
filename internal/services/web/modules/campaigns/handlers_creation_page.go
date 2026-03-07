@@ -8,21 +8,6 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-// handleCharacterCreationPageRoute handles the GET route for the dedicated creation page.
-func (h handlers) handleCharacterCreationPageRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	characterID, ok := h.routeCharacterID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	h.handleCharacterCreationPage(w, r, campaignID, characterID)
-}
-
 // handleCharacterCreationPage renders the dedicated character creation page
 // with a full-width layout (no campaign sidebar).
 func (h handlers) handleCharacterCreationPage(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {

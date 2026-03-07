@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/a-h/templ"
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
@@ -73,14 +74,7 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, err)
 		return
 	}
-	profile := SettingsProfile{
-		Username:      strings.TrimSpace(r.FormValue("username")),
-		Name:          strings.TrimSpace(r.FormValue("name")),
-		AvatarSetID:   existingProfile.AvatarSetID,
-		AvatarAssetID: existingProfile.AvatarAssetID,
-		Pronouns:      strings.TrimSpace(r.FormValue("pronouns")),
-		Bio:           strings.TrimSpace(r.FormValue("bio")),
-	}
+	profile := parseProfileInput(r.PostForm, existingProfile)
 	if err := h.service.SaveProfile(ctx, userID, profile); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
 			loc, _ := h.PageLocalizer(w, r)
@@ -112,7 +106,7 @@ func (h handlers) handleLocalePost(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_locale_form", "failed to parse locale form"))
 		return
 	}
-	selectedLocale := strings.TrimSpace(r.FormValue("locale"))
+	selectedLocale := parseLocaleInput(r.PostForm)
 	if err := h.service.SaveLocale(ctx, userID, selectedLocale); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
 			loc, _ := h.PageLocalizer(w, r)
@@ -139,8 +133,7 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_ai_key_form", "failed to parse ai key form"))
 		return
 	}
-	label := strings.TrimSpace(r.FormValue("label"))
-	secret := strings.TrimSpace(r.FormValue("secret"))
+	label, secret := parseAIKeyCreateInput(r.PostForm)
 	if err := h.service.CreateAIKey(ctx, userID, label, secret); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
 			loc, _ := h.PageLocalizer(w, r)
@@ -170,26 +163,38 @@ func (h handlers) writeFlashNotice(w http.ResponseWriter, r *http.Request, notic
 	flashnotice.WriteWithPolicy(w, r, notice, h.flashMeta)
 }
 
-// handleAIKeyRevokeRoute handles this route in the module transport layer.
-func (h handlers) handleAIKeyRevokeRoute(w http.ResponseWriter, r *http.Request) {
+// routeCredentialID extracts the canonical settings credential route parameter.
+func (h handlers) routeCredentialID(r *http.Request) (string, bool) {
 	credentialID := strings.TrimSpace(r.PathValue("credentialID"))
 	if credentialID == "" {
-		h.WriteNotFound(w, r)
-		return
+		return "", false
 	}
-	h.handleAIKeyRevoke(w, r, credentialID)
+	return credentialID, true
+}
+
+// withCredentialID extracts the credential ID path param and delegates to fn,
+// returning 404 when the param is missing.
+func (h handlers) withCredentialID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		credentialID, ok := h.routeCredentialID(r)
+		if !ok {
+			h.WriteNotFound(w, r)
+			return
+		}
+		fn(w, r, credentialID)
+	}
 }
 
 // renderProfilePage centralizes this web behavior in one helper seam.
 func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, statusCode int, profile SettingsProfile, errorMessage string) {
 	loc, _ := h.PageLocalizer(w, r)
-	layout := webtemplates.AppMainLayoutOptions{SideMenu: settingsSideMenu(routepath.AppSettingsProfile, loc)}
-	h.WritePage(
-		w, r,
-		webtemplates.T(loc, "web.settings.page_profile_title"),
+	h.writeSettingsPage(
+		w,
+		r,
+		loc,
 		statusCode,
-		settingsMainHeader(loc),
-		layout,
+		routepath.AppSettingsProfile,
+		webtemplates.T(loc, "web.settings.page_profile_title"),
 		webtemplates.SettingsProfileFragment(webtemplates.SettingsProfileForm{
 			Username:      profile.Username,
 			Name:          profile.Name,
@@ -205,13 +210,13 @@ func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, stat
 // renderLocalePage centralizes this web behavior in one helper seam.
 func (h handlers) renderLocalePage(w http.ResponseWriter, r *http.Request, statusCode int, selectedLocale string, errorMessage string) {
 	loc, _ := h.PageLocalizer(w, r)
-	layout := webtemplates.AppMainLayoutOptions{SideMenu: settingsSideMenu(routepath.AppSettingsLocale, loc)}
-	h.WritePage(
-		w, r,
-		webtemplates.T(loc, "web.settings.page_locale_title"),
+	h.writeSettingsPage(
+		w,
+		r,
+		loc,
 		statusCode,
-		settingsMainHeader(loc),
-		layout,
+		routepath.AppSettingsLocale,
+		webtemplates.T(loc, "web.settings.page_locale_title"),
 		webtemplates.SettingsLocaleFragment(webtemplates.SettingsLocaleForm{
 			SelectedLocale: selectedLocale,
 			ErrorMessage:   errorMessage,
@@ -222,34 +227,45 @@ func (h handlers) renderLocalePage(w http.ResponseWriter, r *http.Request, statu
 // renderAIKeysPage centralizes this web behavior in one helper seam.
 func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx context.Context, userID string, statusCode int, label string, errorMessage string) {
 	loc, _ := h.PageLocalizer(w, r)
-	keys, err := h.service.ListAIKeys(ctx, userID)
+	rows, err := h.loadAIKeyRows(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	rows := make([]webtemplates.SettingsAIKeyRow, 0, len(keys))
-	for _, key := range keys {
-		rows = append(rows, webtemplates.SettingsAIKeyRow{
-			ID:        key.ID,
-			Label:     key.Label,
-			Provider:  key.Provider,
-			Status:    key.Status,
-			CreatedAt: key.CreatedAt,
-			RevokedAt: key.RevokedAt,
-			CanRevoke: key.CanRevoke,
-		})
-	}
-	layout := webtemplates.AppMainLayoutOptions{SideMenu: settingsSideMenu(routepath.AppSettingsAIKeys, loc)}
-	h.WritePage(
-		w, r,
-		webtemplates.T(loc, "web.settings.page_ai_keys_title"),
+	h.writeSettingsPage(
+		w,
+		r,
+		loc,
 		statusCode,
-		settingsMainHeader(loc),
-		layout,
+		routepath.AppSettingsAIKeys,
+		webtemplates.T(loc, "web.settings.page_ai_keys_title"),
 		webtemplates.SettingsAIKeysFragment(webtemplates.SettingsAIKeysForm{
 			Label:        label,
 			Provider:     "OpenAI",
 			ErrorMessage: errorMessage,
 		}, rows, loc),
 	)
+}
+
+// writeSettingsPage centralizes common settings page shell rendering.
+func (h handlers) writeSettingsPage(
+	w http.ResponseWriter,
+	r *http.Request,
+	loc webtemplates.Localizer,
+	statusCode int,
+	activePath string,
+	title string,
+	body templ.Component,
+) {
+	layout := webtemplates.AppMainLayoutOptions{SideMenu: settingsSideMenu(activePath, loc)}
+	h.WritePage(w, r, title, statusCode, settingsMainHeader(loc), layout, body)
+}
+
+// loadAIKeyRows resolves settings AI key rows for template rendering.
+func (h handlers) loadAIKeyRows(ctx context.Context, userID string) ([]webtemplates.SettingsAIKeyRow, error) {
+	keys, err := h.service.ListAIKeys(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return mapAIKeyTemplateRows(keys), nil
 }

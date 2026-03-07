@@ -3,7 +3,6 @@ package campaigns
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
@@ -15,61 +14,6 @@ import (
 // handleOverviewMethodNotAllowed preserves explicit Allow headers for the overview route.
 func (h handlers) handleOverviewMethodNotAllowed(w http.ResponseWriter, _ *http.Request) {
 	httpx.MethodNotAllowed(http.MethodGet+", HEAD")(w, nil)
-}
-
-// handleCharacterDetailRoute handles this route in the module transport layer.
-func (h handlers) handleCharacterDetailRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	characterID, ok := h.routeCharacterID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	h.handleCharacterDetail(w, r, campaignID, characterID)
-}
-
-// handleParticipantEditRoute handles this route in the module transport layer.
-func (h handlers) handleParticipantEditRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	participantID, ok := h.routeParticipantID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	h.handleParticipantEdit(w, r, campaignID, participantID)
-}
-
-// handleCampaignEditRoute handles this route in the module transport layer.
-func (h handlers) handleCampaignEditRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	h.handleCampaignEdit(w, r, campaignID)
-}
-
-// handleSessionDetailRoute handles this route in the module transport layer.
-func (h handlers) handleSessionDetailRoute(w http.ResponseWriter, r *http.Request) {
-	campaignID, ok := h.routeCampaignID(r)
-	if !ok {
-		h.WriteNotFound(w, r)
-		return
-	}
-	sessionID := strings.TrimSpace(r.PathValue("sessionID"))
-	if sessionID == "" {
-		h.WriteNotFound(w, r)
-		return
-	}
-	h.handleSessionDetail(w, r, campaignID, sessionID)
 }
 
 // --- Campaign detail scaffold ---

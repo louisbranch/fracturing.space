@@ -59,6 +59,51 @@ func TestRegisterRoutesSettingsPathAndMethodContracts(t *testing.T) {
 	}
 }
 
+func TestWithCredentialIDReturnsNotFoundForMissingPathValue(t *testing.T) {
+	t.Parallel()
+
+	h := newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{})
+	called := false
+	handler := h.withCredentialID(func(http.ResponseWriter, *http.Request, string) {
+		called = true
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if called {
+		t.Fatalf("expected delegate not to be called")
+	}
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+}
+
+func TestWithCredentialIDDelegatesResolvedID(t *testing.T) {
+	t.Parallel()
+
+	h := newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{})
+	called := false
+	var gotID string
+	handler := h.withCredentialID(func(_ http.ResponseWriter, _ *http.Request, credentialID string) {
+		called = true
+		gotID = credentialID
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	req.SetPathValue("credentialID", " cred-1 ")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if !called {
+		t.Fatalf("expected delegate to be called")
+	}
+	if gotID != "cred-1" {
+		t.Fatalf("credentialID = %q, want %q", gotID, "cred-1")
+	}
+}
+
 // staticGateway returns canned settings data for route-level tests.
 type staticGateway struct{}
 
