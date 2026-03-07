@@ -46,6 +46,14 @@ func (f fakeDomainExecutor) Execute(context.Context, command.Command) (engine.Re
 	return f.result, f.err
 }
 
+type nonRetryableTestError struct {
+	err error
+}
+
+func (e nonRetryableTestError) Error() string      { return e.err.Error() }
+func (e nonRetryableTestError) Unwrap() error      { return e.err }
+func (e nonRetryableTestError) NonRetryable() bool { return true }
+
 func testWriteRuntime(t *testing.T) *domainwrite.Runtime {
 	t.Helper()
 	runtime := domainwrite.NewRuntime()
@@ -217,5 +225,30 @@ func TestExecuteAndApplyDomainCommandSkipsJournalOnlyInlineApply(t *testing.T) {
 	}
 	if applier.calls != 0 {
 		t.Fatalf("apply calls = %d, want 0", applier.calls)
+	}
+}
+
+func TestExecuteAndApplyDomainCommandMapsNonRetryableExecutionError(t *testing.T) {
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
+
+	svc := &DaggerheartService{
+		stores: Stores{
+			Domain:       fakeDomainExecutor{err: nonRetryableTestError{err: errors.New("checkpoint save failed")}},
+			WriteRuntime: runtime,
+		},
+	}
+
+	_, err := svc.executeAndApplyDomainCommand(
+		context.Background(),
+		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
+		&fakeEventApplier{},
+		domainwrite.Options{},
+	)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if status.Code(err) != codes.FailedPrecondition {
+		t.Fatalf("status code = %s, want %s", status.Code(err), codes.FailedPrecondition)
 	}
 }

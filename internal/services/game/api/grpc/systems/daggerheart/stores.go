@@ -29,6 +29,7 @@ type Stores struct {
 	Daggerheart        storage.DaggerheartStore
 	DaggerheartContent storage.DaggerheartContentReadStore
 	Event              storage.EventStore
+	Watermarks         storage.ProjectionWatermarkStore
 	Domain             Domain
 
 	// WriteRuntime owns request-path write execution flags (inline apply,
@@ -100,7 +101,7 @@ func (s Stores) ValidateContent() error {
 func (s Stores) Applier() projection.Applier {
 	applier, err := s.TryApplier()
 	if err != nil {
-		panic(err)
+		return projection.Applier{}
 	}
 	return applier
 }
@@ -128,6 +129,7 @@ func (s Stores) TryApplier() (projection.Applier, error) {
 		Session:          s.Session,
 		SessionGate:      s.SessionGate,
 		SessionSpotlight: s.SessionSpotlight,
+		Watermarks:       s.Watermarks,
 		Adapters:         adapters,
 	}, nil
 }

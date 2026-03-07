@@ -55,13 +55,13 @@ func TestRegistryListAliases(t *testing.T) {
 
 	t.Run("returns copy", func(t *testing.T) {
 		registry := NewRegistry()
-		if err := registry.Register(Definition{Type: Type("participant.seat_reassigned"), Owner: OwnerCore}); err != nil {
+		if err := registry.Register(Definition{Type: Type("campaign.created"), Owner: OwnerCore}); err != nil {
 			t.Fatalf("register canonical 1: %v", err)
 		}
 		if err := registry.Register(Definition{Type: Type("participant.updated"), Owner: OwnerCore}); err != nil {
 			t.Fatalf("register canonical 2: %v", err)
 		}
-		if err := registry.RegisterAlias(Type("seat.reassigned"), Type("participant.seat_reassigned")); err != nil {
+		if err := registry.RegisterAlias(Type("legacy.campaign.created"), Type("campaign.created")); err != nil {
 			t.Fatalf("register alias 1: %v", err)
 		}
 		if err := registry.RegisterAlias(Type("participant.changed"), Type("participant.updated")); err != nil {
@@ -72,18 +72,18 @@ func TestRegistryListAliases(t *testing.T) {
 		if len(got) != 2 {
 			t.Fatalf("ListAliases() len = %d, want 2", len(got))
 		}
-		if got[Type("seat.reassigned")] != Type("participant.seat_reassigned") {
-			t.Fatalf("alias seat.reassigned = %s, want participant.seat_reassigned", got[Type("seat.reassigned")])
+		if got[Type("legacy.campaign.created")] != Type("campaign.created") {
+			t.Fatalf("alias legacy.campaign.created = %s, want campaign.created", got[Type("legacy.campaign.created")])
 		}
 		if got[Type("participant.changed")] != Type("participant.updated") {
 			t.Fatalf("alias participant.changed = %s, want participant.updated", got[Type("participant.changed")])
 		}
 
 		// Mutate caller copy and ensure registry copy remains unchanged.
-		got[Type("seat.reassigned")] = Type("corrupted")
+		got[Type("legacy.campaign.created")] = Type("corrupted")
 		fresh := registry.ListAliases()
-		if fresh[Type("seat.reassigned")] != Type("participant.seat_reassigned") {
-			t.Fatalf("fresh alias seat.reassigned = %s, want participant.seat_reassigned", fresh[Type("seat.reassigned")])
+		if fresh[Type("legacy.campaign.created")] != Type("campaign.created") {
+			t.Fatalf("fresh alias legacy.campaign.created = %s, want campaign.created", fresh[Type("legacy.campaign.created")])
 		}
 	})
 }

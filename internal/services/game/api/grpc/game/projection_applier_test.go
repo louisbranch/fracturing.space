@@ -398,10 +398,7 @@ func TestStoresApplier_ApplyParticipantBindUnbindAndSeatReassign(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode reassign payload: %v", err)
 	}
-	seatEvents := []event.Type{
-		event.Type("seat.reassigned"),
-		event.Type("participant.seat_reassigned"),
-	}
+	seatEvents := []event.Type{event.Type("participant.seat_reassigned")}
 	for _, eventType := range seatEvents {
 		t.Run(string(eventType), func(t *testing.T) {
 			if err := applier.Apply(ctx, event.Event{

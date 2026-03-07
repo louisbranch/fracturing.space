@@ -786,8 +786,8 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		t.Fatalf("forked gm fear = %d, want 4", snapshot.GMFear)
 	}
 
-	if dhStore.statePuts["fork-1"] != 1 {
-		t.Fatalf("daggerheart state puts = %d, want 1", dhStore.statePuts["fork-1"])
+	if dhStore.statePuts["fork-1"] != 2 {
+		t.Fatalf("daggerheart state puts = %d, want 2", dhStore.statePuts["fork-1"])
 	}
 	if dhStore.snapPuts["fork-1"] != 1 {
 		t.Fatalf("daggerheart snapshot puts = %d, want 1", dhStore.snapPuts["fork-1"])

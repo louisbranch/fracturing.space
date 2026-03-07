@@ -16,7 +16,6 @@ func TestActiveSessionPolicyForCommandType(t *testing.T) {
 	}{
 		{name: "campaign blocked", cmdType: command.Type("campaign.update"), want: ActiveSessionCommandPolicyBlocked, ok: true},
 		{name: "participant blocked", cmdType: command.Type("participant.join"), want: ActiveSessionCommandPolicyBlocked, ok: true},
-		{name: "seat blocked", cmdType: command.Type("seat.reassign"), want: ActiveSessionCommandPolicyBlocked, ok: true},
 		{name: "invite blocked", cmdType: command.Type("invite.claim"), want: ActiveSessionCommandPolicyBlocked, ok: true},
 		{name: "character blocked", cmdType: command.Type("character.update"), want: ActiveSessionCommandPolicyBlocked, ok: true},
 		{name: "session allowed", cmdType: command.Type("session.end"), want: ActiveSessionCommandPolicyAllowed, ok: true},

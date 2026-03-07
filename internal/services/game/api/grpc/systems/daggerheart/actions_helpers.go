@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"strconv"
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -194,15 +193,15 @@ func (s *DaggerheartService) advanceBreathCountdown(
 		if !errors.Is(err, storage.ErrNotFound) {
 			return handleDomainError(err)
 		}
-		_, createErr := s.CreateCountdown(ctx, &pb.DaggerheartCreateCountdownRequest{
+		_, createErr := s.runCreateCountdown(ctx, &pb.DaggerheartCreateCountdownRequest{
 			CampaignId:  campaignID,
 			SessionId:   sessionID,
 			CountdownId: countdownID,
-			Name:        "Breath",
-			Kind:        pb.DaggerheartCountdownKind_DAGGERHEART_COUNTDOWN_KIND_CONSEQUENCE,
-			Current:     0,
-			Max:         3,
-			Direction:   pb.DaggerheartCountdownDirection_DAGGERHEART_COUNTDOWN_DIRECTION_INCREASE,
+			Name:        daggerheart.BreathCountdownName,
+			Kind:        daggerheartCountdownKindToProto(daggerheart.CountdownKindConsequence),
+			Current:     daggerheart.BreathCountdownInitial,
+			Max:         daggerheart.BreathCountdownMax,
+			Direction:   daggerheartCountdownDirectionToProto(daggerheart.CountdownDirectionIncrease),
 			Looping:     false,
 		})
 		if createErr != nil && status.Code(createErr) != codes.FailedPrecondition {
@@ -210,18 +209,13 @@ func (s *DaggerheartService) advanceBreathCountdown(
 		}
 	}
 
-	delta := int32(1)
-	reason := "breath_tick"
-	if failed {
-		delta = 2
-		reason = "breath_failure"
-	}
-	if _, err := s.UpdateCountdown(ctx, &pb.DaggerheartUpdateCountdownRequest{
+	advance := daggerheart.ResolveBreathCountdownAdvance(failed)
+	if _, err := s.runUpdateCountdown(ctx, &pb.DaggerheartUpdateCountdownRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		CountdownId: countdownID,
-		Delta:       delta,
-		Reason:      reason,
+		Delta:       int32(advance.Delta),
+		Reason:      advance.Reason,
 	}); err != nil {
 		return err
 	}
@@ -246,12 +240,12 @@ func (s *DaggerheartService) ensureNoOpenSessionGate(ctx context.Context, campai
 	return status.Errorf(codes.Internal, "load session gate: %v", err)
 }
 
-func normalizeActionModifiers(modifiers []*pb.ActionRollModifier) (int, []map[string]any) {
+func normalizeActionModifiers(modifiers []*pb.ActionRollModifier) (int, []rollModifierMetadata) {
 	if len(modifiers) == 0 {
 		return 0, nil
 	}
 
-	entries := make([]map[string]any, 0, len(modifiers))
+	entries := make([]rollModifierMetadata, 0, len(modifiers))
 	total := 0
 	for _, modifier := range modifiers {
 		if modifier == nil {
@@ -259,9 +253,9 @@ func normalizeActionModifiers(modifiers []*pb.ActionRollModifier) (int, []map[st
 		}
 		value := int(modifier.GetValue())
 		total += value
-		entry := map[string]any{"value": value}
+		entry := rollModifierMetadata{Value: value}
 		if source := strings.TrimSpace(modifier.GetSource()); source != "" {
-			entry["source"] = source
+			entry.Source = source
 		}
 		entries = append(entries, entry)
 	}
@@ -277,32 +271,6 @@ func normalizeRollKind(kind pb.RollKind) pb.RollKind {
 		return pb.RollKind_ROLL_KIND_ACTION
 	}
 	return kind
-}
-
-// applyGMFearSpend mirrors legacy snapshot checks to keep error messaging stable.
-func applyGMFearSpend(current, amount int) (int, int, error) {
-	if amount <= 0 {
-		return 0, 0, errors.New("gm fear amount must be greater than zero")
-	}
-	if current < amount {
-		return 0, 0, errors.New("gm fear is insufficient")
-	}
-	before := current
-	after := before - amount
-	return before, after, nil
-}
-
-// applyGMFearGain mirrors legacy snapshot checks to keep error messaging stable.
-func applyGMFearGain(current, amount int) (int, int, error) {
-	if amount <= 0 {
-		return 0, 0, errors.New("gm fear amount must be greater than zero")
-	}
-	before := current
-	after := before + amount
-	if after > daggerheart.GMFearMax {
-		return 0, 0, errors.New("gm fear exceeds cap")
-	}
-	return before, after, nil
 }
 
 func withCampaignSessionMetadata(ctx context.Context, campaignID, sessionID string) context.Context {
@@ -422,191 +390,6 @@ func normalizeHopeSpendSource(value string) string {
 	return replacer.Replace(normalized)
 }
 
-const (
-	outcomeFlavorHope = "HOPE"
-	outcomeFlavorFear = "FEAR"
-)
-
-func outcomeFlavorFromCode(code string) string {
-	switch strings.TrimSpace(code) {
-	case pb.Outcome_ROLL_WITH_HOPE.String(),
-		pb.Outcome_SUCCESS_WITH_HOPE.String(),
-		pb.Outcome_FAILURE_WITH_HOPE.String(),
-		pb.Outcome_CRITICAL_SUCCESS.String():
-		return outcomeFlavorHope
-	case pb.Outcome_ROLL_WITH_FEAR.String(),
-		pb.Outcome_SUCCESS_WITH_FEAR.String(),
-		pb.Outcome_FAILURE_WITH_FEAR.String():
-		return outcomeFlavorFear
-	default:
-		return ""
-	}
-}
-
-func outcomeSuccessFromCode(code string) (bool, bool) {
-	switch strings.TrimSpace(code) {
-	case pb.Outcome_SUCCESS_WITH_HOPE.String(),
-		pb.Outcome_SUCCESS_WITH_FEAR.String(),
-		pb.Outcome_CRITICAL_SUCCESS.String():
-		return true, true
-	case pb.Outcome_FAILURE_WITH_HOPE.String(),
-		pb.Outcome_FAILURE_WITH_FEAR.String(),
-		pb.Outcome_ROLL_WITH_HOPE.String(),
-		pb.Outcome_ROLL_WITH_FEAR.String():
-		return false, true
-	default:
-		return false, false
-	}
-}
-
-func outcomeCodeToProto(code string) pb.Outcome {
-	switch strings.TrimSpace(code) {
-	case pb.Outcome_ROLL_WITH_HOPE.String():
-		return pb.Outcome_ROLL_WITH_HOPE
-	case pb.Outcome_ROLL_WITH_FEAR.String():
-		return pb.Outcome_ROLL_WITH_FEAR
-	case pb.Outcome_SUCCESS_WITH_HOPE.String():
-		return pb.Outcome_SUCCESS_WITH_HOPE
-	case pb.Outcome_SUCCESS_WITH_FEAR.String():
-		return pb.Outcome_SUCCESS_WITH_FEAR
-	case pb.Outcome_FAILURE_WITH_HOPE.String():
-		return pb.Outcome_FAILURE_WITH_HOPE
-	case pb.Outcome_FAILURE_WITH_FEAR.String():
-		return pb.Outcome_FAILURE_WITH_FEAR
-	case pb.Outcome_CRITICAL_SUCCESS.String():
-		return pb.Outcome_CRITICAL_SUCCESS
-	default:
-		return pb.Outcome_OUTCOME_UNSPECIFIED
-	}
-}
-
-// SystemData key constants for daggerheart roll payloads.
-const (
-	sdKeyCharacterID = "character_id"
-	sdKeyAdversaryID = "adversary_id"
-	sdKeyRollKind    = "roll_kind"
-	sdKeyOutcome     = "outcome"
-	sdKeyHopeFear    = "hope_fear"
-	sdKeyCrit        = "crit"
-	sdKeyCritNegates = "crit_negates"
-	sdKeyRoll        = "roll"
-	sdKeyModifier    = "modifier"
-	sdKeyTotal       = "total"
-)
-
-func outcomeFromSystemData(systemData map[string]any, fallback string) string {
-	if systemData == nil {
-		return strings.TrimSpace(fallback)
-	}
-	if value, ok := systemData[sdKeyOutcome]; ok {
-		if outcome, ok := value.(string); ok {
-			return strings.TrimSpace(outcome)
-		}
-	}
-	return strings.TrimSpace(fallback)
-}
-
-func rollKindFromSystemData(systemData map[string]any) pb.RollKind {
-	if systemData == nil {
-		return pb.RollKind_ROLL_KIND_ACTION
-	}
-	value, ok := systemData[sdKeyRollKind]
-	if !ok {
-		return pb.RollKind_ROLL_KIND_ACTION
-	}
-	kind, ok := value.(string)
-	if !ok {
-		return pb.RollKind_ROLL_KIND_ACTION
-	}
-	switch strings.TrimSpace(kind) {
-	case pb.RollKind_ROLL_KIND_REACTION.String():
-		return pb.RollKind_ROLL_KIND_REACTION
-	case pb.RollKind_ROLL_KIND_ACTION.String():
-		return pb.RollKind_ROLL_KIND_ACTION
-	default:
-		return pb.RollKind_ROLL_KIND_ACTION
-	}
-}
-
-func boolFromSystemData(systemData map[string]any, key string, fallback bool) bool {
-	if systemData == nil {
-		return fallback
-	}
-	value, ok := systemData[key]
-	if !ok {
-		return fallback
-	}
-	boolValue, ok := value.(bool)
-	if !ok {
-		return fallback
-	}
-	return boolValue
-}
-
-func intFromSystemData(systemData map[string]any, key string) (int, bool) {
-	if systemData == nil {
-		return 0, false
-	}
-	value, ok := systemData[key]
-	if !ok {
-		return 0, false
-	}
-	switch decoded := value.(type) {
-	case float64:
-		return int(decoded), true
-	case int:
-		return decoded, true
-	case int64:
-		return int(decoded), true
-	case float32:
-		return int(decoded), true
-	case uint64:
-		return int(decoded), true
-	case uint:
-		return int(decoded), true
-	case json.Number:
-		asInt, err := decoded.Int64()
-		if err != nil {
-			return 0, false
-		}
-		return int(asInt), true
-	case string:
-		intValue, err := strconv.Atoi(strings.TrimSpace(decoded))
-		if err != nil {
-			return 0, false
-		}
-		return intValue, true
-	default:
-		return 0, false
-	}
-}
-
-func critFromSystemData(systemData map[string]any, outcome string) bool {
-	if systemData != nil {
-		if value, ok := systemData[sdKeyCrit]; ok {
-			if crit, ok := value.(bool); ok {
-				return crit
-			}
-		}
-	}
-	return strings.TrimSpace(outcome) == pb.Outcome_CRITICAL_SUCCESS.String()
-}
-
-func stringFromSystemData(systemData map[string]any, key string) string {
-	if systemData == nil {
-		return ""
-	}
-	value, ok := systemData[key]
-	if !ok {
-		return ""
-	}
-	stringValue, ok := value.(string)
-	if !ok {
-		return ""
-	}
-	return strings.TrimSpace(stringValue)
-}
-
 func normalizeTargets(targets []string) []string {
 	if len(targets) == 0 {
 		return nil
@@ -636,106 +419,6 @@ func clamp(value, minValue, maxValue int) int {
 		return maxValue
 	}
 	return value
-}
-
-func applyDaggerheartDamage(req *pb.DaggerheartDamageRequest, profile storage.DaggerheartCharacterProfile, state storage.DaggerheartCharacterState) (daggerheart.DamageApplication, bool, error) {
-	damageTypes := daggerheart.DamageTypes{}
-	switch req.DamageType {
-	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL:
-		damageTypes.Physical = true
-	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MAGIC:
-		damageTypes.Magic = true
-	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MIXED:
-		damageTypes.Physical = true
-		damageTypes.Magic = true
-	}
-
-	resistance := daggerheart.ResistanceProfile{
-		ResistPhysical: req.ResistPhysical,
-		ResistMagic:    req.ResistMagic,
-		ImmunePhysical: req.ImmunePhysical,
-		ImmuneMagic:    req.ImmuneMagic,
-	}
-	adjusted := daggerheart.ApplyResistance(int(req.Amount), damageTypes, resistance)
-	mitigated := adjusted < int(req.Amount)
-	options := daggerheart.DamageOptions{EnableMassiveDamage: req.MassiveDamage}
-	result, err := daggerheart.EvaluateDamage(adjusted, profile.MajorThreshold, profile.SevereThreshold, options)
-	if err != nil {
-		return daggerheart.DamageApplication{}, mitigated, err
-	}
-	if req.Direct {
-		app, err := daggerheart.ApplyDamage(state.Hp, adjusted, profile.MajorThreshold, profile.SevereThreshold, options)
-		return app, mitigated, err
-	}
-	app := daggerheart.ApplyDamageWithArmor(state.Hp, state.Armor, result)
-	if app.ArmorSpent > 0 {
-		mitigated = true
-	}
-	return app, mitigated, nil
-}
-
-func applyDaggerheartAdversaryDamage(req *pb.DaggerheartDamageRequest, adversary storage.DaggerheartAdversary) (daggerheart.DamageApplication, bool, error) {
-	damageTypes := daggerheart.DamageTypes{}
-	switch req.DamageType {
-	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL:
-		damageTypes.Physical = true
-	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MAGIC:
-		damageTypes.Magic = true
-	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MIXED:
-		damageTypes.Physical = true
-		damageTypes.Magic = true
-	}
-
-	resistance := daggerheart.ResistanceProfile{
-		ResistPhysical: req.ResistPhysical,
-		ResistMagic:    req.ResistMagic,
-		ImmunePhysical: req.ImmunePhysical,
-		ImmuneMagic:    req.ImmuneMagic,
-	}
-	adjusted := daggerheart.ApplyResistance(int(req.Amount), damageTypes, resistance)
-	mitigated := adjusted < int(req.Amount)
-	options := daggerheart.DamageOptions{EnableMassiveDamage: req.MassiveDamage}
-	result, err := daggerheart.EvaluateDamage(adjusted, adversary.Major, adversary.Severe, options)
-	if err != nil {
-		return daggerheart.DamageApplication{}, mitigated, err
-	}
-	if req.Direct {
-		app, err := daggerheart.ApplyDamage(adversary.HP, adjusted, adversary.Major, adversary.Severe, options)
-		return app, mitigated, err
-	}
-	app := daggerheart.ApplyDamageWithArmor(adversary.HP, adversary.Armor, result)
-	if app.ArmorSpent > 0 {
-		mitigated = true
-	}
-	return app, mitigated, nil
-}
-
-func daggerheartSeverityToString(severity daggerheart.DamageSeverity) string {
-	switch severity {
-	case daggerheart.DamageMinor:
-		return "minor"
-	case daggerheart.DamageMajor:
-		return "major"
-	case daggerheart.DamageSevere:
-		return "severe"
-	case daggerheart.DamageMassive:
-		return "massive"
-	default:
-		return "none"
-	}
-}
-
-func daggerheartDamageTypeToString(t pb.DaggerheartDamageType) string {
-	switch t {
-	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL:
-		return "physical"
-	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MAGIC:
-		return "magic"
-	case pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_MIXED:
-		return "mixed"
-	default:
-		return "unknown"
-	}
 }
 
 func daggerheartRestTypeFromProto(t pb.DaggerheartRestType) (daggerheart.RestType, error) {
@@ -784,37 +467,6 @@ func daggerheartDowntimeMoveToString(m daggerheart.DowntimeMove) string {
 	default:
 		return "unknown"
 	}
-}
-
-func daggerheartStateToProto(state storage.DaggerheartCharacterState) *pb.DaggerheartCharacterState {
-	temporaryArmorBuckets := make([]*pb.DaggerheartTemporaryArmorBucket, 0, len(state.TemporaryArmor))
-	for _, bucket := range state.TemporaryArmor {
-		temporaryArmorBuckets = append(temporaryArmorBuckets, &pb.DaggerheartTemporaryArmorBucket{
-			Source:   bucket.Source,
-			Duration: bucket.Duration,
-			SourceId: bucket.SourceID,
-			Amount:   int32(bucket.Amount),
-		})
-	}
-
-	return &pb.DaggerheartCharacterState{
-		Hp:                    int32(state.Hp),
-		Hope:                  int32(state.Hope),
-		HopeMax:               int32(state.HopeMax),
-		Stress:                int32(state.Stress),
-		Armor:                 int32(state.Armor),
-		Conditions:            daggerheartConditionsToProto(state.Conditions),
-		TemporaryArmorBuckets: temporaryArmorBuckets,
-		LifeState:             daggerheartLifeStateToProto(state.LifeState),
-	}
-}
-
-func optionalInt32(value *int) *int32 {
-	if value == nil {
-		return nil
-	}
-	v := int32(*value)
-	return &v
 }
 
 // handleDomainError maps domain errors to gRPC status errors with proper codes

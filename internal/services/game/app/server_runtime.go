@@ -20,7 +20,7 @@ func (s *Server) Addr() string {
 
 // Run creates and serves a game server until the context ends.
 func Run(ctx context.Context, port int) error {
-	grpcServer, err := New(port)
+	grpcServer, err := NewContext(ctx, port)
 	if err != nil {
 		return err
 	}
@@ -29,7 +29,7 @@ func Run(ctx context.Context, port int) error {
 
 // RunWithAddr creates and serves a game server until the context ends.
 func RunWithAddr(ctx context.Context, addr string) error {
-	grpcServer, err := NewWithAddr(addr)
+	grpcServer, err := NewWithAddrContext(ctx, addr)
 	if err != nil {
 		return err
 	}

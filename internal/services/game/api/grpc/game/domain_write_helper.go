@@ -63,6 +63,9 @@ func normalizeGRPCDefaults(options *domainwrite.Options) {
 			message = "execute domain command"
 		}
 		options.ExecuteErr = func(err error) error {
+			if engine.IsNonRetryable(err) {
+				return status.Errorf(codes.FailedPrecondition, "%s: %v", message, err)
+			}
 			return status.Errorf(codes.Internal, "%s: %v", message, err)
 		}
 	}

@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type fakeDomainExecutor struct {
@@ -20,6 +23,14 @@ type fakeDomainExecutor struct {
 func (f fakeDomainExecutor) Execute(context.Context, command.Command) (engine.Result, error) {
 	return f.result, f.err
 }
+
+type nonRetryableTestError struct {
+	err error
+}
+
+func (e nonRetryableTestError) Error() string      { return e.err.Error() }
+func (e nonRetryableTestError) Unwrap() error      { return e.err }
+func (e nonRetryableTestError) NonRetryable() bool { return true }
 
 func testDecisionEvent() event.Event {
 	return event.Event{
@@ -120,5 +131,30 @@ func TestExecuteAndApplyDomainCommand_SkipsJournalOnlyInlineApply(t *testing.T) 
 	)
 	if err != nil {
 		t.Fatalf("expected journal-only inline apply skip with no error, got %v", err)
+	}
+}
+
+func TestExecuteAndApplyDomainCommand_MapsNonRetryableExecutionError(t *testing.T) {
+	runtime := testWriteRuntime(t)
+	domain := fakeDomainExecutor{
+		err: nonRetryableTestError{err: errors.New("post-persist checkpoint failed")},
+	}
+	stores := Stores{Domain: domain, WriteRuntime: runtime}
+	_, err := executeAndApplyDomainCommand(
+		context.Background(),
+		stores,
+		projection.Applier{},
+		command.Command{CampaignID: "camp-1", Type: command.Type("campaign.create")},
+		domainwrite.Options{},
+	)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.FailedPrecondition {
+		t.Fatalf("code = %s, want %s", st.Code(), codes.FailedPrecondition)
 	}
 }

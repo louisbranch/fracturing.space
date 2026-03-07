@@ -133,6 +133,40 @@ func (s *fakeSnapshotStore) SaveState(context.Context, string, uint64, any) erro
 	return nil
 }
 
+type staticCheckpointStore struct {
+	seq uint64
+}
+
+func (s staticCheckpointStore) Get(context.Context, string) (replay.Checkpoint, error) {
+	if s.seq == 0 {
+		return replay.Checkpoint{}, replay.ErrCheckpointNotFound
+	}
+	return replay.Checkpoint{CampaignID: "camp-1", LastSeq: s.seq}, nil
+}
+
+func (s staticCheckpointStore) Save(context.Context, replay.Checkpoint) error {
+	return nil
+}
+
+type trackingCheckpointStore struct {
+	seq       uint64
+	saveCalls int
+	last      replay.Checkpoint
+}
+
+func (s *trackingCheckpointStore) Get(context.Context, string) (replay.Checkpoint, error) {
+	if s.seq == 0 {
+		return replay.Checkpoint{}, replay.ErrCheckpointNotFound
+	}
+	return replay.Checkpoint{CampaignID: "camp-1", LastSeq: s.seq}, nil
+}
+
+func (s *trackingCheckpointStore) Save(_ context.Context, checkpoint replay.Checkpoint) error {
+	s.saveCalls++
+	s.last = checkpoint
+	return nil
+}
+
 func TestReplayStateLoader_SeedsReplayFromSnapshot(t *testing.T) {
 	events := &trackingReplayEventStore{}
 	snapshots := &fakeSnapshotStore{
@@ -167,6 +201,52 @@ func TestReplayStateLoader_SeedsReplayFromSnapshot(t *testing.T) {
 	}
 	if agg.Session.GateID != "gate-1" {
 		t.Fatalf("gate id = %q, want %q", agg.Session.GateID, "gate-1")
+	}
+}
+
+func TestReplayStateLoader_DoesNotSkipPastSnapshotWhenCheckpointAhead(t *testing.T) {
+	events := &trackingReplayEventStore{}
+	snapshots := &fakeSnapshotStore{
+		state: aggregate.State{
+			Session: session.State{GateID: "gate-1"},
+		},
+		seq: 7,
+	}
+	loader := ReplayStateLoader{
+		Events:      events,
+		Checkpoints: staticCheckpointStore{seq: 12},
+		Snapshots:   snapshots,
+		Folder:      &aggregate.Folder{},
+		StateFactory: func() any {
+			return aggregate.State{}
+		},
+	}
+
+	_, err := loader.Load(context.Background(), command.Command{CampaignID: "camp-1"})
+	if err != nil {
+		t.Fatalf("load state: %v", err)
+	}
+	if len(events.afterCalls) == 0 {
+		t.Fatal("expected replay to query events")
+	}
+	if events.afterCalls[0] != 7 {
+		t.Fatalf("first after_seq = %d, want %d (snapshot seq must cap checkpoint)", events.afterCalls[0], 7)
+	}
+}
+
+func TestCheckpointCapStore_SaveDelegatesToBaseStore(t *testing.T) {
+	base := &trackingCheckpointStore{}
+	capped := checkpointCapStore{base: base, maxSeq: 12}
+
+	input := replay.Checkpoint{CampaignID: "camp-1", LastSeq: 9}
+	if err := capped.Save(context.Background(), input); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	if base.saveCalls != 1 {
+		t.Fatalf("save calls = %d, want 1", base.saveCalls)
+	}
+	if base.last != input {
+		t.Fatalf("saved checkpoint = %#v, want %#v", base.last, input)
 	}
 }
 

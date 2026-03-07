@@ -181,27 +181,6 @@ func TestBuildRegistries_FailsWhenCoreDomainCommandRegistrationFails(t *testing.
 	}
 }
 
-func TestBuildRegistries_FailsWhenCoreAliasCanonicalTypeMissing(t *testing.T) {
-	_, err := buildRegistries(
-		[]CoreDomain{
-			{
-				name:                "core",
-				RegisterCommands:    func(*command.Registry) error { return nil },
-				RegisterEvents:      func(*event.Registry) error { return nil },
-				EmittableEventTypes: func() []event.Type { return nil },
-				FoldHandledTypes:    func() []event.Type { return nil },
-			},
-		},
-		nil,
-	)
-	if err == nil {
-		t.Fatal("expected alias canonical registration error")
-	}
-	if !strings.Contains(err.Error(), "canonical type participant.seat_reassigned is not registered") {
-		t.Fatalf("buildRegistries() error = %v, want canonical alias registration error", err)
-	}
-}
-
 func TestBuildRegistries_FailsCoreEmittableValidationWhenCoreDomainsMissing(t *testing.T) {
 	_, err := buildRegistries(
 		[]CoreDomain{

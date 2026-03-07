@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 5
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-06"
 ---
 
 # Event Replay and Snapshots
@@ -42,8 +42,11 @@ Mode selection is operational; invariants stay the same.
 
 ## Checkpoint and snapshot model
 
-- Replay starts from max of configured `after_seq`, checkpoint sequence, and
-  snapshot sequence.
+- Snapshot-accelerated replay starts from the snapshot sequence.
+- When a checkpoint is ahead of snapshot sequence, replay must cap the
+  checkpoint cursor at snapshot sequence so no events are skipped.
+- Without a snapshot seed, replay starts from max of configured `after_seq`
+  and checkpoint sequence.
 - Successful apply advances checkpoint.
 - Snapshot writes are optimization artifacts and can be recomputed.
 - Snapshot corruption must not block journal-based recovery.

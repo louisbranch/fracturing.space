@@ -111,7 +111,7 @@ func (a *Adapter) ApplyProfile(ctx context.Context, campaignID, characterID stri
 		})
 	}
 
-	return a.store.PutDaggerheartCharacterProfile(ctx, storage.DaggerheartCharacterProfile{
+	if err := a.store.PutDaggerheartCharacterProfile(ctx, storage.DaggerheartCharacterProfile{
 		CampaignID:           campaignID,
 		CharacterID:          characterID,
 		Level:                level,
@@ -143,5 +143,29 @@ func (a *Adapter) ApplyProfile(ctx context.Context, campaignID, characterID stri
 		Instinct:             profile.Instinct,
 		Presence:             profile.Presence,
 		Knowledge:            profile.Knowledge,
+	}); err != nil {
+		return err
+	}
+
+	// Character creation now emits a single workflow command that carries both
+	// create and profile events. Seed state on first profile apply so Daggerheart
+	// action flows can run immediately without requiring an extra state command.
+	_, exists, err := a.getCharacterStateIfExists(ctx, campaignID, characterID)
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	return a.putCharacterState(ctx, storage.DaggerheartCharacterState{
+		CampaignID:  campaignID,
+		CharacterID: characterID,
+		Hp:          profile.HpMax,
+		Hope:        HopeDefault,
+		HopeMax:     HopeMaxDefault,
+		Stress:      StressDefault,
+		Armor:       ArmorDefault,
+		LifeState:   LifeStateAlive,
 	})
 }

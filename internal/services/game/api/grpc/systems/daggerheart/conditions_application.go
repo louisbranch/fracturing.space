@@ -479,7 +479,7 @@ func (s *DaggerheartService) runApplyGmMove(ctx context.Context, in *pb.Daggerhe
 
 	fearSpent := int(in.GetFearSpent())
 	if fearSpent > 0 {
-		before, after, err := applyGMFearSpend(gmFearBefore, fearSpent)
+		before, after, err := daggerheart.ApplyGMFearSpend(gmFearBefore, fearSpent)
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}

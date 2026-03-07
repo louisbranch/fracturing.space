@@ -359,7 +359,7 @@ func TestRegisterCommands_ValidatesSeatReassignPayload(t *testing.T) {
 		t.Fatalf("register commands: %v", err)
 	}
 
-	for _, commandType := range []command.Type{command.Type("seat.reassign"), command.Type("participant.seat.reassign")} {
+	for _, commandType := range []command.Type{command.Type("participant.seat.reassign")} {
 		validCommand := command.Command{
 			CampaignID:  "camp-1",
 			Type:        commandType,
@@ -392,7 +392,7 @@ func TestRegisterEvents_ValidatesSeatReassignedPayload(t *testing.T) {
 		t.Fatalf("register events: %v", err)
 	}
 
-	for _, eventType := range []event.Type{event.Type("seat.reassigned"), event.Type("participant.seat_reassigned")} {
+	for _, eventType := range []event.Type{event.Type("participant.seat_reassigned")} {
 		validEvent := event.Event{
 			CampaignID:  "camp-1",
 			Type:        eventType,

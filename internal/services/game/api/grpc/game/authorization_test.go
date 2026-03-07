@@ -349,6 +349,7 @@ func TestRequirePolicyDeniesAdminOverrideWhenReasonMissing(t *testing.T) {
 	auditStore := &authzAuditStore{}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-fracturing-space-platform-role", "ADMIN",
+		grpcmeta.UserIDHeader, "user-admin-1",
 	))
 
 	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"})
@@ -364,6 +365,26 @@ func TestRequirePolicyDeniesAdminOverrideWhenReasonMissing(t *testing.T) {
 	}
 	if got, ok := evt.Attributes["reason_code"].(string); !ok || got != "AUTHZ_DENY_OVERRIDE_REASON_REQUIRED" {
 		t.Fatalf("reason_code = %#v, want %q", evt.Attributes["reason_code"], "AUTHZ_DENY_OVERRIDE_REASON_REQUIRED")
+	}
+}
+
+func TestRequirePolicyDeniesAdminOverrideWhenPrincipalMissing(t *testing.T) {
+	auditStore := &authzAuditStore{}
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		"x-fracturing-space-platform-role", "ADMIN",
+		"x-fracturing-space-authz-override-reason", "incident-ops",
+	))
+
+	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"})
+	if status.Code(err) != codes.PermissionDenied {
+		t.Fatalf("expected permission denied, got %v", err)
+	}
+	if len(auditStore.events) != 1 {
+		t.Fatalf("audit events = %d, want 1", len(auditStore.events))
+	}
+	evt := auditStore.events[0]
+	if got, ok := evt.Attributes["reason_code"].(string); !ok || got != "AUTHZ_DENY_MISSING_IDENTITY" {
+		t.Fatalf("reason_code = %#v, want %q", evt.Attributes["reason_code"], "AUTHZ_DENY_MISSING_IDENTITY")
 	}
 }
 

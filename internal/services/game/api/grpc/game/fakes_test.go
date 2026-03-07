@@ -1277,6 +1277,7 @@ func contextWithAdminOverride(reason string) context.Context {
 	md := metadata.Pairs(
 		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
 		grpcmeta.AuthzOverrideReasonHeader, reason,
+		grpcmeta.UserIDHeader, "user-admin-test",
 	)
 	return metadata.NewIncomingContext(context.Background(), md)
 }

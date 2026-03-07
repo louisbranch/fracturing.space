@@ -193,20 +193,6 @@ func TestRegistryRegister_NilSystem(t *testing.T) {
 	}
 }
 
-func TestRegistryMustGetPanicsWhenMissing(t *testing.T) {
-	registry := NewMetadataRegistry()
-	defer func() {
-		r := recover()
-		if r == nil {
-			t.Fatal("MustGet() did not panic")
-		}
-		if err, ok := r.(error); !ok || !errors.Is(err, ErrSystemNotRegistered) {
-			t.Fatalf("MustGet() panic = %v, want ErrSystemNotRegistered", r)
-		}
-	}()
-	registry.MustGet(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
-}
-
 func TestRegistryGetOrError(t *testing.T) {
 	registry := NewMetadataRegistry()
 	_, err := registry.GetOrError(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)

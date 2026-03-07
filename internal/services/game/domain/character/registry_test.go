@@ -71,6 +71,36 @@ func TestRegisterCommands_ValidatesUpdatePayload(t *testing.T) {
 	}
 }
 
+func TestRegisterCommands_ValidatesCreateWithProfilePayload(t *testing.T) {
+	registry := command.NewRegistry()
+	if err := RegisterCommands(registry); err != nil {
+		t.Fatalf("register commands: %v", err)
+	}
+
+	validCommand := command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("character.create_with_profile"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(`{
+			"create":{"character_id":"char-1","name":"Aria","kind":"PC"},
+			"system_profile":{"daggerheart":{"level":1}}
+		}`),
+	}
+	if _, err := registry.ValidateForDecision(validCommand); err != nil {
+		t.Fatalf("valid command rejected: %v", err)
+	}
+
+	invalidCommand := validCommand
+	invalidCommand.PayloadJSON = []byte(`{"create":1}`)
+	_, err := registry.ValidateForDecision(invalidCommand)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if errors.Is(err, command.ErrTypeUnknown) {
+		t.Fatalf("expected payload validation error, got %v", err)
+	}
+}
+
 func TestRegisterCommands_ValidatesDeletePayload(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := RegisterCommands(registry); err != nil {

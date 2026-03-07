@@ -21,6 +21,7 @@ type sessionOutcomePrelude struct {
 	campaignID    string
 	sessionID     string
 	rollPayload   action.RollResolvePayload
+	rollMetadata  rollSystemMetadata
 	rollRequestID string
 }
 
@@ -85,6 +86,10 @@ func (s *DaggerheartService) validateSessionOutcome(
 	if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
 		return sessionOutcomePrelude{}, status.Errorf(codes.Internal, "decode roll payload: %v", err)
 	}
+	rollMetadata, err := decodeRollSystemMetadata(rollPayload.SystemData)
+	if err != nil {
+		return sessionOutcomePrelude{}, status.Errorf(codes.InvalidArgument, "invalid roll system_data: %v", err)
+	}
 
 	rollRequestID := strings.TrimSpace(rollPayload.RequestID)
 	if rollRequestID == "" {
@@ -98,6 +103,7 @@ func (s *DaggerheartService) validateSessionOutcome(
 		campaignID:    campaignID,
 		sessionID:     sessionID,
 		rollPayload:   rollPayload,
+		rollMetadata:  rollMetadata,
 		rollRequestID: rollRequestID,
 	}, nil
 }
@@ -115,24 +121,24 @@ func (s *DaggerheartService) runApplyAttackOutcome(ctx context.Context, in *pb.D
 		return nil, err
 	}
 
-	rollKind := rollKindFromSystemData(pre.rollPayload.SystemData)
+	rollKind := pre.rollMetadata.rollKindOrDefault()
 	if rollKind == pb.RollKind_ROLL_KIND_REACTION {
 		return nil, status.Error(codes.FailedPrecondition, "roll seq references a reaction roll")
 	}
-	rollOutcome := outcomeFromSystemData(pre.rollPayload.SystemData, pre.rollPayload.Outcome)
+	rollOutcome := pre.rollMetadata.outcomeOrFallback(pre.rollPayload.Outcome)
 	if rollOutcome == "" {
 		return nil, status.Error(codes.InvalidArgument, "roll outcome is required")
 	}
-	crit := critFromSystemData(pre.rollPayload.SystemData, rollOutcome)
+	crit := boolPointerValue(pre.rollMetadata.Crit, strings.TrimSpace(rollOutcome) == pb.Outcome_CRITICAL_SUCCESS.String())
 	flavor := outcomeFlavorFromCode(rollOutcome)
-	if !boolFromSystemData(pre.rollPayload.SystemData, sdKeyHopeFear, true) {
+	if !boolPointerValue(pre.rollMetadata.HopeFear, true) {
 		flavor = ""
 	}
 	rollSuccess, ok := outcomeSuccessFromCode(rollOutcome)
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "roll outcome is invalid")
 	}
-	attackerID := stringFromSystemData(pre.rollPayload.SystemData, sdKeyCharacterID)
+	attackerID := strings.TrimSpace(pre.rollMetadata.CharacterID)
 	if attackerID == "" {
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
@@ -170,13 +176,13 @@ func (s *DaggerheartService) runApplyAdversaryAttackOutcome(ctx context.Context,
 		return nil, err
 	}
 
-	rollKind := strings.TrimSpace(stringFromSystemData(pre.rollPayload.SystemData, sdKeyRollKind))
+	rollKind := pre.rollMetadata.rollKindCode()
 	if rollKind != "adversary_roll" {
 		return nil, status.Error(codes.InvalidArgument, "roll seq does not reference an adversary roll")
 	}
-	adversaryID := strings.TrimSpace(stringFromSystemData(pre.rollPayload.SystemData, sdKeyCharacterID))
+	adversaryID := strings.TrimSpace(pre.rollMetadata.CharacterID)
 	if adversaryID == "" {
-		adversaryID = strings.TrimSpace(stringFromSystemData(pre.rollPayload.SystemData, sdKeyAdversaryID))
+		adversaryID = strings.TrimSpace(pre.rollMetadata.AdversaryID)
 	}
 	if adversaryID == "" {
 		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
@@ -187,15 +193,15 @@ func (s *DaggerheartService) runApplyAdversaryAttackOutcome(ctx context.Context,
 		return nil, status.Error(codes.InvalidArgument, "targets are required")
 	}
 
-	roll, rollHasValue := intFromSystemData(pre.rollPayload.SystemData, sdKeyRoll)
+	roll, rollHasValue := intPointerValue(pre.rollMetadata.Roll)
 	if !rollHasValue {
 		return nil, status.Error(codes.InvalidArgument, "roll payload missing roll")
 	}
-	_, hasModifier := intFromSystemData(pre.rollPayload.SystemData, sdKeyModifier)
+	_, hasModifier := intPointerValue(pre.rollMetadata.Modifier)
 	if !hasModifier {
 		return nil, status.Error(codes.InvalidArgument, "roll payload missing modifier")
 	}
-	total, hasTotal := intFromSystemData(pre.rollPayload.SystemData, sdKeyTotal)
+	total, hasTotal := intPointerValue(pre.rollMetadata.Total)
 	if !hasTotal {
 		return nil, status.Error(codes.InvalidArgument, "roll payload missing total")
 	}
@@ -226,22 +232,22 @@ func (s *DaggerheartService) runApplyReactionOutcome(ctx context.Context, in *pb
 		return nil, err
 	}
 
-	rollKind := rollKindFromSystemData(pre.rollPayload.SystemData)
+	rollKind := pre.rollMetadata.rollKindOrDefault()
 	if rollKind != pb.RollKind_ROLL_KIND_REACTION {
 		return nil, status.Error(codes.FailedPrecondition, "roll seq does not reference a reaction roll")
 	}
-	rollOutcome := outcomeFromSystemData(pre.rollPayload.SystemData, pre.rollPayload.Outcome)
+	rollOutcome := pre.rollMetadata.outcomeOrFallback(pre.rollPayload.Outcome)
 	if rollOutcome == "" {
 		return nil, status.Error(codes.InvalidArgument, "roll outcome is required")
 	}
-	crit := critFromSystemData(pre.rollPayload.SystemData, rollOutcome)
+	crit := boolPointerValue(pre.rollMetadata.Crit, strings.TrimSpace(rollOutcome) == pb.Outcome_CRITICAL_SUCCESS.String())
 	rollSuccess, ok := outcomeSuccessFromCode(rollOutcome)
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "roll outcome is invalid")
 	}
-	critNegates := boolFromSystemData(pre.rollPayload.SystemData, sdKeyCritNegates, crit)
+	critNegates := boolPointerValue(pre.rollMetadata.CritNegates, crit)
 	effectsNegated := crit && critNegates
-	actorID := stringFromSystemData(pre.rollPayload.SystemData, sdKeyCharacterID)
+	actorID := strings.TrimSpace(pre.rollMetadata.CharacterID)
 	if actorID == "" {
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}

@@ -52,6 +52,7 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 	}
 	var state any
 	options := l.Options
+	checkpoints := l.Checkpoints
 	if l.Snapshots != nil {
 		snapshotState, snapshotSeq, err := l.Snapshots.GetState(ctx, cmd.CampaignID)
 		if err != nil {
@@ -63,6 +64,13 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 			if snapshotSeq > options.AfterSeq {
 				options.AfterSeq = snapshotSeq
 			}
+			// Never allow replay cursor to outrun the state represented by the
+			// loaded snapshot. A stale checkpoint ahead of snapshot sequence would
+			// otherwise skip events and corrupt reconstructed state.
+			checkpoints = checkpointCapStore{
+				base:   l.Checkpoints,
+				maxSeq: snapshotSeq,
+			}
 		}
 	}
 	if l.StateFactory != nil {
@@ -70,11 +78,34 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 			state = l.StateFactory()
 		}
 	}
-	result, err := replay.Replay(ctx, l.Events, l.Checkpoints, l.Folder, cmd.CampaignID, state, options)
+	result, err := replay.Replay(ctx, l.Events, checkpoints, l.Folder, cmd.CampaignID, state, options)
 	if err != nil {
 		return nil, err
 	}
 	return result.State, nil
+}
+
+// checkpointCapStore forwards checkpoint writes and caps checkpoint reads to a
+// maximum sequence so replay cannot skip events that are not represented by the
+// in-memory state seed.
+type checkpointCapStore struct {
+	base   replay.CheckpointStore
+	maxSeq uint64
+}
+
+func (s checkpointCapStore) Get(ctx context.Context, campaignID string) (replay.Checkpoint, error) {
+	checkpoint, err := s.base.Get(ctx, campaignID)
+	if err != nil {
+		return replay.Checkpoint{}, err
+	}
+	if checkpoint.LastSeq > s.maxSeq {
+		checkpoint.LastSeq = s.maxSeq
+	}
+	return checkpoint, nil
+}
+
+func (s checkpointCapStore) Save(ctx context.Context, checkpoint replay.Checkpoint) error {
+	return s.base.Save(ctx, checkpoint)
 }
 
 // LoadSession returns the session state for gate checks.

@@ -8,7 +8,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
 type registryBootstrap struct {
@@ -44,10 +43,6 @@ func buildRegistries(domains []CoreDomain, modules []module.Module) (Registries,
 	bootstrap := newRegistryBootstrap(modules)
 
 	if err := bootstrap.registerCoreDomains(domains); err != nil {
-		return Registries{}, err
-	}
-
-	if err := bootstrap.registerCoreAliases(); err != nil {
 		return Registries{}, err
 	}
 
@@ -90,12 +85,6 @@ func (b registryBootstrap) registerCoreDomains(domains []CoreDomain) error {
 		}
 	}
 	return nil
-}
-
-// registerCoreAliases seeds registry-level backward-compatible aliases that are
-// treated as core runtime contracts.
-func (b registryBootstrap) registerCoreAliases() error {
-	return b.eventRegistry.RegisterAlias(participant.EventTypeSeatReassignedLegacy, participant.EventTypeSeatReassigned)
 }
 
 // validateCoreRegistrations enforces core domain emission declarations against

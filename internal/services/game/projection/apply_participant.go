@@ -246,7 +246,7 @@ func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event, paylo
 
 	newUserID := strings.TrimSpace(payload.UserID)
 	if newUserID == "" {
-		return fmt.Errorf("seat.reassigned user_id is required")
+		return fmt.Errorf("participant.seat_reassigned user_id is required")
 	}
 	priorUserID := strings.TrimSpace(payload.PriorUserID)
 
@@ -256,7 +256,7 @@ func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event, paylo
 	}
 	currentUserID := strings.TrimSpace(current.UserID)
 	if priorUserID != "" && priorUserID != currentUserID {
-		return fmt.Errorf("seat.reassigned prior_user_id mismatch")
+		return fmt.Errorf("participant.seat_reassigned prior_user_id mismatch")
 	}
 
 	updatedAt, err := ensureTimestamp(evt.Timestamp)

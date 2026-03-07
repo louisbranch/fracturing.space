@@ -140,6 +140,39 @@ func TestRegisterCommands_ValidatesUpdatePayload(t *testing.T) {
 	}
 }
 
+func TestRegisterCommands_ValidatesCreateWithParticipantsPayload(t *testing.T) {
+	registry := command.NewRegistry()
+	if err := RegisterCommands(registry); err != nil {
+		t.Fatalf("register commands: %v", err)
+	}
+
+	validCommand := command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("campaign.create_with_participants"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(`{
+			"campaign":{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"},
+			"participants":[{"participant_id":"p-1","user_id":"user-1","name":"Alice","role":"player"}]
+		}`),
+	}
+	if _, err := registry.ValidateForDecision(validCommand); err != nil {
+		t.Fatalf("valid command rejected: %v", err)
+	}
+
+	invalidCommand := validCommand
+	invalidCommand.PayloadJSON = []byte(`{
+		"campaign":{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"},
+		"participants":[{"participant_id":1}]
+	}`)
+	_, err := registry.ValidateForDecision(invalidCommand)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if errors.Is(err, command.ErrTypeUnknown) {
+		t.Fatalf("expected payload validation error, got %v", err)
+	}
+}
+
 func TestRegisterEvents_ValidatesUpdatedPayload(t *testing.T) {
 	registry := event.NewRegistry()
 	if err := RegisterEvents(registry); err != nil {

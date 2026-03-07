@@ -17,7 +17,6 @@ type serverEnv struct {
 	ProjectionsDBPath                        string `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
 	ContentDBPath                            string `env:"FRACTURING_SPACE_GAME_CONTENT_DB_PATH"`
 	DomainEnabled                            bool   `env:"FRACTURING_SPACE_GAME_DOMAIN_ENABLED"                       envDefault:"true"`
-	CompatibilityAppendEnabled               bool   `env:"FRACTURING_SPACE_GAME_COMPATIBILITY_APPEND_ENABLED"         envDefault:"false"`
 	ProjectionApplyOutboxEnabled             bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED"     envDefault:"false"`
 	ProjectionApplyOutboxShadowWorkerEnabled bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED" envDefault:"false"`
 	ProjectionApplyOutboxWorkerEnabled       bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED" envDefault:"false"`

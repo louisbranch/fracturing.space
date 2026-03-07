@@ -160,6 +160,9 @@ func (r *Registry) Register(def Definition) error {
 // canonical JSON, ownership checks, actor identity defaults, and payload
 // validation all happen before domain logic sees the command.
 func (r *Registry) ValidateForDecision(cmd Command) (Command, error) {
+	if r == nil {
+		return Command{}, errors.New("registry is required")
+	}
 	cmd.CampaignID = strings.TrimSpace(cmd.CampaignID)
 	if cmd.CampaignID == "" {
 		return Command{}, ErrCampaignIDRequired

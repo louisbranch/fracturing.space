@@ -785,7 +785,6 @@ func TestDecideParticipantUnbind_AIControllerIdentityLocked(t *testing.T) {
 func TestDecideSeatReassign_EmitsSeatReassignedEvent(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	commandTypes := []command.Type{
-		command.Type("seat.reassign"),
 		command.Type("participant.seat.reassign"),
 	}
 	for _, cmdType := range commandTypes {
@@ -835,7 +834,6 @@ func TestDecideSeatReassign_EmitsSeatReassignedEvent(t *testing.T) {
 
 func TestDecideSeatReassign_PriorUserMismatchRejected(t *testing.T) {
 	commandTypes := []command.Type{
-		command.Type("seat.reassign"),
 		command.Type("participant.seat.reassign"),
 	}
 	for _, cmdType := range commandTypes {
@@ -863,7 +861,6 @@ func TestDecideSeatReassign_PriorUserMismatchRejected(t *testing.T) {
 
 func TestDecideSeatReassign_MissingUserIDRejected(t *testing.T) {
 	commandTypes := []command.Type{
-		command.Type("seat.reassign"),
 		command.Type("participant.seat.reassign"),
 	}
 	for _, cmdType := range commandTypes {
@@ -891,7 +888,6 @@ func TestDecideSeatReassign_MissingUserIDRejected(t *testing.T) {
 
 func TestDecideSeatReassign_AIControllerIdentityLocked(t *testing.T) {
 	commandTypes := []command.Type{
-		command.Type("seat.reassign"),
 		command.Type("participant.seat.reassign"),
 	}
 	for _, cmdType := range commandTypes {
@@ -1141,7 +1137,6 @@ func TestDecide_MalformedUnbindPayloadRejected(t *testing.T) {
 
 func TestDecide_MalformedSeatReassignPayloadRejected(t *testing.T) {
 	commandTypes := []command.Type{
-		command.Type("seat.reassign"),
 		command.Type("participant.seat.reassign"),
 	}
 	for _, cmdType := range commandTypes {
@@ -1191,7 +1186,6 @@ func TestDecideParticipantUnbind_MissingParticipantIDRejected(t *testing.T) {
 
 func TestDecideSeatReassign_MissingParticipantIDRejected(t *testing.T) {
 	commandTypes := []command.Type{
-		command.Type("seat.reassign"),
 		command.Type("participant.seat.reassign"),
 	}
 	for _, cmdType := range commandTypes {
@@ -1233,14 +1227,6 @@ func TestDecideParticipantActiveGuards_LeftParticipantRejected(t *testing.T) {
 			},
 		},
 		{
-			name: "seat.reassign",
-			cmd: command.Command{
-				CampaignID:  "camp-1",
-				Type:        CommandTypeSeatReassignLegacy,
-				PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"user-1","user_id":"user-2"}`),
-			},
-		},
-		{
 			name: "participant.seat.reassign",
 			cmd: command.Command{
 				CampaignID:  "camp-1",
@@ -1274,7 +1260,6 @@ func TestParticipantDecisionHandlersCoverSupportedCommands(t *testing.T) {
 		CommandTypeBind,
 		CommandTypeUnbind,
 		CommandTypeSeatReassign,
-		CommandTypeSeatReassignLegacy,
 	}
 	if len(participantDecisionHandlers) != len(expected) {
 		t.Fatalf("handler count = %d, expected count = %d", len(participantDecisionHandlers), len(expected))

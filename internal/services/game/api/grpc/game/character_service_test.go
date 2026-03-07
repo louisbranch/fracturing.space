@@ -151,40 +151,27 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 		Status: campaign.StatusActive,
 	}
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("character.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","notes":"A brave adventurer"}`),
-			}),
-		},
-		command.Type("character.profile_update"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.profile_updated"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
-			}),
-		},
-		command.Type("sys.daggerheart.character_state.patch"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:    "c1",
-				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     now,
-				ActorType:     event.ActorTypeSystem,
-				EntityType:    "character",
-				EntityID:      "char-123",
-				SystemID:      "daggerheart",
-				SystemVersion: "1.0.0",
-				PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
-			}),
+		commandTypeCharacterCreateWithProfile: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","notes":"A brave adventurer"}`),
+				},
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.profile_updated"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
+				},
+			),
 		},
 	}}
 
@@ -228,23 +215,14 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 		t.Fatalf("Daggerheart profile not persisted: %v", err)
 	}
 
-	// Verify Daggerheart state persisted
-	_, err = ts.Daggerheart.GetDaggerheartCharacterState(context.Background(), "c1", "char-123")
-	if err != nil {
-		t.Fatalf("Daggerheart state not persisted: %v", err)
-	}
-
-	if got := len(ts.Event.events["c1"]); got != 3 {
-		t.Fatalf("expected 3 events, got %d", got)
+	if got := len(ts.Event.events["c1"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
 	}
 	if ts.Event.events["c1"][0].Type != event.Type("character.created") {
 		t.Fatalf("event[0] type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.created"))
 	}
 	if ts.Event.events["c1"][1].Type != event.Type("character.profile_updated") {
 		t.Fatalf("event[1] type = %s, want %s", ts.Event.events["c1"][1].Type, event.Type("character.profile_updated"))
-	}
-	if ts.Event.events["c1"][2].Type != event.Type("sys.daggerheart.character_state_patched") {
-		t.Fatalf("event[2] type = %s, want %s", ts.Event.events["c1"][2].Type, event.Type("sys.daggerheart.character_state_patched"))
 	}
 }
 
@@ -258,40 +236,27 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 		Status: campaign.StatusDraft,
 	}
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("character.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "character",
-				EntityID:    "npc-456",
-				PayloadJSON: []byte(`{"character_id":"npc-456","name":"Shopkeeper","kind":"npc"}`),
-			}),
-		},
-		command.Type("character.profile_update"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.profile_updated"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "character",
-				EntityID:    "npc-456",
-				PayloadJSON: []byte(`{"character_id":"npc-456","system_profile":{"daggerheart":{"hp_max":6}}}`),
-			}),
-		},
-		command.Type("sys.daggerheart.character_state.patch"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:    "c1",
-				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     now,
-				ActorType:     event.ActorTypeSystem,
-				EntityType:    "character",
-				EntityID:      "npc-456",
-				SystemID:      "daggerheart",
-				SystemVersion: "1.0.0",
-				PayloadJSON:   []byte(`{"character_id":"npc-456","hp_after":3}`),
-			}),
+		commandTypeCharacterCreateWithProfile: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "character",
+					EntityID:    "npc-456",
+					PayloadJSON: []byte(`{"character_id":"npc-456","name":"Shopkeeper","kind":"npc"}`),
+				},
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.profile_updated"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "character",
+					EntityID:    "npc-456",
+					PayloadJSON: []byte(`{"character_id":"npc-456","system_profile":{"daggerheart":{"hp_max":6}}}`),
+				},
+			),
 		},
 	}}
 
@@ -312,8 +277,8 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 	if resp.Character.Kind != statev1.CharacterKind_NPC {
 		t.Errorf("Character Kind = %v, want %v", resp.Character.Kind, statev1.CharacterKind_NPC)
 	}
-	if got := len(ts.Event.events["c1"]); got != 3 {
-		t.Fatalf("expected 3 events, got %d", got)
+	if got := len(ts.Event.events["c1"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
 	}
 }
 
@@ -328,40 +293,27 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("character.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","notes":"A brave adventurer"}`),
-			}),
-		},
-		command.Type("character.profile_update"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.profile_updated"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
-			}),
-		},
-		command.Type("sys.daggerheart.character_state.patch"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:    "c1",
-				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     now,
-				ActorType:     event.ActorTypeSystem,
-				EntityType:    "character",
-				EntityID:      "char-123",
-				SystemID:      "daggerheart",
-				SystemVersion: "1.0.0",
-				PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
-			}),
+		commandTypeCharacterCreateWithProfile: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","notes":"A brave adventurer"}`),
+				},
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.profile_updated"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
+				},
+			),
 		},
 	}}
 
@@ -383,20 +335,14 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	if resp.Character == nil {
 		t.Fatal("CreateCharacter response has nil character")
 	}
-	if domain.calls != 3 {
-		t.Fatalf("expected domain to be called three times, got %d", domain.calls)
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
 	}
-	if len(domain.commands) != 3 {
-		t.Fatalf("expected 3 domain commands, got %d", len(domain.commands))
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("character.create") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "character.create")
-	}
-	if domain.commands[1].Type != command.Type("character.profile_update") {
-		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "character.profile_update")
-	}
-	if domain.commands[2].Type != command.Type("sys.daggerheart.character_state.patch") {
-		t.Fatalf("command type = %s, want %s", domain.commands[2].Type, "sys.daggerheart.character_state.patch")
+	if domain.commands[0].Type != commandTypeCharacterCreateWithProfile {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandTypeCharacterCreateWithProfile)
 	}
 	if _, err := ts.Character.GetCharacter(context.Background(), "c1", "char-123"); err != nil {
 		t.Fatalf("Character not persisted: %v", err)
@@ -404,20 +350,14 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	if _, err := ts.Daggerheart.GetDaggerheartCharacterProfile(context.Background(), "c1", "char-123"); err != nil {
 		t.Fatalf("Daggerheart profile not persisted: %v", err)
 	}
-	if _, err := ts.Daggerheart.GetDaggerheartCharacterState(context.Background(), "c1", "char-123"); err != nil {
-		t.Fatalf("Daggerheart state not persisted: %v", err)
-	}
-	if got := len(ts.Event.events["c1"]); got != 3 {
-		t.Fatalf("expected 3 events, got %d", got)
+	if got := len(ts.Event.events["c1"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
 	}
 	if ts.Event.events["c1"][0].Type != event.Type("character.created") {
 		t.Fatalf("event[0] type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.created"))
 	}
 	if ts.Event.events["c1"][1].Type != event.Type("character.profile_updated") {
 		t.Fatalf("event[1] type = %s, want %s", ts.Event.events["c1"][1].Type, event.Type("character.profile_updated"))
-	}
-	if ts.Event.events["c1"][2].Type != event.Type("sys.daggerheart.character_state_patched") {
-		t.Fatalf("event[2] type = %s, want %s", ts.Event.events["c1"][2].Type, event.Type("sys.daggerheart.character_state_patched"))
 	}
 }
 
@@ -431,43 +371,29 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 		Status: campaign.StatusActive,
 	}
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("character.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeParticipant,
-				ActorID:     "manager-1",
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","owner_participant_id":"manager-1"}`),
-			}),
-		},
-		command.Type("character.profile_update"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.profile_updated"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeParticipant,
-				ActorID:     "manager-1",
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
-			}),
-		},
-		command.Type("sys.daggerheart.character_state.patch"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:    "c1",
-				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     now,
-				ActorType:     event.ActorTypeParticipant,
-				ActorID:       "manager-1",
-				EntityType:    "character",
-				EntityID:      "char-123",
-				SystemID:      "daggerheart",
-				SystemVersion: "1.0.0",
-				PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
-			}),
+		commandTypeCharacterCreateWithProfile: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "manager-1",
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","owner_participant_id":"manager-1"}`),
+				},
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.profile_updated"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "manager-1",
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
+				},
+			),
 		},
 	}}
 
@@ -486,14 +412,14 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 		t.Fatalf("CreateCharacter returned error: %v", err)
 	}
 	if len(domain.commands) == 0 {
-		t.Fatal("expected character.create command")
+		t.Fatal("expected character.create_with_profile command")
 	}
-	var payload character.CreatePayload
+	var payload character.CreateWithProfilePayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal create payload: %v", err)
+		t.Fatalf("unmarshal create workflow payload: %v", err)
 	}
-	if payload.OwnerParticipantID != "manager-1" {
-		t.Fatalf("owner_participant_id = %q, want %q", payload.OwnerParticipantID, "manager-1")
+	if payload.Create.OwnerParticipantID != "manager-1" {
+		t.Fatalf("owner_participant_id = %q, want %q", payload.Create.OwnerParticipantID, "manager-1")
 	}
 }
 
@@ -514,43 +440,29 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 		},
 	}
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("character.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeParticipant,
-				ActorID:     "player-1",
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","owner_participant_id":"player-1","participant_id":"player-1"}`),
-			}),
-		},
-		command.Type("character.profile_update"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.profile_updated"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeParticipant,
-				ActorID:     "player-1",
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
-			}),
-		},
-		command.Type("sys.daggerheart.character_state.patch"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:    "c1",
-				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     now,
-				ActorType:     event.ActorTypeParticipant,
-				ActorID:       "player-1",
-				EntityType:    "character",
-				EntityID:      "char-123",
-				SystemID:      "daggerheart",
-				SystemVersion: "1.0.0",
-				PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
-			}),
+		commandTypeCharacterCreateWithProfile: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "player-1",
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","owner_participant_id":"player-1","participant_id":"player-1"}`),
+				},
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.profile_updated"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "player-1",
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
+				},
+			),
 		},
 	}}
 
@@ -569,14 +481,14 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 		t.Fatalf("CreateCharacter returned error: %v", err)
 	}
 	if len(domain.commands) == 0 {
-		t.Fatal("expected character.create command")
+		t.Fatal("expected character.create_with_profile command")
 	}
-	var payload character.CreatePayload
+	var payload character.CreateWithProfilePayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal create payload: %v", err)
+		t.Fatalf("unmarshal create workflow payload: %v", err)
 	}
-	if payload.ParticipantID != "player-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "player-1")
+	if payload.Create.ParticipantID != "player-1" {
+		t.Fatalf("participant_id = %q, want %q", payload.Create.ParticipantID, "player-1")
 	}
 	participantIDValue := resp.GetCharacter().GetParticipantId()
 	if participantIDValue == nil || participantIDValue.GetValue() != "player-1" {
@@ -608,43 +520,29 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 		},
 	}
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("character.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeParticipant,
-				ActorID:     "gm-1",
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","name":"Guide","kind":"npc","owner_participant_id":"gm-1","participant_id":"gm-1"}`),
-			}),
-		},
-		command.Type("character.profile_update"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("character.profile_updated"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeParticipant,
-				ActorID:     "gm-1",
-				EntityType:  "character",
-				EntityID:    "char-123",
-				PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
-			}),
-		},
-		command.Type("sys.daggerheart.character_state.patch"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:    "c1",
-				Type:          event.Type("sys.daggerheart.character_state_patched"),
-				Timestamp:     now,
-				ActorType:     event.ActorTypeParticipant,
-				ActorID:       "gm-1",
-				EntityType:    "character",
-				EntityID:      "char-123",
-				SystemID:      "daggerheart",
-				SystemVersion: "1.0.0",
-				PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
-			}),
+		commandTypeCharacterCreateWithProfile: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "gm-1",
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","name":"Guide","kind":"npc","owner_participant_id":"gm-1","participant_id":"gm-1"}`),
+				},
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("character.profile_updated"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "gm-1",
+					EntityType:  "character",
+					EntityID:    "char-123",
+					PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
+				},
+			),
 		},
 	}}
 
@@ -663,14 +561,14 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 		t.Fatalf("CreateCharacter returned error: %v", err)
 	}
 	if len(domain.commands) == 0 {
-		t.Fatal("expected character.create command")
+		t.Fatal("expected character.create_with_profile command")
 	}
-	var payload character.CreatePayload
+	var payload character.CreateWithProfilePayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal create payload: %v", err)
+		t.Fatalf("unmarshal create workflow payload: %v", err)
 	}
-	if payload.ParticipantID != "gm-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "gm-1")
+	if payload.Create.ParticipantID != "gm-1" {
+		t.Fatalf("participant_id = %q, want %q", payload.Create.ParticipantID, "gm-1")
 	}
 	participantIDValue := resp.GetCharacter().GetParticipantId()
 	if participantIDValue == nil || participantIDValue.GetValue() != "gm-1" {

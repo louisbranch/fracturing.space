@@ -46,43 +46,29 @@ func TestCreateCharacter_InheritsControllerIdentityWhenAutoAssigned(t *testing.T
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			command.Type("character.create"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "c1",
-					Type:        event.Type("character.created"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeParticipant,
-					ActorID:     "part-1",
-					EntityType:  "character",
-					EntityID:    "char-123",
-					PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_blank_v1","avatar_asset_id":"blank_faceless_silhouette"}`),
-				}),
-			},
-			command.Type("character.profile_update"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "c1",
-					Type:        event.Type("character.profile_updated"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeParticipant,
-					ActorID:     "part-1",
-					EntityType:  "character",
-					EntityID:    "char-123",
-					PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
-				}),
-			},
-			command.Type("sys.daggerheart.character_state.patch"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:    "c1",
-					Type:          event.Type("sys.daggerheart.character_state_patched"),
-					Timestamp:     now,
-					ActorType:     event.ActorTypeParticipant,
-					ActorID:       "part-1",
-					EntityType:    "character",
-					EntityID:      "char-123",
-					SystemID:      "daggerheart",
-					SystemVersion: "1.0.0",
-					PayloadJSON:   []byte(`{"character_id":"char-123","hp_after":6}`),
-				}),
+			commandTypeCharacterCreateWithProfile: {
+				Decision: command.Accept(
+					event.Event{
+						CampaignID:  "c1",
+						Type:        event.Type("character.created"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeParticipant,
+						ActorID:     "part-1",
+						EntityType:  "character",
+						EntityID:    "char-123",
+						PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_blank_v1","avatar_asset_id":"blank_faceless_silhouette"}`),
+					},
+					event.Event{
+						CampaignID:  "c1",
+						Type:        event.Type("character.profile_updated"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeParticipant,
+						ActorID:     "part-1",
+						EntityType:  "character",
+						EntityID:    "char-123",
+						PayloadJSON: []byte(`{"character_id":"char-123","system_profile":{"daggerheart":{"hp_max":6}}}`),
+					},
+				),
 			},
 		},
 	}
@@ -111,21 +97,21 @@ func TestCreateCharacter_InheritsControllerIdentityWhenAutoAssigned(t *testing.T
 		t.Fatal("expected at least one domain command")
 	}
 
-	var payload character.CreatePayload
+	var payload character.CreateWithProfilePayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
-		t.Fatalf("decode create payload: %v", err)
+		t.Fatalf("decode create workflow payload: %v", err)
 	}
-	if payload.ParticipantID != "part-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "part-1")
+	if payload.Create.ParticipantID != "part-1" {
+		t.Fatalf("participant_id = %q, want %q", payload.Create.ParticipantID, "part-1")
 	}
-	if payload.AvatarSetID != assetcatalog.AvatarSetPeopleV1 {
-		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, assetcatalog.AvatarSetPeopleV1)
+	if payload.Create.AvatarSetID != assetcatalog.AvatarSetPeopleV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.Create.AvatarSetID, assetcatalog.AvatarSetPeopleV1)
 	}
-	if payload.AvatarAssetID != "007" {
-		t.Fatalf("avatar_asset_id = %q, want %q", payload.AvatarAssetID, "007")
+	if payload.Create.AvatarAssetID != "007" {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.Create.AvatarAssetID, "007")
 	}
-	if payload.Pronouns != "they/them" {
-		t.Fatalf("pronouns = %q, want %q", payload.Pronouns, "they/them")
+	if payload.Create.Pronouns != "they/them" {
+		t.Fatalf("pronouns = %q, want %q", payload.Create.Pronouns, "they/them")
 	}
 }
 
@@ -154,43 +140,29 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			command.Type("character.create"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "c1",
-					Type:        event.Type("character.created"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeParticipant,
-					ActorID:     "part-1",
-					EntityType:  "character",
-					EntityID:    "char-456",
-					PayloadJSON: []byte(`{"character_id":"char-456","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_v1","avatar_asset_id":"010","participant_id":"part-1","pronouns":"she/her"}`),
-				}),
-			},
-			command.Type("character.profile_update"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "c1",
-					Type:        event.Type("character.profile_updated"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeParticipant,
-					ActorID:     "part-1",
-					EntityType:  "character",
-					EntityID:    "char-456",
-					PayloadJSON: []byte(`{"character_id":"char-456","system_profile":{"daggerheart":{"hp_max":6}}}`),
-				}),
-			},
-			command.Type("sys.daggerheart.character_state.patch"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:    "c1",
-					Type:          event.Type("sys.daggerheart.character_state_patched"),
-					Timestamp:     now,
-					ActorType:     event.ActorTypeParticipant,
-					ActorID:       "part-1",
-					EntityType:    "character",
-					EntityID:      "char-456",
-					SystemID:      "daggerheart",
-					SystemVersion: "1.0.0",
-					PayloadJSON:   []byte(`{"character_id":"char-456","hp_after":6}`),
-				}),
+			commandTypeCharacterCreateWithProfile: {
+				Decision: command.Accept(
+					event.Event{
+						CampaignID:  "c1",
+						Type:        event.Type("character.created"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeParticipant,
+						ActorID:     "part-1",
+						EntityType:  "character",
+						EntityID:    "char-456",
+						PayloadJSON: []byte(`{"character_id":"char-456","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_v1","avatar_asset_id":"010","participant_id":"part-1","pronouns":"she/her"}`),
+					},
+					event.Event{
+						CampaignID:  "c1",
+						Type:        event.Type("character.profile_updated"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeParticipant,
+						ActorID:     "part-1",
+						EntityType:  "character",
+						EntityID:    "char-456",
+						PayloadJSON: []byte(`{"character_id":"char-456","system_profile":{"daggerheart":{"hp_max":6}}}`),
+					},
+				),
 			},
 		},
 	}
@@ -222,21 +194,21 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 		t.Fatal("expected at least one domain command")
 	}
 
-	var payload character.CreatePayload
+	var payload character.CreateWithProfilePayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
-		t.Fatalf("decode create payload: %v", err)
+		t.Fatalf("decode create workflow payload: %v", err)
 	}
-	if payload.ParticipantID != "part-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "part-1")
+	if payload.Create.ParticipantID != "part-1" {
+		t.Fatalf("participant_id = %q, want %q", payload.Create.ParticipantID, "part-1")
 	}
-	if payload.AvatarSetID != assetcatalog.AvatarSetPeopleV1 {
-		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, assetcatalog.AvatarSetPeopleV1)
+	if payload.Create.AvatarSetID != assetcatalog.AvatarSetPeopleV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.Create.AvatarSetID, assetcatalog.AvatarSetPeopleV1)
 	}
-	if payload.AvatarAssetID != "010" {
-		t.Fatalf("avatar_asset_id = %q, want %q", payload.AvatarAssetID, "010")
+	if payload.Create.AvatarAssetID != "010" {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.Create.AvatarAssetID, "010")
 	}
-	if payload.Pronouns != "she/her" {
-		t.Fatalf("pronouns = %q, want %q", payload.Pronouns, "she/her")
+	if payload.Create.Pronouns != "she/her" {
+		t.Fatalf("pronouns = %q, want %q", payload.Create.Pronouns, "she/her")
 	}
 }
 
@@ -265,43 +237,29 @@ func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			command.Type("character.create"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "c1",
-					Type:        event.Type("character.created"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeParticipant,
-					ActorID:     "part-1",
-					EntityType:  "character",
-					EntityID:    "char-789",
-					PayloadJSON: []byte(`{"character_id":"char-789","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_v1","avatar_asset_id":"007","participant_id":"part-1","pronouns":""}`),
-				}),
-			},
-			command.Type("character.profile_update"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "c1",
-					Type:        event.Type("character.profile_updated"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeParticipant,
-					ActorID:     "part-1",
-					EntityType:  "character",
-					EntityID:    "char-789",
-					PayloadJSON: []byte(`{"character_id":"char-789","system_profile":{"daggerheart":{"hp_max":6}}}`),
-				}),
-			},
-			command.Type("sys.daggerheart.character_state.patch"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:    "c1",
-					Type:          event.Type("sys.daggerheart.character_state_patched"),
-					Timestamp:     now,
-					ActorType:     event.ActorTypeParticipant,
-					ActorID:       "part-1",
-					EntityType:    "character",
-					EntityID:      "char-789",
-					SystemID:      "daggerheart",
-					SystemVersion: "1.0.0",
-					PayloadJSON:   []byte(`{"character_id":"char-789","hp_after":6}`),
-				}),
+			commandTypeCharacterCreateWithProfile: {
+				Decision: command.Accept(
+					event.Event{
+						CampaignID:  "c1",
+						Type:        event.Type("character.created"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeParticipant,
+						ActorID:     "part-1",
+						EntityType:  "character",
+						EntityID:    "char-789",
+						PayloadJSON: []byte(`{"character_id":"char-789","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_v1","avatar_asset_id":"007","participant_id":"part-1","pronouns":""}`),
+					},
+					event.Event{
+						CampaignID:  "c1",
+						Type:        event.Type("character.profile_updated"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeParticipant,
+						ActorID:     "part-1",
+						EntityType:  "character",
+						EntityID:    "char-789",
+						PayloadJSON: []byte(`{"character_id":"char-789","system_profile":{"daggerheart":{"hp_max":6}}}`),
+					},
+				),
 			},
 		},
 	}
@@ -335,20 +293,20 @@ func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t
 		t.Fatal("expected at least one domain command")
 	}
 
-	var payload character.CreatePayload
+	var payload character.CreateWithProfilePayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
-		t.Fatalf("decode create payload: %v", err)
+		t.Fatalf("decode create workflow payload: %v", err)
 	}
-	if payload.ParticipantID != "part-1" {
-		t.Fatalf("participant_id = %q, want %q", payload.ParticipantID, "part-1")
+	if payload.Create.ParticipantID != "part-1" {
+		t.Fatalf("participant_id = %q, want %q", payload.Create.ParticipantID, "part-1")
 	}
-	if payload.AvatarSetID != assetcatalog.AvatarSetPeopleV1 {
-		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, assetcatalog.AvatarSetPeopleV1)
+	if payload.Create.AvatarSetID != assetcatalog.AvatarSetPeopleV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.Create.AvatarSetID, assetcatalog.AvatarSetPeopleV1)
 	}
-	if payload.AvatarAssetID != "007" {
-		t.Fatalf("avatar_asset_id = %q, want %q", payload.AvatarAssetID, "007")
+	if payload.Create.AvatarAssetID != "007" {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.Create.AvatarAssetID, "007")
 	}
-	if payload.Pronouns != "" {
-		t.Fatalf("pronouns = %q, want empty", payload.Pronouns)
+	if payload.Create.Pronouns != "" {
+		t.Fatalf("pronouns = %q, want empty", payload.Create.Pronouns)
 	}
 }

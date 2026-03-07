@@ -63,6 +63,10 @@ func TestWithAdminOverrideAppendsMetadataWhenReasonPresent(t *testing.T) {
 	if len(reasonValues) != 1 || reasonValues[0] != "admin_dashboard" {
 		t.Fatalf("metadata %s = %v, want [admin_dashboard]", grpcmeta.AuthzOverrideReasonHeader, reasonValues)
 	}
+	userValues := md.Get(grpcmeta.UserIDHeader)
+	if len(userValues) != 1 || userValues[0] != adminOverridePrincipalUserID {
+		t.Fatalf("metadata %s = %v, want [%s]", grpcmeta.UserIDHeader, userValues, adminOverridePrincipalUserID)
+	}
 }
 
 func TestWithAdminOverrideNoopWhenReasonEmpty(t *testing.T) {
@@ -70,6 +74,20 @@ func TestWithAdminOverrideNoopWhenReasonEmpty(t *testing.T) {
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if ok && len(md.Get(grpcmeta.PlatformRoleHeader)) > 0 {
 		t.Fatalf("expected no %s metadata, got %v", grpcmeta.PlatformRoleHeader, md.Get(grpcmeta.PlatformRoleHeader))
+	}
+}
+
+func TestWithAdminOverridePreservesExistingUserID(t *testing.T) {
+	base := WithUserID(context.Background(), "user-123")
+	ctx := WithAdminOverride(base, "admin_dashboard")
+
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		t.Fatalf("expected outgoing metadata context")
+	}
+	values := md.Get(grpcmeta.UserIDHeader)
+	if len(values) == 0 || values[0] != "user-123" {
+		t.Fatalf("metadata %s = %v, want first value user-123", grpcmeta.UserIDHeader, values)
 	}
 }
 
@@ -92,6 +110,9 @@ func TestAdminOverrideUnaryClientInterceptorAddsMetadata(t *testing.T) {
 			}
 			if got := md.Get(grpcmeta.AuthzOverrideReasonHeader); len(got) != 1 || got[0] != "mcp_service" {
 				t.Fatalf("metadata %s = %v, want [mcp_service]", grpcmeta.AuthzOverrideReasonHeader, got)
+			}
+			if got := md.Get(grpcmeta.UserIDHeader); len(got) != 1 || got[0] != adminOverridePrincipalUserID {
+				t.Fatalf("metadata %s = %v, want [%s]", grpcmeta.UserIDHeader, got, adminOverridePrincipalUserID)
 			}
 			return nil
 		},
@@ -119,6 +140,9 @@ func TestAdminOverrideStreamClientInterceptorAddsMetadata(t *testing.T) {
 			}
 			if got := md.Get(grpcmeta.AuthzOverrideReasonHeader); len(got) != 1 || got[0] != "admin_dashboard" {
 				t.Fatalf("metadata %s = %v, want [admin_dashboard]", grpcmeta.AuthzOverrideReasonHeader, got)
+			}
+			if got := md.Get(grpcmeta.UserIDHeader); len(got) != 1 || got[0] != adminOverridePrincipalUserID {
+				t.Fatalf("metadata %s = %v, want [%s]", grpcmeta.UserIDHeader, got, adminOverridePrincipalUserID)
 			}
 			return nil, nil
 		},

@@ -14,7 +14,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -114,63 +113,12 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		avatarAssetID = ""
 	}
 
-	applier := c.stores.Applier()
-	payload := character.CreatePayload{
-		CharacterID:        characterID,
-		OwnerParticipantID: strings.TrimSpace(policyActor.ID),
-		Name:               name,
-		Kind:               in.GetKind().String(),
-		Notes:              notes,
-		AvatarSetID:        avatarSetID,
-		AvatarAssetID:      avatarAssetID,
-		ParticipantID:      defaultParticipantID,
-		Pronouns:           pronouns,
-		Aliases:            append([]string(nil), in.GetAliases()...),
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorType := command.ActorTypeSystem
-	if actorID != "" {
-		actorType = command.ActorTypeParticipant
-	}
-	_, err = executeAndApplyDomainCommand(
-		ctx,
-		c.stores,
-		applier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeCharacterCreate,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "character",
-			EntityID:     characterID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.Options{},
-	)
-	if err != nil {
-		return storage.CharacterRecord{}, err
-	}
-
-	created, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
-	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "load character: %v", err)
-	}
-
 	// Get Daggerheart defaults for the character kind
 	kindStr := "PC"
-	if created.Kind == character.KindNPC {
+	if kind == character.KindNPC {
 		kindStr = "NPC"
 	}
 	dhDefaults := daggerheartprofile.GetDefaults(kindStr)
-
-	reqID := grpcmeta.RequestIDFromContext(ctx)
-	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 
 	experiencesPayload := make([]map[string]any, 0, len(dhDefaults.Experiences))
 	for _, experience := range dhDefaults.Experiences {
@@ -212,90 +160,55 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 			"connections":             "",
 		},
 	}
-	projectionApplier := c.stores.Applier()
-	commandPayload := character.ProfileUpdatePayload{
-		CharacterID:   created.ID,
+	workflowPayload := character.CreateWithProfilePayload{
+		Create: character.CreatePayload{
+			CharacterID:        characterID,
+			OwnerParticipantID: strings.TrimSpace(policyActor.ID),
+			Name:               name,
+			Kind:               in.GetKind().String(),
+			Notes:              notes,
+			AvatarSetID:        avatarSetID,
+			AvatarAssetID:      avatarAssetID,
+			ParticipantID:      defaultParticipantID,
+			Pronouns:           pronouns,
+			Aliases:            append([]string(nil), in.GetAliases()...),
+		},
 		SystemProfile: systemProfile,
 	}
-	commandPayloadJSON, err := json.Marshal(commandPayload)
+	workflowPayloadJSON, err := json.Marshal(workflowPayload)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode profile payload: %v", err)
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode create workflow payload: %v", err)
 	}
 
-	profileCommandActorType := command.ActorTypeSystem
+	actorType := command.ActorTypeSystem
 	if actorID != "" {
-		profileCommandActorType = command.ActorTypeGM
-	}
-	_, err = executeAndApplyDomainCommand(
-		ctx,
-		c.stores,
-		projectionApplier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeCharacterProfileUpdate,
-			ActorType:    profileCommandActorType,
-			ActorID:      actorID,
-			RequestID:    reqID,
-			InvocationID: invocationID,
-			EntityType:   "character",
-			EntityID:     created.ID,
-			PayloadJSON:  commandPayloadJSON,
-		}),
-		domainwrite.Options{
-			ApplyErrMessage: "apply profile event",
-		},
-	)
-	if err != nil {
-		return storage.CharacterRecord{}, err
-	}
-
-	hpAfter := dhDefaults.HpMax
-	hopeAfter := daggerheart.HopeDefault
-	hopeMaxAfter := daggerheart.HopeMax
-	stressAfter := daggerheart.StressDefault
-	armorAfter := 0
-	lifeStateAfter := daggerheart.LifeStateAlive
-	statePayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:    created.ID,
-		HPAfter:        &hpAfter,
-		HopeAfter:      &hopeAfter,
-		HopeMaxAfter:   &hopeMaxAfter,
-		StressAfter:    &stressAfter,
-		ArmorAfter:     &armorAfter,
-		LifeStateAfter: &lifeStateAfter,
-	}
-	stateJSON, err := json.Marshal(statePayload)
-	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode state payload: %v", err)
+		actorType = command.ActorTypeParticipant
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
 		c.stores,
 		c.stores.Applier(),
-		commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
-			CoreInput: commandbuild.CoreInput{
-				CampaignID:   campaignID,
-				Type:         commandTypeDaggerheartCharacterStatePatch,
-				ActorType:    profileCommandActorType,
-				ActorID:      actorID,
-				SessionID:    grpcmeta.SessionIDFromContext(ctx),
-				RequestID:    reqID,
-				InvocationID: invocationID,
-				EntityType:   "character",
-				EntityID:     created.ID,
-				PayloadJSON:  stateJSON,
-			},
+		commandbuild.Core(commandbuild.CoreInput{
+			CampaignID:   campaignID,
+			Type:         commandTypeCharacterCreateWithProfile,
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "character",
+			EntityID:     characterID,
+			PayloadJSON:  workflowPayloadJSON,
 		}),
-		domainwrite.Options{
-			RequireEvents:   true,
-			MissingEventMsg: "character state patch did not emit an event",
-			ApplyErrMessage: "apply state event",
-		},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CharacterRecord{}, err
 	}
 
+	created, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
+	if err != nil {
+		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "load character: %v", err)
+	}
 	return created, nil
 }
 

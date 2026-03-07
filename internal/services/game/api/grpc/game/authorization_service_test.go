@@ -200,6 +200,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 			name: "admin override requires reason",
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 				grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
+				grpcmeta.UserIDHeader, "user-admin-1",
 			)),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",
@@ -214,6 +215,7 @@ func TestAuthorizationServiceCan(t *testing.T) {
 			ctx: metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 				grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
 				grpcmeta.AuthzOverrideReasonHeader, "incident-ops",
+				grpcmeta.UserIDHeader, "user-admin-1",
 			)),
 			request: &campaignv1.CanRequest{
 				CampaignId: "c1",

@@ -225,26 +225,25 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 		results["modifiers"] = modifierList
 	}
 
-	systemData := map[string]any{
-		sdKeyCharacterID: characterID,
-		"trait":          trait,
-		sdKeyRollKind:    rollKind.String(),
-		sdKeyOutcome:     outcomeCode,
-		"flavor":         flavor,
-		sdKeyCrit:        result.IsCrit,
-		sdKeyHopeFear:    generateHopeFear,
-		"gm_move":        triggerGMMove,
-		sdKeyCritNegates: critNegatesEffects,
-		"advantage":      advantage,
-		"disadvantage":   disadvantage,
-		"underwater":     in.GetUnderwater(),
-	}
-	if len(modifierList) > 0 {
-		systemData["modifiers"] = modifierList
+	systemMetadata := rollSystemMetadata{
+		CharacterID:  characterID,
+		Trait:        trait,
+		RollKind:     rollKind.String(),
+		Outcome:      outcomeCode,
+		Flavor:       flavor,
+		HopeFear:     boolPtr(generateHopeFear),
+		Crit:         boolPtr(result.IsCrit),
+		CritNegates:  boolPtr(critNegatesEffects),
+		GMMove:       boolPtr(triggerGMMove),
+		Advantage:    intPtrValue(advantage),
+		Disadvantage: intPtrValue(disadvantage),
+		Underwater:   boolPtr(in.GetUnderwater()),
+		Modifiers:    modifierList,
 	}
 	if countdownID := strings.TrimSpace(in.GetBreathCountdownId()); countdownID != "" {
-		systemData["breath_countdown_id"] = countdownID
+		systemMetadata.BreathCountdownID = countdownID
 	}
+	systemData := systemMetadata.mapValue()
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	payload := action.RollResolvePayload{

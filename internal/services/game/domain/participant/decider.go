@@ -11,20 +11,18 @@ import (
 )
 
 const (
-	CommandTypeJoin               command.Type = "participant.join"
-	CommandTypeUpdate             command.Type = "participant.update"
-	CommandTypeLeave              command.Type = "participant.leave"
-	CommandTypeBind               command.Type = "participant.bind"
-	CommandTypeUnbind             command.Type = "participant.unbind"
-	CommandTypeSeatReassign       command.Type = "participant.seat.reassign"
-	CommandTypeSeatReassignLegacy command.Type = "seat.reassign"
-	EventTypeJoined               event.Type   = "participant.joined"
-	EventTypeUpdated              event.Type   = "participant.updated"
-	EventTypeLeft                 event.Type   = "participant.left"
-	EventTypeBound                event.Type   = "participant.bound"
-	EventTypeUnbound              event.Type   = "participant.unbound"
-	EventTypeSeatReassigned       event.Type   = "participant.seat_reassigned"
-	EventTypeSeatReassignedLegacy event.Type   = "seat.reassigned"
+	CommandTypeJoin         command.Type = "participant.join"
+	CommandTypeUpdate       command.Type = "participant.update"
+	CommandTypeLeave        command.Type = "participant.leave"
+	CommandTypeBind         command.Type = "participant.bind"
+	CommandTypeUnbind       command.Type = "participant.unbind"
+	CommandTypeSeatReassign command.Type = "participant.seat.reassign"
+	EventTypeJoined         event.Type   = "participant.joined"
+	EventTypeUpdated        event.Type   = "participant.updated"
+	EventTypeLeft           event.Type   = "participant.left"
+	EventTypeBound          event.Type   = "participant.bound"
+	EventTypeUnbound        event.Type   = "participant.unbound"
+	EventTypeSeatReassigned event.Type   = "participant.seat_reassigned"
 
 	rejectionCodeParticipantAlreadyJoined      = "PARTICIPANT_ALREADY_JOINED"
 	rejectionCodeParticipantNotJoined          = "PARTICIPANT_NOT_JOINED"
@@ -48,13 +46,12 @@ const (
 type participantDecisionHandler func(State, command.Command, func() time.Time) command.Decision
 
 var participantDecisionHandlers = map[command.Type]participantDecisionHandler{
-	CommandTypeJoin:               decideJoin,
-	CommandTypeUpdate:             decideUpdate,
-	CommandTypeLeave:              decideLeave,
-	CommandTypeBind:               decideBind,
-	CommandTypeUnbind:             decideUnbind,
-	CommandTypeSeatReassign:       decideSeatReassign,
-	CommandTypeSeatReassignLegacy: decideSeatReassign,
+	CommandTypeJoin:         decideJoin,
+	CommandTypeUpdate:       decideUpdate,
+	CommandTypeLeave:        decideLeave,
+	CommandTypeBind:         decideBind,
+	CommandTypeUnbind:       decideUnbind,
+	CommandTypeSeatReassign: decideSeatReassign,
 }
 
 // Decide returns the decision for a participant command against current state.

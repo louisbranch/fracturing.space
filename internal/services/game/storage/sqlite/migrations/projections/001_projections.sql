@@ -1,36 +1,7 @@
 -- +migrate Up
 
-PRAGMA foreign_keys = OFF;
-
-DROP INDEX IF EXISTS idx_session_spotlight_session;
-DROP TABLE IF EXISTS session_spotlight;
-DROP INDEX IF EXISTS idx_session_gates_open;
-DROP TABLE IF EXISTS session_gates;
-DROP TABLE IF EXISTS daggerheart_adversaries;
-DROP TABLE IF EXISTS daggerheart_countdowns;
-DROP TABLE IF EXISTS daggerheart_snapshots;
-DROP TABLE IF EXISTS daggerheart_character_states;
-DROP TABLE IF EXISTS daggerheart_character_profiles;
-DROP INDEX IF EXISTS idx_snapshots_seq;
-DROP TABLE IF EXISTS snapshots;
-DROP INDEX IF EXISTS idx_invites_campaign_recipient;
-DROP INDEX IF EXISTS idx_invites_recipient_user;
-DROP INDEX IF EXISTS idx_invites_participant;
-DROP INDEX IF EXISTS idx_invites_campaign;
-DROP TABLE IF EXISTS invites;
-DROP TABLE IF EXISTS campaign_active_session;
-DROP INDEX IF EXISTS idx_sessions_active;
-DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS characters;
-DROP INDEX IF EXISTS idx_participant_claims_participant;
-DROP TABLE IF EXISTS participant_claims;
-DROP INDEX IF EXISTS idx_participants_campaign_user;
-DROP INDEX IF EXISTS idx_participants_user_id;
-DROP TABLE IF EXISTS participants;
-DROP TABLE IF EXISTS campaigns;
-
 -- Campaign layer
-CREATE TABLE campaigns (
+CREATE TABLE IF NOT EXISTS campaigns (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     locale TEXT NOT NULL DEFAULT 'en-US',
@@ -51,7 +22,7 @@ CREATE TABLE campaigns (
     archived_at INTEGER
 );
 
-CREATE TABLE participants (
+CREATE TABLE IF NOT EXISTS participants (
     campaign_id TEXT NOT NULL,
     id TEXT NOT NULL,
     user_id TEXT NOT NULL DEFAULT '',
@@ -66,12 +37,12 @@ CREATE TABLE participants (
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_participants_user_id ON participants(user_id);
-CREATE UNIQUE INDEX idx_participants_campaign_user
+CREATE INDEX IF NOT EXISTS idx_participants_user_id ON participants(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_participants_campaign_user
     ON participants(campaign_id, user_id)
     WHERE user_id != '';
 
-CREATE TABLE participant_claims (
+CREATE TABLE IF NOT EXISTS participant_claims (
     campaign_id TEXT NOT NULL,
     user_id TEXT NOT NULL,
     participant_id TEXT NOT NULL,
@@ -81,9 +52,9 @@ CREATE TABLE participant_claims (
     FOREIGN KEY (campaign_id, participant_id) REFERENCES participants(campaign_id, id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_participant_claims_participant ON participant_claims(participant_id);
+CREATE INDEX IF NOT EXISTS idx_participant_claims_participant ON participant_claims(participant_id);
 
-CREATE TABLE characters (
+CREATE TABLE IF NOT EXISTS characters (
     campaign_id TEXT NOT NULL,
     id TEXT NOT NULL,
     controller_participant_id TEXT,
@@ -99,7 +70,7 @@ CREATE TABLE characters (
 );
 
 -- Session layer
-CREATE TABLE sessions (
+CREATE TABLE IF NOT EXISTS sessions (
     campaign_id TEXT NOT NULL,
     id TEXT NOT NULL,
     name TEXT NOT NULL DEFAULT '',
@@ -111,17 +82,17 @@ CREATE TABLE sessions (
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_sessions_active ON sessions(campaign_id)
+CREATE INDEX IF NOT EXISTS idx_sessions_active ON sessions(campaign_id)
     WHERE status = 'ACTIVE';
 
-CREATE TABLE campaign_active_session (
+CREATE TABLE IF NOT EXISTS campaign_active_session (
     campaign_id TEXT PRIMARY KEY,
     session_id TEXT NOT NULL,
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 );
 
 -- Invitations
-CREATE TABLE invites (
+CREATE TABLE IF NOT EXISTS invites (
     id TEXT PRIMARY KEY,
     campaign_id TEXT NOT NULL,
     participant_id TEXT NOT NULL,
@@ -134,13 +105,13 @@ CREATE TABLE invites (
     FOREIGN KEY (campaign_id, participant_id) REFERENCES participants(campaign_id, id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_invites_campaign ON invites(campaign_id);
-CREATE INDEX idx_invites_participant ON invites(participant_id);
-CREATE INDEX idx_invites_recipient_user ON invites(recipient_user_id);
-CREATE INDEX idx_invites_campaign_recipient ON invites(campaign_id, recipient_user_id);
+CREATE INDEX IF NOT EXISTS idx_invites_campaign ON invites(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_invites_participant ON invites(participant_id);
+CREATE INDEX IF NOT EXISTS idx_invites_recipient_user ON invites(recipient_user_id);
+CREATE INDEX IF NOT EXISTS idx_invites_campaign_recipient ON invites(campaign_id, recipient_user_id);
 
 -- Snapshots
-CREATE TABLE snapshots (
+CREATE TABLE IF NOT EXISTS snapshots (
     campaign_id TEXT NOT NULL,
     session_id TEXT NOT NULL,
     event_seq INTEGER NOT NULL,
@@ -152,10 +123,10 @@ CREATE TABLE snapshots (
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_snapshots_seq ON snapshots(campaign_id, event_seq DESC);
+CREATE INDEX IF NOT EXISTS idx_snapshots_seq ON snapshots(campaign_id, event_seq DESC);
 
 -- Daggerheart projection tables
-CREATE TABLE daggerheart_character_profiles (
+CREATE TABLE IF NOT EXISTS daggerheart_character_profiles (
     campaign_id TEXT NOT NULL,
     character_id TEXT NOT NULL,
     level INTEGER NOT NULL DEFAULT 1,
@@ -191,7 +162,7 @@ CREATE TABLE daggerheart_character_profiles (
         REFERENCES characters(campaign_id, id) ON DELETE CASCADE
 );
 
-CREATE TABLE daggerheart_character_states (
+CREATE TABLE IF NOT EXISTS daggerheart_character_states (
     campaign_id TEXT NOT NULL,
     character_id TEXT NOT NULL,
     hp INTEGER NOT NULL DEFAULT 6,
@@ -207,14 +178,14 @@ CREATE TABLE daggerheart_character_states (
         REFERENCES characters(campaign_id, id) ON DELETE CASCADE
 );
 
-CREATE TABLE daggerheart_snapshots (
+CREATE TABLE IF NOT EXISTS daggerheart_snapshots (
     campaign_id TEXT PRIMARY KEY,
     gm_fear INTEGER NOT NULL DEFAULT 0,
     consecutive_short_rests INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 );
 
-CREATE TABLE daggerheart_countdowns (
+CREATE TABLE IF NOT EXISTS daggerheart_countdowns (
     campaign_id TEXT NOT NULL,
     countdown_id TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -226,7 +197,7 @@ CREATE TABLE daggerheart_countdowns (
     PRIMARY KEY (campaign_id, countdown_id)
 );
 
-CREATE TABLE daggerheart_adversaries (
+CREATE TABLE IF NOT EXISTS daggerheart_adversaries (
     campaign_id TEXT NOT NULL,
     adversary_id TEXT NOT NULL,
     name TEXT NOT NULL,
@@ -248,7 +219,7 @@ CREATE TABLE daggerheart_adversaries (
 );
 
 -- Session governance
-CREATE TABLE session_gates (
+CREATE TABLE IF NOT EXISTS session_gates (
     campaign_id TEXT NOT NULL,
     session_id TEXT NOT NULL,
     gate_id TEXT NOT NULL,
@@ -266,9 +237,9 @@ CREATE TABLE session_gates (
     PRIMARY KEY (campaign_id, session_id, gate_id)
 );
 
-CREATE INDEX idx_session_gates_open ON session_gates(campaign_id, session_id, status);
+CREATE INDEX IF NOT EXISTS idx_session_gates_open ON session_gates(campaign_id, session_id, status);
 
-CREATE TABLE session_spotlight (
+CREATE TABLE IF NOT EXISTS session_spotlight (
     campaign_id TEXT NOT NULL,
     session_id TEXT NOT NULL,
     spotlight_type TEXT NOT NULL,
@@ -279,9 +250,7 @@ CREATE TABLE session_spotlight (
     PRIMARY KEY (campaign_id, session_id)
 );
 
-CREATE INDEX idx_session_spotlight_session ON session_spotlight(campaign_id, session_id);
-
-PRAGMA foreign_keys = ON;
+CREATE INDEX IF NOT EXISTS idx_session_spotlight_session ON session_spotlight(campaign_id, session_id);
 
 -- +migrate Down
 DROP INDEX IF EXISTS idx_session_spotlight_session;

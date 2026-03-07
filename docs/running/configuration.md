@@ -23,7 +23,6 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH`: projections SQLite path. Default: `data/game-projections.db`.
 - `FRACTURING_SPACE_GAME_CONTENT_DB_PATH`: content SQLite path. Default: `data/game-content.db`.
 - `FRACTURING_SPACE_GAME_DOMAIN_ENABLED`: enable domain-engine write path. Default: `true`.
-- `FRACTURING_SPACE_GAME_COMPATIBILITY_APPEND_ENABLED`: allow direct compatibility `EventService.AppendEvent` fallback when domain is disabled. Default: `false`.
 - `FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED`: enqueue projection-apply outbox rows on append. Default: `false`.
 - `FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED`: enable outbox shadow worker (requires outbox enabled). Default: `false`.
 - `FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED`: enable outbox apply worker (requires outbox enabled). Default: `false`.

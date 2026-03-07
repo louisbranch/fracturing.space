@@ -122,16 +122,16 @@ func (s *DaggerheartService) runSessionDamageRoll(ctx context.Context, in *pb.Se
 			"critical_bonus": result.CriticalBonus,
 			sdKeyTotal:       result.Total,
 		},
-		SystemData: map[string]any{
-			sdKeyCharacterID: characterID,
-			sdKeyRollKind:    "damage_roll",
-			sdKeyRoll:        result.Total,
-			"base_total":     result.BaseTotal,
-			sdKeyModifier:    result.Modifier,
-			"critical":       in.GetCritical(),
-			"critical_bonus": result.CriticalBonus,
-			sdKeyTotal:       result.Total,
-		},
+		SystemData: rollSystemMetadata{
+			CharacterID:   characterID,
+			RollKind:      "damage_roll",
+			Roll:          intPtrValue(result.Total),
+			BaseTotal:     intPtrValue(result.BaseTotal),
+			Modifier:      intPtrValue(result.Modifier),
+			Critical:      boolPtr(in.GetCritical()),
+			CriticalBonus: intPtrValue(result.CriticalBonus),
+			Total:         intPtrValue(result.Total),
+		}.mapValue(),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

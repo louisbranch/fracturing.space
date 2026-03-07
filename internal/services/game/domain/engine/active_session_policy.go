@@ -30,7 +30,7 @@ const (
 // reviewed and classified once, then inherited by all commands in that family.
 func ActiveSessionPolicyForCommandType(cmdType command.Type) (ActiveSessionCommandPolicy, bool) {
 	switch commandNamespace(cmdType) {
-	case "campaign", "participant", "seat", "invite", "character":
+	case "campaign", "participant", "invite", "character":
 		return ActiveSessionCommandPolicyBlocked, true
 	case "session", "scene", "action", "story", "sys":
 		return ActiveSessionCommandPolicyAllowed, true

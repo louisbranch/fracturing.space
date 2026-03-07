@@ -311,10 +311,11 @@ func TestListEventsPage(t *testing.T) {
 	}
 
 	filterResult, err := store.ListEventsPage(context.Background(), storage.ListEventsPageRequest{
-		CampaignID:   campaignID,
-		PageSize:     20,
-		FilterClause: "session_id = ?",
-		FilterParams: []any{"sess-filter"},
+		CampaignID: campaignID,
+		PageSize:   20,
+		Filter: storage.EventQueryFilter{
+			SessionID: "sess-filter",
+		},
 	})
 	if err != nil {
 		t.Fatalf("list events page with filter: %v", err)
@@ -378,7 +379,7 @@ func TestListEventsPageAfterSeq(t *testing.T) {
 }
 
 func TestBuildListEventsPageSQLPlanBuildsExpectedClauses(t *testing.T) {
-	plan := buildListEventsPageSQLPlan(storage.ListEventsPageRequest{
+	plan, err := buildListEventsPageSQLPlan(storage.ListEventsPageRequest{
 		CampaignID:    "camp-plan",
 		AfterSeq:      5,
 		PageSize:      25,
@@ -386,9 +387,13 @@ func TestBuildListEventsPageSQLPlanBuildsExpectedClauses(t *testing.T) {
 		CursorDir:     "bwd",
 		CursorReverse: true,
 		Descending:    true,
-		FilterClause:  "session_id = ?",
-		FilterParams:  []any{"sess-1"},
+		Filter: storage.EventQueryFilter{
+			SessionID: "sess-1",
+		},
 	})
+	if err != nil {
+		t.Fatalf("build list events page plan: %v", err)
+	}
 
 	if plan.whereClause != "campaign_id = ? AND seq > ? AND seq < ? AND session_id = ?" {
 		t.Fatalf("where clause = %q", plan.whereClause)
@@ -410,6 +415,42 @@ func TestBuildListEventsPageSQLPlanBuildsExpectedClauses(t *testing.T) {
 	}
 	if len(plan.countParams) != 3 {
 		t.Fatalf("count params = %d, want %d", len(plan.countParams), 3)
+	}
+}
+
+func TestBuildListEventsPageSQLPlanFilterExpression(t *testing.T) {
+	plan, err := buildListEventsPageSQLPlan(storage.ListEventsPageRequest{
+		CampaignID: "camp-plan-expr",
+		PageSize:   10,
+		Filter: storage.EventQueryFilter{
+			Expression: `session_id = "sess-1"`,
+			EventType:  "session.started",
+		},
+	})
+	if err != nil {
+		t.Fatalf("build list events page plan: %v", err)
+	}
+	if plan.whereClause != "campaign_id = ? AND (session_id = ?) AND event_type = ?" {
+		t.Fatalf("where clause = %q", plan.whereClause)
+	}
+	if len(plan.params) != 3 {
+		t.Fatalf("params = %d, want 3", len(plan.params))
+	}
+	if plan.params[0] != "camp-plan-expr" || plan.params[1] != "sess-1" || plan.params[2] != "session.started" {
+		t.Fatalf("params = %v", plan.params)
+	}
+}
+
+func TestBuildListEventsPageSQLPlanInvalidFilterExpression(t *testing.T) {
+	_, err := buildListEventsPageSQLPlan(storage.ListEventsPageRequest{
+		CampaignID: "camp-plan-invalid",
+		PageSize:   10,
+		Filter: storage.EventQueryFilter{
+			Expression: "invalid filter syntax ===",
+		},
+	})
+	if err == nil {
+		t.Fatal("expected invalid filter expression error")
 	}
 }
 

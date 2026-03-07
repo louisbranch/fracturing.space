@@ -28,6 +28,13 @@ var characterCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
+			Type:            CommandTypeCreateWithProfile,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateCreateWithProfilePayload,
+		},
+	},
+	{
+		definition: command.Definition{
 			Type:            CommandTypeUpdate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateUpdatePayload,
@@ -155,6 +162,15 @@ func characterEventTypes(include func(eventProjectionContract) bool) []event.Typ
 // validateCreatePayload ensures create payloads match the character create shape.
 func validateCreatePayload(raw json.RawMessage) error {
 	var payload CreatePayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateCreateWithProfilePayload ensures workflow payload shape for create bootstrap.
+func validateCreateWithProfilePayload(raw json.RawMessage) error {
+	var payload CreateWithProfilePayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}

@@ -45,7 +45,6 @@ func FoldHandledTypes() []event.Type {
 		EventTypeBound,
 		EventTypeUnbound,
 		EventTypeSeatReassigned,
-		EventTypeSeatReassignedLegacy,
 	}
 }
 
@@ -63,7 +62,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		return foldBound(state, evt)
 	case EventTypeUnbound:
 		return foldUnbound(state, evt)
-	case EventTypeSeatReassigned, EventTypeSeatReassignedLegacy:
+	case EventTypeSeatReassigned:
 		return foldSeatReassigned(state, evt)
 	}
 	return state, nil

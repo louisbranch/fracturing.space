@@ -200,6 +200,17 @@ func TestSceneCharacterLifecycle(t *testing.T) {
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 
 	seedCampaign(t, store, "camp-sc-char", now)
+	if err := store.PutScene(ctx, storage.SceneRecord{
+		CampaignID: "camp-sc-char",
+		SceneID:    "sc-1",
+		SessionID:  "sess-1",
+		Name:       "Scene",
+		Active:     true,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}); err != nil {
+		t.Fatalf("put scene: %v", err)
+	}
 
 	// Add characters to a scene.
 	if err := store.PutSceneCharacter(ctx, storage.SceneCharacterRecord{
@@ -250,6 +261,17 @@ func TestSceneGateLifecycle(t *testing.T) {
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 
 	seedCampaign(t, store, "camp-sc-gate", now)
+	if err := store.PutScene(ctx, storage.SceneRecord{
+		CampaignID: "camp-sc-gate",
+		SceneID:    "sc-1",
+		SessionID:  "sess-1",
+		Name:       "Scene",
+		Active:     true,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}); err != nil {
+		t.Fatalf("put scene: %v", err)
+	}
 
 	// Put a gate.
 	gate := storage.SceneGate{
@@ -629,6 +651,17 @@ func TestSceneSpotlightLifecycle(t *testing.T) {
 	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
 
 	seedCampaign(t, store, "camp-sc-spot", now)
+	if err := store.PutScene(ctx, storage.SceneRecord{
+		CampaignID: "camp-sc-spot",
+		SceneID:    "sc-1",
+		SessionID:  "sess-1",
+		Name:       "Scene",
+		Active:     true,
+		CreatedAt:  now,
+		UpdatedAt:  now,
+	}); err != nil {
+		t.Fatalf("put scene: %v", err)
+	}
 
 	// Put spotlight.
 	spotlight := storage.SceneSpotlight{

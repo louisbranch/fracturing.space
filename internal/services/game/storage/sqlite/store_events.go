@@ -323,6 +323,17 @@ func (s *Store) VerifyEventIntegrity(ctx context.Context) error {
 	return nil
 }
 
+// ListEventCampaignIDs returns campaign IDs that have at least one stored event.
+func (s *Store) ListEventCampaignIDs(ctx context.Context) ([]string, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	return s.listEventCampaignIDs(ctx)
+}
+
 func (s *Store) listEventCampaignIDs(ctx context.Context) ([]string, error) {
 	rows, err := s.sqlDB.QueryContext(ctx, "SELECT DISTINCT campaign_id FROM events ORDER BY campaign_id")
 	if err != nil {
@@ -573,7 +584,10 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 		req.PageSize = 200
 	}
 
-	plan := buildListEventsPageSQLPlan(req)
+	plan, err := buildListEventsPageSQLPlan(req)
+	if err != nil {
+		return storage.ListEventsPageResult{}, fmt.Errorf("build list events query plan: %w", err)
+	}
 
 	// Build and execute the query
 	query := fmt.Sprintf(

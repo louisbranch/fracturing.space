@@ -249,7 +249,7 @@ func TestApplySeatReassigned_UpdatesClaims(t *testing.T) {
 	payload := testevent.SeatReassignedPayload{UserID: "user-new", PriorUserID: "user-old"}
 	data, _ := json.Marshal(payload)
 	stamp := time.Date(2026, 2, 10, 12, 30, 0, 0, time.UTC)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeSeatReassigned, PayloadJSON: data, Timestamp: stamp}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data, Timestamp: stamp}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -2203,7 +2203,7 @@ func TestApplyParticipantJoined_MissingCampaignID(t *testing.T) {
 func TestApplySeatReassigned_MissingStores(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
 
 	if err := (Applier{Campaign: newProjectionCampaignStore()}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing participant store")
@@ -2216,7 +2216,7 @@ func TestApplySeatReassigned_MissingStores(t *testing.T) {
 func TestApplySeatReassigned_MissingCampaignID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new"})
-	evt := testevent.Event{CampaignID: "", EntityID: "part-1", Type: testevent.TypeSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign ID")
@@ -2226,7 +2226,7 @@ func TestApplySeatReassigned_MissingCampaignID(t *testing.T) {
 func TestApplySeatReassigned_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
 	applier := Applier{Participant: newProjectionParticipantStore(), Campaign: newProjectionCampaignStore()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing entity ID")
@@ -2242,7 +2242,7 @@ func TestApplySeatReassigned_MissingUserID(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "", PriorUserID: "user-old"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing user ID")
 	}
@@ -2257,7 +2257,7 @@ func TestApplySeatReassigned_PriorUserMismatch(t *testing.T) {
 	applier := Applier{Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new", PriorUserID: "user-wrong"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeSeatReassigned, PayloadJSON: data}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for prior user mismatch")
 	}
@@ -2272,7 +2272,7 @@ func TestApplySeatReassigned_NoClaims(t *testing.T) {
 	applier := Applier{Events: testEventRegistry(t), Participant: participantStore, Campaign: campaignStore}
 
 	data, _ := json.Marshal(testevent.SeatReassignedPayload{UserID: "user-new"})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeSeatReassigned, PayloadJSON: data, Timestamp: time.Now()}
+	evt := testevent.Event{CampaignID: "camp-1", EntityID: "part-1", Type: testevent.TypeParticipantSeatReassigned, PayloadJSON: data, Timestamp: time.Now()}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}

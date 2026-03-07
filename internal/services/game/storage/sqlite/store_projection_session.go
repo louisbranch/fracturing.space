@@ -30,6 +30,10 @@ func (s *Store) PutSession(ctx context.Context, sess storage.SessionRecord) erro
 		return fmt.Errorf("session id is required")
 	}
 
+	if s.tx != nil {
+		return putSessionWithQueries(ctx, s.q, sess)
+	}
+
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -37,41 +41,13 @@ func (s *Store) PutSession(ctx context.Context, sess storage.SessionRecord) erro
 	defer tx.Rollback()
 
 	qtx := s.q.WithTx(tx)
-
-	if sess.Status == session.StatusActive {
-		hasActive, err := qtx.HasActiveSession(ctx, sess.CampaignID)
-		if err != nil {
-			return fmt.Errorf("check active session: %w", err)
-		}
-		if hasActive != 0 {
-			return storage.ErrActiveSessionExists
-		}
+	if err := putSessionWithQueries(ctx, qtx, sess); err != nil {
+		return err
 	}
-
-	endedAt := toNullMillis(sess.EndedAt)
-
-	if err := qtx.PutSession(ctx, db.PutSessionParams{
-		CampaignID: sess.CampaignID,
-		ID:         sess.ID,
-		Name:       sess.Name,
-		Status:     sessionStatusToString(sess.Status),
-		StartedAt:  toMillis(sess.StartedAt),
-		UpdatedAt:  toMillis(sess.UpdatedAt),
-		EndedAt:    endedAt,
-	}); err != nil {
-		return fmt.Errorf("put session: %w", err)
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit: %w", err)
 	}
-
-	if sess.Status == session.StatusActive {
-		if err := qtx.SetActiveSession(ctx, db.SetActiveSessionParams{
-			CampaignID: sess.CampaignID,
-			SessionID:  sess.ID,
-		}); err != nil {
-			return fmt.Errorf("set active session: %w", err)
-		}
-	}
-
-	return tx.Commit()
+	return nil
 }
 
 // EndSession marks a session as ended and clears it as active for the campaign.
@@ -89,6 +65,10 @@ func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, en
 		return storage.SessionRecord{}, false, fmt.Errorf("session id is required")
 	}
 
+	if s.tx != nil {
+		return endSessionWithQueries(ctx, s.q, campaignID, sessionID, endedAt)
+	}
+
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
 		return storage.SessionRecord{}, false, fmt.Errorf("begin tx: %w", err)
@@ -96,8 +76,56 @@ func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, en
 	defer tx.Rollback()
 
 	qtx := s.q.WithTx(tx)
+	sess, transitioned, err := endSessionWithQueries(ctx, qtx, campaignID, sessionID, endedAt)
+	if err != nil {
+		return storage.SessionRecord{}, false, err
+	}
+	if err := tx.Commit(); err != nil {
+		return storage.SessionRecord{}, false, fmt.Errorf("commit: %w", err)
+	}
 
-	row, err := qtx.GetSession(ctx, db.GetSessionParams{
+	return sess, transitioned, nil
+}
+
+func putSessionWithQueries(ctx context.Context, queries *db.Queries, sess storage.SessionRecord) error {
+	if sess.Status == session.StatusActive {
+		hasActive, err := queries.HasActiveSession(ctx, sess.CampaignID)
+		if err != nil {
+			return fmt.Errorf("check active session: %w", err)
+		}
+		if hasActive != 0 {
+			return storage.ErrActiveSessionExists
+		}
+	}
+
+	endedAt := toNullMillis(sess.EndedAt)
+
+	if err := queries.PutSession(ctx, db.PutSessionParams{
+		CampaignID: sess.CampaignID,
+		ID:         sess.ID,
+		Name:       sess.Name,
+		Status:     sessionStatusToString(sess.Status),
+		StartedAt:  toMillis(sess.StartedAt),
+		UpdatedAt:  toMillis(sess.UpdatedAt),
+		EndedAt:    endedAt,
+	}); err != nil {
+		return fmt.Errorf("put session: %w", err)
+	}
+
+	if sess.Status == session.StatusActive {
+		if err := queries.SetActiveSession(ctx, db.SetActiveSessionParams{
+			CampaignID: sess.CampaignID,
+			SessionID:  sess.ID,
+		}); err != nil {
+			return fmt.Errorf("set active session: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func endSessionWithQueries(ctx context.Context, queries *db.Queries, campaignID, sessionID string, endedAt time.Time) (storage.SessionRecord, bool, error) {
+	row, err := queries.GetSession(ctx, db.GetSessionParams{
 		CampaignID: campaignID,
 		ID:         sessionID,
 	})
@@ -120,7 +148,7 @@ func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, en
 		sess.UpdatedAt = endedAt.UTC()
 		sess.EndedAt = &sess.UpdatedAt
 
-		if err := qtx.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
+		if err := queries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
 			Status:     sessionStatusToString(sess.Status),
 			UpdatedAt:  toMillis(sess.UpdatedAt),
 			EndedAt:    toNullMillis(sess.EndedAt),
@@ -131,12 +159,8 @@ func (s *Store) EndSession(ctx context.Context, campaignID, sessionID string, en
 		}
 	}
 
-	if err := qtx.ClearActiveSession(ctx, campaignID); err != nil {
+	if err := queries.ClearActiveSession(ctx, campaignID); err != nil {
 		return storage.SessionRecord{}, false, fmt.Errorf("clear active session: %w", err)
-	}
-
-	if err := tx.Commit(); err != nil {
-		return storage.SessionRecord{}, false, fmt.Errorf("commit: %w", err)
 	}
 
 	return sess, transitioned, nil

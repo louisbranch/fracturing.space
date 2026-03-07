@@ -269,7 +269,7 @@ func (s *Store) CountParticipants(ctx context.Context, campaignID string) (int, 
 		return 0, fmt.Errorf("campaign id is required")
 	}
 	var count int64
-	err := s.sqlDB.QueryRowContext(ctx,
+	err := s.projectionQueryable().QueryRowContext(ctx,
 		"SELECT COUNT(*) FROM participants WHERE campaign_id = ?", campaignID,
 	).Scan(&count)
 	if err != nil {

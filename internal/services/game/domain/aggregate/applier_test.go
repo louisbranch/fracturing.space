@@ -183,6 +183,29 @@ func TestFolderApply_PropagatesFoldError(t *testing.T) {
 	}
 }
 
+func TestFolderFold_ReturnsErrorWhenCoreFoldHandlerMissing(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := registry.Register(event.Definition{
+		Type:   event.Type("core.unhandled"),
+		Owner:  event.OwnerCore,
+		Intent: event.IntentProjectionAndReplay,
+	}); err != nil {
+		t.Fatalf("register event: %v", err)
+	}
+
+	applier := Folder{Events: registry}
+	_, err := applier.Fold(State{}, event.Event{
+		Type:        event.Type("core.unhandled"),
+		PayloadJSON: []byte(`{}`),
+	})
+	if err == nil {
+		t.Fatal("expected missing fold-handler error")
+	}
+	if !strings.Contains(err.Error(), "no core fold handler registered") {
+		t.Fatalf("expected missing fold-handler error, got %v", err)
+	}
+}
+
 func TestFolderApply_SkipsAuditOnlyEvents(t *testing.T) {
 	registry := event.NewRegistry()
 	if err := registry.Register(event.Definition{

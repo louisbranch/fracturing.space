@@ -10,40 +10,44 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
 const (
-	CommandTypeCreate       command.Type = "campaign.create"
-	CommandTypeUpdate       command.Type = "campaign.update"
-	CommandTypeAIBind       command.Type = "campaign.ai_bind"
-	CommandTypeAIUnbind     command.Type = "campaign.ai_unbind"
-	CommandTypeAIAuthRotate command.Type = "campaign.ai_auth_rotate"
-	CommandTypeFork         command.Type = "campaign.fork"
-	CommandTypeEnd          command.Type = "campaign.end"
-	CommandTypeArchive      command.Type = "campaign.archive"
-	CommandTypeRestore      command.Type = "campaign.restore"
-	EventTypeCreated        event.Type   = "campaign.created"
-	EventTypeUpdated        event.Type   = "campaign.updated"
-	EventTypeAIBound        event.Type   = "campaign.ai_bound"
-	EventTypeAIUnbound      event.Type   = "campaign.ai_unbound"
-	EventTypeAIAuthRotated  event.Type   = "campaign.ai_auth_rotated"
-	EventTypeForked         event.Type   = "campaign.forked"
+	CommandTypeCreate                 command.Type = "campaign.create"
+	CommandTypeCreateWithParticipants command.Type = "campaign.create_with_participants"
+	CommandTypeUpdate                 command.Type = "campaign.update"
+	CommandTypeAIBind                 command.Type = "campaign.ai_bind"
+	CommandTypeAIUnbind               command.Type = "campaign.ai_unbind"
+	CommandTypeAIAuthRotate           command.Type = "campaign.ai_auth_rotate"
+	CommandTypeFork                   command.Type = "campaign.fork"
+	CommandTypeEnd                    command.Type = "campaign.end"
+	CommandTypeArchive                command.Type = "campaign.archive"
+	CommandTypeRestore                command.Type = "campaign.restore"
+	EventTypeCreated                  event.Type   = "campaign.created"
+	EventTypeUpdated                  event.Type   = "campaign.updated"
+	EventTypeAIBound                  event.Type   = "campaign.ai_bound"
+	EventTypeAIUnbound                event.Type   = "campaign.ai_unbound"
+	EventTypeAIAuthRotated            event.Type   = "campaign.ai_auth_rotated"
+	EventTypeForked                   event.Type   = "campaign.forked"
 
-	rejectionCodeCampaignAlreadyExists      = "CAMPAIGN_ALREADY_EXISTS"
-	rejectionCodeCampaignNotCreated         = "CAMPAIGN_NOT_CREATED"
-	rejectionCodeCampaignNameEmpty          = "CAMPAIGN_NAME_EMPTY"
-	rejectionCodeCampaignGameSystemInvalid  = "CAMPAIGN_INVALID_GAME_SYSTEM"
-	rejectionCodeCampaignGmModeInvalid      = "CAMPAIGN_INVALID_GM_MODE"
-	rejectionCodeCampaignUpdateEmpty        = "CAMPAIGN_UPDATE_EMPTY"
-	rejectionCodeCampaignStatusInvalid      = "CAMPAIGN_INVALID_STATUS"
-	rejectionCodeCampaignStatusTransition   = "CAMPAIGN_INVALID_STATUS_TRANSITION"
-	rejectionCodeCampaignUpdateFieldInvalid = "CAMPAIGN_UPDATE_FIELD_INVALID"
-	rejectionCodeCampaignLocaleInvalid      = "CAMPAIGN_LOCALE_INVALID"
-	rejectionCodeCampaignCoverAssetInvalid  = "CAMPAIGN_COVER_ASSET_INVALID"
-	rejectionCodeCampaignCoverSetInvalid    = "CAMPAIGN_COVER_SET_INVALID"
-	rejectionCodeCampaignAIAgentIDRequired  = "CAMPAIGN_AI_AGENT_ID_REQUIRED"
-	rejectionCodeCommandTypeUnsupported     = "COMMAND_TYPE_UNSUPPORTED"
-	rejectionCodePayloadDecodeFailed        = "PAYLOAD_DECODE_FAILED"
+	rejectionCodeCampaignAlreadyExists        = "CAMPAIGN_ALREADY_EXISTS"
+	rejectionCodeCampaignNotCreated           = "CAMPAIGN_NOT_CREATED"
+	rejectionCodeCampaignNameEmpty            = "CAMPAIGN_NAME_EMPTY"
+	rejectionCodeCampaignGameSystemInvalid    = "CAMPAIGN_INVALID_GAME_SYSTEM"
+	rejectionCodeCampaignGmModeInvalid        = "CAMPAIGN_INVALID_GM_MODE"
+	rejectionCodeCampaignUpdateEmpty          = "CAMPAIGN_UPDATE_EMPTY"
+	rejectionCodeCampaignStatusInvalid        = "CAMPAIGN_INVALID_STATUS"
+	rejectionCodeCampaignStatusTransition     = "CAMPAIGN_INVALID_STATUS_TRANSITION"
+	rejectionCodeCampaignUpdateFieldInvalid   = "CAMPAIGN_UPDATE_FIELD_INVALID"
+	rejectionCodeCampaignLocaleInvalid        = "CAMPAIGN_LOCALE_INVALID"
+	rejectionCodeCampaignCoverAssetInvalid    = "CAMPAIGN_COVER_ASSET_INVALID"
+	rejectionCodeCampaignCoverSetInvalid      = "CAMPAIGN_COVER_SET_INVALID"
+	rejectionCodeCampaignAIAgentIDRequired    = "CAMPAIGN_AI_AGENT_ID_REQUIRED"
+	rejectionCodeCampaignParticipantsEmpty    = "CAMPAIGN_PARTICIPANTS_REQUIRED"
+	rejectionCodeCampaignParticipantDuplicate = "CAMPAIGN_PARTICIPANT_DUPLICATE"
+	rejectionCodeCommandTypeUnsupported       = "COMMAND_TYPE_UNSUPPORTED"
+	rejectionCodePayloadDecodeFailed          = "PAYLOAD_DECODE_FAILED"
 )
 
 var lifecycleCommandTargets = map[command.Type]Status{
@@ -107,6 +111,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	switch cmd.Type {
 	case CommandTypeCreate:
 		return decideCreate(state, cmd, now)
+	case CommandTypeCreateWithParticipants:
+		return decideCreateWithParticipants(state, cmd, now)
 	case CommandTypeUpdate:
 		return decideUpdate(state, cmd, now)
 	case CommandTypeAIBind:
@@ -141,39 +147,125 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
+	normalizedPayload, rejection := normalizeCreatePayload(payload, cmd.CampaignID)
+	if rejection != nil {
+		return command.Reject(*rejection)
+	}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	return command.Accept(evt)
+}
 
+func decideCreateWithParticipants(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if state.Created {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignAlreadyExists,
+			Message: "campaign already exists",
+		})
+	}
+
+	var payload CreateWithParticipantsPayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+
+	normalizedCampaign, rejection := normalizeCreatePayload(payload.Campaign, cmd.CampaignID)
+	if rejection != nil {
+		return command.Reject(*rejection)
+	}
+	if len(payload.Participants) == 0 {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCampaignParticipantsEmpty,
+			Message: "at least one participant is required",
+		})
+	}
+
+	decisionTime := nowFunc(now)().UTC()
+	campaignPayloadJSON, _ := json.Marshal(normalizedCampaign)
+	campaignCreated := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, campaignPayloadJSON, decisionTime)
+
+	seenParticipantIDs := make(map[string]struct{}, len(payload.Participants))
+	participantEvents := make([]event.Event, 0, len(payload.Participants))
+	for _, joinPayload := range payload.Participants {
+		participantID := strings.TrimSpace(joinPayload.ParticipantID)
+		if _, exists := seenParticipantIDs[participantID]; exists {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeCampaignParticipantDuplicate,
+				Message: "participant ids must be unique",
+			})
+		}
+		seenParticipantIDs[participantID] = struct{}{}
+
+		joinPayloadJSON, _ := json.Marshal(joinPayload)
+		joinDecision := participant.Decide(
+			participant.State{},
+			command.Command{
+				CampaignID:   cmd.CampaignID,
+				Type:         participant.CommandTypeJoin,
+				ActorType:    command.ActorTypeSystem,
+				RequestID:    cmd.RequestID,
+				InvocationID: cmd.InvocationID,
+				EntityType:   "participant",
+				EntityID:     participantID,
+				PayloadJSON:  joinPayloadJSON,
+			},
+			func() time.Time { return decisionTime },
+		)
+		if len(joinDecision.Rejections) > 0 {
+			rej := joinDecision.Rejections[0]
+			return command.Reject(command.Rejection{Code: rej.Code, Message: rej.Message})
+		}
+		if len(joinDecision.Events) != 1 {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeCommandTypeUnsupported,
+				Message: "participant bootstrap did not emit join event",
+			})
+		}
+		participantEvents = append(participantEvents, joinDecision.Events[0])
+	}
+
+	events := make([]event.Event, 0, 1+len(participantEvents))
+	events = append(events, campaignCreated)
+	events = append(events, participantEvents...)
+	return command.Accept(events...)
+}
+
+func normalizeCreatePayload(payload CreatePayload, campaignID string) (CreatePayload, *command.Rejection) {
 	normalizedName := strings.TrimSpace(payload.Name)
 	if normalizedName == "" {
-		return command.Reject(command.Rejection{
+		return CreatePayload{}, &command.Rejection{
 			Code:    rejectionCodeCampaignNameEmpty,
 			Message: "campaign name is required",
-		})
+		}
 	}
 	normalizedGameSystem, ok := normalizeGameSystemLabel(payload.GameSystem)
 	if !ok {
-		return command.Reject(command.Rejection{
+		return CreatePayload{}, &command.Rejection{
 			Code:    rejectionCodeCampaignGameSystemInvalid,
 			Message: "game system is required",
-		})
+		}
 	}
 	normalizedGmMode, ok := normalizeGmModeLabel(payload.GmMode)
 	if !ok {
-		return command.Reject(command.Rejection{
+		return CreatePayload{}, &command.Rejection{
 			Code:    rejectionCodeCampaignGmModeInvalid,
 			Message: "gm mode is required",
-		})
+		}
 	}
 
 	coverAssetID := strings.TrimSpace(payload.CoverAssetID)
 	if coverAssetID == "" {
-		coverAssetID = defaultCampaignCoverAssetID(cmd.CampaignID)
+		coverAssetID = defaultCampaignCoverAssetID(campaignID)
 	}
 	normalizedCoverAssetID, ok := normalizeCampaignCoverAssetID(coverAssetID)
 	if !ok {
-		return command.Reject(command.Rejection{
+		return CreatePayload{}, &command.Rejection{
 			Code:    rejectionCodeCampaignCoverAssetInvalid,
 			Message: "campaign cover asset is invalid",
-		})
+		}
 	}
 	coverSetID := strings.TrimSpace(payload.CoverSetID)
 	if coverSetID == "" {
@@ -181,13 +273,13 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 	}
 	normalizedCoverSetID, ok := normalizeCampaignCoverSetID(coverSetID)
 	if !ok {
-		return command.Reject(command.Rejection{
+		return CreatePayload{}, &command.Rejection{
 			Code:    rejectionCodeCampaignCoverSetInvalid,
 			Message: "campaign cover set is invalid",
-		})
+		}
 	}
 
-	normalizedPayload := CreatePayload{
+	return CreatePayload{
 		Name:         normalizedName,
 		Locale:       normalizeCampaignLocale(payload.Locale),
 		GameSystem:   normalizedGameSystem,
@@ -197,11 +289,7 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 		ThemePrompt:  payload.ThemePrompt,
 		CoverAssetID: normalizedCoverAssetID,
 		CoverSetID:   normalizedCoverSetID,
-	}
-	payloadJSON, _ := json.Marshal(normalizedPayload)
-
-	evt := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
-	return command.Accept(evt)
+	}, nil
 }
 
 // normalizeCampaignLocale canonicalizes known locale labels/tags and falls

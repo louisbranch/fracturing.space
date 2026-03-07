@@ -17,7 +17,7 @@ func (s *Store) GetProjectionWatermark(ctx context.Context, campaignID string) (
 	if campaignID == "" {
 		return storage.ProjectionWatermark{}, fmt.Errorf("campaign id is required")
 	}
-	row := s.sqlDB.QueryRowContext(ctx,
+	row := s.projectionQueryable().QueryRowContext(ctx,
 		`SELECT campaign_id, applied_seq, expected_next_seq, updated_at FROM projection_watermarks WHERE campaign_id = ?`,
 		campaignID,
 	)
@@ -40,7 +40,7 @@ func (s *Store) SaveProjectionWatermark(ctx context.Context, wm storage.Projecti
 	if wm.CampaignID == "" {
 		return fmt.Errorf("campaign id is required")
 	}
-	_, err := s.sqlDB.ExecContext(ctx,
+	_, err := s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO projection_watermarks (campaign_id, applied_seq, expected_next_seq, updated_at)
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT (campaign_id) DO UPDATE SET
@@ -60,7 +60,7 @@ func (s *Store) SaveProjectionWatermark(ctx context.Context, wm storage.Projecti
 
 // ListProjectionWatermarks returns all watermarks ordered by campaign id.
 func (s *Store) ListProjectionWatermarks(ctx context.Context) ([]storage.ProjectionWatermark, error) {
-	rows, err := s.sqlDB.QueryContext(ctx,
+	rows, err := s.projectionQueryable().QueryContext(ctx,
 		`SELECT campaign_id, applied_seq, expected_next_seq, updated_at FROM projection_watermarks ORDER BY campaign_id`,
 	)
 	if err != nil {

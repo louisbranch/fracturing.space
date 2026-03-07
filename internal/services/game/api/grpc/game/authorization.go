@@ -145,12 +145,16 @@ func requireCharacterMutationPolicy(
 
 func authorizePolicyActor(ctx context.Context, stores Stores, capability domainauthz.Capability, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, string, error) {
 	if overrideReason, overrideRequested := adminOverrideFromContext(ctx); overrideRequested {
+		overrideUserID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
+		if overrideUserID == "" {
+			return storage.ParticipantRecord{}, authzReasonDenyMissingIdentity, status.Error(codes.PermissionDenied, "admin override requires authenticated principal")
+		}
 		if overrideReason == "" {
 			return storage.ParticipantRecord{}, authzReasonDenyOverrideReasonRequired, status.Error(codes.PermissionDenied, "admin override reason is required")
 		}
 		return storage.ParticipantRecord{
 			ID:     strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx)),
-			UserID: strings.TrimSpace(grpcmeta.UserIDFromContext(ctx)),
+			UserID: overrideUserID,
 		}, authzReasonAllowAdminOverride, nil
 	}
 
@@ -290,8 +294,11 @@ func authzExtraAttributesForReason(ctx context.Context, reasonCode string) map[s
 	if !requested || reason == "" {
 		return nil
 	}
+	overrideUserID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
 	return map[string]any{
-		"override_reason": reason,
+		"override_reason":          reason,
+		"override_principal_user":  overrideUserID,
+		"override_principal_scope": "user_id",
 	}
 }
 

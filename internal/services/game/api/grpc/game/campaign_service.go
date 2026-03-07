@@ -97,6 +97,11 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 	overrideReason, overrideRequested := adminOverrideFromContext(ctx)
 
 	if overrideRequested {
+		if userID == "" {
+			err := status.Error(codes.PermissionDenied, "admin override requires authenticated principal")
+			emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", domainauthz.CapabilityReadCampaign, authzDecisionDeny, authzReasonDenyMissingIdentity, storage.ParticipantRecord{}, err, nil)
+			return nil, err
+		}
 		if overrideReason == "" {
 			err := status.Error(codes.PermissionDenied, "admin override reason is required")
 			emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", domainauthz.CapabilityReadCampaign, authzDecisionDeny, authzReasonDenyOverrideReasonRequired, storage.ParticipantRecord{}, err, nil)

@@ -138,16 +138,16 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 			"advantage":    advantage,
 			"disadvantage": disadvantage,
 		},
-		SystemData: map[string]any{
-			sdKeyCharacterID: adversaryID,
-			sdKeyAdversaryID: adversaryID,
-			sdKeyRollKind:    "adversary_roll",
-			sdKeyRoll:        selected,
-			sdKeyModifier:    modifier,
-			sdKeyTotal:       total,
-			"advantage":      advantage,
-			"disadvantage":   disadvantage,
-		},
+		SystemData: rollSystemMetadata{
+			CharacterID:  adversaryID,
+			AdversaryID:  adversaryID,
+			RollKind:     "adversary_roll",
+			Roll:         intPtrValue(selected),
+			Modifier:     intPtrValue(modifier),
+			Total:        intPtrValue(total),
+			Advantage:    intPtrValue(advantage),
+			Disadvantage: intPtrValue(disadvantage),
+		}.mapValue(),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -348,7 +348,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackFlow(ctx context.Context, 
 		return nil, status.Error(codes.InvalidArgument, "damage_type is required")
 	}
 
-	rollResp, err := s.SessionAdversaryAttackRoll(ctx, &pb.SessionAdversaryAttackRollRequest{
+	rollResp, err := s.runSessionAdversaryAttackRoll(ctx, &pb.SessionAdversaryAttackRollRequest{
 		CampaignId:     campaignID,
 		SessionId:      sessionID,
 		AdversaryId:    adversaryID,
@@ -362,7 +362,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackFlow(ctx context.Context, 
 	}
 
 	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
-	attackOutcome, err := s.ApplyAdversaryAttackOutcome(ctxWithMeta, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
+	attackOutcome, err := s.runApplyAdversaryAttackOutcome(ctxWithMeta, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
 		SessionId:  sessionID,
 		RollSeq:    rollResp.GetRollSeq(),
 		Targets:    []string{targetID},
@@ -386,7 +386,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackFlow(ctx context.Context, 
 	}
 
 	critical := attackOutcome.GetResult().GetCrit() || in.GetDamageCritical()
-	damageRoll, err := s.SessionDamageRoll(ctx, &pb.SessionDamageRollRequest{
+	damageRoll, err := s.runSessionDamageRoll(ctx, &pb.SessionDamageRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		CharacterId: adversaryID,
@@ -416,7 +416,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackFlow(ctx context.Context, 
 		SourceCharacterIds: sourceCharacterIDs,
 	}
 
-	applyDamage, err := s.ApplyDamage(ctxWithMeta, &pb.DaggerheartApplyDamageRequest{
+	applyDamage, err := s.runApplyDamage(ctxWithMeta, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:        campaignID,
 		CharacterId:       targetID,
 		Damage:            damageReq,
