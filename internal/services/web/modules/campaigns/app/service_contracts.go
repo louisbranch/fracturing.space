@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"strings"
 
 	"golang.org/x/text/language"
 )
@@ -77,7 +76,7 @@ type service struct {
 	readGateway     campaignReadGateway
 	mutationGateway campaignMutationGateway
 	authzGateway    AuthzGateway
-	workflows       map[string]CharacterCreationWorkflow
+	workflows       map[GameSystem]CharacterCreationWorkflow
 }
 
 // NewService constructs a service with default workflows.
@@ -86,7 +85,7 @@ func NewService(gateway CampaignGateway) Service {
 }
 
 // NewServiceWithWorkflows constructs a service with explicit workflow map.
-func NewServiceWithWorkflows(gateway CampaignGateway, workflows map[string]CharacterCreationWorkflow) Service {
+func NewServiceWithWorkflows(gateway CampaignGateway, workflows map[GameSystem]CharacterCreationWorkflow) Service {
 	return newServiceWithWorkflows(gateway, workflows)
 }
 
@@ -105,7 +104,7 @@ func newService(gateway CampaignGateway) service {
 }
 
 // newServiceWithWorkflows builds package wiring for this web seam.
-func newServiceWithWorkflows(gateway CampaignGateway, workflows map[string]CharacterCreationWorkflow) service {
+func newServiceWithWorkflows(gateway CampaignGateway, workflows map[GameSystem]CharacterCreationWorkflow) service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
@@ -126,5 +125,9 @@ func (s service) resolveWorkflow(system string) CharacterCreationWorkflow {
 	if s.workflows == nil {
 		return nil
 	}
-	return s.workflows[strings.ToLower(strings.TrimSpace(system))]
+	resolvedSystem, ok := ParseGameSystem(system)
+	if !ok {
+		return nil
+	}
+	return s.workflows[resolvedSystem]
 }

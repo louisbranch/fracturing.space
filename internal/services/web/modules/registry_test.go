@@ -65,7 +65,7 @@ func TestDefaultProtectedModulesDelegatesToBuilder(t *testing.T) {
 	opts := ProtectedModuleOptions{}
 
 	modules := defaultProtectedModules(deps, resolvers, opts)
-	builtModules, _ := buildProtectedModules(deps, resolvers, opts)
+	builtModules := buildProtectedModules(deps, resolvers, opts)
 	if len(modules) != len(builtModules) {
 		t.Fatalf("defaultProtectedModules len = %d, want %d", len(modules), len(builtModules))
 	}
@@ -117,10 +117,6 @@ func TestRegistryBuildComposesExpectedModules(t *testing.T) {
 	}
 	if len(built.Protected) != 4 {
 		t.Fatalf("protected module count = %d, want 4", len(built.Protected))
-	}
-	// Health is nil in tests — no status service available to query.
-	if len(built.Health) != 0 {
-		t.Fatalf("health entry count = %d, want 0 (no status service)", len(built.Health))
 	}
 }
 

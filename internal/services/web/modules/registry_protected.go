@@ -22,8 +22,7 @@ import (
 
 // defaultProtectedModules returns stable authenticated web modules.
 func defaultProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions) []Module {
-	modules, _ := buildProtectedModules(deps, res, opts)
-	return modules
+	return buildProtectedModules(deps, res, opts)
 }
 
 // buildProtectedModules centralizes this web behavior in one helper seam.
@@ -31,7 +30,7 @@ func buildProtectedModules(
 	deps Dependencies,
 	res ModuleResolvers,
 	opts ProtectedModuleOptions,
-) ([]Module, []dashboard.ServiceHealthEntry) {
+) []Module {
 	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
 	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort, defaultCampaignWorkflows(deps))
 	settingsMod := settings.New(settings.Config{
@@ -50,19 +49,24 @@ func buildProtectedModules(
 		Base:           base,
 		HealthProvider: statusHealthProvider(deps.StatusClient),
 	})
-	return []Module{dashMod, settingsMod, notifMod, campaignMod}, nil
+	return []Module{dashMod, settingsMod, notifMod, campaignMod}
 }
 
 // defaultCampaignWorkflows returns the production workflow implementations
-// keyed by their system label (lowercase).
-func defaultCampaignWorkflows(deps Dependencies) map[string]campaigns.CharacterCreationWorkflow {
-	return map[string]campaigns.CharacterCreationWorkflow{
-		"daggerheart": daggerheart.New(deps.AssetBaseURL),
+// keyed by canonical game-system identifiers.
+func defaultCampaignWorkflows(deps Dependencies) map[campaigns.GameSystem]campaigns.CharacterCreationWorkflow {
+	return map[campaigns.GameSystem]campaigns.CharacterCreationWorkflow{
+		campaigns.GameSystemDaggerheart: daggerheart.New(deps.AssetBaseURL),
 	}
 }
 
 // newCampaignModule returns the campaigns module with stable route ownership.
-func newCampaignModule(deps Dependencies, base modulehandler.Base, chatFallbackPort string, workflows map[string]campaigns.CharacterCreationWorkflow) Module {
+func newCampaignModule(
+	deps Dependencies,
+	base modulehandler.Base,
+	chatFallbackPort string,
+	workflows map[campaigns.GameSystem]campaigns.CharacterCreationWorkflow,
+) Module {
 	return campaigns.New(campaigns.Config{
 		Gateway:          newCampaignGateway(deps),
 		Base:             base,

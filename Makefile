@@ -191,7 +191,7 @@ docs-architecture-budget-check:
 	@bash ./scripts/check-architecture-page-budget.sh
 
 web-architecture-check: web-package-comment-check web-declaration-comment-check web-comment-quality-check
-	go test ./internal/services/web/modules ./internal/services/web/routepath ./internal/services/web
+	go test ./internal/services/web/modules ./internal/services/web/routepath ./internal/services/web/templates ./internal/services/web
 
 admin-architecture-check:
 	go test ./internal/services/admin/modules ./internal/services/admin/routepath ./internal/services/admin

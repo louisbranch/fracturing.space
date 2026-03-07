@@ -14,7 +14,7 @@ type Module struct {
 	gateway          CampaignGateway
 	base             modulehandler.Base
 	chatFallbackPort string
-	workflows        map[string]CharacterCreationWorkflow
+	workflows        map[GameSystem]CharacterCreationWorkflow
 }
 
 // Config defines constructor dependencies for a campaigns module.
@@ -22,7 +22,7 @@ type Config struct {
 	Gateway          CampaignGateway
 	Base             modulehandler.Base
 	ChatFallbackPort string
-	Workflows        map[string]CharacterCreationWorkflow
+	Workflows        map[GameSystem]CharacterCreationWorkflow
 }
 
 // New returns a campaigns module with explicit dependencies.

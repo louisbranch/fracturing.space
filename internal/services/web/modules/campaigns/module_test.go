@@ -662,8 +662,8 @@ func (testCreationWorkflow) ParseStepInput(form url.Values, nextStep int32) (*Ca
 
 // defaultTestWorkflows returns a workflow map suitable for tests that need
 // character creation enabled for Daggerheart campaigns.
-func defaultTestWorkflows() map[string]CharacterCreationWorkflow {
-	return map[string]CharacterCreationWorkflow{"daggerheart": testCreationWorkflow{}}
+func defaultTestWorkflows() map[GameSystem]CharacterCreationWorkflow {
+	return map[GameSystem]CharacterCreationWorkflow{GameSystemDaggerheart: testCreationWorkflow{}}
 }
 
 type fakeGateway struct {

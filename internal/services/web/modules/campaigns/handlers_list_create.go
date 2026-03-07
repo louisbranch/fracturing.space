@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
@@ -140,12 +141,7 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 
 // parseAppGameSystem parses inbound values into package-safe forms.
 func parseAppGameSystem(value string) (GameSystem, bool) {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "daggerheart", "game_system_daggerheart":
-		return GameSystemDaggerheart, true
-	default:
-		return GameSystemUnspecified, false
-	}
+	return campaignapp.ParseGameSystem(value)
 }
 
 // parseAppGmMode parses inbound values into package-safe forms.

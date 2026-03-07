@@ -8,23 +8,23 @@ func newService(gateway CampaignGateway) campaignapp.Service {
 }
 
 // newServiceWithWorkflows builds package wiring for this web seam.
-func newServiceWithWorkflows(gateway CampaignGateway, workflows map[string]CharacterCreationWorkflow) campaignapp.Service {
+func newServiceWithWorkflows(gateway CampaignGateway, workflows map[GameSystem]CharacterCreationWorkflow) campaignapp.Service {
 	return campaignapp.NewServiceWithWorkflows(gateway, mapWorkflowsToApp(workflows))
 }
 
 // mapWorkflowsToApp maps values across transport and domain boundaries.
 func mapWorkflowsToApp(
-	workflows map[string]CharacterCreationWorkflow,
-) map[string]campaignapp.CharacterCreationWorkflow {
+	workflows map[GameSystem]CharacterCreationWorkflow,
+) map[campaignapp.GameSystem]campaignapp.CharacterCreationWorkflow {
 	if len(workflows) == 0 {
 		return nil
 	}
-	mapped := make(map[string]campaignapp.CharacterCreationWorkflow, len(workflows))
+	mapped := make(map[campaignapp.GameSystem]campaignapp.CharacterCreationWorkflow, len(workflows))
 	for system, workflow := range workflows {
 		if workflow == nil {
 			continue
 		}
-		mapped[system] = workflow
+		mapped[campaignapp.GameSystem(system)] = workflow
 	}
 	if len(mapped) == 0 {
 		return nil

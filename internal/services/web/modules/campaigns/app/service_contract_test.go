@@ -25,9 +25,33 @@ func TestNewServiceAndWorkflowResolverContracts(t *testing.T) {
 	}
 
 	workflow := testCreationWorkflow{}
-	svcWithWorkflow := NewServiceWithWorkflows(nil, map[string]CharacterCreationWorkflow{"daggerheart": workflow})
+	svcWithWorkflow := NewServiceWithWorkflows(nil, map[GameSystem]CharacterCreationWorkflow{GameSystemDaggerheart: workflow})
 	if svcWithWorkflow.ResolveWorkflow(" DAggerHEART ") == nil {
 		t.Fatalf("ResolveWorkflow() should normalize workflow key")
+	}
+	if svcWithWorkflow.ResolveWorkflow("not-a-system") != nil {
+		t.Fatalf("ResolveWorkflow() should return nil for unknown systems")
+	}
+}
+
+func TestParseGameSystemContracts(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input string
+		want  GameSystem
+		ok    bool
+	}{
+		{input: "daggerheart", want: GameSystemDaggerheart, ok: true},
+		{input: " Daggerheart ", want: GameSystemDaggerheart, ok: true},
+		{input: "game_system_daggerheart", want: GameSystemDaggerheart, ok: true},
+		{input: "unknown-system", want: GameSystemUnspecified, ok: false},
+	}
+	for _, tc := range tests {
+		got, ok := ParseGameSystem(tc.input)
+		if got != tc.want || ok != tc.ok {
+			t.Fatalf("ParseGameSystem(%q) = (%q, %v), want (%q, %v)", tc.input, got, ok, tc.want, tc.ok)
+		}
 	}
 }
 
@@ -49,7 +73,7 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 		characterCreationCatalog:  CampaignCharacterCreationCatalog{},
 		characterCreationProfile:  CampaignCharacterCreationProfile{},
 	}
-	svc := NewServiceWithWorkflows(gateway, map[string]CharacterCreationWorkflow{"daggerheart": testCreationWorkflow{}})
+	svc := NewServiceWithWorkflows(gateway, map[GameSystem]CharacterCreationWorkflow{GameSystemDaggerheart: testCreationWorkflow{}})
 	ctx := contextWithResolvedUserID("user-1")
 
 	if _, err := svc.ListCampaigns(ctx); err != nil {
