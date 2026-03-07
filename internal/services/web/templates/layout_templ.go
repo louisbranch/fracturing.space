@@ -1063,7 +1063,7 @@ func AppToastComponent(toast *AppToast) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		if appToastMessage(toast) != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "<div id=\"app-toast-stack\" class=\"toast toast-top toast-end z-[60]\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 51, "<div id=\"app-toast-stack\" class=\"toast toast-top toast-end top-20 z-[60]\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

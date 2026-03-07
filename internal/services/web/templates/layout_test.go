@@ -1,6 +1,8 @@
 package templates
 
 import (
+	"bytes"
+	"context"
 	"strings"
 	"testing"
 )
@@ -54,5 +56,32 @@ func TestAppSideMenuSubItemClassHighlightsActiveSessionRows(t *testing.T) {
 	}
 	if strings.Contains(inactiveClass, "menu-active") {
 		t.Fatalf("inactiveClass = %q, want no menu-active", inactiveClass)
+	}
+}
+
+func TestAppToastComponentIncludesTopOffsetClass(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	err := AppToastComponent(&AppToast{
+		Kind:    "info",
+		Message: "Profile updated",
+	}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render AppToastComponent: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`id="app-toast-stack"`,
+		`toast-top`,
+		`toast-end`,
+		`top-20`,
+		`data-app-toast="true"`,
+		`data-app-toast-hide-after-ms="4500"`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("AppToastComponent output missing marker %q: %q", marker, got)
+		}
 	}
 }
