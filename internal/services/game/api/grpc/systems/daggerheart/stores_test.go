@@ -1,11 +1,36 @@
 package daggerheart
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
+
+func TestStoresValidate_MissingEvents(t *testing.T) {
+	s := Stores{
+		Campaign:         &fakeCampaignStore{},
+		Character:        &fakeCharacterStore{},
+		Domain:           &fakeDomainEngine{},
+		Session:          &fakeSessionStore{},
+		SessionGate:      &fakeSessionGateStore{},
+		SessionSpotlight: &fakeSessionSpotlightStore{},
+		Daggerheart:      &fakeDaggerheartStore{},
+		Event:            &fakeEventStore{},
+		WriteRuntime:     domainwrite.NewRuntime(),
+	}
+
+	err := s.Validate()
+	if err == nil {
+		t.Fatal("expected validate error when events registry is missing")
+	}
+	if !strings.Contains(err.Error(), "Events") {
+		t.Fatalf("validate error = %v, want mention of Events", err)
+	}
+}
 
 func TestStoresApplier(t *testing.T) {
 	s := Stores{
@@ -18,6 +43,7 @@ func TestStoresApplier(t *testing.T) {
 		Daggerheart:      &fakeDaggerheartStore{},
 		Event:            &fakeEventStore{},
 		WriteRuntime:     domainwrite.NewRuntime(),
+		Events:           event.NewRegistry(),
 	}
 	if err := s.Validate(); err != nil {
 		t.Fatalf("validate stores: %v", err)
@@ -42,6 +68,40 @@ func TestStoresApplier(t *testing.T) {
 	if applier.Adapters == nil {
 		t.Error("expected Adapters to be set")
 	}
+	if applier.Events == nil {
+		t.Error("expected Events registry to be set")
+	}
+}
+
+func TestNewStoresFromProjection(t *testing.T) {
+	projectionStore := &projectionStoreBundleStub{
+		CampaignStore:            &fakeCampaignStore{},
+		CharacterStore:           &fakeCharacterStore{},
+		SessionStore:             &fakeSessionStore{},
+		SessionGateStore:         &fakeSessionGateStore{},
+		SessionSpotlightStore:    &fakeSessionSpotlightStore{},
+		DaggerheartStore:         &fakeDaggerheartStore{},
+		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
+	}
+
+	stores := NewStoresFromProjection(StoresFromProjectionConfig{
+		ProjectionStore: projectionStore,
+		EventStore:      &fakeEventStore{},
+		ContentStore:    stubDaggerheartContentStore{},
+		Domain:          &fakeDomainEngine{},
+		WriteRuntime:    domainwrite.NewRuntime(),
+		Events:          event.NewRegistry(),
+	})
+
+	if stores.Campaign == nil || stores.Character == nil || stores.Daggerheart == nil {
+		t.Fatal("expected projection-backed stores to be populated")
+	}
+	if stores.Event == nil || stores.WriteRuntime == nil || stores.Events == nil {
+		t.Fatal("expected runtime stores to be propagated")
+	}
+	if stores.DaggerheartContent == nil {
+		t.Fatal("expected content store to be propagated")
+	}
 }
 
 // TestStoresAdapterRegistryMatchesManifest verifies that the adapter registry
@@ -59,6 +119,7 @@ func TestStoresAdapterRegistryMatchesManifest(t *testing.T) {
 		Daggerheart:      daggerheartStore,
 		Event:            &fakeEventStore{},
 		WriteRuntime:     domainwrite.NewRuntime(),
+		Events:           event.NewRegistry(),
 	}
 	if err := s.Validate(); err != nil {
 		t.Fatalf("validate stores: %v", err)
@@ -95,4 +156,21 @@ func TestStoresAdapterRegistryMatchesManifest(t *testing.T) {
 			t.Errorf("adapter %s version mismatch: stores=%s, manifest=%s", a.ID(), a.Version(), manifestVersion)
 		}
 	}
+}
+
+type projectionStoreBundleStub struct {
+	storage.CampaignStore
+	storage.CharacterStore
+	storage.SessionStore
+	storage.SessionGateStore
+	storage.SessionSpotlightStore
+	storage.DaggerheartStore
+	storage.ProjectionWatermarkStore
+}
+
+type stubProjectionWatermarkStore struct {
+	storage.ProjectionWatermarkStore
+}
+type stubDaggerheartContentStore struct {
+	storage.DaggerheartContentReadStore
 }

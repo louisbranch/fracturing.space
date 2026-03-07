@@ -1,0 +1,113 @@
+package game
+
+import (
+	"context"
+	"encoding/json"
+	"strings"
+
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID string, in *campaignv1.SetSceneSpotlightRequest) error {
+	sceneID := strings.TrimSpace(in.GetSceneId())
+	if sceneID == "" {
+		return status.Error(codes.InvalidArgument, "scene id is required")
+	}
+	spotlightType, err := scene.NormalizeSpotlightType(in.GetType())
+	if err != nil {
+		return status.Error(codes.InvalidArgument, err.Error())
+	}
+
+	c, err := a.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return err
+	}
+	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+		return err
+	}
+
+	payload := scene.SpotlightSetPayload{
+		SceneID:       sceneID,
+		SpotlightType: spotlightType,
+		CharacterID:   strings.TrimSpace(in.GetCharacterId()),
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	actorID, actorType := resolveCommandActor(ctx)
+
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores,
+		a.stores.Applier(),
+		commandbuild.Core(commandbuild.CoreInput{
+			CampaignID:   campaignID,
+			Type:         commandTypeSceneSpotlightSet,
+			ActorType:    actorType,
+			ActorID:      actorID,
+			SceneID:      sceneID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "scene",
+			EntityID:     sceneID,
+			PayloadJSON:  payloadJSON,
+		}),
+		domainwrite.RequireEvents("scene.spotlight_set did not emit an event"),
+	)
+	return err
+}
+
+func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID string, in *campaignv1.ClearSceneSpotlightRequest) error {
+	sceneID := strings.TrimSpace(in.GetSceneId())
+	if sceneID == "" {
+		return status.Error(codes.InvalidArgument, "scene id is required")
+	}
+
+	c, err := a.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return err
+	}
+	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+		return err
+	}
+
+	payload := scene.SpotlightClearedPayload{
+		SceneID: sceneID,
+		Reason:  strings.TrimSpace(in.GetReason()),
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return status.Errorf(codes.Internal, "encode payload: %v", err)
+	}
+
+	actorID, actorType := resolveCommandActor(ctx)
+
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		a.stores,
+		a.stores.Applier(),
+		commandbuild.Core(commandbuild.CoreInput{
+			CampaignID:   campaignID,
+			Type:         commandTypeSceneSpotlightClear,
+			ActorType:    actorType,
+			ActorID:      actorID,
+			SceneID:      sceneID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "scene",
+			EntityID:     sceneID,
+			PayloadJSON:  payloadJSON,
+		}),
+		domainwrite.RequireEvents("scene.spotlight_clear did not emit an event"),
+	)
+	return err
+}

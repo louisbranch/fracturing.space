@@ -1,26 +1,40 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/checkpoint"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
+
+var errDomainWritePathDisabled = errors.New("game domain write path is disabled")
+
+// disabledDomain intentionally rejects command execution when domain writes are
+// disabled at runtime. This keeps startup wiring valid while ensuring write
+// requests fail closed.
+type disabledDomain struct{}
+
+func (disabledDomain) Execute(context.Context, command.Command) (engine.Result, error) {
+	return engine.Result{}, errDomainWritePathDisabled
+}
 
 // configureDomain wires the write-path domain engine into gRPC stores when enabled.
 //
 // This is intentionally guarded by config so deployments can run without domain
 // execution in specific environments (for example, projection-only workflows).
 func configureDomain(srvEnv serverEnv, stores *gamegrpc.Stores, registries engine.Registries) error {
-	if !srvEnv.DomainEnabled {
-		return nil
-	}
 	if stores == nil {
 		return errors.New("stores are required")
+	}
+	if !srvEnv.DomainEnabled {
+		stores.Domain = disabledDomain{}
+		return nil
 	}
 	domainEngine, err := buildDomainEngine(stores.Event, registries)
 	if err != nil {

@@ -1,6 +1,7 @@
-// Package workflow defines the system-agnostic types shared between the game
-// service's character creation transport layer and system-specific workflow
-// providers (e.g., Daggerheart).
+// Package workflow defines character-creation contracts shared between the game
+// transport layer and system providers. The value model is generic, while the
+// dependency surface currently reflects the active Daggerheart-backed system
+// profile workflow.
 package workflow
 
 import (
@@ -25,13 +26,13 @@ type Progress struct {
 	UnmetReasons []string
 }
 
-// Deps provides the game-layer operations that a system-specific workflow
+// CreationDeps provides the game-layer operations that a system workflow
 // provider needs. The game package's characterApplication implements this
 // interface, bridging authorization, domain execution, and store access.
-type Deps interface {
+type CreationDeps interface {
 	GetCharacterRecord(ctx context.Context, campaignID, characterID string) (storage.CharacterRecord, error)
-	GetDaggerheartProfile(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error)
-	DaggerheartContent() storage.DaggerheartContentReadStore
+	GetCharacterSystemProfile(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error)
+	SystemContent() storage.DaggerheartContentReadStore
 	ExecuteProfileUpdate(ctx context.Context, campaignRecord storage.CampaignRecord, characterID string, systemProfile map[string]any) error
 	RequireReadPolicy(ctx context.Context, campaignRecord storage.CampaignRecord) error
 	ProfileToProto(campaignID, characterID string, profile storage.DaggerheartCharacterProfile) *campaignv1.CharacterProfile
@@ -40,8 +41,8 @@ type Deps interface {
 // Provider defines system-specific workflow behavior behind a common
 // CharacterService transport contract.
 type Provider interface {
-	GetProgress(ctx context.Context, deps Deps, campaignRecord storage.CampaignRecord, characterID string) (Progress, error)
-	ApplyStep(ctx context.Context, deps Deps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationStepRequest) (*campaignv1.CharacterProfile, Progress, error)
-	ApplyWorkflow(ctx context.Context, deps Deps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationWorkflowRequest) (*campaignv1.CharacterProfile, Progress, error)
-	Reset(ctx context.Context, deps Deps, campaignRecord storage.CampaignRecord, characterID string) (Progress, error)
+	GetProgress(ctx context.Context, deps CreationDeps, campaignRecord storage.CampaignRecord, characterID string) (Progress, error)
+	ApplyStep(ctx context.Context, deps CreationDeps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationStepRequest) (*campaignv1.CharacterProfile, Progress, error)
+	ApplyWorkflow(ctx context.Context, deps CreationDeps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationWorkflowRequest) (*campaignv1.CharacterProfile, Progress, error)
+	Reset(ctx context.Context, deps CreationDeps, campaignRecord storage.CampaignRecord, characterID string) (Progress, error)
 }

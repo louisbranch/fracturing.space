@@ -118,16 +118,29 @@ func classifyMethodKind(fullMethod string) string {
 	switch fullMethod {
 	case campaignv1.CampaignService_ListCampaigns_FullMethodName,
 		campaignv1.CampaignService_GetCampaign_FullMethodName,
+		campaignv1.CampaignService_GetCampaignSessionReadiness_FullMethodName,
 		campaignv1.ParticipantService_ListParticipants_FullMethodName,
 		campaignv1.ParticipantService_GetParticipant_FullMethodName,
 		campaignv1.CharacterService_ListCharacters_FullMethodName,
 		campaignv1.CharacterService_GetCharacterSheet_FullMethodName,
+		campaignv1.CharacterService_GetCharacterCreationProgress_FullMethodName,
 		campaignv1.SessionService_ListSessions_FullMethodName,
 		campaignv1.SessionService_GetSession_FullMethodName,
+		campaignv1.SessionService_GetSessionSpotlight_FullMethodName,
 		campaignv1.SnapshotService_GetSnapshot_FullMethodName,
 		campaignv1.EventService_ListEvents_FullMethodName,
+		campaignv1.EventService_ListTimelineEntries_FullMethodName,
 		campaignv1.ForkService_GetLineage_FullMethodName,
-		campaignv1.ForkService_ListForks_FullMethodName:
+		campaignv1.ForkService_ListForks_FullMethodName,
+		campaignv1.InviteService_GetInvite_FullMethodName,
+		campaignv1.InviteService_ListInvites_FullMethodName,
+		campaignv1.InviteService_ListPendingInvites_FullMethodName,
+		campaignv1.InviteService_ListPendingInvitesForUser_FullMethodName,
+		campaignv1.SystemService_ListGameSystems_FullMethodName,
+		campaignv1.SystemService_GetGameSystem_FullMethodName,
+		campaignv1.StatisticsService_GetGameStatistics_FullMethodName,
+		campaignv1.AuthorizationService_Can_FullMethodName,
+		campaignv1.AuthorizationService_BatchCan_FullMethodName:
 		return "read"
 	default:
 		return "write"

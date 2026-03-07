@@ -56,11 +56,31 @@ func (r sourceCampaignRequest) GetSessionId() string {
 }
 
 func TestClassifyMethodKind(t *testing.T) {
-	if classifyMethodKind(campaignv1.CampaignService_GetCampaign_FullMethodName) != "read" {
-		t.Fatal("expected get campaign to be read method")
+	readMethods := []string{
+		campaignv1.CampaignService_GetCampaign_FullMethodName,
+		campaignv1.CampaignService_GetCampaignSessionReadiness_FullMethodName,
+		campaignv1.CharacterService_GetCharacterCreationProgress_FullMethodName,
+		campaignv1.SessionService_GetSessionSpotlight_FullMethodName,
+		campaignv1.EventService_ListTimelineEntries_FullMethodName,
+		campaignv1.SystemService_ListGameSystems_FullMethodName,
+		campaignv1.StatisticsService_GetGameStatistics_FullMethodName,
+		campaignv1.AuthorizationService_BatchCan_FullMethodName,
 	}
-	if classifyMethodKind(campaignv1.CampaignService_CreateCampaign_FullMethodName) != "write" {
-		t.Fatal("expected create campaign to be write method")
+	for _, method := range readMethods {
+		if got := classifyMethodKind(method); got != "read" {
+			t.Fatalf("expected %s to be read method, got %s", method, got)
+		}
+	}
+
+	writeMethods := []string{
+		campaignv1.CampaignService_CreateCampaign_FullMethodName,
+		campaignv1.CampaignAIService_IssueCampaignAISessionGrant_FullMethodName,
+		campaignv1.SessionService_StartSession_FullMethodName,
+	}
+	for _, method := range writeMethods {
+		if got := classifyMethodKind(method); got != "write" {
+			t.Fatalf("expected %s to be write method, got %s", method, got)
+		}
 	}
 }
 

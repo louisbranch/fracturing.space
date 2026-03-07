@@ -17,9 +17,10 @@ func TestDirectAppendEventUsageIsRestrictedToMaintenancePaths(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	grpcRoot := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc")
 	allowed := map[string]struct{}{
-		"internal/services/game/api/grpc/game/domain_adapter.go":    {},
-		"internal/services/game/api/grpc/game/event_application.go": {},
-		"internal/services/game/api/grpc/game/fork_application.go":  {},
+		"internal/services/game/api/grpc/game/domain_adapter.go":        {},
+		"internal/services/game/api/grpc/game/event_application.go":     {},
+		"internal/services/game/api/grpc/game/fork_application.go":      {},
+		"internal/services/game/api/grpc/game/fork_application_fork.go": {},
 	}
 
 	var violations []string

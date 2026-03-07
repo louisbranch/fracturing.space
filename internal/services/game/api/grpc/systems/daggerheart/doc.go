@@ -6,9 +6,10 @@
 //   - Outcome probability calculations
 //   - Ruleset metadata for replay and validation
 //   - Generic dice rolling utilities
+//   - Campaign/session mutation workflows for Daggerheart-specific mechanics
 //
-// The service is read-only with respect to game state; it returns mechanics
-// outcomes without mutating campaigns or snapshots.
+// The package includes both read-only mechanics endpoints and write-path
+// endpoints that emit domain commands/events for campaign state mutation.
 //
 // This package implements systems.daggerheart.v1.DaggerheartService from
 // api/proto/systems/daggerheart/v1/service.proto.

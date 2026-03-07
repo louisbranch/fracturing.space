@@ -1,0 +1,192 @@
+package game
+
+import (
+	"context"
+	"strings"
+
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+// UpdateCampaign updates mutable campaign metadata fields.
+func (s *CampaignService) UpdateCampaign(ctx context.Context, in *campaignv1.UpdateCampaignRequest) (*campaignv1.UpdateCampaignResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "update campaign request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	var update campaignUpdateInput
+	if name := in.GetName(); name != nil {
+		value := name.GetValue()
+		update.Name = &value
+	}
+	if themePrompt := in.GetThemePrompt(); themePrompt != nil {
+		value := themePrompt.GetValue()
+		update.ThemePrompt = &value
+	}
+	switch locale := in.GetLocale(); locale {
+	case commonv1.Locale_LOCALE_UNSPECIFIED:
+		// optional field omitted
+	case commonv1.Locale_LOCALE_EN_US, commonv1.Locale_LOCALE_PT_BR:
+		value := locale
+		update.Locale = &value
+	default:
+		return nil, status.Error(codes.InvalidArgument, "locale is invalid")
+	}
+
+	updated, err := newCampaignApplication(s).UpdateCampaign(ctx, campaignID, update)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+
+	return &campaignv1.UpdateCampaignResponse{Campaign: campaignToProto(updated)}, nil
+}
+
+// EndCampaign marks a campaign as completed.
+func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCampaignRequest) (*campaignv1.EndCampaignResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "end campaign request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	updated, err := newCampaignApplication(s).EndCampaign(ctx, campaignID)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+
+	return &campaignv1.EndCampaignResponse{Campaign: campaignToProto(updated)}, nil
+}
+
+// ArchiveCampaign archives a campaign.
+func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.ArchiveCampaignRequest) (*campaignv1.ArchiveCampaignResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "archive campaign request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	updated, err := newCampaignApplication(s).ArchiveCampaign(ctx, campaignID)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+
+	return &campaignv1.ArchiveCampaignResponse{Campaign: campaignToProto(updated)}, nil
+}
+
+// RestoreCampaign restores an archived campaign to draft state.
+func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.RestoreCampaignRequest) (*campaignv1.RestoreCampaignResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "restore campaign request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	updated, err := newCampaignApplication(s).RestoreCampaign(ctx, campaignID)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+
+	return &campaignv1.RestoreCampaignResponse{Campaign: campaignToProto(updated)}, nil
+}
+
+// SetCampaignCover updates the selected built-in campaign cover.
+func (s *CampaignService) SetCampaignCover(ctx context.Context, in *campaignv1.SetCampaignCoverRequest) (*campaignv1.SetCampaignCoverResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "set campaign cover request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	coverAssetID := strings.TrimSpace(in.GetCoverAssetId())
+	if coverAssetID == "" {
+		return nil, status.Error(codes.InvalidArgument, "cover asset id is required")
+	}
+	coverSetID := strings.TrimSpace(in.GetCoverSetId())
+
+	updated, err := newCampaignApplication(s).SetCampaignCover(ctx, campaignID, coverAssetID, coverSetID)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+
+	return &campaignv1.SetCampaignCoverResponse{Campaign: campaignToProto(updated)}, nil
+}
+
+// SetCampaignAIBinding binds an AI agent to a campaign.
+func (s *CampaignService) SetCampaignAIBinding(ctx context.Context, in *campaignv1.SetCampaignAIBindingRequest) (*campaignv1.SetCampaignAIBindingResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "set campaign ai binding request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	aiAgentID := strings.TrimSpace(in.GetAiAgentId())
+	if aiAgentID == "" {
+		return nil, status.Error(codes.InvalidArgument, "ai agent id is required")
+	}
+
+	updated, err := newCampaignApplication(s).SetCampaignAIBinding(ctx, campaignID, aiAgentID)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+	return &campaignv1.SetCampaignAIBindingResponse{Campaign: campaignToProto(updated)}, nil
+}
+
+// ClearCampaignAIBinding clears the AI agent binding from a campaign.
+func (s *CampaignService) ClearCampaignAIBinding(ctx context.Context, in *campaignv1.ClearCampaignAIBindingRequest) (*campaignv1.ClearCampaignAIBindingResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "clear campaign ai binding request is required")
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+
+	updated, err := newCampaignApplication(s).ClearCampaignAIBinding(ctx, campaignID)
+	if err != nil {
+		if apperrors.GetCode(err) != apperrors.CodeUnknown {
+			return nil, handleDomainError(err)
+		}
+		return nil, err
+	}
+	return &campaignv1.ClearCampaignAIBindingResponse{Campaign: campaignToProto(updated)}, nil
+}
