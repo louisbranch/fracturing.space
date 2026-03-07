@@ -5,9 +5,9 @@ import (
 	"errors"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -107,7 +107,7 @@ func campaignReadinessAggregateState(
 		}
 	}
 
-	if campaignRecord.System == commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+	if systemIDFromCampaignRecord(campaignRecord) == bridge.SystemIDDaggerheart {
 		if stores.SystemStores.Daggerheart == nil {
 			return aggregate.State{}, status.Error(codes.Internal, "daggerheart projection store is not configured")
 		}
@@ -127,9 +127,9 @@ func campaignReadinessAggregateState(
 	return state, nil
 }
 
-func systemReadinessChecker(system commonv1.GameSystem) readiness.CharacterSystemReadiness {
+func systemReadinessChecker(system bridge.SystemID) readiness.CharacterSystemReadiness {
 	switch system {
-	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
+	case bridge.SystemIDDaggerheart:
 		return daggerheartdomain.EvaluateCreationReadinessFromSystemProfile
 	default:
 		return nil

@@ -5,7 +5,6 @@ import (
 	"errors"
 	"testing"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
@@ -35,11 +34,11 @@ func (t *testAdapter) HandledTypes() []event.Type {
 }
 
 type testGameSystem struct {
-	id      commonv1.GameSystem
+	id      SystemID
 	version string
 }
 
-func (t *testGameSystem) ID() commonv1.GameSystem {
+func (t *testGameSystem) ID() SystemID {
 	return t.id
 }
 
@@ -151,7 +150,7 @@ func TestAdapterRegistryGetRequired_NilRegistryReturnsError(t *testing.T) {
 func TestRegistryRegister_RequiresVersion(t *testing.T) {
 	registry := NewMetadataRegistry()
 	err := registry.Register(&testGameSystem{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      SystemIDDaggerheart,
 		version: "   ",
 	})
 	if !errors.Is(err, ErrSystemVersionRequired) {
@@ -162,7 +161,7 @@ func TestRegistryRegister_RequiresVersion(t *testing.T) {
 func TestRegistryRegister_Duplicate(t *testing.T) {
 	registry := NewMetadataRegistry()
 	system := &testGameSystem{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      SystemIDDaggerheart,
 		version: "1.0.0",
 	}
 	if err := registry.Register(system); err != nil {
@@ -177,7 +176,7 @@ func TestRegistryRegister_Duplicate(t *testing.T) {
 func TestRegistryRegister_NilRegistry(t *testing.T) {
 	var registry *MetadataRegistry
 	err := registry.Register(&testGameSystem{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      SystemIDDaggerheart,
 		version: "1.0.0",
 	})
 	if !errors.Is(err, ErrSystemRegistryNil) {
@@ -195,19 +194,19 @@ func TestRegistryRegister_NilSystem(t *testing.T) {
 
 func TestRegistryGetOrError(t *testing.T) {
 	registry := NewMetadataRegistry()
-	_, err := registry.GetOrError(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	_, err := registry.GetOrError(SystemIDDaggerheart)
 	if !errors.Is(err, ErrSystemNotRegistered) {
 		t.Fatalf("expected ErrSystemNotRegistered, got %v", err)
 	}
 
 	system := &testGameSystem{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      SystemIDDaggerheart,
 		version: "1.0",
 	}
 	if err := registry.Register(system); err != nil {
 		t.Fatalf("register: %v", err)
 	}
-	got, err := registry.GetOrError(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	got, err := registry.GetOrError(SystemIDDaggerheart)
 	if err != nil {
 		t.Fatalf("GetOrError() unexpected error: %v", err)
 	}

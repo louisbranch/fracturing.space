@@ -6,16 +6,83 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+)
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+// SystemID identifies a game system in the domain layer.
+//
+// Domain packages use this type instead of transport enums to avoid coupling
+// to generated API code.
+type SystemID string
+
+const (
+	// SystemIDUnspecified is the zero value for unknown or missing systems.
+	SystemIDUnspecified SystemID = ""
+	// SystemIDDaggerheart identifies the Daggerheart ruleset.
+	SystemIDDaggerheart SystemID = "daggerheart"
+)
+
+func (id SystemID) String() string {
+	return string(id)
+}
+
+// NormalizeSystemID canonicalizes accepted system labels into a SystemID.
+//
+// Accepted values include canonical IDs like "daggerheart" and transport enum
+// labels like "GAME_SYSTEM_DAGGERHEART".
+func NormalizeSystemID(value string) (SystemID, bool) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return SystemIDUnspecified, false
+	}
+	upper := strings.ToUpper(trimmed)
+	upper = strings.TrimPrefix(upper, "GAME_SYSTEM_")
+	switch upper {
+	case "DAGGERHEART":
+		return SystemIDDaggerheart, true
+	default:
+		return SystemIDUnspecified, false
+	}
+}
+
+// ImplementationStage describes how complete a system is.
+type ImplementationStage string
+
+const (
+	ImplementationStageUnspecified ImplementationStage = ""
+	ImplementationStagePlanned     ImplementationStage = "planned"
+	ImplementationStagePartial     ImplementationStage = "partial"
+	ImplementationStageComplete    ImplementationStage = "complete"
+	ImplementationStageDeprecated  ImplementationStage = "deprecated"
+)
+
+// OperationalStatus describes runtime availability for a system.
+type OperationalStatus string
+
+const (
+	OperationalStatusUnspecified OperationalStatus = ""
+	OperationalStatusOffline     OperationalStatus = "offline"
+	OperationalStatusDegraded    OperationalStatus = "degraded"
+	OperationalStatusOperational OperationalStatus = "operational"
+	OperationalStatusMaintenance OperationalStatus = "maintenance"
+)
+
+// AccessLevel describes who can access a system.
+type AccessLevel string
+
+const (
+	AccessLevelUnspecified AccessLevel = ""
+	AccessLevelInternal    AccessLevel = "internal"
+	AccessLevelBeta        AccessLevel = "beta"
+	AccessLevelPublic      AccessLevel = "public"
+	AccessLevelRetired     AccessLevel = "retired"
 )
 
 // GameSystem defines the interface that all game systems must implement.
 // This allows the API layer to dispatch to the correct system based on
 // the campaign's system_id.
 type GameSystem interface {
-	// ID returns the system identifier (matches GameSystem proto enum).
-	ID() commonv1.GameSystem
+	// ID returns the system identifier.
+	ID() SystemID
 
 	// Version returns the system ruleset version.
 	Version() string
@@ -40,9 +107,9 @@ type GameSystem interface {
 
 // RegistryMetadata describes how a system is published and operated.
 type RegistryMetadata struct {
-	ImplementationStage commonv1.GameSystemImplementationStage
-	OperationalStatus   commonv1.GameSystemOperationalStatus
-	AccessLevel         commonv1.GameSystemAccessLevel
+	ImplementationStage ImplementationStage
+	OperationalStatus   OperationalStatus
+	AccessLevel         AccessLevel
 	Notes               string
 }
 
@@ -158,16 +225,16 @@ type OutcomeApplier interface {
 }
 
 // MetadataRegistry manages registered game systems, mapping system_id + version
-// to protobuf GameSystem enums for API transport layers (gRPC and MCP).
+// to system metadata used by transport adapters.
 type MetadataRegistry struct {
 	mu       sync.RWMutex
 	systems  map[SystemKey]GameSystem
-	defaults map[commonv1.GameSystem]string
+	defaults map[SystemID]string
 }
 
 // SystemKey identifies a specific version of a system.
 type SystemKey struct {
-	ID      commonv1.GameSystem
+	ID      SystemID
 	Version string
 }
 
@@ -187,7 +254,7 @@ var (
 func NewMetadataRegistry() *MetadataRegistry {
 	return &MetadataRegistry{
 		systems:  make(map[SystemKey]GameSystem),
-		defaults: make(map[commonv1.GameSystem]string),
+		defaults: make(map[SystemID]string),
 	}
 }
 
@@ -219,13 +286,13 @@ func (r *MetadataRegistry) Register(system GameSystem) error {
 }
 
 // Get returns the game system for the given ID, or nil if not found.
-func (r *MetadataRegistry) Get(id commonv1.GameSystem) GameSystem {
+func (r *MetadataRegistry) Get(id SystemID) GameSystem {
 	return r.GetVersion(id, "")
 }
 
 // GetVersion returns the game system for the given ID and version.
 // If version is empty, the default registered version is returned.
-func (r *MetadataRegistry) GetVersion(id commonv1.GameSystem, version string) GameSystem {
+func (r *MetadataRegistry) GetVersion(id SystemID, version string) GameSystem {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -240,7 +307,7 @@ func (r *MetadataRegistry) GetVersion(id commonv1.GameSystem, version string) Ga
 }
 
 // DefaultVersion returns the default registered version for the given system.
-func (r *MetadataRegistry) DefaultVersion(id commonv1.GameSystem) string {
+func (r *MetadataRegistry) DefaultVersion(id SystemID) string {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -248,7 +315,7 @@ func (r *MetadataRegistry) DefaultVersion(id commonv1.GameSystem) string {
 }
 
 // GetOrError returns the game system for the given ID or an error if not found.
-func (r *MetadataRegistry) GetOrError(id commonv1.GameSystem) (GameSystem, error) {
+func (r *MetadataRegistry) GetOrError(id SystemID) (GameSystem, error) {
 	system := r.Get(id)
 	if system == nil {
 		return nil, fmt.Errorf("%w: %s", ErrSystemNotRegistered, id)

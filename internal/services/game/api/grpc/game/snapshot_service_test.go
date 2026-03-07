@@ -10,7 +10,6 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -47,7 +46,7 @@ func TestGetSnapshot_CampaignNotFound(t *testing.T) {
 
 func TestGetSnapshot_RequiresCampaignReadPolicy(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
@@ -67,10 +66,7 @@ func TestGetSnapshot_CampaignArchivedAllowed(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	characterStore := newFakeCharacterStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusArchived,
-	}
+	campaignStore.campaigns["c1"] = archivedCampaignRecord("c1")
 	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
 
 	svc := NewSnapshotService(Stores{
@@ -96,7 +92,7 @@ func TestGetSnapshot_Success_NoCharacters(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	characterStore := newFakeCharacterStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
 
 	svc := NewSnapshotService(Stores{
@@ -129,7 +125,7 @@ func TestGetSnapshot_Success_WithCharacters(t *testing.T) {
 	characterStore := newFakeCharacterStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 3}
 	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
@@ -163,7 +159,7 @@ func TestGetSnapshot_Success_DefaultGmFear(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	characterStore := newFakeCharacterStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	// No DaggerheartSnapshot entry - should default to 0
 
 	svc := NewSnapshotService(Stores{
@@ -201,7 +197,7 @@ func TestPatchCharacterState_MissingCampaignId(t *testing.T) {
 
 func TestPatchCharacterState_MissingCharacterId(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
@@ -230,7 +226,7 @@ func TestPatchCharacterState_CampaignNotFound(t *testing.T) {
 
 func TestPatchCharacterState_RequiresCharacterMutationPolicy(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
@@ -251,7 +247,7 @@ func TestPatchCharacterState_RequiresCharacterMutationPolicy(t *testing.T) {
 
 func TestPatchCharacterState_CampaignArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusArchived}
+	campaignStore.campaigns["c1"] = archivedCampaignRecord("c1")
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
@@ -268,7 +264,7 @@ func TestPatchCharacterState_CampaignArchivedDisallowed(t *testing.T) {
 
 func TestPatchCharacterState_StateNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
@@ -288,7 +284,7 @@ func TestPatchCharacterState_InvalidHope(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
@@ -311,7 +307,7 @@ func TestPatchCharacterState_InvalidStress(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
@@ -337,7 +333,7 @@ func TestPatchCharacterState_InvalidHp(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
@@ -363,7 +359,7 @@ func TestPatchCharacterState_RequiresDomainEngine(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
@@ -393,7 +389,7 @@ func TestPatchCharacterState_Success(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
@@ -489,7 +485,7 @@ func TestPatchCharacterState_SetToZero(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 5, Stress: 3},
 	}
@@ -603,7 +599,7 @@ func TestUpdateSnapshotState_CampaignNotFound(t *testing.T) {
 
 func TestUpdateSnapshotState_RequiresManageSessionsPolicy(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
@@ -623,7 +619,7 @@ func TestUpdateSnapshotState_RequiresManageSessionsPolicy(t *testing.T) {
 
 func TestUpdateSnapshotState_CampaignArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusArchived}
+	campaignStore.campaigns["c1"] = archivedCampaignRecord("c1")
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
@@ -641,7 +637,7 @@ func TestUpdateSnapshotState_CampaignArchivedDisallowed(t *testing.T) {
 
 func TestUpdateSnapshotState_NegativeGmFear(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
@@ -662,7 +658,7 @@ func TestUpdateSnapshotState_RequiresDomainEngine(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
@@ -685,7 +681,7 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Before: 0, After: 7})
 	if err != nil {
@@ -752,7 +748,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 3}
 
 	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Before: 3, After: 10})
@@ -810,7 +806,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
 
 	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Before: 5, After: 0})
@@ -862,7 +858,7 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Before: 0, After: 5})
 	if err != nil {
@@ -919,7 +915,7 @@ func TestPatchCharacterState_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}

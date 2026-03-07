@@ -2,8 +2,6 @@ package bridge
 
 import (
 	"testing"
-
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 )
 
 func TestAdapterRegistryAdapters(t *testing.T) {
@@ -50,7 +48,7 @@ func TestAdapterRegistryAdapters(t *testing.T) {
 
 func TestMetadataRegistryDefaultVersion(t *testing.T) {
 	registry := NewMetadataRegistry()
-	systemID := commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
+	systemID := SystemIDDaggerheart
 
 	if got := registry.DefaultVersion(systemID); got != "" {
 		t.Fatalf("DefaultVersion() = %q, want empty", got)
@@ -72,8 +70,8 @@ func TestMetadataRegistryDefaultVersion(t *testing.T) {
 
 func TestMetadataRegistryList(t *testing.T) {
 	registry := NewMetadataRegistry()
-	alpha := &testGameSystem{id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, version: "1.0.0"}
-	beta := &testGameSystem{id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, version: "2.0.0"}
+	alpha := &testGameSystem{id: SystemIDDaggerheart, version: "1.0.0"}
+	beta := &testGameSystem{id: SystemIDDaggerheart, version: "2.0.0"}
 	if err := registry.Register(alpha); err != nil {
 		t.Fatalf("register alpha: %v", err)
 	}

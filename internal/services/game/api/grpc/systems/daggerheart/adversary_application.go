@@ -6,7 +6,6 @@ import (
 	"errors"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -66,8 +65,8 @@ func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.Dagg
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversaries")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart adversaries"); err != nil {
+		return nil, err
 	}
 
 	if sessionID != "" {
@@ -167,8 +166,8 @@ func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.Dagg
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversaries")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart adversaries"); err != nil {
+		return nil, err
 	}
 
 	current, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
@@ -307,8 +306,8 @@ func (s *DaggerheartService) runDeleteAdversary(ctx context.Context, in *pb.Dagg
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversaries")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart adversaries"); err != nil {
+		return nil, err
 	}
 
 	current, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
@@ -383,8 +382,8 @@ func (s *DaggerheartService) runGetAdversary(ctx context.Context, in *pb.Daggerh
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversaries")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart adversaries"); err != nil {
+		return nil, err
 	}
 
 	adversary, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
@@ -417,8 +416,8 @@ func (s *DaggerheartService) runListAdversaries(ctx context.Context, in *pb.Dagg
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversaries")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart adversaries"); err != nil {
+		return nil, err
 	}
 
 	sessionID := ""

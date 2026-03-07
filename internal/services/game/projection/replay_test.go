@@ -9,6 +9,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -40,8 +41,8 @@ func TestReplayCampaign_AppliesEvents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("campaign not stored: %v", err)
 	}
-	if storedCampaign.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		t.Fatalf("campaign system = %v, want %v", storedCampaign.System, commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	if storedCampaign.System != bridge.SystemIDDaggerheart {
+		t.Fatalf("campaign system = %v, want %v", storedCampaign.System, bridge.SystemIDDaggerheart)
 	}
 	if storedCampaign.ParticipantCount != 1 {
 		t.Fatalf("campaign participant count = %d, want 1", storedCampaign.ParticipantCount)

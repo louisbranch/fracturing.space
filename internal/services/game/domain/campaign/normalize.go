@@ -2,16 +2,13 @@ package campaign
 
 import (
 	"strings"
-
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 )
 
 // CreateInput describes the metadata needed to create a campaign.
 type CreateInput struct {
 	Name         string
-	Locale       commonv1.Locale
-	System       commonv1.GameSystem
+	Locale       string
+	System       GameSystem
 	GmMode       GmMode
 	Intent       Intent
 	AccessPolicy AccessPolicy
@@ -24,13 +21,15 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 	if input.Name == "" {
 		return CreateInput{}, ErrEmptyName
 	}
-	if input.System == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+	normalizedSystem, ok := NormalizeGameSystem(input.System.String())
+	if !ok {
 		return CreateInput{}, ErrInvalidGameSystem
 	}
+	input.System = normalizedSystem
 	if input.GmMode == GmModeUnspecified {
 		input.GmMode = GmModeAI
 	}
-	input.Locale = platformi18n.NormalizeLocale(input.Locale)
+	input.Locale = normalizeCampaignLocale(input.Locale)
 	if input.Intent == IntentUnspecified {
 		input.Intent = IntentStandard
 	}

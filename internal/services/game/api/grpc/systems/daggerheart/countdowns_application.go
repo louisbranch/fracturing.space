@@ -6,7 +6,6 @@ import (
 	"errors"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -66,8 +65,8 @@ func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.Dagg
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart countdowns")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart countdowns"); err != nil {
+		return nil, err
 	}
 
 	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
@@ -172,8 +171,8 @@ func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.Dagg
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart countdowns")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart countdowns"); err != nil {
+		return nil, err
 	}
 
 	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
@@ -274,8 +273,8 @@ func (s *DaggerheartService) runDeleteCountdown(ctx context.Context, in *pb.Dagg
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart countdowns")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart countdowns"); err != nil {
+		return nil, err
 	}
 
 	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
@@ -350,8 +349,8 @@ func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart blaze of glory")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart blaze of glory"); err != nil {
+		return nil, err
 	}
 
 	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -84,8 +85,8 @@ func TestStoresApplier_ApplyCampaignAndParticipant(t *testing.T) {
 	if campaign.Name != "Test Campaign" {
 		t.Fatalf("campaign name = %q, want %q", campaign.Name, "Test Campaign")
 	}
-	if campaign.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		t.Fatalf("campaign system = %s, want %s", campaign.System, commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	if campaign.System != bridge.SystemIDDaggerheart {
+		t.Fatalf("campaign system = %s, want %s", campaign.System, bridge.SystemIDDaggerheart)
 	}
 	if campaign.CoverAssetID != "camp-cover-02" {
 		t.Fatalf("campaign cover asset id = %q, want %q", campaign.CoverAssetID, "camp-cover-02")
@@ -1023,7 +1024,7 @@ func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 
 	campaignRecord := storage.CampaignRecord{
 		ID:        "camp-1",
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:    bridge.SystemIDDaggerheart,
 		Status:    campaign.StatusActive,
 		CreatedAt: now,
 		UpdatedAt: now,

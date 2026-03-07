@@ -8,6 +8,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
@@ -26,7 +27,7 @@ func TestCampaignPutGet(t *testing.T) {
 		ID:               "camp-crud",
 		Name:             "Shimmering Fields",
 		Locale:           commonv1.Locale_LOCALE_PT_BR,
-		System:           commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:           bridge.SystemIDDaggerheart,
 		Status:           campaign.StatusCompleted,
 		GmMode:           campaign.GmModeHybrid,
 		ParticipantCount: 1,
@@ -349,7 +350,7 @@ func seedCampaign(t *testing.T, store *Store, id string, now time.Time) storage.
 		ID:        id,
 		Name:      "Campaign",
 		Locale:    platformi18n.DefaultLocale(),
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:    bridge.SystemIDDaggerheart,
 		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: now,

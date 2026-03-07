@@ -7,7 +7,6 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -29,7 +28,7 @@ func TestCreateInvite_RequiresDomainEngine(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
@@ -56,7 +55,7 @@ func TestCreateInvite_Success(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
@@ -114,7 +113,7 @@ func TestCreateInvite_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
@@ -182,7 +181,7 @@ func TestRevokeInvite_AlreadyClaimed(t *testing.T) {
 	eventStore := newFakeEventStore()
 	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusClaimed}
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
@@ -205,7 +204,7 @@ func TestCreateInvite_MissingParticipantIdentity(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
@@ -230,7 +229,7 @@ func TestClaimInvite_Success(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
@@ -320,7 +319,7 @@ func TestClaimInvite_RequiresDomainEngine(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
@@ -360,7 +359,7 @@ func TestClaimInvite_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
@@ -455,7 +454,7 @@ func TestClaimInvite_RejectsAIControlledSeatBinding(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {
 			ID:             "participant-1",
@@ -523,7 +522,7 @@ func TestClaimInvite_MissingUserID(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
@@ -574,7 +573,7 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
@@ -654,7 +653,7 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 		"participant-2": {ID: "participant-2", CampaignID: "campaign-1", UserID: "user-1"},
@@ -725,7 +724,7 @@ func TestRevokeInvite_AlreadyRevoked(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusRevoked}
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
@@ -746,7 +745,7 @@ func TestRevokeInvite_Success(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusPending}
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
@@ -796,7 +795,7 @@ func TestRevokeInvite_RequiresDomainEngine(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusPending}
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
@@ -817,7 +816,7 @@ func TestRevokeInvite_UsesDomainEngine(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusPending}
 	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
@@ -945,7 +944,7 @@ func TestListPendingInvites_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner, UserID: "user-1"},
 		"seat-1":  {ID: "seat-1", CampaignID: "campaign-1", Name: "Seat 1", Role: participant.RolePlayer},
@@ -1022,7 +1021,7 @@ func TestGetInvite_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
@@ -1058,7 +1057,7 @@ func TestGetInvite_MissingParticipantIdentity(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	participantStore := newFakeParticipantStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	inviteStore.invites["invite-1"] = storage.InviteRecord{
 		ID:         "invite-1",
 		CampaignID: "campaign-1",
@@ -1106,7 +1105,7 @@ func TestListInvites_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
@@ -1144,7 +1143,7 @@ func TestListInvites_WithStatusFilter(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
@@ -1188,7 +1187,7 @@ func TestListInvites_EmptyResult(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
@@ -1216,7 +1215,7 @@ func TestListPendingInvitesForUser_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
 
-	campaignStore.campaigns["campaign-1"] = storage.CampaignRecord{ID: "campaign-1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
 		"seat-1": {ID: "seat-1", CampaignID: "campaign-1", Name: "Seat 1", Role: participant.RolePlayer},
 	}

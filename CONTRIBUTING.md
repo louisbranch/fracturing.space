@@ -31,6 +31,7 @@ use the Make targets documented in [integration tests](docs/running/integration-
 - `make integration`
 - `make cover`
 - `make web-architecture-check` (required when changing `internal/services/web/` architecture, modules, routes, or templates)
+- `make game-architecture-check` (required when changing `internal/services/game/` domain boundaries or write-path architecture guards)
 
 ------------------------------------------------------------------------
 

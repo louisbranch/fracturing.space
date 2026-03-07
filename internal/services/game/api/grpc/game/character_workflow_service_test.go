@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -336,7 +336,7 @@ func newWorkflowCharacterService(t *testing.T, profile storage.DaggerheartCharac
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System: bridge.SystemIDDaggerheart,
 	}
 
 	return NewCharacterService(Stores{

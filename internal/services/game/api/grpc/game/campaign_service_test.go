@@ -11,11 +11,11 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
@@ -89,11 +89,7 @@ func (s *orderedCampaignStore) List(_ context.Context, pageSize int, pageToken s
 func ownerParticipantStore(campaignID string) *fakeParticipantStore {
 	store := newFakeParticipantStore()
 	store.participants[campaignID] = map[string]storage.ParticipantRecord{
-		"owner-1": {
-			ID:             "owner-1",
-			CampaignID:     campaignID,
-			CampaignAccess: participant.CampaignAccessOwner,
-		},
+		"owner-1": ownerParticipantRecord(campaignID, "owner-1"),
 	}
 	return store
 }
@@ -1001,26 +997,13 @@ func TestListCampaigns_DeniesAdminOverrideWithoutPrincipal(t *testing.T) {
 func TestListCampaigns_WithParticipantIdentity(t *testing.T) {
 	ts := newTestStores()
 	now := time.Now().UTC()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Name:   "Campaign One",
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status: campaign.StatusDraft,
-		GmMode: campaign.GmModeHuman,
-	}
-	ts.Campaign.campaigns["c2"] = storage.CampaignRecord{
-		ID:        "c2",
-		Name:      "Campaign Two",
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.StatusActive,
-		GmMode:    campaign.GmModeAI,
-		CreatedAt: now,
-	}
+	ts.Campaign.campaigns["c1"] = daggerheartCampaignRecord("c1", "Campaign One", campaign.StatusDraft, campaign.GmModeHuman)
+	ts.Campaign.campaigns["c2"] = daggerheartCampaignRecordWithCreatedAt("c2", "Campaign Two", campaign.StatusActive, campaign.GmModeAI, now)
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"participant-1": {ID: "participant-1", CampaignID: "c1", UserID: "user-1", Name: "Alice"},
+		"participant-1": userParticipantRecord("c1", "participant-1", "user-1", "Alice"),
 	}
 	ts.Participant.participants["c2"] = map[string]storage.ParticipantRecord{
-		"participant-1": {ID: "participant-1", CampaignID: "c2", UserID: "user-1", Name: "Alice"},
+		"participant-1": userParticipantRecord("c2", "participant-1", "user-1", "Alice"),
 	}
 
 	svc := NewCampaignService(ts.build())
@@ -1040,27 +1023,13 @@ func TestListCampaigns_WithParticipantIdentity(t *testing.T) {
 func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
 	ts := newTestStores()
 	now := time.Now().UTC()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:        "c1",
-		Name:      "Campaign One",
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.StatusDraft,
-		GmMode:    campaign.GmModeHuman,
-		CreatedAt: now,
-	}
-	ts.Campaign.campaigns["c2"] = storage.CampaignRecord{
-		ID:        "c2",
-		Name:      "Campaign Two",
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.StatusActive,
-		GmMode:    campaign.GmModeAI,
-		CreatedAt: now,
-	}
+	ts.Campaign.campaigns["c1"] = daggerheartCampaignRecordWithCreatedAt("c1", "Campaign One", campaign.StatusDraft, campaign.GmModeHuman, now)
+	ts.Campaign.campaigns["c2"] = daggerheartCampaignRecordWithCreatedAt("c2", "Campaign Two", campaign.StatusActive, campaign.GmModeAI, now)
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", UserID: "user-123", Name: "Alice"},
+		"p1": userParticipantRecord("c1", "p1", "user-123", "Alice"),
 	}
 	ts.Participant.participants["c2"] = map[string]storage.ParticipantRecord{
-		"p2": {ID: "p2", CampaignID: "c2", UserID: "user-999", Name: "Bob"},
+		"p2": userParticipantRecord("c2", "p2", "user-999", "Bob"),
 	}
 
 	svc := NewCampaignService(ts.build())
@@ -1093,14 +1062,14 @@ func TestListCampaigns_UserScopedByMetadataAfterPageBoundary(t *testing.T) {
 		orderedStore.campaigns[i-1] = storage.CampaignRecord{
 			ID:        fmt.Sprintf("campaign-%03d", i),
 			Name:      fmt.Sprintf("Campaign %d", i),
-			System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			System:    bridge.SystemIDDaggerheart,
 			Status:    campaign.StatusDraft,
 			GmMode:    campaign.GmModeHuman,
 			CreatedAt: time.Now().UTC(),
 		}
 	}
 	ts.Participant.participants["campaign-012"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "campaign-012", UserID: "user-123", Name: "Alice"},
+		"p1": userParticipantRecord("campaign-012", "p1", "user-123", "Alice"),
 	}
 
 	stores := ts.build()
@@ -1125,14 +1094,7 @@ func TestListCampaigns_UserScopedByMetadataAfterPageBoundary(t *testing.T) {
 
 func TestListCampaigns_UserScopedByMetadataQueryFailure(t *testing.T) {
 	ts := newTestStores()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:        "c1",
-		Name:      "Campaign One",
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.StatusDraft,
-		GmMode:    campaign.GmModeHuman,
-		CreatedAt: time.Now().UTC(),
-	}
+	ts.Campaign.campaigns["c1"] = daggerheartCampaignRecordWithCreatedAt("c1", "Campaign One", campaign.StatusDraft, campaign.GmModeHuman, time.Now().UTC())
 	ts.Participant.listCampaignIDsByUserErr = fmt.Errorf("campaign index unavailable")
 	svc := NewCampaignService(ts.build())
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -1162,14 +1124,7 @@ func TestGetCampaign_NotFound(t *testing.T) {
 func TestGetCampaign_DeniesMissingIdentity(t *testing.T) {
 	ts := newTestStores()
 	now := time.Now().UTC()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:        "c1",
-		Name:      "Test Campaign",
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.StatusDraft,
-		GmMode:    campaign.GmModeHuman,
-		CreatedAt: now,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatusAndCreatedAt(campaign.StatusDraft, now)
 
 	svc := NewCampaignService(ts.build())
 	_, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{CampaignId: "c1"})
@@ -1179,14 +1134,7 @@ func TestGetCampaign_DeniesMissingIdentity(t *testing.T) {
 func TestGetCampaign_DeniesNonMember(t *testing.T) {
 	ts := newTestStores()
 	now := time.Now().UTC()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:        "c1",
-		Name:      "Test Campaign",
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.StatusDraft,
-		GmMode:    campaign.GmModeHuman,
-		CreatedAt: now,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatusAndCreatedAt(campaign.StatusDraft, now)
 
 	svc := NewCampaignService(ts.build())
 	_, err := svc.GetCampaign(contextWithParticipantID("outsider-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
@@ -1196,21 +1144,9 @@ func TestGetCampaign_DeniesNonMember(t *testing.T) {
 func TestGetCampaign_Success(t *testing.T) {
 	ts := newTestStores()
 	now := time.Now().UTC()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:        "c1",
-		Name:      "Test Campaign",
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.StatusDraft,
-		GmMode:    campaign.GmModeHuman,
-		CreatedAt: now,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatusAndCreatedAt(campaign.StatusDraft, now)
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"participant-1": {
-			ID:             "participant-1",
-			CampaignID:     "c1",
-			UserID:         "user-1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"participant-1": memberUserParticipantRecord("c1", "participant-1", "user-1", ""),
 	}
 
 	svc := NewCampaignService(ts.build())
@@ -1233,21 +1169,9 @@ func TestGetCampaign_Success(t *testing.T) {
 func TestGetCampaign_SuccessByUserIDFallback(t *testing.T) {
 	ts := newTestStores()
 	now := time.Now().UTC()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:        "c1",
-		Name:      "Test Campaign",
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:    campaign.StatusDraft,
-		GmMode:    campaign.GmModeHuman,
-		CreatedAt: now,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatusAndCreatedAt(campaign.StatusDraft, now)
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"participant-1": {
-			ID:             "participant-1",
-			CampaignID:     "c1",
-			UserID:         "user-1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"participant-1": memberUserParticipantRecord("c1", "participant-1", "user-1", ""),
 	}
 
 	svc := NewCampaignService(ts.build())
@@ -1283,13 +1207,7 @@ func TestEndCampaign_ActiveSessionBlocks(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Name:   "Test Campaign",
-		Status: campaign.StatusActive,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: campaign.GmModeHuman,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatus(campaign.StatusActive)
 	ts.Session.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
@@ -1304,13 +1222,7 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 	ts := newTestStores().withSession()
 	ts.Participant = ownerParticipantStore("c1")
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Name:   "Test Campaign",
-		Status: campaign.StatusDraft,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: campaign.GmModeHuman,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatus(campaign.StatusDraft)
 
 	svc := NewCampaignService(ts.build())
 	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
@@ -1321,16 +1233,9 @@ func TestEndCampaign_AllowsManagerAccess(t *testing.T) {
 	ts := newTestStores().withSession()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"manager-1": {
-			ID:             "manager-1",
-			CampaignID:     "c1",
-			CampaignAccess: "manager",
-		},
+		"manager-1": managerParticipantRecord("c1", "manager-1"),
 	}
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
@@ -1360,7 +1265,7 @@ func TestEndCampaign_AllowsManagerAccess(t *testing.T) {
 func TestEndCampaign_RequiresDomainEngine(t *testing.T) {
 	ts := newTestStores().withSession()
 	ts.Participant = ownerParticipantStore("c1")
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
 	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
@@ -1372,13 +1277,7 @@ func TestEndCampaign_Success(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Name:   "Test Campaign",
-		Status: campaign.StatusActive,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: campaign.GmModeHuman,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatus(campaign.StatusActive)
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
@@ -1426,13 +1325,7 @@ func TestEndCampaign_UsesDomainEngine(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Name:   "Test Campaign",
-		Status: campaign.StatusActive,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: campaign.GmModeHuman,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatus(campaign.StatusActive)
 
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
@@ -1486,10 +1379,7 @@ func TestArchiveCampaign_ActiveSessionBlocks(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Session.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
@@ -1503,7 +1393,7 @@ func TestArchiveCampaign_ActiveSessionBlocks(t *testing.T) {
 func TestArchiveCampaign_RequiresDomainEngine(t *testing.T) {
 	ts := newTestStores().withSession()
 	ts.Participant = ownerParticipantStore("c1")
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
 	_, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
@@ -1515,13 +1405,7 @@ func TestArchiveCampaign_Success(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Name:   "Test Campaign",
-		Status: campaign.StatusCompleted,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: campaign.GmModeHuman,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatus(campaign.StatusCompleted)
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
@@ -1563,13 +1447,7 @@ func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Name:   "Test Campaign",
-		Status: campaign.StatusCompleted,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: campaign.GmModeHuman,
-	}
+	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatus(campaign.StatusCompleted)
 
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
@@ -1621,10 +1499,7 @@ func TestRestoreCampaign_NotFound(t *testing.T) {
 func TestRestoreCampaign_NotArchivedDisallowed(t *testing.T) {
 	ts := newTestStores()
 	ts.Participant = ownerParticipantStore("c1")
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
 	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
@@ -1634,7 +1509,7 @@ func TestRestoreCampaign_NotArchivedDisallowed(t *testing.T) {
 func TestRestoreCampaign_RequiresDomainEngine(t *testing.T) {
 	ts := newTestStores()
 	ts.Participant = ownerParticipantStore("c1")
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusArchived}
+	ts.Campaign.campaigns["c1"] = archivedCampaignRecord("c1")
 
 	svc := NewCampaignService(ts.build())
 	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
@@ -1647,14 +1522,7 @@ func TestRestoreCampaign_Success(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	archivedAt := now.Add(-24 * time.Hour)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:         "c1",
-		Name:       "Test Campaign",
-		Status:     campaign.StatusArchived,
-		ArchivedAt: &archivedAt,
-		System:     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:     campaign.GmModeHuman,
-	}
+	ts.Campaign.campaigns["c1"] = testArchivedCampaignRecord(archivedAt)
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
@@ -1697,14 +1565,7 @@ func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	archivedAt := now.Add(-24 * time.Hour)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:         "c1",
-		Name:       "Test Campaign",
-		Status:     campaign.StatusArchived,
-		ArchivedAt: &archivedAt,
-		System:     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:     campaign.GmModeHuman,
-	}
+	ts.Campaign.campaigns["c1"] = testArchivedCampaignRecord(archivedAt)
 
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
@@ -1760,15 +1621,11 @@ func TestUpdateCampaign_Success(t *testing.T) {
 	ts := newTestStores()
 	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2026, 2, 14, 12, 0, 0, 0, time.UTC)
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:          "c1",
-		Name:        "Old Name",
-		ThemePrompt: "Old theme",
-		Locale:      commonv1.Locale_LOCALE_EN_US,
-		Status:      campaign.StatusActive,
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:      campaign.GmModeHuman,
-	}
+	storedCampaign := testCampaignRecordWithStatus(campaign.StatusActive)
+	storedCampaign.Name = "Old Name"
+	storedCampaign.ThemePrompt = "Old theme"
+	storedCampaign.Locale = commonv1.Locale_LOCALE_EN_US
+	ts.Campaign.campaigns["c1"] = storedCampaign
 
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{
@@ -1831,15 +1688,11 @@ func TestUpdateCampaign_NoOpSkipsDomainCommand(t *testing.T) {
 	ts := newTestStores()
 	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2026, 2, 14, 12, 0, 0, 0, time.UTC)
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:          "c1",
-		Name:        "Existing Name",
-		ThemePrompt: "Existing theme",
-		Locale:      commonv1.Locale_LOCALE_EN_US,
-		Status:      campaign.StatusActive,
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:      campaign.GmModeHuman,
-	}
+	storedCampaign := testCampaignRecordWithStatus(campaign.StatusActive)
+	storedCampaign.Name = "Existing Name"
+	storedCampaign.ThemePrompt = "Existing theme"
+	storedCampaign.Locale = commonv1.Locale_LOCALE_EN_US
+	ts.Campaign.campaigns["c1"] = storedCampaign
 
 	domain := &fakeDomainEngine{store: ts.Event}
 	svc := &CampaignService{
@@ -1874,14 +1727,9 @@ func TestSetCampaignCover_Success(t *testing.T) {
 	ts := newTestStores()
 	ts.Participant = ownerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:           "c1",
-		Name:         "Test Campaign",
-		Status:       campaign.StatusActive,
-		CoverAssetID: "camp-cover-01",
-		System:       commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:       campaign.GmModeHuman,
-	}
+	storedCampaign := testCampaignRecordWithStatus(campaign.StatusActive)
+	storedCampaign.CoverAssetID = "camp-cover-01"
+	ts.Campaign.campaigns["c1"] = storedCampaign
 
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
 		Decision: command.Accept(event.Event{

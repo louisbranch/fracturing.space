@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -37,7 +38,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		ID:          "source",
 		Name:        "Source Campaign",
 		Status:      campaign.StatusActive,
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:      bridge.SystemIDDaggerheart,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
 	}
@@ -389,7 +390,7 @@ func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *test
 		ID:          "source",
 		Name:        "Source Campaign",
 		Status:      campaign.StatusActive,
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:      bridge.SystemIDDaggerheart,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
 	}
@@ -511,7 +512,7 @@ func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
 		ID:          "source",
 		Name:        "Source Campaign",
 		Status:      campaign.StatusActive,
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:      bridge.SystemIDDaggerheart,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
 	}
@@ -566,7 +567,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		ID:          "source",
 		Name:        "Source Campaign",
 		Status:      campaign.StatusActive,
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:      bridge.SystemIDDaggerheart,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
 	}
@@ -809,7 +810,7 @@ func TestForkCampaign_UsesDomainEngine(t *testing.T) {
 		ID:          "source",
 		Name:        "Source Campaign",
 		Status:      campaign.StatusActive,
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:      bridge.SystemIDDaggerheart,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
 	}
@@ -922,7 +923,7 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 		ID:          "source",
 		Name:        "Source Campaign",
 		Status:      campaign.StatusActive,
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:      bridge.SystemIDDaggerheart,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
 	}
@@ -1093,7 +1094,7 @@ func TestForkCampaign_RejectsWhenSourceCampaignHasActiveSession(t *testing.T) {
 		ID:          "source",
 		Name:        "Source Campaign",
 		Status:      campaign.StatusActive,
-		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:      bridge.SystemIDDaggerheart,
 		GmMode:      campaign.GmModeHuman,
 		ThemePrompt: "theme",
 	}

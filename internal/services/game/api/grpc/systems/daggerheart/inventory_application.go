@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -28,8 +27,8 @@ func (s *DaggerheartService) validateInventoryPreconditions(ctx context.Context,
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return status.Errorf(codes.FailedPrecondition, "campaign system does not support daggerheart %s", operationName)
+	if err := requireDaggerheartSystemf(c, "campaign system does not support daggerheart %s", operationName); err != nil {
+		return err
 	}
 
 	// Verify character exists.

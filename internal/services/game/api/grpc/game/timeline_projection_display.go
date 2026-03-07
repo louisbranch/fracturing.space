@@ -1,8 +1,8 @@
 package game
 
 import (
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -15,8 +15,8 @@ func campaignProjectionDisplay(entry storage.CampaignRecord) *campaignv1.Project
 	display := &campaignv1.ProjectionDisplay{
 		Title: entry.Name,
 	}
-	switch entry.System {
-	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
+	switch systemIDFromCampaignRecord(entry) {
+	case bridge.SystemIDDaggerheart:
 		display.Subtitle = "DAGGERHEART"
 	}
 	switch entry.Status {

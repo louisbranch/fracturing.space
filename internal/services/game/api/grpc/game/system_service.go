@@ -34,7 +34,7 @@ func (s *SystemService) ListGameSystems(ctx context.Context, in *gamev1.ListGame
 	}
 
 	systemsList := s.registry.List()
-	defaultVersions := make(map[commonv1.GameSystem]string, len(systemsList))
+	defaultVersions := make(map[bridge.SystemID]string, len(systemsList))
 	for _, system := range systemsList {
 		if _, ok := defaultVersions[system.ID()]; !ok {
 			defaultVersions[system.ID()] = s.registry.DefaultVersion(system.ID())
@@ -67,18 +67,19 @@ func (s *SystemService) GetGameSystem(ctx context.Context, in *gamev1.GetGameSys
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get game system request is required")
 	}
-	if in.GetId() == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+	systemID, ok := systemIDFromProto(in.GetId())
+	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "game system id is required")
 	}
 	if s.registry == nil {
 		return nil, status.Error(codes.Internal, "game system registry is not configured")
 	}
 
-	system := s.registry.GetVersion(in.GetId(), in.GetVersion())
+	system := s.registry.GetVersion(systemID, in.GetVersion())
 	if system == nil {
 		return nil, status.Error(codes.NotFound, "game system not registered")
 	}
-	defaultVersion := s.registry.DefaultVersion(in.GetId())
+	defaultVersion := s.registry.DefaultVersion(systemID)
 
 	return &gamev1.GetGameSystemResponse{
 		System: systemToProto(system, defaultVersion),
@@ -89,13 +90,76 @@ func systemToProto(system bridge.GameSystem, defaultVersion string) *gamev1.Game
 	metadata := system.RegistryMetadata()
 	version := strings.TrimSpace(system.Version())
 	return &gamev1.GameSystemInfo{
-		Id:                  system.ID(),
+		Id:                  systemIDToProto(system.ID()),
 		Name:                system.Name(),
 		Version:             version,
-		ImplementationStage: metadata.ImplementationStage,
-		OperationalStatus:   metadata.OperationalStatus,
-		AccessLevel:         metadata.AccessLevel,
+		ImplementationStage: implementationStageToProto(metadata.ImplementationStage),
+		OperationalStatus:   operationalStatusToProto(metadata.OperationalStatus),
+		AccessLevel:         accessLevelToProto(metadata.AccessLevel),
 		IsDefault:           version != "" && version == strings.TrimSpace(defaultVersion),
 		Notes:               metadata.Notes,
+	}
+}
+
+func systemIDFromProto(value commonv1.GameSystem) (bridge.SystemID, bool) {
+	switch value {
+	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
+		return bridge.SystemIDDaggerheart, true
+	default:
+		return bridge.SystemIDUnspecified, false
+	}
+}
+
+func systemIDToProto(value bridge.SystemID) commonv1.GameSystem {
+	switch value {
+	case bridge.SystemIDDaggerheart:
+		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
+	default:
+		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED
+	}
+}
+
+func implementationStageToProto(value bridge.ImplementationStage) commonv1.GameSystemImplementationStage {
+	switch value {
+	case bridge.ImplementationStagePlanned:
+		return commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PLANNED
+	case bridge.ImplementationStagePartial:
+		return commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL
+	case bridge.ImplementationStageComplete:
+		return commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE
+	case bridge.ImplementationStageDeprecated:
+		return commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_DEPRECATED
+	default:
+		return commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_UNSPECIFIED
+	}
+}
+
+func operationalStatusToProto(value bridge.OperationalStatus) commonv1.GameSystemOperationalStatus {
+	switch value {
+	case bridge.OperationalStatusOffline:
+		return commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OFFLINE
+	case bridge.OperationalStatusDegraded:
+		return commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_DEGRADED
+	case bridge.OperationalStatusOperational:
+		return commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL
+	case bridge.OperationalStatusMaintenance:
+		return commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_MAINTENANCE
+	default:
+		return commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_UNSPECIFIED
+	}
+}
+
+func accessLevelToProto(value bridge.AccessLevel) commonv1.GameSystemAccessLevel {
+	switch value {
+	case bridge.AccessLevelInternal:
+		return commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_INTERNAL
+	case bridge.AccessLevelBeta:
+		return commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA
+	case bridge.AccessLevelPublic:
+		return commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_PUBLIC
+	case bridge.AccessLevelRetired:
+		return commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_RETIRED
+	default:
+		return commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_UNSPECIFIED
 	}
 }

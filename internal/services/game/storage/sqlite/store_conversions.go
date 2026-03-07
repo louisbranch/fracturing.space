@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
@@ -19,22 +19,21 @@ import (
 
 // Conversion helpers
 
-func gameSystemToString(gs commonv1.GameSystem) string {
+func gameSystemToString(gs bridge.SystemID) string {
 	switch gs {
-	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
+	case bridge.SystemIDDaggerheart:
 		return "DAGGERHEART"
 	default:
 		return "UNSPECIFIED"
 	}
 }
 
-func stringToGameSystem(s string) commonv1.GameSystem {
-	switch s {
-	case "DAGGERHEART":
-		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
-	default:
-		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED
+func stringToGameSystem(s string) bridge.SystemID {
+	systemID, ok := bridge.NormalizeSystemID(s)
+	if !ok {
+		return bridge.SystemIDUnspecified
 	}
+	return systemID
 }
 
 func campaignStatusToString(status campaign.Status) string {

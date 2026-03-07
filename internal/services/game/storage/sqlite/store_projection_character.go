@@ -143,17 +143,14 @@ func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize 
 		Characters: make([]storage.CharacterRecord, 0, pageSize),
 	}
 
-	for i, row := range rows {
-		if i >= pageSize {
-			page.NextPageToken = rows[pageSize-1].ID
-			break
-		}
-		c, err := dbCharacterToDomain(row)
-		if err != nil {
-			return storage.CharacterPage{}, err
-		}
-		page.Characters = append(page.Characters, c)
+	characters, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Character) string {
+		return row.ID
+	}, dbCharacterToDomain)
+	if err != nil {
+		return storage.CharacterPage{}, err
 	}
+	page.Characters = characters
+	page.NextPageToken = nextPageToken
 
 	return page, nil
 }

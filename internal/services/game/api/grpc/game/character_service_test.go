@@ -9,7 +9,6 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -23,11 +22,7 @@ import (
 func characterManagerParticipantStore(campaignID string) *fakeParticipantStore {
 	store := newFakeParticipantStore()
 	store.participants[campaignID] = map[string]storage.ParticipantRecord{
-		"manager-1": {
-			ID:             "manager-1",
-			CampaignID:     campaignID,
-			CampaignAccess: participant.CampaignAccessManager,
-		},
+		"manager-1": managerParticipantRecord(campaignID, "manager-1"),
 	}
 	return store
 }
@@ -35,7 +30,7 @@ func characterManagerParticipantStore(campaignID string) *fakeParticipantStore {
 // activeCampaignStore returns a campaign store with an active campaign for the given ID.
 func activeCampaignStore(campaignID string) *fakeCampaignStore {
 	store := newFakeCampaignStore()
-	store.campaigns[campaignID] = storage.CampaignRecord{ID: campaignID, Status: campaign.StatusActive}
+	store.campaigns[campaignID] = activeCampaignRecord(campaignID)
 	return store
 }
 
@@ -66,10 +61,7 @@ func TestCreateCharacter_CampaignNotFound(t *testing.T) {
 
 func TestCreateCharacter_CompletedCampaignDisallowed(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusCompleted,
-	}
+	ts.Campaign.campaigns["c1"] = completedCampaignRecord("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
 
 	svc := NewCharacterService(ts.build())
@@ -84,10 +76,7 @@ func TestCreateCharacter_CompletedCampaignDisallowed(t *testing.T) {
 
 func TestCreateCharacter_EmptyName(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewCharacterService(ts.build())
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
@@ -99,10 +88,7 @@ func TestCreateCharacter_EmptyName(t *testing.T) {
 
 func TestCreateCharacter_InvalidKind(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewCharacterService(ts.build())
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
@@ -114,7 +100,7 @@ func TestCreateCharacter_InvalidKind(t *testing.T) {
 
 func TestCreateCharacter_DeniesMissingIdentity(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
 
 	svc := NewCharacterService(ts.build())
@@ -129,7 +115,7 @@ func TestCreateCharacter_DeniesMissingIdentity(t *testing.T) {
 
 func TestCreateCharacter_RequiresDomainEngine(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
 
 	svc := NewCharacterService(ts.build())
@@ -146,10 +132,7 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		commandTypeCharacterCreateWithProfile: {
 			Decision: command.Accept(
@@ -231,10 +214,7 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusDraft,
-	}
+	ts.Campaign.campaigns["c1"] = draftCampaignRecord("c1")
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		commandTypeCharacterCreateWithProfile: {
 			Decision: command.Accept(
@@ -287,10 +267,7 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		commandTypeCharacterCreateWithProfile: {
@@ -366,10 +343,7 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2026, 2, 20, 18, 30, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		commandTypeCharacterCreateWithProfile: {
 			Decision: command.Accept(
@@ -427,17 +401,9 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 19, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"player-1": {
-			ID:             "player-1",
-			CampaignID:     "c1",
-			Role:           participant.RolePlayer,
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"player-1": roleMemberParticipantRecord("c1", "player-1", participant.RolePlayer),
 	}
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		commandTypeCharacterCreateWithProfile: {
@@ -507,17 +473,9 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 21, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"gm-1": {
-			ID:             "gm-1",
-			CampaignID:     "c1",
-			Role:           participant.RoleGM,
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"gm-1": roleMemberParticipantRecord("c1", "gm-1", participant.RoleGM),
 	}
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		commandTypeCharacterCreateWithProfile: {
@@ -585,7 +543,7 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 
 func TestUpdateCharacter_NoFields(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
 	}
@@ -602,18 +560,10 @@ func TestUpdateCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 18, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"member-1": {
-			ID:             "member-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
-		"member-owner": {
-			ID:             "member-owner",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"member-1":     memberParticipantRecord("c1", "member-1"),
+		"member-owner": memberParticipantRecord("c1", "member-owner"),
 	}
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
@@ -665,13 +615,9 @@ func TestUpdateCharacter_DeniesControllerWhenOwnershipUnresolved(t *testing.T) {
 	// no ownership events should be denied — controller is not owner.
 	ts := newTestStores().withCharacter()
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"controller-1": {
-			ID:             "controller-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"controller-1": memberParticipantRecord("c1", "controller-1"),
 	}
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, ParticipantID: "controller-1"},
@@ -696,13 +642,9 @@ func TestUpdateCharacter_AllowsMemberWhenOwner(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 18, 35, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"member-1": {
-			ID:             "member-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"member-1": memberParticipantRecord("c1", "member-1"),
 	}
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-1", Name: "Hero", Kind: character.KindPC},
@@ -758,18 +700,10 @@ func TestUpdateCharacter_AllowsMemberWhenOwnershipTransferred(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 19, 30, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"member-1": {
-			ID:             "member-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
-		"member-owner": {
-			ID:             "member-owner",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"member-1":     memberParticipantRecord("c1", "member-1"),
+		"member-owner": memberParticipantRecord("c1", "member-owner"),
 	}
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-1", Name: "Hero", Kind: character.KindPC},
@@ -836,18 +770,10 @@ func TestUpdateCharacter_DeniesManagerOwnershipTransfer(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 19, 35, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"manager-1": {
-			ID:             "manager-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessManager,
-		},
-		"member-1": {
-			ID:             "member-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"manager-1": managerParticipantRecord("c1", "manager-1"),
+		"member-1":  memberParticipantRecord("c1", "member-1"),
 	}
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
@@ -898,18 +824,10 @@ func TestUpdateCharacter_AllowsOwnerOwnershipTransfer(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 19, 40, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {
-			ID:             "owner-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessOwner,
-		},
-		"member-1": {
-			ID:             "member-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"owner-1":  ownerParticipantRecord("c1", "owner-1"),
+		"member-1": memberParticipantRecord("c1", "member-1"),
 	}
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
@@ -973,7 +891,7 @@ func TestUpdateCharacter_AllowsOwnerOwnershipTransfer(t *testing.T) {
 
 func TestUpdateCharacter_RequiresDomainEngine(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, OwnerParticipantID: "manager-1"},
@@ -992,7 +910,7 @@ func TestUpdateCharacter_Success(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Participant = characterManagerParticipantStore("c1")
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, Notes: "old"},
 	}
@@ -1051,7 +969,7 @@ func TestUpdateCharacter_UsesDomainEngine(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Participant = characterManagerParticipantStore("c1")
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, Notes: "old"},
 	}
@@ -1117,7 +1035,7 @@ func TestDeleteCharacter_Success(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Participant = characterManagerParticipantStore("c1")
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecordWithCharacterCount("c1", 1)
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
 	}
@@ -1170,18 +1088,10 @@ func TestDeleteCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 18, 10, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecordWithCharacterCount("c1", 1)
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"member-1": {
-			ID:             "member-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
-		"member-owner": {
-			ID:             "member-owner",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"member-1":     memberParticipantRecord("c1", "member-1"),
+		"member-owner": memberParticipantRecord("c1", "member-owner"),
 	}
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
@@ -1230,7 +1140,7 @@ func TestDeleteCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 
 func TestDeleteCharacter_RequiresDomainEngine(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecordWithCharacterCount("c1", 1)
 	ts.Participant = characterManagerParticipantStore("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, OwnerParticipantID: "manager-1"},
@@ -1248,7 +1158,7 @@ func TestDeleteCharacter_UsesDomainEngine(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Participant = characterManagerParticipantStore("c1")
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecordWithCharacterCount("c1", 1)
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
 	}
@@ -1331,12 +1241,9 @@ func TestListCharacters_CampaignNotFound(t *testing.T) {
 
 func TestListCharacters_DeniesMissingIdentity(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
+		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
 	}
 
 	svc := NewCharacterService(ts.build())
@@ -1346,12 +1253,9 @@ func TestListCharacters_DeniesMissingIdentity(t *testing.T) {
 
 func TestListCharacters_EmptyList(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
+		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
 	}
 
 	svc := NewCharacterService(ts.build())
@@ -1368,13 +1272,13 @@ func TestListCharacters_WithCharacters(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Now().UTC()
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, CreatedAt: now},
 		"ch2": {ID: "ch2", CampaignID: "c1", Name: "Sidekick", Kind: character.KindNPC, CreatedAt: now},
 	}
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
+		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
 	}
 
 	svc := NewCharacterService(ts.build())
@@ -1404,7 +1308,7 @@ func TestSetDefaultControl_MissingCampaignId(t *testing.T) {
 
 func TestSetDefaultControl_MissingCharacterId(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewCharacterService(ts.build())
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
@@ -1426,7 +1330,7 @@ func TestSetDefaultControl_CampaignNotFound(t *testing.T) {
 
 func TestSetDefaultControl_CharacterNotFound(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewCharacterService(ts.build())
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
@@ -1439,7 +1343,7 @@ func TestSetDefaultControl_CharacterNotFound(t *testing.T) {
 
 func TestSetDefaultControl_RequiresDomainEngine(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", OwnerParticipantID: "manager-1"},
@@ -1458,7 +1362,7 @@ func TestSetDefaultControl_MissingParticipantId(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Now().UTC()
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
@@ -1475,7 +1379,7 @@ func TestSetDefaultControl_ParticipantNotFound(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Now().UTC()
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
@@ -1494,7 +1398,7 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
@@ -1569,7 +1473,7 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
@@ -1657,7 +1561,7 @@ func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
 	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
@@ -1740,7 +1644,7 @@ func TestGetCharacterSheet_MissingCampaignId(t *testing.T) {
 
 func TestGetCharacterSheet_MissingCharacterId(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewCharacterService(ts.build())
 	_, err := svc.GetCharacterSheet(context.Background(), &statev1.GetCharacterSheetRequest{CampaignId: "c1"})
@@ -1758,9 +1662,9 @@ func TestGetCharacterSheet_CampaignNotFound(t *testing.T) {
 
 func TestGetCharacterSheet_DeniesMissingIdentity(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
+		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
 	}
 
 	svc := NewCharacterService(ts.build())
@@ -1773,9 +1677,9 @@ func TestGetCharacterSheet_DeniesMissingIdentity(t *testing.T) {
 
 func TestGetCharacterSheet_CharacterNotFound(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
+		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
 	}
 
 	svc := NewCharacterService(ts.build())
@@ -1790,7 +1694,7 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Now().UTC()
 
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, CreatedAt: now},
 	}
@@ -1801,7 +1705,7 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
+		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
 	}
 
 	svc := NewCharacterService(ts.build())
@@ -1866,7 +1770,7 @@ func TestPatchCharacterProfile_CampaignNotFound(t *testing.T) {
 
 func TestPatchCharacterProfile_ProfileNotFound(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
@@ -1877,10 +1781,7 @@ func TestPatchCharacterProfile_ProfileNotFound(t *testing.T) {
 
 func TestPatchCharacterProfile_CompletedCampaignDisallowed(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusCompleted,
-	}
+	ts.Campaign.campaigns["c1"] = completedCampaignRecord("c1")
 	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
@@ -1934,16 +1835,8 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 	now := time.Date(2026, 2, 20, 18, 20, 0, 0, time.UTC)
 
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
-		"member-1": {
-			ID:             "member-1",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
-		"member-owner": {
-			ID:             "member-owner",
-			CampaignID:     "c1",
-			CampaignAccess: participant.CampaignAccessMember,
-		},
+		"member-1":     memberParticipantRecord("c1", "member-1"),
+		"member-owner": memberParticipantRecord("c1", "member-owner"),
 	}
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
@@ -2251,7 +2144,7 @@ func TestDeleteCharacter_CampaignNotFound(t *testing.T) {
 
 func TestDeleteCharacter_MissingCharacterId(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	svc := NewCharacterService(ts.build())
 	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
 		CampaignId: "c1",
@@ -2261,7 +2154,7 @@ func TestDeleteCharacter_MissingCharacterId(t *testing.T) {
 
 func TestDeleteCharacter_CharacterNotFound(t *testing.T) {
 	ts := newTestStores().withCharacter()
-	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	svc := NewCharacterService(ts.build())
 	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",

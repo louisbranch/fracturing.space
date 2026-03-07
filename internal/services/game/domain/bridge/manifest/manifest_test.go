@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -67,7 +66,7 @@ func TestModulesAndMetadataShareSystemVersionKeys(t *testing.T) {
 		if !ok {
 			t.Fatalf("unknown module id %q", module.ID())
 		}
-		key := fmt.Sprintf("%d@%s", systemID, strings.TrimSpace(module.Version()))
+		key := fmt.Sprintf("%s@%s", systemID, strings.TrimSpace(module.Version()))
 		moduleKeys[key] = struct{}{}
 	}
 
@@ -75,7 +74,7 @@ func TestModulesAndMetadataShareSystemVersionKeys(t *testing.T) {
 		if gameSystem == nil {
 			t.Fatal("metadata system is nil")
 		}
-		key := fmt.Sprintf("%d@%s", gameSystem.ID(), strings.TrimSpace(gameSystem.Version()))
+		key := fmt.Sprintf("%s@%s", gameSystem.ID(), strings.TrimSpace(gameSystem.Version()))
 		if _, ok := moduleKeys[key]; !ok {
 			t.Fatalf("metadata %q has no matching module registration", key)
 		}
@@ -287,17 +286,6 @@ func TestValidateProfileAdapterCoverage_SkipsNonProfileSystems(t *testing.T) {
 	}
 }
 
-func parseGameSystemID(raw string) (commonv1.GameSystem, bool) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, false
-	}
-	if value, ok := commonv1.GameSystem_value[trimmed]; ok {
-		return commonv1.GameSystem(value), true
-	}
-	upper := strings.ToUpper(trimmed)
-	if value, ok := commonv1.GameSystem_value["GAME_SYSTEM_"+upper]; ok {
-		return commonv1.GameSystem(value), true
-	}
-	return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, false
+func parseGameSystemID(raw string) (domainbridge.SystemID, bool) {
+	return domainbridge.NormalizeSystemID(raw)
 }

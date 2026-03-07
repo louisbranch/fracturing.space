@@ -63,11 +63,11 @@ func (f fakeSystemModule) StateFactory() module.StateFactory {
 }
 
 type fakeGameSystem struct {
-	id      commonv1.GameSystem
+	id      bridge.SystemID
 	version string
 }
 
-func (f fakeGameSystem) ID() commonv1.GameSystem {
+func (f fakeGameSystem) ID() bridge.SystemID {
 	return f.id
 }
 
@@ -241,7 +241,7 @@ func TestBuildProjectionApplyOutboxApplySkipsDuplicateSeq(t *testing.T) {
 		ID:               "camp-outbox-exactly-once",
 		Name:             "Exactly Once",
 		Locale:           commonv1.Locale_LOCALE_EN_US,
-		System:           commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:           bridge.SystemIDDaggerheart,
 		Status:           campaign.StatusDraft,
 		GmMode:           campaign.GmModeHuman,
 		Intent:           campaign.IntentStandard,
@@ -1186,7 +1186,7 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 		}
 		registry := bridge.NewMetadataRegistry()
 		if err := registry.Register(fakeGameSystem{
-			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			id:      bridge.SystemIDDaggerheart,
 			version: "v1",
 		}); err != nil {
 			t.Fatalf("register metadata system: %v", err)
@@ -1209,7 +1209,7 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 		}
 		registry := bridge.NewMetadataRegistry()
 		if err := registry.Register(fakeGameSystem{
-			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			id:      bridge.SystemIDDaggerheart,
 			version: "v1",
 		}); err != nil {
 			t.Fatalf("register metadata system: %v", err)
@@ -1228,7 +1228,7 @@ func TestValidateSystemRegistrationParity(t *testing.T) {
 	t.Run("metadata without module", func(t *testing.T) {
 		registry := bridge.NewMetadataRegistry()
 		if err := registry.Register(fakeGameSystem{
-			id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			id:      bridge.SystemIDDaggerheart,
 			version: "v1",
 		}); err != nil {
 			t.Fatalf("register metadata system: %v", err)

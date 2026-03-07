@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -21,7 +21,7 @@ func TestCampaignPaging(t *testing.T) {
 			ID:        id,
 			Name:      "Campaign",
 			Locale:    platformi18n.DefaultLocale(),
-			System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			System:    bridge.SystemIDDaggerheart,
 			Status:    campaign.StatusActive,
 			GmMode:    campaign.GmModeHuman,
 			CreatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
@@ -61,7 +61,7 @@ func TestParticipantPaging(t *testing.T) {
 		ID:        "camp-1",
 		Name:      "Campaign",
 		Locale:    platformi18n.DefaultLocale(),
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:    bridge.SystemIDDaggerheart,
 		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),

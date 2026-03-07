@@ -622,7 +622,7 @@ func TestParseGameSystem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if sys != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+	if sys != bridge.SystemIDDaggerheart {
 		t.Fatalf("expected DAGGERHEART, got %v", sys)
 	}
 
@@ -631,7 +631,7 @@ func TestParseGameSystem(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if sys != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+	if sys != bridge.SystemIDDaggerheart {
 		t.Fatalf("expected DAGGERHEART, got %v", sys)
 	}
 

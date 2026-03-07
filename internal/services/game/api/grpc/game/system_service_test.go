@@ -11,13 +11,13 @@ import (
 )
 
 type testRegistrySystem struct {
-	id       commonv1.GameSystem
+	id       bridge.SystemID
 	version  string
 	name     string
 	metadata bridge.RegistryMetadata
 }
 
-func (t *testRegistrySystem) ID() commonv1.GameSystem {
+func (t *testRegistrySystem) ID() bridge.SystemID {
 	return t.id
 }
 
@@ -44,26 +44,26 @@ func (t *testRegistrySystem) OutcomeApplier() bridge.OutcomeApplier {
 func TestListGameSystems_Defaults(t *testing.T) {
 	registry := bridge.NewMetadataRegistry()
 	if err := registry.Register(&testRegistrySystem{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      bridge.SystemIDDaggerheart,
 		version: "1.0.0",
 		name:    "Daggerheart",
 		metadata: bridge.RegistryMetadata{
-			ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
-			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
-			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
+			ImplementationStage: bridge.ImplementationStagePartial,
+			OperationalStatus:   bridge.OperationalStatusOperational,
+			AccessLevel:         bridge.AccessLevelBeta,
 			Notes:               "partial support",
 		},
 	}); err != nil {
 		t.Fatalf("register 1.0.0: %v", err)
 	}
 	if err := registry.Register(&testRegistrySystem{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      bridge.SystemIDDaggerheart,
 		version: "1.1.0",
 		name:    "Daggerheart",
 		metadata: bridge.RegistryMetadata{
-			ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
-			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
-			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
+			ImplementationStage: bridge.ImplementationStagePartial,
+			OperationalStatus:   bridge.OperationalStatusOperational,
+			AccessLevel:         bridge.AccessLevelBeta,
 			Notes:               "partial support",
 		},
 	}); err != nil {
@@ -95,25 +95,25 @@ func TestListGameSystems_Defaults(t *testing.T) {
 func TestGetGameSystem_DefaultVersion(t *testing.T) {
 	registry := bridge.NewMetadataRegistry()
 	if err := registry.Register(&testRegistrySystem{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      bridge.SystemIDDaggerheart,
 		version: "1.0.0",
 		name:    "Daggerheart",
 		metadata: bridge.RegistryMetadata{
-			ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
-			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
-			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
+			ImplementationStage: bridge.ImplementationStagePartial,
+			OperationalStatus:   bridge.OperationalStatusOperational,
+			AccessLevel:         bridge.AccessLevelBeta,
 		},
 	}); err != nil {
 		t.Fatalf("register 1.0.0: %v", err)
 	}
 	if err := registry.Register(&testRegistrySystem{
-		id:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		id:      bridge.SystemIDDaggerheart,
 		version: "1.1.0",
 		name:    "Daggerheart",
 		metadata: bridge.RegistryMetadata{
-			ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
-			OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
-			AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
+			ImplementationStage: bridge.ImplementationStagePartial,
+			OperationalStatus:   bridge.OperationalStatusOperational,
+			AccessLevel:         bridge.AccessLevelBeta,
 		},
 	}); err != nil {
 		t.Fatalf("register 1.1.0: %v", err)

@@ -2,6 +2,19 @@ package campaign
 
 import "strings"
 
+// GameSystem identifies the campaign rules system label.
+type GameSystem string
+
+const (
+	GameSystemUnspecified GameSystem = ""
+	GameSystemDaggerheart GameSystem = "daggerheart"
+)
+
+// String returns the canonical game-system label.
+func (g GameSystem) String() string {
+	return string(g)
+}
+
 // GmMode identifies how the GM role is handled.
 type GmMode string
 
@@ -35,6 +48,21 @@ const (
 // NormalizeStatus parses a status label into a canonical value.
 func NormalizeStatus(value string) (Status, bool) {
 	return normalizeStatusLabel(value)
+}
+
+// NormalizeGameSystem parses a game-system label into a canonical value.
+func NormalizeGameSystem(value string) (GameSystem, bool) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return GameSystemUnspecified, false
+	}
+	upper := strings.ToUpper(trimmed)
+	switch upper {
+	case "DAGGERHEART", "GAME_SYSTEM_DAGGERHEART":
+		return GameSystemDaggerheart, true
+	default:
+		return GameSystemUnspecified, false
+	}
 }
 
 // NormalizeGmMode parses a gm mode label into a canonical value.

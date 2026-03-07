@@ -3,7 +3,6 @@ package manifest
 import (
 	"testing"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -80,7 +79,7 @@ func TestMetadataSystems_SkipsNilBuildersAndNilSystems(t *testing.T) {
 				return nil
 			},
 			BuildMetadataSystem: func() domainbridge.GameSystem {
-				return metadataSystemStub{id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, version: "v1"}
+				return metadataSystemStub{id: domainbridge.SystemIDDaggerheart, version: "v1"}
 			},
 			BuildAdapter: func(ProjectionStores) domainbridge.Adapter { return nil },
 		},
@@ -111,13 +110,13 @@ func (m moduleStub) Folder() domainsystem.Folder              { return nil }
 func (m moduleStub) StateFactory() domainsystem.StateFactory  { return nil }
 
 type metadataSystemStub struct {
-	id      commonv1.GameSystem
+	id      domainbridge.SystemID
 	version string
 }
 
-func (m metadataSystemStub) ID() commonv1.GameSystem { return m.id }
-func (m metadataSystemStub) Version() string         { return m.version }
-func (m metadataSystemStub) Name() string            { return "stub" }
+func (m metadataSystemStub) ID() domainbridge.SystemID { return m.id }
+func (m metadataSystemStub) Version() string           { return m.version }
+func (m metadataSystemStub) Name() string              { return "stub" }
 func (m metadataSystemStub) RegistryMetadata() domainbridge.RegistryMetadata {
 	return domainbridge.RegistryMetadata{}
 }

@@ -1,7 +1,6 @@
 package daggerheart
 
 import (
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 )
 
@@ -13,9 +12,9 @@ func NewRegistrySystem() *RegistrySystem {
 	return &RegistrySystem{}
 }
 
-// ID returns the game-system enum identifier.
-func (r *RegistrySystem) ID() commonv1.GameSystem {
-	return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
+// ID returns the game-system identifier.
+func (r *RegistrySystem) ID() bridge.SystemID {
+	return bridge.SystemIDDaggerheart
 }
 
 // Version returns the published Daggerheart rules version.
@@ -34,8 +33,8 @@ func (r *RegistrySystem) Name() string {
 func (r *RegistrySystem) RegistryMetadata() bridge.RegistryMetadata {
 	return bridge.RegistryMetadata{
 		ImplementationStage: DeriveImplementationStage(),
-		OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
-		AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
+		OperationalStatus:   bridge.OperationalStatusOperational,
+		AccessLevel:         bridge.AccessLevelBeta,
 		Notes:               deriveImplementationNotes(),
 	}
 }

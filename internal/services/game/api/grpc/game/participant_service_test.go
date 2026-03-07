@@ -55,10 +55,7 @@ func TestCreateParticipant_CampaignNotFound(t *testing.T) {
 func TestCreateParticipant_CampaignArchivedDisallowed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusArchived,
-	}
+	campaignStore.campaigns["c1"] = archivedCampaignRecord("c1")
 
 	eventStore := newFakeEventStore()
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
@@ -74,12 +71,9 @@ func TestCreateParticipant_EmptyName(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusDraft,
-	}
+	campaignStore.campaigns["c1"] = draftCampaignRecord("c1")
 
 	eventStore := newFakeEventStore()
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
@@ -95,12 +89,9 @@ func TestCreateParticipant_InvalidRole(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusDraft,
-	}
+	campaignStore.campaigns["c1"] = draftCampaignRecord("c1")
 
 	eventStore := newFakeEventStore()
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
@@ -117,12 +108,9 @@ func TestCreateParticipant_DomainRejectsAIInvariant(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusDraft,
-	}
+	campaignStore.campaigns["c1"] = draftCampaignRecord("c1")
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("participant.join"): {
 			Decision: command.Reject(command.Rejection{
@@ -150,9 +138,9 @@ func TestCreateParticipant_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["c1"] = draftCampaignRecord("c1")
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: newFakeEventStore()})
 	ctx := contextWithParticipantID("owner-1")
@@ -169,14 +157,11 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusDraft,
-	}
+	campaignStore.campaigns["c1"] = draftCampaignRecord("c1")
 
 	eventStore := newFakeEventStore()
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
@@ -248,14 +233,11 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	eventStore := newFakeEventStore()
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
@@ -306,9 +288,9 @@ func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -374,9 +356,9 @@ func TestCreateParticipant_UserLinkedRequestFieldsTakePrecedenceOverSocial(t *te
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -457,9 +439,9 @@ func TestCreateParticipant_UserLinkedMissingFieldsHydrateFromSocial(t *testing.T
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -530,9 +512,9 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToMysteriousPerson(t *t
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -595,9 +577,9 @@ func TestCreateParticipant_UserLinkedMissingPronounsFallsBackToTheyThem(t *testi
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -667,7 +649,7 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToLocalizedNameForLocal
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 	}
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
@@ -731,9 +713,9 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -764,9 +746,9 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 func TestUpdateParticipant_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
 
@@ -785,9 +767,9 @@ func TestUpdateParticipant_DomainRejectsAIInvariant(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1": {
 			ID:             "p1",
 			CampaignID:     "c1",
@@ -824,9 +806,9 @@ func TestUpdateParticipant_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -883,9 +865,9 @@ func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -958,9 +940,9 @@ func TestUpdateParticipant_CampaignAccess(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", CampaignAccess: participant.CampaignAccessMember},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -1007,10 +989,10 @@ func TestUpdateParticipant_DeniesManagerAssigningOwnerAccess(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1":   {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"manager-1": {ID: "manager-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessManager},
+		"manager-1": managerParticipantRecord("c1", "manager-1"),
 		"member-1":  {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
 	}
 
@@ -1029,10 +1011,10 @@ func TestUpdateParticipant_DeniesManagerMutatingOwnerWithoutAccessChange(t *test
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1":   {ID: "owner-1", CampaignID: "c1", Name: "Owner", CampaignAccess: participant.CampaignAccessOwner},
-		"manager-1": {ID: "manager-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessManager},
+		"manager-1": managerParticipantRecord("c1", "manager-1"),
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
@@ -1050,10 +1032,10 @@ func TestUpdateParticipant_DeniesDemotingFinalOwner(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1":  {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"member-1": {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
+		"member-1": memberParticipantRecord("c1", "member-1"),
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
@@ -1072,10 +1054,10 @@ func TestDeleteParticipant_DeniesManagerRemovingOwner(t *testing.T) {
 	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1":   {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"manager-1": {ID: "manager-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessManager},
+		"manager-1": managerParticipantRecord("c1", "manager-1"),
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore})
@@ -1093,10 +1075,10 @@ func TestDeleteParticipant_DeniesRemovingFinalOwner(t *testing.T) {
 	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1":  {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
-		"member-1": {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
+		"member-1": memberParticipantRecord("c1", "member-1"),
 	}
 
 	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore})
@@ -1113,9 +1095,9 @@ func TestDeleteParticipant_DeniesMemberWithoutManageAccess(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 2}
+	campaignStore.campaigns["c1"] = activeCampaignRecordWithParticipantCount("c1", 2)
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"member-1": {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
+		"member-1": memberParticipantRecord("c1", "member-1"),
 		"p1":       {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
 	}
 
@@ -1134,9 +1116,9 @@ func TestDeleteParticipant_Success(t *testing.T) {
 	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
+	campaignStore.campaigns["c1"] = activeCampaignRecordWithParticipantCount("c1", 1)
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -1194,9 +1176,9 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 20, 19, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 2}
+	campaignStore.campaigns["c1"] = activeCampaignRecordWithParticipantCount("c1", 2)
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
 	}
 	eventStore.events["c1"] = []event.Event{
@@ -1252,9 +1234,9 @@ func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 20, 19, 5, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 2}
+	campaignStore.campaigns["c1"] = activeCampaignRecordWithParticipantCount("c1", 2)
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
 	}
 	eventStore.events["c1"] = []event.Event{
@@ -1310,9 +1292,9 @@ func TestDeleteParticipant_AllowsWhenOwnedCharacterAlreadyDeleted(t *testing.T) 
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 20, 19, 10, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 2}
+	campaignStore.campaigns["c1"] = activeCampaignRecordWithParticipantCount("c1", 2)
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
 	}
 	eventStore.events["c1"] = []event.Event{
@@ -1381,9 +1363,9 @@ func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testin
 	eventStore := newFakeEventStore()
 	now := time.Date(2026, 2, 20, 19, 25, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 3}
+	campaignStore.campaigns["c1"] = activeCampaignRecordWithParticipantCount("c1", 3)
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
 		"p2":      {ID: "p2", CampaignID: "c1", Name: "Player Two", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
 	}
@@ -1453,9 +1435,9 @@ func TestDeleteParticipant_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	characterStore := newFakeCharacterStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
+	campaignStore.campaigns["c1"] = activeCampaignRecordWithParticipantCount("c1", 1)
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
 	}
 
@@ -1474,9 +1456,9 @@ func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
 	characterStore := newFakeCharacterStore()
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, ParticipantCount: 1}
+	campaignStore.campaigns["c1"] = activeCampaignRecordWithParticipantCount("c1", 1)
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
-		"owner-1": {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
 		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -1573,10 +1555,7 @@ func TestListParticipants_CampaignNotFound(t *testing.T) {
 func TestListParticipants_DeniesMissingIdentity(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
 			ID:             "p1",
@@ -1600,10 +1579,7 @@ func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusArchived,
-	}
+	campaignStore.campaigns["c1"] = archivedCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
 			ID:             "p1",
@@ -1628,10 +1604,7 @@ func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
 func TestListParticipants_DeniesNonMember(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
 			ID:             "p1",
@@ -1652,10 +1625,7 @@ func TestListParticipants_WithParticipants(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
 			ID:             "p1",
@@ -1718,10 +1688,7 @@ func TestGetParticipant_CampaignNotFound(t *testing.T) {
 func TestGetParticipant_DeniesMissingIdentity(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
 			ID:             "p1",
@@ -1740,10 +1707,7 @@ func TestGetParticipant_DeniesMissingIdentity(t *testing.T) {
 func TestGetParticipant_ParticipantNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
 			ID:             "p1",
@@ -1764,10 +1728,7 @@ func TestGetParticipant_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {
 			ID:             "p1",

@@ -40,8 +40,8 @@ func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.Daggerhear
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart rest")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart rest"); err != nil {
+		return nil, err
 	}
 
 	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
@@ -190,8 +190,8 @@ func (s *DaggerheartService) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart downtime")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart downtime"); err != nil {
+		return nil, err
 	}
 
 	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
@@ -325,8 +325,8 @@ func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart temporary armor")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart temporary armor"); err != nil {
+		return nil, err
 	}
 
 	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
@@ -415,8 +415,8 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart loadout")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart loadout"); err != nil {
+		return nil, err
 	}
 
 	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
@@ -580,8 +580,8 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart death moves")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart death moves"); err != nil {
+		return nil, err
 	}
 
 	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
@@ -13,19 +13,17 @@ import (
 
 // parseGameSystem maps external and enum-style system names into canonical
 // GameSystem values that projection state persists for reads and filtering.
-func parseGameSystem(value string) (commonv1.GameSystem, error) {
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("game system is required")
+func parseGameSystem(value string) (bridge.SystemID, error) {
+	normalized, ok := campaign.NormalizeGameSystem(value)
+	if !ok || normalized == campaign.GameSystemUnspecified {
+		return bridge.SystemIDUnspecified, fmt.Errorf("game system is required")
 	}
-	if system, ok := commonv1.GameSystem_value[trimmed]; ok {
-		return commonv1.GameSystem(system), nil
+	switch normalized {
+	case campaign.GameSystemDaggerheart:
+		return bridge.SystemIDDaggerheart, nil
+	default:
+		return bridge.SystemIDUnspecified, fmt.Errorf("unknown game system: %s", value)
 	}
-	upper := strings.ToUpper(trimmed)
-	if system, ok := commonv1.GameSystem_value["GAME_SYSTEM_"+upper]; ok {
-		return commonv1.GameSystem(system), nil
-	}
-	return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("unknown game system: %s", trimmed)
 }
 
 // parseCampaignStatus enforces campaign status vocabulary before applying

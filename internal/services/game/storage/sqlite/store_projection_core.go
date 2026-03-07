@@ -94,17 +94,14 @@ func (s *Store) List(ctx context.Context, pageSize int, pageToken string) (stora
 		if err != nil {
 			return storage.CampaignPage{}, fmt.Errorf("list campaigns: %w", err)
 		}
-		for i, row := range rows {
-			if i >= pageSize {
-				page.NextPageToken = rows[pageSize-1].ID
-				break
-			}
-			c, err := dbListAllCampaignsRowToDomain(row)
-			if err != nil {
-				return storage.CampaignPage{}, err
-			}
-			page.Campaigns = append(page.Campaigns, c)
+		campaigns, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.ListAllCampaignsRow) string {
+			return row.ID
+		}, dbListAllCampaignsRowToDomain)
+		if err != nil {
+			return storage.CampaignPage{}, err
 		}
+		page.Campaigns = campaigns
+		page.NextPageToken = nextPageToken
 	} else {
 		rows, err := s.q.ListCampaigns(ctx, db.ListCampaignsParams{
 			ID:    pageToken,
@@ -113,17 +110,14 @@ func (s *Store) List(ctx context.Context, pageSize int, pageToken string) (stora
 		if err != nil {
 			return storage.CampaignPage{}, fmt.Errorf("list campaigns: %w", err)
 		}
-		for i, row := range rows {
-			if i >= pageSize {
-				page.NextPageToken = rows[pageSize-1].ID
-				break
-			}
-			c, err := dbListCampaignsRowToDomain(row)
-			if err != nil {
-				return storage.CampaignPage{}, err
-			}
-			page.Campaigns = append(page.Campaigns, c)
+		campaigns, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.ListCampaignsRow) string {
+			return row.ID
+		}, dbListCampaignsRowToDomain)
+		if err != nil {
+			return storage.CampaignPage{}, err
 		}
+		page.Campaigns = campaigns
+		page.NextPageToken = nextPageToken
 	}
 
 	return page, nil

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -57,8 +56,8 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart outcomes")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart outcomes"); err != nil {
+		return nil, err
 	}
 
 	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)

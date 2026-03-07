@@ -9,6 +9,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -161,7 +162,7 @@ func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Riverfall",
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System: bridge.SystemIDDaggerheart,
 		Status: campaign.StatusDraft,
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
