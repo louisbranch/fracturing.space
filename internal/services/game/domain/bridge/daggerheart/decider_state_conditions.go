@@ -31,7 +31,6 @@ func decideGMFearSet(snapshotState SnapshotState, hasSnapshot bool, cmd command.
 				before = s.GMFear
 			}
 			if after == before {
-				// FIXME(telemetry): metric for idempotent gm fear set commands (no-op reject).
 				return &command.Rejection{
 					Code:    rejectionCodeGMFearUnchanged,
 					Message: "gm fear after is unchanged",
@@ -58,7 +57,6 @@ func decideCharacterStatePatch(snapshotState SnapshotState, hasSnapshot bool, cm
 		func(p *CharacterStatePatchPayload) string { return strings.TrimSpace(p.CharacterID) },
 		func(s SnapshotState, hasState bool, p *CharacterStatePatchPayload, _ func() time.Time) *command.Rejection {
 			if hasState && isCharacterStatePatchNoMutation(s, *p) {
-				// FIXME(telemetry): metric for idempotent character state patch commands.
 				return &command.Rejection{
 					Code:    rejectionCodeCharacterStatePatchNoMutation,
 					Message: "character state patch is unchanged",
@@ -81,7 +79,6 @@ func decideConditionChange(snapshotState SnapshotState, hasSnapshot bool, cmd co
 					}
 				}
 				if isConditionChangeNoMutation(s, *p) {
-					// FIXME(telemetry): metric for idempotent character condition changes.
 					return &command.Rejection{
 						Code:    rejectionCodeConditionChangeNoMutation,
 						Message: "condition change is unchanged",

@@ -95,13 +95,13 @@ func ownerParticipantStore(campaignID string) *fakeParticipantStore {
 }
 
 func TestCreateCampaign_NilRequest(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.CreateCampaign(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestCreateCampaign_MissingSystem(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		GmMode: statev1.GmMode_HUMAN,
@@ -110,7 +110,7 @@ func TestCreateCampaign_MissingSystem(t *testing.T) {
 }
 
 func TestCreateCampaign_EmptyName(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -120,7 +120,7 @@ func TestCreateCampaign_EmptyName(t *testing.T) {
 }
 
 func TestCreateCampaign_InvalidGmMode(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -208,7 +208,7 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 }
 
 func TestCreateCampaign_MissingCreatorUserID(t *testing.T) {
-	svc := NewCampaignServiceWithAuth(newTestStores().build(), &fakeAuthClient{})
+	svc := NewCampaignService(newTestStores().build(), &fakeAuthClient{}, nil)
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
@@ -912,13 +912,13 @@ func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T
 }
 
 func TestListCampaigns_NilRequest(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.ListCampaigns(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListCampaigns_DeniesMissingIdentity(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 
 	resp, err := svc.ListCampaigns(context.Background(), &statev1.ListCampaignsRequest{})
 	if status.Code(err) != codes.PermissionDenied {
@@ -946,7 +946,7 @@ func TestListCampaigns_AllowsAdminOverride(t *testing.T) {
 		GmMode:    campaign.GmModeAI,
 		CreatedAt: now,
 	}
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
@@ -973,7 +973,7 @@ func TestListCampaigns_AllowsAdminOverride(t *testing.T) {
 }
 
 func TestListCampaigns_DeniesAdminOverrideWithoutReason(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
@@ -984,7 +984,7 @@ func TestListCampaigns_DeniesAdminOverrideWithoutReason(t *testing.T) {
 }
 
 func TestListCampaigns_DeniesAdminOverrideWithoutPrincipal(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
@@ -1006,7 +1006,7 @@ func TestListCampaigns_WithParticipantIdentity(t *testing.T) {
 		"participant-1": userParticipantRecord("c2", "participant-1", "user-1", "Alice"),
 	}
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 
 	resp, err := svc.ListCampaigns(contextWithParticipantID("participant-1"), &statev1.ListCampaignsRequest{})
 	if err != nil {
@@ -1032,7 +1032,7 @@ func TestListCampaigns_UserScopedByMetadata(t *testing.T) {
 		"p2": userParticipantRecord("c2", "p2", "user-999", "Bob"),
 	}
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 
 	resp, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
@@ -1074,7 +1074,7 @@ func TestListCampaigns_UserScopedByMetadataAfterPageBoundary(t *testing.T) {
 
 	stores := ts.build()
 	stores.Campaign = orderedStore
-	svc := NewCampaignService(stores)
+	svc := NewCampaignService(stores, nil, nil)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 
 	resp, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
@@ -1096,7 +1096,7 @@ func TestListCampaigns_UserScopedByMetadataQueryFailure(t *testing.T) {
 	ts := newTestStores()
 	ts.Campaign.campaigns["c1"] = daggerheartCampaignRecordWithCreatedAt("c1", "Campaign One", campaign.StatusDraft, campaign.GmModeHuman, time.Now().UTC())
 	ts.Participant.listCampaignIDsByUserErr = fmt.Errorf("campaign index unavailable")
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 
 	_, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
@@ -1104,19 +1104,19 @@ func TestListCampaigns_UserScopedByMetadataQueryFailure(t *testing.T) {
 }
 
 func TestGetCampaign_NilRequest(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.GetCampaign(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetCampaign_MissingCampaignId(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 	_, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetCampaign_NotFound(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 	_, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -1126,7 +1126,7 @@ func TestGetCampaign_DeniesMissingIdentity(t *testing.T) {
 	now := time.Now().UTC()
 	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatusAndCreatedAt(campaign.StatusDraft, now)
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	_, err := svc.GetCampaign(context.Background(), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
@@ -1136,7 +1136,7 @@ func TestGetCampaign_DeniesNonMember(t *testing.T) {
 	now := time.Now().UTC()
 	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatusAndCreatedAt(campaign.StatusDraft, now)
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	_, err := svc.GetCampaign(contextWithParticipantID("outsider-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
@@ -1149,7 +1149,7 @@ func TestGetCampaign_Success(t *testing.T) {
 		"participant-1": memberUserParticipantRecord("c1", "participant-1", "user-1", ""),
 	}
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 
 	resp, err := svc.GetCampaign(contextWithParticipantID("participant-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	if err != nil {
@@ -1174,7 +1174,7 @@ func TestGetCampaign_SuccessByUserIDFallback(t *testing.T) {
 		"participant-1": memberUserParticipantRecord("c1", "participant-1", "user-1", ""),
 	}
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	resp, err := svc.GetCampaign(contextWithUserID("user-1"), &statev1.GetCampaignRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("GetCampaign returned error: %v", err)
@@ -1185,19 +1185,19 @@ func TestGetCampaign_SuccessByUserIDFallback(t *testing.T) {
 }
 
 func TestEndCampaign_NilRequest(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.EndCampaign(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestEndCampaign_MissingCampaignId(t *testing.T) {
-	svc := NewCampaignService(newTestStores().withSession().build())
+	svc := NewCampaignService(newTestStores().withSession().build(), nil, nil)
 	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestEndCampaign_NotFound(t *testing.T) {
-	svc := NewCampaignService(newTestStores().withSession().build())
+	svc := NewCampaignService(newTestStores().withSession().build(), nil, nil)
 	_, err := svc.EndCampaign(context.Background(), &statev1.EndCampaignRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -1213,7 +1213,7 @@ func TestEndCampaign_ActiveSessionBlocks(t *testing.T) {
 	}
 	ts.Session.activeSession["c1"] = "s1"
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
@@ -1224,7 +1224,7 @@ func TestEndCampaign_DraftStatusDisallowed(t *testing.T) {
 
 	ts.Campaign.campaigns["c1"] = testCampaignRecordWithStatus(campaign.StatusDraft)
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
@@ -1267,7 +1267,7 @@ func TestEndCampaign_RequiresDomainEngine(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -1357,19 +1357,19 @@ func TestEndCampaign_UsesDomainEngine(t *testing.T) {
 }
 
 func TestArchiveCampaign_NilRequest(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.ArchiveCampaign(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestArchiveCampaign_MissingCampaignId(t *testing.T) {
-	svc := NewCampaignService(newTestStores().withSession().build())
+	svc := NewCampaignService(newTestStores().withSession().build(), nil, nil)
 	_, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestArchiveCampaign_NotFound(t *testing.T) {
-	svc := NewCampaignService(newTestStores().withSession().build())
+	svc := NewCampaignService(newTestStores().withSession().build(), nil, nil)
 	_, err := svc.ArchiveCampaign(context.Background(), &statev1.ArchiveCampaignRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -1385,7 +1385,7 @@ func TestArchiveCampaign_ActiveSessionBlocks(t *testing.T) {
 	}
 	ts.Session.activeSession["c1"] = "s1"
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	_, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
@@ -1395,7 +1395,7 @@ func TestArchiveCampaign_RequiresDomainEngine(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	_, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -1479,19 +1479,19 @@ func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
 }
 
 func TestRestoreCampaign_NilRequest(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.RestoreCampaign(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRestoreCampaign_MissingCampaignId(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRestoreCampaign_NotFound(t *testing.T) {
-	svc := NewCampaignService(newTestStores().build())
+	svc := NewCampaignService(newTestStores().build(), nil, nil)
 	_, err := svc.RestoreCampaign(context.Background(), &statev1.RestoreCampaignRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -1501,7 +1501,7 @@ func TestRestoreCampaign_NotArchivedDisallowed(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
@@ -1511,7 +1511,7 @@ func TestRestoreCampaign_RequiresDomainEngine(t *testing.T) {
 	ts.Participant = ownerParticipantStore("c1")
 	ts.Campaign.campaigns["c1"] = archivedCampaignRecord("c1")
 
-	svc := NewCampaignService(ts.build())
+	svc := NewCampaignService(ts.build(), nil, nil)
 	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -1597,19 +1597,19 @@ func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 }
 
 func TestSetCampaignCover_NilRequest(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.SetCampaignCover(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestUpdateCampaign_NilRequest(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.UpdateCampaign(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestUpdateCampaign_InvalidLocaleRejected(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.UpdateCampaign(context.Background(), &statev1.UpdateCampaignRequest{
 		CampaignId: "c1",
 		Locale:     commonv1.Locale(99),

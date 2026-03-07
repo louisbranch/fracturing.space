@@ -14,7 +14,7 @@ import (
 
 func TestStatisticsServiceGetGameStatistics(t *testing.T) {
 	t.Run("rejects nil request", func(t *testing.T) {
-		service := NewStatisticsService(Stores{Statistics: &fakeStatisticsStore{}})
+		service := NewStatisticsService(&fakeStatisticsStore{})
 		_, err := service.GetGameStatistics(context.Background(), nil)
 		if status.Code(err) != codes.InvalidArgument {
 			t.Fatalf("expected invalid argument, got %v", err)
@@ -31,7 +31,7 @@ func TestStatisticsServiceGetGameStatistics(t *testing.T) {
 				ParticipantCount: 9,
 			},
 		}
-		service := NewStatisticsService(Stores{Statistics: store})
+		service := NewStatisticsService(store)
 		resp, err := service.GetGameStatistics(context.Background(), &gamev1.GetGameStatisticsRequest{
 			Since: timestamppb.New(since),
 		})

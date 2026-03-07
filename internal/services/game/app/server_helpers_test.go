@@ -16,6 +16,7 @@ import (
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -254,7 +255,7 @@ func TestBuildProjectionApplyOutboxApplySkipsDuplicateSeq(t *testing.T) {
 		t.Fatalf("seed campaign: %v", err)
 	}
 
-	apply := buildProjectionApplyOutboxApply(store, nil)
+	apply := buildProjectionApplyOutboxApply(store, systemmanifest.ProjectionStores{Daggerheart: store}, nil)
 	if apply == nil {
 		t.Fatal("expected projection apply callback")
 	}
@@ -688,6 +689,17 @@ func TestResolveProjectionApplyOutboxModes_InvalidWhenBothWorkersEnabled(t *test
 	})
 	if err == nil {
 		t.Fatal("expected both workers to fail")
+	}
+}
+
+func TestResolveProjectionApplyOutboxModes_InvalidWhenOutboxEnabledWithoutWorker(t *testing.T) {
+	_, _, _, err := resolveProjectionApplyOutboxModes(serverEnv{
+		ProjectionApplyOutboxEnabled:             true,
+		ProjectionApplyOutboxWorkerEnabled:       false,
+		ProjectionApplyOutboxShadowWorkerEnabled: false,
+	})
+	if err == nil {
+		t.Fatal("expected outbox without worker to fail")
 	}
 }
 

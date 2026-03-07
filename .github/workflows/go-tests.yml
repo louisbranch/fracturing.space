@@ -10,6 +10,8 @@ permissions:
   contents: read
 
 jobs:
+  # Test job steps should stay in sync with scripts/ci-go-tests-local.sh.
+  # Intentional divergences: coverage-badge job is CI-only.
   test:
     runs-on: ubuntu-latest
     steps:
@@ -37,6 +39,10 @@ jobs:
         run: make negative-test-assertion-check
       - name: Run web architecture checks
         run: make web-architecture-check
+      - name: Run game architecture checks
+        run: make game-architecture-check
+      - name: Run admin architecture checks
+        run: make admin-architecture-check
       - name: Run tests and generate coverage report
         run: make cover
       - name: Run critical-domain coverpkg report

@@ -17,7 +17,7 @@ import (
 )
 
 func TestCreateInvite_NilRequest(t *testing.T) {
-	svc := NewInviteService(Stores{})
+	svc := NewInviteService(Stores{}, nil)
 	_, err := svc.CreateInvite(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -703,19 +703,19 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 }
 
 func TestRevokeInvite_NilRequest(t *testing.T) {
-	svc := NewInviteService(Stores{})
+	svc := NewInviteService(Stores{}, nil)
 	_, err := svc.RevokeInvite(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRevokeInvite_MissingInviteId(t *testing.T) {
-	svc := NewInviteService(Stores{Invite: newFakeInviteStore(), Campaign: newFakeCampaignStore(), Event: newFakeEventStore()})
+	svc := NewInviteService(Stores{Invite: newFakeInviteStore(), Campaign: newFakeCampaignStore(), Event: newFakeEventStore()}, nil)
 	_, err := svc.RevokeInvite(context.Background(), &statev1.RevokeInviteRequest{InviteId: ""})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRevokeInvite_InviteNotFound(t *testing.T) {
-	svc := NewInviteService(Stores{Invite: newFakeInviteStore(), Campaign: newFakeCampaignStore(), Event: newFakeEventStore()})
+	svc := NewInviteService(Stores{Invite: newFakeInviteStore(), Campaign: newFakeCampaignStore(), Event: newFakeEventStore()}, nil)
 	_, err := svc.RevokeInvite(context.Background(), &statev1.RevokeInviteRequest{InviteId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -876,7 +876,7 @@ func TestRevokeInvite_UsesDomainEngine(t *testing.T) {
 }
 
 func TestClaimInvite_NilRequest(t *testing.T) {
-	svc := NewInviteService(Stores{})
+	svc := NewInviteService(Stores{}, nil)
 	_, err := svc.ClaimInvite(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -887,7 +887,7 @@ func TestClaimInvite_MissingCampaignId(t *testing.T) {
 		Campaign:    newFakeCampaignStore(),
 		Participant: newFakeParticipantStore(),
 		Event:       newFakeEventStore(),
-	})
+	}, nil)
 	ctx := contextWithUserID("user-1")
 	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{InviteId: "inv-1", JoinGrant: "grant"})
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -899,7 +899,7 @@ func TestClaimInvite_MissingInviteId(t *testing.T) {
 		Campaign:    newFakeCampaignStore(),
 		Participant: newFakeParticipantStore(),
 		Event:       newFakeEventStore(),
-	})
+	}, nil)
 	ctx := contextWithUserID("user-1")
 	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{CampaignId: "c1", JoinGrant: "grant"})
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -911,7 +911,7 @@ func TestClaimInvite_MissingJoinGrant(t *testing.T) {
 		Campaign:    newFakeCampaignStore(),
 		Participant: newFakeParticipantStore(),
 		Event:       newFakeEventStore(),
-	})
+	}, nil)
 	ctx := contextWithUserID("user-1")
 	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{CampaignId: "c1", InviteId: "inv-1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -923,7 +923,7 @@ func TestCreateInvite_MissingCampaignId(t *testing.T) {
 		Campaign:    newFakeCampaignStore(),
 		Participant: newFakeParticipantStore(),
 		Event:       newFakeEventStore(),
-	})
+	}, nil)
 	_, err := svc.CreateInvite(context.Background(), &statev1.CreateInviteRequest{ParticipantId: "p1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -934,7 +934,7 @@ func TestCreateInvite_MissingParticipantId(t *testing.T) {
 		Campaign:    newFakeCampaignStore(),
 		Participant: newFakeParticipantStore(),
 		Event:       newFakeEventStore(),
-	})
+	}, nil)
 	_, err := svc.CreateInvite(context.Background(), &statev1.CreateInviteRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -993,7 +993,7 @@ func TestListPendingInvites_Success(t *testing.T) {
 }
 
 func TestGetInvite_NilRequest(t *testing.T) {
-	svc := NewInviteService(Stores{})
+	svc := NewInviteService(Stores{}, nil)
 	_, err := svc.GetInvite(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -1002,7 +1002,7 @@ func TestGetInvite_MissingInviteId(t *testing.T) {
 	svc := NewInviteService(Stores{
 		Invite:   newFakeInviteStore(),
 		Campaign: newFakeCampaignStore(),
-	})
+	}, nil)
 	_, err := svc.GetInvite(context.Background(), &statev1.GetInviteRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -1011,7 +1011,7 @@ func TestGetInvite_InviteNotFound(t *testing.T) {
 	svc := NewInviteService(Stores{
 		Invite:   newFakeInviteStore(),
 		Campaign: newFakeCampaignStore(),
-	})
+	}, nil)
 	_, err := svc.GetInvite(context.Background(), &statev1.GetInviteRequest{InviteId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -1077,7 +1077,7 @@ func TestGetInvite_MissingParticipantIdentity(t *testing.T) {
 }
 
 func TestListInvites_NilRequest(t *testing.T) {
-	svc := NewInviteService(Stores{})
+	svc := NewInviteService(Stores{}, nil)
 	_, err := svc.ListInvites(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -1086,7 +1086,7 @@ func TestListInvites_MissingCampaignId(t *testing.T) {
 	svc := NewInviteService(Stores{
 		Invite:   newFakeInviteStore(),
 		Campaign: newFakeCampaignStore(),
-	})
+	}, nil)
 	_, err := svc.ListInvites(context.Background(), &statev1.ListInvitesRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -1095,7 +1095,7 @@ func TestListInvites_CampaignNotFound(t *testing.T) {
 	svc := NewInviteService(Stores{
 		Invite:   newFakeInviteStore(),
 		Campaign: newFakeCampaignStore(),
-	})
+	}, nil)
 	_, err := svc.ListInvites(context.Background(), &statev1.ListInvitesRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }

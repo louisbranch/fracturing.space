@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -91,5 +92,5 @@ func forkPointFromProto(pb *campaignv1.ForkPoint) fork.ForkPoint {
 
 // isNotFound reports whether err is a not-found error.
 func isNotFound(err error) bool {
-	return err == storage.ErrNotFound
+	return errors.Is(err, storage.ErrNotFound)
 }

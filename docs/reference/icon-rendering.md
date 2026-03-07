@@ -2,6 +2,7 @@
 title: "Icon Rendering"
 parent: "Reference"
 nav_order: 10
+last_reviewed: "2026-03-07"
 ---
 
 # Icon Rendering

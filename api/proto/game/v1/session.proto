@@ -32,7 +32,17 @@ message SessionGate {
   google.protobuf.Timestamp resolved_at = 10;
   string resolved_by_actor_type = 11;
   string resolved_by_actor_id = 12;
+
+  // Gate-type-dependent metadata supplied when the gate was opened.
+  // Shape varies by gate type. Known keys for system-generated gates:
+  //   "roll_seq"    (number) — sequence of the roll event that triggered the gate
+  //   "request_id"  (string) — request ID associated with the gate trigger
+  // Consumers should treat unknown keys as pass-through.
   google.protobuf.Struct metadata = 13;
+
+  // Gate-type-dependent resolution data supplied when the gate was resolved.
+  // Shape is determined by the gate type and the resolving actor. The field is
+  // optional and may be empty when the resolution carries no structured data.
   google.protobuf.Struct resolution = 14;
 }
 
@@ -159,6 +169,9 @@ message OpenSessionGateRequest {
   string gate_type = 3;
   string reason = 4;
   string gate_id = 5;
+
+  // Gate-type-dependent metadata passed through to the SessionGate.metadata
+  // field. See SessionGate.metadata for known keys.
   google.protobuf.Struct metadata = 6;
 }
 
@@ -171,6 +184,9 @@ message ResolveSessionGateRequest {
   string session_id = 2;
   string gate_id = 3;
   string decision = 4;
+
+  // Gate-type-dependent resolution data passed through to
+  // SessionGate.resolution. See SessionGate.resolution for semantics.
   google.protobuf.Struct resolution = 5;
 }
 

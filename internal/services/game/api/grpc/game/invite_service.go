@@ -24,19 +24,14 @@ type InviteService struct {
 	joinGrantVerifier joingrant.Verifier
 }
 
-// NewInviteService creates an InviteService with default dependencies.
-func NewInviteService(stores Stores) *InviteService {
+// NewInviteService creates an InviteService. The authClient is optional —
+// pass nil when the dependency is not needed (e.g. in tests).
+func NewInviteService(stores Stores, authClient authv1.AuthServiceClient) *InviteService {
 	return &InviteService{
 		stores:            stores,
 		clock:             time.Now,
 		idGenerator:       id.NewID,
 		joinGrantVerifier: joingrant.EnvVerifier{Now: time.Now},
+		authClient:        authClient,
 	}
-}
-
-// NewInviteServiceWithAuth creates an InviteService with an auth client.
-func NewInviteServiceWithAuth(stores Stores, authClient authv1.AuthServiceClient) *InviteService {
-	service := NewInviteService(stores)
-	service.authClient = authClient
-	return service
 }

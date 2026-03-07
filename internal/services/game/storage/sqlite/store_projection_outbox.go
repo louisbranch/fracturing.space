@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log"
 	"strings"
 	"time"
 
@@ -385,6 +386,8 @@ func (s *Store) markProjectionApplyOutboxRetry(ctx context.Context, row projecti
 	status := "failed"
 	if attempt >= outboxDeadLetterThreshold {
 		status = "dead"
+		log.Printf("projection outbox dead letter campaign_id=%s seq=%d attempts=%d last_error=%s",
+			row.CampaignID, row.Seq, attempt, lastError)
 	}
 	result, err := s.sqlDB.ExecContext(
 		ctx,

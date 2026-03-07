@@ -57,6 +57,15 @@ message Intermediates {
 message ExplainStep {
   string code = 1;
   string message = 2;
+
+  // Step-code-dependent structured data. Shape varies by code:
+  //   SUM_DICE:          hope (int), fear (int), base_total (int)
+  //   APPLY_MODIFIER:    base_total (int), modifier (int), total (int)
+  //   CHECK_CRIT:        hope (int), fear (int), is_crit (bool)
+  //   CHECK_DIFFICULTY:  total (int), meets_difficulty (bool),
+  //                      critical_auto_success (bool), difficulty_present (bool),
+  //                      difficulty (int, present only when difficulty_present)
+  //   SELECT_OUTCOME:    outcome_code (int), outcome_label (string)
   google.protobuf.Struct data = 3;
 }
 

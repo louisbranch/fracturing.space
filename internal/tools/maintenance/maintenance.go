@@ -588,9 +588,11 @@ func runCampaign(ctx context.Context, eventStore storage.EventStore, projStore s
 		result.ExitCode = 1
 		return result
 	}
-	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{
-		Daggerheart: projStore,
-	})
+	systemStores := systemmanifest.ProjectionStores{}
+	if dhs, ok := projStore.(storage.DaggerheartStore); ok {
+		systemStores.Daggerheart = dhs
+	}
+	systemAdapters, err := systemmanifest.AdapterRegistry(systemStores)
 	if err != nil {
 		result.Error = fmt.Sprintf("build projection adapters: %v", err)
 		result.ExitCode = 1
@@ -1144,9 +1146,11 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 		return report, warnings, fmt.Errorf("seed campaign: %w", err)
 	}
 
-	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{
-		Daggerheart: scratch,
-	})
+	scratchSystemStores := systemmanifest.ProjectionStores{}
+	if dhs, ok := scratch.(storage.DaggerheartStore); ok {
+		scratchSystemStores.Daggerheart = dhs
+	}
+	systemAdapters, err := systemmanifest.AdapterRegistry(scratchSystemStores)
 	if err != nil {
 		return report, warnings, fmt.Errorf("build projection adapters: %w", err)
 	}
@@ -1160,11 +1164,17 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 	}
 	report.LastSeq = lastSeq
 
-	sourceSnapshot, err := source.GetDaggerheartSnapshot(ctx, campaignID)
+	sourceDH, sourceOk := source.(storage.DaggerheartStore)
+	scratchDH, scratchOk := scratch.(storage.DaggerheartStore)
+	if !sourceOk || !scratchOk {
+		return report, warnings, nil
+	}
+
+	sourceSnapshot, err := sourceDH.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil {
 		return report, warnings, fmt.Errorf("get source snapshot: %w", err)
 	}
-	replaySnapshot, err := scratch.GetDaggerheartSnapshot(ctx, campaignID)
+	replaySnapshot, err := scratchDH.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil {
 		return report, warnings, fmt.Errorf("get replay snapshot: %w", err)
 	}
@@ -1179,7 +1189,7 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 			return report, warnings, fmt.Errorf("list characters: %w", err)
 		}
 		for _, ch := range page.Characters {
-			sourceState, err := source.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
+			sourceState, err := sourceDH.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
 			if err != nil {
 				if errors.Is(err, storage.ErrNotFound) {
 					report.MissingStates++
@@ -1188,7 +1198,7 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 				}
 				return report, warnings, fmt.Errorf("get source state: %w", err)
 			}
-			replayState, err := scratch.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
+			replayState, err := scratchDH.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
 			if err != nil {
 				if errors.Is(err, storage.ErrNotFound) {
 					report.MissingStates++
@@ -1269,9 +1279,11 @@ func runGapRepair(ctx context.Context, eventStore storage.EventStore, projStore 
 		errOut = io.Discard
 	}
 
-	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ProjectionStores{
-		Daggerheart: projStore,
-	})
+	gapSystemStores := systemmanifest.ProjectionStores{}
+	if dhs, ok := projStore.(storage.DaggerheartStore); ok {
+		gapSystemStores.Daggerheart = dhs
+	}
+	systemAdapters, err := systemmanifest.AdapterRegistry(gapSystemStores)
 	if err != nil {
 		return fmt.Errorf("build projection adapters: %w", err)
 	}

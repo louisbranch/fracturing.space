@@ -28,6 +28,7 @@ type SessionPage struct {
 // SessionReader provides read-only access to session projections.
 type SessionReader interface {
 	// GetSession retrieves a session by campaign ID and session ID.
+	// Returns ErrNotFound if the session does not exist.
 	GetSession(ctx context.Context, campaignID, sessionID string) (SessionRecord, error)
 	// GetActiveSession retrieves the active session for a campaign, if one exists.
 	// Returns ErrNotFound if no active session exists.
@@ -71,8 +72,10 @@ type SessionGate struct {
 // SessionGateReader provides read-only access to session gate projections.
 type SessionGateReader interface {
 	// GetSessionGate retrieves a gate by id.
+	// Returns ErrNotFound if the gate does not exist.
 	GetSessionGate(ctx context.Context, campaignID, sessionID, gateID string) (SessionGate, error)
 	// GetOpenSessionGate retrieves the currently open gate for a session.
+	// Returns ErrNotFound if no open gate exists.
 	GetOpenSessionGate(ctx context.Context, campaignID, sessionID string) (SessionGate, error)
 }
 
@@ -99,6 +102,7 @@ type SessionSpotlight struct {
 // SessionSpotlightReader provides read-only access to session spotlight projections.
 type SessionSpotlightReader interface {
 	// GetSessionSpotlight retrieves the current spotlight for a session.
+	// Returns ErrNotFound if no spotlight is set.
 	GetSessionSpotlight(ctx context.Context, campaignID, sessionID string) (SessionSpotlight, error)
 }
 
@@ -171,6 +175,7 @@ type SceneSpotlight struct {
 // SceneReader provides read-only access to scene projections.
 type SceneReader interface {
 	// GetScene retrieves a scene by campaign ID and scene ID.
+	// Returns ErrNotFound if the scene does not exist.
 	GetScene(ctx context.Context, campaignID, sceneID string) (SceneRecord, error)
 	// ListScenes returns a page of scene records for a session.
 	ListScenes(ctx context.Context, campaignID, sessionID string, pageSize int, pageToken string) (ScenePage, error)
@@ -185,6 +190,7 @@ type SceneStore interface {
 	// PutScene stores a scene record.
 	PutScene(ctx context.Context, s SceneRecord) error
 	// EndScene marks a scene as ended.
+	// Returns ErrNotFound if the scene does not exist.
 	EndScene(ctx context.Context, campaignID, sceneID string, endedAt time.Time) error
 }
 
@@ -207,8 +213,10 @@ type SceneCharacterStore interface {
 // SceneGateReader provides read-only access to scene gate projections.
 type SceneGateReader interface {
 	// GetSceneGate retrieves a gate by id.
+	// Returns ErrNotFound if the gate does not exist.
 	GetSceneGate(ctx context.Context, campaignID, sceneID, gateID string) (SceneGate, error)
 	// GetOpenSceneGate retrieves the currently open gate for a scene.
+	// Returns ErrNotFound if no open gate exists.
 	GetOpenSceneGate(ctx context.Context, campaignID, sceneID string) (SceneGate, error)
 }
 
@@ -223,6 +231,7 @@ type SceneGateStore interface {
 // SceneSpotlightReader provides read-only access to scene spotlight projections.
 type SceneSpotlightReader interface {
 	// GetSceneSpotlight retrieves the current spotlight for a scene.
+	// Returns ErrNotFound if no spotlight is set.
 	GetSceneSpotlight(ctx context.Context, campaignID, sceneID string) (SceneSpotlight, error)
 }
 

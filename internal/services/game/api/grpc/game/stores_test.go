@@ -59,7 +59,6 @@ func TestNewStoresFromProjection(t *testing.T) {
 		ClaimIndexStore:          stubClaimIndex{},
 		InviteStore:              newFakeInviteStore(),
 		CharacterStore:           newFakeCharacterStore(),
-		DaggerheartStore:         &fakeDaggerheartStore{},
 		SessionStore:             newFakeSessionStore(),
 		SessionGateStore:         &fakeSessionGateStore{},
 		SessionSpotlightStore:    &fakeSessionSpotlightStore{},
@@ -75,6 +74,7 @@ func TestNewStoresFromProjection(t *testing.T) {
 
 	stores := NewStoresFromProjection(StoresFromProjectionConfig{
 		ProjectionStore: projectionStore,
+		SystemStores:    systemmanifest.ProjectionStores{Daggerheart: &fakeDaggerheartStore{}},
 		EventStore: eventAuditStoreStub{
 			EventStore:      newFakeEventStore(),
 			AuditEventStore: stubAudit{},
@@ -89,7 +89,7 @@ func TestNewStoresFromProjection(t *testing.T) {
 		t.Fatal("expected projection-backed stores to be populated")
 	}
 	if stores.SystemStores.Daggerheart == nil {
-		t.Fatal("expected Daggerheart system store to be inferred from projection bundle")
+		t.Fatal("expected Daggerheart system store to be set from config")
 	}
 	if stores.Audit == nil {
 		t.Fatal("expected audit store to be inferred from event store when compatible")
@@ -106,7 +106,6 @@ func TestNewStoresFromProjection_AuditStoreSelection(t *testing.T) {
 		ClaimIndexStore:          stubClaimIndex{},
 		InviteStore:              newFakeInviteStore(),
 		CharacterStore:           newFakeCharacterStore(),
-		DaggerheartStore:         &fakeDaggerheartStore{},
 		SessionStore:             newFakeSessionStore(),
 		SessionGateStore:         &fakeSessionGateStore{},
 		SessionSpotlightStore:    &fakeSessionSpotlightStore{},
@@ -241,7 +240,6 @@ type projectionStoreBundleStub struct {
 	storage.ClaimIndexStore
 	storage.InviteStore
 	storage.CharacterStore
-	storage.DaggerheartStore
 	storage.SessionStore
 	storage.SnapshotStore
 	storage.CampaignForkStore

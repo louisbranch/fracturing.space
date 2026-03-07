@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -80,7 +81,7 @@ func TestSceneLifecycle(t *testing.T) {
 func TestSceneGetNotFound(t *testing.T) {
 	store := openTestStore(t)
 	_, err := store.GetScene(context.Background(), "camp-x", "nonexistent")
-	if err != storage.ErrNotFound {
+	if !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -88,7 +89,7 @@ func TestSceneGetNotFound(t *testing.T) {
 func TestSceneEndNotFound(t *testing.T) {
 	store := openTestStore(t)
 	err := store.EndScene(context.Background(), "camp-x", "nonexistent", time.Now())
-	if err != storage.ErrNotFound {
+	if !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -322,13 +323,13 @@ func TestSceneGateLifecycle(t *testing.T) {
 
 	// No open gate now.
 	_, err = store.GetOpenSceneGate(ctx, "camp-sc-gate", "sc-1")
-	if err != storage.ErrNotFound {
+	if !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound for open gate, got %v", err)
 	}
 
 	// Get not-found gate.
 	_, err = store.GetSceneGate(ctx, "camp-sc-gate", "sc-1", "nonexistent")
-	if err != storage.ErrNotFound {
+	if !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }
@@ -695,13 +696,13 @@ func TestSceneSpotlightLifecycle(t *testing.T) {
 
 	// Get after clear.
 	_, err = store.GetSceneSpotlight(ctx, "camp-sc-spot", "sc-1")
-	if err != storage.ErrNotFound {
+	if !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound after clear, got %v", err)
 	}
 
 	// Get not-found spotlight.
 	_, err = store.GetSceneSpotlight(ctx, "camp-sc-spot", "nonexistent")
-	if err != storage.ErrNotFound {
+	if !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected ErrNotFound, got %v", err)
 	}
 }

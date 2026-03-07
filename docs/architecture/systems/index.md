@@ -13,6 +13,7 @@ last_reviewed: "2026-03-02"
 Mechanics and game-system extension documentation.
 
 - [Game systems architecture](game-systems.md)
+- [Adding a game system](adding-a-game-system.md)
 - Daggerheart reference contracts:
   - [Daggerheart creation workflow](../../reference/daggerheart-creation-workflow.md)
   - [Daggerheart event timeline contract](../../reference/daggerheart-event-timeline-contract.md)

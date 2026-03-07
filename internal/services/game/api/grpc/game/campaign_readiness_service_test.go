@@ -17,7 +17,7 @@ import (
 )
 
 func TestGetCampaignSessionReadiness_ValidateRequest(t *testing.T) {
-	svc := NewCampaignService(Stores{})
+	svc := NewCampaignService(Stores{}, nil, nil)
 
 	_, err := svc.GetCampaignSessionReadiness(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
@@ -32,7 +32,7 @@ func TestGetCampaignSessionReadiness_NotFound(t *testing.T) {
 		Participant: newFakeParticipantStore(),
 		Character:   newFakeCharacterStore(),
 		Session:     newFakeSessionStore(),
-	})
+	}, nil, nil)
 
 	_, err := svc.GetCampaignSessionReadiness(contextWithParticipantID("owner-1"), &statev1.GetCampaignSessionReadinessRequest{CampaignId: "missing"})
 	assertStatusCode(t, err, codes.NotFound)
@@ -51,7 +51,7 @@ func TestGetCampaignSessionReadiness_PermissionDeniedWhenActorMissing(t *testing
 		Participant: newFakeParticipantStore(),
 		Character:   newFakeCharacterStore(),
 		Session:     newFakeSessionStore(),
-	})
+	}, nil, nil)
 
 	_, err := svc.GetCampaignSessionReadiness(contextWithParticipantID("missing"), &statev1.GetCampaignSessionReadinessRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
@@ -329,7 +329,7 @@ func newReadinessServiceFixture(config readinessServiceFixtureConfig) (*Campaign
 		Participant: stores.participant,
 		Character:   stores.character,
 		Session:     stores.session,
-	})
+	}, nil, nil)
 	return service, stores
 }
 
