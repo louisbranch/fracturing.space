@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -85,24 +84,10 @@ func TestSwapLoadout_NegativeRecallCost(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestSwapLoadout_RequiresDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	ctx := contextWithSessionID("sess-1")
-	_, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
-		CampaignId:  "camp-1",
-		CharacterId: "char-1",
-		Swap: &pb.DaggerheartLoadoutSwapRequest{
-			CardId:     "card-1",
-			RecallCost: 0,
-		},
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestSwapLoadout_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 	loadoutPayload := struct {
 		CharacterID  string `json:"character_id"`
 		CardID       string `json:"card_id"`
@@ -165,7 +150,7 @@ func TestSwapLoadout_Success(t *testing.T) {
 func TestSwapLoadout_WithRecallCost(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 	stressBefore := 3
 	stressAfter := 2
 	loadoutPayload := struct {
@@ -251,7 +236,7 @@ func TestSwapLoadout_WithRecallCost(t *testing.T) {
 func TestSwapLoadout_UsesDomainEngineForLoadoutSwap(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	stressBefore := 3
 	stressAfter := 3
@@ -361,7 +346,7 @@ func TestSwapLoadout_UsesDomainEngineForLoadoutSwap(t *testing.T) {
 func TestSwapLoadout_UsesDomainEngineForStressSpend(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	stressBefore := 3
 	stressAfter := 2
@@ -494,7 +479,7 @@ func TestSwapLoadout_UsesDomainEngineForStressSpend(t *testing.T) {
 func TestSwapLoadout_InRestSkipsRecallCost(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 	loadoutPayload := struct {
 		CharacterID  string `json:"character_id"`
 		CardID       string `json:"card_id"`

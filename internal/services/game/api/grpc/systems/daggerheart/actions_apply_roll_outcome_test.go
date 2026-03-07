@@ -7,7 +7,6 @@ import (
 	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -17,6 +16,16 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
+
+// fearRollEvent creates a roll event builder pre-configured for FAILURE_WITH_FEAR
+// with gm_move enabled — the common setup for complication/gate tests.
+func fearRollEvent(t *testing.T, requestID string) *rollEventBuilder {
+	t.Helper()
+	return newRollEvent(t, requestID).
+		withOutcome(pb.Outcome_FAILURE_WITH_FEAR.String()).
+		withResults(map[string]any{"d20": 1}).
+		withSystemData("gm_move", true)
+}
 
 // --- ApplyRollOutcome tests ---
 
@@ -60,41 +69,12 @@ func TestApplyRollOutcome_MissingRollSeq(t *testing.T) {
 func TestApplyRollOutcome_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	svc.stores.Domain = nil
 
-	rollPayload := action.RollResolvePayload{
-		RequestID: "req-roll-outcome-required",
-		RollSeq:   1,
-		Results:   map[string]any{"d20": 20},
-		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
-		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    true,
-		},
-	}
-	rollJSON, err := json.Marshal(rollPayload)
-	if err != nil {
-		t.Fatalf("encode roll payload: %v", err)
-	}
-	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-1",
-		Timestamp:   now,
-		Type:        event.Type("action.roll_resolved"),
-		SessionID:   "sess-1",
-		RequestID:   "req-roll-outcome-required",
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "roll",
-		EntityID:    "req-roll-outcome-required",
-		PayloadJSON: rollJSON,
-	})
-	if err != nil {
-		t.Fatalf("append roll event: %v", err)
-	}
+	rollEvent := newRollEvent(t, "req-roll-outcome-required").appendTo(eventStore)
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-outcome-required")
-	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-outcome-required")
+	_, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
 	})
@@ -104,7 +84,7 @@ func TestApplyRollOutcome_RequiresDomainEngine(t *testing.T) {
 func TestApplyRollOutcome_IdempotentWhenAlreadyAppliedEvenWithOpenGate(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
@@ -132,38 +112,9 @@ func TestApplyRollOutcome_IdempotentWhenAlreadyAppliedEvenWithOpenGate(t *testin
 		},
 	}
 
-	rollPayload := action.RollResolvePayload{
-		RequestID: "req-roll-duplicate",
-		RollSeq:   1,
-		Results:   map[string]any{"d20": 1},
-		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
-		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    true,
-			"gm_move":      true,
-		},
-	}
-	rollJSON, err := json.Marshal(rollPayload)
-	if err != nil {
-		t.Fatalf("encode roll payload: %v", err)
-	}
-	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-1",
-		Timestamp:   now,
-		Type:        event.Type("action.roll_resolved"),
-		SessionID:   "sess-1",
-		RequestID:   "req-roll-duplicate",
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "roll",
-		EntityID:    "req-roll-duplicate",
-		PayloadJSON: rollJSON,
-	})
-	if err != nil {
-		t.Fatalf("append roll event: %v", err)
-	}
+	rollEvent := fearRollEvent(t, "req-roll-duplicate").appendTo(eventStore)
 
-	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+	_, err := eventStore.AppendEvent(context.Background(), event.Event{
 		CampaignID:  "camp-1",
 		Timestamp:   now.Add(time.Second),
 		Type:        event.Type("action.outcome_applied"),
@@ -179,7 +130,7 @@ func TestApplyRollOutcome_IdempotentWhenAlreadyAppliedEvenWithOpenGate(t *testin
 	}
 
 	domain := svc.stores.Domain.(*fakeDomainEngine)
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-duplicate")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-duplicate")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -205,45 +156,16 @@ func TestApplyRollOutcome_AlreadyAppliedStillEnsuresComplicationGate(t *testing.
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     2,
 	}
 
-	rollPayload := action.RollResolvePayload{
-		RequestID: "req-roll-gate-retry",
-		RollSeq:   1,
-		Results:   map[string]any{"d20": 1},
-		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
-		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    true,
-			"gm_move":      true,
-		},
-	}
-	rollJSON, err := json.Marshal(rollPayload)
-	if err != nil {
-		t.Fatalf("encode roll payload: %v", err)
-	}
-	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-1",
-		Timestamp:   now,
-		Type:        event.Type("action.roll_resolved"),
-		SessionID:   "sess-1",
-		RequestID:   "req-roll-gate-retry",
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "roll",
-		EntityID:    "req-roll-gate-retry",
-		PayloadJSON: rollJSON,
-	})
-	if err != nil {
-		t.Fatalf("append roll event: %v", err)
-	}
+	rollEvent := fearRollEvent(t, "req-roll-gate-retry").appendTo(eventStore)
 
-	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+	_, err := eventStore.AppendEvent(context.Background(), event.Event{
 		CampaignID:  "camp-1",
 		Timestamp:   now.Add(time.Second),
 		Type:        event.Type("action.outcome_applied"),
@@ -305,7 +227,7 @@ func TestApplyRollOutcome_AlreadyAppliedStillEnsuresComplicationGate(t *testing.
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-gate-retry")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-gate-retry")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -341,45 +263,16 @@ func TestApplyRollOutcome_PartialRetrySkipsRepeatedGMFearSet(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     1,
 	}
 
-	rollPayload := action.RollResolvePayload{
-		RequestID: "req-roll-partial-retry",
-		RollSeq:   1,
-		Results:   map[string]any{"d20": 1},
-		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
-		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    true,
-			"gm_move":      true,
-		},
-	}
-	rollJSON, err := json.Marshal(rollPayload)
-	if err != nil {
-		t.Fatalf("encode roll payload: %v", err)
-	}
-	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-1",
-		Timestamp:   now,
-		Type:        event.Type("action.roll_resolved"),
-		SessionID:   "sess-1",
-		RequestID:   "req-roll-partial-retry",
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "roll",
-		EntityID:    "req-roll-partial-retry",
-		PayloadJSON: rollJSON,
-	})
-	if err != nil {
-		t.Fatalf("append roll event: %v", err)
-	}
+	rollEvent := fearRollEvent(t, "req-roll-partial-retry").appendTo(eventStore)
 
-	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+	_, err := eventStore.AppendEvent(context.Background(), event.Event{
 		CampaignID:    "camp-1",
 		Timestamp:     now.Add(time.Second),
 		Type:          event.Type("sys.daggerheart.gm_fear_changed"),
@@ -454,7 +347,7 @@ func TestApplyRollOutcome_PartialRetrySkipsRepeatedGMFearSet(t *testing.T) {
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-partial-retry")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-partial-retry")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -485,39 +378,11 @@ func TestApplyRollOutcome_PartialRetrySkipsRepeatedGMFearSet(t *testing.T) {
 func TestApplyRollOutcome_PartialRetrySkipsRepeatedCharacterPatch(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
-	rollPayload := action.RollResolvePayload{
-		RequestID: "req-roll-patch-retry",
-		RollSeq:   1,
-		Results:   map[string]any{"d20": 20},
-		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
-		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    true,
-		},
-	}
-	rollJSON, err := json.Marshal(rollPayload)
-	if err != nil {
-		t.Fatalf("encode roll payload: %v", err)
-	}
-	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-1",
-		Timestamp:   now,
-		Type:        event.Type("action.roll_resolved"),
-		SessionID:   "sess-1",
-		RequestID:   "req-roll-patch-retry",
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "roll",
-		EntityID:    "req-roll-patch-retry",
-		PayloadJSON: rollJSON,
-	})
-	if err != nil {
-		t.Fatalf("append roll event: %v", err)
-	}
+	rollEvent := newRollEvent(t, "req-roll-patch-retry").appendTo(eventStore)
 
-	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+	_, err := eventStore.AppendEvent(context.Background(), event.Event{
 		CampaignID:    "camp-1",
 		Timestamp:     now.Add(time.Second),
 		Type:          event.Type("sys.daggerheart.character_state_patched"),
@@ -551,7 +416,7 @@ func TestApplyRollOutcome_PartialRetrySkipsRepeatedCharacterPatch(t *testing.T) 
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-patch-retry")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-patch-retry")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -574,7 +439,7 @@ func TestApplyRollOutcome_AlreadyAppliedWithOpenGateRepairsSpotlight(t *testing.
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
 		CampaignID: "camp-1",
@@ -593,38 +458,9 @@ func TestApplyRollOutcome_AlreadyAppliedWithOpenGateRepairsSpotlight(t *testing.
 		},
 	}
 
-	rollPayload := action.RollResolvePayload{
-		RequestID: "req-roll-open-gate",
-		RollSeq:   1,
-		Results:   map[string]any{"d20": 1},
-		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
-		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_ACTION.String(),
-			"hope_fear":    true,
-			"gm_move":      true,
-		},
-	}
-	rollJSON, err := json.Marshal(rollPayload)
-	if err != nil {
-		t.Fatalf("encode roll payload: %v", err)
-	}
-	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-1",
-		Timestamp:   now,
-		Type:        event.Type("action.roll_resolved"),
-		SessionID:   "sess-1",
-		RequestID:   "req-roll-open-gate",
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "roll",
-		EntityID:    "req-roll-open-gate",
-		PayloadJSON: rollJSON,
-	})
-	if err != nil {
-		t.Fatalf("append roll event: %v", err)
-	}
+	rollEvent := fearRollEvent(t, "req-roll-open-gate").appendTo(eventStore)
 
-	_, err = eventStore.AppendEvent(context.Background(), event.Event{
+	_, err := eventStore.AppendEvent(context.Background(), event.Event{
 		CampaignID:  "camp-1",
 		Timestamp:   now.Add(time.Second),
 		Type:        event.Type("action.outcome_applied"),
@@ -662,7 +498,7 @@ func TestApplyRollOutcome_AlreadyAppliedWithOpenGateRepairsSpotlight(t *testing.
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-open-gate")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-open-gate")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,

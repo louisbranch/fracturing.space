@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -57,24 +56,6 @@ func TestUpdateCountdown_NoDeltaOrCurrent(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestDeleteCountdown_RequiresDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	_, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
-		CampaignId:  "camp-1",
-		SessionId:   "sess-1",
-		CountdownId: "cd-1",
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestUpdateCountdown_RequiresDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	_, err := svc.UpdateCountdown(context.Background(), &pb.DaggerheartUpdateCountdownRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", CountdownId: "cd-1", Delta: 1,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestUpdateCountdown_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
@@ -120,7 +101,7 @@ func TestUpdateCountdown_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.countdown_created"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-countdown-update-create",
@@ -135,7 +116,7 @@ func TestUpdateCountdown_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.countdown_updated"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-countdown-update",
@@ -222,7 +203,7 @@ func TestUpdateCountdown_UsesDomainEngine(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.countdown_updated"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-countdown-update",

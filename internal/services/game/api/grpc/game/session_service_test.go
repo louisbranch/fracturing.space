@@ -70,11 +70,12 @@ func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 	}
 
 	svc := NewSessionService(Stores{
-		Campaign:    campaignStore,
-		Session:     sessionStore,
-		Participant: participantStore,
-		Event:       eventStore,
-		Domain:      domain,
+		Campaign:     campaignStore,
+		Session:      sessionStore,
+		Participant:  participantStore,
+		Event:        eventStore,
+		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -103,11 +104,12 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 	sessionStore.activeSession["c1"] = "s1"
 
 	svc := NewSessionService(Stores{
-		Campaign:    campaignStore,
-		Session:     sessionStore,
-		Participant: participantStore,
-		Event:       eventStore,
-		Domain:      domain,
+		Campaign:     campaignStore,
+		Session:      sessionStore,
+		Participant:  participantStore,
+		Event:        eventStore,
+		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -165,7 +167,7 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	}}
 
 	svc := &SessionService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("session-123"),
 	}
@@ -231,7 +233,7 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	}}
 
 	svc := &SessionService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("session-123"),
 	}
@@ -278,11 +280,12 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 
 	svc := &SessionService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Session:      sessionStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("session-123"),
@@ -372,6 +375,7 @@ func TestSetSessionSpotlight_Success(t *testing.T) {
 			Participant:      participantStore,
 			Event:            eventStore,
 			Domain:           domain,
+			WriteRuntime:     testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -456,6 +460,7 @@ func TestSetSessionSpotlight_UsesDomainEngine(t *testing.T) {
 			Participant:      participantStore,
 			Event:            eventStore,
 			Domain:           domain,
+			WriteRuntime:     testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -596,6 +601,7 @@ func TestClearSessionSpotlight_Success(t *testing.T) {
 		Participant:      participantStore,
 		Event:            eventStore,
 		Domain:           domain,
+		WriteRuntime:     testRuntime,
 	})
 
 	resp, err := svc.ClearSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
@@ -685,6 +691,7 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 			Participant:      participantStore,
 			Event:            eventStore,
 			Domain:           domain,
+			WriteRuntime:     testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -949,7 +956,7 @@ func TestEndSession_Success(t *testing.T) {
 	}}
 
 	svc := &SessionService{
-		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("session-123"),
 	}
@@ -1000,11 +1007,12 @@ func TestEndSession_UsesDomainEngine(t *testing.T) {
 
 	svc := &SessionService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Session:      sessionStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -1203,12 +1211,13 @@ func TestAbandonSessionGate_Success(t *testing.T) {
 
 	svc := &SessionService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			SessionGate: gateStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Session:      sessionStore,
+			SessionGate:  gateStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -1284,12 +1293,13 @@ func TestOpenSessionGate_UsesDomainEngine(t *testing.T) {
 
 	svc := &SessionService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			SessionGate: gateStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Session:      sessionStore,
+			SessionGate:  gateStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -1344,12 +1354,13 @@ func TestResolveSessionGate_UsesDomainEngine(t *testing.T) {
 
 	svc := &SessionService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			SessionGate: gateStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Session:      sessionStore,
+			SessionGate:  gateStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -1404,12 +1415,13 @@ func TestAbandonSessionGate_UsesDomainEngine(t *testing.T) {
 
 	svc := &SessionService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			SessionGate: gateStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Session:      sessionStore,
+			SessionGate:  gateStore,
+			Participant:  participantStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}

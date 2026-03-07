@@ -8,6 +8,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -184,7 +185,7 @@ func campaignReadinessAggregateState(
 				}
 				return aggregate.State{}, status.Errorf(codes.Internal, "get daggerheart character profile %s: %v", characterID, err)
 			}
-			characterState.SystemProfile = daggerheartSystemProfileMap(profile)
+			characterState.SystemProfile = daggerheartgrpc.SystemProfileMap(profile)
 			state.Characters[characterID] = characterState
 		}
 	}

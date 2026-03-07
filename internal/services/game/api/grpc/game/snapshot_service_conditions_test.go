@@ -47,7 +47,7 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 
 	err = applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Domain: domain},
+		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Domain: domain, WriteRuntime: testRuntime},
 		"c1",
 		"s1",
 		"ch1",
@@ -110,7 +110,7 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 
 	err = applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Domain: domain},
+		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Domain: domain, WriteRuntime: testRuntime},
 		"c1",
 		"s1",
 		"ch1",

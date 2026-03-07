@@ -11,6 +11,7 @@ import (
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -114,9 +115,6 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 
 	applier := c.stores.Applier()
-	if c.stores.Domain == nil {
-		return storage.CharacterRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := character.CreatePayload{
 		CharacterID:        characterID,
 		OwnerParticipantID: strings.TrimSpace(policyActor.ID),
@@ -140,7 +138,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -153,7 +151,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 			EntityID:     characterID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CharacterRecord{}, err
@@ -230,7 +228,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		projectionApplier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -243,8 +241,8 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 			EntityID:     created.ID,
 			PayloadJSON:  commandPayloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErrMessage: "apply profile event",
+		domainwrite.Options{
+			ApplyErrMessage: "apply profile event",
 		},
 	)
 	if err != nil {
@@ -272,7 +270,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		c.stores.Applier(),
 		commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
 			CoreInput: commandbuild.CoreInput{
@@ -288,10 +286,10 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 				PayloadJSON:  stateJSON,
 			},
 		}),
-		domainCommandApplyOptions{
-			requireEvents:   true,
-			missingEventMsg: "character state patch did not emit an event",
-			applyErrMessage: "apply state event",
+		domainwrite.Options{
+			RequireEvents:   true,
+			MissingEventMsg: "character state patch did not emit an event",
+			ApplyErrMessage: "apply state event",
 		},
 	)
 	if err != nil {
@@ -404,9 +402,6 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
 	applier := c.stores.Applier()
-	if c.stores.Domain == nil {
-		return storage.CharacterRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payloadFields := make(map[string]string, len(fields))
 	for key, value := range fields {
 		stringValue, ok := value.(string)
@@ -430,7 +425,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -443,7 +438,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 			EntityID:     characterID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return storage.CharacterRecord{}, err
@@ -491,9 +486,6 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	}
 	reason := strings.TrimSpace(in.GetReason())
 	applier := c.stores.Applier()
-	if c.stores.Domain == nil {
-		return storage.CharacterRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := character.DeletePayload{
 		CharacterID: characterID,
 		Reason:      reason,
@@ -509,7 +501,7 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -522,8 +514,8 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 			EntityID:     characterID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErrMessage: "apply event",
+		domainwrite.Options{
+			ApplyErrMessage: "apply event",
 		},
 	)
 	if err != nil {
@@ -560,9 +552,6 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 	}
 
 	applier := c.stores.Applier()
-	if c.stores.Domain == nil {
-		return "", "", status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := character.UpdatePayload{
 		CharacterID: characterID,
 		Fields: map[string]string{
@@ -580,7 +569,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -593,8 +582,8 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 			EntityID:     characterID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErrMessage: "apply event",
+		domainwrite.Options{
+			ApplyErrMessage: "apply event",
 		},
 	)
 	if err != nil {
@@ -861,9 +850,6 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
 	applier := c.stores.Applier()
-	if c.stores.Domain == nil {
-		return "", storage.DaggerheartCharacterProfile{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	commandPayload := character.ProfileUpdatePayload{
 		CharacterID:   characterID,
 		SystemProfile: systemProfile,
@@ -879,7 +865,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -892,7 +878,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 			EntityID:     characterID,
 			PayloadJSON:  commandPayloadJSON,
 		}),
-		domainCommandApplyOptions{},
+		domainwrite.Options{},
 	)
 	if err != nil {
 		return "", storage.DaggerheartCharacterProfile{}, err

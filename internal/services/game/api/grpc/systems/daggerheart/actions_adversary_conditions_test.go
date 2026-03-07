@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -55,18 +54,6 @@ func TestApplyAdversaryConditions_MissingSessionId(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestApplyAdversaryConditions_RequiresDomainEngine(t *testing.T) {
-	svc := newAdversaryDamageTestService()
-	svc.stores.Domain = nil
-	ctx := contextWithSessionID("sess-1")
-	_, err := svc.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
-		CampaignId:  "camp-1",
-		AdversaryId: "adv-1",
-		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestApplyAdversaryConditions_NoConditions(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	ctx := contextWithSessionID("sess-1")
@@ -107,7 +94,7 @@ func TestApplyAdversaryConditions_AddCondition_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.adversary_condition_changed"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-adv-conditions-add",
@@ -160,7 +147,7 @@ func TestApplyAdversaryConditions_RemoveCondition_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.adversary_condition_changed"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-adv-conditions-remove",
@@ -190,7 +177,7 @@ func TestApplyAdversaryConditions_RemoveCondition_Success(t *testing.T) {
 func TestApplyAdversaryConditions_UsesDomainEngine(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	payload := daggerheart.AdversaryConditionChangedPayload{
 		AdversaryID:      "adv-1",

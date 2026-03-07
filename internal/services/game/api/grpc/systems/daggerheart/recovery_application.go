@@ -8,6 +8,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -19,32 +20,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type recoveryApplication struct {
-	service *DaggerheartService
-}
-
-func newRecoveryApplication(service *DaggerheartService) recoveryApplication {
-	return recoveryApplication{service: service}
-}
-
-func (a recoveryApplication) runApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequest) (*pb.DaggerheartApplyRestResponse, error) {
+func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequest) (*pb.DaggerheartApplyRestResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply rest request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-	if a.service.seedFunc == nil {
-		return nil, status.Error(codes.Internal, "seed generator is not configured")
-	}
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore, dependencySeedGenerator); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -52,7 +33,7 @@ func (a recoveryApplication) runApplyRest(ctx context.Context, in *pb.Daggerhear
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -67,7 +48,7 @@ func (a recoveryApplication) runApplyRest(ctx context.Context, in *pb.Daggerhear
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -80,14 +61,14 @@ func (a recoveryApplication) runApplyRest(ctx context.Context, in *pb.Daggerhear
 
 	seed, _, _, err := random.ResolveSeed(
 		in.Rest.GetRng(),
-		a.service.seedFunc,
+		s.seedFunc,
 		func(mode commonv1.RollMode) bool { return mode == commonv1.RollMode_REPLAY },
 	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to resolve rest seed: %v", err)
 	}
 
-	currentSnap, err := a.service.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+	currentSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return nil, status.Errorf(codes.Internal, "get daggerheart snapshot: %v", err)
 	}
@@ -112,7 +93,7 @@ func (a recoveryApplication) runApplyRest(ctx context.Context, in *pb.Daggerhear
 	longTermCountdownID := strings.TrimSpace(in.Rest.GetLongTermCountdownId())
 	var longTermCountdown *daggerheart.CountdownUpdatePayload
 	if outcome.AdvanceCountdown && longTermCountdownID != "" {
-		storedCountdown, err := a.service.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, longTermCountdownID)
+		storedCountdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, longTermCountdownID)
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
@@ -168,10 +149,10 @@ func (a recoveryApplication) runApplyRest(ctx context.Context, in *pb.Daggerhear
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartRestTake,
 		ActorType:     command.ActorTypeSystem,
@@ -183,17 +164,12 @@ func (a recoveryApplication) runApplyRest(ctx context.Context, in *pb.Daggerhear
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "rest did not emit an event",
-		applyErrMessage: "apply rest event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("rest did not emit an event", "apply rest event"))
 	if err != nil {
 		return nil, err
 	}
 
-	updatedSnap, err := a.service.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+	updatedSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart snapshot: %v", err)
 	}
@@ -203,7 +179,7 @@ func (a recoveryApplication) runApplyRest(ctx context.Context, in *pb.Daggerhear
 		if strings.TrimSpace(id) == "" {
 			continue
 		}
-		state, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, id)
+		state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, id)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				continue
@@ -225,18 +201,12 @@ func (a recoveryApplication) runApplyRest(ctx context.Context, in *pb.Daggerhear
 	}, nil
 }
 
-func (a recoveryApplication) runApplyDowntimeMove(ctx context.Context, in *pb.DaggerheartApplyDowntimeMoveRequest) (*pb.DaggerheartApplyDowntimeMoveResponse, error) {
+func (s *DaggerheartService) runApplyDowntimeMove(ctx context.Context, in *pb.DaggerheartApplyDowntimeMoveRequest) (*pb.DaggerheartApplyDowntimeMoveResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply downtime request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -248,7 +218,7 @@ func (a recoveryApplication) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -263,7 +233,7 @@ func (a recoveryApplication) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -274,11 +244,11 @@ func (a recoveryApplication) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 		return nil, status.Error(codes.InvalidArgument, "downtime move is required")
 	}
 
-	profile, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	profile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
-	current, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	current, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -324,10 +294,10 @@ func (a recoveryApplication) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartDowntimeMoveApply,
 		ActorType:     command.ActorTypeSystem,
@@ -339,16 +309,11 @@ func (a recoveryApplication) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "downtime move did not emit an event",
-		applyErrMessage: "apply downtime move event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("downtime move did not emit an event", "apply downtime move event"))
 	if err != nil {
 		return nil, err
 	}
-	if err := a.service.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
+	if err := s.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
 		campaignID:   campaignID,
 		sessionID:    grpcmeta.SessionIDFromContext(ctx),
 		characterID:  characterID,
@@ -361,7 +326,7 @@ func (a recoveryApplication) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 		return nil, err
 	}
 
-	updated, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
 	}
@@ -371,18 +336,12 @@ func (a recoveryApplication) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 	}, nil
 }
 
-func (a recoveryApplication) runApplyTemporaryArmor(ctx context.Context, in *pb.DaggerheartApplyTemporaryArmorRequest) (*pb.DaggerheartApplyTemporaryArmorResponse, error) {
+func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.DaggerheartApplyTemporaryArmorRequest) (*pb.DaggerheartApplyTemporaryArmorResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply temporary armor request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -394,7 +353,7 @@ func (a recoveryApplication) runApplyTemporaryArmor(ctx context.Context, in *pb.
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -409,17 +368,17 @@ func (a recoveryApplication) runApplyTemporaryArmor(ctx context.Context, in *pb.
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
 	if in.Armor == nil {
 		return nil, status.Error(codes.InvalidArgument, "armor is required")
 	}
-	if _, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID); err != nil {
+	if _, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if _, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID); err != nil {
+	if _, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID); err != nil {
 		return nil, handleDomainError(err)
 	}
 
@@ -435,10 +394,10 @@ func (a recoveryApplication) runApplyTemporaryArmor(ctx context.Context, in *pb.
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartTemporaryArmorApply,
 		ActorType:     command.ActorTypeSystem,
@@ -450,17 +409,12 @@ func (a recoveryApplication) runApplyTemporaryArmor(ctx context.Context, in *pb.
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "temporary armor apply did not emit an event",
-		applyErrMessage: "apply temporary armor event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("temporary armor apply did not emit an event", "apply temporary armor event"))
 	if err != nil {
 		return nil, err
 	}
 
-	updated, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
 	}
@@ -470,18 +424,12 @@ func (a recoveryApplication) runApplyTemporaryArmor(ctx context.Context, in *pb.
 	}, nil
 }
 
-func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.DaggerheartSwapLoadoutRequest) (*pb.DaggerheartSwapLoadoutResponse, error) {
+func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.DaggerheartSwapLoadoutRequest) (*pb.DaggerheartSwapLoadoutResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "swap loadout request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -493,7 +441,7 @@ func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -508,7 +456,7 @@ func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -522,11 +470,11 @@ func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 		return nil, status.Error(codes.InvalidArgument, "recall_cost must be non-negative")
 	}
 
-	profile, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	profile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
-	current, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	current, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -567,10 +515,10 @@ func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartLoadoutSwap,
 		ActorType:     command.ActorTypeSystem,
@@ -582,16 +530,11 @@ func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "loadout swap did not emit an event",
-		applyErrMessage: "apply loadout swap event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("loadout swap did not emit an event", "apply loadout swap event"))
 	if err != nil {
 		return nil, err
 	}
-	if err := a.service.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
+	if err := s.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
 		campaignID:   campaignID,
 		sessionID:    grpcmeta.SessionIDFromContext(ctx),
 		characterID:  characterID,
@@ -615,7 +558,7 @@ func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "encode stress spend payload: %v", err)
 		}
-		_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    campaignID,
 			Type:          commandTypeDaggerheartStressSpend,
 			ActorType:     command.ActorTypeSystem,
@@ -627,18 +570,13 @@ func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 			SystemID:      daggerheart.SystemID,
 			SystemVersion: daggerheart.SystemVersion,
 			PayloadJSON:   stressSpendJSON,
-		}, adapter, domainCommandApplyOptions{
-			requireEvents:   true,
-			missingEventMsg: "stress spend did not emit an event",
-			applyErrMessage: "apply stress spend event",
-			executeErrMsg:   "execute domain command",
-		})
+		}, adapter, domainwrite.RequireEventsWithDiagnostics("stress spend did not emit an event", "apply stress spend event"))
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	updated, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
 	}
@@ -648,24 +586,12 @@ func (a recoveryApplication) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	}, nil
 }
 
-func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.DaggerheartApplyDeathMoveRequest) (*pb.DaggerheartApplyDeathMoveResponse, error) {
+func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.DaggerheartApplyDeathMoveRequest) (*pb.DaggerheartApplyDeathMoveResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply death move request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-	if a.service.seedFunc == nil {
-		return nil, status.Error(codes.Internal, "seed generator is not configured")
-	}
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore, dependencySeedGenerator); err != nil {
+		return nil, err
 	}
 
 	campaignID := strings.TrimSpace(in.GetCampaignId())
@@ -677,7 +603,7 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -692,7 +618,7 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
-	if err := a.service.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
+	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -709,18 +635,18 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 
 	seed, _, _, err := random.ResolveSeed(
 		in.GetRng(),
-		a.service.seedFunc,
+		s.seedFunc,
 		func(mode commonv1.RollMode) bool { return mode == commonv1.RollMode_REPLAY },
 	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to resolve death move seed: %v", err)
 	}
 
-	profile, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	profile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
-	state, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	state, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -776,9 +702,6 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	if result.LifeState == daggerheart.LifeStateDead && a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "character store is not configured")
-	}
 
 	hpBefore := result.HPBefore
 	hpAfter := result.HPAfter
@@ -828,10 +751,10 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartCharacterStatePatch,
 		ActorType:     command.ActorTypeSystem,
@@ -843,21 +766,16 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "death move did not emit an event",
-		applyErrMessage: "apply character state event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("death move did not emit an event", "apply character state event"))
 	if err != nil {
 		return nil, err
 	}
 	if result.LifeState == daggerheart.LifeStateDead {
-		if err := a.service.appendCharacterDeletedEvent(ctx, campaignID, characterID, result.Move); err != nil {
+		if err := s.appendCharacterDeletedEvent(ctx, campaignID, characterID, result.Move); err != nil {
 			return nil, err
 		}
 	}
-	if err := a.service.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
+	if err := s.applyStressVulnerableCondition(ctx, applyStressVulnerableConditionInput{
 		campaignID:   campaignID,
 		sessionID:    grpcmeta.SessionIDFromContext(ctx),
 		characterID:  characterID,
@@ -870,7 +788,7 @@ func (a recoveryApplication) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 		return nil, err
 	}
 
-	updated, err := a.service.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
 	}

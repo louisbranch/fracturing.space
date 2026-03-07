@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -39,21 +38,6 @@ func TestApplyAdversaryDamage_MissingStores(t *testing.T) {
 	svc := &DaggerheartService{}
 	_, err := svc.ApplyAdversaryDamage(context.Background(), &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId: "c1", AdversaryId: "a1",
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestApplyAdversaryDamage_RequiresDomainEngine(t *testing.T) {
-	svc := newAdversaryDamageTestService()
-	svc.stores.Domain = nil
-	ctx := contextWithSessionID("sess-1")
-	_, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
-		CampaignId:  "camp-1",
-		AdversaryId: "adv-1",
-		Damage: &pb.DaggerheartDamageRequest{
-			Amount:     5,
-			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
-		},
 	})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -125,7 +109,7 @@ func TestApplyAdversaryDamage_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	adversary := dhStore.adversaries["camp-1:adv-1"]
 	damage := &pb.DaggerheartDamageRequest{
@@ -208,7 +192,7 @@ func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	adversary := dhStore.adversaries["camp-1:adv-1"]
 	damage := &pb.DaggerheartDamageRequest{
@@ -316,7 +300,7 @@ func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	adversary := dhStore.adversaries["camp-1:adv-1"]
 	damage := &pb.DaggerheartDamageRequest{

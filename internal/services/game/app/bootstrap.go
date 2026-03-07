@@ -175,6 +175,8 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		bundle.Close()
 	}()
 
+	writeRuntime := gamegrpc.NewWriteRuntime()
+
 	stores := gamegrpc.Stores{
 		Campaign:           bundle.projections,
 		Participant:        bundle.projections,
@@ -191,12 +193,13 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		Snapshot:           bundle.projections,
 		CampaignFork:       bundle.projections,
 		DaggerheartContent: bundle.content,
-	}
-	if err := stores.Validate(); err != nil {
-		return nil, fmt.Errorf("validate stores: %w", err)
+		WriteRuntime:       writeRuntime,
 	}
 	if err := b.config.configureDomain(srvEnv, &stores, registries); err != nil {
 		return nil, fmt.Errorf("configure domain: %w", err)
+	}
+	if err := stores.Validate(); err != nil {
+		return nil, fmt.Errorf("validate stores: %w", err)
 	}
 	systemRegistry, err := b.config.buildSystemRegistry()
 	if err != nil {
@@ -265,6 +268,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		aiClients.agentClient,
 		systemRegistry,
 		sessionGrantConfig,
+		srvEnv.CompatibilityAppendEnabled,
 	); err != nil {
 		return nil, err
 	}
@@ -273,17 +277,14 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	if err != nil {
 		return nil, fmt.Errorf("resolve projection apply outbox modes: %w", err)
 	}
-	gamegrpc.SetInlineProjectionApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
-	gamegrpc.SetCompatibilityAppendEnabled(srvEnv.CompatibilityAppendEnabled)
-	daggerheartservice.SetInlineProjectionApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
+	writeRuntime.SetInlineApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
 	log.Printf("projection apply mode = %s", projectionApplyMode)
 
 	projectionRegistries, err := b.config.buildProjectionRegistries(registries, applier.Adapters)
 	if err != nil {
 		return nil, fmt.Errorf("build projection registries: %w", err)
 	}
-	gamegrpc.SetIntentFilter(projectionRegistries)
-	daggerheartservice.SetIntentFilter(projectionRegistries)
+	writeRuntime.SetIntentFilter(projectionRegistries)
 
 	// Wire status reporter: lenient dial, nil-safe if unreachable.
 	statusConn, statusClient := dialStatusLenient(srvEnv.StatusAddr)
@@ -336,6 +337,7 @@ func (b *serverBootstrap) registerServices(
 	aiAgentClient aiv1.AgentServiceClient,
 	systemRegistry *bridge.MetadataRegistry,
 	sessionGrantConfig aisessiongrant.Config,
+	compatibilityAppendEnabled bool,
 ) error {
 	daggerheartStores := daggerheartservice.Stores{
 		Campaign:           bundle.projections,
@@ -347,6 +349,7 @@ func (b *serverBootstrap) registerServices(
 		DaggerheartContent: bundle.content,
 		Event:              bundle.events,
 		Domain:             stores.Domain,
+		WriteRuntime:       stores.WriteRuntime,
 	}
 	daggerheartService, err := daggerheartservice.NewDaggerheartService(daggerheartStores, random.NewSeed)
 	if err != nil {
@@ -364,6 +367,7 @@ func (b *serverBootstrap) registerServices(
 	sessionService := gamegrpc.NewSessionService(stores)
 	forkService := gamegrpc.NewForkService(stores)
 	eventService := gamegrpc.NewEventService(stores)
+	eventService.SetCompatibilityAppendEnabled(compatibilityAppendEnabled)
 	statisticsService := gamegrpc.NewStatisticsService(stores)
 	systemService := gamegrpc.NewSystemService(systemRegistry)
 	authorizationService := gamegrpc.NewAuthorizationService(stores)

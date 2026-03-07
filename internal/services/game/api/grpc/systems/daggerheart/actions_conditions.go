@@ -7,13 +7,13 @@ import (
 )
 
 func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyConditionsRequest) (*pb.DaggerheartApplyConditionsResponse, error) {
-	return newConditionsApplication(s).runApplyConditions(ctx, in)
+	return s.runApplyConditions(ctx, in)
 }
 
 func (s *DaggerheartService) ApplyAdversaryConditions(ctx context.Context, in *pb.DaggerheartApplyAdversaryConditionsRequest) (*pb.DaggerheartApplyAdversaryConditionsResponse, error) {
-	return newConditionsApplication(s).runApplyAdversaryConditions(ctx, in)
+	return s.runApplyAdversaryConditions(ctx, in)
 }
 
 func (s *DaggerheartService) ApplyGmMove(ctx context.Context, in *pb.DaggerheartApplyGmMoveRequest) (*pb.DaggerheartApplyGmMoveResponse, error) {
-	return newConditionsApplication(s).runApplyGmMove(ctx, in)
+	return s.runApplyGmMove(ctx, in)
 }

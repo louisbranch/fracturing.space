@@ -375,8 +375,9 @@ func newWorkflowCharacterService(t *testing.T, profile storage.DaggerheartCharac
 				"domain-card.arcana-bolt": {ID: "domain-card.arcana-bolt", DomainID: "domain.arcana", Name: "Arcana Bolt"},
 			},
 		},
-		Event:  newFakeEventStore(),
-		Domain: domain,
+		Event:        newFakeEventStore(),
+		Domain:       domain,
+		WriteRuntime: testRuntime,
 	})
 }
 

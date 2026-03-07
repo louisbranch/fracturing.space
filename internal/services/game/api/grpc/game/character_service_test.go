@@ -9,7 +9,6 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -47,12 +46,7 @@ func TestCreateCharacter_NilRequest(t *testing.T) {
 }
 
 func TestCreateCharacter_MissingCampaignId(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:     newFakeCampaignStore(),
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-		Event:        newFakeEventStore(),
-	})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		Name: "Hero",
 		Kind: statev1.CharacterKind_PC,
@@ -61,12 +55,7 @@ func TestCreateCharacter_MissingCampaignId(t *testing.T) {
 }
 
 func TestCreateCharacter_CampaignNotFound(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:     newFakeCampaignStore(),
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-		Event:        newFakeEventStore(),
-	})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		CampaignId: "nonexistent",
 		Name:       "Hero",
@@ -76,20 +65,14 @@ func TestCreateCharacter_CampaignNotFound(t *testing.T) {
 }
 
 func TestCreateCharacter_CompletedCampaignDisallowed(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusCompleted,
 	}
-	participantStore := characterManagerParticipantStore("c1")
+	ts.Participant = characterManagerParticipantStore("c1")
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Participant:  participantStore,
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-		Event:        newFakeEventStore(),
-	})
+	svc := NewCharacterService(ts.build())
 	ctx := contextWithParticipantID("manager-1")
 	_, err := svc.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -100,18 +83,13 @@ func TestCreateCharacter_CompletedCampaignDisallowed(t *testing.T) {
 }
 
 func TestCreateCharacter_EmptyName(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-		Event:        newFakeEventStore(),
-	})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Kind:       statev1.CharacterKind_PC,
@@ -120,18 +98,13 @@ func TestCreateCharacter_EmptyName(t *testing.T) {
 }
 
 func TestCreateCharacter_InvalidKind(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-		Event:        newFakeEventStore(),
-	})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Hero",
@@ -140,16 +113,11 @@ func TestCreateCharacter_InvalidKind(t *testing.T) {
 }
 
 func TestCreateCharacter_DeniesMissingIdentity(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant = characterManagerParticipantStore("c1")
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Participant:  characterManagerParticipantStore("c1"),
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-		Event:        newFakeEventStore(),
-	})
+	svc := NewCharacterService(ts.build())
 
 	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -160,16 +128,12 @@ func TestCreateCharacter_DeniesMissingIdentity(t *testing.T) {
 }
 
 func TestCreateCharacter_RequiresDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant = characterManagerParticipantStore("c1")
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-		Event:        newFakeEventStore(),
-	})
-	_, err := svc.CreateCharacter(context.Background(), &statev1.CreateCharacterRequest{
+	svc := NewCharacterService(ts.build())
+	_, err := svc.CreateCharacter(contextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
 		Name:       "Hero",
 		Kind:       statev1.CharacterKind_PC,
@@ -178,18 +142,15 @@ func TestCreateCharacter_RequiresDomainEngine(t *testing.T) {
 }
 
 func TestCreateCharacter_Success_PC(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := characterManagerParticipantStore("c1")
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -228,14 +189,7 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 	}}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			Domain:       domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),
 	}
@@ -263,50 +217,47 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 	}
 
 	// Verify character persisted
-	_, err = characterStore.GetCharacter(context.Background(), "c1", "char-123")
+	_, err = ts.Character.GetCharacter(context.Background(), "c1", "char-123")
 	if err != nil {
 		t.Fatalf("Character not persisted: %v", err)
 	}
 
 	// Verify Daggerheart profile persisted
-	_, err = dhStore.GetDaggerheartCharacterProfile(context.Background(), "c1", "char-123")
+	_, err = ts.Daggerheart.GetDaggerheartCharacterProfile(context.Background(), "c1", "char-123")
 	if err != nil {
 		t.Fatalf("Daggerheart profile not persisted: %v", err)
 	}
 
 	// Verify Daggerheart state persisted
-	_, err = dhStore.GetDaggerheartCharacterState(context.Background(), "c1", "char-123")
+	_, err = ts.Daggerheart.GetDaggerheartCharacterState(context.Background(), "c1", "char-123")
 	if err != nil {
 		t.Fatalf("Daggerheart state not persisted: %v", err)
 	}
 
-	if got := len(eventStore.events["c1"]); got != 3 {
+	if got := len(ts.Event.events["c1"]); got != 3 {
 		t.Fatalf("expected 3 events, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.created") {
-		t.Fatalf("event[0] type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.created"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.created") {
+		t.Fatalf("event[0] type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.created"))
 	}
-	if eventStore.events["c1"][1].Type != event.Type("character.profile_updated") {
-		t.Fatalf("event[1] type = %s, want %s", eventStore.events["c1"][1].Type, event.Type("character.profile_updated"))
+	if ts.Event.events["c1"][1].Type != event.Type("character.profile_updated") {
+		t.Fatalf("event[1] type = %s, want %s", ts.Event.events["c1"][1].Type, event.Type("character.profile_updated"))
 	}
-	if eventStore.events["c1"][2].Type != event.Type("sys.daggerheart.character_state_patched") {
-		t.Fatalf("event[2] type = %s, want %s", eventStore.events["c1"][2].Type, event.Type("sys.daggerheart.character_state_patched"))
+	if ts.Event.events["c1"][2].Type != event.Type("sys.daggerheart.character_state_patched") {
+		t.Fatalf("event[2] type = %s, want %s", ts.Event.events["c1"][2].Type, event.Type("sys.daggerheart.character_state_patched"))
 	}
 }
 
 func TestCreateCharacter_Success_NPC(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := characterManagerParticipantStore("c1")
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusDraft,
 	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -345,14 +296,7 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 	}}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			Domain:       domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("npc-456"),
 	}
@@ -368,25 +312,22 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 	if resp.Character.Kind != statev1.CharacterKind_NPC {
 		t.Errorf("Character Kind = %v, want %v", resp.Character.Kind, statev1.CharacterKind_NPC)
 	}
-	if got := len(eventStore.events["c1"]); got != 3 {
+	if got := len(ts.Event.events["c1"]); got != 3 {
 		t.Fatalf("expected 3 events, got %d", got)
 	}
 }
 
 func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := characterManagerParticipantStore("c1")
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -425,14 +366,7 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			Domain:       domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),
 	}
@@ -464,42 +398,39 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	if domain.commands[2].Type != command.Type("sys.daggerheart.character_state.patch") {
 		t.Fatalf("command type = %s, want %s", domain.commands[2].Type, "sys.daggerheart.character_state.patch")
 	}
-	if _, err := characterStore.GetCharacter(context.Background(), "c1", "char-123"); err != nil {
+	if _, err := ts.Character.GetCharacter(context.Background(), "c1", "char-123"); err != nil {
 		t.Fatalf("Character not persisted: %v", err)
 	}
-	if _, err := dhStore.GetDaggerheartCharacterProfile(context.Background(), "c1", "char-123"); err != nil {
+	if _, err := ts.Daggerheart.GetDaggerheartCharacterProfile(context.Background(), "c1", "char-123"); err != nil {
 		t.Fatalf("Daggerheart profile not persisted: %v", err)
 	}
-	if _, err := dhStore.GetDaggerheartCharacterState(context.Background(), "c1", "char-123"); err != nil {
+	if _, err := ts.Daggerheart.GetDaggerheartCharacterState(context.Background(), "c1", "char-123"); err != nil {
 		t.Fatalf("Daggerheart state not persisted: %v", err)
 	}
-	if got := len(eventStore.events["c1"]); got != 3 {
+	if got := len(ts.Event.events["c1"]); got != 3 {
 		t.Fatalf("expected 3 events, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.created") {
-		t.Fatalf("event[0] type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.created"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.created") {
+		t.Fatalf("event[0] type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.created"))
 	}
-	if eventStore.events["c1"][1].Type != event.Type("character.profile_updated") {
-		t.Fatalf("event[1] type = %s, want %s", eventStore.events["c1"][1].Type, event.Type("character.profile_updated"))
+	if ts.Event.events["c1"][1].Type != event.Type("character.profile_updated") {
+		t.Fatalf("event[1] type = %s, want %s", ts.Event.events["c1"][1].Type, event.Type("character.profile_updated"))
 	}
-	if eventStore.events["c1"][2].Type != event.Type("sys.daggerheart.character_state_patched") {
-		t.Fatalf("event[2] type = %s, want %s", eventStore.events["c1"][2].Type, event.Type("sys.daggerheart.character_state_patched"))
+	if ts.Event.events["c1"][2].Type != event.Type("sys.daggerheart.character_state_patched") {
+		t.Fatalf("event[2] type = %s, want %s", ts.Event.events["c1"][2].Type, event.Type("sys.daggerheart.character_state_patched"))
 	}
 }
 
 func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := characterManagerParticipantStore("c1")
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2026, 2, 20, 18, 30, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -541,14 +472,7 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 	}}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			Domain:       domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),
 	}
@@ -574,18 +498,14 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 }
 
 func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 19, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"player-1": {
 			ID:             "player-1",
 			CampaignID:     "c1",
@@ -593,7 +513,7 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -635,14 +555,7 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 	}}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			Domain:       domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),
 	}
@@ -669,7 +582,7 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 	if participantIDValue == nil || participantIDValue.GetValue() != "player-1" {
 		t.Fatalf("response participant_id = %v, want %q", participantIDValue, "player-1")
 	}
-	stored, err := characterStore.GetCharacter(context.Background(), "c1", "char-123")
+	stored, err := ts.Character.GetCharacter(context.Background(), "c1", "char-123")
 	if err != nil {
 		t.Fatalf("Character not persisted: %v", err)
 	}
@@ -679,18 +592,14 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 }
 
 func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 21, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"gm-1": {
 			ID:             "gm-1",
 			CampaignID:     "c1",
@@ -698,7 +607,7 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.create"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -740,14 +649,7 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 	}}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			Domain:       domain,
-		},
+		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("char-123"),
 	}
@@ -774,7 +676,7 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 	if participantIDValue == nil || participantIDValue.GetValue() != "gm-1" {
 		t.Fatalf("response participant_id = %v, want %q", participantIDValue, "gm-1")
 	}
-	stored, err := characterStore.GetCharacter(context.Background(), "c1", "char-123")
+	stored, err := ts.Character.GetCharacter(context.Background(), "c1", "char-123")
 	if err != nil {
 		t.Fatalf("Character not persisted: %v", err)
 	}
@@ -784,16 +686,13 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 }
 
 func TestUpdateCharacter_NoFields(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
-
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: characterStore, Event: eventStore})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.UpdateCharacter(context.Background(), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -802,14 +701,11 @@ func TestUpdateCharacter_NoFields(t *testing.T) {
 }
 
 func TestUpdateCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 18, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"member-1": {
 			ID:             "member-1",
 			CampaignID:     "c1",
@@ -821,10 +717,10 @@ func TestUpdateCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
 	}
-	eventStore.events["c1"] = []event.Event{
+	ts.Event.events["c1"] = []event.Event{
 		{
 			Seq:         1,
 			CampaignID:  "c1",
@@ -837,9 +733,9 @@ func TestUpdateCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 			PayloadJSON: []byte(`{"character_id":"ch1","name":"Hero","kind":"pc","owner_participant_id":"member-owner"}`),
 		},
 	}
-	eventStore.nextSeq["c1"] = 2
+	ts.Event.nextSeq["c1"] = 2
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -854,13 +750,7 @@ func TestUpdateCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: participantStore,
-		Character:   characterStore,
-		Event:       eventStore,
-		Domain:      domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	_, err := svc.UpdateCharacter(contextWithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -875,33 +765,24 @@ func TestUpdateCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 func TestUpdateCharacter_DeniesControllerWhenOwnershipUnresolved(t *testing.T) {
 	// A member whose participant ID matches ParticipantID (controller) but has
 	// no ownership events should be denied — controller is not owner.
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"controller-1": {
 			ID:             "controller-1",
 			CampaignID:     "c1",
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, ParticipantID: "controller-1"},
 	}
 	// No events — ownership cannot be resolved from the journal.
-	eventStore.nextSeq["c1"] = 1
+	ts.Event.nextSeq["c1"] = 1
 
-	domain := &fakeDomainEngine{store: eventStore}
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: participantStore,
-		Character:   characterStore,
-		Event:       eventStore,
-		Domain:      domain,
-	})
+	domain := &fakeDomainEngine{store: ts.Event}
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	_, err := svc.UpdateCharacter(contextWithParticipantID("controller-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -914,24 +795,21 @@ func TestUpdateCharacter_DeniesControllerWhenOwnershipUnresolved(t *testing.T) {
 }
 
 func TestUpdateCharacter_AllowsMemberWhenOwner(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 18, 35, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"member-1": {
 			ID:             "member-1",
 			CampaignID:     "c1",
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-1", Name: "Hero", Kind: character.KindPC},
 	}
-	eventStore.events["c1"] = []event.Event{
+	ts.Event.events["c1"] = []event.Event{
 		{
 			Seq:         1,
 			CampaignID:  "c1",
@@ -944,9 +822,9 @@ func TestUpdateCharacter_AllowsMemberWhenOwner(t *testing.T) {
 			PayloadJSON: []byte(`{"character_id":"ch1","name":"Hero","kind":"pc","owner_participant_id":"member-1"}`),
 		},
 	}
-	eventStore.nextSeq["c1"] = 2
+	ts.Event.nextSeq["c1"] = 2
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -961,13 +839,7 @@ func TestUpdateCharacter_AllowsMemberWhenOwner(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: participantStore,
-		Character:   characterStore,
-		Event:       eventStore,
-		Domain:      domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	resp, err := svc.UpdateCharacter(contextWithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -985,14 +857,11 @@ func TestUpdateCharacter_AllowsMemberWhenOwner(t *testing.T) {
 }
 
 func TestUpdateCharacter_AllowsMemberWhenOwnershipTransferred(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 19, 30, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"member-1": {
 			ID:             "member-1",
 			CampaignID:     "c1",
@@ -1004,10 +873,10 @@ func TestUpdateCharacter_AllowsMemberWhenOwnershipTransferred(t *testing.T) {
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-1", Name: "Hero", Kind: character.KindPC},
 	}
-	eventStore.events["c1"] = []event.Event{
+	ts.Event.events["c1"] = []event.Event{
 		{
 			Seq:         1,
 			CampaignID:  "c1",
@@ -1031,9 +900,9 @@ func TestUpdateCharacter_AllowsMemberWhenOwnershipTransferred(t *testing.T) {
 			PayloadJSON: []byte(`{"character_id":"ch1","fields":{"owner_participant_id":"member-1"}}`),
 		},
 	}
-	eventStore.nextSeq["c1"] = 3
+	ts.Event.nextSeq["c1"] = 3
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1048,13 +917,7 @@ func TestUpdateCharacter_AllowsMemberWhenOwnershipTransferred(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: participantStore,
-		Character:   characterStore,
-		Event:       eventStore,
-		Domain:      domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	resp, err := svc.UpdateCharacter(contextWithParticipantID("member-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -1072,14 +935,11 @@ func TestUpdateCharacter_AllowsMemberWhenOwnershipTransferred(t *testing.T) {
 }
 
 func TestUpdateCharacter_DeniesManagerOwnershipTransfer(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 19, 35, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"manager-1": {
 			ID:             "manager-1",
 			CampaignID:     "c1",
@@ -1091,10 +951,10 @@ func TestUpdateCharacter_DeniesManagerOwnershipTransfer(t *testing.T) {
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
 	}
-	eventStore.events["c1"] = []event.Event{
+	ts.Event.events["c1"] = []event.Event{
 		{
 			Seq:         1,
 			CampaignID:  "c1",
@@ -1107,9 +967,9 @@ func TestUpdateCharacter_DeniesManagerOwnershipTransfer(t *testing.T) {
 			PayloadJSON: []byte(`{"character_id":"ch1","name":"Hero","kind":"pc","owner_participant_id":"manager-1"}`),
 		},
 	}
-	eventStore.nextSeq["c1"] = 2
+	ts.Event.nextSeq["c1"] = 2
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1124,13 +984,7 @@ func TestUpdateCharacter_DeniesManagerOwnershipTransfer(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: participantStore,
-		Character:   characterStore,
-		Event:       eventStore,
-		Domain:      domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	_, err := svc.UpdateCharacter(contextWithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -1143,14 +997,11 @@ func TestUpdateCharacter_DeniesManagerOwnershipTransfer(t *testing.T) {
 }
 
 func TestUpdateCharacter_AllowsOwnerOwnershipTransfer(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 19, 40, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"owner-1": {
 			ID:             "owner-1",
 			CampaignID:     "c1",
@@ -1162,10 +1013,10 @@ func TestUpdateCharacter_AllowsOwnerOwnershipTransfer(t *testing.T) {
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
 	}
-	eventStore.events["c1"] = []event.Event{
+	ts.Event.events["c1"] = []event.Event{
 		{
 			Seq:         1,
 			CampaignID:  "c1",
@@ -1178,9 +1029,9 @@ func TestUpdateCharacter_AllowsOwnerOwnershipTransfer(t *testing.T) {
 			PayloadJSON: []byte(`{"character_id":"ch1","name":"Hero","kind":"pc","owner_participant_id":"owner-1"}`),
 		},
 	}
-	eventStore.nextSeq["c1"] = 2
+	ts.Event.nextSeq["c1"] = 2
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1195,13 +1046,7 @@ func TestUpdateCharacter_AllowsOwnerOwnershipTransfer(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: participantStore,
-		Character:   characterStore,
-		Event:       eventStore,
-		Domain:      domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	resp, err := svc.UpdateCharacter(contextWithParticipantID("owner-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -1229,15 +1074,15 @@ func TestUpdateCharacter_AllowsOwnerOwnershipTransfer(t *testing.T) {
 }
 
 func TestUpdateCharacter_RequiresDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant = characterManagerParticipantStore("c1")
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, OwnerParticipantID: "manager-1"},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: characterStore, Event: newFakeEventStore()})
-	_, err := svc.UpdateCharacter(context.Background(), &statev1.UpdateCharacterRequest{
+	svc := NewCharacterService(ts.build())
+	_, err := svc.UpdateCharacter(contextWithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 		Name:        wrapperspb.String("New Hero"),
@@ -1246,17 +1091,15 @@ func TestUpdateCharacter_RequiresDomainEngine(t *testing.T) {
 }
 
 func TestUpdateCharacter_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := characterManagerParticipantStore("c1")
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, Notes: "old"},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1270,7 +1113,7 @@ func TestUpdateCharacter_Success(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	resp, err := svc.UpdateCharacter(contextWithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -1291,34 +1134,32 @@ func TestUpdateCharacter_Success(t *testing.T) {
 		t.Errorf("Character Notes = %q, want %q", resp.Character.Notes, "updated")
 	}
 
-	stored, err := characterStore.GetCharacter(context.Background(), "c1", "ch1")
+	stored, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1")
 	if err != nil {
 		t.Fatalf("character not persisted: %v", err)
 	}
 	if stored.Name != "New Hero" {
 		t.Errorf("Stored Name = %q, want %q", stored.Name, "New Hero")
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.updated"))
 	}
 }
 
 func TestUpdateCharacter_UsesDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := characterManagerParticipantStore("c1")
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, Notes: "old"},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1333,14 +1174,8 @@ func TestUpdateCharacter_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Character:   characterStore,
-			Event:       eventStore,
-			Domain:      domain,
-		},
-		clock: fixedClock(now),
+		stores: ts.withDomain(domain).build(),
+		clock:  fixedClock(now),
 	}
 
 	resp, err := svc.UpdateCharacter(contextWithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
@@ -1365,13 +1200,13 @@ func TestUpdateCharacter_UsesDomainEngine(t *testing.T) {
 	if domain.commands[0].Type != command.Type("character.update") {
 		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "character.update")
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.updated"))
 	}
-	stored, err := characterStore.GetCharacter(context.Background(), "c1", "ch1")
+	stored, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1")
 	if err != nil {
 		t.Fatalf("character not persisted: %v", err)
 	}
@@ -1381,17 +1216,15 @@ func TestUpdateCharacter_UsesDomainEngine(t *testing.T) {
 }
 
 func TestDeleteCharacter_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := characterManagerParticipantStore("c1")
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.delete"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1405,7 +1238,7 @@ func TestDeleteCharacter_Success(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Participant: participantStore, Character: characterStore, Event: eventStore, Domain: domain})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	resp, err := svc.DeleteCharacter(contextWithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -1417,33 +1250,30 @@ func TestDeleteCharacter_Success(t *testing.T) {
 	if resp.Character.Id != "ch1" {
 		t.Errorf("Character ID = %q, want %q", resp.Character.Id, "ch1")
 	}
-	if _, err := characterStore.GetCharacter(context.Background(), "c1", "ch1"); err == nil {
+	if _, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1"); err == nil {
 		t.Fatal("expected character to be deleted")
 	}
-	updatedCampaign, err := campaignStore.Get(context.Background(), "c1")
+	updatedCampaign, err := ts.Campaign.Get(context.Background(), "c1")
 	if err != nil {
 		t.Fatalf("campaign not found: %v", err)
 	}
 	if updatedCampaign.CharacterCount != 0 {
 		t.Errorf("CharacterCount = %d, want 0", updatedCampaign.CharacterCount)
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.deleted") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.deleted"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.deleted") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.deleted"))
 	}
 }
 
 func TestDeleteCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 18, 10, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"member-1": {
 			ID:             "member-1",
 			CampaignID:     "c1",
@@ -1455,10 +1285,10 @@ func TestDeleteCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
 	}
-	eventStore.events["c1"] = []event.Event{
+	ts.Event.events["c1"] = []event.Event{
 		{
 			Seq:         1,
 			CampaignID:  "c1",
@@ -1471,9 +1301,9 @@ func TestDeleteCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 			PayloadJSON: []byte(`{"character_id":"ch1","name":"Hero","kind":"pc","owner_participant_id":"member-owner"}`),
 		},
 	}
-	eventStore.nextSeq["c1"] = 2
+	ts.Event.nextSeq["c1"] = 2
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.delete"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1488,13 +1318,7 @@ func TestDeleteCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: participantStore,
-		Character:   characterStore,
-		Event:       eventStore,
-		Domain:      domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	_, err := svc.DeleteCharacter(contextWithParticipantID("member-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -1507,15 +1331,15 @@ func TestDeleteCharacter_DeniesMemberWhenNotOwner(t *testing.T) {
 }
 
 func TestDeleteCharacter_RequiresDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
+	ts.Participant = characterManagerParticipantStore("c1")
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, OwnerParticipantID: "manager-1"},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: characterStore, Event: newFakeEventStore()})
-	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
+	svc := NewCharacterService(ts.build())
+	_, err := svc.DeleteCharacter(contextWithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
 	})
@@ -1523,18 +1347,16 @@ func TestDeleteCharacter_RequiresDomainEngine(t *testing.T) {
 }
 
 func TestDeleteCharacter_UsesDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := characterManagerParticipantStore("c1")
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive, CharacterCount: 1}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.delete"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1549,14 +1371,8 @@ func TestDeleteCharacter_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Character:   characterStore,
-			Event:       eventStore,
-			Domain:      domain,
-		},
-		clock: fixedClock(now),
+		stores: ts.withDomain(domain).build(),
+		clock:  fixedClock(now),
 	}
 
 	resp, err := svc.DeleteCharacter(contextWithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
@@ -1579,16 +1395,16 @@ func TestDeleteCharacter_UsesDomainEngine(t *testing.T) {
 	if domain.commands[0].Type != command.Type("character.delete") {
 		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "character.delete")
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.deleted") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.deleted"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.deleted") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.deleted"))
 	}
-	if _, err := characterStore.GetCharacter(context.Background(), "c1", "ch1"); err == nil {
+	if _, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1"); err == nil {
 		t.Fatal("expected character to be deleted")
 	}
-	updatedCampaign, err := campaignStore.Get(context.Background(), "c1")
+	updatedCampaign, err := ts.Campaign.Get(context.Background(), "c1")
 	if err != nil {
 		t.Fatalf("campaign not found: %v", err)
 	}
@@ -1604,53 +1420,43 @@ func TestListCharacters_NilRequest(t *testing.T) {
 }
 
 func TestListCharacters_MissingCampaignId(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:  newFakeCampaignStore(),
-		Character: newFakeCharacterStore(),
-	})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.ListCharacters(context.Background(), &statev1.ListCharactersRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListCharacters_CampaignNotFound(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:  newFakeCampaignStore(),
-		Character: newFakeCharacterStore(),
-	})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.ListCharacters(context.Background(), &statev1.ListCharactersRequest{CampaignId: "nonexistent"})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestListCharacters_DeniesMissingIdentity(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: characterStore, Participant: participantStore})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.ListCharacters(context.Background(), &statev1.ListCharactersRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestListCharacters_EmptyList(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: characterStore, Participant: participantStore})
+	svc := NewCharacterService(ts.build())
 	resp, err := svc.ListCharacters(contextWithParticipantID("p1"), &statev1.ListCharactersRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListCharacters returned error: %v", err)
@@ -1661,21 +1467,19 @@ func TestListCharacters_EmptyList(t *testing.T) {
 }
 
 func TestListCharacters_WithCharacters(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores().withCharacter()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, CreatedAt: now},
 		"ch2": {ID: "ch2", CampaignID: "c1", Name: "Sidekick", Kind: character.KindNPC, CreatedAt: now},
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: characterStore, Participant: participantStore})
+	svc := NewCharacterService(ts.build())
 	resp, err := svc.ListCharacters(contextWithParticipantID("p1"), &statev1.ListCharactersRequest{CampaignId: "c1"})
 	if err != nil {
 		t.Fatalf("ListCharacters returned error: %v", err)
@@ -1692,11 +1496,7 @@ func TestSetDefaultControl_NilRequest(t *testing.T) {
 }
 
 func TestSetDefaultControl_MissingCampaignId(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:  newFakeCampaignStore(),
-		Character: newFakeCharacterStore(),
-		Event:     newFakeEventStore(),
-	})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
 		CharacterId:   "ch1",
 		ParticipantId: wrapperspb.String(""),
@@ -1705,14 +1505,10 @@ func TestSetDefaultControl_MissingCampaignId(t *testing.T) {
 }
 
 func TestSetDefaultControl_MissingCharacterId(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
-	svc := NewCharacterService(Stores{
-		Campaign:  campaignStore,
-		Character: newFakeCharacterStore(),
-		Event:     newFakeEventStore(),
-	})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		ParticipantId: wrapperspb.String(""),
@@ -1721,11 +1517,7 @@ func TestSetDefaultControl_MissingCharacterId(t *testing.T) {
 }
 
 func TestSetDefaultControl_CampaignNotFound(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:  newFakeCampaignStore(),
-		Character: newFakeCharacterStore(),
-		Event:     newFakeEventStore(),
-	})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
 		CampaignId:    "nonexistent",
 		CharacterId:   "ch1",
@@ -1735,14 +1527,10 @@ func TestSetDefaultControl_CampaignNotFound(t *testing.T) {
 }
 
 func TestSetDefaultControl_CharacterNotFound(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
-	svc := NewCharacterService(Stores{
-		Campaign:  campaignStore,
-		Character: newFakeCharacterStore(),
-		Event:     newFakeEventStore(),
-	})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		CharacterId:   "nonexistent",
@@ -1752,19 +1540,15 @@ func TestSetDefaultControl_CharacterNotFound(t *testing.T) {
 }
 
 func TestSetDefaultControl_RequiresDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero"},
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant = characterManagerParticipantStore("c1")
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", OwnerParticipantID: "manager-1"},
 	}
 
-	svc := NewCharacterService(Stores{
-		Campaign:  campaignStore,
-		Character: characterStore,
-		Event:     newFakeEventStore(),
-	})
-	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
+	svc := NewCharacterService(ts.build())
+	_, err := svc.SetDefaultControl(contextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		CharacterId:   "ch1",
 		ParticipantId: wrapperspb.String(""),
@@ -1773,20 +1557,15 @@ func TestSetDefaultControl_RequiresDomainEngine(t *testing.T) {
 }
 
 func TestSetDefaultControl_MissingParticipantId(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
+	ts := newTestStores().withCharacter()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
 
-	svc := NewCharacterService(Stores{
-		Campaign:  campaignStore,
-		Character: characterStore,
-		Event:     newFakeEventStore(),
-	})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -1795,22 +1574,15 @@ func TestSetDefaultControl_MissingParticipantId(t *testing.T) {
 }
 
 func TestSetDefaultControl_ParticipantNotFound(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores().withCharacter()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
 
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Character:   characterStore,
-		Participant: participantStore,
-		Event:       newFakeEventStore(),
-	})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		CharacterId:   "ch1",
@@ -1820,17 +1592,15 @@ func TestSetDefaultControl_ParticipantNotFound(t *testing.T) {
 }
 
 func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := characterManagerParticipantStore("c1")
-	characterStore := newFakeCharacterStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1844,13 +1614,7 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Participant: participantStore,
-		Character:   characterStore,
-		Event:       eventStore,
-		Domain:      domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 
 	resp, err := svc.SetDefaultControl(contextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
@@ -1887,33 +1651,31 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 	}
 
 	// Verify persisted
-	updated, err := characterStore.GetCharacter(context.Background(), "c1", "ch1")
+	updated, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1")
 	if err != nil {
 		t.Fatalf("Character not persisted: %v", err)
 	}
 	if updated.ParticipantID != "" {
 		t.Fatalf("ParticipantID = %q, want empty", updated.ParticipantID)
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.updated"))
 	}
 }
 
 func TestSetDefaultControl_Success_Participant(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	participantStore := characterManagerParticipantStore("c1")
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"manager-1": {
 			ID:             "manager-1",
 			CampaignID:     "c1",
@@ -1931,7 +1693,7 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 			CreatedAt:     now,
 		},
 	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -1945,13 +1707,7 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:    campaignStore,
-		Character:   characterStore,
-		Participant: participantStore,
-		Event:       eventStore,
-		Domain:      domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 
 	resp, err := svc.SetDefaultControl(contextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
@@ -1982,34 +1738,32 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	}
 
 	// Verify persisted
-	ctrl, err := characterStore.GetCharacter(context.Background(), "c1", "ch1")
+	ctrl, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1")
 	if err != nil {
 		t.Fatalf("Character not persisted: %v", err)
 	}
 	if ctrl.ParticipantID != "p1" {
 		t.Errorf("ParticipantID = %q, want %q", ctrl.ParticipantID, "p1")
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.updated"))
 	}
 	_ = resp
 }
 
 func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	participantStore := characterManagerParticipantStore("c1")
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Participant = characterManagerParticipantStore("c1")
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"manager-1": {
 			ID:             "manager-1",
 			CampaignID:     "c1",
@@ -2020,7 +1774,7 @@ func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
 		"p1": {ID: "p1", CampaignID: "c1", Name: "Player 1", CreatedAt: now},
 	}
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -2035,14 +1789,8 @@ func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
 	}}
 
 	svc := &CharacterService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Character:   characterStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Domain:      domain,
-		},
-		clock: fixedClock(now),
+		stores: ts.withDomain(domain).build(),
+		clock:  fixedClock(now),
 	}
 
 	resp, err := svc.SetDefaultControl(contextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
@@ -2065,13 +1813,13 @@ func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
 	if domain.commands[0].Type != command.Type("character.update") {
 		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "character.update")
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.updated"))
 	}
-	updated, err := characterStore.GetCharacter(context.Background(), "c1", "ch1")
+	updated, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1")
 	if err != nil {
 		t.Fatalf("Character not persisted: %v", err)
 	}
@@ -2087,34 +1835,22 @@ func TestGetCharacterSheet_NilRequest(t *testing.T) {
 }
 
 func TestGetCharacterSheet_MissingCampaignId(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:     newFakeCampaignStore(),
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-	})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.GetCharacterSheet(context.Background(), &statev1.GetCharacterSheetRequest{CharacterId: "ch1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetCharacterSheet_MissingCharacterId(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-	})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.GetCharacterSheet(context.Background(), &statev1.GetCharacterSheetRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetCharacterSheet_CampaignNotFound(t *testing.T) {
-	svc := NewCharacterService(Stores{
-		Campaign:     newFakeCampaignStore(),
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-	})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.GetCharacterSheet(context.Background(), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "nonexistent",
 		CharacterId: "ch1",
@@ -2123,19 +1859,13 @@ func TestGetCharacterSheet_CampaignNotFound(t *testing.T) {
 }
 
 func TestGetCharacterSheet_DeniesMissingIdentity(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
 	}
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-		Participant:  participantStore,
-	})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.GetCharacterSheet(context.Background(), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -2144,19 +1874,13 @@ func TestGetCharacterSheet_DeniesMissingIdentity(t *testing.T) {
 }
 
 func TestGetCharacterSheet_CharacterNotFound(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	participantStore := newFakeParticipantStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
 	}
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Character:    newFakeCharacterStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
-		Participant:  participantStore,
-	})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.GetCharacterSheet(contextWithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "c1",
 		CharacterId: "nonexistent",
@@ -2165,32 +1889,24 @@ func TestGetCharacterSheet_CharacterNotFound(t *testing.T) {
 }
 
 func TestGetCharacterSheet_Success(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	characterStore := newFakeCharacterStore()
-	dhStore := newFakeDaggerheartStore()
-	participantStore := newFakeParticipantStore()
+	ts := newTestStores().withCharacter()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, CreatedAt: now},
 	}
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10, Agility: 2, Strength: 1},
 	}
-	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	ts.Daggerheart.states["c1"] = map[string]storage.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": {ID: "p1", CampaignID: "c1", Name: "GM", Role: participant.RoleGM, CampaignAccess: participant.CampaignAccessMember},
 	}
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Character:    characterStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-		Participant:  participantStore,
-	})
+	svc := NewCharacterService(ts.build())
 
 	resp, err := svc.GetCharacterSheet(contextWithParticipantID("p1"), &statev1.GetCharacterSheetRequest{
 		CampaignId:  "c1",
@@ -2226,7 +1942,7 @@ func TestPatchCharacterProfile_NilRequest(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_MissingCampaignId(t *testing.T) {
-	svc := NewCharacterService(Stores{SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()}, Event: newFakeEventStore()})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CharacterId: "ch1",
 	})
@@ -2234,7 +1950,7 @@ func TestPatchCharacterProfile_MissingCampaignId(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_MissingCharacterId(t *testing.T) {
-	svc := NewCharacterService(Stores{SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()}, Event: newFakeEventStore()})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId: "c1",
 	})
@@ -2242,7 +1958,7 @@ func TestPatchCharacterProfile_MissingCharacterId(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_CampaignNotFound(t *testing.T) {
-	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore(), SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()}, Event: newFakeEventStore()})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -2251,9 +1967,9 @@ func TestPatchCharacterProfile_CampaignNotFound(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_ProfileNotFound(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	svc := NewCharacterService(Stores{Campaign: campaignStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()}, Event: newFakeEventStore()})
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -2262,22 +1978,17 @@ func TestPatchCharacterProfile_ProfileNotFound(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_CompletedCampaignDisallowed(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusCompleted,
 	}
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
+	ts.Participant = characterManagerParticipantStore("c1")
 
-	svc := NewCharacterService(Stores{
-		Campaign:     campaignStore,
-		Participant:  characterManagerParticipantStore("c1"),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-		Event:        newFakeEventStore(),
-	})
+	svc := NewCharacterService(ts.build())
 	ctx := contextWithParticipantID("manager-1")
 	_, err := svc.PatchCharacterProfile(ctx, &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
@@ -2288,13 +1999,14 @@ func TestPatchCharacterProfile_CompletedCampaignDisallowed(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_DeniesMissingIdentity(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Participant = characterManagerParticipantStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.profile_update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -2308,13 +2020,7 @@ func TestPatchCharacterProfile_DeniesMissingIdentity(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:     activeCampaignStore("c1"),
-		Participant:  characterManagerParticipantStore("c1"),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-		Event:        eventStore,
-		Domain:       domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
@@ -2325,12 +2031,11 @@ func TestPatchCharacterProfile_DeniesMissingIdentity(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
-	participantStore := newFakeParticipantStore()
-	dhStore := newFakeDaggerheartStore()
-	eventStore := newFakeEventStore()
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
 	now := time.Date(2026, 2, 20, 18, 20, 0, 0, time.UTC)
 
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"member-1": {
 			ID:             "member-1",
 			CampaignID:     "c1",
@@ -2342,14 +2047,13 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	characterStore := newFakeCharacterStore()
-	characterStore.characters["c1"] = map[string]storage.CharacterRecord{
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
 	}
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 6, StressMax: 6},
 	}
-	eventStore.events["c1"] = []event.Event{
+	ts.Event.events["c1"] = []event.Event{
 		{
 			Seq:         1,
 			CampaignID:  "c1",
@@ -2362,9 +2066,9 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 			PayloadJSON: []byte(`{"character_id":"ch1","name":"Hero","kind":"pc","owner_participant_id":"member-owner"}`),
 		},
 	}
-	eventStore.nextSeq["c1"] = 2
+	ts.Event.nextSeq["c1"] = 2
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.profile_update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -2379,14 +2083,7 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{
-		Campaign:     activeCampaignStore("c1"),
-		Participant:  participantStore,
-		Character:    characterStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-		Event:        eventStore,
-		Domain:       domain,
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	_, err := svc.PatchCharacterProfile(contextWithParticipantID("member-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -2401,12 +2098,13 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_NegativeHpMax(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2418,12 +2116,12 @@ func TestPatchCharacterProfile_NegativeHpMax(t *testing.T) {
 func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	// In proto3 patch semantics, HpMax=0 means "don't change" since 0 is the default value.
 	// The original HpMax should be preserved.
-	participantStore := characterManagerParticipantStore("c1")
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Participant = characterManagerParticipantStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	profileJSON, err := json.Marshal(map[string]any{
 		"character_id": "ch1",
@@ -2437,7 +2135,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encode profile payload: %v", err)
 	}
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.profile_update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -2451,7 +2149,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: eventStore, Domain: domain})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	resp, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2464,23 +2162,23 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetHpMax() != 12 {
 		t.Errorf("Profile HpMax = %d, want %d (unchanged)", dh.GetHpMax(), 12)
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.profile_updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.profile_updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.profile_updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.profile_updated"))
 	}
 }
 
 func TestPatchCharacterProfile_Success(t *testing.T) {
-	participantStore := characterManagerParticipantStore("c1")
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Participant = characterManagerParticipantStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10},
 	}
-	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.profile_update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -2494,7 +2192,7 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: eventStore, Domain: domain})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	resp, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2517,24 +2215,24 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	if dh := resp.Profile.GetDaggerheart(); dh == nil || dh.GetEvasion().GetValue() != 10 {
 		t.Errorf("Profile Evasion = %d, want %d (unchanged)", dh.GetEvasion().GetValue(), 10)
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.profile_updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.profile_updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.profile_updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.profile_updated"))
 	}
 }
 
 func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
-	participantStore := characterManagerParticipantStore("c1")
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Participant = characterManagerParticipantStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10},
 	}
-	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.profile_update"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
@@ -2548,7 +2246,7 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: eventStore, Domain: domain})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 	resp, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2569,18 +2267,19 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 	if domain.commands[0].Type != command.Type("character.profile_update") {
 		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "character.profile_update")
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
+	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
 	}
-	if eventStore.events["c1"][0].Type != event.Type("character.profile_updated") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("character.profile_updated"))
+	if ts.Event.events["c1"][0].Type != event.Type("character.profile_updated") {
+		t.Fatalf("event type = %s, want %s", ts.Event.events["c1"][0].Type, event.Type("character.profile_updated"))
 	}
 }
 
 func TestPatchCharacterProfile_RejectsCreationWorkflowFields(t *testing.T) {
-	participantStore := characterManagerParticipantStore("c1")
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Participant = characterManagerParticipantStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {
 			CampaignID:  "c1",
 			CharacterID: "ch1",
@@ -2588,14 +2287,9 @@ func TestPatchCharacterProfile_RejectsCreationWorkflowFields(t *testing.T) {
 			StressMax:   6,
 		},
 	}
+	domain := &fakeDomainEngine{}
 
-	svc := NewCharacterService(Stores{
-		Campaign:     activeCampaignStore("c1"),
-		Participant:  participantStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-		Event:        newFakeEventStore(),
-		Domain:       &fakeDomainEngine{},
-	})
+	svc := NewCharacterService(ts.withDomain(domain).build())
 
 	_, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
@@ -2641,7 +2335,7 @@ func TestDeleteCharacter_NilRequest(t *testing.T) {
 }
 
 func TestDeleteCharacter_MissingCampaignId(t *testing.T) {
-	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore(), Character: newFakeCharacterStore(), Event: newFakeEventStore()})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
 		CharacterId: "ch1",
 	})
@@ -2649,7 +2343,7 @@ func TestDeleteCharacter_MissingCampaignId(t *testing.T) {
 }
 
 func TestDeleteCharacter_CampaignNotFound(t *testing.T) {
-	svc := NewCharacterService(Stores{Campaign: newFakeCampaignStore(), Character: newFakeCharacterStore(), Event: newFakeEventStore()})
+	svc := NewCharacterService(newTestStores().withCharacter().build())
 	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
 		CampaignId:  "nonexistent",
 		CharacterId: "ch1",
@@ -2658,9 +2352,9 @@ func TestDeleteCharacter_CampaignNotFound(t *testing.T) {
 }
 
 func TestDeleteCharacter_MissingCharacterId(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: newFakeCharacterStore(), Event: newFakeEventStore()})
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	svc := NewCharacterService(ts.build())
 	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
 		CampaignId: "c1",
 	})
@@ -2668,9 +2362,9 @@ func TestDeleteCharacter_MissingCharacterId(t *testing.T) {
 }
 
 func TestDeleteCharacter_CharacterNotFound(t *testing.T) {
-	campaignStore := newFakeCampaignStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
-	svc := NewCharacterService(Stores{Campaign: campaignStore, Character: newFakeCharacterStore(), Event: newFakeEventStore()})
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	svc := NewCharacterService(ts.build())
 	_, err := svc.DeleteCharacter(context.Background(), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -2679,11 +2373,12 @@ func TestDeleteCharacter_CharacterNotFound(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_HpMaxTooHigh(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2693,11 +2388,12 @@ func TestPatchCharacterProfile_HpMaxTooHigh(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_StressMaxTooHigh(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2707,11 +2403,12 @@ func TestPatchCharacterProfile_StressMaxTooHigh(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_NegativeEvasion(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2721,11 +2418,12 @@ func TestPatchCharacterProfile_NegativeEvasion(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_NegativeMajorThreshold(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2735,11 +2433,12 @@ func TestPatchCharacterProfile_NegativeMajorThreshold(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_NegativeSevereThreshold(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2749,11 +2448,12 @@ func TestPatchCharacterProfile_NegativeSevereThreshold(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_NegativeProficiency(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2763,13 +2463,14 @@ func TestPatchCharacterProfile_NegativeProficiency(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_RequiresDomainEngine(t *testing.T) {
-	participantStore := characterManagerParticipantStore("c1")
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Participant = characterManagerParticipantStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), Participant: participantStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(contextWithParticipantID("manager-1"), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2779,11 +2480,12 @@ func TestPatchCharacterProfile_RequiresDomainEngine(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_NegativeArmorScore(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2793,11 +2495,12 @@ func TestPatchCharacterProfile_NegativeArmorScore(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_ArmorMaxTooHigh(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2807,11 +2510,12 @@ func TestPatchCharacterProfile_ArmorMaxTooHigh(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_NegativeArmorMax(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",
@@ -2821,11 +2525,12 @@ func TestPatchCharacterProfile_NegativeArmorMax(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_EmptyExperienceName(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:  "c1",
 		CharacterId: "ch1",
@@ -2837,12 +2542,13 @@ func TestPatchCharacterProfile_EmptyExperienceName(t *testing.T) {
 }
 
 func TestPatchCharacterProfile_NegativeStressMax(t *testing.T) {
-	dhStore := newFakeDaggerheartStore()
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts := newTestStores().withCharacter()
+	ts.Campaign = activeCampaignStore("c1")
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 
-	svc := NewCharacterService(Stores{Campaign: activeCampaignStore("c1"), SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Event: newFakeEventStore()})
+	svc := NewCharacterService(ts.build())
 	_, err := svc.PatchCharacterProfile(context.Background(), &statev1.PatchCharacterProfileRequest{
 		CampaignId:         "c1",
 		CharacterId:        "ch1",

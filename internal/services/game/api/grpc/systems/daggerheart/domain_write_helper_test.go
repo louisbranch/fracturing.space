@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -45,14 +46,9 @@ func (f fakeDomainExecutor) Execute(context.Context, command.Command) (engine.Re
 	return f.result, f.err
 }
 
-// setTestIntentFilter configures the package-level intent filter with a
-// registry containing common test event types and restores the previous
-// filter on cleanup.
-func setTestIntentFilter(t *testing.T) {
+func testWriteRuntime(t *testing.T) *domainwrite.Runtime {
 	t.Helper()
-	prev := writeRuntime.ShouldApply()
-	t.Cleanup(func() { writeRuntime.SetShouldApply(prev) })
-
+	runtime := domainwrite.NewRuntime()
 	registry := event.NewRegistry()
 	for _, def := range []event.Definition{
 		{Type: event.Type("sys.daggerheart.gm_fear_changed"), Owner: event.OwnerSystem, Intent: event.IntentProjectionAndReplay},
@@ -62,18 +58,18 @@ func setTestIntentFilter(t *testing.T) {
 			t.Fatalf("register event: %v", err)
 		}
 	}
-	SetIntentFilter(registry)
+	runtime.SetIntentFilter(registry)
+	return runtime
 }
 
 func TestExecuteAndApplyDomainCommandRequiresEvents(t *testing.T) {
-	setTestIntentFilter(t)
-	SetInlineProjectionApplyEnabled(true)
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
 
 	svc := &DaggerheartService{
 		stores: Stores{
-			Domain: fakeDomainExecutor{
-				result: engine.Result{Decision: command.Decision{}},
-			},
+			Domain:       fakeDomainExecutor{result: engine.Result{Decision: command.Decision{}}},
+			WriteRuntime: runtime,
 		},
 	}
 
@@ -81,13 +77,10 @@ func TestExecuteAndApplyDomainCommandRequiresEvents(t *testing.T) {
 		context.Background(),
 		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
 		&fakeEventApplier{},
-		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
 	)
 	if err == nil {
 		t.Fatal("expected missing-event error")
-	}
-	if status.Code(err) != codes.Internal {
-		t.Fatalf("status code = %s, want %s", status.Code(err), codes.Internal)
 	}
 	if !strings.Contains(err.Error(), "missing events") {
 		t.Fatalf("error = %v, want missing events message", err)
@@ -95,9 +88,8 @@ func TestExecuteAndApplyDomainCommandRequiresEvents(t *testing.T) {
 }
 
 func TestExecuteAndApplyDomainCommandSkipsApplyWhenInlineDisabled(t *testing.T) {
-	setTestIntentFilter(t)
-	SetInlineProjectionApplyEnabled(false)
-	t.Cleanup(func() { SetInlineProjectionApplyEnabled(true) })
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(false)
 
 	applier := &fakeEventApplier{err: errors.New("should not apply")}
 	svc := &DaggerheartService{
@@ -107,6 +99,7 @@ func TestExecuteAndApplyDomainCommandSkipsApplyWhenInlineDisabled(t *testing.T) 
 					Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
 				},
 			},
+			WriteRuntime: runtime,
 		},
 	}
 
@@ -114,7 +107,7 @@ func TestExecuteAndApplyDomainCommandSkipsApplyWhenInlineDisabled(t *testing.T) 
 		context.Background(),
 		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
 		applier,
-		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
 	)
 	if err != nil {
 		t.Fatalf("execute and apply with inline disabled: %v", err)
@@ -125,8 +118,8 @@ func TestExecuteAndApplyDomainCommandSkipsApplyWhenInlineDisabled(t *testing.T) 
 }
 
 func TestExecuteAndApplyDomainCommandAppliesWhenInlineEnabled(t *testing.T) {
-	setTestIntentFilter(t)
-	SetInlineProjectionApplyEnabled(true)
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
 
 	applier := &fakeEventApplier{}
 	svc := &DaggerheartService{
@@ -136,6 +129,7 @@ func TestExecuteAndApplyDomainCommandAppliesWhenInlineEnabled(t *testing.T) {
 					Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
 				},
 			},
+			WriteRuntime: runtime,
 		},
 	}
 
@@ -143,7 +137,7 @@ func TestExecuteAndApplyDomainCommandAppliesWhenInlineEnabled(t *testing.T) {
 		context.Background(),
 		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
 		applier,
-		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
 	)
 	if err != nil {
 		t.Fatalf("execute and apply with inline enabled: %v", err)
@@ -154,8 +148,8 @@ func TestExecuteAndApplyDomainCommandAppliesWhenInlineEnabled(t *testing.T) {
 }
 
 func TestExecuteAndApplyDomainCommandReturnsApplyErrorWhenInlineEnabled(t *testing.T) {
-	setTestIntentFilter(t)
-	SetInlineProjectionApplyEnabled(true)
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
 
 	applier := &fakeEventApplier{err: errors.New("boom")}
 	svc := &DaggerheartService{
@@ -165,6 +159,7 @@ func TestExecuteAndApplyDomainCommandReturnsApplyErrorWhenInlineEnabled(t *testi
 					Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
 				},
 			},
+			WriteRuntime: runtime,
 		},
 	}
 
@@ -172,7 +167,7 @@ func TestExecuteAndApplyDomainCommandReturnsApplyErrorWhenInlineEnabled(t *testi
 		context.Background(),
 		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
 		applier,
-		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
 	)
 	if err == nil {
 		t.Fatal("expected apply error")
@@ -186,8 +181,9 @@ func TestExecuteAndApplyDomainCommandReturnsApplyErrorWhenInlineEnabled(t *testi
 }
 
 func TestExecuteAndApplyDomainCommandSkipsJournalOnlyInlineApply(t *testing.T) {
-	setTestIntentFilter(t)
-	SetInlineProjectionApplyEnabled(true)
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
+
 	applier := &fakeEventApplier{err: errors.New("should not apply")}
 	svc := &DaggerheartService{
 		stores: Stores{
@@ -206,6 +202,7 @@ func TestExecuteAndApplyDomainCommandSkipsJournalOnlyInlineApply(t *testing.T) {
 					}},
 				},
 			},
+			WriteRuntime: runtime,
 		},
 	}
 
@@ -213,7 +210,7 @@ func TestExecuteAndApplyDomainCommandSkipsJournalOnlyInlineApply(t *testing.T) {
 		context.Background(),
 		command.Command{CampaignID: "camp-1", Type: command.Type("story.note.add")},
 		applier,
-		domainCommandApplyOptions{requireEvents: true, missingEventMsg: "missing events"},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
 	)
 	if err != nil {
 		t.Fatalf("execute and apply with journal-only event: %v", err)

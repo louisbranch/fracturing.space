@@ -7,6 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -15,30 +16,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type inventoryApplication struct {
-	service *DaggerheartService
-}
-
-func newInventoryApplication(service *DaggerheartService) inventoryApplication {
-	return inventoryApplication{service: service}
-}
-
 // validateInventoryPreconditions checks common preconditions for inventory commands.
-func (a inventoryApplication) validateInventoryPreconditions(ctx context.Context, campaignID, characterID, operationName string) error {
-	if a.service.stores.Campaign == nil {
-		return status.Error(codes.Internal, "campaign store is not configured")
+func (s *DaggerheartService) validateInventoryPreconditions(ctx context.Context, campaignID, characterID, operationName string) error {
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return err
 	}
-	if a.service.stores.Daggerheart == nil {
-		return status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return status.Error(codes.Internal, "event store is not configured")
-	}
-	if a.service.stores.Domain == nil {
-		return status.Error(codes.Internal, "domain engine is not configured")
-	}
-
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return handleDomainError(err)
 	}
@@ -50,18 +33,18 @@ func (a inventoryApplication) validateInventoryPreconditions(ctx context.Context
 	}
 
 	// Verify character exists.
-	if _, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID); err != nil {
+	if _, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID); err != nil {
 		return handleDomainError(err)
 	}
 	return nil
 }
 
 // executeDomainCommand marshals a payload, builds a daggerheart system command, and executes it.
-func (a inventoryApplication) executeDomainCommand(ctx context.Context, campaignID, characterID string, cmdType command.Type, payloadJSON []byte, missingEventMsg, applyErrMsg string) error {
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+func (s *DaggerheartService) executeDomainCommand(ctx context.Context, campaignID, characterID string, cmdType command.Type, payloadJSON []byte, missingEventMsg, applyErrMsg string) error {
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err := a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err := s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          cmdType,
 		ActorType:     command.ActorTypeSystem,
@@ -73,16 +56,11 @@ func (a inventoryApplication) executeDomainCommand(ctx context.Context, campaign
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: missingEventMsg,
-		applyErrMessage: applyErrMsg,
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics(missingEventMsg, applyErrMsg))
 	return err
 }
 
-func (a inventoryApplication) runUpdateGold(ctx context.Context, in *pb.DaggerheartUpdateGoldRequest) (*pb.DaggerheartUpdateGoldResponse, error) {
+func (s *DaggerheartService) runUpdateGold(ctx context.Context, in *pb.DaggerheartUpdateGoldRequest) (*pb.DaggerheartUpdateGoldResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "update gold request is required")
 	}
@@ -94,7 +72,7 @@ func (a inventoryApplication) runUpdateGold(ctx context.Context, in *pb.Daggerhe
 	if characterID == "" {
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
-	if err := a.validateInventoryPreconditions(ctx, campaignID, characterID, "gold update"); err != nil {
+	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "gold update"); err != nil {
 		return nil, err
 	}
 
@@ -113,13 +91,13 @@ func (a inventoryApplication) runUpdateGold(ctx context.Context, in *pb.Daggerhe
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	if err := a.executeDomainCommand(ctx, campaignID, characterID,
+	if err := s.executeDomainCommand(ctx, campaignID, characterID,
 		commandTypeDaggerheartGoldUpdate, payloadJSON,
 		"gold update did not emit an event", "apply gold update event"); err != nil {
 		return nil, err
 	}
 
-	updatedProfile, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	updatedProfile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart profile: %v", err)
 	}
@@ -131,7 +109,7 @@ func (a inventoryApplication) runUpdateGold(ctx context.Context, in *pb.Daggerhe
 	}, nil
 }
 
-func (a inventoryApplication) runAcquireDomainCard(ctx context.Context, in *pb.DaggerheartAcquireDomainCardRequest) (*pb.DaggerheartAcquireDomainCardResponse, error) {
+func (s *DaggerheartService) runAcquireDomainCard(ctx context.Context, in *pb.DaggerheartAcquireDomainCardRequest) (*pb.DaggerheartAcquireDomainCardResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "acquire domain card request is required")
 	}
@@ -147,7 +125,7 @@ func (a inventoryApplication) runAcquireDomainCard(ctx context.Context, in *pb.D
 	if cardID == "" {
 		return nil, status.Error(codes.InvalidArgument, "card id is required")
 	}
-	if err := a.validateInventoryPreconditions(ctx, campaignID, characterID, "domain card acquire"); err != nil {
+	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "domain card acquire"); err != nil {
 		return nil, err
 	}
 
@@ -165,7 +143,7 @@ func (a inventoryApplication) runAcquireDomainCard(ctx context.Context, in *pb.D
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	if err := a.executeDomainCommand(ctx, campaignID, characterID,
+	if err := s.executeDomainCommand(ctx, campaignID, characterID,
 		commandTypeDaggerheartDomainCardAcquire, payloadJSON,
 		"domain card acquire did not emit an event", "apply domain card acquire event"); err != nil {
 		return nil, err
@@ -176,7 +154,7 @@ func (a inventoryApplication) runAcquireDomainCard(ctx context.Context, in *pb.D
 	}, nil
 }
 
-func (a inventoryApplication) runSwapEquipment(ctx context.Context, in *pb.DaggerheartSwapEquipmentRequest) (*pb.DaggerheartSwapEquipmentResponse, error) {
+func (s *DaggerheartService) runSwapEquipment(ctx context.Context, in *pb.DaggerheartSwapEquipmentRequest) (*pb.DaggerheartSwapEquipmentResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "swap equipment request is required")
 	}
@@ -192,7 +170,7 @@ func (a inventoryApplication) runSwapEquipment(ctx context.Context, in *pb.Dagge
 	if itemID == "" {
 		return nil, status.Error(codes.InvalidArgument, "item id is required")
 	}
-	if err := a.validateInventoryPreconditions(ctx, campaignID, characterID, "equipment swap"); err != nil {
+	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "equipment swap"); err != nil {
 		return nil, err
 	}
 
@@ -209,7 +187,7 @@ func (a inventoryApplication) runSwapEquipment(ctx context.Context, in *pb.Dagge
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	if err := a.executeDomainCommand(ctx, campaignID, characterID,
+	if err := s.executeDomainCommand(ctx, campaignID, characterID,
 		commandTypeDaggerheartEquipmentSwap, payloadJSON,
 		"equipment swap did not emit an event", "apply equipment swap event"); err != nil {
 		return nil, err
@@ -220,7 +198,7 @@ func (a inventoryApplication) runSwapEquipment(ctx context.Context, in *pb.Dagge
 	}, nil
 }
 
-func (a inventoryApplication) runUseConsumable(ctx context.Context, in *pb.DaggerheartUseConsumableRequest) (*pb.DaggerheartUseConsumableResponse, error) {
+func (s *DaggerheartService) runUseConsumable(ctx context.Context, in *pb.DaggerheartUseConsumableRequest) (*pb.DaggerheartUseConsumableResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "use consumable request is required")
 	}
@@ -236,7 +214,7 @@ func (a inventoryApplication) runUseConsumable(ctx context.Context, in *pb.Dagge
 	if consumableID == "" {
 		return nil, status.Error(codes.InvalidArgument, "consumable id is required")
 	}
-	if err := a.validateInventoryPreconditions(ctx, campaignID, characterID, "consumable use"); err != nil {
+	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "consumable use"); err != nil {
 		return nil, err
 	}
 
@@ -251,7 +229,7 @@ func (a inventoryApplication) runUseConsumable(ctx context.Context, in *pb.Dagge
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	if err := a.executeDomainCommand(ctx, campaignID, characterID,
+	if err := s.executeDomainCommand(ctx, campaignID, characterID,
 		commandTypeDaggerheartConsumableUse, payloadJSON,
 		"consumable use did not emit an event", "apply consumable use event"); err != nil {
 		return nil, err
@@ -262,7 +240,7 @@ func (a inventoryApplication) runUseConsumable(ctx context.Context, in *pb.Dagge
 	}, nil
 }
 
-func (a inventoryApplication) runAcquireConsumable(ctx context.Context, in *pb.DaggerheartAcquireConsumableRequest) (*pb.DaggerheartAcquireConsumableResponse, error) {
+func (s *DaggerheartService) runAcquireConsumable(ctx context.Context, in *pb.DaggerheartAcquireConsumableRequest) (*pb.DaggerheartAcquireConsumableResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "acquire consumable request is required")
 	}
@@ -278,7 +256,7 @@ func (a inventoryApplication) runAcquireConsumable(ctx context.Context, in *pb.D
 	if consumableID == "" {
 		return nil, status.Error(codes.InvalidArgument, "consumable id is required")
 	}
-	if err := a.validateInventoryPreconditions(ctx, campaignID, characterID, "consumable acquire"); err != nil {
+	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "consumable acquire"); err != nil {
 		return nil, err
 	}
 
@@ -293,7 +271,7 @@ func (a inventoryApplication) runAcquireConsumable(ctx context.Context, in *pb.D
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	if err := a.executeDomainCommand(ctx, campaignID, characterID,
+	if err := s.executeDomainCommand(ctx, campaignID, characterID,
 		commandTypeDaggerheartConsumableAcquire, payloadJSON,
 		"consumable acquire did not emit an event", "apply consumable acquire event"); err != nil {
 		return nil, err

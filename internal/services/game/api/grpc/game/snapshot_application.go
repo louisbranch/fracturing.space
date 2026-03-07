@@ -9,6 +9,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -187,9 +188,6 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 		applier := a.stores.Applier()
 		requestID := grpcmeta.RequestIDFromContext(ctx)
 		invocationID := grpcmeta.InvocationIDFromContext(ctx)
-		if a.stores.Domain == nil {
-			return "", storage.DaggerheartCharacterState{}, status.Error(codes.Internal, "domain engine is not configured")
-		}
 		actorTypeForCommand := command.ActorTypeSystem
 		switch actorType {
 		case event.ActorTypeParticipant:
@@ -199,7 +197,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 		}
 		_, err = executeAndApplyDomainCommand(
 			ctx,
-			a.stores.Domain,
+			a.stores,
 			applier,
 			commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
 				CoreInput: commandbuild.CoreInput{
@@ -215,10 +213,10 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 					PayloadJSON:  payloadJSON,
 				},
 			}),
-			domainCommandApplyOptions{
-				requireEvents:   true,
-				missingEventMsg: "character state patch did not emit an event",
-				applyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			domainwrite.Options{
+				RequireEvents:   true,
+				MissingEventMsg: "character state patch did not emit an event",
+				ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
 			},
 		)
 		if err != nil {
@@ -254,9 +252,6 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 					return "", storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "encode condition payload: %v", err)
 				}
 
-				if a.stores.Domain == nil {
-					return "", storage.DaggerheartCharacterState{}, status.Error(codes.Internal, "domain engine is not configured")
-				}
 				actorTypeForCommand := command.ActorTypeSystem
 				switch actorType {
 				case event.ActorTypeParticipant:
@@ -266,7 +261,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 				}
 				_, err = executeAndApplyDomainCommand(
 					ctx,
-					a.stores.Domain,
+					a.stores,
 					applier,
 					commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
 						CoreInput: commandbuild.CoreInput{
@@ -282,10 +277,10 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 							PayloadJSON:  conditionJSON,
 						},
 					}),
-					domainCommandApplyOptions{
-						requireEvents:   true,
-						missingEventMsg: "condition change did not emit an event",
-						applyErr:        domainApplyErrorWithCodePreserve("apply event"),
+					domainwrite.Options{
+						RequireEvents:   true,
+						MissingEventMsg: "condition change did not emit an event",
+						ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
 					},
 				)
 				if err != nil {
@@ -340,9 +335,6 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		applier := a.stores.Applier()
 		requestID := grpcmeta.RequestIDFromContext(ctx)
 		invocationID := grpcmeta.InvocationIDFromContext(ctx)
-		if a.stores.Domain == nil {
-			return storage.DaggerheartSnapshot{}, status.Error(codes.Internal, "domain engine is not configured")
-		}
 		after := gmFear
 		payload := daggerheart.GMFearSetPayload{After: &after}
 		payloadJSON, err := json.Marshal(payload)
@@ -355,7 +347,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		}
 		_, err = executeAndApplyDomainCommand(
 			ctx,
-			a.stores.Domain,
+			a.stores,
 			applier,
 			commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
 				CoreInput: commandbuild.CoreInput{
@@ -371,10 +363,10 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 					PayloadJSON:  payloadJSON,
 				},
 			}),
-			domainCommandApplyOptions{
-				requireEvents:   true,
-				missingEventMsg: "gm fear update did not emit an event",
-				applyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			domainwrite.Options{
+				RequireEvents:   true,
+				MissingEventMsg: "gm fear update did not emit an event",
+				ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
 			},
 		)
 		if err != nil {
@@ -405,8 +397,8 @@ func applyStressVulnerableCondition(
 	actorType event.ActorType,
 	actorID string,
 ) error {
-	if stores.Domain == nil || stores.SystemStores.Daggerheart == nil {
-		return status.Error(codes.Internal, "domain engine or daggerheart store is not configured")
+	if stores.SystemStores.Daggerheart == nil {
+		return status.Error(codes.Internal, "daggerheart store is not configured")
 	}
 	if stressMax <= 0 {
 		return nil
@@ -482,7 +474,7 @@ func applyStressVulnerableCondition(
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		stores.Domain,
+		stores,
 		stores.Applier(),
 		commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
 			CoreInput: commandbuild.CoreInput{
@@ -498,10 +490,10 @@ func applyStressVulnerableCondition(
 				PayloadJSON:  payloadJSON,
 			},
 		}),
-		domainCommandApplyOptions{
-			requireEvents:   true,
-			missingEventMsg: "condition change did not emit an event",
-			applyErr:        domainApplyErrorWithCodePreserve("apply condition event"),
+		domainwrite.Options{
+			RequireEvents:   true,
+			MissingEventMsg: "condition change did not emit an event",
+			ApplyErr:        domainApplyErrorWithCodePreserve("apply condition event"),
 		},
 	)
 	if err != nil {

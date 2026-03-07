@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -80,7 +79,7 @@ func TestSessionActionRoll_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.roll_resolved"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-roll-success",
@@ -113,7 +112,7 @@ func TestSessionActionRoll_Success(t *testing.T) {
 func TestSessionActionRoll_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
@@ -166,7 +165,7 @@ func TestSessionActionRoll_UsesDomainEngine(t *testing.T) {
 func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	hopeBefore := 2
 	hopeAfter := 1
@@ -300,7 +299,7 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 func TestSessionActionRoll_WithModifiers(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 	hopeBefore := 2
 	hopeAfter := 1
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
@@ -464,19 +463,19 @@ func TestSessionDamageRoll_Success(t *testing.T) {
 		Results: map[string]any{
 			"rolls":          []int{3, 4},
 			"base_total":     7,
-			"modifier":       0,
+			sdKeyModifier:    0,
 			"critical_bonus": 0,
-			"total":          7,
+			sdKeyTotal:       7,
 		},
 		SystemData: map[string]any{
-			"character_id":   "char-1",
-			"roll_kind":      "damage_roll",
-			"roll":           7,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    "damage_roll",
+			sdKeyRoll:        7,
 			"base_total":     7,
-			"modifier":       0,
+			sdKeyModifier:    0,
 			"critical":       false,
 			"critical_bonus": 0,
-			"total":          7,
+			sdKeyTotal:       7,
 		},
 	}
 	rollPayloadJSON, err := json.Marshal(rollPayload)
@@ -488,7 +487,7 @@ func TestSessionDamageRoll_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.roll_resolved"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-damage-roll-success",
@@ -527,19 +526,19 @@ func TestSessionDamageRoll_UsesDomainEngine(t *testing.T) {
 		Results: map[string]any{
 			"rolls":          []int{3, 4},
 			"base_total":     7,
-			"modifier":       0,
+			sdKeyModifier:    0,
 			"critical_bonus": 0,
-			"total":          7,
+			sdKeyTotal:       7,
 		},
 		SystemData: map[string]any{
-			"character_id":   "char-1",
-			"roll_kind":      "damage_roll",
-			"roll":           7,
+			sdKeyCharacterID: "char-1",
+			sdKeyRollKind:    "damage_roll",
+			sdKeyRoll:        7,
 			"base_total":     7,
-			"modifier":       0,
+			sdKeyModifier:    0,
 			"critical":       false,
 			"critical_bonus": 0,
-			"total":          7,
+			sdKeyTotal:       7,
 		},
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -552,7 +551,7 @@ func TestSessionDamageRoll_UsesDomainEngine(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.roll_resolved"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   "req-damage-roll-legacy",
@@ -589,9 +588,9 @@ func TestSessionDamageRoll_UsesDomainEngine(t *testing.T) {
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
 		t.Fatalf("decode damage roll command payload: %v", err)
 	}
-	characterID, ok := got.SystemData["character_id"].(string)
+	characterID, ok := got.SystemData[sdKeyCharacterID].(string)
 	if !ok || characterID != "char-1" {
-		t.Fatalf("command character id = %v, want %s", got.SystemData["character_id"], "char-1")
+		t.Fatalf("command character id = %v, want %s", got.SystemData[sdKeyCharacterID], "char-1")
 	}
 	if gotRollSeq, ok := got.SystemData["roll_seq"]; ok {
 		if gotRollSeq != nil {

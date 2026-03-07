@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -29,6 +30,11 @@ type Stores struct {
 	DaggerheartContent storage.DaggerheartContentReadStore
 	Event              storage.EventStore
 	Domain             Domain
+
+	// WriteRuntime owns request-path write execution flags (inline apply,
+	// intent filtering). Injected at service construction; used by
+	// executeAndApplyDomainCommand instead of package-level global state.
+	WriteRuntime *domainwrite.Runtime
 
 	// adapters is built eagerly during Validate and cached for Applier.
 	adapters *bridge.AdapterRegistry
@@ -62,6 +68,9 @@ func (s *Stores) Validate() error {
 	}
 	if s.Domain == nil {
 		missing = append(missing, "Domain")
+	}
+	if s.WriteRuntime == nil {
+		missing = append(missing, "WriteRuntime")
 	}
 	if len(missing) > 0 {
 		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))

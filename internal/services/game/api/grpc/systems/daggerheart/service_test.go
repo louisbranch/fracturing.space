@@ -783,6 +783,7 @@ func validDaggerheartStoresForConstructorTests() Stores {
 		Daggerheart:      &fakeDaggerheartStore{},
 		Event:            &fakeEventStore{},
 		Domain:           &fakeDomainEngine{},
+		WriteRuntime:     testRuntime,
 	}
 }
 

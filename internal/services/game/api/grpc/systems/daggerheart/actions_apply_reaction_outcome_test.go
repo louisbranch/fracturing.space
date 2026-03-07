@@ -2,14 +2,9 @@ package daggerheart
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"google.golang.org/grpc/codes"
 )
 
@@ -52,74 +47,18 @@ func TestApplyReactionOutcome_MissingRollSeq(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestApplyReactionOutcome_RequiresDomainEngine(t *testing.T) {
-	svc := newActionTestService()
-	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-react-outcome-required")
-	configureActionRollDomain(t, svc, "req-react-outcome-required")
-	rollResp, err := svc.SessionActionRoll(rollCtx, &pb.SessionActionRollRequest{
-		CampaignId:  "camp-1",
-		SessionId:   "sess-1",
-		CharacterId: "char-1",
-		Trait:       "agility",
-		RollKind:    pb.RollKind_ROLL_KIND_REACTION,
-		Difficulty:  10,
-	})
-	if err != nil {
-		t.Fatalf("SessionActionRoll returned error: %v", err)
-	}
-	svc.stores.Domain = nil
-
-	ctx := grpcmeta.WithRequestID(
-		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
-		"req-react-outcome-required",
-	)
-	_, err = svc.ApplyReactionOutcome(ctx, &pb.DaggerheartApplyReactionOutcomeRequest{
-		SessionId: "sess-1",
-		RollSeq:   rollResp.RollSeq,
-	})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestApplyReactionOutcome_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	configureNoopDomain(svc)
 
-	rollPayload := action.RollResolvePayload{
-		RequestID: "req-react-outcome-legacy",
-		RollSeq:   1,
-		Results:   map[string]any{"d20": 12},
-		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
-		SystemData: map[string]any{
-			"character_id": "char-1",
-			"roll_kind":    pb.RollKind_ROLL_KIND_REACTION.String(),
-			"hope_fear":    false,
-		},
-	}
-	rollJSON, err := json.Marshal(rollPayload)
-	if err != nil {
-		t.Fatalf("encode roll payload: %v", err)
-	}
-	rollEvent, err := eventStore.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-1",
-		Timestamp:   now,
-		Type:        event.Type("action.roll_resolved"),
-		SessionID:   "sess-1",
-		RequestID:   "req-react-outcome-legacy",
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "roll",
-		EntityID:    "req-react-outcome-legacy",
-		PayloadJSON: rollJSON,
-	})
-	if err != nil {
-		t.Fatalf("append roll event: %v", err)
-	}
+	rollEvent := newRollEvent(t, "req-react-outcome-legacy").
+		withRollKind(pb.RollKind_ROLL_KIND_REACTION).
+		withHopeFear(false).
+		withResults(map[string]any{"d20": 12}).
+		appendTo(eventStore)
 
-	ctx := grpcmeta.WithRequestID(
-		withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"),
-		"req-react-outcome-legacy",
-	)
+	ctx := testSessionCtx("camp-1", "sess-1", "req-react-outcome-legacy")
 	resp, err := svc.ApplyReactionOutcome(ctx, &pb.DaggerheartApplyReactionOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,

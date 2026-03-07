@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -178,7 +177,7 @@ func configureActionRollDomain(t *testing.T, svc *DaggerheartService, requestID 
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
 				Type:        event.Type("action.roll_resolved"),
-				Timestamp:   time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:   testTimestamp,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "sess-1",
 				RequestID:   requestID,
@@ -251,6 +250,7 @@ func newActionTestService() *DaggerheartService {
 			SessionSpotlight: &fakeSessionSpotlightStore{},
 			Domain:           &fakeDomainEngine{},
 			Session:          sessStore,
+			WriteRuntime:     testRuntime,
 		},
 		seedFunc: func() (int64, error) { return 42, nil },
 	}

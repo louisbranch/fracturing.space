@@ -11,6 +11,8 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/workflow"
+	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -272,7 +274,7 @@ func (s *CharacterService) GetCharacterCreationProgress(ctx context.Context, in 
 
 	progress, err := newCharacterApplication(s).GetCharacterCreationProgress(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, handleWorkflowError(err)
+		return nil, daggerheartgrpc.HandleWorkflowError(err)
 	}
 
 	return &campaignv1.GetCharacterCreationProgressResponse{
@@ -297,7 +299,7 @@ func (s *CharacterService) ApplyCharacterCreationStep(ctx context.Context, in *c
 
 	profile, progress, err := newCharacterApplication(s).ApplyCharacterCreationStep(ctx, campaignID, in)
 	if err != nil {
-		return nil, handleWorkflowError(err)
+		return nil, daggerheartgrpc.HandleWorkflowError(err)
 	}
 
 	return &campaignv1.ApplyCharacterCreationStepResponse{
@@ -323,7 +325,7 @@ func (s *CharacterService) ApplyCharacterCreationWorkflow(ctx context.Context, i
 
 	profile, progress, err := newCharacterApplication(s).ApplyCharacterCreationWorkflow(ctx, campaignID, in)
 	if err != nil {
-		return nil, handleWorkflowError(err)
+		return nil, daggerheartgrpc.HandleWorkflowError(err)
 	}
 
 	return &campaignv1.ApplyCharacterCreationWorkflowResponse{
@@ -349,7 +351,7 @@ func (s *CharacterService) ResetCharacterCreationWorkflow(ctx context.Context, i
 
 	progress, err := newCharacterApplication(s).ResetCharacterCreationWorkflow(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, handleWorkflowError(err)
+		return nil, daggerheartgrpc.HandleWorkflowError(err)
 	}
 
 	return &campaignv1.ResetCharacterCreationWorkflowResponse{
@@ -357,7 +359,7 @@ func (s *CharacterService) ResetCharacterCreationWorkflow(ctx context.Context, i
 	}, nil
 }
 
-func creationProgressToProto(campaignID, characterID string, progress characterCreationProgress) *campaignv1.CharacterCreationProgress {
+func creationProgressToProto(campaignID, characterID string, progress workflow.Progress) *campaignv1.CharacterCreationProgress {
 	steps := make([]*campaignv1.CharacterCreationStepProgress, 0, len(progress.Steps))
 	for _, step := range progress.Steps {
 		steps = append(steps, &campaignv1.CharacterCreationStepProgress{

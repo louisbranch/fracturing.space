@@ -4,7 +4,7 @@ parent: "System extension"
 nav_order: 1
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-04"
 ---
 
 # Game Systems Architecture
@@ -55,43 +55,41 @@ Startup validation enforces coverage:
 - adapter coverage for projection-relevant events
 - no fold handlers for audit-only events
 
-## Extension surfaces
+## Extension surfaces and registry wiring
 
-### 1. Domain module registry (write path)
+Adding a game system requires four registries, all wired from one
+`SystemDescriptor` in `domain/bridge/manifest/manifest.go`. If a system is
+present in one registry and missing in another, startup validation fails.
 
-Location: `internal/services/game/domain/module/registry.go`
+| Registry | Scope | File | What it provides |
+|----------|-------|------|------------------|
+| **Module** | Write path | `domain/module/registry.go` | Routes commands to deciders, events to folders during replay |
+| **Adapter** | Projection | `domain/bridge/adapter_registry.go` | Applies system events to projection stores |
+| **Metadata** | API surface | `domain/bridge/registry_bridge.go` | Transport-facing contracts, state handler factories, outcome appliers |
+| **Manifest** | Glue | `domain/bridge/manifest/manifest.go` | Single descriptor that wires the other three together |
 
-Responsibilities:
+### Startup validation order
 
-- register system commands and events
-- route system commands to deciders
-- route system events to folders during replay
+`BuildRegistries()` in `domain/engine/registries_builder.go`:
 
-### 2. Metadata bridge (transport metadata)
+1. **Register core domains** — core commands, events, and aliases.
+2. **Register system modules** — validate `sys.<namespace>.*` naming and emittable event coverage.
+3. **Validate write-path contracts** — fold, decider, state factory, and readiness coverage.
+4. **Validate projection contracts** — handler coverage, no stale handlers, adapter events.
+5. **Three-way parity check** — module, metadata, and adapter registries must agree on which systems exist.
 
-Location: `internal/services/game/domain/bridge/registry_bridge.go`
+### Common mistakes
 
-Responsibilities:
-
-- map `system_id + system_version` to transport-facing metadata
-- keep gRPC/MCP system metadata aligned with module registration
-
-### 3. Adapter registry (projection read path)
-
-Location: `internal/services/game/domain/bridge/adapter_registry.go`
-
-Responsibilities:
-
-- route system events to projection adapters
-- keep projection updates replay-safe and idempotent
-
-## Single-source registration rule
-
-All three surfaces must be wired from one descriptor in:
-`internal/services/game/domain/bridge/manifest/manifest.go`.
-
-If a system is present in one registry and missing in another, registration is
-invalid and must be fixed before merge.
+| Mistake | Error |
+|---------|-------|
+| Event not handled by folder | `system emittable events missing folder fold handlers: <types>` |
+| Command not in decider | `system commands missing decider handlers: <types>` |
+| Adapter missing for event | `system emittable events missing adapter handlers: <types>` |
+| Module without metadata | `metadata missing for module <id>@<version>` |
+| Metadata without adapter | `adapter missing for metadata <id>@<version>` |
+| `HasProfileSupport=true` without `ProfileAdapter` | `system module registry mismatch: <validation error>` |
+| Non-deterministic state factory | `state factory determinism check failed for <id>` |
+| Fold handler for audit-only event | `fold handlers registered for audit-only events (dead code): <types>` |
 
 ## Package layout contract
 

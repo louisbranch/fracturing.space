@@ -77,11 +77,12 @@ func TestCreateInvite_Success(t *testing.T) {
 
 	svc := &InviteService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Invite:      inviteStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Invite:       inviteStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("invite-123"),
@@ -134,11 +135,12 @@ func TestCreateInvite_UsesDomainEngine(t *testing.T) {
 
 	svc := &InviteService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Invite:      inviteStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Invite:       inviteStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("invite-123"),
@@ -267,11 +269,12 @@ func TestClaimInvite_Success(t *testing.T) {
 
 	svc := &InviteService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Invite:      inviteStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Invite:       inviteStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -395,11 +398,12 @@ func TestClaimInvite_UsesDomainEngine(t *testing.T) {
 
 	svc := &InviteService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Invite:      inviteStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Invite:       inviteStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -479,11 +483,12 @@ func TestClaimInvite_RejectsAIControlledSeatBinding(t *testing.T) {
 
 	svc := &InviteService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Invite:      inviteStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Invite:       inviteStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -545,11 +550,12 @@ func TestClaimInvite_MissingUserID(t *testing.T) {
 
 	svc := &InviteService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Invite:      inviteStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Invite:       inviteStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 	}
@@ -606,11 +612,12 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 
 	svc := &InviteService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Invite:      inviteStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Invite:       inviteStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(now),
 	}
@@ -675,11 +682,12 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 
 	svc := &InviteService{
 		stores: Stores{
-			Campaign:    campaignStore,
-			Participant: participantStore,
-			Invite:      inviteStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Invite:       inviteStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock: fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 	}
@@ -760,7 +768,7 @@ func TestRevokeInvite_Success(t *testing.T) {
 	}}
 
 	svc := &InviteService{
-		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore, Domain: domain},
+		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore, Domain: domain, WriteRuntime: testRuntime},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("x"),
 	}
@@ -832,11 +840,12 @@ func TestRevokeInvite_UsesDomainEngine(t *testing.T) {
 
 	svc := &InviteService{
 		stores: Stores{
-			Invite:      inviteStore,
-			Participant: participantStore,
-			Campaign:    campaignStore,
-			Event:       eventStore,
-			Domain:      domain,
+			Invite:       inviteStore,
+			Participant:  participantStore,
+			Campaign:     campaignStore,
+			Event:        eventStore,
+			Domain:       domain,
+			WriteRuntime: testRuntime,
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("x"),

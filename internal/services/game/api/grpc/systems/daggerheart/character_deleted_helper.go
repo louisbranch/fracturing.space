@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -13,11 +14,8 @@ import (
 )
 
 func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, campaignID, characterID, reason string) error {
-	if s.stores.Campaign == nil {
-		return status.Error(codes.Internal, "campaign store is not configured")
-	}
-	if s.stores.Domain == nil {
-		return status.Error(codes.Internal, "domain engine is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore); err != nil {
+		return err
 	}
 	payload := character.DeletePayload{
 		CharacterID: characterID,
@@ -38,12 +36,7 @@ func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, ca
 		EntityType:   "character",
 		EntityID:     characterID,
 		PayloadJSON:  payloadJSON,
-	}, applier, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "character delete did not emit an event",
-		applyErrMessage: "apply event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, applier, domainwrite.RequireEventsWithDiagnostics("character delete did not emit an event", "apply event"))
 	if err != nil {
 		return err
 	}

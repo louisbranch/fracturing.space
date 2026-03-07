@@ -9,6 +9,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -88,9 +89,6 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	}
 
 	applier := c.stores.Applier()
-	if c.stores.Domain == nil {
-		return storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := participant.JoinPayload{
 		ParticipantID:  participantID,
 		UserID:         userID,
@@ -110,7 +108,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -123,8 +121,8 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 			EntityID:     participantID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErr: domainApplyErrorWithCodePreserve("apply event"),
+		domainwrite.Options{
+			ApplyErr: domainApplyErrorWithCodePreserve("apply event"),
 		},
 	)
 	if err != nil {
@@ -265,9 +263,6 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	}
 
 	applier := c.stores.Applier()
-	if c.stores.Domain == nil {
-		return storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payloadFields := make(map[string]string, len(fields))
 	for key, value := range fields {
 		stringValue, ok := value.(string)
@@ -288,7 +283,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -301,8 +296,8 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 			EntityID:     participantID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErr: domainApplyErrorWithCodePreserve("apply event"),
+		domainwrite.Options{
+			ApplyErr: domainApplyErrorWithCodePreserve("apply event"),
 		},
 	)
 	if err != nil {
@@ -395,9 +390,6 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 
 	reason := strings.TrimSpace(in.GetReason())
 	applier := c.stores.Applier()
-	if c.stores.Domain == nil {
-		return storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := participant.LeavePayload{
 		ParticipantID: participantID,
 		Reason:        reason,
@@ -410,7 +402,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Domain,
+		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -423,8 +415,8 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 			EntityID:     participantID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErr: domainApplyErrorWithCodePreserve("apply event"),
+		domainwrite.Options{
+			ApplyErr: domainApplyErrorWithCodePreserve("apply event"),
 		},
 	)
 	if err != nil {

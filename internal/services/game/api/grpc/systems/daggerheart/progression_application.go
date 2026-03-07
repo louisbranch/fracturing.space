@@ -7,6 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -15,31 +16,13 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type progressionApplication struct {
-	service *DaggerheartService
-}
-
-func newProgressionApplication(service *DaggerheartService) progressionApplication {
-	return progressionApplication{service: service}
-}
-
-func (a progressionApplication) runApplyLevelUp(ctx context.Context, in *pb.DaggerheartApplyLevelUpRequest) (*pb.DaggerheartApplyLevelUpResponse, error) {
+func (s *DaggerheartService) runApplyLevelUp(ctx context.Context, in *pb.DaggerheartApplyLevelUpRequest) (*pb.DaggerheartApplyLevelUpResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "apply level up request is required")
 	}
-	if a.service.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
+	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
+		return nil, err
 	}
-	if a.service.stores.Daggerheart == nil {
-		return nil, status.Error(codes.Internal, "daggerheart store is not configured")
-	}
-	if a.service.stores.Event == nil {
-		return nil, status.Error(codes.Internal, "event store is not configured")
-	}
-	if a.service.stores.Domain == nil {
-		return nil, status.Error(codes.Internal, "domain engine is not configured")
-	}
-
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
@@ -49,7 +32,7 @@ func (a progressionApplication) runApplyLevelUp(ctx context.Context, in *pb.Dagg
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	c, err := a.service.stores.Campaign.Get(ctx, campaignID)
+	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -60,7 +43,7 @@ func (a progressionApplication) runApplyLevelUp(ctx context.Context, in *pb.Dagg
 		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart level up")
 	}
 
-	profile, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	profile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
@@ -111,10 +94,10 @@ func (a progressionApplication) runApplyLevelUp(ctx context.Context, in *pb.Dagg
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
 	}
 
-	adapter := daggerheart.NewAdapter(a.service.stores.Daggerheart)
+	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = a.service.executeAndApplyDomainCommand(ctx, command.Command{
+	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 		CampaignID:    campaignID,
 		Type:          commandTypeDaggerheartLevelUpApply,
 		ActorType:     command.ActorTypeSystem,
@@ -126,17 +109,12 @@ func (a progressionApplication) runApplyLevelUp(ctx context.Context, in *pb.Dagg
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON:   payloadJSON,
-	}, adapter, domainCommandApplyOptions{
-		requireEvents:   true,
-		missingEventMsg: "level up did not emit an event",
-		applyErrMessage: "apply level up event",
-		executeErrMsg:   "execute domain command",
-	})
+	}, adapter, domainwrite.RequireEventsWithDiagnostics("level up did not emit an event", "apply level up event"))
 	if err != nil {
 		return nil, err
 	}
 
-	updatedProfile, err := a.service.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	updatedProfile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "load daggerheart profile: %v", err)
 	}

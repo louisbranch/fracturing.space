@@ -3,7 +3,6 @@ package daggerheart
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -34,7 +33,7 @@ func TestApplyConditions_AddCondition_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.condition_changed"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-conditions-add",
@@ -83,7 +82,7 @@ func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.condition_changed"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-conditions-remove",
@@ -133,7 +132,7 @@ func TestApplyConditions_AddAndRemove(t *testing.T) {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.condition_changed"),
-				Timestamp:     time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC),
+				Timestamp:     testTimestamp,
 				ActorType:     event.ActorTypeSystem,
 				SessionID:     "sess-1",
 				RequestID:     "req-conditions-both",

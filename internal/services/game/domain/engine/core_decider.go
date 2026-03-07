@@ -254,6 +254,11 @@ type participantIDPayload struct {
 	ParticipantID string `json:"participant_id"`
 }
 
+// participantStateFor loads the target participant from command metadata.
+//
+// Commands can carry the participant reference in either EntityID or payload body;
+// this lets callers keep transport-level shape flexible while preserving deterministic
+// routing.
 func participantStateFor(cmd command.Command, current aggregate.State) participant.State {
 	if current.Participants == nil {
 		return participant.State{}
@@ -261,6 +266,9 @@ func participantStateFor(cmd command.Command, current aggregate.State) participa
 	participantID := strings.TrimSpace(cmd.EntityID)
 	if participantID == "" {
 		var payload participantIDPayload
+		// PayloadJSON may not carry the target ID for all command types;
+		// unmarshal failure is safe — empty fallback causes the decider to
+		// reject if the entity is required but missing.
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
 		participantID = strings.TrimSpace(payload.ParticipantID)
 	}
@@ -286,6 +294,9 @@ func characterStateFor(cmd command.Command, current aggregate.State) character.S
 	characterID := strings.TrimSpace(cmd.EntityID)
 	if characterID == "" {
 		var payload characterIDPayload
+		// PayloadJSON may not carry the target ID for all command types;
+		// unmarshal failure is safe — empty fallback causes the decider to
+		// reject if the entity is required but missing.
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
 		characterID = strings.TrimSpace(payload.CharacterID)
 	}
@@ -299,6 +310,11 @@ type inviteIDPayload struct {
 	InviteID string `json:"invite_id"`
 }
 
+// inviteStateFor loads the target invite from command metadata.
+//
+// Commands can carry the invite reference in either EntityID or payload body;
+// this lets callers keep transport-level shape flexible while preserving deterministic
+// routing.
 func inviteStateFor(cmd command.Command, current aggregate.State) invite.State {
 	if current.Invites == nil {
 		return invite.State{}
@@ -306,6 +322,9 @@ func inviteStateFor(cmd command.Command, current aggregate.State) invite.State {
 	inviteID := strings.TrimSpace(cmd.EntityID)
 	if inviteID == "" {
 		var payload inviteIDPayload
+		// PayloadJSON may not carry the target ID for all command types;
+		// unmarshal failure is safe — empty fallback causes the decider to
+		// reject if the entity is required but missing.
 		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
 		inviteID = strings.TrimSpace(payload.InviteID)
 	}

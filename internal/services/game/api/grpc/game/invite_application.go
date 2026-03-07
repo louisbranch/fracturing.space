@@ -12,6 +12,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -98,9 +99,6 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	applier := a.stores.Applier()
-	if a.stores.Domain == nil {
-		return storage.InviteRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := invite.CreatePayload{
 		InviteID:               inviteID,
 		ParticipantID:          participantID,
@@ -114,7 +112,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -127,8 +125,8 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 			EntityID:     inviteID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErr: domainApplyErrorWithCodePreserve("apply invite event"),
+		domainwrite.Options{
+			ApplyErr: domainApplyErrorWithCodePreserve("apply invite event"),
 		},
 	)
 	if err != nil {
@@ -244,9 +242,6 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	applier := a.stores.Applier()
-	if a.stores.Domain == nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := participant.BindPayload{
 		ParticipantID: seat.ID,
 		UserID:        userID,
@@ -259,7 +254,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -272,8 +267,8 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 			EntityID:     seat.ID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErr: domainApplyErrorWithCodePreserve("apply participant event"),
+		domainwrite.Options{
+			ApplyErr: domainApplyErrorWithCodePreserve("apply participant event"),
 		},
 	)
 	if err != nil {
@@ -296,7 +291,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -309,8 +304,8 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 			EntityID:     inv.ID,
 			PayloadJSON:  claimJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErr: domainApplyErrorWithCodePreserve("apply invite event"),
+		domainwrite.Options{
+			ApplyErr: domainApplyErrorWithCodePreserve("apply invite event"),
 		},
 	)
 	if err != nil {
@@ -356,9 +351,6 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	applier := a.stores.Applier()
-	if a.stores.Domain == nil {
-		return storage.InviteRecord{}, status.Error(codes.Internal, "domain engine is not configured")
-	}
 	payload := invite.RevokePayload{InviteID: inv.ID}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -367,7 +359,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Domain,
+		a.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   inv.CampaignID,
@@ -380,8 +372,8 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 			EntityID:     inv.ID,
 			PayloadJSON:  payloadJSON,
 		}),
-		domainCommandApplyOptions{
-			applyErr: domainApplyErrorWithCodePreserve("apply invite event"),
+		domainwrite.Options{
+			ApplyErr: domainApplyErrorWithCodePreserve("apply invite event"),
 		},
 	)
 	if err != nil {

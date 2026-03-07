@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -19,7 +17,7 @@ import (
 func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-roll-1",
@@ -27,7 +25,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
 		Results:   map[string]any{"d20": 1},
 		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
+			sdKeyCharacterID: "char-1",
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -122,7 +120,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -166,7 +164,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
 func TestApplyRollOutcome_CorrelationIDOnIntermediateCommands(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-roll-corr",
@@ -174,7 +172,7 @@ func TestApplyRollOutcome_CorrelationIDOnIntermediateCommands(t *testing.T) {
 		Results:   map[string]any{"d20": 1},
 		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
+			sdKeyCharacterID: "char-1",
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -269,7 +267,7 @@ func TestApplyRollOutcome_CorrelationIDOnIntermediateCommands(t *testing.T) {
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-corr")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-corr")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -295,7 +293,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	state := dhStore.States["camp-1:char-1"]
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-roll-1",
@@ -303,7 +301,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
+			sdKeyCharacterID: "char-1",
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -381,7 +379,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,
@@ -435,7 +433,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	state.Stress = profile.StressMax
 	state.Conditions = []string{daggerheart.ConditionVulnerable}
 	dhStore.States["camp-1:char-1"] = state
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-roll-1",
@@ -443,8 +441,8 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_CRITICAL_SUCCESS.String(),
 		SystemData: map[string]any{
-			"character_id": "char-1",
-			"crit":         true,
+			sdKeyCharacterID: "char-1",
+			sdKeyCrit:        true,
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -549,7 +547,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	}}
 	svc.stores.Domain = domain
 
-	ctx := grpcmeta.WithRequestID(withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1"), "req-roll-1")
+	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 		RollSeq:   rollEvent.Seq,

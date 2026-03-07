@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
-	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -83,7 +82,7 @@ func TestApplyRest_UnspecifiedRestType(t *testing.T) {
 func TestApplyRest_ShortRest_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
 		RestType:         "short",
@@ -136,7 +135,7 @@ func TestApplyRest_ShortRest_Success(t *testing.T) {
 func TestApplyRest_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	restPayload := struct {
 		RestType    string `json:"rest_type"`
@@ -208,7 +207,7 @@ func TestApplyRest_UsesDomainEngine(t *testing.T) {
 func TestApplyRest_LongRest_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
 		RestType:         "long",
@@ -261,7 +260,7 @@ func TestApplyRest_LongRest_Success(t *testing.T) {
 func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
 		RestType:         "long",
@@ -305,7 +304,7 @@ func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 			LongTermCountdownId: "missing-countdown",
 		},
 	})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.NotFound)
 
 	if len(eventStore.Events["camp-1"]) != 0 {
 		t.Fatalf("expected no events committed on failed rest flow, got %d", len(eventStore.Events["camp-1"]))
@@ -326,7 +325,7 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 		Direction:   "increase",
 		Looping:     false,
 	}
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	now := testTimestamp
 
 	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
 		RestType:         "long",

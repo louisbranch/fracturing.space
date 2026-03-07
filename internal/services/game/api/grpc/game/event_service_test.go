@@ -354,7 +354,7 @@ func TestAppendEvent_UsesDomainEngineForActionEvents(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: results}
-	svc := NewEventService(Stores{Event: eventStore, Domain: domain})
+	svc := NewEventService(Stores{Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 
 	for _, tc := range cases {
 		_, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
@@ -401,7 +401,7 @@ func TestAppendEvent_RequiresMaintenanceOrAdminScope(t *testing.T) {
 func TestAppendEvent_RejectsUnmappedTypeWithDomain(t *testing.T) {
 	eventStore := newFakeEventStore()
 	domain := &fakeDomainEngine{store: eventStore}
-	svc := NewEventService(Stores{Event: eventStore, Domain: domain})
+	svc := NewEventService(Stores{Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 	ctx := appendEventScopeContext(appendEventScopeMaintenance)
 
 	_, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
@@ -419,8 +419,6 @@ func TestAppendEvent_RejectsUnmappedTypeWithDomain(t *testing.T) {
 }
 
 func TestAppendEvent_DirectAppendRequiresCompatibilityMode(t *testing.T) {
-	SetCompatibilityAppendEnabled(false)
-
 	eventStore := newFakeEventStore()
 	svc := NewEventService(Stores{Event: eventStore})
 	ctx := appendEventScopeContext(appendEventScopeMaintenance)
@@ -440,11 +438,9 @@ func TestAppendEvent_DirectAppendRequiresCompatibilityMode(t *testing.T) {
 }
 
 func TestAppendEvent_DirectAppendAllowedWhenCompatibilityModeEnabled(t *testing.T) {
-	SetCompatibilityAppendEnabled(true)
-	t.Cleanup(func() { SetCompatibilityAppendEnabled(false) })
-
 	eventStore := newFakeEventStore()
 	svc := NewEventService(Stores{Event: eventStore})
+	svc.SetCompatibilityAppendEnabled(true)
 	ctx := appendEventScopeContext(appendEventScopeMaintenance)
 
 	resp, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
@@ -496,7 +492,7 @@ func TestAppendEvent_ReturnsRequestedMappedEventWhenDomainEmitsMultipleEvents(t 
 			},
 		},
 	}
-	svc := NewEventService(Stores{Event: eventStore, Domain: domain})
+	svc := NewEventService(Stores{Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
 
 	resp, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
 		CampaignId:  "c1",

@@ -1,0 +1,215 @@
+package daggerheart
+
+import (
+	"context"
+	"strings"
+
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.SessionAttackFlowRequest) (*pb.SessionAttackFlowResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "session attack flow request is required")
+	}
+	if err := s.requireDependencies(
+		dependencyCampaignStore,
+		dependencySessionStore,
+		dependencyDaggerheartStore,
+		dependencyEventStore,
+		dependencySeedGenerator,
+	); err != nil {
+		return nil, err
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	sessionID := strings.TrimSpace(in.GetSessionId())
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+	attackerID := strings.TrimSpace(in.GetCharacterId())
+	if attackerID == "" {
+		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	}
+	trait := strings.TrimSpace(in.GetTrait())
+	if trait == "" {
+		return nil, status.Error(codes.InvalidArgument, "trait is required")
+	}
+	targetID := strings.TrimSpace(in.GetTargetId())
+	if targetID == "" {
+		return nil, status.Error(codes.InvalidArgument, "target id is required")
+	}
+	if in.GetDamage() == nil {
+		return nil, status.Error(codes.InvalidArgument, "damage is required")
+	}
+	if in.GetDamage().GetDamageType() == pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_UNSPECIFIED {
+		return nil, status.Error(codes.InvalidArgument, "damage_type is required")
+	}
+
+	rollResp, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+		CampaignId:        campaignID,
+		SessionId:         sessionID,
+		CharacterId:       attackerID,
+		Trait:             trait,
+		RollKind:          pb.RollKind_ROLL_KIND_ACTION,
+		Difficulty:        in.GetDifficulty(),
+		Modifiers:         in.GetModifiers(),
+		Underwater:        in.GetUnderwater(),
+		BreathCountdownId: in.GetBreathCountdownId(),
+		Rng:               in.GetActionRng(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
+	rollOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
+		SessionId: sessionID,
+		RollSeq:   rollResp.GetRollSeq(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	attackOutcome, err := s.ApplyAttackOutcome(ctxWithMeta, &pb.DaggerheartApplyAttackOutcomeRequest{
+		SessionId: sessionID,
+		RollSeq:   rollResp.GetRollSeq(),
+		Targets:   []string{targetID},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := &pb.SessionAttackFlowResponse{
+		ActionRoll:    rollResp,
+		RollOutcome:   rollOutcome,
+		AttackOutcome: attackOutcome,
+	}
+
+	if attackOutcome.GetResult() == nil || !attackOutcome.GetResult().GetSuccess() {
+		return response, nil
+	}
+
+	if len(in.GetDamageDice()) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "damage_dice are required")
+	}
+
+	critical := attackOutcome.GetResult().GetCrit() || in.GetDamageCritical()
+	damageRoll, err := s.SessionDamageRoll(ctx, &pb.SessionDamageRollRequest{
+		CampaignId:  campaignID,
+		SessionId:   sessionID,
+		CharacterId: attackerID,
+		Dice:        in.GetDamageDice(),
+		Modifier:    in.GetDamageModifier(),
+		Critical:    critical,
+		Rng:         in.GetDamageRng(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	damageReq := &pb.DaggerheartDamageRequest{
+		Amount:             damageRoll.GetTotal(),
+		DamageType:         in.GetDamage().GetDamageType(),
+		ResistPhysical:     in.GetDamage().GetResistPhysical(),
+		ResistMagic:        in.GetDamage().GetResistMagic(),
+		ImmunePhysical:     in.GetDamage().GetImmunePhysical(),
+		ImmuneMagic:        in.GetDamage().GetImmuneMagic(),
+		Direct:             in.GetDamage().GetDirect(),
+		MassiveDamage:      in.GetDamage().GetMassiveDamage(),
+		Source:             in.GetDamage().GetSource(),
+		SourceCharacterIds: normalizeTargets(in.GetDamage().GetSourceCharacterIds()),
+	}
+
+	applyDamage, err := s.ApplyDamage(ctxWithMeta, &pb.DaggerheartApplyDamageRequest{
+		CampaignId:        campaignID,
+		CharacterId:       targetID,
+		Damage:            damageReq,
+		RollSeq:           &damageRoll.RollSeq,
+		RequireDamageRoll: in.GetRequireDamageRoll(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response.DamageRoll = damageRoll
+	response.DamageApplied = applyDamage
+	return response, nil
+}
+
+func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.SessionReactionFlowRequest) (*pb.SessionReactionFlowResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "session reaction flow request is required")
+	}
+	if err := s.requireDependencies(
+		dependencyCampaignStore,
+		dependencySessionStore,
+		dependencyDaggerheartStore,
+		dependencyEventStore,
+		dependencySeedGenerator,
+	); err != nil {
+		return nil, err
+	}
+
+	campaignID := strings.TrimSpace(in.GetCampaignId())
+	if campaignID == "" {
+		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	}
+	sessionID := strings.TrimSpace(in.GetSessionId())
+	if sessionID == "" {
+		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	}
+	actorID := strings.TrimSpace(in.GetCharacterId())
+	if actorID == "" {
+		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	}
+	trait := strings.TrimSpace(in.GetTrait())
+	if trait == "" {
+		return nil, status.Error(codes.InvalidArgument, "trait is required")
+	}
+
+	rollResp, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+		CampaignId:   campaignID,
+		SessionId:    sessionID,
+		CharacterId:  actorID,
+		Trait:        trait,
+		RollKind:     pb.RollKind_ROLL_KIND_REACTION,
+		Difficulty:   in.GetDifficulty(),
+		Modifiers:    in.GetModifiers(),
+		Advantage:    in.GetAdvantage(),
+		Disadvantage: in.GetDisadvantage(),
+		Rng:          in.GetReactionRng(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
+	rollOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
+		SessionId: sessionID,
+		RollSeq:   rollResp.GetRollSeq(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	reactionOutcome, err := s.ApplyReactionOutcome(ctxWithMeta, &pb.DaggerheartApplyReactionOutcomeRequest{
+		SessionId: sessionID,
+		RollSeq:   rollResp.GetRollSeq(),
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	response := &pb.SessionReactionFlowResponse{
+		ActionRoll:      rollResp,
+		RollOutcome:     rollOutcome,
+		ReactionOutcome: reactionOutcome,
+	}
+
+	return response, nil
+}

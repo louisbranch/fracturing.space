@@ -2,13 +2,13 @@ package domainwrite
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"sync/atomic"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // Executor executes a domain command and returns the domain result.
@@ -30,6 +30,30 @@ type Options struct {
 	ExecuteErr         func(error) error
 	ApplyErr           func(error) error
 	RejectErr          func(string) error
+
+	// ExecuteErrMessage and ApplyErrMessage are used to construct default
+	// ExecuteErr / ApplyErr handlers when those callbacks are nil.
+	ExecuteErrMessage string
+	ApplyErrMessage   string
+}
+
+// RequireEvents returns options that require at least one event to be emitted.
+func RequireEvents(missingEventMsg string) Options {
+	return Options{
+		RequireEvents:   true,
+		MissingEventMsg: missingEventMsg,
+	}
+}
+
+// RequireEventsWithDiagnostics returns options that require events and provide
+// diagnostic error messages for both apply and execute failures.
+func RequireEventsWithDiagnostics(missingEventMsg, applyErrMsg string) Options {
+	return Options{
+		RequireEvents:     true,
+		MissingEventMsg:   missingEventMsg,
+		ApplyErrMessage:   applyErrMsg,
+		ExecuteErrMessage: "execute domain command",
+	}
 }
 
 // ErrorHandlerOptions controls how ExecuteAndApply error callbacks are
@@ -145,7 +169,7 @@ func ExecuteAndApply(
 	options = normalizeOptions(options)
 
 	if executor == nil {
-		return engine.Result{}, status.Error(codes.Internal, "domain engine is not configured")
+		return engine.Result{}, errors.New("domain engine is not configured")
 	}
 
 	result, err := executor.Execute(ctx, cmd)
@@ -156,7 +180,7 @@ func ExecuteAndApply(
 		return engine.Result{}, options.RejectErr(result.Decision.Rejections[0].Message)
 	}
 	if options.RequireEvents && len(result.Decision.Events) == 0 {
-		return engine.Result{}, status.Error(codes.Internal, options.MissingEventMsg)
+		return engine.Result{}, errors.New(options.MissingEventMsg)
 	}
 	if options.InlineApplyEnabled {
 		for _, evt := range result.Decision.Events {
@@ -197,9 +221,11 @@ func NewIntentFilter(registry *event.Registry) func(event.Event) bool {
 
 func normalizeOptions(options Options) Options {
 	executeErr, applyErr, rejectErr := NormalizeErrorHandlers(ErrorHandlerOptions{
-		ExecuteErr: options.ExecuteErr,
-		ApplyErr:   options.ApplyErr,
-		RejectErr:  options.RejectErr,
+		ExecuteErr:        options.ExecuteErr,
+		ApplyErr:          options.ApplyErr,
+		RejectErr:         options.RejectErr,
+		ExecuteErrMessage: options.ExecuteErrMessage,
+		ApplyErrMessage:   options.ApplyErrMessage,
 	})
 	options.ExecuteErr = executeErr
 	options.ApplyErr = applyErr
@@ -224,7 +250,7 @@ func NormalizeErrorHandlers(options ErrorHandlerOptions) (
 			message = "execute domain command"
 		}
 		executeErr = func(err error) error {
-			return status.Errorf(codes.Internal, "%s: %v", message, err)
+			return fmt.Errorf("%s: %w", message, err)
 		}
 	}
 	if applyErr == nil {
@@ -233,12 +259,12 @@ func NormalizeErrorHandlers(options ErrorHandlerOptions) (
 			message = "apply event"
 		}
 		applyErr = func(err error) error {
-			return status.Errorf(codes.Internal, "%s: %v", message, err)
+			return fmt.Errorf("%s: %w", message, err)
 		}
 	}
 	if rejectErr == nil {
 		rejectErr = func(message string) error {
-			return status.Error(codes.FailedPrecondition, message)
+			return errors.New(message)
 		}
 	}
 

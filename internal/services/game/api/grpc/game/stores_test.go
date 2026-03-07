@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -28,6 +29,7 @@ func TestStoresValidate(t *testing.T) {
 			"Character", "SystemStores.Daggerheart", "Session", "SessionGate",
 			"SessionSpotlight", "Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
+			"Domain", "WriteRuntime",
 		} {
 			if !strings.Contains(msg, name) {
 				t.Errorf("error should mention %q, got: %s", name, msg)
@@ -66,6 +68,8 @@ func validStores() Stores {
 		Snapshot:           stubSnapshot{},
 		CampaignFork:       &fakeCampaignForkStore{},
 		DaggerheartContent: stubDaggerheartContent{},
+		Domain:             fakeDomainExecutor{},
+		WriteRuntime:       domainwrite.NewRuntime(),
 	}
 }
 
