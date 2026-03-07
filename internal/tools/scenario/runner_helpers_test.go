@@ -1428,6 +1428,42 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 	})
 }
 
+func TestEnsureDaggerheartCharacterReadiness_UsesCatalogBackedEquipmentIDs(t *testing.T) {
+	var applyReq *gamev1.ApplyCharacterCreationWorkflowRequest
+	char := &fakeCharacterClient{
+		applyWorkflow: func(_ context.Context, in *gamev1.ApplyCharacterCreationWorkflowRequest, _ ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error) {
+			applyReq = in
+			return &gamev1.ApplyCharacterCreationWorkflowResponse{}, nil
+		},
+	}
+	r := newTestRunner(scenarioEnv{characterClient: char})
+	state := &scenarioState{campaignID: "c-1"}
+
+	err := r.ensureDaggerheartCharacterReadiness(context.Background(), state, "char-1")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if applyReq == nil {
+		t.Fatal("expected ApplyCharacterCreationWorkflow request")
+	}
+	input := applyReq.GetDaggerheart()
+	if input == nil {
+		t.Fatal("expected daggerheart workflow input")
+	}
+	if got := input.GetEquipmentInput().GetArmorId(); got != scenarioReadinessArmorID {
+		t.Fatalf("armor_id = %q, want %q", got, scenarioReadinessArmorID)
+	}
+	if got := input.GetEquipmentInput().GetArmorId(); got == "armor.readiness-light" {
+		t.Fatalf("armor_id unexpectedly used removed seed id %q", got)
+	}
+	if got := input.GetEquipmentInput().GetWeaponIds(); len(got) != 1 || got[0] != scenarioReadinessWeaponID {
+		t.Fatalf("weapon_ids = %v, want [%q]", got, scenarioReadinessWeaponID)
+	}
+	if got := input.GetEquipmentInput().GetPotionItemId(); got != scenarioReadinessPotionItemID {
+		t.Fatalf("potion_item_id = %q, want %q", got, scenarioReadinessPotionItemID)
+	}
+}
+
 func TestApplyOptionalCharacterState_NoOp(t *testing.T) {
 	r := newTestRunner(scenarioEnv{})
 	state := &scenarioState{campaignID: "c-1"}

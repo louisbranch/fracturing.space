@@ -280,20 +280,6 @@ func seedScenarioContent(t *testing.T) {
 		t.Fatalf("seed armor: %v", err)
 	}
 
-	if err := store.PutDaggerheartArmor(ctx, storage.DaggerheartArmor{
-		ID:                  "armor.readiness-light",
-		Name:                "Readiness Light Armor",
-		Tier:                1,
-		BaseMajorThreshold:  6,
-		BaseSevereThreshold: 12,
-		ArmorScore:          0,
-		Feature:             "Scenario readiness armor",
-		CreatedAt:           now,
-		UpdatedAt:           now,
-	}); err != nil {
-		t.Fatalf("seed readiness armor: %v", err)
-	}
-
 	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
 		ID:        "item.minor-health-potion",
 		Name:      "Minor Health Potion",

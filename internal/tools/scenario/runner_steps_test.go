@@ -309,8 +309,8 @@ func TestRunCampaignStepDefaults(t *testing.T) {
 	if gotRequest == nil {
 		t.Fatal("expected create campaign request")
 	}
-	if got := gotRequest.GetGmMode(); got != gamev1.GmMode_AI {
-		t.Fatalf("gm mode = %s, want AI", got.String())
+	if got := gotRequest.GetGmMode(); got != gamev1.GmMode_HUMAN {
+		t.Fatalf("gm mode = %s, want HUMAN", got.String())
 	}
 	if got := gotRequest.GetIntent(); got != gamev1.CampaignIntent_SANDBOX {
 		t.Fatalf("intent = %s, want SANDBOX", got.String())
