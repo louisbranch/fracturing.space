@@ -1,6 +1,7 @@
 package discovery
 
 import (
+	"context"
 	"log"
 	"net/http"
 
@@ -23,18 +24,33 @@ func newHandlers(base publichandler.Base, gw Gateway) handlers {
 // handleIndex handles this route in the module transport layer.
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
+	entries := h.loadStarterEntriesView(r.Context())
+	h.writeDiscoveryPage(w, r, loc, lang, entries)
+}
 
-	var entries []webtemplates.StarterEntryView
-	if h.gateway != nil {
-		results, err := h.gateway.ListStarterEntries(r.Context())
-		if err != nil {
-			log.Printf("discovery: list starter entries: %v", err)
-			// Render empty list on error — soft degradation.
-		} else {
-			entries = mapEntriesToView(results)
-		}
+// loadStarterEntriesView loads discovery entries and soft-degrades to an empty
+// list when the gateway is unavailable.
+func (h handlers) loadStarterEntriesView(ctx context.Context) []webtemplates.StarterEntryView {
+	if h.gateway == nil {
+		return nil
 	}
+	results, err := h.gateway.ListStarterEntries(ctx)
+	if err != nil {
+		log.Printf("discovery: list starter entries: %v", err)
+		// Render empty list on error — soft degradation.
+		return nil
+	}
+	return mapEntriesToView(results)
+}
 
+// writeDiscoveryPage writes the discovery page shell and content fragment.
+func (h handlers) writeDiscoveryPage(
+	w http.ResponseWriter,
+	r *http.Request,
+	loc webtemplates.Localizer,
+	lang string,
+	entries []webtemplates.StarterEntryView,
+) {
 	h.WritePublicPage(
 		w,
 		r,
@@ -44,27 +60,4 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 		http.StatusOK,
 		webtemplates.DiscoveryFragment(entries, loc),
 	)
-}
-
-// mapEntriesToView converts gateway domain types to template view types.
-func mapEntriesToView(entries []StarterEntry) []webtemplates.StarterEntryView {
-	if len(entries) == 0 {
-		return nil
-	}
-	views := make([]webtemplates.StarterEntryView, len(entries))
-	for i, entry := range entries {
-		views[i] = webtemplates.StarterEntryView{
-			CampaignID:  entry.CampaignID,
-			Title:       entry.Title,
-			Description: entry.Description,
-			Tags:        entry.Tags,
-			Difficulty:  entry.Difficulty,
-			Duration:    entry.Duration,
-			GmMode:      entry.GmMode,
-			System:      entry.System,
-			Level:       entry.Level,
-			Players:     entry.Players,
-		}
-	}
-	return views
 }

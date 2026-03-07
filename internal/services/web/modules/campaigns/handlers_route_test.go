@@ -246,6 +246,98 @@ func TestWithCampaignIDReturnsNotFoundForEmptyPath(t *testing.T) {
 	}
 }
 
+func TestWithCampaignAndCharacterIDDelegatesResolvedParams(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHandlers(fakeGateway{})
+	called := false
+	var gotCampaignID, gotCharacterID string
+	handler := h.withCampaignAndCharacterID(func(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+		called = true
+		gotCampaignID = campaignID
+		gotCharacterID = characterID
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.SetPathValue("campaignID", "c-1")
+	req.SetPathValue("characterID", "char-1")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if !called {
+		t.Fatalf("expected delegate to be called")
+	}
+	if gotCampaignID != "c-1" || gotCharacterID != "char-1" {
+		t.Fatalf("delegated ids = (%q, %q), want (%q, %q)", gotCampaignID, gotCharacterID, "c-1", "char-1")
+	}
+}
+
+func TestWithCampaignAndCharacterIDReturnsNotFoundForMissingCharacterID(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHandlers(fakeGateway{})
+	called := false
+	handler := h.withCampaignAndCharacterID(func(http.ResponseWriter, *http.Request, string, string) {
+		called = true
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.SetPathValue("campaignID", "c-1")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if called {
+		t.Fatalf("expected delegate not to be called")
+	}
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+}
+
+func TestWithCampaignAndParticipantIDReturnsNotFoundForMissingParticipantID(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHandlers(fakeGateway{})
+	called := false
+	handler := h.withCampaignAndParticipantID(func(http.ResponseWriter, *http.Request, string, string) {
+		called = true
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.SetPathValue("campaignID", "c-1")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if called {
+		t.Fatalf("expected delegate not to be called")
+	}
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+}
+
+func TestWithCampaignAndSessionIDReturnsNotFoundForMissingSessionID(t *testing.T) {
+	t.Parallel()
+
+	h := newTestHandlers(fakeGateway{})
+	called := false
+	handler := h.withCampaignAndSessionID(func(http.ResponseWriter, *http.Request, string, string) {
+		called = true
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.SetPathValue("campaignID", "c-1")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if called {
+		t.Fatalf("expected delegate not to be called")
+	}
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+}
+
 // --- helpers ---
 
 func newTestHandlers(gw fakeGateway) handlers {

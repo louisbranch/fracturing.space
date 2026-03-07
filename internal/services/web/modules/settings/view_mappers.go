@@ -32,3 +32,20 @@ func settingsSideMenu(currentPath string, loc webtemplates.Localizer) *webtempla
 		},
 	}
 }
+
+// mapAIKeyTemplateRows maps settings AI key values into template rows.
+func mapAIKeyTemplateRows(keys []SettingsAIKey) []webtemplates.SettingsAIKeyRow {
+	rows := make([]webtemplates.SettingsAIKeyRow, 0, len(keys))
+	for _, key := range keys {
+		rows = append(rows, webtemplates.SettingsAIKeyRow{
+			ID:        key.ID,
+			Label:     key.Label,
+			Provider:  key.Provider,
+			Status:    key.Status,
+			CreatedAt: key.CreatedAt,
+			RevokedAt: key.RevokedAt,
+			CanRevoke: key.CanRevoke,
+		})
+	}
+	return rows
+}

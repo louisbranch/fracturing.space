@@ -98,39 +98,14 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_campaign_create_form", "failed to parse campaign create form"))
 		return
 	}
-
-	name := strings.TrimSpace(r.FormValue("name"))
-
-	systemValue := strings.TrimSpace(r.FormValue("system"))
-	if systemValue == "" {
-		systemValue = "daggerheart"
-	}
-	system, ok := parseAppGameSystem(systemValue)
-	if !ok {
-		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_system_is_invalid", "campaign system is invalid"))
+	input, err := parseCreateCampaignInput(r.Form)
+	if err != nil {
+		h.WriteError(w, r, err)
 		return
 	}
-
-	gmModeValue := strings.TrimSpace(r.FormValue("gm_mode"))
-	if gmModeValue == "" {
-		gmModeValue = "ai"
-	}
-	gmMode, ok := parseAppGmMode(gmModeValue)
-	if !ok {
-		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_gm_mode_is_invalid", "campaign gm mode is invalid"))
-		return
-	}
-
-	themePrompt := strings.TrimSpace(r.FormValue("theme_prompt"))
 	ctx, _ := h.RequestContextAndUserID(r)
-
-	created, err := h.service.CreateCampaign(ctx, CreateCampaignInput{
-		Name:        name,
-		System:      system,
-		GMMode:      gmMode,
-		ThemePrompt: themePrompt,
-		Locale:      h.RequestLocaleTag(r),
-	})
+	input.Locale = h.RequestLocaleTag(r)
+	created, err := h.service.CreateCampaign(ctx, input)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

@@ -80,6 +80,41 @@ func WriteAppError(w http.ResponseWriter, r *http.Request, statusCode int, resol
 	}
 }
 
+// WritePublicAppError writes a localized public-shell error page for routes
+// outside the authenticated app chrome.
+func WritePublicAppError(w http.ResponseWriter, r *http.Request, statusCode int) {
+	if w == nil {
+		return
+	}
+	if !ShouldRenderAppError(statusCode) {
+		statusCode = http.StatusInternalServerError
+	}
+	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
+	pagerender.WritePublicPage(
+		w,
+		r,
+		webtemplates.AppErrorPageTitle(statusCode, loc),
+		webtemplates.T(loc, "layout.meta_description"),
+		lang,
+		statusCode,
+		webtemplates.AppErrorState(statusCode, loc),
+	)
+}
+
+// WritePublicError writes a public-route-safe localized error response.
+func WritePublicError(w http.ResponseWriter, r *http.Request, err error) {
+	if w == nil {
+		return
+	}
+	statusCode := apperrors.HTTPStatus(err)
+	if ShouldRenderAppError(statusCode) {
+		WritePublicAppError(w, r, statusCode)
+		return
+	}
+	loc, _ := webi18n.ResolveLocalizer(w, r, nil)
+	http.Error(w, PublicMessage(loc, err), statusCode)
+}
+
 // WriteModuleError writes a module-safe localized error response.
 func WriteModuleError(w http.ResponseWriter, r *http.Request, err error, resolver pagerender.RequestResolver) {
 	if w == nil {

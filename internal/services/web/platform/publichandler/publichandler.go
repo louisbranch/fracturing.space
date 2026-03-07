@@ -8,11 +8,8 @@ import (
 
 	"github.com/a-h/templ"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
-	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // Base provides shared error handling and page rendering for public (unauthenticated)
@@ -70,38 +67,11 @@ func (Base) WritePublicPage(w http.ResponseWriter, r *http.Request, title string
 
 // WriteNotFound renders a localized 404 error page using the public layout.
 func (Base) WriteNotFound(w http.ResponseWriter, r *http.Request) {
-	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
-	pagerender.WritePublicPage(
-		w,
-		r,
-		webtemplates.AppErrorPageTitle(http.StatusNotFound, loc),
-		webtemplates.T(loc, "layout.meta_description"),
-		lang,
-		http.StatusNotFound,
-		webtemplates.AppErrorState(http.StatusNotFound, loc),
-	)
+	weberror.WritePublicAppError(w, r, http.StatusNotFound)
 }
 
 // WriteError renders a user-safe error response: app error pages for not-found
 // and server errors, plain-text status messages for everything else.
 func (Base) WriteError(w http.ResponseWriter, r *http.Request, err error) {
-	if w == nil {
-		return
-	}
-	statusCode := apperrors.HTTPStatus(err)
-	if weberror.ShouldRenderAppError(statusCode) {
-		loc, lang := webi18n.ResolveLocalizer(w, r, nil)
-		pagerender.WritePublicPage(
-			w,
-			r,
-			webtemplates.AppErrorPageTitle(statusCode, loc),
-			webtemplates.T(loc, "layout.meta_description"),
-			lang,
-			statusCode,
-			webtemplates.AppErrorState(statusCode, loc),
-		)
-		return
-	}
-	loc, _ := webi18n.ResolveLocalizer(w, r, nil)
-	http.Error(w, weberror.PublicMessage(loc, err), statusCode)
+	weberror.WritePublicError(w, r, err)
 }

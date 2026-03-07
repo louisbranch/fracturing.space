@@ -2,7 +2,6 @@ package profile
 
 import (
 	"net/http"
-	"strings"
 
 	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
@@ -28,7 +27,7 @@ func newHandlers(s profileService, base publichandler.Base) handlers {
 
 // handleProfile handles this route in the module transport layer.
 func (h handlers) handleProfile(w http.ResponseWriter, r *http.Request) {
-	username := strings.TrimSpace(r.PathValue("username"))
+	username := parseProfileRouteUsername(r)
 	profile, err := h.service.LoadProfile(httpx.RequestContext(r), username)
 	if err != nil {
 		h.WriteError(w, r, err)
@@ -52,13 +51,6 @@ func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, prof
 		webtemplates.T(loc, "layout.meta_description"),
 		lang,
 		http.StatusOK,
-		webtemplates.PublicProfilePage(webtemplates.PublicProfileView{
-			Username:       profile.Username,
-			Name:           profile.Name,
-			Pronouns:       profile.Pronouns,
-			Bio:            profile.Bio,
-			AvatarURL:      profile.AvatarURL,
-			ViewerSignedIn: h.IsViewerSignedIn(r),
-		}, loc),
+		webtemplates.PublicProfilePage(mapPublicProfileTemplateView(profile, h.IsViewerSignedIn(r)), loc),
 	)
 }

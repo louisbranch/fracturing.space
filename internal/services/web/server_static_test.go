@@ -14,7 +14,7 @@ func TestStaticThemeServedByWeb(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -34,7 +34,7 @@ func TestStaticThemeIncludesCampaignChatDrawerToggleRules(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -62,7 +62,7 @@ func TestStaticCampaignChatScriptServedByWeb(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -82,7 +82,7 @@ func TestStaticCampaignChatScriptIncludesAppHostFallbackLogic(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -110,7 +110,7 @@ func TestStaticCampaignChatScriptPrefersFallbackPortForLocalhost(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -139,7 +139,7 @@ func TestStaticAppShellScriptIncludesHTMXErrorSwapContract(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -166,7 +166,7 @@ func TestStaticAppShellScriptIncludesRouteMetadataContract(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -193,7 +193,7 @@ func TestStaticAppShellScriptIncludesImageFallbackContract(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{AuthClient: newFakeWebAuthClient()}),
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
@@ -231,13 +231,15 @@ func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{SessionClient: auth},
 			modules.Dependencies{
-				AuthClient:          auth,
-				CampaignClient:      fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
-				ParticipantClient:   defaultParticipantClient(),
-				CharacterClient:     defaultCharacterClient(),
-				SessionClient:       defaultSessionClient(),
-				InviteClient:        defaultInviteClient(),
-				AuthorizationClient: defaultAuthorizationClient(),
+				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
+				Campaigns: modules.CampaignDependencies{
+					CampaignClient:      fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
+					ParticipantClient:   defaultParticipantClient(),
+					CharacterClient:     defaultCharacterClient(),
+					SessionClient:       defaultSessionClient(),
+					InviteClient:        defaultInviteClient(),
+					AuthorizationClient: defaultAuthorizationClient(),
+				},
 			},
 		),
 	})

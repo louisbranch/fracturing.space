@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
@@ -28,57 +29,22 @@ func (g GRPCGateway) CharacterCreationProfile(ctx context.Context, campaignID st
 	if err != nil {
 		return campaignapp.CampaignCharacterCreationProfile{}, err
 	}
+	return mapCharacterCreationProfile(resp), nil
+}
+
+// mapCharacterCreationProfile converts a character sheet response into creation profile values.
+func mapCharacterCreationProfile(resp *statev1.GetCharacterSheetResponse) campaignapp.CampaignCharacterCreationProfile {
 	if resp == nil {
-		return campaignapp.CampaignCharacterCreationProfile{}, nil
+		return campaignapp.CampaignCharacterCreationProfile{}
 	}
-	if resp.GetProfile() == nil || resp.GetProfile().GetDaggerheart() == nil {
-		return campaignapp.CampaignCharacterCreationProfile{
-			CharacterName: characterDisplayName(resp.GetCharacter()),
-		}, nil
-	}
-	profile := resp.GetProfile().GetDaggerheart()
+
 	characterName := characterDisplayName(resp.GetCharacter())
-
-	startingWeaponIDs := make([]string, 0, len(profile.GetStartingWeaponIds()))
-	for _, weaponID := range profile.GetStartingWeaponIds() {
-		trimmedWeaponID := strings.TrimSpace(weaponID)
-		if trimmedWeaponID == "" {
-			continue
-		}
-		startingWeaponIDs = append(startingWeaponIDs, trimmedWeaponID)
-	}
-	primaryWeaponID := ""
-	secondaryWeaponID := ""
-	if len(startingWeaponIDs) > 0 {
-		primaryWeaponID = startingWeaponIDs[0]
-	}
-	if len(startingWeaponIDs) > 1 {
-		secondaryWeaponID = startingWeaponIDs[1]
+	if resp.GetProfile() == nil || resp.GetProfile().GetDaggerheart() == nil {
+		return campaignapp.CampaignCharacterCreationProfile{CharacterName: characterName}
 	}
 
-	domainCardIDs := make([]string, 0, len(profile.GetDomainCardIds()))
-	for _, domainCardID := range profile.GetDomainCardIds() {
-		trimmedDomainCardID := strings.TrimSpace(domainCardID)
-		if trimmedDomainCardID == "" {
-			continue
-		}
-		domainCardIDs = append(domainCardIDs, trimmedDomainCardID)
-	}
-
-	experiences := make([]campaignapp.CampaignCharacterCreationExperience, 0, len(profile.GetExperiences()))
-	for _, exp := range profile.GetExperiences() {
-		if exp == nil {
-			continue
-		}
-		name := strings.TrimSpace(exp.GetName())
-		if name == "" {
-			continue
-		}
-		experiences = append(experiences, campaignapp.CampaignCharacterCreationExperience{
-			Name:     name,
-			Modifier: strconv.FormatInt(int64(exp.GetModifier()), 10),
-		})
-	}
+	profile := resp.GetProfile().GetDaggerheart()
+	primaryWeaponID, secondaryWeaponID := startingWeaponIDs(profile)
 
 	return campaignapp.CampaignCharacterCreationProfile{
 		CharacterName:     characterName,
@@ -98,8 +64,55 @@ func (g GRPCGateway) CharacterCreationProfile(ctx context.Context, campaignID st
 		PotionItemID:      strings.TrimSpace(profile.GetStartingPotionItemId()),
 		Background:        strings.TrimSpace(profile.GetBackground()),
 		Description:       strings.TrimSpace(profile.GetDescription()),
-		Experiences:       experiences,
-		DomainCardIDs:     domainCardIDs,
+		Experiences:       mapProfileExperiences(profile.GetExperiences()),
+		DomainCardIDs:     trimNonEmptyProfileValues(profile.GetDomainCardIds()),
 		Connections:       strings.TrimSpace(profile.GetConnections()),
-	}, nil
+	}
+}
+
+// startingWeaponIDs extracts the first two starting weapon IDs as primary/secondary values.
+func startingWeaponIDs(profile *daggerheartv1.DaggerheartProfile) (string, string) {
+	if profile == nil {
+		return "", ""
+	}
+	ids := trimNonEmptyProfileValues(profile.GetStartingWeaponIds())
+	if len(ids) == 0 {
+		return "", ""
+	}
+	if len(ids) == 1 {
+		return ids[0], ""
+	}
+	return ids[0], ids[1]
+}
+
+// mapProfileExperiences maps profile experiences while removing blank names.
+func mapProfileExperiences(experiences []*daggerheartv1.DaggerheartExperience) []campaignapp.CampaignCharacterCreationExperience {
+	mapped := make([]campaignapp.CampaignCharacterCreationExperience, 0, len(experiences))
+	for _, experience := range experiences {
+		if experience == nil {
+			continue
+		}
+		name := strings.TrimSpace(experience.GetName())
+		if name == "" {
+			continue
+		}
+		mapped = append(mapped, campaignapp.CampaignCharacterCreationExperience{
+			Name:     name,
+			Modifier: strconv.FormatInt(int64(experience.GetModifier()), 10),
+		})
+	}
+	return mapped
+}
+
+// trimNonEmptyProfileValues trims whitespace and drops empty values while preserving order.
+func trimNonEmptyProfileValues(values []string) []string {
+	mapped := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		mapped = append(mapped, trimmed)
+	}
+	return mapped
 }

@@ -22,18 +22,26 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				SocialClient:  social,
 			},
 			modules.Dependencies{
-				AuthClient:               auth,
-				CampaignClient:           defaultCampaignClient(),
-				ParticipantClient:        defaultParticipantClient(),
-				CharacterClient:          defaultCharacterClient(),
-				DaggerheartContentClient: defaultDaggerheartContentClient(),
-				SessionClient:            defaultSessionClient(),
-				InviteClient:             defaultInviteClient(),
-				AuthorizationClient:      defaultAuthorizationClient(),
-				AccountClient:            account,
-				ProfileSocialClient:      social,
-				SettingsSocialClient:     social,
-				CredentialClient:         fakeCredentialClient{},
+				PublicAuth: modules.PublicAuthDependencies{
+					AuthClient: auth,
+				},
+				Campaigns: modules.CampaignDependencies{
+					CampaignClient:           defaultCampaignClient(),
+					ParticipantClient:        defaultParticipantClient(),
+					CharacterClient:          defaultCharacterClient(),
+					DaggerheartContentClient: defaultDaggerheartContentClient(),
+					SessionClient:            defaultSessionClient(),
+					InviteClient:             defaultInviteClient(),
+					AuthorizationClient:      defaultAuthorizationClient(),
+				},
+				Settings: modules.SettingsDependencies{
+					SocialClient:     social,
+					AccountClient:    account,
+					CredentialClient: fakeCredentialClient{},
+				},
+				Profile: modules.ProfileDependencies{
+					SocialClient: social,
+				},
 			},
 		),
 	}

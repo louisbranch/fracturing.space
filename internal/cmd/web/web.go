@@ -98,7 +98,7 @@ func Run(ctx context.Context, cfg Config) error {
 		defer stopStatusReporter()
 
 		// Share the status client with modules for dashboard health queries.
-		dependencies.Modules.StatusClient = statusClient
+		dependencies.Modules.Dashboard.StatusClient = statusClient
 
 		server, err := web.NewServer(ctx, web.Config{
 			HTTPAddr:            cfg.HTTPAddr,

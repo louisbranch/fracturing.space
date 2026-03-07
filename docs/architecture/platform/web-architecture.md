@@ -42,15 +42,30 @@ Required properties:
 2. Handlers stay transport-thin; orchestration lives in area-local `app` services.
 3. Gateway adapters encapsulate backend protocol mapping.
 4. Missing required dependencies fail closed.
+5. Composition dependencies are module-owned bundles (`modules.Dependencies.Campaigns`, `Settings`, `PublicAuth`, etc.), not one flat cross-area field bag.
 
 ## Routing strategy
 
 - Route declarations are module-owned and explicit.
 - Canonical browser endpoints come from `routepath` constants/builders.
+- Route-param guards are centralized in reusable helpers (for example
+  `withCampaignID`, `withCampaignAndCharacterID`) instead of repeated inline
+  path extraction in handlers.
+- Form/JSON input parsing is isolated to helper seams; mutation handlers
+  orchestrate only request flow + app service calls.
 - Protected mutations require authenticated session context.
 - Public-auth flows are isolated under public module ownership.
 - Legacy top-level invites scaffolding (`/app/invites`) remains intentionally
   unregistered until that area has a production route owner.
+
+## Transport input contracts
+
+- Public JSON handlers must decode with explicit safety guards:
+  - bounded request size,
+  - unknown-field rejection,
+  - single-payload enforcement (reject trailing JSON tokens).
+- Form handlers should map request values through dedicated parser helpers and
+  keep validation messaging explicit and localized.
 
 ## Authorization and mutation boundaries
 

@@ -38,16 +38,3 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 func dashboardMainHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeader {
 	return &webtemplates.AppMainHeader{Title: webtemplates.T(loc, "dashboard.title")}
 }
-
-// mapDashboardTemplateView maps values across transport and domain boundaries.
-func mapDashboardTemplateView(view DashboardView) webtemplates.DashboardPageView {
-	health := make([]webtemplates.DashboardServiceHealthEntry, len(view.ServiceHealth))
-	for i, e := range view.ServiceHealth {
-		health[i] = webtemplates.DashboardServiceHealthEntry{Label: e.Label, Available: e.Available}
-	}
-	return webtemplates.DashboardPageView{
-		ProfilePending: webtemplates.DashboardProfilePendingBlock{Visible: view.ShowPendingProfileBlock},
-		Adventure:      webtemplates.DashboardAdventureBlock{Visible: view.ShowAdventureBlock},
-		ServiceHealth:  health,
-	}
-}

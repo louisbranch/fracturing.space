@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"golang.org/x/text/language"
@@ -168,6 +169,25 @@ func (h handlers) routeParticipantID(r *http.Request) (string, bool) {
 	return participantID, true
 }
 
+// routeSessionID centralizes this web behavior in one helper seam.
+func (h handlers) routeSessionID(r *http.Request) (string, bool) {
+	sessionID := strings.TrimSpace(r.PathValue("sessionID"))
+	if sessionID == "" {
+		return "", false
+	}
+	return sessionID, true
+}
+
+// parseFormOrWriteError parses form data and writes a localized invalid-input
+// error response when parsing fails.
+func (h handlers) parseFormOrWriteError(w http.ResponseWriter, r *http.Request, localizationKey string, message string) bool {
+	if err := r.ParseForm(); err != nil {
+		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, localizationKey, message))
+		return false
+	}
+	return true
+}
+
 // withCampaignID extracts the campaign ID path param and delegates to fn,
 // returning 404 when the param is missing.
 func (h handlers) withCampaignID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
@@ -178,5 +198,59 @@ func (h handlers) withCampaignID(fn func(http.ResponseWriter, *http.Request, str
 			return
 		}
 		fn(w, r, campaignID)
+	}
+}
+
+// withCampaignAndParticipantID extracts campaign/participant IDs and delegates
+// to fn, returning 404 when either route parameter is missing.
+func (h handlers) withCampaignAndParticipantID(fn func(http.ResponseWriter, *http.Request, string, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		campaignID, ok := h.routeCampaignID(r)
+		if !ok {
+			h.WriteNotFound(w, r)
+			return
+		}
+		participantID, ok := h.routeParticipantID(r)
+		if !ok {
+			h.WriteNotFound(w, r)
+			return
+		}
+		fn(w, r, campaignID, participantID)
+	}
+}
+
+// withCampaignAndCharacterID extracts campaign/character IDs and delegates to
+// fn, returning 404 when either route parameter is missing.
+func (h handlers) withCampaignAndCharacterID(fn func(http.ResponseWriter, *http.Request, string, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		campaignID, ok := h.routeCampaignID(r)
+		if !ok {
+			h.WriteNotFound(w, r)
+			return
+		}
+		characterID, ok := h.routeCharacterID(r)
+		if !ok {
+			h.WriteNotFound(w, r)
+			return
+		}
+		fn(w, r, campaignID, characterID)
+	}
+}
+
+// withCampaignAndSessionID extracts campaign/session IDs and delegates to fn,
+// returning 404 when either route parameter is missing.
+func (h handlers) withCampaignAndSessionID(fn func(http.ResponseWriter, *http.Request, string, string)) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		campaignID, ok := h.routeCampaignID(r)
+		if !ok {
+			h.WriteNotFound(w, r)
+			return
+		}
+		sessionID, ok := h.routeSessionID(r)
+		if !ok {
+			h.WriteNotFound(w, r)
+			return
+		}
+		fn(w, r, campaignID, sessionID)
 	}
 }

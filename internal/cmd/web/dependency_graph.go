@@ -35,13 +35,16 @@ const (
 // grpcDialer abstracts dependency dialing for startup tests.
 type grpcDialer func(context.Context, string, time.Duration) (*grpc.ClientConn, error)
 
+// dependencyInputSetter maps one connected dependency into principal/module bundles.
+type dependencyInputSetter func(*web.PrincipalDependencies, *modules.Dependencies, *grpc.ClientConn)
+
 // dependencyRequirement describes one startup dependency dial and field wiring step.
 type dependencyRequirement struct {
 	name       string
 	address    string
 	required   bool
 	capability string
-	setInput   func(*web.PrincipalDependencies, *modules.Dependencies, *grpc.ClientConn)
+	setInput   dependencyInputSetter
 }
 
 // dependencyDialState classifies dependency dial outcomes at startup.
@@ -64,86 +67,142 @@ type dependencyStatus struct {
 // dependencyRequirements returns startup requirements in stable dependency order.
 func dependencyRequirements(cfg Config) []dependencyRequirement {
 	return []dependencyRequirement{
-		{
-			name:       dependencyNameAuth,
-			address:    cfg.AuthAddr,
-			required:   true,
-			capability: "web.auth.integration",
-			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-				authClient := authv1.NewAuthServiceClient(conn)
-				accountClient := authv1.NewAccountServiceClient(conn)
-				p.SessionClient = authClient
-				p.AccountClient = accountClient
-				m.AuthClient = authClient
-				m.AccountClient = accountClient
-			},
-		},
-		{
-			name:       dependencyNameSocial,
-			address:    cfg.SocialAddr,
-			required:   true,
-			capability: "web.social.integration",
-			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-				socialClient := socialv1.NewSocialServiceClient(conn)
-				p.SocialClient = socialClient
-				m.ProfileSocialClient = socialClient
-				m.SettingsSocialClient = socialClient
-			},
-		},
-		{
-			name:       dependencyNameGame,
-			address:    cfg.GameAddr,
-			required:   true,
-			capability: "web.game.integration",
-			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-				m.CampaignClient = statev1.NewCampaignServiceClient(conn)
-				m.ParticipantClient = statev1.NewParticipantServiceClient(conn)
-				m.CharacterClient = statev1.NewCharacterServiceClient(conn)
-				m.DaggerheartContentClient = daggerheartv1.NewDaggerheartContentServiceClient(conn)
-				m.SessionClient = statev1.NewSessionServiceClient(conn)
-				m.InviteClient = statev1.NewInviteServiceClient(conn)
-				m.AuthorizationClient = statev1.NewAuthorizationServiceClient(conn)
-			},
-		},
-		{
-			name:       dependencyNameAI,
-			address:    cfg.AIAddr,
-			required:   false,
-			capability: "web.ai.integration",
-			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-				m.CredentialClient = aiv1.NewCredentialServiceClient(conn)
-			},
-		},
-		{
-			name:       dependencyNameDiscovery,
-			address:    cfg.DiscoveryAddr,
-			required:   false,
-			capability: "web.discovery.integration",
-			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-				m.DiscoveryClient = discoveryv1.NewDiscoveryServiceClient(conn)
-			},
-		},
-		{
-			name:       dependencyNameUserHub,
-			address:    cfg.UserHubAddr,
-			required:   false,
-			capability: "web.userhub.integration",
-			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-				m.UserHubClient = userhubv1.NewUserHubServiceClient(conn)
-			},
-		},
-		{
-			name:       dependencyNameNotifications,
-			address:    cfg.NotificationsAddr,
-			required:   false,
-			capability: "web.notifications.integration",
-			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-				notificationClient := notificationsv1.NewNotificationServiceClient(conn)
-				p.NotificationClient = notificationClient
-				m.NotificationClient = notificationClient
-			},
-		},
+		dependencyRequirementAuth(cfg.AuthAddr),
+		dependencyRequirementSocial(cfg.SocialAddr),
+		dependencyRequirementGame(cfg.GameAddr),
+		dependencyRequirementAI(cfg.AIAddr),
+		dependencyRequirementDiscovery(cfg.DiscoveryAddr),
+		dependencyRequirementUserHub(cfg.UserHubAddr),
+		dependencyRequirementNotifications(cfg.NotificationsAddr),
 	}
+}
+
+// dependencyRequirementAuth returns the auth dependency wiring contract.
+func dependencyRequirementAuth(address string) dependencyRequirement {
+	return dependencyRequirement{
+		name:       dependencyNameAuth,
+		address:    address,
+		required:   true,
+		capability: "web.auth.integration",
+		setInput:   setDependencyAuth,
+	}
+}
+
+// dependencyRequirementSocial returns the social dependency wiring contract.
+func dependencyRequirementSocial(address string) dependencyRequirement {
+	return dependencyRequirement{
+		name:       dependencyNameSocial,
+		address:    address,
+		required:   true,
+		capability: "web.social.integration",
+		setInput:   setDependencySocial,
+	}
+}
+
+// dependencyRequirementGame returns the game dependency wiring contract.
+func dependencyRequirementGame(address string) dependencyRequirement {
+	return dependencyRequirement{
+		name:       dependencyNameGame,
+		address:    address,
+		required:   true,
+		capability: "web.game.integration",
+		setInput:   setDependencyGame,
+	}
+}
+
+// dependencyRequirementAI returns the AI dependency wiring contract.
+func dependencyRequirementAI(address string) dependencyRequirement {
+	return dependencyRequirement{
+		name:       dependencyNameAI,
+		address:    address,
+		required:   false,
+		capability: "web.ai.integration",
+		setInput:   setDependencyAI,
+	}
+}
+
+// dependencyRequirementDiscovery returns the discovery dependency wiring contract.
+func dependencyRequirementDiscovery(address string) dependencyRequirement {
+	return dependencyRequirement{
+		name:       dependencyNameDiscovery,
+		address:    address,
+		required:   false,
+		capability: "web.discovery.integration",
+		setInput:   setDependencyDiscovery,
+	}
+}
+
+// dependencyRequirementUserHub returns the userhub dependency wiring contract.
+func dependencyRequirementUserHub(address string) dependencyRequirement {
+	return dependencyRequirement{
+		name:       dependencyNameUserHub,
+		address:    address,
+		required:   false,
+		capability: "web.userhub.integration",
+		setInput:   setDependencyUserHub,
+	}
+}
+
+// dependencyRequirementNotifications returns the notifications dependency wiring contract.
+func dependencyRequirementNotifications(address string) dependencyRequirement {
+	return dependencyRequirement{
+		name:       dependencyNameNotifications,
+		address:    address,
+		required:   false,
+		capability: "web.notifications.integration",
+		setInput:   setDependencyNotifications,
+	}
+}
+
+// setDependencyAuth wires auth clients into principal and module bundles.
+func setDependencyAuth(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+	authClient := authv1.NewAuthServiceClient(conn)
+	accountClient := authv1.NewAccountServiceClient(conn)
+	p.SessionClient = authClient
+	p.AccountClient = accountClient
+	m.PublicAuth.AuthClient = authClient
+	m.Settings.AccountClient = accountClient
+}
+
+// setDependencySocial wires social clients into principal and module bundles.
+func setDependencySocial(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+	socialClient := socialv1.NewSocialServiceClient(conn)
+	p.SocialClient = socialClient
+	m.Profile.SocialClient = socialClient
+	m.Settings.SocialClient = socialClient
+}
+
+// setDependencyGame wires game clients into module bundles.
+func setDependencyGame(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+	m.Campaigns.CampaignClient = statev1.NewCampaignServiceClient(conn)
+	m.Campaigns.ParticipantClient = statev1.NewParticipantServiceClient(conn)
+	m.Campaigns.CharacterClient = statev1.NewCharacterServiceClient(conn)
+	m.Campaigns.DaggerheartContentClient = daggerheartv1.NewDaggerheartContentServiceClient(conn)
+	m.Campaigns.SessionClient = statev1.NewSessionServiceClient(conn)
+	m.Campaigns.InviteClient = statev1.NewInviteServiceClient(conn)
+	m.Campaigns.AuthorizationClient = statev1.NewAuthorizationServiceClient(conn)
+}
+
+// setDependencyAI wires AI clients into module bundles.
+func setDependencyAI(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+	m.Settings.CredentialClient = aiv1.NewCredentialServiceClient(conn)
+}
+
+// setDependencyDiscovery wires discovery clients into module bundles.
+func setDependencyDiscovery(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+	m.Discovery.DiscoveryClient = discoveryv1.NewDiscoveryServiceClient(conn)
+}
+
+// setDependencyUserHub wires userhub clients into module bundles.
+func setDependencyUserHub(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+	m.Dashboard.UserHubClient = userhubv1.NewUserHubServiceClient(conn)
+}
+
+// setDependencyNotifications wires notifications clients into principal and module bundles.
+func setDependencyNotifications(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+	notificationClient := notificationsv1.NewNotificationServiceClient(conn)
+	p.NotificationClient = notificationClient
+	m.Notifications.NotificationClient = notificationClient
 }
 
 // bootstrapDependencies dials service dependencies and maps connected clients

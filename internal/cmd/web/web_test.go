@@ -214,25 +214,25 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 	if bundle.Principal.SessionClient == nil {
 		t.Fatalf("expected principal session client")
 	}
-	if bundle.Modules.CampaignClient == nil {
+	if bundle.Modules.Campaigns.CampaignClient == nil {
 		t.Fatalf("expected campaign client")
 	}
-	if bundle.Modules.CredentialClient == nil {
+	if bundle.Modules.Settings.CredentialClient == nil {
 		t.Fatalf("expected credential client")
 	}
-	if bundle.Modules.ProfileSocialClient == nil {
+	if bundle.Modules.Profile.SocialClient == nil {
 		t.Fatalf("expected profile social client")
 	}
-	if bundle.Modules.SettingsSocialClient == nil {
+	if bundle.Modules.Settings.SocialClient == nil {
 		t.Fatalf("expected settings social client")
 	}
-	if bundle.Modules.UserHubClient == nil {
+	if bundle.Modules.Dashboard.UserHubClient == nil {
 		t.Fatalf("expected userhub client")
 	}
-	if bundle.Modules.NotificationClient == nil {
+	if bundle.Modules.Notifications.NotificationClient == nil {
 		t.Fatalf("expected notification client")
 	}
-	if bundle.Modules.DiscoveryClient == nil {
+	if bundle.Modules.Discovery.DiscoveryClient == nil {
 		t.Fatalf("expected discovery client")
 	}
 	if bundle.Principal.AssetBaseURL != "https://cdn.example.com/assets" {
@@ -276,7 +276,7 @@ func TestBootstrapDependenciesOptionalFailuresProduceWarnings(t *testing.T) {
 	if !strings.Contains(warnings[0], "ai") {
 		t.Fatalf("warning = %q, want ai warning", warnings[0])
 	}
-	if bundle.Modules.CredentialClient != nil {
+	if bundle.Modules.Settings.CredentialClient != nil {
 		t.Fatalf("expected credential client to be unavailable")
 	}
 }
@@ -333,10 +333,10 @@ func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
 	if !hasAI || !hasUserHub {
 		t.Fatalf("unexpected warnings: %v", warnings)
 	}
-	if bundle.Modules.CredentialClient != nil {
+	if bundle.Modules.Settings.CredentialClient != nil {
 		t.Fatalf("expected credential client to be unavailable")
 	}
-	if bundle.Modules.UserHubClient != nil {
+	if bundle.Modules.Dashboard.UserHubClient != nil {
 		t.Fatalf("expected userhub client to be unavailable")
 	}
 }
@@ -380,7 +380,7 @@ func TestBootstrapDependenciesRequiredNilConnectionReturnsError(t *testing.T) {
 	if bundle.Principal.SocialClient != nil {
 		t.Fatalf("expected principal social client to be unavailable")
 	}
-	if bundle.Modules.ProfileSocialClient != nil || bundle.Modules.SettingsSocialClient != nil {
+	if bundle.Modules.Profile.SocialClient != nil || bundle.Modules.Settings.SocialClient != nil {
 		t.Fatalf("expected profile/settings social clients to be unavailable")
 	}
 }

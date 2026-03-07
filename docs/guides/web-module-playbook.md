@@ -57,6 +57,9 @@ inside the same area boundary:
   registry, not through `Mount`.  Protected modules receive a
   `modulehandler.Base` for shared request-scoped resolvers (viewer, user-id,
   language).
+- Keep `modules.Dependencies` module-owned and nested by area (for example
+  `Dependencies.Campaigns.*`, `Dependencies.Settings.*`). Do not add new
+  flat cross-area dependency fields.
 - For modules with segmented route ownership, assemble route registration
   through explicit route-surface slices (for example campaigns:
   stable core + stable workflow + stable mutations) so ownership stays
@@ -69,6 +72,8 @@ inside the same area boundary:
   `gateway` contracts.
 - Register routes with stdlib method+path patterns and keep method/path guards
   out of handlers.
+- Prefer route-param guard helpers for multi-param routes (for example
+  `withCampaignAndCharacterID`) so 404 behavior is centralized and testable.
 - Prefer route-level contracts that naturally support `HEAD` for `GET`
   surfaces.
 - Source browser endpoint URLs from `routepath` constants/builders (including
@@ -84,6 +89,10 @@ inside the same area boundary:
 - Use `internal/services/web/platform/httpx.MethodNotAllowed` for `405` +
   `Allow` behavior instead of duplicating module-local helpers.
 - Keep handlers thin; call service methods for behavior.
+- For form-based mutations, keep form parsing/validation-message creation in
+  reusable helper seams instead of repeating inline `ParseForm` branches.
+- For public JSON endpoints, decode through strict parser helpers:
+  body-size caps, unknown-field rejection, and single-payload enforcement.
 - Return typed errors and map them once at transport boundaries.
 - Avoid shared global mutable state.
 - Protected module defaults must fail closed when a required backend dependency
@@ -168,7 +177,8 @@ Public/auth route ownership is split into explicit surface modules under:
   - mount only production-ready handlers by default,
   - keep incomplete handlers unregistered until contracts are stable and
     fail-closed checks are in place.
-5. Ensure new module dependencies are wired through `modules.BuildInput`.
+5. Ensure new module dependencies are wired through `modules.BuildInput` and
+   then assigned into the matching `modules.Dependencies.<Area>` bundle.
 6. If an area is partially ready, keep one module owner and split route
    registration by explicit surfaces instead of exposing unstable handlers by
    default.
