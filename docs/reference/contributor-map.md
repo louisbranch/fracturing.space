@@ -37,6 +37,7 @@ Run targeted tests first, then full checks:
 
 - `go test ./...`
 - `make integration`
+- `make game-architecture-check` (when changing `internal/services/game/**`)
 - `make docs-check`
 
 ## Canonical references

@@ -67,6 +67,10 @@ present in one registry and missing in another, startup validation fails.
 | **Metadata** | API surface | `domain/bridge/registry_bridge.go` | Transport-facing contracts, state handler factories, outcome appliers |
 | **Manifest** | Glue | `domain/bridge/manifest/manifest.go` | Single descriptor that wires the other three together |
 
+Metadata registry contracts are domain-owned (`SystemID`, metadata status enums).
+gRPC/API adapters map those values to protobuf enums at transport boundaries so
+domain packages remain independent from generated API code.
+
 ### Startup validation order
 
 `BuildRegistries()` in `domain/engine/registries_builder.go`:
@@ -117,22 +121,13 @@ Keep handlers thin and avoid transport logic in domain packages.
 - Event payloads should capture resulting state (absolute values), not deltas.
 - Rejection codes should be stable, machine-readable constants.
 - Multi-consequence mechanics should prefer single-command atomic emission patterns.
-Detailed Daggerheart examples and timeline contracts are maintained in:
-
-- [Daggerheart event timeline contract](../../reference/daggerheart-event-timeline-contract.md)
 
 ## Character creation workflow boundary
 
 Character creation workflow APIs are generic at transport level, while step semantics
-are owned by each system provider.
-
-Transport-to-provider workflow contracts use workflow-owned context models
-(`CampaignContext`, `CharacterContext`) instead of storage record structs so
+are owned by each system provider. Workflow contracts use workflow-owned context
+models (`CampaignContext`, `CharacterContext`) instead of storage record structs so
 provider behavior stays decoupled from projection persistence shape.
-
-Daggerheart workflow and readiness behavior is specified in:
-
-- [Daggerheart creation workflow](../../reference/daggerheart-creation-workflow.md)
 
 ## Minimum review checklist
 

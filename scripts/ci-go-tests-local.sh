@@ -14,6 +14,7 @@ run_step make i18n-status-check
 run_step make topology-check
 run_step make negative-test-assertion-check
 run_step make web-architecture-check
+run_step make game-architecture-check
 run_step make cover
 run_step make cover-critical-domain
 

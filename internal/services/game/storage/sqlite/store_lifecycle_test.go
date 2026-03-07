@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
@@ -43,7 +43,7 @@ func TestOpenAlias(t *testing.T) {
 		ID:        "camp-open",
 		Name:      "Test",
 		Locale:    platformi18n.DefaultLocale(),
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:    bridge.SystemIDDaggerheart,
 		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,
 		CreatedAt: time.Now().UTC(),
@@ -387,7 +387,7 @@ func TestCampaignPutUpdate(t *testing.T) {
 		ID:        "camp-update",
 		Name:      "Original",
 		Locale:    platformi18n.DefaultLocale(),
-		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:    bridge.SystemIDDaggerheart,
 		Status:    campaign.StatusDraft,
 		GmMode:    campaign.GmModeAI,
 		CreatedAt: now,

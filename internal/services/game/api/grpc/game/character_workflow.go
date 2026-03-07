@@ -5,13 +5,13 @@ import (
 	"encoding/json"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/workflow"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -19,11 +19,11 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var characterCreationWorkflowProviders = map[commonv1.GameSystem]workflow.Provider{
-	commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART: daggerheartgrpc.CreationWorkflowProvider{},
+var characterCreationWorkflowProviders = map[bridge.SystemID]workflow.Provider{
+	bridge.SystemIDDaggerheart: daggerheartgrpc.CreationWorkflowProvider{},
 }
 
-func characterCreationWorkflowProviderForSystem(system commonv1.GameSystem) (workflow.Provider, bool) {
+func characterCreationWorkflowProviderForSystem(system bridge.SystemID) (workflow.Provider, bool) {
 	provider, ok := characterCreationWorkflowProviders[system]
 	return provider, ok
 }
@@ -33,13 +33,14 @@ func (c characterApplication) workflowProviderForCampaign(ctx context.Context, c
 	if err != nil {
 		return workflow.CampaignContext{}, nil, err
 	}
-	provider, ok := characterCreationWorkflowProviderForSystem(campaignRecord.System)
+	systemID := systemIDFromCampaignRecord(campaignRecord)
+	provider, ok := characterCreationWorkflowProviderForSystem(systemID)
 	if !ok {
 		return workflow.CampaignContext{}, nil, status.Errorf(codes.Unimplemented, "character creation workflow is not supported for game system %s", campaignRecord.System.String())
 	}
 	return workflow.CampaignContext{
 		ID:     campaignRecord.ID,
-		System: campaignRecord.System,
+		System: systemID,
 		Status: campaignRecord.Status,
 	}, provider, nil
 }

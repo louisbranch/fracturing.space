@@ -41,7 +41,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 
 	if err := c.executeCharacterProfileUpdate(ctx, workflow.CampaignContext{
 		ID:     campaignRecord.ID,
-		System: campaignRecord.System,
+		System: systemIDFromCampaignRecord(campaignRecord),
 		Status: campaignRecord.Status,
 	}, characterID, daggerheartgrpc.SystemProfileMap(dhProfile)); err != nil {
 		return "", storage.DaggerheartCharacterProfile{}, err

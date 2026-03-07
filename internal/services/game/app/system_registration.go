@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	domainsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -48,10 +47,9 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 	}
 
 	moduleKeys := make(map[string]struct{}, len(modules))
-	// enumToModuleID maps protobuf enum IDs to string module IDs so the
-	// metadata loop (which iterates enum-keyed GameSystem values) can look
-	// up string-keyed adapters.
-	enumToModuleID := make(map[commonv1.GameSystem]string, len(modules))
+	// systemIDToModuleID maps domain system IDs to module IDs so the metadata
+	// loop can look up string-keyed adapters.
+	systemIDToModuleID := make(map[domainbridge.SystemID]string, len(modules))
 	for _, module := range modules {
 		if module == nil {
 			return fmt.Errorf("%w: module is nil", errSystemModuleRegistryMismatch)
@@ -66,7 +64,7 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 			return fmt.Errorf("%w: %v", errSystemModuleRegistryMismatch, err)
 		}
 		moduleKeys[systemParityKey(moduleID, moduleVersion)] = struct{}{}
-		enumToModuleID[gameSystem] = moduleID
+		systemIDToModuleID[gameSystem] = moduleID
 		if metadata.GetVersion(gameSystem, moduleVersion) == nil {
 			return fmt.Errorf("%w: metadata missing for module %s@%s", errSystemModuleRegistryMismatch, moduleID, moduleVersion)
 		}
@@ -84,7 +82,7 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 			continue
 		}
 		version := strings.TrimSpace(gameSystem.Version())
-		moduleID, ok := enumToModuleID[gameSystem.ID()]
+		moduleID, ok := systemIDToModuleID[gameSystem.ID()]
 		if !ok {
 			return fmt.Errorf("%w: metadata registered without module %s@%s", errSystemModuleRegistryMismatch, gameSystem.ID(), version)
 		}
@@ -99,20 +97,17 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 	return nil
 }
 
-// parseGameSystemID turns environment-facing system names into the API enum domain type.
-func parseGameSystemID(raw string) (commonv1.GameSystem, error) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("system id is required")
+// parseGameSystemID canonicalizes environment-facing system labels.
+func parseGameSystemID(raw string) (domainbridge.SystemID, error) {
+	systemID, ok := domainbridge.NormalizeSystemID(raw)
+	if !ok {
+		trimmed := strings.TrimSpace(raw)
+		if trimmed == "" {
+			return domainbridge.SystemIDUnspecified, fmt.Errorf("system id is required")
+		}
+		return domainbridge.SystemIDUnspecified, fmt.Errorf("unknown system id: %s", trimmed)
 	}
-	if value, ok := commonv1.GameSystem_value[trimmed]; ok {
-		return commonv1.GameSystem(value), nil
-	}
-	upper := strings.ToUpper(trimmed)
-	if value, ok := commonv1.GameSystem_value["GAME_SYSTEM_"+upper]; ok {
-		return commonv1.GameSystem(value), nil
-	}
-	return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("unknown system id: %s", trimmed)
+	return systemID, nil
 }
 
 // systemParityKey normalizes system+version into a single key for cross-registry comparison.

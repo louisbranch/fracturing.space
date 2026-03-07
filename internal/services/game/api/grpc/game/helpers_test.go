@@ -6,6 +6,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
@@ -25,7 +26,7 @@ func TestCampaignToProto(t *testing.T) {
 		ID:               "camp-1",
 		Name:             "Campaign",
 		Locale:           commonv1.Locale_LOCALE_PT_BR,
-		System:           commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System:           bridge.SystemIDDaggerheart,
 		Status:           campaign.StatusActive,
 		GmMode:           campaign.GmModeHybrid,
 		Intent:           campaign.IntentStarter,
@@ -695,11 +696,11 @@ func TestEnumConversionsExtended(t *testing.T) {
 	}
 
 	// gameSystemToProto / gameSystemFromProto
-	sys := commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
-	if gameSystemToProto(sys) != sys {
-		t.Fatal("expected passthrough")
+	sys := bridge.SystemIDDaggerheart
+	if gameSystemToProto(sys) != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+		t.Fatal("expected daggerheart mapping")
 	}
-	if gameSystemFromProto(sys) != sys {
-		t.Fatal("expected passthrough")
+	if gameSystemFromProto(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART) != sys {
+		t.Fatal("expected daggerheart reverse mapping")
 	}
 }

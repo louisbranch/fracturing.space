@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -479,37 +478,11 @@ func statusCommandTarget(cmdType command.Type) (Status, bool) {
 // Campaign behavior depends on a stable system identity, not caller-specific casing
 // or enum prefix variants.
 func normalizeGameSystemLabel(value string) (string, bool) {
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
+	system, ok := NormalizeGameSystem(value)
+	if !ok || system == GameSystemUnspecified {
 		return "", false
 	}
-	system, ok := gameSystemFromLabel(trimmed)
-	if !ok || system == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
-		return "", false
-	}
-	return canonicalGameSystemLabel(system), true
-}
-
-// gameSystemFromLabel accepts enum labels with or without the GAME_SYSTEM_ prefix.
-//
-// This keeps campaign creation tolerant of payload shape differences while keeping
-// canonical values internally.
-func gameSystemFromLabel(value string) (commonv1.GameSystem, bool) {
-	if system, ok := commonv1.GameSystem_value[value]; ok {
-		return commonv1.GameSystem(system), true
-	}
-	upper := strings.ToUpper(value)
-	if system, ok := commonv1.GameSystem_value["GAME_SYSTEM_"+upper]; ok {
-		return commonv1.GameSystem(system), true
-	}
-	return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, false
-}
-
-// canonicalGameSystemLabel strips transport enum prefixes for stable, compact state.
-func canonicalGameSystemLabel(system commonv1.GameSystem) string {
-	label := system.String()
-	label = strings.TrimPrefix(label, "GAME_SYSTEM_")
-	return strings.ToLower(label)
+	return system.String(), true
 }
 
 // normalizeGmModeLabel returns a canonical label for stable payload hashes.

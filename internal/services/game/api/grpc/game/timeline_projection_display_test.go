@@ -3,7 +3,7 @@ package game
 import (
 	"testing"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -20,7 +20,7 @@ func TestCampaignProjectionDisplay(t *testing.T) {
 	}{
 		{
 			name:         "daggerheart active",
-			record:       storage.CampaignRecord{Name: "Riverfall", System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, Status: campaign.StatusActive},
+			record:       storage.CampaignRecord{Name: "Riverfall", System: bridge.SystemIDDaggerheart, Status: campaign.StatusActive},
 			wantSubtitle: "DAGGERHEART",
 			wantStatus:   "ACTIVE",
 		},

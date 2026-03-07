@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -40,8 +39,8 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart damage")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart damage"); err != nil {
+		return nil, err
 	}
 
 	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
@@ -194,8 +193,8 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart damage")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart damage"); err != nil {
+		return nil, err
 	}
 
 	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))

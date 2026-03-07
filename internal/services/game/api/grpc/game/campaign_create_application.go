@@ -29,14 +29,14 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 
 	input := campaign.CreateInput{
 		Name:         in.GetName(),
-		Locale:       in.GetLocale(),
-		System:       in.GetSystem(),
+		Locale:       platformi18n.LocaleString(in.GetLocale()),
+		System:       campaign.GameSystem(in.GetSystem().String()),
 		GmMode:       gmModeFromProto(gmMode),
 		Intent:       campaignIntentFromProto(in.GetIntent()),
 		AccessPolicy: campaignAccessPolicyFromProto(in.GetAccessPolicy()),
 		ThemePrompt:  in.GetThemePrompt(),
 	}
-	if input.System == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+	if in.GetSystem() == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "game system is required")
 	}
 
@@ -65,7 +65,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 
 	campaignPayload := campaign.CreatePayload{
 		Name:         normalized.Name,
-		Locale:       platformi18n.LocaleString(normalized.Locale),
+		Locale:       normalized.Locale,
 		GameSystem:   normalized.System.String(),
 		GmMode:       gmModeToProto(normalized.GmMode).String(),
 		Intent:       campaignIntentToProto(normalized.Intent).String(),
@@ -73,10 +73,15 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		ThemePrompt:  normalized.ThemePrompt,
 	}
 
+	defaultLocale, ok := platformi18n.ParseLocale(normalized.Locale)
+	if !ok {
+		defaultLocale = platformi18n.DefaultLocale()
+	}
+
 	profile := loadSocialProfileSnapshot(ctx, c.stores.Social, userID)
 	creatorDisplayName := strings.TrimSpace(profile.Name)
 	if creatorDisplayName == "" {
-		creatorDisplayName = defaultUnknownParticipantName(normalized.Locale)
+		creatorDisplayName = defaultUnknownParticipantName(defaultLocale)
 	}
 	creatorPronouns := strings.TrimSpace(profile.Pronouns)
 	if creatorPronouns == "" && userID != "" {
@@ -109,7 +114,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		participantPayloads = append(participantPayloads, participant.JoinPayload{
 			ParticipantID:  aiParticipantID,
 			UserID:         "",
-			Name:           defaultAIParticipantName(normalized.Locale),
+			Name:           defaultAIParticipantName(defaultLocale),
 			Role:           "GM",
 			Controller:     "AI",
 			CampaignAccess: "MEMBER",

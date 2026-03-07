@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -20,11 +20,7 @@ import (
 func sessionManagerParticipantStore(campaignID string) *fakeParticipantStore {
 	store := newFakeParticipantStore()
 	store.participants[campaignID] = map[string]storage.ParticipantRecord{
-		"manager-1": {
-			ID:             "manager-1",
-			CampaignID:     campaignID,
-			CampaignAccess: participant.CampaignAccessManager,
-		},
+		"manager-1": managerParticipantRecord(campaignID, "manager-1"),
 	}
 	return store
 }
@@ -64,10 +60,7 @@ func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 			Message: "campaign status does not allow session start",
 		}),
 	}}
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusArchived,
-	}
+	campaignStore.campaigns["c1"] = archivedCampaignRecord("c1")
 
 	svc := NewSessionService(Stores{
 		Campaign:     campaignStore,
@@ -94,10 +87,7 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 	}}
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
@@ -121,7 +111,7 @@ func TestStartSession_RequiresDomainEngine(t *testing.T) {
 	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusDraft}
+	campaignStore.campaigns["c1"] = draftCampaignRecord("c1")
 
 	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
 	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
@@ -139,7 +129,7 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 		ID:     "c1",
 		Name:   "Test Campaign",
 		Status: campaign.StatusDraft,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System: bridge.SystemIDDaggerheart,
 		GmMode: campaign.GmModeHuman,
 	}
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
@@ -215,10 +205,7 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
 		Decision: command.Accept(event.Event{
 			CampaignID:  "c1",
@@ -260,10 +247,7 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
 		Decision: command.Accept(event.Event{
@@ -332,10 +316,7 @@ func TestListSessions_DeniesMissingIdentity(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
 	_, err := svc.ListSessions(context.Background(), &statev1.ListSessionsRequest{CampaignId: "c1"})
@@ -350,7 +331,7 @@ func TestSetSessionSpotlight_Success(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -411,7 +392,7 @@ func TestSetSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -434,7 +415,7 @@ func TestSetSessionSpotlight_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -526,7 +507,7 @@ func TestGetSessionSpotlight_Success(t *testing.T) {
 	spotlightStore := newFakeSessionSpotlightStore()
 	participantStore := sessionManagerParticipantStore("c1")
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: time.Now()},
 	}
@@ -568,7 +549,7 @@ func TestClearSessionSpotlight_Success(t *testing.T) {
 	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: time.Now()},
 	}
@@ -631,7 +612,7 @@ func TestClearSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -657,7 +638,7 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -716,10 +697,7 @@ func TestListSessions_EmptyList(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
 	resp, err := svc.ListSessions(contextWithParticipantID("manager-1"), &statev1.ListSessionsRequest{CampaignId: "c1"})
@@ -737,10 +715,7 @@ func TestListSessions_WithSessions(t *testing.T) {
 	participantStore := sessionManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:     "c1",
-		Status: campaign.StatusActive,
-	}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusEnded, StartedAt: now},
 		"s2": {ID: "s2", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
@@ -790,7 +765,7 @@ func TestGetSession_DeniesMissingIdentity(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
 	_, err := svc.GetSession(context.Background(), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
@@ -801,7 +776,7 @@ func TestGetSession_SessionNotFound(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore})
 	_, err := svc.GetSession(contextWithParticipantID("manager-1"), &statev1.GetSessionRequest{CampaignId: "c1", SessionId: "s1"})
@@ -814,7 +789,7 @@ func TestGetSession_Success(t *testing.T) {
 	participantStore := sessionManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Name: "Test Session", Status: session.StatusActive, StartedAt: now},
 	}
@@ -873,7 +848,7 @@ func TestEndSession_SessionNotFound(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
 	_, err := svc.EndSession(contextWithParticipantID("manager-1"), &statev1.EndSessionRequest{CampaignId: "c1", SessionId: "s1"})
@@ -887,7 +862,7 @@ func TestEndSession_DeniesMemberAccess(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
@@ -919,7 +894,7 @@ func TestEndSession_RequiresDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
@@ -937,7 +912,7 @@ func TestEndSession_Success(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
@@ -986,7 +961,7 @@ func TestEndSession_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now},
 	}
@@ -1095,7 +1070,7 @@ func TestAbandonSessionGate_DeniesMemberAccess(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -1133,7 +1108,7 @@ func TestAbandonSessionGate_AlreadyAbandoned(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -1179,7 +1154,7 @@ func TestAbandonSessionGate_Success(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -1248,7 +1223,7 @@ func TestAbandonSessionGate_RequiresDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -1273,7 +1248,7 @@ func TestOpenSessionGate_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -1329,7 +1304,7 @@ func TestResolveSessionGate_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -1390,7 +1365,7 @@ func TestAbandonSessionGate_UsesDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 2, 1, 12, 0, 0, 0, time.UTC)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
@@ -1479,7 +1454,7 @@ func TestGetSessionSpotlight_DeniesMissingIdentity(t *testing.T) {
 	spotlightStore := newFakeSessionSpotlightStore()
 	participantStore := sessionManagerParticipantStore("c1")
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: time.Now()},
 	}
@@ -1560,7 +1535,7 @@ func TestSetSessionSpotlight_SessionNotActive(t *testing.T) {
 	participantStore := sessionManagerParticipantStore("c1")
 	now := time.Now().UTC()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	endedAt := now.Add(-time.Hour)
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusEnded, StartedAt: now.Add(-2 * time.Hour), EndedAt: &endedAt},
@@ -1620,7 +1595,7 @@ func TestEndSession_AlreadyEnded(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	endedAt := now.Add(-1 * time.Hour)
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusActive}
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusEnded, StartedAt: now.Add(-2 * time.Hour), EndedAt: &endedAt},
 	}

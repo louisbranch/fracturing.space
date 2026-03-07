@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
@@ -31,8 +31,8 @@ func TestAdapterIdentityAndGuards(t *testing.T) {
 
 func TestRegistrySystem_Contract(t *testing.T) {
 	system := NewRegistrySystem()
-	if system.ID() != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		t.Fatalf("ID() = %v, want daggerheart enum", system.ID())
+	if system.ID() != bridge.SystemIDDaggerheart {
+		t.Fatalf("ID() = %v, want daggerheart", system.ID())
 	}
 	if system.Version() != SystemVersion {
 		t.Fatalf("Version() = %q, want %q", system.Version(), SystemVersion)
@@ -41,13 +41,13 @@ func TestRegistrySystem_Contract(t *testing.T) {
 		t.Fatalf("Name() = %q, want Daggerheart", system.Name())
 	}
 	metadata := system.RegistryMetadata()
-	if metadata.ImplementationStage != commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE {
+	if metadata.ImplementationStage != bridge.ImplementationStageComplete {
 		t.Fatalf("implementation stage = %v, want complete", metadata.ImplementationStage)
 	}
-	if metadata.OperationalStatus != commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL {
+	if metadata.OperationalStatus != bridge.OperationalStatusOperational {
 		t.Fatalf("operational status = %v, want operational", metadata.OperationalStatus)
 	}
-	if metadata.AccessLevel != commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA {
+	if metadata.AccessLevel != bridge.AccessLevelBeta {
 		t.Fatalf("access level = %v, want beta", metadata.AccessLevel)
 	}
 	if system.StateHandlerFactory() != nil {

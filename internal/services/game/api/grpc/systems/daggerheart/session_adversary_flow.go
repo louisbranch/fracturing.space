@@ -55,8 +55,8 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversary rolls")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart adversary rolls"); err != nil {
+		return nil, err
 	}
 
 	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
@@ -232,8 +232,8 @@ func (s *DaggerheartService) runSessionAdversaryActionCheck(ctx context.Context,
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart adversary checks")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart adversary checks"); err != nil {
+		return nil, err
 	}
 
 	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)

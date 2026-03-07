@@ -288,6 +288,12 @@ func (b *serverBootstrap) configureStatusRuntime(
 func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server *Server, err error) {
 	startupCtx := startupContext(ctx)
 	srvEnv := b.config.loadEnv()
+	rollback := startupRollback{}
+	defer func() {
+		if err != nil {
+			rollback.cleanup()
+		}
+	}()
 
 	registries, err := engine.BuildRegistries(registeredSystemModules()...)
 	if err != nil {
@@ -298,23 +304,17 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 	if err != nil {
 		return nil, wrapStartupError(startupPhaseNetwork, fmt.Sprintf("listen on %s", addr), err)
 	}
-	defer func() {
-		if err == nil {
-			return
-		}
+	rollback.add(func() {
 		_ = listener.Close()
-	}()
+	})
 
 	bundle, err := b.config.openStorageBundle.Open(startupCtx, srvEnv, registries.Events)
 	if err != nil {
 		return nil, wrapStartupError(startupPhaseStorage, "open storage bundle", err)
 	}
-	defer func() {
-		if err == nil {
-			return
-		}
+	rollback.add(func() {
 		bundle.Close()
-	}()
+	})
 
 	storeState, err := b.configureStoresAndApplier(startupCtx, srvEnv, bundle, registries)
 	if err != nil {
@@ -336,31 +336,24 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 	if err != nil {
 		return nil, wrapStartupError(startupPhaseDependencies, "dial auth gRPC", err)
 	}
-	defer func() {
-		if err == nil {
-			return
-		}
-		if authClients.conn != nil {
-			_ = authClients.conn.Close()
-		}
-	}()
-
-	defer func() {
-		if err == nil {
-			return
-		}
-		if socialClients.conn != nil {
-			_ = socialClients.conn.Close()
-		}
-	}()
-	defer func() {
-		if err == nil {
-			return
-		}
-		if aiClients.conn != nil {
-			_ = aiClients.conn.Close()
-		}
-	}()
+	if authClients.conn != nil {
+		authConn := authClients.conn
+		rollback.add(func() {
+			_ = authConn.Close()
+		})
+	}
+	if socialClients.conn != nil {
+		socialConn := socialClients.conn
+		rollback.add(func() {
+			_ = socialConn.Close()
+		})
+	}
+	if aiClients.conn != nil {
+		aiConn := aiClients.conn
+		rollback.add(func() {
+			_ = aiConn.Close()
+		})
+	}
 	stores.Social = socialClients.socialClient
 
 	grpcServer := b.config.newGRPCServer(bundle, srvEnv)
@@ -400,15 +393,12 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		socialClients.socialClient != nil,
 		aiClients.agentClient != nil,
 	)
-	statusConn := statusRuntime.conn
-	defer func() {
-		if err == nil {
-			return
-		}
-		if statusConn != nil {
+	if statusRuntime.conn != nil {
+		statusConn := statusRuntime.conn
+		rollback.add(func() {
 			_ = statusConn.Close()
-		}
-	}()
+		})
+	}
 
 	server = &Server{
 		listener:                                 listener,
@@ -418,20 +408,14 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		authConn:                                 authClients.conn,
 		socialConn:                               socialClients.conn,
 		aiConn:                                   aiClients.conn,
-		statusConn:                               statusConn,
+		statusConn:                               statusRuntime.conn,
 		projectionApplyOutboxWorkerEnabled:       projectionRuntime.enableApplyWorker,
 		projectionApplyOutboxApply:               projectionRuntime.applyOutbox,
 		projectionApplyOutboxShadowWorkerEnabled: projectionRuntime.enableShadowWorker,
 		statusReporter:                           statusRuntime.reporter,
 		catalogReadyAtStartup:                    statusRuntime.catalogReadyAtStartup,
 	}
-
-	listener = nil
-	bundle = nil
-	authClients.conn = nil
-	socialClients.conn = nil
-	aiClients.conn = nil
-	statusConn = nil
+	rollback.release()
 	return server, nil
 }
 

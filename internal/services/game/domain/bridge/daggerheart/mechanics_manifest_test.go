@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"testing"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
@@ -123,7 +123,7 @@ func TestManifest_ScenarioTagsExist(t *testing.T) {
 func TestManifest_DeriveImplementationStage(t *testing.T) {
 	stage := DeriveImplementationStage()
 	// All Required mechanics are now implemented (including leveling and multiclassing).
-	if stage != commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE {
+	if stage != bridge.ImplementationStageComplete {
 		t.Fatalf("DeriveImplementationStage() = %s, want COMPLETE", stage)
 	}
 }

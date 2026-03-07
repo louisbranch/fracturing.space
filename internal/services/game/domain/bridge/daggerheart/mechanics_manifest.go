@@ -3,7 +3,7 @@ package daggerheart
 import (
 	"fmt"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
@@ -525,7 +525,7 @@ func MechanicsManifest() []Mechanic {
 // DeriveImplementationStage computes the implementation stage from the manifest.
 // Only Required mechanics affect the stage: all implemented → COMPLETE,
 // some implemented → PARTIAL, none implemented → PLANNED.
-func DeriveImplementationStage() commonv1.GameSystemImplementationStage {
+func DeriveImplementationStage() bridge.ImplementationStage {
 	manifest := MechanicsManifest()
 
 	var requiredTotal, requiredImplemented int
@@ -541,13 +541,13 @@ func DeriveImplementationStage() commonv1.GameSystemImplementationStage {
 
 	switch {
 	case requiredTotal == 0:
-		return commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PLANNED
+		return bridge.ImplementationStagePlanned
 	case requiredImplemented == requiredTotal:
-		return commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE
+		return bridge.ImplementationStageComplete
 	case requiredImplemented > 0:
-		return commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL
+		return bridge.ImplementationStagePartial
 	default:
-		return commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PLANNED
+		return bridge.ImplementationStagePlanned
 	}
 }
 

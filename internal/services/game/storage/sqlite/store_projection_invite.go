@@ -115,17 +115,14 @@ func (s *Store) ListInvites(ctx context.Context, campaignID string, recipientUse
 	}
 
 	page := storage.InvitePage{Invites: make([]storage.InviteRecord, 0, pageSize)}
-	for i, row := range rows {
-		if i >= pageSize {
-			page.NextPageToken = rows[pageSize-1].ID
-			break
-		}
-		inv, err := dbInviteToDomain(row)
-		if err != nil {
-			return storage.InvitePage{}, err
-		}
-		page.Invites = append(page.Invites, inv)
+	invites, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Invite) string {
+		return row.ID
+	}, dbInviteToDomain)
+	if err != nil {
+		return storage.InvitePage{}, err
 	}
+	page.Invites = invites
+	page.NextPageToken = nextPageToken
 
 	return page, nil
 }
@@ -167,17 +164,14 @@ func (s *Store) ListPendingInvites(ctx context.Context, campaignID string, pageS
 	}
 
 	page := storage.InvitePage{Invites: make([]storage.InviteRecord, 0, pageSize)}
-	for i, row := range rows {
-		if i >= pageSize {
-			page.NextPageToken = rows[pageSize-1].ID
-			break
-		}
-		inv, err := dbInviteToDomain(row)
-		if err != nil {
-			return storage.InvitePage{}, err
-		}
-		page.Invites = append(page.Invites, inv)
+	invites, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Invite) string {
+		return row.ID
+	}, dbInviteToDomain)
+	if err != nil {
+		return storage.InvitePage{}, err
 	}
+	page.Invites = invites
+	page.NextPageToken = nextPageToken
 
 	return page, nil
 }
@@ -219,17 +213,14 @@ func (s *Store) ListPendingInvitesForRecipient(ctx context.Context, userID strin
 	}
 
 	page := storage.InvitePage{Invites: make([]storage.InviteRecord, 0, pageSize)}
-	for i, row := range rows {
-		if i >= pageSize {
-			page.NextPageToken = rows[pageSize-1].ID
-			break
-		}
-		inv, err := dbInviteToDomain(row)
-		if err != nil {
-			return storage.InvitePage{}, err
-		}
-		page.Invites = append(page.Invites, inv)
+	invites, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Invite) string {
+		return row.ID
+	}, dbInviteToDomain)
+	if err != nil {
+		return storage.InvitePage{}, err
 	}
+	page.Invites = invites
+	page.NextPageToken = nextPageToken
 
 	return page, nil
 }

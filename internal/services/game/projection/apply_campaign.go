@@ -19,25 +19,17 @@ func ProjectionHandledTypes() []event.Type {
 }
 
 func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event, payload campaign.CreatePayload) error {
-	system, err := parseGameSystem(payload.GameSystem)
-	if err != nil {
-		return err
-	}
 	gmMode, err := parseGmMode(payload.GmMode)
 	if err != nil {
 		return err
 	}
 	intent := parseCampaignIntent(payload.Intent)
 	accessPolicy := parseCampaignAccessPolicy(payload.AccessPolicy)
-	locale := platformi18n.DefaultLocale()
-	if parsed, ok := platformi18n.ParseLocale(payload.Locale); ok {
-		locale = parsed
-	}
 
 	input := campaign.CreateInput{
 		Name:         payload.Name,
-		Locale:       locale,
-		System:       system,
+		Locale:       payload.Locale,
+		System:       campaign.GameSystem(payload.GameSystem),
 		GmMode:       gmMode,
 		Intent:       intent,
 		AccessPolicy: accessPolicy,
@@ -47,6 +39,14 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event, payl
 	if err != nil {
 		return err
 	}
+	system, err := parseGameSystem(normalized.System.String())
+	if err != nil {
+		return err
+	}
+	locale := platformi18n.DefaultLocale()
+	if parsed, ok := platformi18n.ParseLocale(normalized.Locale); ok {
+		locale = parsed
+	}
 
 	createdAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
@@ -55,8 +55,8 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event, payl
 	return a.Campaign.Put(ctx, storage.CampaignRecord{
 		ID:               evt.EntityID,
 		Name:             normalized.Name,
-		Locale:           normalized.Locale,
-		System:           normalized.System,
+		Locale:           locale,
+		System:           system,
 		Status:           campaign.StatusDraft,
 		GmMode:           normalized.GmMode,
 		Intent:           normalized.Intent,

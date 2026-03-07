@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"strings"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
@@ -56,8 +55,8 @@ func (s *DaggerheartService) validateSessionOutcome(
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return sessionOutcomePrelude{}, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return sessionOutcomePrelude{}, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart outcomes")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart outcomes"); err != nil {
+		return sessionOutcomePrelude{}, err
 	}
 
 	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)

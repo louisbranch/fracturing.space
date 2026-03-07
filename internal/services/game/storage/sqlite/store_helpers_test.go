@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -70,13 +70,13 @@ func TestIsAlreadyExistsError(t *testing.T) {
 }
 
 func TestConversionHelpers(t *testing.T) {
-	if gameSystemToString(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART) != "DAGGERHEART" {
+	if gameSystemToString(bridge.SystemIDDaggerheart) != "DAGGERHEART" {
 		t.Fatal("expected daggerheart game system string")
 	}
-	if gameSystemToString(commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED) != "UNSPECIFIED" {
+	if gameSystemToString(bridge.SystemIDUnspecified) != "UNSPECIFIED" {
 		t.Fatal("expected unspecified game system string")
 	}
-	if stringToGameSystem("unknown") != commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+	if stringToGameSystem("unknown") != bridge.SystemIDUnspecified {
 		t.Fatal("expected fallback game system unspecified")
 	}
 

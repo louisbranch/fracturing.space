@@ -256,17 +256,14 @@ func (s *Store) ListSessions(ctx context.Context, campaignID string, pageSize in
 		Sessions: make([]storage.SessionRecord, 0, pageSize),
 	}
 
-	for i, row := range rows {
-		if i >= pageSize {
-			page.NextPageToken = rows[pageSize-1].ID
-			break
-		}
-		sess, err := dbSessionToDomain(row)
-		if err != nil {
-			return storage.SessionPage{}, err
-		}
-		page.Sessions = append(page.Sessions, sess)
+	sessions, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Session) string {
+		return row.ID
+	}, dbSessionToDomain)
+	if err != nil {
+		return storage.SessionPage{}, err
 	}
+	page.Sessions = sessions
+	page.NextPageToken = nextPageToken
 
 	return page, nil
 }

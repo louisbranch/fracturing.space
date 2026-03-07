@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -119,7 +120,7 @@ func TestCampaignReadinessAggregateState_DaggerheartStoreRequired(t *testing.T) 
 			ID:     "c1",
 			Status: campaign.StatusActive,
 			GmMode: campaign.GmModeHuman,
-			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			System: bridge.SystemIDDaggerheart,
 		},
 		nil,
 		[]storage.CharacterRecord{{ID: "char-1", CampaignID: "c1"}},
@@ -138,7 +139,7 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileLoadError(t *testing.
 			ID:     "c1",
 			Status: campaign.StatusActive,
 			GmMode: campaign.GmModeHuman,
-			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			System: bridge.SystemIDDaggerheart,
 		},
 		nil,
 		[]storage.CharacterRecord{{ID: "char-1", CampaignID: "c1"}},
@@ -163,7 +164,7 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileMapped(t *testing.T) 
 			ID:     "c1",
 			Status: campaign.StatusActive,
 			GmMode: campaign.GmModeHuman,
-			System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+			System: bridge.SystemIDDaggerheart,
 		},
 		[]storage.ParticipantRecord{
 			{

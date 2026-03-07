@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -137,12 +137,12 @@ func newAdversaryTestService() *DaggerheartService {
 	campaignStore.Campaigns["camp-1"] = storage.CampaignRecord{
 		ID:     "camp-1",
 		Status: campaign.StatusActive,
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System: bridge.SystemIDDaggerheart,
 	}
 	campaignStore.Campaigns["camp-non-dh"] = storage.CampaignRecord{
 		ID:     "camp-non-dh",
 		Status: campaign.StatusActive,
-		System: commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED,
+		System: bridge.SystemIDUnspecified,
 	}
 
 	sessStore := newFakeSessionStore()

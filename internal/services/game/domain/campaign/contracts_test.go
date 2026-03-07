@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	testcontracts "github.com/louisbranch/fracturing.space/internal/services/game/domain/internaltest/contracts"
@@ -125,6 +124,13 @@ func TestNormalizeLabels(t *testing.T) {
 		t.Fatalf("NormalizeGmMode invalid = (%q, %v), want (%q, false)", got, ok, GmModeUnspecified)
 	}
 
+	if got, ok := NormalizeGameSystem("GAME_SYSTEM_DAGGERHEART"); !ok || got != GameSystemDaggerheart {
+		t.Fatalf("NormalizeGameSystem = (%q, %v), want (%q, true)", got, ok, GameSystemDaggerheart)
+	}
+	if got, ok := NormalizeGameSystem("invalid"); ok || got != GameSystemUnspecified {
+		t.Fatalf("NormalizeGameSystem invalid = (%q, %v), want (%q, false)", got, ok, GameSystemUnspecified)
+	}
+
 	if got := NormalizeIntent("CAMPAIGN_INTENT_SANDBOX"); got != IntentSandbox {
 		t.Fatalf("NormalizeIntent = %q, want %q", got, IntentSandbox)
 	}
@@ -143,7 +149,7 @@ func TestNormalizeLabels(t *testing.T) {
 func TestNormalizeCreateInput(t *testing.T) {
 	_, err := NormalizeCreateInput(CreateInput{
 		Name:   "",
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System: GameSystemDaggerheart,
 		GmMode: GmModeHuman,
 	})
 	if !errors.Is(err, ErrEmptyName) {
@@ -152,7 +158,7 @@ func TestNormalizeCreateInput(t *testing.T) {
 
 	_, err = NormalizeCreateInput(CreateInput{
 		Name:   "Sunfall",
-		System: commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED,
+		System: GameSystemUnspecified,
 		GmMode: GmModeHuman,
 	})
 	if !errors.Is(err, ErrInvalidGameSystem) {
@@ -161,7 +167,7 @@ func TestNormalizeCreateInput(t *testing.T) {
 
 	normalized, err := NormalizeCreateInput(CreateInput{
 		Name:   "  Sunfall  ",
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		System: GameSystemDaggerheart,
 		GmMode: GmModeUnspecified,
 	})
 	if err != nil {
@@ -170,8 +176,8 @@ func TestNormalizeCreateInput(t *testing.T) {
 	if normalized.Name != "Sunfall" {
 		t.Fatalf("Name = %q, want Sunfall", normalized.Name)
 	}
-	if normalized.Locale != commonv1.Locale_LOCALE_EN_US {
-		t.Fatalf("Locale = %s, want %s", normalized.Locale, commonv1.Locale_LOCALE_EN_US)
+	if normalized.Locale != "en-US" {
+		t.Fatalf("Locale = %s, want %s", normalized.Locale, "en-US")
 	}
 	if normalized.GmMode != GmModeAI {
 		t.Fatalf("GmMode = %q, want %q", normalized.GmMode, GmModeAI)

@@ -25,6 +25,14 @@ type authzAuditStore struct {
 	err    error
 }
 
+func authzCampaignRecord() storage.CampaignRecord {
+	return storage.CampaignRecord{}
+}
+
+func authzParticipantWithAccess(access participant.CampaignAccess) storage.ParticipantRecord {
+	return storage.ParticipantRecord{CampaignAccess: access}
+}
+
 func (s *authzAuditStore) AppendAuditEvent(_ context.Context, evt storage.AuditEvent) error {
 	if s.err != nil {
 		return s.err
@@ -73,7 +81,7 @@ func (f authzParticipantStore) ListParticipants(ctx context.Context, campaignID 
 
 func TestRequirePolicyMissingActor(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{}}
-	err := requirePolicy(context.Background(), stores, domainauthz.CapabilityManageParticipants, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(context.Background(), stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -85,7 +93,7 @@ func TestRequirePolicyNotFound(t *testing.T) {
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -97,7 +105,7 @@ func TestRequirePolicyLoadError(t *testing.T) {
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("expected internal error, got %v", err)
 	}
@@ -105,11 +113,11 @@ func TestRequirePolicyLoadError(t *testing.T) {
 
 func TestRequirePolicyDenied(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return storage.ParticipantRecord{CampaignAccess: participant.CampaignAccessMember}, nil
+		return authzParticipantWithAccess(participant.CampaignAccessMember), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -117,11 +125,11 @@ func TestRequirePolicyDenied(t *testing.T) {
 
 func TestRequirePolicyAllowed(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return storage.ParticipantRecord{CampaignAccess: participant.CampaignAccessOwner}, nil
+		return authzParticipantWithAccess(participant.CampaignAccessOwner), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -129,11 +137,11 @@ func TestRequirePolicyAllowed(t *testing.T) {
 
 func TestRequirePolicyCampaignManageAllowedForManager(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return storage.ParticipantRecord{CampaignAccess: participant.CampaignAccessManager}, nil
+		return authzParticipantWithAccess(participant.CampaignAccessManager), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -141,11 +149,11 @@ func TestRequirePolicyCampaignManageAllowedForManager(t *testing.T) {
 
 func TestRequirePolicyCampaignManageAllowedForOwner(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return storage.ParticipantRecord{CampaignAccess: participant.CampaignAccessOwner}, nil
+		return authzParticipantWithAccess(participant.CampaignAccessOwner), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -153,11 +161,11 @@ func TestRequirePolicyCampaignManageAllowedForOwner(t *testing.T) {
 
 func TestRequirePolicySessionManageAllowedForManager(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return storage.ParticipantRecord{CampaignAccess: participant.CampaignAccessManager}, nil
+		return authzParticipantWithAccess(participant.CampaignAccessManager), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageSessions, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageSessions, authzCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -165,11 +173,11 @@ func TestRequirePolicySessionManageAllowedForManager(t *testing.T) {
 
 func TestRequirePolicySessionManageDeniedForMember(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return storage.ParticipantRecord{CampaignAccess: participant.CampaignAccessMember}, nil
+		return authzParticipantWithAccess(participant.CampaignAccessMember), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageSessions, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageSessions, authzCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -177,11 +185,11 @@ func TestRequirePolicySessionManageDeniedForMember(t *testing.T) {
 
 func TestRequirePolicyCharacterManageAllowedForMember(t *testing.T) {
 	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return storage.ParticipantRecord{CampaignAccess: participant.CampaignAccessMember}, nil
+		return authzParticipantWithAccess(participant.CampaignAccessMember), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityMutateCharacters, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityMutateCharacters, authzCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -204,7 +212,7 @@ func TestRequirePolicyAllowsOwnerByUserIDFallback(t *testing.T) {
 	}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-1"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -224,7 +232,7 @@ func TestRequirePolicyTelemetryDenied(t *testing.T) {
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "member-1"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -257,7 +265,7 @@ func TestRequirePolicyTelemetryAllowed(t *testing.T) {
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "owner-1"))
 
-	if err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"}); err != nil {
+	if err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, authzCampaignRecord()); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if len(auditStore.events) != 1 {
@@ -300,7 +308,7 @@ func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 	_, err := requireCharacterMutationPolicy(
 		ctx,
 		stores,
-		storage.CampaignRecord{ID: "camp"},
+		authzCampaignRecord(),
 		"char-1",
 	)
 	if status.Code(err) != codes.PermissionDenied {
@@ -326,7 +334,7 @@ func TestRequirePolicyTelemetryAdminOverride(t *testing.T) {
 		grpcmeta.UserIDHeader, "user-admin-1",
 	))
 
-	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -352,7 +360,7 @@ func TestRequirePolicyDeniesAdminOverrideWhenReasonMissing(t *testing.T) {
 		grpcmeta.UserIDHeader, "user-admin-1",
 	))
 
-	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -375,7 +383,7 @@ func TestRequirePolicyDeniesAdminOverrideWhenPrincipalMissing(t *testing.T) {
 		"x-fracturing-space-authz-override-reason", "incident-ops",
 	))
 
-	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, storage.CampaignRecord{ID: "camp"})
+	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -399,7 +407,7 @@ func TestRequireCharacterMutationPolicyTelemetryAdminOverride(t *testing.T) {
 	_, err := requireCharacterMutationPolicy(
 		ctx,
 		Stores{Audit: auditStore},
-		storage.CampaignRecord{ID: "camp"},
+		authzCampaignRecord(),
 		"char-1",
 	)
 	if err != nil {

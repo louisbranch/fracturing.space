@@ -59,8 +59,8 @@ func (s *DaggerheartService) runSessionDamageRoll(ctx context.Context, in *pb.Se
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
 		return nil, handleDomainError(err)
 	}
-	if c.System != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
-		return nil, status.Error(codes.FailedPrecondition, "campaign system does not support daggerheart rolls")
+	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart rolls"); err != nil {
+		return nil, err
 	}
 
 	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
