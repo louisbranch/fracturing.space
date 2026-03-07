@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_gondor_court_gravity_of_empire")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_gondor_court_gravity_of_empire")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the golden opportunity and stress/temptation consequences.
-scene:campaign{
+scn:campaign{
   name = "Environment Gondor Court Gravity of Empire",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The empire tempts a PC with a major offer.
-scene:start_session("Gravity of Empire")
+scn:start_session("Gravity of Empire")
 dh:gm_fear(1)
 
 -- Missing DSL: apply Presence reaction and stress or acceptance on failure.
@@ -27,8 +27,8 @@ dh:apply_reaction_outcome{
     {kind = "apply_condition", target = "Frodo", add = {"VULNERABLE"}, source = "imperial_temptation_tax"},
   },
 }
-scene:set_spotlight{ target = "Frodo" }
+scn:set_spotlight{ target = "Frodo" }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

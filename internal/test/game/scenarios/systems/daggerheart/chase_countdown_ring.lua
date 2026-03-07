@@ -1,20 +1,20 @@
-local scene = Scenario.new("chase_countdown_ring")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("chase_countdown_ring")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the ring chase with competing countdowns.
-scene:campaign{
+scn:campaign{
   name = "Chase Countdown Ring",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "countdown"
 }
 
-scene:pc("Sam")
-scene:pc("Frodo")
+scn:pc("Sam")
+scn:pc("Frodo")
 dh:adversary("Golum")
 
 -- The PCs chase a thief across a market with progress and consequence clocks.
-scene:start_session("Market Chase")
+scn:start_session("Market Chase")
 
 dh:countdown_create{ name = "PC Progress", kind = "progress", current = 0, max = 6, direction = "increase" }
 dh:countdown_create{ name = "Thief Escape", kind = "consequence", current = 0, max = 3, direction = "increase" }
@@ -31,6 +31,6 @@ dh:apply_roll_outcome{
 }
 
 -- Close the session after the chase advances.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

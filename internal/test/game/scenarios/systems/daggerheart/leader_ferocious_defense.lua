@@ -1,19 +1,19 @@
-local scene = Scenario.new("leader_ferocious_defense")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("leader_ferocious_defense")
+local dh = scn:system("DAGGERHEART")
 
 -- Model Ferocious Defense increasing Difficulty after taking HP damage.
-scene:campaign{
+scn:campaign{
   name = "Leader Ferocious Defense",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "adversary"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Mirkwood Warden")
 
 -- The Mirkwood Warden hardens after a damaging hit.
-scene:start_session("Ferocious Defense")
+scn:start_session("Ferocious Defense")
 
 -- Example: after marking HP, Difficulty increases by 1 until they mark HP.
 -- Partial mapping: explicit post-hit difficulty escalation is represented.
@@ -32,6 +32,6 @@ dh:adversary_update{
   notes = "ferocious_defense"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

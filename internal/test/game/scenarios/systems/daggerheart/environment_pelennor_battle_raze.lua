@@ -1,23 +1,23 @@
-local scene = Scenario.new("environment_pelennor_battle_raze")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_pelennor_battle_raze")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the raze-and-pillage escalation.
-scene:campaign{
+scn:campaign{
   name = "Environment Pelennor Battle Raze",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The battle escalates with fire or abduction.
-scene:start_session("Raze and Pillage")
+scn:start_session("Raze and Pillage")
 dh:gm_fear(1)
 
 -- Narrative branch selection and objective shifts remain unresolved.
 dh:gm_spend_fear(1):spotlight("Battlefield")
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

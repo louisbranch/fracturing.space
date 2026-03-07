@@ -1,19 +1,19 @@
-local scene = Scenario.new("condition_stacking_guard")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("condition_stacking_guard")
+local dh = scn:system("DAGGERHEART")
 
 -- Set up Galadriel to test stacking the same condition.
-scene:campaign{
+scn:campaign{
   name = "Condition Stacking Guard",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "conditions"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Galadriel")
 
 -- The GM applies conditions and tries to stack the same one twice.
-scene:start_session("Condition Guard")
+scn:start_session("Condition Guard")
 
 -- Vulnerable is applied, then requested again alongside a new condition.
 dh:apply_condition{
@@ -32,6 +32,6 @@ dh:apply_condition{
 }
 
 -- Close the session after the stacking attempt.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

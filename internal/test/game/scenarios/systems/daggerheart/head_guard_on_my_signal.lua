@@ -1,20 +1,20 @@
-local scene = Scenario.new("head_guard_on_my_signal")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("head_guard_on_my_signal")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the leader reaction that starts an archer countdown.
-scene:campaign{
+scn:campaign{
   name = "Gondor Captain On My Signal",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "adversary"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Gondor Captain")
 dh:adversary("Gondor Archers")
 
 -- The head guard signals archers to attack with advantage.
-scene:start_session("On My Signal")
+scn:start_session("On My Signal")
 
 -- Example: reaction starts a countdown for coordinated archer fire.
 -- Partial mapping: explicit countdown tick and advantaged archer volley are represented.
@@ -29,6 +29,6 @@ dh:adversary_attack{
   damage_type = "physical"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

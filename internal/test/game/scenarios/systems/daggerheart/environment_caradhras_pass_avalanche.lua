@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_caradhras_pass_avalanche")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_caradhras_pass_avalanche")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the avalanche action and reaction roll consequences.
-scene:campaign{
+scn:campaign{
   name = "Environment Caradhras Pass Avalanche",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The GM triggers an avalanche down the pass.
-scene:start_session("Avalanche")
+scn:start_session("Avalanche")
 dh:gm_fear(1)
 
 -- Example: reaction roll or take 2d20 damage, knocked to Far, mark Stress.
@@ -28,6 +28,6 @@ dh:group_reaction{
   source = "caradhras_avalanche"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

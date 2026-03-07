@@ -1,13 +1,13 @@
-local scene = Scenario.new("low_level_rolls")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("low_level_rolls")
+local dh = scn:system("DAGGERHEART")
 
 -- Set a low-stakes skirmish to exercise roll plumbing.
-scene:campaign{ name = "Low Level Rolls", system = "DAGGERHEART", gm_mode = "HUMAN" }
-scene:pc("Sam")
+scn:campaign{ name = "Low Level Rolls", system = "DAGGERHEART", gm_mode = "HUMAN" }
+scn:pc("Sam")
 dh:adversary("Goblin")
 
 -- Open a session to run through low-level rolls.
-scene:start_session("Low Level")
+scn:start_session("Low Level")
 
 -- Resolve Sam's action roll and apply the attack outcome.
 dh:action_roll{ actor = "Sam", trait = "instinct", difficulty = 8, outcome = "hope" }
@@ -26,5 +26,5 @@ dh:reaction_roll{ actor = "Sam", trait = "agility", difficulty = 8, outcome = "h
 dh:apply_reaction_outcome{}
 
 -- Close the session once the roll chain completes.
-scene:end_session()
-return scene
+scn:end_session()
+return scn

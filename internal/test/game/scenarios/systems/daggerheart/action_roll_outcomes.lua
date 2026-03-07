@@ -1,21 +1,21 @@
-local scene = Scenario.new("action_roll_outcomes")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("action_roll_outcomes")
+local dh = scn:system("DAGGERHEART")
 
 -- Introduce Frodo and three foes to showcase roll outcomes.
-scene:campaign{
+scn:campaign{
   name = "Action Roll Outcomes",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "outcomes"
 }
 
-scene:pc("Frodo", { stress = 1 })
+scn:pc("Frodo", { stress = 1 })
 dh:adversary("Nazgul")
 dh:adversary("Golum")
 dh:adversary("Saruman")
 
 -- Frodo tests three distinct action roll outcomes in a single session.
-scene:start_session("Outcomes")
+scn:start_session("Outcomes")
 
 -- Hope outcome: the player gains momentum from a clean success.
 dh:attack{
@@ -67,6 +67,6 @@ dh:attack{
 }
 
 -- Close the session after all outcomes land.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

@@ -1,19 +1,19 @@
-local scene = Scenario.new("ranged_battle_teleport")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("ranged_battle_teleport")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the Saruman's battle teleport stress spend.
-scene:campaign{
+scn:campaign{
   name = "Ranged Battle Teleport",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "adversary"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Saruman")
 
 -- The wizard teleports before or after a standard attack.
-scene:start_session("Battle Teleport")
+scn:start_session("Battle Teleport")
 
 -- Example: mark Stress to teleport within Far range.
 dh:adversary_attack{
@@ -25,6 +25,6 @@ dh:adversary_attack{
   damage_type = "magic"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

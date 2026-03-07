@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_mirkwood_blight_choking_ash")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_mirkwood_blight_choking_ash")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the looping choking ash countdown.
-scene:campaign{
+scn:campaign{
   name = "Environment Mirkwood Blight Choking Ash",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Gandalf")
+scn:pc("Gandalf")
 
 -- The ash periodically forces reaction rolls.
-scene:start_session("Choking Ash")
+scn:start_session("Choking Ash")
 
 -- Loop countdown progression remains unresolved in this fixture.
 dh:countdown_create{ name = "Choking Ash", kind = "loop", current = 0, max = 4, direction = "increase" }
@@ -28,6 +28,6 @@ dh:group_reaction{
   source = "choking_ash"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

@@ -1,18 +1,18 @@
-local scene = Scenario.new("spellcast_hope_cost")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("spellcast_hope_cost")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the spellcast roll that costs Hope to cast.
-scene:campaign{
+scn:campaign{
   name = "Spellcast Hope Cost",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "spellcast"
 }
 
-scene:pc("Gandalf", { hope = 2 })
+scn:pc("Gandalf", { hope = 2 })
 
 -- Gandalf casts a warding door with a Hope cost.
-scene:start_session("Arcane Door")
+scn:start_session("Arcane Door")
 dh:gm_fear(0)
 
 -- Build enough Hope for the explicit spend step.
@@ -35,6 +35,6 @@ dh:action_roll{
 dh:gm_fear(1)
 
 -- Close the session after the spellcast.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

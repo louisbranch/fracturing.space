@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_bruinen_ford_dangerous_crossing")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_bruinen_ford_dangerous_crossing")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the dangerous crossing progress countdown.
-scene:campaign{
+scn:campaign{
   name = "Environment Bruinen Ford Dangerous Crossing",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- Crossing requires a progress countdown and can trigger undertow.
-scene:start_session("Dangerous Crossing")
+scn:start_session("Dangerous Crossing")
 
 -- Example: Progress Countdown (4) with failure + Fear triggering Undertow.
 dh:countdown_create{ name = "Bruinen Ford Crossing", kind = "progress", current = 0, max = 4, direction = "increase" }
@@ -26,6 +26,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

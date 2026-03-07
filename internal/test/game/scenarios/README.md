@@ -23,25 +23,32 @@ Example smoke entry:
 System mechanics must be invoked through an explicit system handle:
 
 ```lua
-local scene = Scenario.new("demo")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("demo")
+local dh = scn:system("DAGGERHEART")
 
-scene:campaign({name = "Demo", system = "DAGGERHEART"})
+scn:campaign({name = "Demo", system = "DAGGERHEART"})
 dh:attack({actor = "Frodo", target = "Nazgul"})
 ```
 
-Core lifecycle steps remain on `scene` (campaign, participant/character setup, session lifecycle, spotlight controls).
+Root alias convention:
+
+- canonical semantic name: `scenario`
+- preferred shorthand for scripts: `scn`
+- avoid `scene` as the root alias to prevent collision with domain `scene` terminology
+
+Core lifecycle steps remain on the root handle (`scn` above): campaign, participant/character setup, session lifecycle, and spotlight controls.
 
 The same DSL shape is used for every system. Adding a new system should extend
 the scenario system registry (`internal/tools/scenario/system_registry.go`)
 rather than introducing a new top-level DSL object.
 
-`scene:campaign` must declare `system` explicitly. Implicit default systems are
+`scn:campaign` must declare `system` explicitly. Implicit default systems are
 not supported.
 
-Legacy scene-level mechanic calls (for example `scene:attack(...)`) are
-intentionally rejected. Use `scene:system("<SYSTEM_ID>"):attack(...)`.
+Legacy root-level mechanic calls (for example `scene:attack(...)` or
+`scn:attack(...)`) are intentionally rejected. Use
+`scn:system("<SYSTEM_ID>"):attack(...)`.
 
 ## Comment Validation
 
-When comment validation is enabled, each non-empty block that contains scenario step calls (for example, `scene:*` or `dh:*`) must start with a comment line (`-- ...`).
+When comment validation is enabled, each non-empty block that contains scenario step calls (for example, `scn:*` or `dh:*`) must start with a comment line (`-- ...`).

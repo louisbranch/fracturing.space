@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_isengard_ritual_desecrated_ground")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_isengard_ritual_desecrated_ground")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the Hope die reduction from desecrated ground.
-scene:campaign{
+scn:campaign{
   name = "Environment Isengard Ritual Desecrated Ground",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The environment suppresses Hope while the ritual site remains tainted.
-scene:start_session("Desecrated Ground")
+scn:start_session("Desecrated Ground")
 
 -- Example: reduce Hope Die to d10 until a progress countdown clears it.
 dh:countdown_create{ name = "Cleanse Desecration", kind = "progress", current = 0, max = 6, direction = "increase" }
@@ -23,6 +23,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

@@ -7,15 +7,41 @@ import (
 	"testing"
 )
 
+func TestScenarioSupportsArbitraryRootAlias(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local game = Scenario.new("alias")
+game:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Add one character through the alias.
+game:pc("Frodo")
+
+return game
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if scenario.Name != "alias" {
+		t.Fatalf("scenario name = %q, want %q", scenario.Name, "alias")
+	}
+	if len(scenario.Steps) != 2 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 2)
+	}
+	if scenario.Steps[1].Kind != "character" {
+		t.Fatalf("step kind = %q, want %q", scenario.Steps[1].Kind, "character")
+	}
+}
+
 func TestParticipantChainingCreatesSteps(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("chain")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("chain")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Participant + character
-scene:participant({name = "John"}):character({name = "Frodo"})
+scn:participant({name = "John"}):character({name = "Frodo"})
 
-return scene
+return scn
 `)
 
 	scenario, err := LoadScenarioFromFile(path)
@@ -51,13 +77,13 @@ return scene
 
 func TestParticipantChainingOverridesDefaults(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("chain")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("chain")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Participant + character overrides
-scene:participant({name = "Ada", role = "GM", controller = "AI"}):character({name = "Sam", kind = "NPC", control = "gm"})
+scn:participant({name = "Ada", role = "GM", controller = "AI"}):character({name = "Sam", kind = "NPC", control = "gm"})
 
-return scene
+return scn
 `)
 
 	scenario, err := LoadScenarioFromFile(path)
@@ -99,13 +125,13 @@ return scene
 
 func TestScenarioParticipantRequiresName(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("missing_participant")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("missing_participant")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Missing participant name
-scene:participant({})
+scn:participant({})
 
-return scene
+return scn
 `)
 
 	_, err := LoadScenarioFromFile(path)
@@ -119,13 +145,13 @@ return scene
 
 func TestScenarioParticipantCharacterRequiresName(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("missing_character")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("missing_character")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Missing character name
-scene:participant({name = "John"}):character({})
+scn:participant({name = "John"}):character({})
 
-return scene
+return scn
 `)
 
 	_, err := LoadScenarioFromFile(path)
@@ -139,13 +165,13 @@ return scene
 
 func TestScenarioSetSpotlightCreatesStep(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("spotlight")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("spotlight")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Force spotlight to a character
-scene:set_spotlight({target = "Frodo", expect_spotlight = "Frodo"})
+scn:set_spotlight({target = "Frodo", expect_spotlight = "Frodo"})
 
-return scene
+return scn
 `)
 
 	scenario, err := LoadScenarioFromFile(path)
@@ -170,13 +196,13 @@ return scene
 
 func TestScenarioClearSpotlightCreatesStep(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("clear_spotlight")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("clear_spotlight")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Clear spotlight when needed
-scene:clear_spotlight()
+scn:clear_spotlight()
 
-return scene
+return scn
 `)
 
 	scenario, err := LoadScenarioFromFile(path)
@@ -195,14 +221,14 @@ return scene
 
 func TestScenarioAdversaryReactionCreatesStep(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("adversary_reaction")
-local dh = scene:system("DAGGERHEART")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("adversary_reaction")
+local dh = scn:system("DAGGERHEART")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Trigger a reactive adversary effect and cooldown toggle.
 dh:adversary_reaction({actor = "Saruman", target = "Frodo", damage = 7, damage_type = "magic", cooldown_note = "warding_sphere:cooldown"})
 
-return scene
+return scn
 `)
 
 	scenario, err := LoadScenarioFromFile(path)
@@ -230,14 +256,14 @@ return scene
 
 func TestScenarioGroupReactionCreatesStep(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("group_reaction")
-local dh = scene:system("DAGGERHEART")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("group_reaction")
+local dh = scn:system("DAGGERHEART")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Roll reactions for multiple targets and apply failure-only effects.
 dh:group_reaction({targets = {"Frodo", "Sam"}, trait = "agility", difficulty = 15, failure_conditions = {"VULNERABLE"}, source = "snowblind_trap"})
 
-return scene
+return scn
 `)
 
 	scenario, err := LoadScenarioFromFile(path)
@@ -259,13 +285,13 @@ return scene
 
 func TestScenarioSystemScopedMethodsAreNotAvailableOnScene(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("legacy_scene_method")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("legacy_scene_method")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Legacy style is intentionally removed.
-scene:attack({actor = "Frodo", target = "Nazgul"})
+scn:attack({actor = "Frodo", target = "Nazgul"})
 
-return scene
+return scn
 `)
 
 	_, err := LoadScenarioFromFile(path)
@@ -282,12 +308,12 @@ return scene
 
 func TestScenarioSystemRequiresRegisteredSystem(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("unknown_system")
-local dh = scene:system("UNKNOWN")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("unknown_system")
+local dh = scn:system("UNKNOWN")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 dh:gm_fear(1)
 
-return scene
+return scn
 `)
 
 	_, err := LoadScenarioFromFile(path)
@@ -300,10 +326,10 @@ return scene
 }
 
 func TestValidateScenarioCommentsRequiresCommentForSceneBlock(t *testing.T) {
-	path := writeScenarioFixture(t, `local scene = Scenario.new("no-comment")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+	path := writeScenarioFixture(t, `local scn = Scenario.new("no-comment")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
-return scene
+return scn
 `)
 
 	_, err := LoadScenarioFromFile(path)
@@ -317,10 +343,10 @@ return scene
 
 func TestValidateScenarioCommentsAllowsCommentedSceneBlock(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("commented")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("commented")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
-return scene
+return scn
 `)
 
 	scenario, err := LoadScenarioFromFile(path)
@@ -334,13 +360,13 @@ return scene
 
 func TestValidateScenarioCommentsRequiresCommentForSystemHandleBlock(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("system-no-comment")
-local dh = scene:system("DAGGERHEART")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("system-no-comment")
+local dh = scn:system("DAGGERHEART")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 dh:gm_fear(1)
 
-return scene
+return scn
 `)
 
 	_, err := LoadScenarioFromFile(path)
@@ -354,14 +380,14 @@ return scene
 
 func TestValidateScenarioCommentsAllowsCommentedSystemHandleBlock(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
-local scene = Scenario.new("system-commented")
-local dh = scene:system("DAGGERHEART")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+local scn = Scenario.new("system-commented")
+local dh = scn:system("DAGGERHEART")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Increase GM fear to force follow-up branch behavior.
 dh:gm_fear(1)
 
-return scene
+return scn
 `)
 
 	scenario, err := LoadScenarioFromFile(path)
@@ -383,10 +409,10 @@ return scene
 }
 
 func TestLoadScenarioFromFileWithoutCommentValidationAllowsMissingComment(t *testing.T) {
-	path := writeScenarioFixture(t, `local scene = Scenario.new("no-comment")
-scene:campaign({name = "Test", system = "DAGGERHEART"})
+	path := writeScenarioFixture(t, `local scn = Scenario.new("no-comment")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
 
-return scene
+return scn
 `)
 
 	_, err := LoadScenarioFromFileWithOptions(path, false)

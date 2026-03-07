@@ -1,18 +1,18 @@
-local scene = Scenario.new("improvised_fear_move_shadow")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("improvised_fear_move_shadow")
+local dh = scn:system("DAGGERHEART")
 
 -- Showcase an improvised fear move that shifts the scene.
-scene:campaign{
+scn:campaign{
   name = "Improvised Fear Move Shadow",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "gm_fear"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The GM spends fear after a success-with-fear to escalate the chase.
-scene:start_session("Fear Move")
+scn:start_session("Fear Move")
 dh:gm_fear(2)
 
 dh:countdown_create{ name = "Looming Shadow", kind = "consequence", current = 0, max = 4, direction = "increase" }
@@ -29,9 +29,9 @@ dh:apply_roll_outcome{
     {kind = "set_spotlight", type = "gm"},
   },
 }
-scene:set_spotlight{ target = "Frodo" }
+scn:set_spotlight{ target = "Frodo" }
 
 -- Close the session after the fear move.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

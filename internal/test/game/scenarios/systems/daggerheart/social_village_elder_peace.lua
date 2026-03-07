@@ -1,19 +1,19 @@
-local scene = Scenario.new("social_village_elder_peace")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("social_village_elder_peace")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the village elder's social reactions and deterrents.
-scene:campaign{
+scn:campaign{
   name = "Social Shire Elder Peace",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "social"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Shire Elder")
 
 -- The elder forbids hospitality and invokes peace when attacked.
-scene:start_session("Village Council")
+scn:start_session("Village Council")
 dh:gm_fear(2)
 
 -- Example: No Hospitality action and There Will Be Peace reaction.
@@ -28,6 +28,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

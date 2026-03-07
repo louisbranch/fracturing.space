@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_misty_ascent_pitons")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_misty_ascent_pitons")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the pitons rule that trades stress for a failed tick.
-scene:campaign{
+scn:campaign{
   name = "Environment Misty Ascent Pitons",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- Pitons let a climber avoid a countdown setback by marking Stress.
-scene:start_session("Pitons")
+scn:start_session("Pitons")
 
 -- Example: on a failed climb, mark Stress instead of ticking up.
 -- Partial mapping: failure branch intercept is explicit and avoids countdown setback.
@@ -28,6 +28,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

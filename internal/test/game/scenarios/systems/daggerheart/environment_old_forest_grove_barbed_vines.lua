@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_old_forest_grove_barbed_vines")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_old_forest_grove_barbed_vines")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the Barbed Vines action in the Old Forest Grove.
-scene:campaign{
+scn:campaign{
   name = "Environment Old Forest Grove Barbed Vines",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The grove lashes out with restraining vines.
-scene:start_session("Barbed Vines")
+scn:start_session("Barbed Vines")
 
 -- Example: Agility reaction or take damage and become Restrained.
 -- Escape checks after becoming Restrained remain unresolved in this fixture.
@@ -27,6 +27,6 @@ dh:group_reaction{
   source = "barbed_vines"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

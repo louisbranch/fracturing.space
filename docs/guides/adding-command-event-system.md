@@ -32,7 +32,7 @@ Canonical how-to for system-extension changes.
 4. Add scenario coverage for the new system:
    - place scenarios under `internal/test/game/scenarios/systems/<system_id>/`
    - add/select smoke entries in `internal/test/game/scenarios/manifests/`
-   - use `local <alias> = scene:system(\"<SYSTEM_ID>\")` for system mechanics in Lua scripts
+   - use a system handle for mechanics (for example `local dh = scn:system(\"<SYSTEM_ID>\")`)
 
 ## 4. If exposing MCP tooling
 

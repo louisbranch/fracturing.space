@@ -371,14 +371,14 @@ func (s *service) getCampaignName(r *http.Request, campaignID string, loc *messa
 }
 
 func defaultScenarioScript() string {
-	return `local scene = Scenario.new("My Scenario")
-scene:campaign({name = "My campaign"})
+	return `local scn = Scenario.new("My Scenario")
+scn:campaign({name = "My campaign", system = "DAGGERHEART"})
 
 -- You must gather your party before venturing forth!
 
 
 
-return scene`
+return scn`
 }
 
 func shouldPrefillScenarioScript(r *http.Request, isHTMXRequest func(*http.Request) bool) bool {

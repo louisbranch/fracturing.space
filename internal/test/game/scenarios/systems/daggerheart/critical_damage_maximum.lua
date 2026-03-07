@@ -1,19 +1,19 @@
-local scene = Scenario.new("critical_damage_maximum")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("critical_damage_maximum")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the critical success example with max damage dice.
-scene:campaign{
+scn:campaign{
   name = "Critical Damage Maximum",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "crit"
 }
 
-scene:pc("Gandalf")
+scn:pc("Gandalf")
 dh:adversary("Nazgul")
 
 -- Gandalf critically succeeds on an attack and doubles up damage logic.
-scene:start_session("Critical Damage")
+scn:start_session("Critical Damage")
 
 -- Example: critical success, start with max 2d6 = 12, then roll 2d6 (4, 5) +1.
 -- Missing DSL: apply max-dice bonus before rolling damage.
@@ -32,6 +32,6 @@ dh:damage_roll{
 }
 
 -- Close the session after the critical damage example.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

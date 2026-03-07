@@ -1,18 +1,18 @@
-local scene = Scenario.new("action_roll_failure_with_hope")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("action_roll_failure_with_hope")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the failure with Hope example outcome.
-scene:campaign{
+scn:campaign{
   name = "Action Roll Failure with Hope",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "core"
 }
 
-scene:pc("Sam")
+scn:pc("Sam")
 
 -- Failure still grants Hope but introduces a complication.
-scene:start_session("Failure with Hope")
+scn:start_session("Failure with Hope")
 
 dh:action_roll{ actor = "Sam", trait = "agility", difficulty = 14, outcome = "failure_hope" }
 dh:apply_roll_outcome{
@@ -21,6 +21,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

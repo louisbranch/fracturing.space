@@ -1,20 +1,20 @@
-local scene = Scenario.new("ranged_arcane_artillery")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("ranged_arcane_artillery")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the Saruman's arcane artillery fear action.
-scene:campaign{
+scn:campaign{
   name = "Ranged Arcane Artillery",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "adversary"
 }
 
-scene:pc("Frodo")
-scene:pc("Sam")
+scn:pc("Frodo")
+scn:pc("Sam")
 dh:adversary("Saruman")
 
 -- The wizard spends Fear to blast all targets with a reaction roll.
-scene:start_session("Arcane Artillery")
+scn:start_session("Arcane Artillery")
 dh:gm_fear(1)
 
 -- Example: all targets roll Agility or take 2d12 magic damage (half on success).
@@ -29,6 +29,6 @@ dh:group_reaction{
   source = "arcane_artillery"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

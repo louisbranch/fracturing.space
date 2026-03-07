@@ -1,19 +1,19 @@
-local scene = Scenario.new("spellcast_flavor_limits")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("spellcast_flavor_limits")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the example where flavor doesn't grant extra effects.
-scene:campaign{
+scn:campaign{
   name = "Spellcast Flavor Limits",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "spellcast"
 }
 
-scene:pc("Gandalf")
+scn:pc("Gandalf")
 dh:adversary("Saruman")
 
 -- Flavoring a warding circle doesn't add extra damage.
-scene:start_session("Flavor Limits")
+scn:start_session("Flavor Limits")
 
 -- Partial mapping: spellcast resolution and bounded damage profile are explicit.
 -- Missing DSL: explicit `action.outcome.reject` emission for out-of-scope flavor effects.
@@ -29,6 +29,6 @@ dh:attack{
   damage_type = "magic"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

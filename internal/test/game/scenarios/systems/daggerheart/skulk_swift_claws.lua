@@ -1,19 +1,19 @@
-local scene = Scenario.new("skulk_swift_claws")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("skulk_swift_claws")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the Fell Beast's Swift Claws leap-and-strike action.
-scene:campaign{
+scn:campaign{
   name = "Skulk Swift Claws",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "adversary"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Fell Beast")
 
 -- The wyrm marks Stress to dash in and strike.
-scene:start_session("Swift Claws")
+scn:start_session("Swift Claws")
 
 -- Example: on hit, deal 2d10+5 and force a Strength reaction to avoid knockback.
 -- Partial mapping: stress-for-advantage and attack damage dice are represented.
@@ -27,6 +27,6 @@ dh:adversary_attack{
   damage_dice = { { sides = 10, count = 2 } }
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

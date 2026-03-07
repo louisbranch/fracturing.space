@@ -1,19 +1,19 @@
-local scene = Scenario.new("armor_depletion")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("armor_depletion")
+local dh = scn:system("DAGGERHEART")
 
 -- Stage a relentless assault to grind through armor.
-scene:campaign{
+scn:campaign{
   name = "Armor Depletion",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "armor"
 }
 
-scene:pc("Frodo", { armor = 2, hp = 6 })
+scn:pc("Frodo", { armor = 2, hp = 6 })
 dh:adversary("Saruman")
 
 -- A relentless foe keeps swinging until armor gives out.
-scene:start_session("Armor Depletion")
+scn:start_session("Armor Depletion")
 
 -- First hit starts chipping away at Frodo's armor.
 dh:adversary_attack{
@@ -70,6 +70,6 @@ dh:adversary_attack{
 }
 
 -- Close the session once armor gives way.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

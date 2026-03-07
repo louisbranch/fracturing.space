@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_bree_market_sticky_fingers")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_bree_market_sticky_fingers")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the Sticky Fingers theft and chase countdowns.
-scene:campaign{
+scn:campaign{
   name = "Environment Bree Market Sticky Fingers",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- A thief targets a PC, forcing a notice roll and a chase.
-scene:start_session("Sticky Fingers")
+scn:start_session("Sticky Fingers")
 
 -- Example: Instinct roll to notice, otherwise trigger progress vs consequence countdowns.
 -- Missing DSL: model item loss and chase triggers.
@@ -28,6 +28,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

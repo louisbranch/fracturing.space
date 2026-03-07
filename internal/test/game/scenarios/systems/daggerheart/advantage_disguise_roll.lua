@@ -1,18 +1,18 @@
-local scene = Scenario.new("advantage_disguise_roll")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("advantage_disguise_roll")
+local dh = scn:system("DAGGERHEART")
 
 -- Highlight advantage on a roll due to a disguise.
-scene:campaign{
+scn:campaign{
   name = "Advantage Disguise Roll",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "advantage"
 }
 
-scene:pc("Aragorn")
+scn:pc("Aragorn")
 
 -- Aragorn slips past the head guard using a stolen uniform.
-scene:start_session("Sneak Past Guard")
+scn:start_session("Sneak Past Guard")
 
 -- Example: Difficulty 15 Presence roll with advantage from the disguise.
 dh:action_roll{
@@ -24,6 +24,6 @@ dh:action_roll{
 }
 
 -- Close the session after the stealth attempt.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

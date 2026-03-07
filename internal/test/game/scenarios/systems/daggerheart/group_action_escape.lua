@@ -1,20 +1,20 @@
-local scene = Scenario.new("group_action_escape")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("group_action_escape")
+local dh = scn:system("DAGGERHEART")
 
 -- Recreate the collapsing stronghold group action example.
-scene:campaign{
+scn:campaign{
   name = "Group Action Escape",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "teamwork"
 }
 
-scene:pc("Sam")
-scene:pc("Frodo")
-scene:pc("Gandalf")
+scn:pc("Sam")
+scn:pc("Frodo")
+scn:pc("Gandalf")
 
 -- The party bolts for the exit as the stronghold comes down.
-scene:start_session("Escape")
+scn:start_session("Escape")
 
 -- Sam leads the group action to remember the way out.
 -- Partial mapping: explicit leader/supporter outcomes are represented.
@@ -31,6 +31,6 @@ dh:group_action{
 }
 
 -- Close the session after the escape attempt.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

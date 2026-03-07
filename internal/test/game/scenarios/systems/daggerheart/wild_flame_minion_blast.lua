@@ -1,21 +1,21 @@
-local scene = Scenario.new("wild_flame_minion_blast")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("wild_flame_minion_blast")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the Wild Flame multi-target spell against minions.
-scene:campaign{
+scn:campaign{
   name = "Wild Flame Minion Blast",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "battle"
 }
 
-scene:pc("Gandalf")
+scn:pc("Gandalf")
 dh:adversary("Orc Raider A")
 dh:adversary("Orc Raider B")
 dh:adversary("Nazgul")
 
 -- Gandalf targets two minions and the knight with a single spell.
-scene:start_session("Wild Flame")
+scn:start_session("Wild Flame")
 
 -- Example: damage roll applies to all targets, minion thresholds delete extras.
 -- Missing DSL: apply Minion (4) overflow and stress marking.
@@ -30,6 +30,6 @@ dh:multi_attack{
 }
 
 -- Close the session after the blast.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

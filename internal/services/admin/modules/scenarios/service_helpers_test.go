@@ -19,6 +19,9 @@ func TestScenarioHelpersScenarioScript(t *testing.T) {
 	if !strings.Contains(defaultScript, "Scenario.new") {
 		t.Fatalf("defaultScenarioScript() missing Scenario.new: %q", defaultScript)
 	}
+	if !strings.Contains(defaultScript, `system = "DAGGERHEART"`) {
+		t.Fatalf("defaultScenarioScript() missing explicit campaign system: %q", defaultScript)
+	}
 
 	r := httptest.NewRequest(http.MethodGet, "/app/scenarios", nil)
 	if !shouldPrefillScenarioScript(r, func(*http.Request) bool { return false }) {

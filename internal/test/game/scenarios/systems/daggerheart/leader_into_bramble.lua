@@ -1,20 +1,20 @@
-local scene = Scenario.new("leader_into_bramble")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("leader_into_bramble")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the Mirkwood Warden's Into the Bramble fear action.
-scene:campaign{
+scn:campaign{
   name = "Leader Into the Bramble",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "adversary"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Mirkwood Warden")
 dh:adversary("Mirkwood Archer")
 
 -- The leader spends Fear to reposition allies and hide them.
-scene:start_session("Bramble Ambush")
+scn:start_session("Bramble Ambush")
 dh:gm_fear(1)
 
 -- Example: spotlight up to 1d4 allies and grant Hidden.
@@ -23,6 +23,6 @@ dh:gm_fear(1)
 dh:gm_spend_fear(1):spotlight("Mirkwood Warden")
 dh:apply_condition{ target = "Mirkwood Archer", add = { "HIDDEN" }, source = "into_bramble" }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

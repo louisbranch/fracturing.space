@@ -1,18 +1,18 @@
-local scene = Scenario.new("experience_spend_modifier")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("experience_spend_modifier")
+local dh = scn:system("DAGGERHEART")
 
 -- Model spending Hope to apply an Experience modifier.
-scene:campaign{
+scn:campaign{
   name = "Experience Spend Modifier",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "experience"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- Frodo uses a relevant Experience by spending Hope for a modifier.
-scene:start_session("Experience Modifier")
+scn:start_session("Experience Modifier")
 
 dh:action_roll{
   actor = "Frodo",
@@ -25,6 +25,6 @@ dh:action_roll{
   }
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

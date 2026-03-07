@@ -1,18 +1,18 @@
-local scene = Scenario.new("rest_and_downtime")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("rest_and_downtime")
+local dh = scn:system("DAGGERHEART")
 
 -- Frame Frodo between encounters for rest and downtime.
-scene:campaign{
+scn:campaign{
   name = "Rest and Downtime",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "rest"
 }
 
-scene:pc("Frodo", { hp = 3, stress = 3, armor = 1 })
+scn:pc("Frodo", { hp = 3, stress = 3, armor = 1 })
 
 -- Frodo pauses to recover between encounters.
-scene:start_session("Rest")
+scn:start_session("Rest")
 
 -- A short rest to regain footing, followed by a Prepare downtime move.
 -- TODO: Update rest deltas if rest recovery rules change.
@@ -45,6 +45,6 @@ dh:downtime_move{
 }
 
 -- Close the session once the rest is done.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn
