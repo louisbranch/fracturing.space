@@ -59,6 +59,7 @@ func campaignMainClass(coverImageURL string) string {
 // campaignPageContext holds the shared state loaded for any campaign detail page.
 type campaignPageContext struct {
 	workspace CampaignWorkspace
+	sessions  []CampaignSession
 	loc       webtemplates.Localizer
 	lang      string
 	locale    language.Tag
@@ -72,8 +73,13 @@ func (h handlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campa
 	if err != nil {
 		return nil, nil, err
 	}
+	sessions, err := h.service.CampaignSessions(ctx, campaignID)
+	if err != nil {
+		return nil, nil, err
+	}
 	return ctx, &campaignPageContext{
 		workspace: workspace,
+		sessions:  sessions,
 		loc:       loc,
 		lang:      lang,
 		locale:    h.RequestLocaleTag(r),
@@ -83,7 +89,7 @@ func (h handlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campa
 // layout centralizes this web behavior in one helper seam.
 func (p *campaignPageContext) layout(campaignID, currentPath string) webtemplates.AppMainLayoutOptions {
 	return webtemplates.AppMainLayoutOptions{
-		SideMenu:               campaignWorkspaceMenu(p.workspace, currentPath, p.loc),
+		SideMenu:               campaignWorkspaceMenu(p.workspace, currentPath, p.sessions, p.loc),
 		MainBackgroundImageURL: strings.TrimSpace(p.workspace.CoverImageURL),
 		MainClass:              campaignMainClass(p.workspace.CoverImageURL),
 		Metadata: webtemplates.AppMainLayoutMetadata{

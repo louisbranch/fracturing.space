@@ -270,7 +270,7 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-session-start-entry="true">
 				<div class="card-body">
 					if !campaignSessionStartReady(view) {
-						<div class="alert alert-warning mb-3" data-campaign-session-readiness-blocked="true">
+						<div class="alert alert-warning alert-soft mb-3" data-campaign-session-readiness-blocked="true">
 							<div class="space-y-2">
 								<p class="font-semibold">{ T(loc, "game.sessions.readiness_heading") }</p>
 								<ul class="list-disc list-inside text-sm space-y-1" data-campaign-session-readiness-blockers="true">
