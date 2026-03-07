@@ -50,7 +50,7 @@ func localizeReadinessBlockerMessage(locale commonv1.Locale, blocker readiness.B
 	case readiness.RejectionCodeSessionReadinessCharacterControllerRequired:
 		return printer.Sprintf("game.session_readiness.character_controller_required", readinessBlockerMetadataValue(blocker.Metadata, "character_id"))
 	case readiness.RejectionCodeSessionReadinessPlayerCharacterRequired:
-		return printer.Sprintf("game.session_readiness.player_character_required", readinessBlockerMetadataValue(blocker.Metadata, "participant_id"))
+		return printer.Sprintf("game.session_readiness.player_character_required", readinessPlayerParticipantLabel(blocker.Metadata))
 	case readiness.RejectionCodeSessionReadinessCharacterSystemRequired:
 		reason := readinessBlockerOptionalMetadataValue(blocker.Metadata, "reason")
 		if reason == "" {
@@ -64,6 +64,14 @@ func localizeReadinessBlockerMessage(locale commonv1.Locale, blocker readiness.B
 
 func readinessBlockerOptionalMetadataValue(metadata map[string]string, key string) string {
 	return readinessBlockerMetadataValueOrDefault(metadata, key, "")
+}
+
+func readinessPlayerParticipantLabel(metadata map[string]string) string {
+	name := readinessBlockerOptionalMetadataValue(metadata, "participant_name")
+	if name != "" {
+		return name
+	}
+	return readinessBlockerMetadataValue(metadata, "participant_id")
 }
 
 func readinessBlockerMetadataValue(metadata map[string]string, key string) string {

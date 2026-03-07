@@ -1,6 +1,7 @@
 package readiness
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
@@ -58,6 +59,7 @@ func TestEvaluateSessionStart_PlayerWithoutCharacterRejected(t *testing.T) {
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
+				Name:          "Avery",
 				Role:          string(participant.RolePlayer),
 			},
 		},
@@ -69,6 +71,12 @@ func TestEvaluateSessionStart_PlayerWithoutCharacterRejected(t *testing.T) {
 	}
 	if rejection.Code != RejectionCodeSessionReadinessPlayerCharacterRequired {
 		t.Fatalf("rejection code = %s, want %s", rejection.Code, RejectionCodeSessionReadinessPlayerCharacterRequired)
+	}
+	if !strings.Contains(rejection.Message, "Avery") {
+		t.Fatalf("rejection message = %q, want participant name", rejection.Message)
+	}
+	if strings.Contains(rejection.Message, "player-1") {
+		t.Fatalf("rejection message = %q, did not expect participant id when name is present", rejection.Message)
 	}
 }
 

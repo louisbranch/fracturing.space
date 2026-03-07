@@ -203,6 +203,34 @@ func TestLocalizeReadinessBlockerMessage_CharacterSystemWithoutReason(t *testing
 	}
 }
 
+func TestLocalizeReadinessBlockerMessage_PlayerCharacterUsesParticipantName(t *testing.T) {
+	message := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
+		Code: readiness.RejectionCodeSessionReadinessPlayerCharacterRequired,
+		Metadata: map[string]string{
+			"participant_id":   "player-2",
+			"participant_name": "Player Two",
+		},
+	})
+	if !strings.Contains(message, "Player Two") {
+		t.Fatalf("message = %q, want participant name in localized message", message)
+	}
+	if strings.Contains(message, "player-2") {
+		t.Fatalf("message = %q, did not expect participant id when name is present", message)
+	}
+}
+
+func TestLocalizeReadinessBlockerMessage_PlayerCharacterFallsBackToParticipantID(t *testing.T) {
+	message := localizeReadinessBlockerMessage(commonv1.Locale_LOCALE_EN_US, readiness.Blocker{
+		Code: readiness.RejectionCodeSessionReadinessPlayerCharacterRequired,
+		Metadata: map[string]string{
+			"participant_id": "player-2",
+		},
+	})
+	if !strings.Contains(message, "player-2") {
+		t.Fatalf("message = %q, want participant id fallback in localized message", message)
+	}
+}
+
 type readinessServiceFixtureStores struct {
 	campaign    *fakeCampaignStore
 	participant *fakeParticipantStore

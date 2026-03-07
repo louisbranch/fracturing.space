@@ -199,12 +199,22 @@ func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness Cha
 		if playerCharacterCounts[playerID] > 0 {
 			continue
 		}
+		playerState := activeParticipants.byID[playerID]
+		playerName := strings.TrimSpace(playerState.Name)
+		playerLabel := playerName
+		if playerLabel == "" {
+			playerLabel = playerID
+		}
+		metadata := map[string]string{
+			"participant_id": playerID,
+		}
+		if playerName != "" {
+			metadata["participant_name"] = playerName
+		}
 		blockers = append(blockers, newBlocker(
 			RejectionCodeSessionReadinessPlayerCharacterRequired,
-			fmt.Sprintf("campaign readiness requires player participant %s to control at least one character", playerID),
-			map[string]string{
-				"participant_id": playerID,
-			},
+			fmt.Sprintf("campaign readiness requires player participant %s to control at least one character", playerLabel),
+			metadata,
 		))
 	}
 
