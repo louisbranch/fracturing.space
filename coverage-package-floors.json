@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-07T23:22:54Z",
+  "updated_at": "2026-03-07T23:39:34Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -20,7 +20,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge",
-      "floor": 98.8,
+      "floor": 98.9,
       "description": "Bridge registry and system metadata routing boundaries."
     },
     {
