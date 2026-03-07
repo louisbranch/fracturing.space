@@ -189,7 +189,7 @@ func TestStaticAppShellScriptIncludesRouteMetadataContract(t *testing.T) {
 	}
 }
 
-func TestStaticAppShellScriptIncludesImageFallbackContract(t *testing.T) {
+func TestStaticAppShellScriptOmitsImageFallbackContract(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
@@ -210,14 +210,13 @@ func TestStaticAppShellScriptIncludesImageFallbackContract(t *testing.T) {
 		`syncAppImageStates`,
 		`document.addEventListener("load"`,
 		`document.addEventListener("error"`,
-		`data-image-el`,
-		`data-image-skeleton`,
 		`hideAppImageSkeleton`,
 		`showAppImageSkeleton`,
 		`target.style.display = "none"`,
 	} {
-		if !strings.Contains(body, marker) {
-			t.Fatalf("app-shell.js missing image fallback marker %q", marker)
+		// Invariant: image fallback behavior is intentionally removed from app-shell.js.
+		if strings.Contains(body, marker) {
+			t.Fatalf("app-shell.js unexpectedly contains removed image fallback marker %q", marker)
 		}
 	}
 }

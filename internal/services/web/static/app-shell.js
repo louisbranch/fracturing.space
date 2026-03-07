@@ -214,8 +214,6 @@ function syncAppChromeState(currentPath) {
 	syncAppNavActiveLinks(currentPath);
 	syncMainStateForRoute(currentPath);
 	initAppToasts();
-	initAppImageFallbacks();
-	syncAppImageStates();
 }
 
 var defaultToastHideAfterMs = 4500;
@@ -265,89 +263,6 @@ function initAppToasts() {
 			dismissAppToast(toast);
 		}, toastHideAfterMs(toast));
 	});
-}
-
-function appImageSkeletonForTarget(target) {
-	if (!target || typeof target.closest !== "function") {
-		return null;
-	}
-	var frame = target.closest("[data-image-frame='true']");
-	if (!frame) {
-		return null;
-	}
-	return frame.querySelector("[data-image-skeleton='true']");
-}
-
-function hideAppImageSkeleton(target) {
-	var skeleton = appImageSkeletonForTarget(target);
-	if (!skeleton || !skeleton.style) {
-		return;
-	}
-	skeleton.style.display = "none";
-}
-
-function showAppImageSkeleton(target) {
-	var skeleton = appImageSkeletonForTarget(target);
-	if (!skeleton || !skeleton.style) {
-		return;
-	}
-	skeleton.style.removeProperty("display");
-}
-
-function syncAppImageState(target) {
-	if (!target || target.getAttribute("data-image-el") !== "true") {
-		return;
-	}
-	if (!target.complete) {
-		return;
-	}
-	if (target.naturalWidth > 0) {
-		target.style.removeProperty("display");
-		hideAppImageSkeleton(target);
-		return;
-	}
-	target.style.display = "none";
-	showAppImageSkeleton(target);
-}
-
-function syncAppImageStates() {
-	var images = document.querySelectorAll("img[data-image-el='true']");
-	if (!images.length) {
-		return;
-	}
-	images.forEach(function(target) {
-		syncAppImageState(target);
-	});
-}
-
-function initAppImageFallbacks() {
-	if (window.__appImageFallbacksInitialized === true) {
-		return;
-	}
-	window.__appImageFallbacksInitialized = true;
-	document.addEventListener("load", function(event) {
-		var target = event && event.target;
-		if (!target || target.tagName !== "IMG") {
-			return;
-		}
-		if (target.getAttribute("data-image-el") !== "true") {
-			return;
-		}
-		target.style.removeProperty("display");
-		hideAppImageSkeleton(target);
-	}, true);
-	// Capture image resource failures and keep skeletons visible by hiding only the failed img node.
-	document.addEventListener("error", function(event) {
-		var target = event && event.target;
-		if (!target || target.tagName !== "IMG") {
-			return;
-		}
-		if (target.getAttribute("data-image-el") !== "true") {
-			return;
-		}
-		target.style.display = "none";
-		showAppImageSkeleton(target);
-	}, true);
 }
 
 syncAppChromeState();
