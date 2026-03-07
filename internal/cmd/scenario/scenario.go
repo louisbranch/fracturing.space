@@ -35,7 +35,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.GRPCAddr, "grpc-addr", cfg.GRPCAddr, "game server address")
 	fs.StringVar(&cfg.Scenario, "scenario", cfg.Scenario, "path to scenario lua file")
 	fs.BoolVar(&cfg.Assertions, "assert", cfg.Assertions, "enable assertions (disable to log expectations)")
-	fs.BoolVar(&cfg.ValidateComments, "validate-comments", cfg.ValidateComments, "require each scene block to start with a comment")
+	fs.BoolVar(&cfg.ValidateComments, "validate-comments", cfg.ValidateComments, "require each scenario block to start with a comment")
 	fs.BoolVar(&cfg.Verbose, "verbose", cfg.Verbose, "enable verbose logging")
 	fs.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "timeout per step")
 	if err := entrypoint.ParseArgs(fs, args); err != nil {

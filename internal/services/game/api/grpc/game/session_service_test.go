@@ -590,7 +590,7 @@ func TestClearSessionSpotlight_Success(t *testing.T) {
 			SessionID:   "s1",
 			EntityType:  "session",
 			EntityID:    "s1",
-			PayloadJSON: []byte(`{"reason":"scene shift"}`),
+			PayloadJSON: []byte(`{"reason":"scene change"}`),
 		}),
 	}}
 
@@ -607,7 +607,7 @@ func TestClearSessionSpotlight_Success(t *testing.T) {
 	resp, err := svc.ClearSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
-		Reason:     "scene shift",
+		Reason:     "scene change",
 	})
 	if err != nil {
 		t.Fatalf("ClearSessionSpotlight returned error: %v", err)
@@ -679,7 +679,7 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 			SessionID:   "s1",
 			EntityType:  "session",
 			EntityID:    "s1",
-			PayloadJSON: []byte(`{"reason":"scene shift"}`),
+			PayloadJSON: []byte(`{"reason":"scene change"}`),
 		}),
 	}}
 
@@ -699,7 +699,7 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 	_, err := svc.ClearSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1",
 		SessionId:  "s1",
-		Reason:     "scene shift",
+		Reason:     "scene change",
 	})
 	if err != nil {
 		t.Fatalf("ClearSessionSpotlight returned error: %v", err)

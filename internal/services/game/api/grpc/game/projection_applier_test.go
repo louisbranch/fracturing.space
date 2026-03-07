@@ -712,7 +712,7 @@ func TestStoresApplier_ApplySessionSpotlightSetAndClear(t *testing.T) {
 		t.Fatalf("spotlight character id = %q, want %q", spotlight.CharacterID, "char-1")
 	}
 
-	clearPayload := session.SpotlightClearedPayload{Reason: "scene shift"}
+	clearPayload := session.SpotlightClearedPayload{Reason: "scene change"}
 	clearJSON, err := json.Marshal(clearPayload)
 	if err != nil {
 		t.Fatalf("encode spotlight clear payload: %v", err)

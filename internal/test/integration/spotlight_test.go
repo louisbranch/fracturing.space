@@ -117,7 +117,7 @@ func TestSessionSpotlightLifecycle(t *testing.T) {
 	_, err = sessionClient.ClearSessionSpotlight(ctxWithUser, &gamev1.ClearSessionSpotlightRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
-		Reason:     "scene shift",
+		Reason:     "scene change",
 	})
 	if err != nil {
 		t.Fatalf("clear spotlight: %v", err)
