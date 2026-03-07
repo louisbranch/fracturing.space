@@ -84,6 +84,10 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 	if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
 		return nil, status.Errorf(codes.Internal, "decode roll payload: %v", err)
 	}
+	rollMetadata, err := decodeRollSystemMetadata(rollPayload.SystemData)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid roll system_data: %v", err)
+	}
 
 	rollRequestID := strings.TrimSpace(rollPayload.RequestID)
 	if rollRequestID == "" {
@@ -94,11 +98,10 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 	}
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 
-	rollSystemData := rollPayload.SystemData
-	rollKind := rollKindFromSystemData(rollSystemData)
-	generateHopeFear := boolFromSystemData(rollSystemData, sdKeyHopeFear, rollKind != pb.RollKind_ROLL_KIND_REACTION)
-	triggerGMMove := boolFromSystemData(rollSystemData, "gm_move", rollKind != pb.RollKind_ROLL_KIND_REACTION)
-	rollOutcome := outcomeFromSystemData(rollSystemData, rollPayload.Outcome)
+	rollKind := rollMetadata.rollKindOrDefault()
+	generateHopeFear := boolPointerValue(rollMetadata.HopeFear, rollKind != pb.RollKind_ROLL_KIND_REACTION)
+	triggerGMMove := boolPointerValue(rollMetadata.GMMove, rollKind != pb.RollKind_ROLL_KIND_REACTION)
+	rollOutcome := rollMetadata.outcomeOrFallback(rollPayload.Outcome)
 	if rollOutcome == "" {
 		return nil, status.Error(codes.InvalidArgument, "roll outcome is required")
 	}
@@ -109,11 +112,11 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 	if !generateHopeFear {
 		flavor = ""
 	}
-	crit := critFromSystemData(rollSystemData, rollOutcome)
+	crit := boolPointerValue(rollMetadata.Crit, strings.TrimSpace(rollOutcome) == pb.Outcome_CRITICAL_SUCCESS.String())
 
 	targets := normalizeTargets(in.GetTargets())
 	if len(targets) == 0 {
-		rollerID := stringFromSystemData(rollSystemData, sdKeyCharacterID)
+		rollerID := strings.TrimSpace(rollMetadata.CharacterID)
 		if strings.TrimSpace(rollerID) == "" {
 			return nil, status.Error(codes.InvalidArgument, "targets are required")
 		}
@@ -168,7 +171,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 			return nil, status.Errorf(codes.Internal, "load gm fear: %v", err)
 		}
 		beforeFear := currentSnap.GMFear
-		before, after, err := applyGMFearGain(beforeFear, gmFearDelta)
+		before, after, err := daggerheart.ApplyGMFearGain(beforeFear, gmFearDelta)
 		if err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "gm fear update invalid: %v", err)
 		}

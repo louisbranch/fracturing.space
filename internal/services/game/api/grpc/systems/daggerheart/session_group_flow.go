@@ -64,7 +64,7 @@ func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *
 			return nil, status.Error(codes.InvalidArgument, "supporter trait is required")
 		}
 
-		rollResp, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+		rollResp, err := s.runSessionActionRoll(ctx, &pb.SessionActionRollRequest{
 			CampaignId:  campaignID,
 			SessionId:   sessionID,
 			SceneId:     sceneID,
@@ -100,7 +100,7 @@ func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *
 		})
 	}
 
-	leaderRoll, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+	leaderRoll, err := s.runSessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		SceneId:     sceneID,
@@ -116,7 +116,7 @@ func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *
 	}
 
 	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
-	leaderOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
+	leaderOutcome, err := s.runApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
 		SceneId:   sceneID,
 		RollSeq:   leaderRoll.GetRollSeq(),
@@ -196,7 +196,7 @@ func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.S
 		return nil, status.Error(codes.InvalidArgument, "selected character id must match a participant")
 	}
 
-	firstRoll, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+	firstRoll, err := s.runSessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		SceneId:     sceneID,
@@ -211,7 +211,7 @@ func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.S
 		return nil, err
 	}
 
-	secondRoll, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+	secondRoll, err := s.runSessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		SceneId:     sceneID,
@@ -233,7 +233,7 @@ func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.S
 
 	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
 	applyTargets := []string{firstID, secondID}
-	selectedOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
+	selectedOutcome, err := s.runApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
 		SceneId:   sceneID,
 		RollSeq:   selectedRoll.GetRollSeq(),

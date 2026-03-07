@@ -44,6 +44,12 @@ type EventHighWaterStore interface {
 	GetLatestEventSeq(ctx context.Context, campaignID string) (uint64, error)
 }
 
+// EventCampaignLister provides campaign discovery for event journals. When
+// available, gap detection can identify campaigns missing watermark rows.
+type EventCampaignLister interface {
+	ListEventCampaignIDs(ctx context.Context) ([]string, error)
+}
+
 // ProjectionGap describes a campaign whose projection watermark is behind
 // the event journal high-water mark.
 type ProjectionGap struct {
@@ -65,8 +71,10 @@ func DetectProjectionGaps(ctx context.Context, watermarks storage.ProjectionWate
 	if err != nil {
 		return nil, fmt.Errorf("list projection watermarks: %w", err)
 	}
+	watermarkByCampaign := make(map[string]storage.ProjectionWatermark, len(wms))
 	var gaps []ProjectionGap
 	for _, wm := range wms {
+		watermarkByCampaign[wm.CampaignID] = wm
 		journalSeq, err := events.GetLatestEventSeq(ctx, wm.CampaignID)
 		if err != nil {
 			return nil, fmt.Errorf("get latest event seq for %s: %w", wm.CampaignID, err)
@@ -89,6 +97,31 @@ func DetectProjectionGaps(ctx context.Context, watermarks storage.ProjectionWate
 				JournalSeq:   journalSeq,
 			})
 		}
+	}
+	campaignLister, ok := events.(EventCampaignLister)
+	if !ok {
+		return gaps, nil
+	}
+	campaignIDs, err := campaignLister.ListEventCampaignIDs(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list event campaign ids: %w", err)
+	}
+	for _, campaignID := range campaignIDs {
+		if _, exists := watermarkByCampaign[campaignID]; exists {
+			continue
+		}
+		journalSeq, err := events.GetLatestEventSeq(ctx, campaignID)
+		if err != nil {
+			return nil, fmt.Errorf("get latest event seq for %s: %w", campaignID, err)
+		}
+		if journalSeq == 0 {
+			continue
+		}
+		gaps = append(gaps, ProjectionGap{
+			CampaignID:   campaignID,
+			WatermarkSeq: 0,
+			JournalSeq:   journalSeq,
+		})
 	}
 	return gaps, nil
 }

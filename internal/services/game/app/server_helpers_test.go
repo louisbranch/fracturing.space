@@ -305,7 +305,7 @@ func TestOpenEventStoreRequiresKey(t *testing.T) {
 		t.Fatalf("build registries: %v", err)
 	}
 
-	if _, err := openEventStore(path, false, registries.Events); err == nil {
+	if _, err := openEventStore(context.Background(), path, false, registries.Events); err == nil {
 		t.Fatal("expected error when HMAC key is missing")
 	}
 }
@@ -319,7 +319,7 @@ func TestOpenEventStoreSuccess(t *testing.T) {
 		t.Fatalf("build registries: %v", err)
 	}
 
-	store, err := openEventStore(path, false, registries.Events)
+	store, err := openEventStore(context.Background(), path, false, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}
@@ -337,7 +337,7 @@ func TestOpenEventStoreProjectionOutboxEnabledEnqueuesOnAppend(t *testing.T) {
 		t.Fatalf("build registries: %v", err)
 	}
 
-	store, err := openEventStore(path, true, registries.Events)
+	store, err := openEventStore(context.Background(), path, true, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}
@@ -389,7 +389,7 @@ func TestOpenEventStoreProjectionOutboxDisabledSkipsAppendEnqueue(t *testing.T) 
 		t.Fatalf("build registries: %v", err)
 	}
 
-	store, err := openEventStore(path, false, registries.Events)
+	store, err := openEventStore(context.Background(), path, false, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}
@@ -446,7 +446,7 @@ func TestOpenStorageBundleSuccess(t *testing.T) {
 		ProjectionsDBPath: filepath.Join(base, "projections.db"),
 		ContentDBPath:     filepath.Join(base, "content.db"),
 	}
-	bundle, err := openStorageBundle(srvEnv, registries.Events)
+	bundle, err := openStorageBundle(context.Background(), srvEnv, registries.Events)
 	if err != nil {
 		t.Fatalf("open storage bundle: %v", err)
 	}
@@ -473,7 +473,7 @@ func TestOpenStorageBundleProjectionFailure(t *testing.T) {
 		ProjectionsDBPath: filepath.Join(blocker, "projections.db"),
 		ContentDBPath:     filepath.Join(base, "content.db"),
 	}
-	if _, err := openStorageBundle(srvEnv, registries.Events); err == nil {
+	if _, err := openStorageBundle(context.Background(), srvEnv, registries.Events); err == nil {
 		t.Fatal("expected error when projection store fails to open")
 	}
 }
@@ -523,30 +523,6 @@ func TestLoadServerEnvDomainEnabled(t *testing.T) {
 	cfg := loadServerEnv()
 	if !cfg.DomainEnabled {
 		t.Fatal("expected domain to be enabled")
-	}
-}
-
-func TestLoadServerEnvCompatibilityAppendDefaults(t *testing.T) {
-	key := "FRACTURING_SPACE_GAME_COMPATIBILITY_APPEND_ENABLED"
-	if val, ok := os.LookupEnv(key); ok {
-		t.Cleanup(func() { _ = os.Setenv(key, val) })
-	} else {
-		t.Cleanup(func() { _ = os.Unsetenv(key) })
-	}
-	_ = os.Unsetenv(key)
-
-	cfg := loadServerEnv()
-	if cfg.CompatibilityAppendEnabled {
-		t.Fatal("expected compatibility append to be disabled by default")
-	}
-}
-
-func TestLoadServerEnvCompatibilityAppendEnabled(t *testing.T) {
-	t.Setenv("FRACTURING_SPACE_GAME_COMPATIBILITY_APPEND_ENABLED", "true")
-
-	cfg := loadServerEnv()
-	if !cfg.CompatibilityAppendEnabled {
-		t.Fatal("expected compatibility append to be enabled")
 	}
 }
 
@@ -967,7 +943,7 @@ func TestStartProjectionApplyOutboxWorkerProcessesRowsWhenEnabled(t *testing.T) 
 		t.Fatalf("build registries: %v", err)
 	}
 
-	store, err := openEventStore(path, true, registries.Events)
+	store, err := openEventStore(context.Background(), path, true, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}
@@ -1045,7 +1021,7 @@ func TestStartProjectionApplyOutboxShadowWorkerProcessesRowsWhenEnabled(t *testi
 		t.Fatalf("build registries: %v", err)
 	}
 
-	store, err := openEventStore(path, true, registries.Events)
+	store, err := openEventStore(context.Background(), path, true, registries.Events)
 	if err != nil {
 		t.Fatalf("open event store: %v", err)
 	}

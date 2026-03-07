@@ -61,13 +61,6 @@ var participantCommandRegistrations = []commandRegistration{
 			ValidatePayload: validateSeatReassignPayload,
 		},
 	},
-	{
-		definition: command.Definition{
-			Type:            CommandTypeSeatReassignLegacy,
-			Owner:           command.OwnerCore,
-			ValidatePayload: validateSeatReassignPayload,
-		},
-	},
 }
 
 var participantEventRegistrations = []eventProjectionRegistration{
@@ -120,16 +113,6 @@ var participantEventRegistrations = []eventProjectionRegistration{
 		},
 		emittable:  true,
 		projection: true,
-	},
-	{
-		definition: event.Definition{
-			Type:            EventTypeSeatReassignedLegacy,
-			Owner:           event.OwnerCore,
-			Addressing:      event.AddressingPolicyEntityTarget,
-			ValidatePayload: validateSeatReassignPayload,
-		},
-		emittable:  false,
-		projection: false,
 	},
 	{
 		definition: event.Definition{

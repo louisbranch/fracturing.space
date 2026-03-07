@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 1
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-03"
+last_reviewed: "2026-03-06"
 ---
 
 # Campaign Authorization Model
@@ -30,7 +30,7 @@ model is clean-slate; compatibility with legacy policy behavior is not required.
 2. Deny by default when no explicit allow rule exists.
 3. Campaign governance decisions are based on access (`OWNER/MANAGER/MEMBER`).
 4. Gameplay role labels do not implicitly grant governance rights.
-5. `ADMIN` override requires explicit reason and audit telemetry.
+5. `ADMIN` override requires an authenticated principal user claim, explicit reason, and audit telemetry.
 
 ## Permission summary
 

@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
 func TestDecideCampaignCreate_EmitsCampaignCreatedEvent(t *testing.T) {
@@ -909,6 +910,177 @@ func TestDecide_MalformedCreatePayloadRejected(t *testing.T) {
 	}
 	if decision.Rejections[0].Code != "PAYLOAD_DECODE_FAILED" {
 		t.Fatalf("rejection code = %s, want PAYLOAD_DECODE_FAILED", decision.Rejections[0].Code)
+	}
+}
+
+func TestDecideCampaignCreateWithParticipants_EmitsCampaignAndParticipantEvents(t *testing.T) {
+	now := time.Date(2026, 3, 6, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("campaign.create_with_participants"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(`{
+			"campaign":{"name":"Sunfall","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN"},
+			"participants":[{"participant_id":" p-1 ","user_id":" user-1 ","name":" Alice ","role":"PLAYER"}]
+		}`),
+	}
+
+	decision := Decide(State{}, cmd, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(decision.Events))
+	}
+
+	campaignEvent := decision.Events[0]
+	if campaignEvent.Type != EventTypeCreated {
+		t.Fatalf("campaign event type = %s, want %s", campaignEvent.Type, EventTypeCreated)
+	}
+	if !campaignEvent.Timestamp.Equal(now) {
+		t.Fatalf("campaign event timestamp = %s, want %s", campaignEvent.Timestamp, now)
+	}
+
+	joinEvent := decision.Events[1]
+	if joinEvent.Type != participant.EventTypeJoined {
+		t.Fatalf("participant event type = %s, want %s", joinEvent.Type, participant.EventTypeJoined)
+	}
+	if joinEvent.EntityType != "participant" {
+		t.Fatalf("participant event entity_type = %s, want participant", joinEvent.EntityType)
+	}
+	if joinEvent.EntityID != "p-1" {
+		t.Fatalf("participant event entity_id = %s, want p-1", joinEvent.EntityID)
+	}
+	if !joinEvent.Timestamp.Equal(now) {
+		t.Fatalf("participant event timestamp = %s, want %s", joinEvent.Timestamp, now)
+	}
+
+	var joinPayload participant.JoinPayload
+	if err := json.Unmarshal(joinEvent.PayloadJSON, &joinPayload); err != nil {
+		t.Fatalf("decode join payload: %v", err)
+	}
+	if joinPayload.ParticipantID != "p-1" {
+		t.Fatalf("participant_id = %q, want %q", joinPayload.ParticipantID, "p-1")
+	}
+	if joinPayload.UserID != "user-1" {
+		t.Fatalf("user_id = %q, want %q", joinPayload.UserID, "user-1")
+	}
+	if joinPayload.Name != "Alice" {
+		t.Fatalf("name = %q, want %q", joinPayload.Name, "Alice")
+	}
+	if joinPayload.Role != "player" {
+		t.Fatalf("role = %q, want %q", joinPayload.Role, "player")
+	}
+	if joinPayload.Controller != "human" {
+		t.Fatalf("controller = %q, want %q", joinPayload.Controller, "human")
+	}
+	if joinPayload.CampaignAccess != "member" {
+		t.Fatalf("campaign_access = %q, want %q", joinPayload.CampaignAccess, "member")
+	}
+}
+
+func TestDecideCampaignCreateWithParticipants_EmptyParticipantsRejected(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("campaign.create_with_participants"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(`{
+			"campaign":{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"},
+			"participants":[]
+		}`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignParticipantsEmpty {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignParticipantsEmpty)
+	}
+}
+
+func TestDecideCampaignCreateWithParticipants_DuplicateParticipantIDsRejected(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("campaign.create_with_participants"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(`{
+			"campaign":{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"},
+			"participants":[
+				{"participant_id":"p-1","user_id":"user-1","name":"Alice","role":"player"},
+				{"participant_id":" p-1 ","user_id":"user-2","name":"Bob","role":"player"}
+			]
+		}`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignParticipantDuplicate {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignParticipantDuplicate)
+	}
+}
+
+func TestDecideCampaignCreateWithParticipants_JoinValidationRejected(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("campaign.create_with_participants"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(`{
+			"campaign":{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"},
+			"participants":[{"participant_id":" ","user_id":"user-1","name":"Alice","role":"player"}]
+		}`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != "PARTICIPANT_ID_REQUIRED" {
+		t.Fatalf("rejection code = %s, want PARTICIPANT_ID_REQUIRED", decision.Rejections[0].Code)
+	}
+}
+
+func TestDecideCampaignCreateWithParticipants_WhenCampaignAlreadyCreatedRejected(t *testing.T) {
+	decision := Decide(State{Created: true}, command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("campaign.create_with_participants"),
+		ActorType:  command.ActorTypeSystem,
+		PayloadJSON: []byte(`{
+			"campaign":{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"},
+			"participants":[{"participant_id":"p-1","user_id":"user-1","name":"Alice","role":"player"}]
+		}`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCampaignAlreadyExists {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCampaignAlreadyExists)
+	}
+}
+
+func TestDecideCampaignCreateWithParticipants_MalformedPayloadRejected(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("campaign.create_with_participants"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{`),
+	}, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodePayloadDecodeFailed {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodePayloadDecodeFailed)
 	}
 }
 

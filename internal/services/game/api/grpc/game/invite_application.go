@@ -399,13 +399,14 @@ func findInviteClaimByJTI(ctx context.Context, store storage.EventStore, campaig
 	var cursor uint64
 	for {
 		page, err := store.ListEventsPage(ctx, storage.ListEventsPageRequest{
-			CampaignID:   campaignID,
-			PageSize:     200,
-			CursorSeq:    cursor,
-			CursorDir:    "fwd",
-			Descending:   false,
-			FilterClause: "event_type = ?",
-			FilterParams: []any{string(eventTypeInviteClaimed)},
+			CampaignID: campaignID,
+			PageSize:   200,
+			CursorSeq:  cursor,
+			CursorDir:  "fwd",
+			Descending: false,
+			Filter: storage.EventQueryFilter{
+				EventType: string(eventTypeInviteClaimed),
+			},
 		})
 		if err != nil {
 			return nil, err

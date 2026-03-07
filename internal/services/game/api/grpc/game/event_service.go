@@ -36,8 +36,7 @@ var defaultCampaignProjectionScopes = []string{
 // EventService implements the game.v1.EventService gRPC API.
 type EventService struct {
 	campaignv1.UnimplementedEventServiceServer
-	stores                     Stores
-	compatibilityAppendEnabled bool
+	stores Stores
 }
 
 type normalizedListEventsRequest struct {
@@ -46,10 +45,9 @@ type normalizedListEventsRequest struct {
 	orderBy         string
 	descending      bool
 	filterStr       string
+	filter          storage.EventQueryFilter
 	afterSeq        uint64
 	paginationScope string
-	filterClause    string
-	filterParams    []any
 	cursorSeq       uint64
 	cursorDir       string
 	cursorReverse   bool
@@ -69,13 +67,6 @@ func NewEventService(stores Stores) *EventService {
 	return &EventService{
 		stores: stores,
 	}
-}
-
-// SetCompatibilityAppendEnabled controls whether the compatibility append path
-// (direct event append without the domain engine) is available. Call this once
-// at server startup.
-func (s *EventService) SetCompatibilityAppendEnabled(enabled bool) {
-	s.compatibilityAppendEnabled = enabled
 }
 
 // AppendEvent appends a new event to the campaign journal.
@@ -112,8 +103,7 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 		CursorDir:     normalized.cursorDir,
 		CursorReverse: normalized.cursorReverse,
 		Descending:    normalized.descending,
-		FilterClause:  normalized.filterClause,
-		FilterParams:  normalized.filterParams,
+		Filter:        normalized.filter,
 	}
 
 	result, err := s.stores.Event.ListEventsPage(ctx, storeReq)
@@ -268,15 +258,10 @@ func normalizeListEventsRequest(in *campaignv1.ListEventsRequest) (normalizedLis
 	afterSeq := in.GetAfterSeq()
 	paginationScope := filterStr + "|after_seq=" + strconv.FormatUint(afterSeq, 10)
 
-	var filterClause string
-	var filterParams []any
 	if filterStr != "" {
-		cond, err := filter.ParseEventFilter(filterStr)
-		if err != nil {
+		if _, err := filter.ParseEventFilter(filterStr); err != nil {
 			return normalizedListEventsRequest{}, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
 		}
-		filterClause = cond.Clause
-		filterParams = cond.Params
 	}
 
 	var cursorSeq uint64
@@ -309,10 +294,9 @@ func normalizeListEventsRequest(in *campaignv1.ListEventsRequest) (normalizedLis
 		orderBy:         orderBy,
 		descending:      descending,
 		filterStr:       filterStr,
+		filter:          storage.EventQueryFilter{Expression: filterStr},
 		afterSeq:        afterSeq,
 		paginationScope: paginationScope,
-		filterClause:    filterClause,
-		filterParams:    filterParams,
 		cursorSeq:       cursorSeq,
 		cursorDir:       cursorDir,
 		cursorReverse:   cursorReverse,
@@ -439,8 +423,6 @@ func projectionScopesForEventType(eventType string) []string {
 	switch {
 	case strings.HasPrefix(eventType, "campaign."):
 		return []string{"campaign_summary"}
-	case eventType == "seat.reassigned":
-		return []string{"campaign_participants", "campaign_summary"}
 	case strings.HasPrefix(eventType, "participant."):
 		return []string{"campaign_participants", "campaign_summary"}
 	case strings.HasPrefix(eventType, "session."):

@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	corefilter "github.com/louisbranch/fracturing.space/internal/services/game/core/filter"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -233,7 +234,7 @@ func (s *EventStore) ListEventsPage(_ context.Context, req storage.ListEventsPag
 		if evt.Seq <= req.AfterSeq {
 			continue
 		}
-		if !eventMatchesPageFilter(evt, req.FilterClause, req.FilterParams) {
+		if !eventMatchesPageFilter(evt, req.Filter) {
 			continue
 		}
 		filtered = append(filtered, evt)
@@ -258,7 +259,61 @@ func (s *EventStore) ListEventsPage(_ context.Context, req storage.ListEventsPag
 	}, nil
 }
 
-func eventMatchesPageFilter(evt event.Event, clause string, params []any) bool {
+func eventMatchesPageFilter(evt event.Event, filter storage.EventQueryFilter) bool {
+	matchExact := func(value, current string) bool {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			return true
+		}
+		return current == value
+	}
+
+	if !matchExact(filter.EventType, string(evt.Type)) {
+		return false
+	}
+	if !matchExact(filter.SessionID, evt.SessionID) {
+		return false
+	}
+	if !matchExact(filter.SceneID, evt.SceneID) {
+		return false
+	}
+	if !matchExact(filter.RequestID, evt.RequestID) {
+		return false
+	}
+	if !matchExact(filter.InvocationID, evt.InvocationID) {
+		return false
+	}
+	if !matchExact(filter.ActorType, string(evt.ActorType)) {
+		return false
+	}
+	if !matchExact(filter.ActorID, evt.ActorID) {
+		return false
+	}
+	if !matchExact(filter.SystemID, evt.SystemID) {
+		return false
+	}
+	if !matchExact(filter.SystemVersion, evt.SystemVersion) {
+		return false
+	}
+	if !matchExact(filter.EntityType, evt.EntityType) {
+		return false
+	}
+	if !matchExact(filter.EntityID, evt.EntityID) {
+		return false
+	}
+
+	expression := strings.TrimSpace(filter.Expression)
+	if expression == "" {
+		return true
+	}
+	cond, err := corefilter.ParseEventFilter(expression)
+	if err != nil {
+		return false
+	}
+	return eventMatchesPageFilterClause(evt, cond.Clause, cond.Params)
+}
+
+func eventMatchesPageFilterClause(evt event.Event, clause string, params []any) bool {
 	if strings.TrimSpace(clause) == "" {
 		return true
 	}

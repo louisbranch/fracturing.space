@@ -1,23 +1,6 @@
 -- +migrate Up
 
-DROP TABLE IF EXISTS daggerheart_damage_types;
-DROP TABLE IF EXISTS daggerheart_loot_entries;
-DROP TABLE IF EXISTS daggerheart_companion_experiences;
-DROP TABLE IF EXISTS daggerheart_beastforms;
-DROP TABLE IF EXISTS daggerheart_adversary_entries;
-DROP TABLE IF EXISTS daggerheart_experiences;
-DROP TABLE IF EXISTS daggerheart_content_strings;
-DROP TABLE IF EXISTS daggerheart_environments;
-DROP TABLE IF EXISTS daggerheart_items;
-DROP TABLE IF EXISTS daggerheart_armor;
-DROP TABLE IF EXISTS daggerheart_weapons;
-DROP TABLE IF EXISTS daggerheart_domain_cards;
-DROP TABLE IF EXISTS daggerheart_domains;
-DROP TABLE IF EXISTS daggerheart_heritages;
-DROP TABLE IF EXISTS daggerheart_subclasses;
-DROP TABLE IF EXISTS daggerheart_classes;
-
-CREATE TABLE daggerheart_classes (
+CREATE TABLE IF NOT EXISTS daggerheart_classes (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     starting_evasion INTEGER NOT NULL DEFAULT 0,
@@ -30,7 +13,7 @@ CREATE TABLE daggerheart_classes (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_subclasses (
+CREATE TABLE IF NOT EXISTS daggerheart_subclasses (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     class_id TEXT NOT NULL,
@@ -42,7 +25,7 @@ CREATE TABLE daggerheart_subclasses (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_heritages (
+CREATE TABLE IF NOT EXISTS daggerheart_heritages (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     kind TEXT NOT NULL DEFAULT '',
@@ -51,7 +34,7 @@ CREATE TABLE daggerheart_heritages (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_domains (
+CREATE TABLE IF NOT EXISTS daggerheart_domains (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
@@ -59,7 +42,7 @@ CREATE TABLE daggerheart_domains (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_domain_cards (
+CREATE TABLE IF NOT EXISTS daggerheart_domain_cards (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     domain_id TEXT NOT NULL,
@@ -73,7 +56,7 @@ CREATE TABLE daggerheart_domain_cards (
     FOREIGN KEY (domain_id) REFERENCES daggerheart_domains(id) ON DELETE CASCADE
 );
 
-CREATE TABLE daggerheart_weapons (
+CREATE TABLE IF NOT EXISTS daggerheart_weapons (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     category TEXT NOT NULL DEFAULT '',
@@ -88,7 +71,7 @@ CREATE TABLE daggerheart_weapons (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_armor (
+CREATE TABLE IF NOT EXISTS daggerheart_armor (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     tier INTEGER NOT NULL DEFAULT 0,
@@ -100,7 +83,7 @@ CREATE TABLE daggerheart_armor (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_items (
+CREATE TABLE IF NOT EXISTS daggerheart_items (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     rarity TEXT NOT NULL DEFAULT '',
@@ -112,7 +95,7 @@ CREATE TABLE daggerheart_items (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_environments (
+CREATE TABLE IF NOT EXISTS daggerheart_environments (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     tier INTEGER NOT NULL DEFAULT 0,
@@ -126,7 +109,7 @@ CREATE TABLE daggerheart_environments (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_content_strings (
+CREATE TABLE IF NOT EXISTS daggerheart_content_strings (
     content_id TEXT NOT NULL,
     content_type TEXT NOT NULL,
     field TEXT NOT NULL,
@@ -137,7 +120,7 @@ CREATE TABLE daggerheart_content_strings (
     PRIMARY KEY (content_id, field, locale)
 );
 
-CREATE TABLE daggerheart_experiences (
+CREATE TABLE IF NOT EXISTS daggerheart_experiences (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
@@ -145,7 +128,7 @@ CREATE TABLE daggerheart_experiences (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_companion_experiences (
+CREATE TABLE IF NOT EXISTS daggerheart_companion_experiences (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
@@ -153,7 +136,7 @@ CREATE TABLE daggerheart_companion_experiences (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_adversary_entries (
+CREATE TABLE IF NOT EXISTS daggerheart_adversary_entries (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     tier INTEGER NOT NULL DEFAULT 0,
@@ -174,7 +157,7 @@ CREATE TABLE daggerheart_adversary_entries (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_beastforms (
+CREATE TABLE IF NOT EXISTS daggerheart_beastforms (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     tier INTEGER NOT NULL DEFAULT 0,
@@ -189,7 +172,7 @@ CREATE TABLE daggerheart_beastforms (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_loot_entries (
+CREATE TABLE IF NOT EXISTS daggerheart_loot_entries (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     roll INTEGER NOT NULL DEFAULT 0,
@@ -198,7 +181,7 @@ CREATE TABLE daggerheart_loot_entries (
     updated_at INTEGER NOT NULL
 );
 
-CREATE TABLE daggerheart_damage_types (
+CREATE TABLE IF NOT EXISTS daggerheart_damage_types (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',

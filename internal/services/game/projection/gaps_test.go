@@ -14,7 +14,8 @@ import (
 
 // fakeEventHighWaterStore provides GetLatestEventSeq for gap detection tests.
 type fakeEventHighWaterStore struct {
-	seqs map[string]uint64
+	seqs        map[string]uint64
+	campaignIDs []string
 }
 
 func (s *fakeEventHighWaterStore) GetLatestEventSeq(_ context.Context, campaignID string) (uint64, error) {
@@ -23,6 +24,19 @@ func (s *fakeEventHighWaterStore) GetLatestEventSeq(_ context.Context, campaignI
 		return 0, nil
 	}
 	return seq, nil
+}
+
+func (s *fakeEventHighWaterStore) ListEventCampaignIDs(_ context.Context) ([]string, error) {
+	if len(s.campaignIDs) > 0 {
+		result := make([]string, len(s.campaignIDs))
+		copy(result, s.campaignIDs)
+		return result, nil
+	}
+	ids := make([]string, 0, len(s.seqs))
+	for campaignID := range s.seqs {
+		ids = append(ids, campaignID)
+	}
+	return ids, nil
 }
 
 func TestDetectProjectionGaps_FindsGaps(t *testing.T) {
@@ -105,6 +119,43 @@ func TestDetectProjectionGaps_EmptyWatermarks(t *testing.T) {
 	}
 }
 
+func TestDetectProjectionGaps_MissingWatermarkCampaign(t *testing.T) {
+	watermarks := newFakeWatermarkStore()
+	ctx := context.Background()
+	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	_ = watermarks.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{
+		CampaignID: "camp-1",
+		AppliedSeq: 5,
+		UpdatedAt:  now,
+	})
+
+	events := &fakeEventHighWaterStore{
+		seqs: map[string]uint64{
+			"camp-1": 5,
+			"camp-2": 3,
+		},
+		campaignIDs: []string{"camp-1", "camp-2"},
+	}
+
+	gaps, err := DetectProjectionGaps(ctx, watermarks, events)
+	if err != nil {
+		t.Fatalf("detect gaps: %v", err)
+	}
+	if len(gaps) != 1 {
+		t.Fatalf("expected 1 gap, got %d", len(gaps))
+	}
+	if gaps[0].CampaignID != "camp-2" {
+		t.Fatalf("gap campaign = %s, want camp-2", gaps[0].CampaignID)
+	}
+	if gaps[0].WatermarkSeq != 0 {
+		t.Fatalf("watermark = %d, want 0", gaps[0].WatermarkSeq)
+	}
+	if gaps[0].JournalSeq != 3 {
+		t.Fatalf("journal = %d, want 3", gaps[0].JournalSeq)
+	}
+}
+
 // gapEventStore is a fake that implements storage.EventStore with configurable
 // high-water marks and event lists, suitable for gap repair tests.
 type gapEventStore struct {
@@ -139,6 +190,13 @@ func (s *gapEventStore) ListEventsBySession(context.Context, string, string, uin
 }
 func (s *gapEventStore) GetLatestEventSeq(_ context.Context, campaignID string) (uint64, error) {
 	return s.seqs[campaignID], nil
+}
+func (s *gapEventStore) ListEventCampaignIDs(_ context.Context) ([]string, error) {
+	ids := make([]string, 0, len(s.seqs))
+	for campaignID := range s.seqs {
+		ids = append(ids, campaignID)
+	}
+	return ids, nil
 }
 func (s *gapEventStore) ListEventsPage(context.Context, storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
 	return storage.ListEventsPageResult{}, nil

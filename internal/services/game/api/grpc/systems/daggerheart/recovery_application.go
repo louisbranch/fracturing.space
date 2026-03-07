@@ -83,67 +83,32 @@ func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.Daggerhear
 		return nil, handleDomainError(err)
 	}
 
-	gmFearBefore := currentSnap.GMFear
-	gmFearAfter := gmFearBefore + outcome.GMFearGain
-	if gmFearAfter > daggerheart.GMFearMax {
-		gmFearAfter = daggerheart.GMFearMax
-	}
-	shortBefore := currentSnap.ConsecutiveShortRests
-	shortAfter := outcome.State.ConsecutiveShortRests
 	longTermCountdownID := strings.TrimSpace(in.Rest.GetLongTermCountdownId())
-	var longTermCountdown *daggerheart.CountdownUpdatePayload
+	var longTermCountdown *daggerheart.Countdown
 	if outcome.AdvanceCountdown && longTermCountdownID != "" {
 		storedCountdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, longTermCountdownID)
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
-		countdown := daggerheart.Countdown{
-			CampaignID: storedCountdown.CampaignID,
-			ID:         storedCountdown.CountdownID,
-			Name:       storedCountdown.Name,
-			Kind:       storedCountdown.Kind,
-			Current:    storedCountdown.Current,
-			Max:        storedCountdown.Max,
-			Direction:  storedCountdown.Direction,
-			Looping:    storedCountdown.Looping,
-		}
-		update, err := daggerheart.ApplyCountdownUpdate(countdown, 1, nil)
-		if err != nil {
-			return nil, status.Error(codes.InvalidArgument, err.Error())
-		}
-		longTermCountdown = &daggerheart.CountdownUpdatePayload{
-			CountdownID: longTermCountdownID,
-			Before:      update.Before,
-			After:       update.After,
-			Delta:       update.Delta,
-			Looped:      update.Looped,
-			Reason:      "long_rest",
-		}
+		countdown := daggerheartCountdownFromStorage(storedCountdown)
+		longTermCountdown = &countdown
 	}
 
-	payload := daggerheart.RestTakePayload{
-		RestType:          daggerheartRestTypeToString(restType),
-		Interrupted:       in.Rest.Interrupted,
-		GMFearBefore:      gmFearBefore,
-		GMFearAfter:       gmFearAfter,
-		ShortRestsBefore:  shortBefore,
-		ShortRestsAfter:   shortAfter,
-		RefreshRest:       outcome.RefreshRest,
-		RefreshLongRest:   outcome.RefreshLongRest,
-		LongTermCountdown: longTermCountdown,
-	}
 	characterIDs := make([]string, len(in.GetCharacterIds()))
 	copy(characterIDs, in.GetCharacterIds())
-	payload.CharacterStates = make([]daggerheart.RestCharacterStatePatch, 0, len(characterIDs))
-	for _, characterID := range characterIDs {
-		characterID = strings.TrimSpace(characterID)
-		if characterID == "" {
-			continue
-		}
-		payload.CharacterStates = append(payload.CharacterStates, daggerheart.RestCharacterStatePatch{
-			CharacterID: characterID,
-		})
+	payload, err := daggerheart.ResolveRestApplication(daggerheart.RestApplicationInput{
+		RestType:               restType,
+		Interrupted:            in.Rest.Interrupted,
+		Outcome:                outcome,
+		CurrentGMFear:          currentSnap.GMFear,
+		ConsecutiveShortRests:  currentSnap.ConsecutiveShortRests,
+		CharacterIDs:           characterIDs,
+		LongTermCountdownState: longTermCountdown,
+	})
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
+
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)

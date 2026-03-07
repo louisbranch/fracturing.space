@@ -50,15 +50,10 @@ func (s *EventService) ListTimelineEntries(ctx context.Context, in *campaignv1.L
 	descending := orderBy == "seq desc"
 
 	filterStr := strings.TrimSpace(in.GetFilter())
-	var filterClause string
-	var filterParams []any
 	if filterStr != "" {
-		cond, err := filter.ParseEventFilter(filterStr)
-		if err != nil {
+		if _, err := filter.ParseEventFilter(filterStr); err != nil {
 			return nil, status.Errorf(codes.InvalidArgument, "invalid filter: %v", err)
 		}
-		filterClause = cond.Clause
-		filterParams = cond.Params
 	}
 
 	var cursorSeq uint64
@@ -96,8 +91,9 @@ func (s *EventService) ListTimelineEntries(ctx context.Context, in *campaignv1.L
 		CursorDir:     cursorDir,
 		CursorReverse: cursorReverse,
 		Descending:    descending,
-		FilterClause:  filterClause,
-		FilterParams:  filterParams,
+		Filter: storage.EventQueryFilter{
+			Expression: filterStr,
+		},
 	}
 
 	result, err := s.stores.Event.ListEventsPage(ctx, req)

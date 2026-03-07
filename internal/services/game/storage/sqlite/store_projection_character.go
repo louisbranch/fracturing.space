@@ -170,7 +170,7 @@ func (s *Store) CountCharacters(ctx context.Context, campaignID string) (int, er
 		return 0, fmt.Errorf("campaign id is required")
 	}
 	var count int64
-	err := s.sqlDB.QueryRowContext(ctx,
+	err := s.projectionQueryable().QueryRowContext(ctx,
 		"SELECT COUNT(*) FROM characters WHERE campaign_id = ?", campaignID,
 	).Scan(&count)
 	if err != nil {

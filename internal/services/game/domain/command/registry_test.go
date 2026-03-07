@@ -7,6 +7,19 @@ import (
 	"testing"
 )
 
+func TestRegistryValidateForDecision_NilRegistry(t *testing.T) {
+	var registry *Registry
+	_, err := registry.ValidateForDecision(Command{
+		CampaignID:  "camp-1",
+		Type:        Type("campaign.create"),
+		ActorType:   ActorTypeSystem,
+		PayloadJSON: []byte("{}"),
+	})
+	if err == nil || err.Error() != "registry is required" {
+		t.Fatalf("ValidateForDecision() error = %v, want registry is required", err)
+	}
+}
+
 func TestRegistryValidateForDecision_MissingCampaignID(t *testing.T) {
 	registry := NewRegistry()
 	if err := registry.Register(Definition{

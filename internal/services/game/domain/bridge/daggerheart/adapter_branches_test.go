@@ -117,6 +117,42 @@ func TestApplyConditionPatch_CreatesStateWhenMissing(t *testing.T) {
 	}
 }
 
+func TestApplyProfileTraitIncrease_KnownTraitsAndUnknownNoOp(t *testing.T) {
+	profile := storage.DaggerheartCharacterProfile{}
+	traits := []string{"agility", "strength", "finesse", "instinct", "presence", "knowledge"}
+	for _, trait := range traits {
+		applyProfileTraitIncrease(&profile, trait)
+	}
+
+	if profile.Agility != 1 || profile.Strength != 1 || profile.Finesse != 1 || profile.Instinct != 1 || profile.Presence != 1 || profile.Knowledge != 1 {
+		t.Fatalf("trait values after increment = %+v, want each trait at 1", profile)
+	}
+
+	applyProfileTraitIncrease(&profile, "unknown")
+	if profile.Agility != 1 || profile.Strength != 1 || profile.Finesse != 1 || profile.Instinct != 1 || profile.Presence != 1 || profile.Knowledge != 1 {
+		t.Fatalf("unknown trait changed profile = %+v", profile)
+	}
+}
+
+func TestAppendUnique_AppendsMissingOnly(t *testing.T) {
+	initial := []string{"card-1", "card-2"}
+	withNew := appendUnique(initial, "card-3")
+	if len(withNew) != 3 {
+		t.Fatalf("len(withNew) = %d, want 3", len(withNew))
+	}
+	if withNew[2] != "card-3" {
+		t.Fatalf("last value = %q, want %q", withNew[2], "card-3")
+	}
+
+	withDuplicate := appendUnique(withNew, "card-2")
+	if len(withDuplicate) != 3 {
+		t.Fatalf("len(withDuplicate) = %d, want 3", len(withDuplicate))
+	}
+	if withDuplicate[0] != "card-1" || withDuplicate[1] != "card-2" || withDuplicate[2] != "card-3" {
+		t.Fatalf("unexpected order/content after duplicate append: %v", withDuplicate)
+	}
+}
+
 func profileForArmorMax(campaignID, characterID string, armorMax int) storage.DaggerheartCharacterProfile {
 	return storage.DaggerheartCharacterProfile{
 		CampaignID:      campaignID,

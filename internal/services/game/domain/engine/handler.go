@@ -26,11 +26,21 @@ var (
 	ErrJournalRequired = errors.New("event journal is required")
 	// ErrGateStateLoaderRequired indicates a missing gate state loader.
 	ErrGateStateLoaderRequired = errors.New("gate state loader is required")
+	// ErrSceneGateStateLoaderRequired indicates a missing scene gate state loader.
+	ErrSceneGateStateLoaderRequired = errors.New("scene gate state loader is required")
+	// ErrSceneIDRequired indicates a missing scene id for scene-scoped commands.
+	ErrSceneIDRequired = errors.New("scene id is required for scene-scoped command")
 	// ErrPostPersistApplyFailed indicates that events were persisted to the
 	// journal but the in-memory fold step failed. Callers should use
 	// errors.Is to detect this condition and recover via replay rather than
 	// retrying the command, which would create duplicates.
 	ErrPostPersistApplyFailed = errors.New("post-persist fold failed")
+	// ErrPostPersistSnapshotFailed indicates snapshot persistence failed after
+	// journal append succeeded.
+	ErrPostPersistSnapshotFailed = errors.New("post-persist snapshot save failed")
+	// ErrPostPersistCheckpointFailed indicates checkpoint persistence failed
+	// after journal append succeeded.
+	ErrPostPersistCheckpointFailed = errors.New("post-persist checkpoint save failed")
 )
 
 // GateStateLoader loads session state for gate checks.
@@ -138,13 +148,22 @@ func NewHandler(cfg HandlerConfig) (Handler, error) {
 	if cfg.Decider == nil {
 		return Handler{}, ErrDeciderRequired
 	}
+	if requiresGateScope(cfg.Commands, command.GateScopeSession) && cfg.GateStateLoader == nil {
+		return Handler{}, ErrGateStateLoaderRequired
+	}
+	if requiresGateScope(cfg.Commands, command.GateScopeScene) && cfg.SceneGateStateLoader == nil {
+		return Handler{}, ErrSceneGateStateLoaderRequired
+	}
+	gate := cfg.Gate
+	// Bind gate registry from Commands to avoid drift and fail-open checks.
+	gate.Registry = cfg.Commands
 	return Handler{
 		Commands:             cfg.Commands,
 		Events:               cfg.Events,
 		Journal:              cfg.Journal,
 		Checkpoints:          cfg.Checkpoints,
 		Snapshots:            cfg.Snapshots,
-		Gate:                 cfg.Gate,
+		Gate:                 gate,
 		GateStateLoader:      cfg.GateStateLoader,
 		SceneGateStateLoader: cfg.SceneGateStateLoader,
 		StateLoader:          cfg.StateLoader,
@@ -180,25 +199,34 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 	if err != nil {
 		return Result{}, err
 	}
-	now := h.nowFunc()
-	if h.Checkpoints != nil && len(decision.Events) > 0 {
-		last := decision.Events[len(decision.Events)-1]
-		if last.Seq > 0 {
-			if err := h.Checkpoints.Save(ctx, replay.Checkpoint{
-				CampaignID: validated.CampaignID,
-				LastSeq:    last.Seq,
-				UpdatedAt:  now().UTC(),
-			}); err != nil {
-				return Result{}, err
-			}
+	lastSeq := lastDecisionSeq(decision.Events)
+	if lastSeq == 0 {
+		return Result{Decision: decision, State: state}, nil
+	}
+
+	if h.Snapshots != nil {
+		if err := h.Snapshots.SaveState(ctx, validated.CampaignID, lastSeq, state); err != nil {
+			return Result{}, newPostPersistError(
+				PostPersistStageSnapshot,
+				validated.CampaignID,
+				lastSeq,
+				fmt.Errorf("%w: %w", ErrPostPersistSnapshotFailed, err),
+			)
 		}
 	}
-	if h.Snapshots != nil && len(decision.Events) > 0 {
-		last := decision.Events[len(decision.Events)-1]
-		if last.Seq > 0 {
-			if err := h.Snapshots.SaveState(ctx, validated.CampaignID, last.Seq, state); err != nil {
-				return Result{}, err
-			}
+	if h.Checkpoints != nil {
+		now := h.nowFunc()
+		if err := h.Checkpoints.Save(ctx, replay.Checkpoint{
+			CampaignID: validated.CampaignID,
+			LastSeq:    lastSeq,
+			UpdatedAt:  now().UTC(),
+		}); err != nil {
+			return Result{}, newPostPersistError(
+				PostPersistStageCheckpoint,
+				validated.CampaignID,
+				lastSeq,
+				fmt.Errorf("%w: %w", ErrPostPersistCheckpointFailed, err),
+			)
 		}
 	}
 	return Result{Decision: decision, State: state}, nil
@@ -276,7 +304,7 @@ func (h Handler) evaluateSessionGate(ctx context.Context, cmd command.Command) (
 	if err != nil {
 		return command.Decision{}, false, err
 	}
-	decision := h.Gate.Check(state, cmd)
+	decision := h.boundGate().Check(state, cmd)
 	if len(decision.Rejections) > 0 {
 		return decision, true, nil
 	}
@@ -289,19 +317,16 @@ func (h Handler) evaluateSceneGate(ctx context.Context, cmd command.Command) (co
 		return command.Decision{}, false, nil
 	}
 	if cmd.SceneID == "" {
-		// No scene context — nothing to gate.
-		return command.Decision{}, false, nil
+		return command.Decision{}, false, ErrSceneIDRequired
 	}
 	if h.SceneGateStateLoader == nil {
-		// Scene gate loader is truly optional; only required for scene-scoped commands
-		// that carry a SceneID. Fall back to loading scene state from the aggregate.
-		return command.Decision{}, false, nil
+		return command.Decision{}, false, ErrSceneGateStateLoaderRequired
 	}
 	state, err := h.SceneGateStateLoader.LoadScene(ctx, cmd.CampaignID, cmd.SceneID)
 	if err != nil {
 		return command.Decision{}, false, err
 	}
-	decision := h.Gate.CheckScene(state, cmd)
+	decision := h.boundGate().CheckScene(state, cmd)
 	if len(decision.Rejections) > 0 {
 		return decision, true, nil
 	}
@@ -339,6 +364,30 @@ func (h Handler) nowFunc() func() time.Time {
 		now = time.Now
 	}
 	return now
+}
+
+func (h Handler) boundGate() DecisionGate {
+	gate := h.Gate
+	if gate.Registry == nil {
+		gate.Registry = h.Commands
+	}
+	return gate
+}
+
+func requiresGateScope(registry *command.Registry, scope command.GateScope) bool {
+	for _, def := range registry.ListDefinitions() {
+		if def.Gate.Scope == scope {
+			return true
+		}
+	}
+	return false
+}
+
+func lastDecisionSeq(events []event.Event) uint64 {
+	if len(events) == 0 {
+		return 0
+	}
+	return events[len(events)-1].Seq
 }
 
 func (h Handler) validateDecisionEvents(decision command.Decision) (command.Decision, error) {
@@ -381,7 +430,12 @@ func (h Handler) applyDecisionEvents(state any, decision command.Decision) (any,
 		stateAfter, err := h.Folder.Fold(state, evt)
 		if err != nil {
 			if journalPersisted {
-				return nil, wrapNonRetryable(fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err))
+				return nil, newPostPersistError(
+					PostPersistStageFold,
+					evt.CampaignID,
+					evt.Seq,
+					fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err),
+				)
 			}
 			return nil, err
 		}

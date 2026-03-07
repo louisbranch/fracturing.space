@@ -2,7 +2,6 @@ package game
 
 import (
 	"context"
-	"errors"
 	"strings"
 	"time"
 
@@ -24,14 +23,12 @@ const (
 )
 
 type eventApplication struct {
-	stores                     Stores
-	compatibilityAppendEnabled bool
+	stores Stores
 }
 
 func newEventApplication(service *EventService) eventApplication {
 	return eventApplication{
-		stores:                     service.stores,
-		compatibilityAppendEnabled: service.compatibilityAppendEnabled,
+		stores: service.stores,
 	}
 }
 
@@ -53,58 +50,46 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		EntityID:     strings.TrimSpace(in.GetEntityId()),
 		PayloadJSON:  in.GetPayloadJson(),
 	}
-	if a.stores.Domain != nil {
-		if cmdType, ok := domainCommandTypeForEvent(input.Type); ok {
-			cmd := commandbuild.Core(commandbuild.CoreInput{
-				CampaignID:   input.CampaignID,
-				Type:         cmdType,
-				ActorType:    commandActorTypeForEventActor(input.ActorType),
-				ActorID:      input.ActorID,
-				SessionID:    input.SessionID,
-				SceneID:      input.SceneID,
-				RequestID:    input.RequestID,
-				InvocationID: input.InvocationID,
-				EntityType:   input.EntityType,
-				EntityID:     input.EntityID,
-				PayloadJSON:  input.PayloadJSON,
-			})
-			result, err := executeDomainCommandWithoutInlineApply(ctx, a.stores, cmd, domainwrite.Options{
-				RequireEvents:   true,
-				MissingEventMsg: "append event did not emit an event",
-				ExecuteErr: func(err error) error {
-					return status.Errorf(codes.Internal, "execute domain command: %v", err)
-				},
-			})
-			if err != nil {
-				return event.Event{}, err
-			}
-			for _, emitted := range result.Decision.Events {
-				if emitted.Type == input.Type {
-					return emitted, nil
-				}
-			}
-			return event.Event{}, status.Errorf(
-				codes.FailedPrecondition,
-				"append event did not emit requested event type %s",
-				input.Type,
-			)
-		}
+	if a.stores.Domain == nil {
+		return event.Event{}, status.Error(codes.FailedPrecondition, "append event requires domain engine")
+	}
+	cmdType, ok := domainCommandTypeForEvent(input.Type)
+	if !ok {
 		return event.Event{}, status.Error(codes.FailedPrecondition, "event type is not supported for append")
 	}
-
-	if !a.compatibilityAppendEnabled {
-		return event.Event{}, status.Error(codes.FailedPrecondition, "append event compatibility mode is disabled")
-	}
-
-	stored, err := a.stores.Event.AppendEvent(ctx, input)
+	cmd := commandbuild.Core(commandbuild.CoreInput{
+		CampaignID:   input.CampaignID,
+		Type:         cmdType,
+		ActorType:    commandActorTypeForEventActor(input.ActorType),
+		ActorID:      input.ActorID,
+		SessionID:    input.SessionID,
+		SceneID:      input.SceneID,
+		RequestID:    input.RequestID,
+		InvocationID: input.InvocationID,
+		EntityType:   input.EntityType,
+		EntityID:     input.EntityID,
+		PayloadJSON:  input.PayloadJSON,
+	})
+	result, err := executeDomainCommandWithoutInlineApply(ctx, a.stores, cmd, domainwrite.Options{
+		RequireEvents:   true,
+		MissingEventMsg: "append event did not emit an event",
+		ExecuteErr: func(err error) error {
+			return status.Errorf(codes.Internal, "execute domain command: %v", err)
+		},
+	})
 	if err != nil {
-		if isEventValidationError(err) {
-			return event.Event{}, status.Error(codes.InvalidArgument, err.Error())
-		}
-		return event.Event{}, status.Errorf(codes.Internal, "append event: %v", err)
+		return event.Event{}, err
 	}
-
-	return stored, nil
+	for _, emitted := range result.Decision.Events {
+		if emitted.Type == input.Type {
+			return emitted, nil
+		}
+	}
+	return event.Event{}, status.Errorf(
+		codes.FailedPrecondition,
+		"append event did not emit requested event type %s",
+		input.Type,
+	)
 }
 
 func appendEventScopeAllowed(ctx context.Context) bool {
@@ -124,31 +109,19 @@ func appendEventScopeAllowed(ctx context.Context) bool {
 	}
 }
 
-func isEventValidationError(err error) bool {
-	return errors.Is(err, event.ErrCampaignIDRequired) ||
-		errors.Is(err, event.ErrTypeRequired) ||
-		errors.Is(err, event.ErrTypeUnknown) ||
-		errors.Is(err, event.ErrActorTypeInvalid) ||
-		errors.Is(err, event.ErrActorIDRequired) ||
-		errors.Is(err, event.ErrSystemMetadataRequired) ||
-		errors.Is(err, event.ErrSystemMetadataForbidden) ||
-		errors.Is(err, event.ErrPayloadInvalid) ||
-		errors.Is(err, event.ErrStorageFieldsSet)
-}
-
-var compatibilityEventCommandMap = map[event.Type]command.Type{
-	eventTypeStoryNoteAdded:        commandTypeStoryNoteAdd,
-	eventTypeActionRollResolved:    commandTypeActionRollResolve,
-	eventTypeActionOutcomeApplied:  commandTypeActionOutcomeApply,
-	eventTypeActionOutcomeRejected: commandTypeActionOutcomeReject,
-}
-
 func domainCommandTypeForEvent(eventType event.Type) (command.Type, bool) {
-	cmdType, ok := compatibilityEventCommandMap[eventType]
-	if !ok {
+	switch eventType {
+	case eventTypeStoryNoteAdded:
+		return commandTypeStoryNoteAdd, true
+	case eventTypeActionRollResolved:
+		return commandTypeActionRollResolve, true
+	case eventTypeActionOutcomeApplied:
+		return commandTypeActionOutcomeApply, true
+	case eventTypeActionOutcomeRejected:
+		return commandTypeActionOutcomeReject, true
+	default:
 		return "", false
 	}
-	return cmdType, true
 }
 
 func commandActorTypeForEventActor(actorType event.ActorType) command.ActorType {

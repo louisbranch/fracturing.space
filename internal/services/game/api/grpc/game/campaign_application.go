@@ -90,8 +90,12 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate campaign id: %v", err)
 	}
 
-	applier := c.stores.Applier()
-	payload := campaign.CreatePayload{
+	creatorID, err := c.idGenerator()
+	if err != nil {
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
+	}
+
+	campaignPayload := campaign.CreatePayload{
 		Name:         normalized.Name,
 		Locale:       platformi18n.LocaleString(normalized.Locale),
 		GameSystem:   normalized.System.String(),
@@ -99,37 +103,6 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		Intent:       campaignIntentToProto(normalized.Intent).String(),
 		AccessPolicy: campaignAccessPolicyToProto(normalized.AccessPolicy).String(),
 		ThemePrompt:  normalized.ThemePrompt,
-	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
-		ctx,
-		c.stores,
-		applier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeCampaignCreate,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "campaign",
-			EntityID:     campaignID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.Options{},
-	)
-	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
-	}
-
-	creatorID, err := c.idGenerator()
-	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
 	}
 
 	profile := loadSocialProfileSnapshot(ctx, c.stores.Social, userID)
@@ -176,36 +149,34 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		})
 	}
 
-	requestID := grpcmeta.RequestIDFromContext(ctx)
-	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	for _, participantPayload := range participantPayloads {
-		participantPayloadJSON, err := json.Marshal(participantPayload)
-		if err != nil {
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode participant payload: %v", err)
-		}
+	workflowPayloadJSON, err := json.Marshal(campaign.CreateWithParticipantsPayload{
+		Campaign:     campaignPayload,
+		Participants: participantPayloads,
+	})
+	if err != nil {
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode create workflow payload: %v", err)
+	}
 
-		_, err = executeAndApplyDomainCommand(
-			ctx,
-			c.stores,
-			applier,
-			commandbuild.Core(commandbuild.CoreInput{
-				CampaignID:   campaignID,
-				Type:         commandTypeParticipantJoin,
-				ActorType:    command.ActorTypeSystem,
-				ActorID:      "",
-				RequestID:    requestID,
-				InvocationID: invocationID,
-				EntityType:   "participant",
-				EntityID:     participantPayload.ParticipantID,
-				PayloadJSON:  participantPayloadJSON,
-			}),
-			domainwrite.Options{
-				ApplyErrMessage: "apply participant event",
-			},
-		)
-		if err != nil {
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
-		}
+	actorID, actorType := resolveCommandActor(ctx)
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.stores,
+		c.stores.Applier(),
+		commandbuild.Core(commandbuild.CoreInput{
+			CampaignID:   campaignID,
+			Type:         commandTypeCampaignCreateWithParticipants,
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			EntityType:   "campaign",
+			EntityID:     campaignID,
+			PayloadJSON:  workflowPayloadJSON,
+		}),
+		domainwrite.Options{},
+	)
+	if err != nil {
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
 	}
 
 	ownerParticipant, err := c.stores.Participant.GetParticipant(ctx, campaignID, creatorID)

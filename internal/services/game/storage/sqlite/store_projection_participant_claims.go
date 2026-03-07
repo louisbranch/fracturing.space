@@ -33,7 +33,7 @@ func (s *Store) PutParticipantClaim(ctx context.Context, campaignID, userID, par
 		claimedAt = time.Now().UTC()
 	}
 
-	_, err := s.sqlDB.ExecContext(
+	_, err := s.projectionQueryable().ExecContext(
 		ctx,
 		"INSERT INTO participant_claims (campaign_id, user_id, participant_id, claimed_at) VALUES (?, ?, ?, ?)",
 		campaignID,
@@ -80,7 +80,7 @@ func (s *Store) GetParticipantClaim(ctx context.Context, campaignID, userID stri
 		return storage.ParticipantClaim{}, fmt.Errorf("user id is required")
 	}
 
-	row := s.sqlDB.QueryRowContext(
+	row := s.projectionQueryable().QueryRowContext(
 		ctx,
 		"SELECT participant_id, claimed_at FROM participant_claims WHERE campaign_id = ? AND user_id = ?",
 		campaignID,
@@ -118,7 +118,7 @@ func (s *Store) DeleteParticipantClaim(ctx context.Context, campaignID, userID s
 		return fmt.Errorf("user id is required")
 	}
 
-	_, err := s.sqlDB.ExecContext(
+	_, err := s.projectionQueryable().ExecContext(
 		ctx,
 		"DELETE FROM participant_claims WHERE campaign_id = ? AND user_id = ?",
 		campaignID,

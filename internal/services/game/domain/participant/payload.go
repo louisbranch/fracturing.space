@@ -38,7 +38,7 @@ type UnbindPayload struct {
 	Reason        string `json:"reason,omitempty"`
 }
 
-// SeatReassignPayload captures the payload for seat.reassign commands and seat.reassigned events.
+// SeatReassignPayload captures the payload for participant seat reassignment commands/events.
 type SeatReassignPayload struct {
 	ParticipantID string `json:"participant_id"`
 	PriorUserID   string `json:"prior_user_id,omitempty"`

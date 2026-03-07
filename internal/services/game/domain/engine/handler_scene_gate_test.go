@@ -32,8 +32,9 @@ func TestHandle_RejectsWhenSceneGateOpen(t *testing.T) {
 
 	decider := &spyDecider{}
 	handler := Handler{
-		Commands:             registry,
-		Gate:                 DecisionGate{Registry: registry},
+		Commands: registry,
+		// Intentionally leave Gate.Registry empty to verify handler binds from Commands.
+		Gate:                 DecisionGate{},
 		SceneGateStateLoader: fakeSceneGateLoader{state: scene.State{GateOpen: true, GateID: "sg-1"}},
 		Decider:              decider,
 	}
@@ -59,7 +60,7 @@ func TestHandle_RejectsWhenSceneGateOpen(t *testing.T) {
 	}
 }
 
-func TestHandle_SceneGateSkippedWhenNoSceneID(t *testing.T) {
+func TestHandle_SceneGateRequiresSceneID(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
 		Type:  command.Type("scene.action"),
@@ -71,24 +72,22 @@ func TestHandle_SceneGateSkippedWhenNoSceneID(t *testing.T) {
 		t.Fatalf("register command: %v", err)
 	}
 
-	decider := &spyDecider{}
 	handler := Handler{
 		Commands:             registry,
 		Gate:                 DecisionGate{Registry: registry},
 		SceneGateStateLoader: fakeSceneGateLoader{state: scene.State{GateOpen: true, GateID: "sg-1"}},
-		Decider:              decider,
+		Decider:              &spyDecider{},
 	}
 	cmd := command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("scene.action"),
 		ActorType:  command.ActorTypeSystem,
-		// No SceneID — gate check should be skipped.
+		// No SceneID — scene-scoped command must fail closed.
 	}
 
-	// This will fail at decider (spyDecider returns no events) but NOT at gate check.
-	_, _ = handler.Handle(context.Background(), cmd)
-	if !decider.called {
-		t.Fatal("expected decider to be called when scene gate is skipped")
+	_, err := handler.Handle(context.Background(), cmd)
+	if !errors.Is(err, ErrSceneIDRequired) {
+		t.Fatalf("expected ErrSceneIDRequired, got %v", err)
 	}
 }
 
@@ -123,7 +122,7 @@ func TestHandle_SceneGateLoaderError(t *testing.T) {
 	}
 }
 
-func TestHandle_SceneGateNilLoaderFallsThrough(t *testing.T) {
+func TestHandle_SceneGateRequiresLoader(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
 		Type:  command.Type("scene.action"),
@@ -135,12 +134,10 @@ func TestHandle_SceneGateNilLoaderFallsThrough(t *testing.T) {
 		t.Fatalf("register command: %v", err)
 	}
 
-	decider := &spyDecider{}
 	handler := Handler{
 		Commands: registry,
 		Gate:     DecisionGate{Registry: registry},
-		// SceneGateStateLoader is nil — should fall through.
-		Decider: decider,
+		Decider:  &spyDecider{},
 	}
 	cmd := command.Command{
 		CampaignID: "camp-1",
@@ -149,8 +146,8 @@ func TestHandle_SceneGateNilLoaderFallsThrough(t *testing.T) {
 		SceneID:    "scene-1",
 	}
 
-	_, _ = handler.Handle(context.Background(), cmd)
-	if !decider.called {
-		t.Fatal("expected decider to be called when scene gate loader is nil")
+	_, err := handler.Handle(context.Background(), cmd)
+	if !errors.Is(err, ErrSceneGateStateLoaderRequired) {
+		t.Fatalf("expected ErrSceneGateStateLoaderRequired, got %v", err)
 	}
 }

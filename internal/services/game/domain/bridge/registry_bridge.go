@@ -247,17 +247,6 @@ func (r *MetadataRegistry) DefaultVersion(id commonv1.GameSystem) string {
 	return r.defaults[id]
 }
 
-// MustGet returns the game system for the given ID, or panics if not registered.
-// For newcomer-safe call paths, prefer GetOrError so startup can surface
-// registry problems without panics.
-func (r *MetadataRegistry) MustGet(id commonv1.GameSystem) GameSystem {
-	system, err := r.GetOrError(id)
-	if err != nil {
-		panic(err)
-	}
-	return system
-}
-
 // GetOrError returns the game system for the given ID or an error if not found.
 func (r *MetadataRegistry) GetOrError(id commonv1.GameSystem) (GameSystem, error) {
 	system := r.Get(id)

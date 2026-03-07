@@ -31,14 +31,14 @@ type catalogCapabilityState struct {
 // dialStatusLenient attempts to connect to the status service.
 // On failure it returns nil values — the reporter will accumulate locally.
 // The caller must close the returned connection on shutdown.
-func dialStatusLenient(addr string) (*grpc.ClientConn, statusv1.StatusServiceClient) {
+func dialStatusLenient(ctx context.Context, addr string) (*grpc.ClientConn, statusv1.StatusServiceClient) {
 	if addr == "" {
 		return nil, nil
 	}
 	logf := func(format string, args ...any) {
 		log.Printf("status %s", fmt.Sprintf(format, args...))
 	}
-	conn := platformgrpc.DialLenient(context.Background(), addr, logf)
+	conn := platformgrpc.DialLenient(startupContext(ctx), addr, logf)
 	if conn == nil {
 		log.Printf("status service unavailable; capability reporting disabled")
 		return nil, nil

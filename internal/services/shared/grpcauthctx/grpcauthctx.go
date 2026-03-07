@@ -9,6 +9,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
+const adminOverridePrincipalUserID = "platform-admin"
+
 // WithUserID returns a context with user-id gRPC metadata when userID is non-empty.
 func WithUserID(ctx context.Context, userID string) context.Context {
 	if ctx == nil {
@@ -42,11 +44,31 @@ func WithAdminOverride(ctx context.Context, reason string) context.Context {
 	if reason == "" {
 		return ctx
 	}
+	if userID := strings.TrimSpace(UserIDFromOutgoingContext(ctx)); userID != "" {
+		return metadata.AppendToOutgoingContext(
+			ctx,
+			grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
+			grpcmeta.AuthzOverrideReasonHeader, reason,
+		)
+	}
 	return metadata.AppendToOutgoingContext(
 		ctx,
 		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
 		grpcmeta.AuthzOverrideReasonHeader, reason,
+		grpcmeta.UserIDHeader, adminOverridePrincipalUserID,
 	)
+}
+
+// UserIDFromOutgoingContext returns the first user-id metadata value from outgoing context.
+func UserIDFromOutgoingContext(ctx context.Context) string {
+	if ctx == nil {
+		return ""
+	}
+	md, ok := metadata.FromOutgoingContext(ctx)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(grpcmeta.FirstMetadataValue(md, grpcmeta.UserIDHeader))
 }
 
 // WithServiceID returns a context with internal service identity metadata.

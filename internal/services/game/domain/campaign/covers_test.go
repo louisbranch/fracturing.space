@@ -52,3 +52,15 @@ func TestDefaultCampaignCoverAssetID_IsDeterministicForCampaignID(t *testing.T) 
 		t.Fatalf("expected deterministic default %q to be in catalog", first)
 	}
 }
+
+func TestDefaultCampaignCoverAssetID_EmptyCatalogReturnsBlank(t *testing.T) {
+	originalCatalog := campaignCoverAssetCatalog
+	campaignCoverAssetCatalog = nil
+	t.Cleanup(func() {
+		campaignCoverAssetCatalog = originalCatalog
+	})
+
+	if got := defaultCampaignCoverAssetID("camp-1"); got != "" {
+		t.Fatalf("defaultCampaignCoverAssetID() = %q, want blank when catalog is empty", got)
+	}
+}

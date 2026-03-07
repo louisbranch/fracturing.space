@@ -420,18 +420,18 @@ func TestRegistryValidateForAppend_RejectsZeroTimestamp(t *testing.T) {
 func TestRegistryRegisterAlias_ResolvesDeprecatedToCanonical(t *testing.T) {
 	registry := NewRegistry()
 	if err := registry.Register(Definition{
-		Type:  Type("participant.seat_reassigned"),
+		Type:  Type("campaign.created"),
 		Owner: OwnerCore,
 	}); err != nil {
 		t.Fatalf("register type: %v", err)
 	}
-	if err := registry.RegisterAlias(Type("seat.reassigned"), Type("participant.seat_reassigned")); err != nil {
+	if err := registry.RegisterAlias(Type("legacy.campaign.created"), Type("campaign.created")); err != nil {
 		t.Fatalf("register alias: %v", err)
 	}
 
-	got := registry.Resolve(Type("seat.reassigned"))
-	if got != Type("participant.seat_reassigned") {
-		t.Fatalf("Resolve(seat.reassigned) = %s, want participant.seat_reassigned", got)
+	got := registry.Resolve(Type("legacy.campaign.created"))
+	if got != Type("campaign.created") {
+		t.Fatalf("Resolve(legacy.campaign.created) = %s, want campaign.created", got)
 	}
 }
 
@@ -454,15 +454,15 @@ func TestRegistryRegisterAlias_RejectsUnknownCanonical(t *testing.T) {
 func TestRegistryRegisterAlias_RejectsDuplicateAlias(t *testing.T) {
 	registry := NewRegistry()
 	if err := registry.Register(Definition{
-		Type:  Type("participant.seat_reassigned"),
+		Type:  Type("campaign.created"),
 		Owner: OwnerCore,
 	}); err != nil {
 		t.Fatalf("register type: %v", err)
 	}
-	if err := registry.RegisterAlias(Type("seat.reassigned"), Type("participant.seat_reassigned")); err != nil {
+	if err := registry.RegisterAlias(Type("legacy.campaign.created"), Type("campaign.created")); err != nil {
 		t.Fatalf("register first alias: %v", err)
 	}
-	err := registry.RegisterAlias(Type("seat.reassigned"), Type("participant.seat_reassigned"))
+	err := registry.RegisterAlias(Type("legacy.campaign.created"), Type("campaign.created"))
 	if err == nil {
 		t.Fatal("expected error for duplicate alias")
 	}

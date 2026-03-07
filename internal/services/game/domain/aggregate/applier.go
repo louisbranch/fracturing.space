@@ -88,14 +88,16 @@ func (a *Folder) Fold(state any, evt event.Event) (any, error) {
 		return State{}, err
 	}
 
+	hasSystemID := evt.SystemID != ""
+	hasSystemVersion := evt.SystemVersion != ""
 	if fn, ok := a.foldIndex[evt.Type]; ok {
 		if err := fn(&current, evt); err != nil {
 			return current, err
 		}
+	} else if !hasSystemID && !hasSystemVersion {
+		return current, fmt.Errorf("no core fold handler registered for event type %s", evt.Type)
 	}
 
-	hasSystemID := evt.SystemID != ""
-	hasSystemVersion := evt.SystemVersion != ""
 	if hasSystemID != hasSystemVersion {
 		return current, fmt.Errorf("system id and version are both required but only got id=%q version=%q", evt.SystemID, evt.SystemVersion)
 	}

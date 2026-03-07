@@ -192,35 +192,21 @@ func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.Dagg
 		return nil, handleDomainError(err)
 	}
 
-	countdown := daggerheart.Countdown{
-		CampaignID: storedCountdown.CampaignID,
-		ID:         storedCountdown.CountdownID,
-		Name:       storedCountdown.Name,
-		Kind:       storedCountdown.Kind,
-		Current:    storedCountdown.Current,
-		Max:        storedCountdown.Max,
-		Direction:  storedCountdown.Direction,
-		Looping:    storedCountdown.Looping,
-	}
 	var override *int
 	if in.Current != nil {
 		value := int(in.GetCurrent())
 		override = &value
 	}
-	update, err := daggerheart.ApplyCountdownUpdate(countdown, int(in.GetDelta()), override)
+	mutation, err := daggerheart.ResolveCountdownMutation(daggerheart.CountdownMutationInput{
+		Countdown: daggerheartCountdownFromStorage(storedCountdown),
+		Delta:     int(in.GetDelta()),
+		Override:  override,
+		Reason:    strings.TrimSpace(in.GetReason()),
+	})
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-
-	payload := daggerheart.CountdownUpdatePayload{
-		CountdownID: countdownID,
-		Before:      update.Before,
-		After:       update.After,
-		Delta:       update.Delta,
-		Looped:      update.Looped,
-		Reason:      strings.TrimSpace(in.GetReason()),
-	}
-	payloadJSON, err := json.Marshal(payload)
+	payloadJSON, err := json.Marshal(mutation.Payload)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "encode countdown update payload: %v", err)
 	}
@@ -253,9 +239,9 @@ func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.Dagg
 
 	return &pb.DaggerheartUpdateCountdownResponse{
 		Countdown: daggerheartCountdownToProto(updatedCountdown),
-		Before:    int32(update.Before),
-		After:     int32(update.After),
-		Delta:     int32(update.Delta),
+		Before:    int32(mutation.Update.Before),
+		After:     int32(mutation.Update.After),
+		Delta:     int32(mutation.Update.Delta),
 	}, nil
 }
 

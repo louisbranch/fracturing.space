@@ -57,15 +57,15 @@ type serverBootstrapConfig struct {
 // This interface keeps storage construction injectable for tests and future
 // non-SQLite implementations.
 type storageBundleOpener interface {
-	Open(serverEnv, *event.Registry) (*storageBundle, error)
+	Open(context.Context, serverEnv, *event.Registry) (*storageBundle, error)
 }
 
 // storageBundleOpenerFunc adapts an existing function to storageBundleOpener.
-type storageBundleOpenerFunc func(serverEnv, *event.Registry) (*storageBundle, error)
+type storageBundleOpenerFunc func(context.Context, serverEnv, *event.Registry) (*storageBundle, error)
 
 // Open satisfies storageBundleOpener.
-func (openFn storageBundleOpenerFunc) Open(env serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
-	return openFn(env, eventRegistry)
+func (openFn storageBundleOpenerFunc) Open(ctx context.Context, env serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
+	return openFn(ctx, env, eventRegistry)
 }
 
 func newServerBootstrap() *serverBootstrap {
@@ -85,8 +85,8 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 		cfg.listen = net.Listen
 	}
 	if cfg.openStorageBundle == nil {
-		cfg.openStorageBundle = storageBundleOpenerFunc(func(env serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
-			return openStorageBundle(env, eventRegistry)
+		cfg.openStorageBundle = storageBundleOpenerFunc(func(ctx context.Context, env serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
+			return openStorageBundle(ctx, env, eventRegistry)
 		})
 	}
 	if cfg.configureDomain == nil {
@@ -143,19 +143,27 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	return cfg
 }
 
+func startupContext(ctx context.Context) context.Context {
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
+}
+
 // NewWithAddr builds a game server using named startup phases.
 // It preserves the previous startup behavior while improving testability through dependency seams.
-func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
+func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server *Server, err error) {
+	startupCtx := startupContext(ctx)
 	srvEnv := b.config.loadEnv()
 
 	registries, err := engine.BuildRegistries(registeredSystemModules()...)
 	if err != nil {
-		return nil, fmt.Errorf("build registries: %w", err)
+		return nil, wrapStartupError(startupPhaseRegistries, "build registries", err)
 	}
 
 	listener, err := b.config.listen("tcp", addr)
 	if err != nil {
-		return nil, fmt.Errorf("listen on %s: %w", addr, err)
+		return nil, wrapStartupError(startupPhaseNetwork, fmt.Sprintf("listen on %s", addr), err)
 	}
 	defer func() {
 		if err == nil {
@@ -164,9 +172,9 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		_ = listener.Close()
 	}()
 
-	bundle, err := b.config.openStorageBundle.Open(srvEnv, registries.Events)
+	bundle, err := b.config.openStorageBundle.Open(startupCtx, srvEnv, registries.Events)
 	if err != nil {
-		return nil, err
+		return nil, wrapStartupError(startupPhaseStorage, "open storage bundle", err)
 	}
 	defer func() {
 		if err == nil {
@@ -176,7 +184,6 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	}()
 
 	writeRuntime := gamegrpc.NewWriteRuntime()
-
 	stores := gamegrpc.Stores{
 		Campaign:           bundle.projections,
 		Participant:        bundle.projections,
@@ -192,34 +199,39 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		SceneGate:          bundle.projections,
 		SceneSpotlight:     bundle.projections,
 		Event:              bundle.events,
+		Watermarks:         bundle.projections,
 		Audit:              bundle.events,
 		Statistics:         bundle.projections,
 		Snapshot:           bundle.projections,
 		CampaignFork:       bundle.projections,
 		DaggerheartContent: bundle.content,
 		WriteRuntime:       writeRuntime,
+		Events:             registries.Events,
 	}
 	if err := b.config.configureDomain(srvEnv, &stores, registries); err != nil {
-		return nil, fmt.Errorf("configure domain: %w", err)
+		return nil, wrapStartupError(startupPhaseDomain, "configure domain", err)
 	}
 	if err := stores.Validate(); err != nil {
-		return nil, fmt.Errorf("validate stores: %w", err)
+		return nil, wrapStartupError(startupPhaseDomain, "validate stores", err)
 	}
+
 	systemRegistry, err := b.config.buildSystemRegistry()
 	if err != nil {
-		return nil, fmt.Errorf("build system registry: %w", err)
+		return nil, wrapStartupError(startupPhaseSystems, "build system registry", err)
 	}
+
 	applier, err := stores.TryApplier()
 	if err != nil {
-		return nil, fmt.Errorf("build projection applier: %w", err)
+		return nil, wrapStartupError(startupPhaseDomain, "build projection applier", err)
 	}
-	repairProjectionGaps(bundle, applier)
 	if err := b.config.validateSystemRegistration(registeredSystemModules(), systemRegistry, applier.Adapters); err != nil {
-		return nil, fmt.Errorf("validate system parity: %w", err)
+		return nil, wrapStartupError(startupPhaseSystems, "validate system parity", err)
 	}
-	authClients, err := b.config.dialAuthGRPC(context.Background(), srvEnv.AuthAddr)
+	repairProjectionGaps(startupCtx, bundle, applier)
+
+	authClients, err := b.config.dialAuthGRPC(startupCtx, srvEnv.AuthAddr)
 	if err != nil {
-		return nil, err
+		return nil, wrapStartupError(startupPhaseDependencies, "dial auth gRPC", err)
 	}
 	defer func() {
 		if err == nil {
@@ -229,7 +241,8 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 			_ = authClients.conn.Close()
 		}
 	}()
-	socialClients, socialErr := b.config.dialSocialGRPC(context.Background(), srvEnv.SocialAddr)
+
+	socialClients, socialErr := b.config.dialSocialGRPC(startupCtx, srvEnv.SocialAddr)
 	if socialErr != nil {
 		log.Printf("social client unavailable; participant pronouns fallback disabled: %v", socialErr)
 		socialClients = socialGRPCClients{}
@@ -242,7 +255,8 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 			_ = socialClients.conn.Close()
 		}
 	}()
-	aiClients, aiErr := b.config.dialAIGRPC(context.Background(), srvEnv.AIAddr)
+
+	aiClients, aiErr := b.config.dialAIGRPC(startupCtx, srvEnv.AIAddr)
 	if aiErr != nil {
 		log.Printf("ai client unavailable; campaign ai binding operations will be unavailable: %v", aiErr)
 		aiClients = aiGRPCClients{}
@@ -261,7 +275,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	healthServer := b.config.newHealthServer()
 	sessionGrantConfig, err := aisessiongrant.LoadConfigFromEnv(time.Now)
 	if err != nil {
-		return nil, fmt.Errorf("load ai session grant config: %w", err)
+		return nil, wrapStartupError(startupPhaseDependencies, "load ai session grant config", err)
 	}
 	if err := b.registerServices(
 		grpcServer,
@@ -272,26 +286,24 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		aiClients.agentClient,
 		systemRegistry,
 		sessionGrantConfig,
-		srvEnv.CompatibilityAppendEnabled,
 	); err != nil {
-		return nil, err
+		return nil, wrapStartupError(startupPhaseTransport, "register gRPC services", err)
 	}
 
 	enableApplyWorker, enableShadowWorker, projectionApplyMode, err := b.config.resolveProjectionApplyModes(srvEnv)
 	if err != nil {
-		return nil, fmt.Errorf("resolve projection apply outbox modes: %w", err)
+		return nil, wrapStartupError(startupPhaseRuntime, "resolve projection apply outbox modes", err)
 	}
 	writeRuntime.SetInlineApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
 	log.Printf("projection apply mode = %s", projectionApplyMode)
 
 	projectionRegistries, err := b.config.buildProjectionRegistries(registries, applier.Adapters)
 	if err != nil {
-		return nil, fmt.Errorf("build projection registries: %w", err)
+		return nil, wrapStartupError(startupPhaseRuntime, "build projection registries", err)
 	}
 	writeRuntime.SetIntentFilter(projectionRegistries)
 
-	// Wire status reporter: lenient dial, nil-safe if unreachable.
-	statusConn, statusClient := dialStatusLenient(srvEnv.StatusAddr)
+	statusConn, statusClient := dialStatusLenient(startupCtx, srvEnv.StatusAddr)
 	defer func() {
 		if err == nil {
 			return
@@ -300,7 +312,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 			_ = statusConn.Close()
 		}
 	}()
-	catalogState := evaluateCatalogCapabilityState(context.Background(), bundle.content)
+	catalogState := evaluateCatalogCapabilityState(startupCtx, bundle.content)
 	statusReporter := initStatusReporter(
 		statusClient,
 		socialClients.socialClient != nil,
@@ -333,15 +345,20 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	return server, nil
 }
 
+type grpcServiceDescriptor struct {
+	healthService string
+	register      func(*grpc.Server)
+}
+
 func (b *serverBootstrap) registerServices(
-	grpcServer *grpc.Server, healthServer *health.Server,
+	grpcServer *grpc.Server,
+	healthServer *health.Server,
 	stores gamegrpc.Stores,
 	bundle *storageBundle,
 	authClient authv1.AuthServiceClient,
 	aiAgentClient aiv1.AgentServiceClient,
 	systemRegistry *bridge.MetadataRegistry,
 	sessionGrantConfig aisessiongrant.Config,
-	compatibilityAppendEnabled bool,
 ) error {
 	daggerheartStores := daggerheartservice.Stores{
 		Campaign:           bundle.projections,
@@ -352,6 +369,7 @@ func (b *serverBootstrap) registerServices(
 		Daggerheart:        bundle.projections,
 		DaggerheartContent: bundle.content,
 		Event:              bundle.events,
+		Watermarks:         bundle.projections,
 		Domain:             stores.Domain,
 		WriteRuntime:       stores.WriteRuntime,
 	}
@@ -372,44 +390,113 @@ func (b *serverBootstrap) registerServices(
 	sceneService := gamegrpc.NewSceneService(stores)
 	forkService := gamegrpc.NewForkService(stores)
 	eventService := gamegrpc.NewEventService(stores)
-	eventService.SetCompatibilityAppendEnabled(compatibilityAppendEnabled)
 	statisticsService := gamegrpc.NewStatisticsService(stores)
 	systemService := gamegrpc.NewSystemService(systemRegistry)
 	authorizationService := gamegrpc.NewAuthorizationService(stores)
 	campaignAIService := gamegrpc.NewCampaignAIService(stores, sessionGrantConfig)
 
-	daggerheartv1.RegisterDaggerheartServiceServer(grpcServer, daggerheartService)
-	daggerheartv1.RegisterDaggerheartContentServiceServer(grpcServer, contentService)
-	statev1.RegisterCampaignServiceServer(grpcServer, campaignService)
-	statev1.RegisterCampaignAIServiceServer(grpcServer, campaignAIService)
-	statev1.RegisterParticipantServiceServer(grpcServer, participantService)
-	statev1.RegisterInviteServiceServer(grpcServer, inviteService)
-	statev1.RegisterCharacterServiceServer(grpcServer, characterService)
-	statev1.RegisterSnapshotServiceServer(grpcServer, snapshotService)
-	statev1.RegisterSessionServiceServer(grpcServer, sessionService)
-	statev1.RegisterSceneServiceServer(grpcServer, sceneService)
-	statev1.RegisterForkServiceServer(grpcServer, forkService)
-	statev1.RegisterEventServiceServer(grpcServer, eventService)
-	statev1.RegisterStatisticsServiceServer(grpcServer, statisticsService)
-	statev1.RegisterSystemServiceServer(grpcServer, systemService)
-	statev1.RegisterAuthorizationServiceServer(grpcServer, authorizationService)
+	descriptors := []grpcServiceDescriptor{
+		{
+			healthService: "systems.daggerheart.v1.DaggerheartService",
+			register: func(server *grpc.Server) {
+				daggerheartv1.RegisterDaggerheartServiceServer(server, daggerheartService)
+			},
+		},
+		{
+			healthService: "systems.daggerheart.v1.DaggerheartContentService",
+			register: func(server *grpc.Server) {
+				daggerheartv1.RegisterDaggerheartContentServiceServer(server, contentService)
+			},
+		},
+		{
+			healthService: "game.v1.CampaignService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterCampaignServiceServer(server, campaignService)
+			},
+		},
+		{
+			healthService: "game.v1.CampaignAIService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterCampaignAIServiceServer(server, campaignAIService)
+			},
+		},
+		{
+			healthService: "game.v1.ParticipantService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterParticipantServiceServer(server, participantService)
+			},
+		},
+		{
+			healthService: "game.v1.InviteService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterInviteServiceServer(server, inviteService)
+			},
+		},
+		{
+			healthService: "game.v1.CharacterService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterCharacterServiceServer(server, characterService)
+			},
+		},
+		{
+			healthService: "game.v1.SnapshotService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterSnapshotServiceServer(server, snapshotService)
+			},
+		},
+		{
+			healthService: "game.v1.SessionService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterSessionServiceServer(server, sessionService)
+			},
+		},
+		{
+			healthService: "game.v1.SceneService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterSceneServiceServer(server, sceneService)
+			},
+		},
+		{
+			healthService: "game.v1.ForkService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterForkServiceServer(server, forkService)
+			},
+		},
+		{
+			healthService: "game.v1.EventService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterEventServiceServer(server, eventService)
+			},
+		},
+		{
+			healthService: "game.v1.StatisticsService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterStatisticsServiceServer(server, statisticsService)
+			},
+		},
+		{
+			healthService: "game.v1.SystemService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterSystemServiceServer(server, systemService)
+			},
+		},
+		{
+			healthService: "game.v1.AuthorizationService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterAuthorizationServiceServer(server, authorizationService)
+			},
+		},
+	}
+
+	for _, descriptor := range descriptors {
+		descriptor.register(grpcServer)
+	}
+
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("systems.daggerheart.v1.DaggerheartService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("systems.daggerheart.v1.DaggerheartContentService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.CampaignService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.ParticipantService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.InviteService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.CharacterService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.SnapshotService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.SessionService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.SceneService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.ForkService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.EventService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.StatisticsService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.SystemService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.CampaignAIService", grpc_health_v1.HealthCheckResponse_SERVING)
-	healthServer.SetServingStatus("game.v1.AuthorizationService", grpc_health_v1.HealthCheckResponse_SERVING)
+	for _, descriptor := range descriptors {
+		healthServer.SetServingStatus(descriptor.healthService, grpc_health_v1.HealthCheckResponse_SERVING)
+	}
 	return nil
 }
 

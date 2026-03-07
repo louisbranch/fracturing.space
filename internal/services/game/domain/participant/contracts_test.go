@@ -31,7 +31,6 @@ func TestParticipantContractTypeLists(t *testing.T) {
 		CommandTypeBind,
 		CommandTypeUnbind,
 		CommandTypeSeatReassign,
-		CommandTypeSeatReassignLegacy,
 	}
 	if !testcontracts.EqualSlices(commands, wantCommands) {
 		t.Fatalf("DeciderHandledCommands() = %v, want %v", commands, wantCommands)
@@ -50,7 +49,6 @@ func TestParticipantContractTypeLists(t *testing.T) {
 		EventTypeBound,
 		EventTypeUnbound,
 		EventTypeSeatReassigned,
-		EventTypeSeatReassignedLegacy,
 	}
 	if !testcontracts.EqualSlices(foldTypes, wantFold) {
 		t.Fatalf("FoldHandledTypes() = %v, want %v", foldTypes, wantFold)

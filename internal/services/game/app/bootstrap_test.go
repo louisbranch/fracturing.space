@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"net"
 	"testing"
@@ -74,12 +75,12 @@ func TestServerBootstrapListensAndClosesOnOpenStorageFailure(t *testing.T) {
 		listen: func(_ string, _ string) (net.Listener, error) {
 			return rawListener, nil
 		},
-		openStorageBundle: storageBundleOpenerFunc(func(_ serverEnv, _ *event.Registry) (*storageBundle, error) {
+		openStorageBundle: storageBundleOpenerFunc(func(context.Context, serverEnv, *event.Registry) (*storageBundle, error) {
 			return nil, errors.New("unable to open storage")
 		}),
 	})
 
-	_, err := bootstrap.NewWithAddr(":0")
+	_, err := bootstrap.NewWithAddr(context.Background(), ":0")
 	if err == nil {
 		t.Fatal("expected bootstrap to fail on storage")
 	}

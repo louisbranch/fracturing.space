@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -29,6 +30,32 @@ func (s *trackingSnapshotStore) SaveState(_ context.Context, campaignID string, 
 	s.lastSeq = lastSeq
 	s.state = state
 	return s.err
+}
+
+type orderedSnapshotStore struct {
+	order *[]string
+}
+
+func (s *orderedSnapshotStore) GetState(context.Context, string) (any, uint64, error) {
+	return nil, 0, replay.ErrCheckpointNotFound
+}
+
+func (s *orderedSnapshotStore) SaveState(context.Context, string, uint64, any) error {
+	*s.order = append(*s.order, "snapshot")
+	return nil
+}
+
+type orderedCheckpointStore struct {
+	order *[]string
+}
+
+func (s *orderedCheckpointStore) Get(context.Context, string) (replay.Checkpoint, error) {
+	return replay.Checkpoint{}, replay.ErrCheckpointNotFound
+}
+
+func (s *orderedCheckpointStore) Save(context.Context, replay.Checkpoint) error {
+	*s.order = append(*s.order, "checkpoint")
+	return nil
 }
 
 func TestHandle_RequiresGateStateLoaderForSessionScopedCommand(t *testing.T) {
@@ -144,6 +171,30 @@ func TestExecute_DoesNotSaveCheckpointOrSnapshotForUnsequencedEvents(t *testing.
 	}
 }
 
+func TestExecute_SavesSnapshotBeforeCheckpoint(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{Type: command.Type("action.test"), Owner: command.OwnerCore}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+	journal := &fakeJournal{}
+	order := make([]string, 0, 2)
+	handler := Handler{
+		Commands:    cmdRegistry,
+		Decider:     fixedDecider{decision: command.Accept(event.Event{CampaignID: "camp-1", Type: event.Type("action.tested"), Timestamp: time.Unix(0, 0).UTC(), ActorType: event.ActorTypeSystem, PayloadJSON: []byte(`{}`)})},
+		Journal:     journal,
+		Checkpoints: &orderedCheckpointStore{order: &order},
+		Snapshots:   &orderedSnapshotStore{order: &order},
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{CampaignID: "camp-1", Type: command.Type("action.test"), ActorType: command.ActorTypeSystem})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if got := strings.Join(order, ","); got != "snapshot,checkpoint" {
+		t.Fatalf("post-persist order = %q, want %q", got, "snapshot,checkpoint")
+	}
+}
+
 func TestExecute_PropagatesSnapshotSaveError(t *testing.T) {
 	cmdRegistry := command.NewRegistry()
 	if err := cmdRegistry.Register(command.Definition{Type: command.Type("action.test"), Owner: command.OwnerCore}); err != nil {
@@ -151,17 +202,41 @@ func TestExecute_PropagatesSnapshotSaveError(t *testing.T) {
 	}
 	journal := &fakeJournal{}
 	snapshotErr := errors.New("snapshot save boom")
+	checkpoints := &fakeCheckpointStore{}
 	handler := Handler{
-		Commands: cmdRegistry,
-		Decider:  fixedDecider{decision: command.Accept(event.Event{CampaignID: "camp-1", Type: event.Type("action.tested"), Timestamp: time.Unix(0, 0).UTC(), ActorType: event.ActorTypeSystem, PayloadJSON: []byte(`{}`)})},
-		Journal:  journal,
+		Commands:    cmdRegistry,
+		Decider:     fixedDecider{decision: command.Accept(event.Event{CampaignID: "camp-1", Type: event.Type("action.tested"), Timestamp: time.Unix(0, 0).UTC(), ActorType: event.ActorTypeSystem, PayloadJSON: []byte(`{}`)})},
+		Journal:     journal,
+		Checkpoints: checkpoints,
 		Snapshots: &trackingSnapshotStore{
 			err: snapshotErr,
 		},
 	}
 
 	_, err := handler.Execute(context.Background(), command.Command{CampaignID: "camp-1", Type: command.Type("action.test"), ActorType: command.ActorTypeSystem})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrPostPersistSnapshotFailed) {
+		t.Fatalf("expected ErrPostPersistSnapshotFailed, got %v", err)
+	}
 	if !errors.Is(err, snapshotErr) {
 		t.Fatalf("expected snapshot error, got %v", err)
+	}
+	if !IsNonRetryable(err) {
+		t.Fatal("expected snapshot save failure to be non-retryable")
+	}
+	meta, ok := AsPostPersistError(err)
+	if !ok {
+		t.Fatal("expected post-persist metadata")
+	}
+	if meta.Stage != PostPersistStageSnapshot {
+		t.Fatalf("stage = %q, want %q", meta.Stage, PostPersistStageSnapshot)
+	}
+	if meta.LastSeq != 1 {
+		t.Fatalf("last seq = %d, want 1", meta.LastSeq)
+	}
+	if checkpoints.calls != 0 {
+		t.Fatalf("checkpoint calls = %d, want 0 when snapshot save fails", checkpoints.calls)
 	}
 }

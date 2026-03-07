@@ -67,3 +67,16 @@ func daggerheartCountdownToProto(countdown storage.DaggerheartCountdown) *pb.Dag
 		Looping:     countdown.Looping,
 	}
 }
+
+func daggerheartCountdownFromStorage(countdown storage.DaggerheartCountdown) daggerheart.Countdown {
+	return daggerheart.Countdown{
+		CampaignID: countdown.CampaignID,
+		ID:         countdown.CountdownID,
+		Name:       countdown.Name,
+		Kind:       countdown.Kind,
+		Current:    countdown.Current,
+		Max:        countdown.Max,
+		Direction:  countdown.Direction,
+		Looping:    countdown.Looping,
+	}
+}

@@ -29,6 +29,13 @@ var campaignCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
+			Type:            CommandTypeCreateWithParticipants,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateCreateWithParticipantsPayload,
+		},
+	},
+	{
+		definition: command.Definition{
 			Type:            CommandTypeUpdate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateUpdatePayload,
@@ -211,6 +218,16 @@ func campaignEventTypes(include func(eventProjectionContract) bool) []event.Type
 // validateCreatePayload ensures command payloads match the campaign create shape.
 func validateCreatePayload(raw json.RawMessage) error {
 	var payload CreatePayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateCreateWithParticipantsPayload ensures workflow payload includes
+// campaign create input and participant bootstrap inputs.
+func validateCreateWithParticipantsPayload(raw json.RawMessage) error {
+	var payload CreateWithParticipantsPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}

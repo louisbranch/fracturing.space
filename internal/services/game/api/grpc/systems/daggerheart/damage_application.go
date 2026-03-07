@@ -103,8 +103,12 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 		if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
 			return nil, status.Errorf(codes.Internal, "decode damage roll payload: %v", err)
 		}
-		rollCharacterID := stringFromSystemData(rollPayload.SystemData, sdKeyCharacterID)
-		if stringFromSystemData(rollPayload.SystemData, sdKeyRollKind) != "damage_roll" {
+		rollMetadata, err := decodeRollSystemMetadata(rollPayload.SystemData)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid roll system_data: %v", err)
+		}
+		rollCharacterID := strings.TrimSpace(rollMetadata.CharacterID)
+		if rollMetadata.rollKindCode() != "damage_roll" {
 			return nil, status.Error(codes.InvalidArgument, "roll_seq does not reference a damage roll")
 		}
 		if rollCharacterID != characterID && !containsString(sourceCharacterIDs, rollCharacterID) {
@@ -249,11 +253,15 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 		if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
 			return nil, status.Errorf(codes.Internal, "decode damage roll payload: %v", err)
 		}
-		if stringFromSystemData(rollPayload.SystemData, sdKeyRollKind) != "damage_roll" {
+		rollMetadata, err := decodeRollSystemMetadata(rollPayload.SystemData)
+		if err != nil {
+			return nil, status.Errorf(codes.InvalidArgument, "invalid roll system_data: %v", err)
+		}
+		if rollMetadata.rollKindCode() != "damage_roll" {
 			return nil, status.Error(codes.InvalidArgument, "roll_seq does not reference a damage roll")
 		}
 		if len(sourceCharacterIDs) > 0 {
-			rollCharacterID := stringFromSystemData(rollPayload.SystemData, sdKeyCharacterID)
+			rollCharacterID := strings.TrimSpace(rollMetadata.CharacterID)
 			if !containsString(sourceCharacterIDs, rollCharacterID) {
 				return nil, status.Error(codes.InvalidArgument, "roll_seq does not match source character")
 			}

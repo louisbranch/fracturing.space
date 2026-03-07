@@ -23,12 +23,22 @@ import (
 )
 
 func New(port int) (*Server, error) {
-	return NewWithAddr(fmt.Sprintf(":%d", port))
+	return NewContext(context.Background(), port)
+}
+
+// NewContext creates a configured game server listening on the provided port.
+func NewContext(ctx context.Context, port int) (*Server, error) {
+	return NewWithAddrContext(ctx, fmt.Sprintf(":%d", port))
 }
 
 // NewWithAddr creates a configured game server listening on the provided address.
 func NewWithAddr(addr string) (*Server, error) {
-	return newServerBootstrap().NewWithAddr(addr)
+	return NewWithAddrContext(context.Background(), addr)
+}
+
+// NewWithAddrContext creates a configured game server listening on the provided address.
+func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
+	return newServerBootstrap().NewWithAddr(ctx, addr)
 }
 
 func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store, eventRegistry *event.Registry) func(context.Context, event.Event) error {
@@ -63,7 +73,12 @@ func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store, event
 					Session:          txStore,
 					SessionGate:      txStore,
 					SessionSpotlight: txStore,
+					Scene:            txStore,
+					SceneCharacter:   txStore,
+					SceneGate:        txStore,
+					SceneSpotlight:   txStore,
 					Adapters:         systemAdapters,
+					Watermarks:       txStore,
 				}
 				return txApplier.Apply(applyCtx, applyEvt)
 			},
@@ -95,8 +110,8 @@ func buildProjectionRegistries(registries engine.Registries, adapters *bridge.Ad
 }
 
 // openStorageBundle opens event, projection, and content databases.
-func openStorageBundle(srvEnv serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
-	eventStore, err := openEventStore(srvEnv.EventsDBPath, srvEnv.ProjectionApplyOutboxEnabled, eventRegistry)
+func openStorageBundle(ctx context.Context, srvEnv serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
+	eventStore, err := openEventStore(ctx, srvEnv.EventsDBPath, srvEnv.ProjectionApplyOutboxEnabled, eventRegistry)
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +135,7 @@ func openStorageBundle(srvEnv serverEnv, eventRegistry *event.Registry) (*storag
 
 // dialAuthGRPC opens an authenticated gRPC client to auth service.
 func dialAuthGRPC(ctx context.Context, authAddr string) (authGRPCClients, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+	ctx = startupContext(ctx)
 	logf := func(format string, args ...any) {
 		log.Printf("auth %s", fmt.Sprintf(format, args...))
 	}
@@ -152,9 +165,7 @@ func dialAuthGRPC(ctx context.Context, authAddr string) (authGRPCClients, error)
 
 // dialSocialGRPC opens an authenticated gRPC client to social service.
 func dialSocialGRPC(ctx context.Context, socialAddr string) (socialGRPCClients, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+	ctx = startupContext(ctx)
 	logf := func(format string, args ...any) {
 		log.Printf("social %s", fmt.Sprintf(format, args...))
 	}
@@ -184,9 +195,7 @@ func dialSocialGRPC(ctx context.Context, socialAddr string) (socialGRPCClients, 
 
 // dialAIGRPC opens a gRPC client to ai service.
 func dialAIGRPC(ctx context.Context, aiAddr string) (aiGRPCClients, error) {
-	if ctx == nil {
-		ctx = context.Background()
-	}
+	ctx = startupContext(ctx)
 	logf := func(format string, args ...any) {
 		log.Printf("ai %s", fmt.Sprintf(format, args...))
 	}
@@ -215,7 +224,7 @@ func dialAIGRPC(ctx context.Context, aiAddr string) (aiGRPCClients, error) {
 }
 
 // openEventStore opens the immutable event store and verifies chain integrity on boot.
-func openEventStore(path string, projectionApplyOutboxEnabled bool, eventRegistry *event.Registry) (*storagesqlite.Store, error) {
+func openEventStore(ctx context.Context, path string, projectionApplyOutboxEnabled bool, eventRegistry *event.Registry) (*storagesqlite.Store, error) {
 	if err := ensureDir(path); err != nil {
 		return nil, err
 	}
@@ -232,7 +241,7 @@ func openEventStore(path string, projectionApplyOutboxEnabled bool, eventRegistr
 	if err != nil {
 		return nil, fmt.Errorf("open events store: %w", err)
 	}
-	if err := store.VerifyEventIntegrity(context.Background()); err != nil {
+	if err := store.VerifyEventIntegrity(startupContext(ctx)); err != nil {
 		_ = store.Close()
 		return nil, fmt.Errorf("verify event integrity: %w", err)
 	}
@@ -265,11 +274,11 @@ func openContentStore(path string) (*storagesqlite.Store, error) {
 
 // repairProjectionGaps detects and auto-repairs projection gaps on startup by
 // replaying missing events from the journal into the projection applier.
-func repairProjectionGaps(bundle *storageBundle, applier projection.Applier) {
+func repairProjectionGaps(ctx context.Context, bundle *storageBundle, applier projection.Applier) {
 	if bundle == nil || bundle.projections == nil || bundle.events == nil {
 		return
 	}
-	results, err := projection.RepairProjectionGaps(context.Background(), bundle.projections, bundle.events, applier)
+	results, err := projection.RepairProjectionGaps(startupContext(ctx), bundle.projections, bundle.events, applier)
 	if err != nil {
 		log.Printf("projection gap repair: %v", err)
 		return

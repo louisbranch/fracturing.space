@@ -19,7 +19,6 @@ const (
 	TypeParticipantUpdated        Type = "participant.updated"
 	TypeParticipantBound          Type = "participant.bound"
 	TypeParticipantUnbound        Type = "participant.unbound"
-	TypeSeatReassigned            Type = "seat.reassigned"
 	TypeParticipantSeatReassigned Type = "participant.seat_reassigned"
 )
 

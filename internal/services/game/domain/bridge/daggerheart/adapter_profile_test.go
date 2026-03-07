@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func TestApplyProfile_GuardsAndReset(t *testing.T) {
@@ -74,6 +76,14 @@ func TestApplyProfile_PersistsValidatedProfile(t *testing.T) {
 	if len(profile.Experiences) != 1 || profile.Experiences[0].Name != "Scout" {
 		t.Fatalf("unexpected experiences: %+v", profile.Experiences)
 	}
+
+	state, err := store.GetDaggerheartCharacterState(context.Background(), "camp-1", "char-1")
+	if err != nil {
+		t.Fatalf("get state: %v", err)
+	}
+	if state.Hp != 6 || state.Hope != HopeDefault || state.HopeMax != HopeMaxDefault || state.Stress != StressDefault || state.Armor != ArmorDefault || state.LifeState != LifeStateAlive {
+		t.Fatalf("unexpected seeded state: %+v", state)
+	}
 }
 
 func TestApplyProfile_DefaultsLevelWhenZero(t *testing.T) {
@@ -100,5 +110,46 @@ func TestApplyProfile_DefaultsLevelWhenZero(t *testing.T) {
 	}
 	if profile.Level != 1 {
 		t.Fatalf("profile level = %d, want 1 default", profile.Level)
+	}
+}
+
+func TestApplyProfile_DoesNotOverwriteExistingState(t *testing.T) {
+	store := newParityDaggerheartStore()
+	adapter := NewAdapter(store)
+
+	if err := store.PutDaggerheartCharacterState(context.Background(), storage.DaggerheartCharacterState{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		Hp:          2,
+		Hope:        1,
+		HopeMax:     4,
+		Stress:      3,
+		Armor:       1,
+		LifeState:   LifeStateUnconscious,
+	}); err != nil {
+		t.Fatalf("seed state: %v", err)
+	}
+
+	payload := json.RawMessage(`{
+		"level": 1,
+		"hp_max": 6,
+		"stress_max": 6,
+		"evasion": 10,
+		"major_threshold": 3,
+		"severe_threshold": 6,
+		"proficiency": 1,
+		"armor_score": 0,
+		"armor_max": 2
+	}`)
+	if err := adapter.ApplyProfile(context.Background(), "camp-1", "char-1", payload); err != nil {
+		t.Fatalf("ApplyProfile: %v", err)
+	}
+
+	state, err := store.GetDaggerheartCharacterState(context.Background(), "camp-1", "char-1")
+	if err != nil {
+		t.Fatalf("get state: %v", err)
+	}
+	if state.Hp != 2 || state.Hope != 1 || state.HopeMax != 4 || state.Stress != 3 || state.Armor != 1 || state.LifeState != LifeStateUnconscious {
+		t.Fatalf("state was overwritten: %+v", state)
 	}
 }

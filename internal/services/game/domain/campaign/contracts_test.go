@@ -37,6 +37,7 @@ func TestCampaignContractTypeLists(t *testing.T) {
 	commands := DeciderHandledCommands()
 	wantCommands := []command.Type{
 		CommandTypeCreate,
+		CommandTypeCreateWithParticipants,
 		CommandTypeUpdate,
 		CommandTypeAIBind,
 		CommandTypeAIUnbind,

@@ -35,6 +35,7 @@ func TestRegistryEventTypeHelpers_StayAlignedWithFoldContract(t *testing.T) {
 func TestDeciderHandledCommands_ReturnsCharacterCommandContract(t *testing.T) {
 	want := []command.Type{
 		CommandTypeCreate,
+		CommandTypeCreateWithProfile,
 		CommandTypeUpdate,
 		CommandTypeDelete,
 		CommandTypeProfileUpdate,

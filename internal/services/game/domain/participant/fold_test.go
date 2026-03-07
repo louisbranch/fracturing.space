@@ -108,10 +108,7 @@ func TestFoldParticipantUnboundClearsUserID(t *testing.T) {
 
 func TestFoldSeatReassignedUpdatesUserID(t *testing.T) {
 	state := State{Joined: true, ParticipantID: "p-1", UserID: "u-1"}
-	eventTypes := []event.Type{
-		event.Type("seat.reassigned"),
-		event.Type("participant.seat_reassigned"),
-	}
+	eventTypes := []event.Type{event.Type("participant.seat_reassigned")}
 	for _, eventType := range eventTypes {
 		t.Run(string(eventType), func(t *testing.T) {
 			updated, err := Fold(state, event.Event{
@@ -136,7 +133,6 @@ func TestFoldParticipantRecognizedEvents_InvalidPayloadReturnsError(t *testing.T
 		EventTypeBound,
 		EventTypeUnbound,
 		EventTypeSeatReassigned,
-		EventTypeSeatReassignedLegacy,
 	}
 
 	for _, eventType := range eventTypes {

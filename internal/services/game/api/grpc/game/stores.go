@@ -37,6 +37,7 @@ type Stores struct {
 
 	// Infrastructure stores — event journal, snapshots, audit.
 	Event      storage.EventStore
+	Watermarks storage.ProjectionWatermarkStore
 	Audit      storage.AuditEventStore
 	Statistics storage.StatisticsStore
 	Snapshot   storage.SnapshotStore
@@ -72,7 +73,7 @@ func NewWriteRuntime() *domainwrite.Runtime {
 func (s Stores) Applier() projection.Applier {
 	applier, err := s.TryApplier()
 	if err != nil {
-		panic(err)
+		return projection.Applier{}
 	}
 	return applier
 }
@@ -106,6 +107,7 @@ func (s Stores) TryApplier() (projection.Applier, error) {
 		SceneCharacter:   s.SceneCharacter,
 		SceneGate:        s.SceneGate,
 		SceneSpotlight:   s.SceneSpotlight,
+		Watermarks:       s.Watermarks,
 		Adapters:         adapters,
 	}, nil
 }

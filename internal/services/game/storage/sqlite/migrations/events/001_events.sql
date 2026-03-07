@@ -1,19 +1,6 @@
 -- +migrate Up
 
-DROP TRIGGER IF EXISTS events_no_delete;
-DROP TRIGGER IF EXISTS events_no_update;
-DROP INDEX IF EXISTS idx_audit_events_timestamp;
-DROP INDEX IF EXISTS idx_audit_events_campaign_id;
-DROP TABLE IF EXISTS audit_events;
-DROP TABLE IF EXISTS outcome_applied;
-DROP TABLE IF EXISTS event_seq;
-DROP INDEX IF EXISTS idx_events_system;
-DROP INDEX IF EXISTS idx_events_type;
-DROP INDEX IF EXISTS idx_events_session;
-DROP INDEX IF EXISTS idx_events_hash;
-DROP TABLE IF EXISTS events;
-
-CREATE TABLE events (
+CREATE TABLE IF NOT EXISTS events (
     campaign_id TEXT NOT NULL,
     seq INTEGER NOT NULL,
     event_hash TEXT NOT NULL,
@@ -36,26 +23,26 @@ CREATE TABLE events (
     PRIMARY KEY (campaign_id, seq)
 );
 
-CREATE UNIQUE INDEX idx_events_hash ON events(event_hash);
-CREATE INDEX idx_events_session ON events(campaign_id, session_id)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_events_hash ON events(event_hash);
+CREATE INDEX IF NOT EXISTS idx_events_session ON events(campaign_id, session_id)
     WHERE session_id != '';
-CREATE INDEX idx_events_type ON events(campaign_id, event_type);
-CREATE INDEX idx_events_system ON events(campaign_id, system_id, system_version)
+CREATE INDEX IF NOT EXISTS idx_events_type ON events(campaign_id, event_type);
+CREATE INDEX IF NOT EXISTS idx_events_system ON events(campaign_id, system_id, system_version)
     WHERE system_id != '';
 
-CREATE TABLE event_seq (
+CREATE TABLE IF NOT EXISTS event_seq (
     campaign_id TEXT PRIMARY KEY,
     next_seq INTEGER NOT NULL DEFAULT 1
 );
 
-CREATE TABLE outcome_applied (
+CREATE TABLE IF NOT EXISTS outcome_applied (
     campaign_id TEXT NOT NULL,
     session_id TEXT NOT NULL,
     request_id TEXT NOT NULL,
     PRIMARY KEY (campaign_id, session_id, request_id)
 );
 
-CREATE TABLE audit_events (
+CREATE TABLE IF NOT EXISTS audit_events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   timestamp INTEGER NOT NULL,
   event_name TEXT NOT NULL,
@@ -71,16 +58,16 @@ CREATE TABLE audit_events (
   attributes_json BLOB
 );
 
-CREATE INDEX idx_audit_events_campaign_id ON audit_events (campaign_id);
-CREATE INDEX idx_audit_events_timestamp ON audit_events (timestamp);
+CREATE INDEX IF NOT EXISTS idx_audit_events_campaign_id ON audit_events (campaign_id);
+CREATE INDEX IF NOT EXISTS idx_audit_events_timestamp ON audit_events (timestamp);
 
-CREATE TRIGGER events_no_update
+CREATE TRIGGER IF NOT EXISTS events_no_update
 BEFORE UPDATE ON events
 BEGIN
     SELECT RAISE(FAIL, 'events are append-only');
 END;
 
-CREATE TRIGGER events_no_delete
+CREATE TRIGGER IF NOT EXISTS events_no_delete
 BEFORE DELETE ON events
 BEGIN
     SELECT RAISE(FAIL, 'events are append-only');

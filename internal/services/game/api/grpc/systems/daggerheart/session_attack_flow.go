@@ -51,7 +51,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 		return nil, status.Error(codes.InvalidArgument, "damage_type is required")
 	}
 
-	rollResp, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+	rollResp, err := s.runSessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:        campaignID,
 		SessionId:         sessionID,
 		SceneId:           sceneID,
@@ -69,7 +69,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 	}
 
 	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
-	rollOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
+	rollOutcome, err := s.runApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
 		SceneId:   sceneID,
 		RollSeq:   rollResp.GetRollSeq(),
@@ -78,7 +78,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 		return nil, err
 	}
 
-	attackOutcome, err := s.ApplyAttackOutcome(ctxWithMeta, &pb.DaggerheartApplyAttackOutcomeRequest{
+	attackOutcome, err := s.runApplyAttackOutcome(ctxWithMeta, &pb.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: sessionID,
 		SceneId:   sceneID,
 		RollSeq:   rollResp.GetRollSeq(),
@@ -103,7 +103,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 	}
 
 	critical := attackOutcome.GetResult().GetCrit() || in.GetDamageCritical()
-	damageRoll, err := s.SessionDamageRoll(ctx, &pb.SessionDamageRollRequest{
+	damageRoll, err := s.runSessionDamageRoll(ctx, &pb.SessionDamageRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		SceneId:     sceneID,
@@ -130,7 +130,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 		SourceCharacterIds: normalizeTargets(in.GetDamage().GetSourceCharacterIds()),
 	}
 
-	applyDamage, err := s.ApplyDamage(ctxWithMeta, &pb.DaggerheartApplyDamageRequest{
+	applyDamage, err := s.runApplyDamage(ctxWithMeta, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:        campaignID,
 		SceneId:           sceneID,
 		CharacterId:       targetID,
@@ -179,7 +179,7 @@ func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.
 		return nil, status.Error(codes.InvalidArgument, "trait is required")
 	}
 
-	rollResp, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+	rollResp, err := s.runSessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:   campaignID,
 		SessionId:    sessionID,
 		SceneId:      sceneID,
@@ -197,7 +197,7 @@ func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.
 	}
 
 	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
-	rollOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
+	rollOutcome, err := s.runApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
 		SceneId:   sceneID,
 		RollSeq:   rollResp.GetRollSeq(),
@@ -206,7 +206,7 @@ func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	reactionOutcome, err := s.ApplyReactionOutcome(ctxWithMeta, &pb.DaggerheartApplyReactionOutcomeRequest{
+	reactionOutcome, err := s.runApplyReactionOutcome(ctxWithMeta, &pb.DaggerheartApplyReactionOutcomeRequest{
 		SessionId: sessionID,
 		SceneId:   sceneID,
 		RollSeq:   rollResp.GetRollSeq(),

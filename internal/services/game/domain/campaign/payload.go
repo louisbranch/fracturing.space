@@ -1,5 +1,7 @@
 package campaign
 
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+
 // CreatePayload captures the payload for campaign.create commands and campaign.created events.
 type CreatePayload struct {
 	Name         string `json:"name"`
@@ -11,6 +13,13 @@ type CreatePayload struct {
 	ThemePrompt  string `json:"theme_prompt,omitempty"`
 	CoverAssetID string `json:"cover_asset_id,omitempty"`
 	CoverSetID   string `json:"cover_set_id,omitempty"`
+}
+
+// CreateWithParticipantsPayload captures campaign bootstrap workflow input.
+// It emits one campaign.created event and one participant.joined event per participant.
+type CreateWithParticipantsPayload struct {
+	Campaign     CreatePayload             `json:"campaign"`
+	Participants []participant.JoinPayload `json:"participants"`
 }
 
 // UpdatePayload captures the payload for campaign.update commands and campaign.updated events.

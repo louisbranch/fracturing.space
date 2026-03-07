@@ -139,27 +139,36 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			command.Type("campaign.create"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "campaign-123",
-					Type:        event.Type("campaign.created"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeSystem,
-					EntityType:  "campaign",
-					EntityID:    "campaign-123",
-					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"AI","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
-				}),
-			},
-			command.Type("participant.join"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "campaign-123",
-					Type:        event.Type("participant.joined"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeSystem,
-					EntityType:  "participant",
-					EntityID:    "participant-owner",
-					PayloadJSON: []byte(`{"participant_id":"participant-owner","user_id":"user-123","name":"Owner","role":"PLAYER","controller":"HUMAN","campaign_access":"OWNER"}`),
-				}),
+			commandTypeCampaignCreateWithParticipants: {
+				Decision: command.Accept(
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("campaign.created"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "campaign",
+						EntityID:    "campaign-123",
+						PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_AI","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+					},
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("participant.joined"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "participant",
+						EntityID:    "participant-owner",
+						PayloadJSON: []byte(`{"participant_id":"participant-owner","user_id":"user-123","name":"Owner","role":"PLAYER","controller":"HUMAN","campaign_access":"OWNER"}`),
+					},
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("participant.joined"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "participant",
+						EntityID:    "participant-ai",
+						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MEMBER","pronouns":"it/its"}`),
+					},
+				),
 			},
 		},
 	}
@@ -184,16 +193,21 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 	if resp.GetOwnerParticipant().GetRole() != statev1.ParticipantRole_PLAYER {
 		t.Fatalf("OwnerParticipant Role = %v, want %v", resp.GetOwnerParticipant().GetRole(), statev1.ParticipantRole_PLAYER)
 	}
-	if len(domain.commands) != 3 {
-		t.Fatalf("domain command count = %d, want %d", len(domain.commands), 3)
+	if len(domain.commands) != 1 {
+		t.Fatalf("domain command count = %d, want %d", len(domain.commands), 1)
 	}
-
-	var createPayload campaign.CreatePayload
-	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &createPayload); err != nil {
-		t.Fatalf("decode create payload: %v", err)
+	if domain.commands[0].Type != commandTypeCampaignCreateWithParticipants {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandTypeCampaignCreateWithParticipants)
 	}
-	if createPayload.GmMode != statev1.GmMode_AI.String() {
-		t.Fatalf("create payload gm mode = %q, want %q", createPayload.GmMode, statev1.GmMode_AI.String())
+	var workflowPayload campaign.CreateWithParticipantsPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &workflowPayload); err != nil {
+		t.Fatalf("decode create workflow payload: %v", err)
+	}
+	if workflowPayload.Campaign.GmMode != statev1.GmMode_AI.String() {
+		t.Fatalf("create payload gm mode = %q, want %q", workflowPayload.Campaign.GmMode, statev1.GmMode_AI.String())
+	}
+	if len(workflowPayload.Participants) != 2 {
+		t.Fatalf("participant payload count = %d, want %d", len(workflowPayload.Participants), 2)
 	}
 }
 
@@ -229,27 +243,27 @@ func TestCreateCampaign_Success(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			command.Type("campaign.create"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "campaign-123",
-					Type:        event.Type("campaign.created"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeSystem,
-					EntityType:  "campaign",
-					EntityID:    "campaign-123",
-					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
-				}),
-			},
-			command.Type("participant.join"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "campaign-123",
-					Type:        event.Type("participant.joined"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeSystem,
-					EntityType:  "participant",
-					EntityID:    "participant-123",
-					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Mysterious Person","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
-				}),
+			commandTypeCampaignCreateWithParticipants: {
+				Decision: command.Accept(
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("campaign.created"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "campaign",
+						EntityID:    "campaign-123",
+						PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+					},
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("participant.joined"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "participant",
+						EntityID:    "participant-123",
+						PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Mysterious Person","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+					},
+				),
 			},
 		},
 	}
@@ -324,27 +338,27 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			command.Type("campaign.create"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "campaign-123",
-					Type:        event.Type("campaign.created"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeSystem,
-					EntityType:  "campaign",
-					EntityID:    "campaign-123",
-					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
-				}),
-			},
-			command.Type("participant.join"): {
-				Decision: command.Accept(event.Event{
-					CampaignID:  "campaign-123",
-					Type:        event.Type("participant.joined"),
-					Timestamp:   now,
-					ActorType:   event.ActorTypeSystem,
-					EntityType:  "participant",
-					EntityID:    "participant-123",
-					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Owner","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
-				}),
+			commandTypeCampaignCreateWithParticipants: {
+				Decision: command.Accept(
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("campaign.created"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "campaign",
+						EntityID:    "campaign-123",
+						PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+					},
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("participant.joined"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "participant",
+						EntityID:    "participant-123",
+						PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Owner","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+					},
+				),
 			},
 		},
 	}
@@ -374,17 +388,14 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 	if resp.Campaign.ThemePrompt != "A dark fantasy adventure" {
 		t.Fatalf("Campaign ThemePrompt = %q, want %q", resp.Campaign.ThemePrompt, "A dark fantasy adventure")
 	}
-	if domain.calls != 2 {
-		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
 	}
-	if len(domain.commands) != 2 {
-		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("campaign.create") {
-		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, "campaign.create")
-	}
-	if domain.commands[1].Type != command.Type("participant.join") {
-		t.Fatalf("second command type = %s, want %s", domain.commands[1].Type, "participant.join")
+	if domain.commands[0].Type != commandTypeCampaignCreateWithParticipants {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandTypeCampaignCreateWithParticipants)
 	}
 	if got := len(ts.Event.events["campaign-123"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)
@@ -430,27 +441,36 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 			domain := &fakeDomainEngine{
 				store: ts.Event,
 				resultsByType: map[command.Type]engine.Result{
-					command.Type("campaign.create"): {
-						Decision: command.Accept(event.Event{
-							CampaignID:  "campaign-123",
-							Type:        event.Type("campaign.created"),
-							Timestamp:   now,
-							ActorType:   event.ActorTypeSystem,
-							EntityType:  "campaign",
-							EntityID:    "campaign-123",
-							PayloadJSON: []byte(campaignPayload),
-						}),
-					},
-					command.Type("participant.join"): {
-						Decision: command.Accept(event.Event{
-							CampaignID:  "campaign-123",
-							Type:        event.Type("participant.joined"),
-							Timestamp:   now,
-							ActorType:   event.ActorTypeSystem,
-							EntityType:  "participant",
-							EntityID:    "participant-owner",
-							PayloadJSON: []byte(ownerJoinResultPayload),
-						}),
+					commandTypeCampaignCreateWithParticipants: {
+						Decision: command.Accept(
+							event.Event{
+								CampaignID:  "campaign-123",
+								Type:        event.Type("campaign.created"),
+								Timestamp:   now,
+								ActorType:   event.ActorTypeSystem,
+								EntityType:  "campaign",
+								EntityID:    "campaign-123",
+								PayloadJSON: []byte(campaignPayload),
+							},
+							event.Event{
+								CampaignID:  "campaign-123",
+								Type:        event.Type("participant.joined"),
+								Timestamp:   now,
+								ActorType:   event.ActorTypeSystem,
+								EntityType:  "participant",
+								EntityID:    "participant-owner",
+								PayloadJSON: []byte(ownerJoinResultPayload),
+							},
+							event.Event{
+								CampaignID:  "campaign-123",
+								Type:        event.Type("participant.joined"),
+								Timestamp:   now,
+								ActorType:   event.ActorTypeSystem,
+								EntityType:  "participant",
+								EntityID:    "participant-ai",
+								PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MEMBER","pronouns":"it/its"}`),
+							},
+						),
 					},
 				},
 			}
@@ -483,20 +503,22 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 				t.Fatalf("OwnerParticipant CampaignAccess = %v, want OWNER", resp.OwnerParticipant.CampaignAccess)
 			}
 
-			if len(domain.commands) != 3 {
-				t.Fatalf("domain command count = %d, want %d", len(domain.commands), 3)
+			if len(domain.commands) != 1 {
+				t.Fatalf("domain command count = %d, want %d", len(domain.commands), 1)
 			}
-			if domain.commands[1].Type != command.Type("participant.join") {
-				t.Fatalf("second command type = %s, want participant.join", domain.commands[1].Type)
-			}
-			if domain.commands[2].Type != command.Type("participant.join") {
-				t.Fatalf("third command type = %s, want participant.join", domain.commands[2].Type)
+			if domain.commands[0].Type != commandTypeCampaignCreateWithParticipants {
+				t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandTypeCampaignCreateWithParticipants)
 			}
 
-			var ownerPayload participant.JoinPayload
-			if err := json.Unmarshal(domain.commands[1].PayloadJSON, &ownerPayload); err != nil {
-				t.Fatalf("decode owner join payload: %v", err)
+			var workflowPayload campaign.CreateWithParticipantsPayload
+			if err := json.Unmarshal(domain.commands[0].PayloadJSON, &workflowPayload); err != nil {
+				t.Fatalf("decode create workflow payload: %v", err)
 			}
+			if len(workflowPayload.Participants) != 2 {
+				t.Fatalf("participant payload count = %d, want %d", len(workflowPayload.Participants), 2)
+			}
+
+			ownerPayload := workflowPayload.Participants[0]
 			if ownerPayload.ParticipantID != "participant-owner" {
 				t.Fatalf("owner payload participant_id = %q, want %q", ownerPayload.ParticipantID, "participant-owner")
 			}
@@ -510,10 +532,7 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 				t.Fatalf("owner payload campaign_access = %q, want %q", ownerPayload.CampaignAccess, "OWNER")
 			}
 
-			var aiPayload participant.JoinPayload
-			if err := json.Unmarshal(domain.commands[2].PayloadJSON, &aiPayload); err != nil {
-				t.Fatalf("decode ai join payload: %v", err)
-			}
+			aiPayload := workflowPayload.Participants[1]
 			if aiPayload.ParticipantID != "participant-ai" {
 				t.Fatalf("ai payload participant_id = %q, want %q", aiPayload.ParticipantID, "participant-ai")
 			}
@@ -544,27 +563,27 @@ func TestCreateCampaign_OwnerParticipantHydratesFromSocialProfile(t *testing.T) 
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("campaign.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("campaign.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "campaign",
-				EntityID:    "campaign-123",
-				PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
-			}),
-		},
-		command.Type("participant.join"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("participant.joined"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "participant",
-				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Profile Name","role":"GM","controller":"HUMAN","campaign_access":"OWNER","avatar_set_id":"creatures-v1","avatar_asset_id":"social-avatar","pronouns":"they/them"}`),
-			}),
+		commandTypeCampaignCreateWithParticipants: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("campaign.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "campaign",
+					EntityID:    "campaign-123",
+					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+				},
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("participant.joined"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "participant",
+					EntityID:    "participant-123",
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Profile Name","role":"GM","controller":"HUMAN","campaign_access":"OWNER","avatar_set_id":"creatures-v1","avatar_asset_id":"social-avatar","pronouns":"they/them"}`),
+				},
+			),
 		},
 	}}
 	socialClient := &fakeSocialClient{profile: &socialv1.UserProfile{
@@ -595,25 +614,29 @@ func TestCreateCampaign_OwnerParticipantHydratesFromSocialProfile(t *testing.T) 
 	if socialClient.getUserProfileCalls != 1 {
 		t.Fatalf("GetUserProfile calls = %d, want %d", socialClient.getUserProfileCalls, 1)
 	}
-	if len(domain.commands) != 2 {
-		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
 
-	var payload participant.JoinPayload
-	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &payload); err != nil {
-		t.Fatalf("decode participant payload: %v", err)
+	var payload campaign.CreateWithParticipantsPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode create workflow payload: %v", err)
 	}
-	if payload.Name != "Profile Name" {
-		t.Fatalf("payload name = %q, want %q", payload.Name, "Profile Name")
+	if len(payload.Participants) != 1 {
+		t.Fatalf("participant payload count = %d, want %d", len(payload.Participants), 1)
 	}
-	if payload.AvatarSetID != "creatures-v1" {
-		t.Fatalf("payload avatar_set_id = %q, want %q", payload.AvatarSetID, "creatures-v1")
+	ownerPayload := payload.Participants[0]
+	if ownerPayload.Name != "Profile Name" {
+		t.Fatalf("payload name = %q, want %q", ownerPayload.Name, "Profile Name")
 	}
-	if payload.AvatarAssetID != "social-avatar" {
-		t.Fatalf("payload avatar_asset_id = %q, want %q", payload.AvatarAssetID, "social-avatar")
+	if ownerPayload.AvatarSetID != "creatures-v1" {
+		t.Fatalf("payload avatar_set_id = %q, want %q", ownerPayload.AvatarSetID, "creatures-v1")
 	}
-	if payload.Pronouns != "they/them" {
-		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	if ownerPayload.AvatarAssetID != "social-avatar" {
+		t.Fatalf("payload avatar_asset_id = %q, want %q", ownerPayload.AvatarAssetID, "social-avatar")
+	}
+	if ownerPayload.Pronouns != "they/them" {
+		t.Fatalf("payload pronouns = %q, want %q", ownerPayload.Pronouns, "they/them")
 	}
 }
 
@@ -622,27 +645,27 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultPronounsWhenSocialPron
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("campaign.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("campaign.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "campaign",
-				EntityID:    "campaign-123",
-				PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
-			}),
-		},
-		command.Type("participant.join"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("participant.joined"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "participant",
-				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Profile Name","role":"GM","controller":"HUMAN","campaign_access":"OWNER","avatar_set_id":"creatures-v1","avatar_asset_id":"social-avatar","pronouns":"they/them"}`),
-			}),
+		commandTypeCampaignCreateWithParticipants: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("campaign.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "campaign",
+					EntityID:    "campaign-123",
+					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+				},
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("participant.joined"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "participant",
+					EntityID:    "participant-123",
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Profile Name","role":"GM","controller":"HUMAN","campaign_access":"OWNER","avatar_set_id":"creatures-v1","avatar_asset_id":"social-avatar","pronouns":"they/them"}`),
+				},
+			),
 		},
 	}}
 	socialClient := &fakeSocialClient{profile: &socialv1.UserProfile{
@@ -669,12 +692,15 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultPronounsWhenSocialPron
 		t.Fatalf("CreateCampaign returned error: %v", err)
 	}
 
-	var payload participant.JoinPayload
-	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &payload); err != nil {
-		t.Fatalf("decode participant payload: %v", err)
+	var payload campaign.CreateWithParticipantsPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode create workflow payload: %v", err)
 	}
-	if payload.Pronouns != "they/them" {
-		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	if len(payload.Participants) != 1 {
+		t.Fatalf("participant payload count = %d, want %d", len(payload.Participants), 1)
+	}
+	if payload.Participants[0].Pronouns != "they/them" {
+		t.Fatalf("payload pronouns = %q, want %q", payload.Participants[0].Pronouns, "they/them")
 	}
 }
 
@@ -683,27 +709,27 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameWithoutSocialOrAut
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("campaign.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("campaign.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "campaign",
-				EntityID:    "campaign-123",
-				PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
-			}),
-		},
-		command.Type("participant.join"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("participant.joined"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "participant",
-				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Mysterious Person","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
-			}),
+		commandTypeCampaignCreateWithParticipants: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("campaign.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "campaign",
+					EntityID:    "campaign-123",
+					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+				},
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("participant.joined"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "participant",
+					EntityID:    "participant-123",
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Mysterious Person","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+				},
+			),
 		},
 	}}
 
@@ -721,25 +747,29 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameWithoutSocialOrAut
 	if err != nil {
 		t.Fatalf("CreateCampaign returned error: %v", err)
 	}
-	if len(domain.commands) != 2 {
-		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
 
-	var payload participant.JoinPayload
-	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &payload); err != nil {
-		t.Fatalf("decode participant payload: %v", err)
+	var payload campaign.CreateWithParticipantsPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode create workflow payload: %v", err)
 	}
-	if payload.Name != "Mysterious Person" {
-		t.Fatalf("payload name = %q, want %q", payload.Name, "Mysterious Person")
+	if len(payload.Participants) != 1 {
+		t.Fatalf("participant payload count = %d, want %d", len(payload.Participants), 1)
 	}
-	if payload.AvatarSetID != "" {
-		t.Fatalf("payload avatar_set_id = %q, want empty", payload.AvatarSetID)
+	ownerPayload := payload.Participants[0]
+	if ownerPayload.Name != "Mysterious Person" {
+		t.Fatalf("payload name = %q, want %q", ownerPayload.Name, "Mysterious Person")
 	}
-	if payload.AvatarAssetID != "" {
-		t.Fatalf("payload avatar_asset_id = %q, want empty", payload.AvatarAssetID)
+	if ownerPayload.AvatarSetID != "" {
+		t.Fatalf("payload avatar_set_id = %q, want empty", ownerPayload.AvatarSetID)
 	}
-	if payload.Pronouns != "they/them" {
-		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	if ownerPayload.AvatarAssetID != "" {
+		t.Fatalf("payload avatar_asset_id = %q, want empty", ownerPayload.AvatarAssetID)
+	}
+	if ownerPayload.Pronouns != "they/them" {
+		t.Fatalf("payload pronouns = %q, want %q", ownerPayload.Pronouns, "they/them")
 	}
 }
 
@@ -748,27 +778,27 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameForLocale(t *testi
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("campaign.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("campaign.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "campaign",
-				EntityID:    "campaign-123",
-				PayloadJSON: []byte(`{"name":"Test Campaign","locale":"pt-BR","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
-			}),
-		},
-		command.Type("participant.join"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("participant.joined"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "participant",
-				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Pessoa Misteriosa","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
-			}),
+		commandTypeCampaignCreateWithParticipants: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("campaign.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "campaign",
+					EntityID:    "campaign-123",
+					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"pt-BR","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+				},
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("participant.joined"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "participant",
+					EntityID:    "participant-123",
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Pessoa Misteriosa","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+				},
+			),
 		},
 	}}
 
@@ -787,16 +817,19 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameForLocale(t *testi
 	if err != nil {
 		t.Fatalf("CreateCampaign returned error: %v", err)
 	}
-	if len(domain.commands) != 2 {
-		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
 
-	var payload participant.JoinPayload
-	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &payload); err != nil {
-		t.Fatalf("decode participant payload: %v", err)
+	var payload campaign.CreateWithParticipantsPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode create workflow payload: %v", err)
 	}
-	if payload.Name != "Pessoa Misteriosa" {
-		t.Fatalf("payload name = %q, want %q", payload.Name, "Pessoa Misteriosa")
+	if len(payload.Participants) != 1 {
+		t.Fatalf("participant payload count = %d, want %d", len(payload.Participants), 1)
+	}
+	if payload.Participants[0].Name != "Pessoa Misteriosa" {
+		t.Fatalf("payload name = %q, want %q", payload.Participants[0].Name, "Pessoa Misteriosa")
 	}
 }
 
@@ -805,27 +838,36 @@ func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		command.Type("campaign.create"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("campaign.created"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "campaign",
-				EntityID:    "campaign-123",
-				PayloadJSON: []byte(`{"name":"Test Campaign","locale":"pt-BR","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_AI","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
-			}),
-		},
-		command.Type("participant.join"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-123",
-				Type:        event.Type("participant.joined"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "participant",
-				EntityID:    "participant-owner",
-				PayloadJSON: []byte(`{"participant_id":"participant-owner","user_id":"user-123","name":"Owner","role":"PLAYER","controller":"HUMAN","campaign_access":"OWNER","pronouns":"they/them"}`),
-			}),
+		commandTypeCampaignCreateWithParticipants: {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("campaign.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "campaign",
+					EntityID:    "campaign-123",
+					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"pt-BR","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_AI","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+				},
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("participant.joined"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "participant",
+					EntityID:    "participant-owner",
+					PayloadJSON: []byte(`{"participant_id":"participant-owner","user_id":"user-123","name":"Pessoa Misteriosa","role":"PLAYER","controller":"HUMAN","campaign_access":"OWNER","pronouns":"they/them"}`),
+				},
+				event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("participant.joined"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "participant",
+					EntityID:    "participant-ai",
+					PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oráculo","role":"GM","controller":"AI","campaign_access":"MEMBER","pronouns":"it/its"}`),
+				},
+			),
 		},
 	}}
 
@@ -845,14 +887,18 @@ func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T
 		t.Fatalf("CreateCampaign returned error: %v", err)
 	}
 
-	if len(domain.commands) != 3 {
-		t.Fatalf("expected 3 domain commands, got %d", len(domain.commands))
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
 
-	var ownerPayload participant.JoinPayload
-	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &ownerPayload); err != nil {
-		t.Fatalf("decode owner payload: %v", err)
+	var workflowPayload campaign.CreateWithParticipantsPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &workflowPayload); err != nil {
+		t.Fatalf("decode create workflow payload: %v", err)
 	}
+	if len(workflowPayload.Participants) != 2 {
+		t.Fatalf("participant payload count = %d, want %d", len(workflowPayload.Participants), 2)
+	}
+	ownerPayload := workflowPayload.Participants[0]
 	if ownerPayload.Name != "Pessoa Misteriosa" {
 		t.Fatalf("owner payload name = %q, want %q", ownerPayload.Name, "Pessoa Misteriosa")
 	}
@@ -860,10 +906,7 @@ func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T
 		t.Fatalf("owner payload role = %q, want %q", ownerPayload.Role, "PLAYER")
 	}
 
-	var aiPayload participant.JoinPayload
-	if err := json.Unmarshal(domain.commands[2].PayloadJSON, &aiPayload); err != nil {
-		t.Fatalf("decode ai payload: %v", err)
-	}
+	aiPayload := workflowPayload.Participants[1]
 	if aiPayload.Name != "Oráculo" {
 		t.Fatalf("ai payload name = %q, want %q", aiPayload.Name, "Oráculo")
 	}
@@ -912,6 +955,7 @@ func TestListCampaigns_AllowsAdminOverride(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
 		grpcmeta.AuthzOverrideReasonHeader, "admin_dashboard",
+		grpcmeta.UserIDHeader, "user-admin-1",
 	))
 	resp, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
 	if err != nil {
@@ -937,6 +981,18 @@ func TestListCampaigns_DeniesAdminOverrideWithoutReason(t *testing.T) {
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
+		grpcmeta.UserIDHeader, "user-admin-1",
+	))
+	_, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestListCampaigns_DeniesAdminOverrideWithoutPrincipal(t *testing.T) {
+	svc := NewCampaignService(newTestStores().build())
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		grpcmeta.PlatformRoleHeader, grpcmeta.PlatformRoleAdmin,
+		grpcmeta.AuthzOverrideReasonHeader, "admin_dashboard",
 	))
 	_, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
 	assertStatusCode(t, err, codes.PermissionDenied)

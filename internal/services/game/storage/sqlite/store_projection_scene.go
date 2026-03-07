@@ -36,7 +36,7 @@ func (s *Store) PutScene(ctx context.Context, rec storage.SceneRecord) error {
 	active := boolToInt(rec.Active)
 	endedAt := toNullMillis(rec.EndedAt)
 
-	_, err := s.sqlDB.ExecContext(ctx,
+	_, err := s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO scenes (campaign_id, scene_id, session_id, name, description, active, created_at, updated_at, ended_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT (campaign_id, scene_id) DO UPDATE SET
@@ -71,7 +71,7 @@ func (s *Store) EndScene(ctx context.Context, campaignID, sceneID string, endedA
 	}
 
 	endedAtMillis := toMillis(endedAt)
-	result, err := s.sqlDB.ExecContext(ctx,
+	result, err := s.projectionQueryable().ExecContext(ctx,
 		`UPDATE scenes SET active = 0, updated_at = ?, ended_at = ? WHERE campaign_id = ? AND scene_id = ?`,
 		endedAtMillis, endedAtMillis, campaignID, sceneID,
 	)
@@ -100,7 +100,7 @@ func (s *Store) GetScene(ctx context.Context, campaignID, sceneID string) (stora
 		return storage.SceneRecord{}, fmt.Errorf("scene id is required")
 	}
 
-	row := s.sqlDB.QueryRowContext(ctx,
+	row := s.projectionQueryable().QueryRowContext(ctx,
 		`SELECT campaign_id, scene_id, session_id, name, description, active, created_at, updated_at, ended_at
 		 FROM scenes WHERE campaign_id = ? AND scene_id = ?`,
 		campaignID, sceneID,
@@ -131,14 +131,14 @@ func (s *Store) ListScenes(ctx context.Context, campaignID, sessionID string, pa
 	limit := int64(pageSize + 1)
 
 	if pageToken == "" {
-		rows, err = s.sqlDB.QueryContext(ctx,
+		rows, err = s.projectionQueryable().QueryContext(ctx,
 			`SELECT campaign_id, scene_id, session_id, name, description, active, created_at, updated_at, ended_at
 			 FROM scenes WHERE campaign_id = ? AND session_id = ?
 			 ORDER BY scene_id ASC LIMIT ?`,
 			campaignID, sessionID, limit,
 		)
 	} else {
-		rows, err = s.sqlDB.QueryContext(ctx,
+		rows, err = s.projectionQueryable().QueryContext(ctx,
 			`SELECT campaign_id, scene_id, session_id, name, description, active, created_at, updated_at, ended_at
 			 FROM scenes WHERE campaign_id = ? AND session_id = ? AND scene_id > ?
 			 ORDER BY scene_id ASC LIMIT ?`,
@@ -184,7 +184,7 @@ func (s *Store) ListActiveScenes(ctx context.Context, campaignID string) ([]stor
 		return nil, fmt.Errorf("campaign id is required")
 	}
 
-	rows, err := s.sqlDB.QueryContext(ctx,
+	rows, err := s.projectionQueryable().QueryContext(ctx,
 		`SELECT campaign_id, scene_id, session_id, name, description, active, created_at, updated_at, ended_at
 		 FROM scenes WHERE campaign_id = ? AND active = 1
 		 ORDER BY scene_id ASC`,
@@ -229,7 +229,7 @@ func (s *Store) PutSceneCharacter(ctx context.Context, rec storage.SceneCharacte
 		return fmt.Errorf("character id is required")
 	}
 
-	_, err := s.sqlDB.ExecContext(ctx,
+	_, err := s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO scene_characters (campaign_id, scene_id, character_id, added_at)
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT (campaign_id, scene_id, character_id) DO NOTHING`,
@@ -259,7 +259,7 @@ func (s *Store) DeleteSceneCharacter(ctx context.Context, campaignID, sceneID, c
 		return fmt.Errorf("character id is required")
 	}
 
-	_, err := s.sqlDB.ExecContext(ctx,
+	_, err := s.projectionQueryable().ExecContext(ctx,
 		`DELETE FROM scene_characters WHERE campaign_id = ? AND scene_id = ? AND character_id = ?`,
 		campaignID, sceneID, characterID,
 	)
@@ -284,7 +284,7 @@ func (s *Store) ListSceneCharacters(ctx context.Context, campaignID, sceneID str
 		return nil, fmt.Errorf("scene id is required")
 	}
 
-	rows, err := s.sqlDB.QueryContext(ctx,
+	rows, err := s.projectionQueryable().QueryContext(ctx,
 		`SELECT campaign_id, scene_id, character_id, added_at
 		 FROM scene_characters WHERE campaign_id = ? AND scene_id = ?
 		 ORDER BY character_id ASC`,
@@ -338,7 +338,7 @@ func (s *Store) PutSceneGate(ctx context.Context, gate storage.SceneGate) error 
 		return fmt.Errorf("gate status is required")
 	}
 
-	_, err := s.sqlDB.ExecContext(ctx,
+	_, err := s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO scene_gates (campaign_id, scene_id, gate_id, gate_type, status, reason,
 		   created_at, created_by_actor_type, created_by_actor_id,
 		   resolved_at, resolved_by_actor_type, resolved_by_actor_id,
@@ -380,7 +380,7 @@ func (s *Store) GetSceneGate(ctx context.Context, campaignID, sceneID, gateID st
 		return storage.SceneGate{}, fmt.Errorf("gate id is required")
 	}
 
-	row := s.sqlDB.QueryRowContext(ctx,
+	row := s.projectionQueryable().QueryRowContext(ctx,
 		`SELECT campaign_id, scene_id, gate_id, gate_type, status, reason,
 		   created_at, created_by_actor_type, created_by_actor_id,
 		   resolved_at, resolved_by_actor_type, resolved_by_actor_id,
@@ -406,7 +406,7 @@ func (s *Store) GetOpenSceneGate(ctx context.Context, campaignID, sceneID string
 		return storage.SceneGate{}, fmt.Errorf("scene id is required")
 	}
 
-	row := s.sqlDB.QueryRowContext(ctx,
+	row := s.projectionQueryable().QueryRowContext(ctx,
 		`SELECT campaign_id, scene_id, gate_id, gate_type, status, reason,
 		   created_at, created_by_actor_type, created_by_actor_id,
 		   resolved_at, resolved_by_actor_type, resolved_by_actor_id,
@@ -439,7 +439,7 @@ func (s *Store) PutSceneSpotlight(ctx context.Context, spotlight storage.SceneSp
 		return fmt.Errorf("spotlight type is required")
 	}
 
-	_, err := s.sqlDB.ExecContext(ctx,
+	_, err := s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO scene_spotlight (campaign_id, scene_id, spotlight_type, character_id, updated_at, updated_by_actor_type, updated_by_actor_id)
 		 VALUES (?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT (campaign_id, scene_id) DO UPDATE SET
@@ -472,7 +472,7 @@ func (s *Store) GetSceneSpotlight(ctx context.Context, campaignID, sceneID strin
 		return storage.SceneSpotlight{}, fmt.Errorf("scene id is required")
 	}
 
-	row := s.sqlDB.QueryRowContext(ctx,
+	row := s.projectionQueryable().QueryRowContext(ctx,
 		`SELECT campaign_id, scene_id, spotlight_type, character_id, updated_at, updated_by_actor_type, updated_by_actor_id
 		 FROM scene_spotlight WHERE campaign_id = ? AND scene_id = ?`,
 		campaignID, sceneID,
@@ -509,7 +509,7 @@ func (s *Store) ClearSceneSpotlight(ctx context.Context, campaignID, sceneID str
 		return fmt.Errorf("scene id is required")
 	}
 
-	_, err := s.sqlDB.ExecContext(ctx,
+	_, err := s.projectionQueryable().ExecContext(ctx,
 		`DELETE FROM scene_spotlight WHERE campaign_id = ? AND scene_id = ?`,
 		campaignID, sceneID,
 	)

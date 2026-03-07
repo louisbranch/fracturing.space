@@ -48,19 +48,16 @@ func (s *DaggerheartService) sessionRequestEventExists(
 		return false, nil
 	}
 
-	filterClause := "session_id = ? AND request_id = ? AND event_type = ?"
-	filterParams := []any{sessionID, requestID, string(eventType)}
-	if entityID != "" {
-		filterClause += " AND entity_id = ?"
-		filterParams = append(filterParams, entityID)
-	}
-
 	result, err := s.stores.Event.ListEventsPage(ctx, storage.ListEventsPageRequest{
-		CampaignID:   campaignID,
-		AfterSeq:     rollSeq - 1,
-		PageSize:     1,
-		FilterClause: filterClause,
-		FilterParams: filterParams,
+		CampaignID: campaignID,
+		AfterSeq:   rollSeq - 1,
+		PageSize:   1,
+		Filter: storage.EventQueryFilter{
+			SessionID: sessionID,
+			RequestID: requestID,
+			EventType: string(eventType),
+			EntityID:  entityID,
+		},
 	})
 	if err != nil {
 		return false, err

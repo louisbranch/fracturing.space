@@ -304,10 +304,27 @@ type ListEventsPageRequest struct {
 	CursorReverse bool
 	// Descending orders results by seq desc (newest first) when true.
 	Descending bool
-	// FilterClause is an optional SQL WHERE clause fragment.
-	FilterClause string
-	// FilterParams are the positional parameters for the filter clause.
-	FilterParams []any
+	// Filter captures typed event-query filter constraints.
+	Filter EventQueryFilter
+}
+
+// EventQueryFilter captures storage-level filter intent without leaking SQL.
+//
+// Expression supports AIP-160 event filtering syntax. Field filters are exact
+// matches that are applied in addition to Expression constraints.
+type EventQueryFilter struct {
+	Expression    string
+	EventType     string
+	SessionID     string
+	SceneID       string
+	RequestID     string
+	InvocationID  string
+	ActorType     string
+	ActorID       string
+	SystemID      string
+	SystemVersion string
+	EntityType    string
+	EntityID      string
 }
 
 // ListEventsPageResult contains paginated event history for introspection tooling.

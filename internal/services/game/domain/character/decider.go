@@ -11,14 +11,15 @@ import (
 )
 
 const (
-	CommandTypeCreate        command.Type = "character.create"
-	CommandTypeUpdate        command.Type = "character.update"
-	CommandTypeDelete        command.Type = "character.delete"
-	CommandTypeProfileUpdate command.Type = "character.profile_update"
-	EventTypeCreated         event.Type   = "character.created"
-	EventTypeUpdated         event.Type   = "character.updated"
-	EventTypeDeleted         event.Type   = "character.deleted"
-	EventTypeProfileUpdated  event.Type   = "character.profile_updated"
+	CommandTypeCreate            command.Type = "character.create"
+	CommandTypeCreateWithProfile command.Type = "character.create_with_profile"
+	CommandTypeUpdate            command.Type = "character.update"
+	CommandTypeDelete            command.Type = "character.delete"
+	CommandTypeProfileUpdate     command.Type = "character.profile_update"
+	EventTypeCreated             event.Type   = "character.created"
+	EventTypeUpdated             event.Type   = "character.updated"
+	EventTypeDeleted             event.Type   = "character.deleted"
+	EventTypeProfileUpdated      event.Type   = "character.profile_updated"
 
 	rejectionCodeCharacterAlreadyExists      = "CHARACTER_ALREADY_EXISTS"
 	rejectionCodeCharacterIDRequired         = "CHARACTER_ID_REQUIRED"
@@ -40,73 +41,9 @@ const (
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
 	switch cmd.Type {
 	case CommandTypeCreate:
-		if state.Created {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCharacterAlreadyExists,
-				Message: "character already exists",
-			})
-		}
-		var payload CreatePayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
-				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
-			})
-		}
-		characterID := strings.TrimSpace(payload.CharacterID)
-		if characterID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCharacterIDRequired,
-				Message: "character id is required",
-			})
-		}
-		name := strings.TrimSpace(payload.Name)
-		if name == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCharacterNameEmpty,
-				Message: "character name is required",
-			})
-		}
-		kind, ok := normalizeCharacterKindLabel(payload.Kind)
-		if !ok {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeCharacterKindInvalid,
-				Message: "character kind is invalid",
-			})
-		}
-		notes := strings.TrimSpace(payload.Notes)
-		pronouns := strings.TrimSpace(payload.Pronouns)
-		participantID := strings.TrimSpace(payload.ParticipantID)
-		ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID)
-		aliases := normalizeAliases(payload.Aliases)
-		avatarSetID, avatarAssetID, err := resolveCharacterAvatarSelection(
-			characterID,
-			payload.AvatarSetID,
-			payload.AvatarAssetID,
-		)
-		if err != nil {
-			return command.Reject(characterAvatarRejection(err))
-		}
-		if now == nil {
-			now = time.Now
-		}
-
-		normalizedPayload := CreatePayload{
-			CharacterID:        characterID,
-			OwnerParticipantID: ownerParticipantID,
-			ParticipantID:      participantID,
-			Name:               name,
-			Kind:               kind,
-			Notes:              notes,
-			AvatarSetID:        avatarSetID,
-			AvatarAssetID:      avatarAssetID,
-			Pronouns:           pronouns,
-			Aliases:            aliases,
-		}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeCreated, "character", characterID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return decideCreate(state, cmd, now)
+	case CommandTypeCreateWithProfile:
+		return decideCreateWithProfile(state, cmd, now)
 
 	case CommandTypeUpdate:
 		if !state.Created || state.Deleted {
@@ -302,6 +239,131 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			Message: fmt.Sprintf("command type %s is not supported by character decider", cmd.Type),
 		})
 	}
+}
+
+func decideCreate(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if state.Created {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCharacterAlreadyExists,
+			Message: "character already exists",
+		})
+	}
+	var payload CreatePayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+	characterID := strings.TrimSpace(payload.CharacterID)
+	if characterID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCharacterIDRequired,
+			Message: "character id is required",
+		})
+	}
+	name := strings.TrimSpace(payload.Name)
+	if name == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCharacterNameEmpty,
+			Message: "character name is required",
+		})
+	}
+	kind, ok := normalizeCharacterKindLabel(payload.Kind)
+	if !ok {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCharacterKindInvalid,
+			Message: "character kind is invalid",
+		})
+	}
+	notes := strings.TrimSpace(payload.Notes)
+	pronouns := strings.TrimSpace(payload.Pronouns)
+	participantID := strings.TrimSpace(payload.ParticipantID)
+	ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID)
+	aliases := normalizeAliases(payload.Aliases)
+	avatarSetID, avatarAssetID, err := resolveCharacterAvatarSelection(
+		characterID,
+		payload.AvatarSetID,
+		payload.AvatarAssetID,
+	)
+	if err != nil {
+		return command.Reject(characterAvatarRejection(err))
+	}
+	if now == nil {
+		now = time.Now
+	}
+
+	normalizedPayload := CreatePayload{
+		CharacterID:        characterID,
+		OwnerParticipantID: ownerParticipantID,
+		ParticipantID:      participantID,
+		Name:               name,
+		Kind:               kind,
+		Notes:              notes,
+		AvatarSetID:        avatarSetID,
+		AvatarAssetID:      avatarAssetID,
+		Pronouns:           pronouns,
+		Aliases:            aliases,
+	}
+	payloadJSON, _ := json.Marshal(normalizedPayload)
+	evt := command.NewEvent(cmd, EventTypeCreated, "character", characterID, payloadJSON, now().UTC())
+	return command.Accept(evt)
+}
+
+func decideCreateWithProfile(state State, cmd command.Command, now func() time.Time) command.Decision {
+	var payload CreateWithProfilePayload
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "PAYLOAD_DECODE_FAILED",
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
+
+	createPayloadJSON, _ := json.Marshal(payload.Create)
+	createDecision := decideCreate(state, command.Command{
+		CampaignID:   cmd.CampaignID,
+		Type:         CommandTypeCreate,
+		ActorType:    cmd.ActorType,
+		ActorID:      cmd.ActorID,
+		RequestID:    cmd.RequestID,
+		InvocationID: cmd.InvocationID,
+		EntityType:   cmd.EntityType,
+		EntityID:     cmd.EntityID,
+		PayloadJSON:  createPayloadJSON,
+	}, now)
+	if len(createDecision.Rejections) > 0 || len(createDecision.Events) == 0 {
+		return createDecision
+	}
+	if len(payload.SystemProfile) == 0 {
+		return createDecision
+	}
+
+	decisionTime := createDecision.Events[0].Timestamp
+	characterID := strings.TrimSpace(createDecision.Events[0].EntityID)
+	profilePayload := ProfileUpdatePayload{
+		CharacterID:   characterID,
+		SystemProfile: payload.SystemProfile,
+	}
+	profilePayloadJSON, _ := json.Marshal(profilePayload)
+
+	profileActorType := event.ActorType(cmd.ActorType)
+	if strings.TrimSpace(cmd.ActorID) != "" {
+		profileActorType = event.ActorType(command.ActorTypeGM)
+	}
+	profileEvent := event.Event{
+		CampaignID:   cmd.CampaignID,
+		Timestamp:    decisionTime,
+		Type:         EventTypeProfileUpdated,
+		RequestID:    cmd.RequestID,
+		InvocationID: cmd.InvocationID,
+		ActorType:    profileActorType,
+		ActorID:      cmd.ActorID,
+		EntityType:   "character",
+		EntityID:     characterID,
+		PayloadJSON:  profilePayloadJSON,
+	}
+	createDecision.Events = append(createDecision.Events, profileEvent)
+	return createDecision
 }
 
 // normalizeCharacterKindLabel returns a canonical character kind label.

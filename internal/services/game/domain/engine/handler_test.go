@@ -82,6 +82,20 @@ func (f *fakeCheckpointStore) Save(_ context.Context, checkpoint replay.Checkpoi
 	return nil
 }
 
+type failingCheckpointStore struct {
+	err   error
+	calls int
+}
+
+func (f *failingCheckpointStore) Get(_ context.Context, _ string) (replay.Checkpoint, error) {
+	return replay.Checkpoint{}, replay.ErrCheckpointNotFound
+}
+
+func (f *failingCheckpointStore) Save(_ context.Context, _ replay.Checkpoint) error {
+	f.calls++
+	return f.err
+}
+
 type trackingStateLoader struct {
 	campaignIDs []string
 }
@@ -158,6 +172,47 @@ func TestNewHandler_AcceptsMinimalConfig(t *testing.T) {
 	}
 	if h.Commands == nil || h.Events == nil || h.Journal == nil || h.Decider == nil {
 		t.Fatal("expected all required fields set")
+	}
+}
+
+func TestNewHandler_RequiresSessionGateLoaderForSessionScopedCommands(t *testing.T) {
+	commands := command.NewRegistry()
+	if err := commands.Register(command.Definition{
+		Type:  command.Type("session.start"),
+		Owner: command.OwnerCore,
+		Gate:  command.GatePolicy{Scope: command.GateScopeSession},
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+	_, err := NewHandler(HandlerConfig{
+		Commands: commands,
+		Events:   event.NewRegistry(),
+		Journal:  &fakeJournal{},
+		Decider:  fixedDecider{},
+	})
+	if !errors.Is(err, ErrGateStateLoaderRequired) {
+		t.Fatalf("expected ErrGateStateLoaderRequired, got %v", err)
+	}
+}
+
+func TestNewHandler_RequiresSceneGateLoaderForSceneScopedCommands(t *testing.T) {
+	commands := command.NewRegistry()
+	if err := commands.Register(command.Definition{
+		Type:  command.Type("scene.gate_open"),
+		Owner: command.OwnerCore,
+		Gate:  command.GatePolicy{Scope: command.GateScopeScene},
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+	_, err := NewHandler(HandlerConfig{
+		Commands:        commands,
+		Events:          event.NewRegistry(),
+		Journal:         &fakeJournal{},
+		Decider:         fixedDecider{},
+		GateStateLoader: fakeGateLoader{},
+	})
+	if !errors.Is(err, ErrSceneGateStateLoaderRequired) {
+		t.Fatalf("expected ErrSceneGateStateLoaderRequired, got %v", err)
 	}
 }
 
@@ -657,6 +712,82 @@ func TestExecute_WrapsPostPersistApplyFailure(t *testing.T) {
 	// A3: post-persist errors must be non-retryable to prevent duplicate events.
 	if !IsNonRetryable(err) {
 		t.Fatal("expected post-persist error to be non-retryable")
+	}
+	meta, ok := AsPostPersistError(err)
+	if !ok {
+		t.Fatal("expected post-persist metadata")
+	}
+	if meta.Stage != PostPersistStageFold {
+		t.Fatalf("stage = %q, want %q", meta.Stage, PostPersistStageFold)
+	}
+	if meta.LastSeq != 1 {
+		t.Fatalf("last seq = %d, want 1", meta.LastSeq)
+	}
+}
+
+func TestExecute_WrapsPostPersistCheckpointFailure(t *testing.T) {
+	cmdRegistry := command.NewRegistry()
+	if err := cmdRegistry.Register(command.Definition{
+		Type:  command.Type("action.test"),
+		Owner: command.OwnerCore,
+	}); err != nil {
+		t.Fatalf("register command: %v", err)
+	}
+
+	journal := &fakeJournal{}
+	checkpointErr := errors.New("checkpoint save boom")
+	checkpoints := &failingCheckpointStore{err: checkpointErr}
+	handler := Handler{
+		Commands:    cmdRegistry,
+		Journal:     journal,
+		Checkpoints: checkpoints,
+		Decider: fixedDecider{decision: command.Accept(event.Event{
+			CampaignID:  "camp-1",
+			Type:        event.Type("action.tested"),
+			Timestamp:   time.Unix(0, 0).UTC(),
+			ActorType:   event.ActorTypeSystem,
+			PayloadJSON: []byte(`{"ok":true}`),
+		})},
+	}
+
+	_, err := handler.Execute(context.Background(), command.Command{
+		CampaignID: "camp-1",
+		Type:       command.Type("action.test"),
+		ActorType:  command.ActorTypeSystem,
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrPostPersistCheckpointFailed) {
+		t.Fatalf("expected ErrPostPersistCheckpointFailed, got %v", err)
+	}
+	if !errors.Is(err, checkpointErr) {
+		t.Fatalf("expected checkpoint cause, got %v", err)
+	}
+	if !IsNonRetryable(err) {
+		t.Fatal("expected post-persist error to be non-retryable")
+	}
+	meta, ok := AsPostPersistError(err)
+	if !ok {
+		t.Fatal("expected post-persist metadata")
+	}
+	if meta.Stage != PostPersistStageCheckpoint {
+		t.Fatalf("stage = %q, want %q", meta.Stage, PostPersistStageCheckpoint)
+	}
+	if meta.LastSeq != 1 {
+		t.Fatalf("last seq = %d, want 1", meta.LastSeq)
+	}
+	if checkpoints.calls != 1 {
+		t.Fatalf("checkpoint save calls = %d, want 1", checkpoints.calls)
+	}
+}
+
+func TestLastDecisionSeq(t *testing.T) {
+	if got := lastDecisionSeq(nil); got != 0 {
+		t.Fatalf("lastDecisionSeq(nil) = %d, want 0", got)
+	}
+	if got := lastDecisionSeq([]event.Event{{Seq: 2}, {Seq: 5}}); got != 5 {
+		t.Fatalf("lastDecisionSeq(last) = %d, want 5", got)
 	}
 }
 
