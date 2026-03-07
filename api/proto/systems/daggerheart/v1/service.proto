@@ -412,6 +412,7 @@ message DaggerheartCreateAdversaryRequest {
   google.protobuf.Int32Value major_threshold = 11;
   google.protobuf.Int32Value severe_threshold = 12;
   google.protobuf.Int32Value armor = 13;
+  string scene_id = 14;
 }
 
 message DaggerheartCreateAdversaryResponse {
@@ -433,6 +434,7 @@ message DaggerheartUpdateAdversaryRequest {
   google.protobuf.Int32Value major_threshold = 12;
   google.protobuf.Int32Value severe_threshold = 13;
   google.protobuf.Int32Value armor = 14;
+  string scene_id = 15;
 }
 
 message DaggerheartUpdateAdversaryResponse {
@@ -443,6 +445,7 @@ message DaggerheartDeleteAdversaryRequest {
   string campaign_id = 1;
   string adversary_id = 2;
   string reason = 3;
+  string scene_id = 4;
 }
 
 message DaggerheartDeleteAdversaryResponse {

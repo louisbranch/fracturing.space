@@ -122,6 +122,34 @@ func TestCoreFoldEntries_FoldFunctionsPropagateCorruptPayloadErrors(t *testing.T
 	}
 }
 
+func TestExtractSceneID_EmptySceneID(t *testing.T) {
+	evt := event.Event{
+		Type:        scene.EventTypeCreated,
+		PayloadJSON: []byte(`{"name":"Test"}`), // scene_id missing
+	}
+	_, err := extractSceneID(evt)
+	if err == nil {
+		t.Fatal("expected error for empty scene_id")
+	}
+}
+
+func TestFoldScene_InitializesMap(t *testing.T) {
+	state := &State{}
+	evt := event.Event{
+		Type:        scene.EventTypeCreated,
+		PayloadJSON: []byte(`{"scene_id":"sc-1","name":"Test"}`),
+	}
+	if err := foldScene(state, evt); err != nil {
+		t.Fatalf("foldScene: %v", err)
+	}
+	if state.Scenes == nil {
+		t.Fatal("expected Scenes map to be initialized")
+	}
+	if len(state.Scenes) != 1 {
+		t.Fatalf("scenes count = %d, want 1", len(state.Scenes))
+	}
+}
+
 func representativeCoreFoldEvent(evtType event.Type) event.Event {
 	switch evtType {
 	case campaign.EventTypeCreated:

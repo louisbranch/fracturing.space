@@ -3648,3 +3648,134 @@ func TestEnsureTimestamp_NonZeroReturnsUTC(t *testing.T) {
 		t.Fatalf("time mismatch: got %v, want %v", got, ts)
 	}
 }
+
+// Scene store fakes
+
+type fakeSceneStore struct {
+	scenes map[string]storage.SceneRecord
+}
+
+func newFakeSceneStore() *fakeSceneStore {
+	return &fakeSceneStore{scenes: make(map[string]storage.SceneRecord)}
+}
+
+func (s *fakeSceneStore) PutScene(_ context.Context, rec storage.SceneRecord) error {
+	s.scenes[rec.CampaignID+":"+rec.SceneID] = rec
+	return nil
+}
+
+func (s *fakeSceneStore) EndScene(_ context.Context, campaignID, sceneID string, endedAt time.Time) error {
+	key := campaignID + ":" + sceneID
+	rec, ok := s.scenes[key]
+	if !ok {
+		return storage.ErrNotFound
+	}
+	rec.Active = false
+	rec.EndedAt = &endedAt
+	rec.UpdatedAt = endedAt
+	s.scenes[key] = rec
+	return nil
+}
+
+func (s *fakeSceneStore) GetScene(_ context.Context, campaignID, sceneID string) (storage.SceneRecord, error) {
+	rec, ok := s.scenes[campaignID+":"+sceneID]
+	if !ok {
+		return storage.SceneRecord{}, storage.ErrNotFound
+	}
+	return rec, nil
+}
+
+func (s *fakeSceneStore) ListScenes(_ context.Context, _, _ string, _ int, _ string) (storage.ScenePage, error) {
+	return storage.ScenePage{}, nil
+}
+
+func (s *fakeSceneStore) ListActiveScenes(_ context.Context, _ string) ([]storage.SceneRecord, error) {
+	return nil, nil
+}
+
+type fakeSceneCharacterStore struct {
+	characters map[string][]storage.SceneCharacterRecord
+}
+
+func newFakeSceneCharacterStore() *fakeSceneCharacterStore {
+	return &fakeSceneCharacterStore{characters: make(map[string][]storage.SceneCharacterRecord)}
+}
+
+func (s *fakeSceneCharacterStore) PutSceneCharacter(_ context.Context, rec storage.SceneCharacterRecord) error {
+	key := rec.CampaignID + ":" + rec.SceneID
+	s.characters[key] = append(s.characters[key], rec)
+	return nil
+}
+
+func (s *fakeSceneCharacterStore) DeleteSceneCharacter(_ context.Context, campaignID, sceneID, characterID string) error {
+	key := campaignID + ":" + sceneID
+	chars := s.characters[key]
+	for i, c := range chars {
+		if c.CharacterID == characterID {
+			s.characters[key] = append(chars[:i], chars[i+1:]...)
+			return nil
+		}
+	}
+	return nil
+}
+
+func (s *fakeSceneCharacterStore) ListSceneCharacters(_ context.Context, campaignID, sceneID string) ([]storage.SceneCharacterRecord, error) {
+	return s.characters[campaignID+":"+sceneID], nil
+}
+
+type fakeSceneGateStore struct {
+	gates map[string]storage.SceneGate
+}
+
+func newFakeSceneGateStore() *fakeSceneGateStore {
+	return &fakeSceneGateStore{gates: make(map[string]storage.SceneGate)}
+}
+
+func (s *fakeSceneGateStore) PutSceneGate(_ context.Context, gate storage.SceneGate) error {
+	s.gates[gate.CampaignID+":"+gate.SceneID+":"+gate.GateID] = gate
+	return nil
+}
+
+func (s *fakeSceneGateStore) GetSceneGate(_ context.Context, campaignID, sceneID, gateID string) (storage.SceneGate, error) {
+	gate, ok := s.gates[campaignID+":"+sceneID+":"+gateID]
+	if !ok {
+		return storage.SceneGate{}, storage.ErrNotFound
+	}
+	return gate, nil
+}
+
+func (s *fakeSceneGateStore) GetOpenSceneGate(_ context.Context, campaignID, sceneID string) (storage.SceneGate, error) {
+	for _, gate := range s.gates {
+		if gate.CampaignID == campaignID && gate.SceneID == sceneID && gate.Status == "open" {
+			return gate, nil
+		}
+	}
+	return storage.SceneGate{}, storage.ErrNotFound
+}
+
+type fakeSceneSpotlightStore struct {
+	spotlights map[string]storage.SceneSpotlight
+	cleared    []string
+}
+
+func newFakeSceneSpotlightStore() *fakeSceneSpotlightStore {
+	return &fakeSceneSpotlightStore{spotlights: make(map[string]storage.SceneSpotlight)}
+}
+
+func (s *fakeSceneSpotlightStore) PutSceneSpotlight(_ context.Context, spotlight storage.SceneSpotlight) error {
+	s.spotlights[spotlight.CampaignID+":"+spotlight.SceneID] = spotlight
+	return nil
+}
+
+func (s *fakeSceneSpotlightStore) GetSceneSpotlight(_ context.Context, campaignID, sceneID string) (storage.SceneSpotlight, error) {
+	spotlight, ok := s.spotlights[campaignID+":"+sceneID]
+	if !ok {
+		return storage.SceneSpotlight{}, storage.ErrNotFound
+	}
+	return spotlight, nil
+}
+
+func (s *fakeSceneSpotlightStore) ClearSceneSpotlight(_ context.Context, campaignID, sceneID string) error {
+	s.cleared = append(s.cleared, campaignID+":"+sceneID)
+	return nil
+}

@@ -165,6 +165,11 @@ func TestCoreRouteWrappers_DelegateToDomainDeciders(t *testing.T) {
 			cmd:   command.Command{Type: command.Type("session.unknown"), PayloadJSON: []byte(`{}`)},
 		},
 		{
+			name:  "scene route",
+			route: sceneRoute,
+			cmd:   command.Command{Type: command.Type("scene.unknown"), PayloadJSON: []byte(`{}`)},
+		},
+		{
 			name:  "participant route",
 			route: participantRoute,
 			cmd: command.Command{

@@ -32,6 +32,8 @@ const (
 	SceneService_AbandonSceneGate_FullMethodName         = "/game.v1.SceneService/AbandonSceneGate"
 	SceneService_SetSceneSpotlight_FullMethodName        = "/game.v1.SceneService/SetSceneSpotlight"
 	SceneService_ClearSceneSpotlight_FullMethodName      = "/game.v1.SceneService/ClearSceneSpotlight"
+	SceneService_GetScene_FullMethodName                 = "/game.v1.SceneService/GetScene"
+	SceneService_ListScenes_FullMethodName               = "/game.v1.SceneService/ListScenes"
 )
 
 // SceneServiceClient is the client API for SceneService service.
@@ -64,6 +66,10 @@ type SceneServiceClient interface {
 	SetSceneSpotlight(ctx context.Context, in *SetSceneSpotlightRequest, opts ...grpc.CallOption) (*SetSceneSpotlightResponse, error)
 	// Clear the scene spotlight.
 	ClearSceneSpotlight(ctx context.Context, in *ClearSceneSpotlightRequest, opts ...grpc.CallOption) (*ClearSceneSpotlightResponse, error)
+	// Get a scene by campaign and scene ID.
+	GetScene(ctx context.Context, in *GetSceneRequest, opts ...grpc.CallOption) (*GetSceneResponse, error)
+	// List scenes for a session.
+	ListScenes(ctx context.Context, in *ListScenesRequest, opts ...grpc.CallOption) (*ListScenesResponse, error)
 }
 
 type sceneServiceClient struct {
@@ -194,6 +200,26 @@ func (c *sceneServiceClient) ClearSceneSpotlight(ctx context.Context, in *ClearS
 	return out, nil
 }
 
+func (c *sceneServiceClient) GetScene(ctx context.Context, in *GetSceneRequest, opts ...grpc.CallOption) (*GetSceneResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetSceneResponse)
+	err := c.cc.Invoke(ctx, SceneService_GetScene_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sceneServiceClient) ListScenes(ctx context.Context, in *ListScenesRequest, opts ...grpc.CallOption) (*ListScenesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListScenesResponse)
+	err := c.cc.Invoke(ctx, SceneService_ListScenes_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // SceneServiceServer is the server API for SceneService service.
 // All implementations must embed UnimplementedSceneServiceServer
 // for forward compatibility.
@@ -224,6 +250,10 @@ type SceneServiceServer interface {
 	SetSceneSpotlight(context.Context, *SetSceneSpotlightRequest) (*SetSceneSpotlightResponse, error)
 	// Clear the scene spotlight.
 	ClearSceneSpotlight(context.Context, *ClearSceneSpotlightRequest) (*ClearSceneSpotlightResponse, error)
+	// Get a scene by campaign and scene ID.
+	GetScene(context.Context, *GetSceneRequest) (*GetSceneResponse, error)
+	// List scenes for a session.
+	ListScenes(context.Context, *ListScenesRequest) (*ListScenesResponse, error)
 	mustEmbedUnimplementedSceneServiceServer()
 }
 
@@ -269,6 +299,12 @@ func (UnimplementedSceneServiceServer) SetSceneSpotlight(context.Context, *SetSc
 }
 func (UnimplementedSceneServiceServer) ClearSceneSpotlight(context.Context, *ClearSceneSpotlightRequest) (*ClearSceneSpotlightResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClearSceneSpotlight not implemented")
+}
+func (UnimplementedSceneServiceServer) GetScene(context.Context, *GetSceneRequest) (*GetSceneResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetScene not implemented")
+}
+func (UnimplementedSceneServiceServer) ListScenes(context.Context, *ListScenesRequest) (*ListScenesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListScenes not implemented")
 }
 func (UnimplementedSceneServiceServer) mustEmbedUnimplementedSceneServiceServer() {}
 func (UnimplementedSceneServiceServer) testEmbeddedByValue()                      {}
@@ -507,6 +543,42 @@ func _SceneService_ClearSceneSpotlight_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SceneService_GetScene_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetSceneRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SceneServiceServer).GetScene(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SceneService_GetScene_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SceneServiceServer).GetScene(ctx, req.(*GetSceneRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SceneService_ListScenes_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListScenesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SceneServiceServer).ListScenes(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SceneService_ListScenes_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SceneServiceServer).ListScenes(ctx, req.(*ListScenesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // SceneService_ServiceDesc is the grpc.ServiceDesc for SceneService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -561,6 +633,14 @@ var SceneService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ClearSceneSpotlight",
 			Handler:    _SceneService_ClearSceneSpotlight_Handler,
+		},
+		{
+			MethodName: "GetScene",
+			Handler:    _SceneService_GetScene_Handler,
+		},
+		{
+			MethodName: "ListScenes",
+			Handler:    _SceneService_ListScenes_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

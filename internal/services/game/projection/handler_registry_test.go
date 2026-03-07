@@ -68,6 +68,10 @@ func TestCheckMissingStores_AllPresent(t *testing.T) {
 		Session:          &fakeSessionStore{},
 		SessionGate:      newFakeSessionGateStore(),
 		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Scene:            newFakeSceneStore(),
+		SceneCharacter:   newFakeSceneCharacterStore(),
+		SceneGate:        newFakeSceneGateStore(),
+		SceneSpotlight:   newFakeSceneSpotlightStore(),
 		Adapters:         bridge.NewAdapterRegistry(),
 	}
 	missing := checkMissingStores(needCampaign|needCharacter|needParticipant, applier)
@@ -110,6 +114,10 @@ func TestValidateStorePreconditions_PassesWhenAllConfigured(t *testing.T) {
 		Session:          &fakeSessionStore{},
 		SessionGate:      newFakeSessionGateStore(),
 		SessionSpotlight: newFakeSessionSpotlightStore(),
+		Scene:            newFakeSceneStore(),
+		SceneCharacter:   newFakeSceneCharacterStore(),
+		SceneGate:        newFakeSceneGateStore(),
+		SceneSpotlight:   newFakeSceneSpotlightStore(),
 		Adapters:         bridge.NewAdapterRegistry(),
 	}
 	if err := applier.ValidateStorePreconditions(); err != nil {

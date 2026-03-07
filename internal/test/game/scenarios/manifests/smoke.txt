@@ -18,3 +18,4 @@ systems/daggerheart/fear_floor.lua
 systems/daggerheart/critical_damage.lua
 systems/daggerheart/full_example_spotlight_sequence.lua
 systems/daggerheart/scene_basic_flow.lua
+systems/daggerheart/scene_gate_spotlight.lua

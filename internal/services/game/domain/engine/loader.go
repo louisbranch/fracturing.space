@@ -7,6 +7,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/replay"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -98,5 +99,33 @@ func (l ReplayGateStateLoader) LoadSession(ctx context.Context, campaignID, _ st
 		return typed.Session, nil
 	default:
 		return session.State{}, errors.New("unsupported state type")
+	}
+}
+
+// LoadScene returns the scene state for scene-scoped gate checks.
+func (l ReplayGateStateLoader) LoadScene(ctx context.Context, campaignID, sceneID string) (scene.State, error) {
+	state, err := l.StateLoader.Load(ctx, command.Command{CampaignID: campaignID})
+	if err != nil {
+		return scene.State{}, err
+	}
+	if state == nil {
+		return scene.State{}, errors.New("state is required")
+	}
+	switch typed := state.(type) {
+	case aggregate.State:
+		if s, ok := typed.Scenes[sceneID]; ok {
+			return s, nil
+		}
+		return scene.State{}, nil
+	case *aggregate.State:
+		if typed == nil {
+			return scene.State{}, errors.New("state is required")
+		}
+		if s, ok := typed.Scenes[sceneID]; ok {
+			return s, nil
+		}
+		return scene.State{}, nil
+	default:
+		return scene.State{}, errors.New("unsupported state type")
 	}
 }
