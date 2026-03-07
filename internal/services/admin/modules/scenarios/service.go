@@ -31,22 +31,22 @@ const (
 	scenarioTempDirEnv = "FRACTURING_SPACE_SCENARIO_TMPDIR"
 )
 
-// service provides module-local scenario handlers backed by shared module dependencies.
-type service struct {
+// handlers implements the scenarios Handlers contract.
+type handlers struct {
 	base           modulehandler.Base
 	grpcAddr       string
 	eventClient    statev1.EventServiceClient
 	campaignClient statev1.CampaignServiceClient
 }
 
-// NewService returns the scenarios module service implementation.
-func NewService(
+// NewHandlers returns the scenarios handler implementation.
+func NewHandlers(
 	base modulehandler.Base,
 	grpcAddr string,
 	eventClient statev1.EventServiceClient,
 	campaignClient statev1.CampaignServiceClient,
-) Service {
-	return &service{
+) Handlers {
+	return &handlers{
 		base:           base,
 		grpcAddr:       strings.TrimSpace(grpcAddr),
 		eventClient:    eventClient,
@@ -55,7 +55,7 @@ func NewService(
 }
 
 // HandleScenarios renders the scenario page and handles scenario run submissions.
-func (s *service) HandleScenarios(w http.ResponseWriter, r *http.Request) {
+func (s *handlers) HandleScenarios(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		s.handleScenarioRun(w, r)
 		return
@@ -82,7 +82,7 @@ func (s *service) HandleScenarios(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleScenarioEvents renders the scenario events page.
-func (s *service) HandleScenarioEvents(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleScenarioEvents(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, lang := s.base.Localizer(w, r)
 	view := s.buildScenarioEventsView(r, campaignID, loc)
 
@@ -97,7 +97,7 @@ func (s *service) HandleScenarioEvents(w http.ResponseWriter, r *http.Request, c
 }
 
 // HandleScenarioEventsTable renders the scenario events table fragment.
-func (s *service) HandleScenarioEventsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleScenarioEventsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, _ := s.base.Localizer(w, r)
 	message := ""
 	var events []templates.EventRow
@@ -145,14 +145,14 @@ func (s *service) HandleScenarioEventsTable(w http.ResponseWriter, r *http.Reque
 }
 
 // HandleScenarioTimelineTable renders the scenario timeline table fragment.
-func (s *service) HandleScenarioTimelineTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleScenarioTimelineTable(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, _ := s.base.Localizer(w, r)
 	view := s.buildScenarioTimelineView(r, campaignID, loc)
 
 	templ.Handler(templates.ScenarioTimelineTableContent(view, loc)).ServeHTTP(w, r)
 }
 
-func (s *service) handleScenarioRun(w http.ResponseWriter, r *http.Request) {
+func (s *handlers) handleScenarioRun(w http.ResponseWriter, r *http.Request) {
 	loc, lang := s.base.Localizer(w, r)
 	if !requireSameOrigin(w, r, loc) {
 		return
@@ -208,7 +208,7 @@ func (s *service) handleScenarioRun(w http.ResponseWriter, r *http.Request) {
 	s.renderScenarioResponse(w, r, view, loc, lang)
 }
 
-func (s *service) renderScenarioResponse(w http.ResponseWriter, r *http.Request, view templates.ScenarioPageView, loc *message.Printer, lang string) {
+func (s *handlers) renderScenarioResponse(w http.ResponseWriter, r *http.Request, view templates.ScenarioPageView, loc *message.Printer, lang string) {
 	pageCtx := s.base.PageContext(lang, loc, r)
 	s.base.RenderPage(
 		w,
@@ -219,7 +219,7 @@ func (s *service) renderScenarioResponse(w http.ResponseWriter, r *http.Request,
 	)
 }
 
-func (s *service) buildScenarioEventsView(r *http.Request, campaignID string, loc *message.Printer) templates.ScenarioEventsView {
+func (s *handlers) buildScenarioEventsView(r *http.Request, campaignID string, loc *message.Printer) templates.ScenarioEventsView {
 	message := ""
 	var events []templates.EventRow
 	var totalCount int32
@@ -261,7 +261,7 @@ func (s *service) buildScenarioEventsView(r *http.Request, campaignID string, lo
 	}
 }
 
-func (s *service) buildScenarioTimelineView(r *http.Request, campaignID string, loc *message.Printer) templates.ScenarioTimelineView {
+func (s *handlers) buildScenarioTimelineView(r *http.Request, campaignID string, loc *message.Printer) templates.ScenarioTimelineView {
 	message := ""
 	var entries []templates.ScenarioTimelineEntry
 	var totalCount int32
@@ -297,7 +297,7 @@ func (s *service) buildScenarioTimelineView(r *http.Request, campaignID string, 
 	}
 }
 
-func (s *service) runScenarioScript(ctx context.Context, script string) (string, string, error) {
+func (s *handlers) runScenarioScript(ctx context.Context, script string) (string, string, error) {
 	tempDir := strings.TrimSpace(os.Getenv(scenarioTempDirEnv))
 	if tempDir != "" {
 		if err := os.MkdirAll(tempDir, 0o755); err != nil {
@@ -338,7 +338,7 @@ func (s *service) runScenarioScript(ctx context.Context, script string) (string,
 	return strings.TrimSpace(output.String()), parseScenarioCampaignID(output.String()), nil
 }
 
-func (s *service) scenarioGRPCAddr() string {
+func (s *handlers) scenarioGRPCAddr() string {
 	if s == nil {
 		return "localhost:8080"
 	}
@@ -351,7 +351,7 @@ func (s *service) scenarioGRPCAddr() string {
 	return "localhost:8080"
 }
 
-func (s *service) getCampaignName(r *http.Request, campaignID string, loc *message.Printer) string {
+func (s *handlers) getCampaignName(r *http.Request, campaignID string, loc *message.Printer) string {
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
 

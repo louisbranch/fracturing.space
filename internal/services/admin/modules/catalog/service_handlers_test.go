@@ -30,10 +30,10 @@ func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, 
 
 func TestCatalogServiceHandlersWithUnavailableClient(t *testing.T) {
 	var conn testUnavailableConn
-	svcIface := NewService(modulehandler.NewBase(), daggerheartv1.NewDaggerheartContentServiceClient(conn))
-	svc, ok := svcIface.(*service)
+	svcIface := NewHandlers(modulehandler.NewBase(), daggerheartv1.NewDaggerheartContentServiceClient(conn))
+	svc, ok := svcIface.(*handlers)
 	if !ok {
-		t.Fatalf("NewService() type = %T, want *service", svcIface)
+		t.Fatalf("NewHandlers() type = %T, want *handlers", svcIface)
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/app/catalog", nil)

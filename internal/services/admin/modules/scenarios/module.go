@@ -7,11 +7,11 @@ import (
 
 // Module provides scenarios routes.
 type Module struct {
-	service Service
+	handlers Handlers
 }
 
 // New returns a scenarios module.
-func New(service Service) Module { return Module{service: service} }
+func New(handlers Handlers) Module { return Module{handlers: handlers} }
 
 // ID returns a stable module identifier.
 func (Module) ID() string { return "scenarios" }
@@ -20,6 +20,6 @@ func (Module) ID() string { return "scenarios" }
 func (m Module) Mount() (mod.Mount, error) {
 	return mod.Mount{
 		Prefix:  routepath.ScenariosPrefix,
-		Handler: newRoutes(m.service),
+		Handler: newRoutes(m.handlers),
 	}, nil
 }

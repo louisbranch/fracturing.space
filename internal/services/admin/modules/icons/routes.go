@@ -7,26 +7,26 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 )
 
-func newRoutes(service Service) *http.ServeMux {
+func newRoutes(h Handlers) *http.ServeMux {
 	mux := http.NewServeMux()
-	if service == nil {
+	if h == nil {
 		mux.HandleFunc(http.MethodGet+" "+routepath.AppIcons, http.NotFound)
 		mux.HandleFunc(http.MethodGet+" "+routepath.IconsPrefix+"{$}", http.NotFound)
 		return mux
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppIcons, func(w http.ResponseWriter, r *http.Request) {
 		if wantsRowsFragment(r) {
-			service.HandleIconsTable(w, r)
+			h.HandleIconsTable(w, r)
 			return
 		}
-		service.HandleIconsPage(w, r)
+		h.HandleIconsPage(w, r)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.IconsPrefix+"{$}", func(w http.ResponseWriter, r *http.Request) {
 		if wantsRowsFragment(r) {
-			service.HandleIconsTable(w, r)
+			h.HandleIconsTable(w, r)
 			return
 		}
-		service.HandleIconsPage(w, r)
+		h.HandleIconsPage(w, r)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.IconsPrefix+"{rest...}", http.NotFound)
 	return mux

@@ -2,8 +2,8 @@ package campaigns
 
 import "net/http"
 
-// Service defines campaign handlers consumed by this module's routes.
-type Service interface {
+// Handlers defines campaign handler methods consumed by this module's routes.
+type Handlers interface {
 	HandleCampaignsPage(w http.ResponseWriter, r *http.Request)
 	HandleCampaignsTable(w http.ResponseWriter, r *http.Request)
 	HandleCampaignDetail(w http.ResponseWriter, r *http.Request, campaignID string)

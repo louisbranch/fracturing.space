@@ -8,15 +8,15 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 )
 
-func newRoutes(service Service) *http.ServeMux {
+func newRoutes(h Handlers) *http.ServeMux {
 	mux := http.NewServeMux()
-	if service == nil {
+	if h == nil {
 		mux.HandleFunc(http.MethodGet+" "+routepath.AppCatalog, http.NotFound)
 		mux.HandleFunc(http.MethodGet+" "+routepath.CatalogPrefix+"{$}", http.NotFound)
 		return mux
 	}
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppCatalog, service.HandleCatalogPage)
-	mux.HandleFunc(http.MethodGet+" "+routepath.CatalogPrefix+"{$}", service.HandleCatalogPage)
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCatalog, h.HandleCatalogPage)
+	mux.HandleFunc(http.MethodGet+" "+routepath.CatalogPrefix+"{$}", h.HandleCatalogPage)
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCatalogSectionPattern, func(w http.ResponseWriter, r *http.Request) {
 		systemID := strings.TrimSpace(r.PathValue("systemID"))
 		sectionID := strings.TrimSpace(r.PathValue("sectionID"))
@@ -25,10 +25,10 @@ func newRoutes(service Service) *http.ServeMux {
 			return
 		}
 		if wantsRowsFragment(r) {
-			service.HandleCatalogSectionTable(w, r, sectionID)
+			h.HandleCatalogSectionTable(w, r, sectionID)
 			return
 		}
-		service.HandleCatalogSection(w, r, sectionID)
+		h.HandleCatalogSection(w, r, sectionID)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCatalogEntryPattern, func(w http.ResponseWriter, r *http.Request) {
 		systemID := strings.TrimSpace(r.PathValue("systemID"))
@@ -38,7 +38,7 @@ func newRoutes(service Service) *http.ServeMux {
 			http.NotFound(w, r)
 			return
 		}
-		service.HandleCatalogSectionDetail(w, r, sectionID, entryID)
+		h.HandleCatalogSectionDetail(w, r, sectionID, entryID)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.CatalogPrefix+"{systemID}/{sectionID}/{rest...}", http.NotFound)
 	return mux

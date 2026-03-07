@@ -27,7 +27,7 @@ func TestBuildIconRows(t *testing.T) {
 }
 
 func TestIconsServiceHandlers(t *testing.T) {
-	svc := service{base: modulehandler.NewBase()}
+	svc := handlers{base: modulehandler.NewBase()}
 
 	rec := httptest.NewRecorder()
 	svc.HandleIconsPage(rec, httptest.NewRequest(http.MethodGet, "/app/icons", nil))

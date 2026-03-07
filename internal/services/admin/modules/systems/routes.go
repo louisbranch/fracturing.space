@@ -7,26 +7,26 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 )
 
-func newRoutes(service Service) *http.ServeMux {
+func newRoutes(h Handlers) *http.ServeMux {
 	mux := http.NewServeMux()
-	if service == nil {
+	if h == nil {
 		mux.HandleFunc(http.MethodGet+" "+routepath.AppSystems, http.NotFound)
 		mux.HandleFunc(http.MethodGet+" "+routepath.SystemsPrefix+"{$}", http.NotFound)
 		return mux
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSystems, func(w http.ResponseWriter, r *http.Request) {
 		if wantsRowsFragment(r) {
-			service.HandleSystemsTable(w, r)
+			h.HandleSystemsTable(w, r)
 			return
 		}
-		service.HandleSystemsPage(w, r)
+		h.HandleSystemsPage(w, r)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.SystemsPrefix+"{$}", func(w http.ResponseWriter, r *http.Request) {
 		if wantsRowsFragment(r) {
-			service.HandleSystemsTable(w, r)
+			h.HandleSystemsTable(w, r)
 			return
 		}
-		service.HandleSystemsPage(w, r)
+		h.HandleSystemsPage(w, r)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSystemPattern, func(w http.ResponseWriter, r *http.Request) {
 		systemID := strings.TrimSpace(r.PathValue("systemID"))
@@ -34,7 +34,7 @@ func newRoutes(service Service) *http.ServeMux {
 			http.NotFound(w, r)
 			return
 		}
-		service.HandleSystemDetail(w, r, systemID)
+		h.HandleSystemDetail(w, r, systemID)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.SystemsPrefix+"{systemID}/{rest...}", http.NotFound)
 	return mux

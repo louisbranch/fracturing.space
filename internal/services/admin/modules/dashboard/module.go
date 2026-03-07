@@ -7,12 +7,12 @@ import (
 
 // Module provides dashboard routes.
 type Module struct {
-	service Service
+	handlers Handlers
 }
 
 // New returns a dashboard module.
-func New(service Service) Module {
-	return Module{service: service}
+func New(handlers Handlers) Module {
+	return Module{handlers: handlers}
 }
 
 // ID returns a stable module identifier.
@@ -22,6 +22,6 @@ func (Module) ID() string { return "dashboard" }
 func (m Module) Mount() (mod.Mount, error) {
 	return mod.Mount{
 		Prefix:  routepath.DashboardPrefix,
-		Handler: newRoutes(m.service),
+		Handler: newRoutes(m.handlers),
 	}, nil
 }

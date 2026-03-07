@@ -8,16 +8,16 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 )
 
-type fakeService struct {
+type fakeHandlers struct {
 	lastCall string
 }
 
-func (f *fakeService) HandleIconsPage(w http.ResponseWriter, _ *http.Request) {
+func (f *fakeHandlers) HandleIconsPage(w http.ResponseWriter, _ *http.Request) {
 	f.lastCall = "icons_page"
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleIconsTable(w http.ResponseWriter, _ *http.Request) {
+func (f *fakeHandlers) HandleIconsTable(w http.ResponseWriter, _ *http.Request) {
 	f.lastCall = "icons_table"
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -25,7 +25,7 @@ func (f *fakeService) HandleIconsTable(w http.ResponseWriter, _ *http.Request) {
 func TestMount(t *testing.T) {
 	t.Parallel()
 
-	svc := &fakeService{}
+	svc := &fakeHandlers{}
 	m, err := New(svc).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

@@ -8,13 +8,13 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 )
 
-type fakeService struct {
+type fakeHandlers struct {
 	lastCall     string
 	lastCampaign string
 	lastPath     string
 }
 
-func (f *fakeService) HandleScenarios(w http.ResponseWriter, r *http.Request) {
+func (f *fakeHandlers) HandleScenarios(w http.ResponseWriter, r *http.Request) {
 	f.lastCall = "scenarios_page"
 	if r != nil && r.URL != nil {
 		f.lastPath = r.URL.Path
@@ -22,19 +22,19 @@ func (f *fakeService) HandleScenarios(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleScenarioEventsTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleScenarioEventsTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "scenarios_events_table"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleScenarioTimelineTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleScenarioTimelineTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "scenarios_timeline_table"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleScenarioEvents(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleScenarioEvents(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "scenarios_events"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
@@ -43,7 +43,7 @@ func (f *fakeService) HandleScenarioEvents(w http.ResponseWriter, _ *http.Reques
 func TestMount(t *testing.T) {
 	t.Parallel()
 
-	svc := &fakeService{}
+	svc := &fakeHandlers{}
 	m, err := New(svc).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

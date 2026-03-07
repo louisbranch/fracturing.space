@@ -8,30 +8,30 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 )
 
-type fakeService struct {
+type fakeHandlers struct {
 	lastCall    string
 	lastSection string
 	lastEntry   string
 }
 
-func (f *fakeService) HandleCatalogPage(w http.ResponseWriter, _ *http.Request) {
+func (f *fakeHandlers) HandleCatalogPage(w http.ResponseWriter, _ *http.Request) {
 	f.lastCall = "catalog_page"
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleCatalogSection(w http.ResponseWriter, _ *http.Request, sectionID string) {
+func (f *fakeHandlers) HandleCatalogSection(w http.ResponseWriter, _ *http.Request, sectionID string) {
 	f.lastCall = "catalog_section"
 	f.lastSection = sectionID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleCatalogSectionTable(w http.ResponseWriter, _ *http.Request, sectionID string) {
+func (f *fakeHandlers) HandleCatalogSectionTable(w http.ResponseWriter, _ *http.Request, sectionID string) {
 	f.lastCall = "catalog_section_table"
 	f.lastSection = sectionID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleCatalogSectionDetail(w http.ResponseWriter, _ *http.Request, sectionID string, entryID string) {
+func (f *fakeHandlers) HandleCatalogSectionDetail(w http.ResponseWriter, _ *http.Request, sectionID string, entryID string) {
 	f.lastCall = "catalog_section_detail"
 	f.lastSection = sectionID
 	f.lastEntry = entryID
@@ -41,7 +41,7 @@ func (f *fakeService) HandleCatalogSectionDetail(w http.ResponseWriter, _ *http.
 func TestMount(t *testing.T) {
 	t.Parallel()
 
-	svc := &fakeService{}
+	svc := &fakeHandlers{}
 	m, err := New(svc).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

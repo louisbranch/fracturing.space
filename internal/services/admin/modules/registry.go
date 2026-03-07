@@ -50,7 +50,7 @@ func NewRegistry() Registry { return Registry{} }
 func (Registry) Build(input BuildInput) BuildOutput {
 	input.ensureClients()
 	return BuildOutput{Modules: []Module{
-		dashboard.New(dashboard.NewService(
+		dashboard.New(dashboard.NewHandlers(
 			input.Base,
 			input.StatisticsClient,
 			input.SystemClient,
@@ -58,7 +58,7 @@ func (Registry) Build(input BuildInput) BuildOutput {
 			input.CampaignClient,
 			input.EventClient,
 		)),
-		campaigns.New(campaigns.NewService(
+		campaigns.New(campaigns.NewHandlers(
 			input.Base,
 			input.CampaignClient,
 			input.CharacterClient,
@@ -68,11 +68,11 @@ func (Registry) Build(input BuildInput) BuildOutput {
 			input.EventClient,
 			input.AuthClient,
 		)),
-		systems.New(systems.NewService(input.Base, input.SystemClient)),
-		catalog.New(catalog.NewService(input.Base, input.DaggerheartContentClient)),
-		icons.New(icons.NewService(input.Base)),
-		users.New(users.NewService(input.Base, input.AuthClient, input.InviteClient)),
-		scenarios.New(scenarios.NewService(input.Base, input.GRPCAddr, input.EventClient, input.CampaignClient)),
-		status.New(status.NewService(input.Base, input.StatusClient)),
+		systems.New(systems.NewHandlers(input.Base, input.SystemClient)),
+		catalog.New(catalog.NewHandlers(input.Base, input.DaggerheartContentClient)),
+		icons.New(icons.NewHandlers(input.Base)),
+		users.New(users.NewHandlers(input.Base, input.AuthClient, input.InviteClient)),
+		scenarios.New(scenarios.NewHandlers(input.Base, input.GRPCAddr, input.EventClient, input.CampaignClient)),
+		status.New(status.NewHandlers(input.Base, input.StatusClient)),
 	}}
 }

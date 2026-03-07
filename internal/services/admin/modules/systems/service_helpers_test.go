@@ -108,7 +108,7 @@ func TestSystemHelpersBuilders(t *testing.T) {
 
 func TestSystemServiceUnavailableClients(t *testing.T) {
 	var conn testUnavailableConn
-	svc := service{
+	svc := handlers{
 		base:         modulehandler.NewBase(),
 		systemClient: statev1.NewSystemServiceClient(conn),
 	}

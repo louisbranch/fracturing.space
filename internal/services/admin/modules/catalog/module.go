@@ -12,11 +12,11 @@ const (
 
 // Module provides catalog routes.
 type Module struct {
-	service Service
+	handlers Handlers
 }
 
 // New returns a catalog module.
-func New(service Service) Module { return Module{service: service} }
+func New(handlers Handlers) Module { return Module{handlers: handlers} }
 
 // ID returns a stable module identifier.
 func (Module) ID() string { return "catalog" }
@@ -25,6 +25,6 @@ func (Module) ID() string { return "catalog" }
 func (m Module) Mount() (mod.Mount, error) {
 	return mod.Mount{
 		Prefix:  routepath.CatalogPrefix,
-		Handler: newRoutes(m.service),
+		Handler: newRoutes(m.handlers),
 	}, nil
 }

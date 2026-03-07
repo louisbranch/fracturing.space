@@ -15,19 +15,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// service implements systems module handlers using shared module dependencies.
-type service struct {
+// handlers implements the systems Handlers contract.
+type handlers struct {
 	base         modulehandler.Base
 	systemClient statev1.SystemServiceClient
 }
 
-// NewService builds the systems module service implementation.
-func NewService(base modulehandler.Base, systemClient statev1.SystemServiceClient) Service {
-	return service{base: base, systemClient: systemClient}
+// NewHandlers builds the systems handler implementation.
+func NewHandlers(base modulehandler.Base, systemClient statev1.SystemServiceClient) Handlers {
+	return handlers{base: base, systemClient: systemClient}
 }
 
 // HandleSystemsPage renders the systems page fragment or full layout.
-func (s service) HandleSystemsPage(w http.ResponseWriter, r *http.Request) {
+func (s handlers) HandleSystemsPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := s.base.Localizer(w, r)
 	pageCtx := s.base.PageContext(lang, loc, r)
 	s.base.RenderPage(
@@ -40,7 +40,7 @@ func (s service) HandleSystemsPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleSystemsTable renders the systems table via HTMX.
-func (s service) HandleSystemsTable(w http.ResponseWriter, r *http.Request) {
+func (s handlers) HandleSystemsTable(w http.ResponseWriter, r *http.Request) {
 	loc, _ := s.base.Localizer(w, r)
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
@@ -63,7 +63,7 @@ func (s service) HandleSystemsTable(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleSystemDetail renders the system detail page.
-func (s service) HandleSystemDetail(w http.ResponseWriter, r *http.Request, systemID string) {
+func (s handlers) HandleSystemDetail(w http.ResponseWriter, r *http.Request, systemID string) {
 	loc, lang := s.base.Localizer(w, r)
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
@@ -98,12 +98,12 @@ func (s service) HandleSystemDetail(w http.ResponseWriter, r *http.Request, syst
 }
 
 // renderSystemsTable renders a systems table with optional rows and message.
-func (s service) renderSystemsTable(w http.ResponseWriter, r *http.Request, rows []templates.SystemRow, message string, loc *message.Printer) {
+func (s handlers) renderSystemsTable(w http.ResponseWriter, r *http.Request, rows []templates.SystemRow, message string, loc *message.Printer) {
 	templ.Handler(templates.SystemsTable(rows, message, loc)).ServeHTTP(w, r)
 }
 
 // renderSystemDetail renders the system detail fragment or full layout.
-func (s service) renderSystemDetail(w http.ResponseWriter, r *http.Request, detail templates.SystemDetail, message string, lang string, loc *message.Printer) {
+func (s handlers) renderSystemDetail(w http.ResponseWriter, r *http.Request, detail templates.SystemDetail, message string, lang string, loc *message.Printer) {
 	pageCtx := s.base.PageContext(lang, loc, r)
 	s.base.RenderPage(
 		w,

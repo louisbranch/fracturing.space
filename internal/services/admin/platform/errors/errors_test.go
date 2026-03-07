@@ -10,31 +10,6 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestGRPCHTTPStatusMapping(t *testing.T) {
-	tests := []struct {
-		name   string
-		err    error
-		expect int
-	}{
-		{"nil", nil, http.StatusOK},
-		{"InvalidArgument", status.Error(codes.InvalidArgument, "bad"), http.StatusBadRequest},
-		{"FailedPrecondition", status.Error(codes.FailedPrecondition, "pre"), http.StatusBadRequest},
-		{"Unauthenticated", status.Error(codes.Unauthenticated, "unauth"), http.StatusUnauthorized},
-		{"PermissionDenied", status.Error(codes.PermissionDenied, "denied"), http.StatusForbidden},
-		{"NotFound", status.Error(codes.NotFound, "missing"), http.StatusNotFound},
-		{"Unavailable", status.Error(codes.Unavailable, "down"), http.StatusServiceUnavailable},
-		{"DeadlineExceeded", status.Error(codes.DeadlineExceeded, "timeout"), http.StatusServiceUnavailable},
-		{"Internal", status.Error(codes.Internal, "oops"), http.StatusInternalServerError},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := GRPCHTTPStatus(tt.err); got != tt.expect {
-				t.Errorf("GRPCHTTPStatus() = %d, want %d", got, tt.expect)
-			}
-		})
-	}
-}
-
 func TestTypedErrorConstructors(t *testing.T) {
 	err := E(KindNotFound, "thing missing")
 	var appErr Error

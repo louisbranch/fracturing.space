@@ -7,28 +7,28 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 )
 
-func newRoutes(service Service) *http.ServeMux {
+func newRoutes(h Handlers) *http.ServeMux {
 	mux := http.NewServeMux()
-	if service == nil {
+	if h == nil {
 		mux.HandleFunc(http.MethodGet+" "+routepath.AppUsers, http.NotFound)
 		mux.HandleFunc(http.MethodGet+" "+routepath.UsersPrefix+"{$}", http.NotFound)
 		return mux
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppUsers, func(w http.ResponseWriter, r *http.Request) {
 		if wantsRowsFragment(r) {
-			service.HandleUsersTable(w, r)
+			h.HandleUsersTable(w, r)
 			return
 		}
-		service.HandleUsersPage(w, r)
+		h.HandleUsersPage(w, r)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.UsersPrefix+"{$}", func(w http.ResponseWriter, r *http.Request) {
 		if wantsRowsFragment(r) {
-			service.HandleUsersTable(w, r)
+			h.HandleUsersTable(w, r)
 			return
 		}
-		service.HandleUsersPage(w, r)
+		h.HandleUsersPage(w, r)
 	})
-	mux.HandleFunc(http.MethodGet+" "+routepath.UsersLookup, service.HandleUserLookup)
+	mux.HandleFunc(http.MethodGet+" "+routepath.UsersLookup, h.HandleUserLookup)
 	mux.HandleFunc(http.MethodGet+" "+routepath.UsersCreate, http.NotFound)
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppUserInvitesPattern, func(w http.ResponseWriter, r *http.Request) {
 		userID := strings.TrimSpace(r.PathValue("userID"))
@@ -36,7 +36,7 @@ func newRoutes(service Service) *http.ServeMux {
 			http.NotFound(w, r)
 			return
 		}
-		service.HandleUserInvites(w, r, userID)
+		h.HandleUserInvites(w, r, userID)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppUserPattern, func(w http.ResponseWriter, r *http.Request) {
 		userID := strings.TrimSpace(r.PathValue("userID"))
@@ -44,7 +44,7 @@ func newRoutes(service Service) *http.ServeMux {
 			http.NotFound(w, r)
 			return
 		}
-		service.HandleUserDetail(w, r, userID)
+		h.HandleUserDetail(w, r, userID)
 	})
 	mux.HandleFunc(http.MethodGet+" "+routepath.UsersPrefix+"{userID}/{rest...}", http.NotFound)
 	return mux

@@ -13,8 +13,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 )
 
-// service implements the catalog service handlers for module-local routing.
-type service struct {
+// handlers implements the catalog Handlers contract for module-local routing.
+type handlers struct {
 	base          modulehandler.Base
 	contentClient daggerheartv1.DaggerheartContentServiceClient
 }
@@ -24,13 +24,13 @@ const (
 	catalogListPageSize = 25
 )
 
-// NewService returns the catalog service backed by shared module handler dependencies.
-func NewService(base modulehandler.Base, contentClient daggerheartv1.DaggerheartContentServiceClient) Service {
-	return &service{base: base, contentClient: contentClient}
+// NewHandlers returns the catalog handler implementation.
+func NewHandlers(base modulehandler.Base, contentClient daggerheartv1.DaggerheartContentServiceClient) Handlers {
+	return &handlers{base: base, contentClient: contentClient}
 }
 
 // HandleCatalogPage renders the catalog page fragment or full layout.
-func (s *service) HandleCatalogPage(w http.ResponseWriter, r *http.Request) {
+func (s *handlers) HandleCatalogPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := s.base.Localizer(w, r)
 	pageCtx := s.base.PageContext(lang, loc, r)
 	sectionID := templates.DefaultDaggerheartCatalogSection()
@@ -44,7 +44,7 @@ func (s *service) HandleCatalogPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleCatalogSection renders the catalog section panel fragment or full layout.
-func (s *service) HandleCatalogSection(w http.ResponseWriter, r *http.Request, sectionID string) {
+func (s *handlers) HandleCatalogSection(w http.ResponseWriter, r *http.Request, sectionID string) {
 	loc, lang := s.base.Localizer(w, r)
 	pageCtx := s.base.PageContext(lang, loc, r)
 	var full templ.Component
@@ -61,7 +61,7 @@ func (s *service) HandleCatalogSection(w http.ResponseWriter, r *http.Request, s
 }
 
 // HandleCatalogSectionTable renders the section table rows and pagination state.
-func (s *service) HandleCatalogSectionTable(w http.ResponseWriter, r *http.Request, sectionID string) {
+func (s *handlers) HandleCatalogSectionTable(w http.ResponseWriter, r *http.Request, sectionID string) {
 	loc, lang := s.base.Localizer(w, r)
 	columns := catalogSectionColumns(sectionID, loc)
 	view := templates.CatalogTableView{
@@ -112,7 +112,7 @@ func (s *service) HandleCatalogSectionTable(w http.ResponseWriter, r *http.Reque
 }
 
 // HandleCatalogSectionDetail renders detail content for a selected catalog entry.
-func (s *service) HandleCatalogSectionDetail(w http.ResponseWriter, r *http.Request, sectionID string, entryID string) {
+func (s *handlers) HandleCatalogSectionDetail(w http.ResponseWriter, r *http.Request, sectionID string, entryID string) {
 	loc, lang := s.base.Localizer(w, r)
 	pageCtx := s.base.PageContext(lang, loc, r)
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
