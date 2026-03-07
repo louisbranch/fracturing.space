@@ -1,6 +1,7 @@
 package flash
 
 import (
+	"encoding/base64"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -39,6 +40,28 @@ func TestWriteAndReadAndClearRoundTrip(t *testing.T) {
 	cleared := readRR.Header().Get("Set-Cookie")
 	if cleared == "" {
 		t.Fatalf("expected clear Set-Cookie header")
+	}
+}
+
+func TestReadAndClearLegacyCookieWithoutSurfaceRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	req.AddCookie(&http.Cookie{
+		Name:  CookieName,
+		Value: base64.RawURLEncoding.EncodeToString([]byte(`{"kind":"info","key":"legacy.notice"}`)),
+	})
+	rr := httptest.NewRecorder()
+
+	notice, ok := ReadAndClear(rr, req)
+	if !ok {
+		t.Fatalf("ReadAndClear() ok = false, want true")
+	}
+	if notice.Kind != KindInfo {
+		t.Fatalf("notice.Kind = %q, want %q", notice.Kind, KindInfo)
+	}
+	if notice.Key != "legacy.notice" {
+		t.Fatalf("notice.Key = %q, want %q", notice.Key, "legacy.notice")
 	}
 }
 

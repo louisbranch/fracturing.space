@@ -58,8 +58,6 @@ const (
 	SettingsPrefix                           = "/app/settings/"
 	AppSettingsAIKeyRevokePattern            = SettingsPrefix + "ai-keys/{credentialID}/revoke"
 	AppSettingsRestPattern                   = SettingsPrefix + "{rest...}"
-	SettingsNoticeQueryKey                   = "notice"
-	SettingsNoticePublicProfileRequired      = "public-profile-required"
 )
 
 // UserProfile returns the public user profile route.
@@ -175,6 +173,9 @@ func AppNotificationOpen(notificationID string) string {
 // AppSettingsProfile returns the public profile settings route.
 const AppSettingsProfile = "/app/settings/profile"
 
+// AppSettingsProfileRequired returns the profile-required notice redirect route.
+const AppSettingsProfileRequired = "/app/settings/profile/required"
+
 // AppSettingsLocale returns the locale settings route.
 const AppSettingsLocale = "/app/settings/locale"
 
@@ -184,15 +185,6 @@ const AppSettingsAIKeys = "/app/settings/ai-keys"
 // AppSettingsAIKeyRevoke returns the AI key revoke route.
 func AppSettingsAIKeyRevoke(credentialID string) string {
 	return AppSettingsAIKeys + "/" + escapeSegment(credentialID) + "/revoke"
-}
-
-// AppSettingsProfileWithNotice returns the profile settings route with a notice code.
-func AppSettingsProfileWithNotice(notice string) string {
-	notice = strings.TrimSpace(notice)
-	if notice == "" {
-		return AppSettingsProfile
-	}
-	return AppSettingsProfile + "?" + SettingsNoticeQueryKey + "=" + url.QueryEscape(notice)
 }
 
 // escapeSegment centralizes this web behavior in one helper seam.

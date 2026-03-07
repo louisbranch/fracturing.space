@@ -68,7 +68,7 @@ func (r viewerResolver) resolveViewerUncached(request *http.Request) module.View
 	resp, err := r.socialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: userID})
 	if err != nil || resp == nil || resp.GetUserProfile() == nil {
 		if status.Code(err) == codes.NotFound {
-			viewer.ProfileURL = routepath.AppSettingsProfileWithNotice(routepath.SettingsNoticePublicProfileRequired)
+			viewer.ProfileURL = routepath.AppSettingsProfileRequired
 		}
 		return viewer
 	}
@@ -77,7 +77,7 @@ func (r viewerResolver) resolveViewerUncached(request *http.Request) module.View
 	if username != "" {
 		viewer.ProfileURL = routepath.UserProfile(username)
 	} else {
-		viewer.ProfileURL = routepath.AppSettingsProfileWithNotice(routepath.SettingsNoticePublicProfileRequired)
+		viewer.ProfileURL = routepath.AppSettingsProfileRequired
 	}
 	if name := strings.TrimSpace(record.GetName()); name != "" {
 		viewer.DisplayName = name

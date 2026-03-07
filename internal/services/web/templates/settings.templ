@@ -12,7 +12,6 @@ type SettingsProfileForm struct {
 	AvatarAssetID string
 	Pronouns      string
 	Bio           string
-	NoticeMessage string
 	ErrorMessage  string
 }
 
@@ -57,9 +56,6 @@ templ SettingsProfileFragment(form SettingsProfileForm, loc Localizer) {
 	<section id="settings-profile" class="card bg-base-200">
 		<div class="card-body">
 			<h2 class="card-title">{ T(loc, "web.settings.user_profile.title") }</h2>
-			if form.NoticeMessage != "" {
-				<div class="alert alert-info">{ form.NoticeMessage }</div>
-			}
 			if form.ErrorMessage != "" {
 				<div class="alert alert-error">{ form.ErrorMessage }</div>
 			}

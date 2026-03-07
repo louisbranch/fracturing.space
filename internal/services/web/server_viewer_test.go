@@ -489,7 +489,7 @@ func TestAppPageUserDropdownProfileFallsBackToSettingsNoticeWhenUsernameMissing(
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, `href="/app/settings/profile?notice=public-profile-required"`) {
+	if !strings.Contains(body, `href="/app/settings/profile/required"`) {
 		t.Fatalf("body missing profile fallback notice link: %q", body)
 	}
 }

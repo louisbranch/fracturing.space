@@ -15,6 +15,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -310,17 +311,51 @@ func TestMountServesCampaignsGetWithEmptyList(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignsNew {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignsNew)
+	}
+	cookie := responseCookieByName(rr, flashnotice.CookieName)
+	if cookie == nil {
+		t.Fatalf("expected %q cookie", flashnotice.CookieName)
+	}
+	flashReq := httptest.NewRequest(http.MethodGet, routepath.AppCampaignsNew, nil)
+	flashReq.AddCookie(cookie)
+	flashRR := httptest.NewRecorder()
+	notice, ok := flashnotice.ReadAndClear(flashRR, flashReq)
+	if !ok {
+		t.Fatalf("ReadAndClear() ok = false, want true")
+	}
+	if notice.Key != "game.campaigns.empty" {
+		t.Fatalf("notice.Key = %q", notice.Key)
+	}
+	if notice.Kind != flashnotice.KindInfo {
+		t.Fatalf("notice.Kind = %q, want %q", notice.Kind, flashnotice.KindInfo)
+	}
+}
+
+func TestMountCampaignsGetWithEmptyListUsesHXRedirect(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{}}, modulehandler.NewTestBase(), "", nil)
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req.Header.Set("HX-Request", "true")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	body := rr.Body.String()
-	for _, marker := range []string{
-		`<h1 class="mb-0">Campaigns</h1>`,
-		`href="/app/campaigns/new"`,
-	} {
-		if !strings.Contains(body, marker) {
-			t.Fatalf("body missing marker %q: %q", marker, body)
-		}
+	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignsNew {
+		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignsNew)
+	}
+	if cookie := responseCookieByName(rr, flashnotice.CookieName); cookie == nil {
+		t.Fatalf("expected %q cookie", flashnotice.CookieName)
 	}
 }
 
@@ -1074,6 +1109,18 @@ func (c failingCampaignComponent) Render(context.Context, io.Writer) error {
 		return c.err
 	}
 	return errors.New("render failed")
+}
+
+func responseCookieByName(rr *httptest.ResponseRecorder, name string) *http.Cookie {
+	if rr == nil {
+		return nil
+	}
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie != nil && cookie.Name == name {
+			return cookie
+		}
+	}
+	return nil
 }
 
 // completeGRPCDeps fills in stub clients for any nil required fields so that
