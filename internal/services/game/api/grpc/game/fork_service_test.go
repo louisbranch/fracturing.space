@@ -1072,6 +1072,59 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 	}
 }
 
+func TestForkCampaign_RejectsWhenSourceCampaignHasActiveSession(t *testing.T) {
+	ctx := contextWithAdminOverride("fork-test")
+	now := time.Date(2025, 2, 2, 9, 0, 0, 0, time.UTC)
+
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
+	dhStore := newFakeDaggerheartStore()
+	eventStore := newFakeEventStore()
+	forkStore := newFakeCampaignForkStore()
+	sessionStore := newFakeSessionStore()
+
+	campaignStore.campaigns["source"] = storage.CampaignRecord{
+		ID:          "source",
+		Name:        "Source Campaign",
+		Status:      campaign.StatusActive,
+		System:      commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:      campaign.GmModeHuman,
+		ThemePrompt: "theme",
+	}
+	sessionStore.sessions["source"] = map[string]storage.SessionRecord{
+		"sess-1": {
+			ID:         "sess-1",
+			CampaignID: "source",
+			Name:       "Active Session",
+			Status:     session.StatusActive,
+			StartedAt:  now.Add(-1 * time.Hour),
+		},
+	}
+	sessionStore.activeSession["source"] = "sess-1"
+
+	svc := &ForkService{
+		stores: Stores{
+			Campaign:     campaignStore,
+			Participant:  participantStore,
+			Character:    characterStore,
+			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+			Session:      sessionStore,
+			Event:        eventStore,
+			CampaignFork: forkStore,
+			Domain:       &fakeDomainEngine{store: eventStore},
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("fork-1"),
+	}
+
+	_, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
+		SourceCampaignId: "source",
+		NewCampaignName:  "Forked Campaign",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
 func TestShouldCopyForkEvent(t *testing.T) {
 	tests := []struct {
 		name             string

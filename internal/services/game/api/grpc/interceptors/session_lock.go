@@ -8,42 +8,53 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// Service prefixes for session lock scope.
-const (
-	participantServicePrefix = "/game.v1.ParticipantService/"
-	characterServicePrefix   = "/game.v1.CharacterService/"
-	snapshotServicePrefix    = "/game.v1.SnapshotService/"
-)
+// blockedMethodCommandTypes maps mutating RPCs to their domain command type so
+// transport lock behavior stays aligned with centralized domain policy.
+var blockedMethodCommandTypes = map[string]command.Type{
+	campaignv1.CampaignService_UpdateCampaign_FullMethodName:         commandids.CampaignUpdate,
+	campaignv1.CampaignService_EndCampaign_FullMethodName:            commandids.CampaignEnd,
+	campaignv1.CampaignService_ArchiveCampaign_FullMethodName:        commandids.CampaignArchive,
+	campaignv1.CampaignService_RestoreCampaign_FullMethodName:        commandids.CampaignRestore,
+	campaignv1.CampaignService_SetCampaignCover_FullMethodName:       commandids.CampaignUpdate,
+	campaignv1.CampaignService_SetCampaignAIBinding_FullMethodName:   commandids.CampaignAIBind,
+	campaignv1.CampaignService_ClearCampaignAIBinding_FullMethodName: commandids.CampaignAIUnbind,
 
-// blockedParticipantMethods lists ParticipantService mutators blocked during an active
-// campaign session so roster mutation cannot drift during active play.
-var blockedParticipantMethods = map[string]struct{}{
-	campaignv1.ParticipantService_CreateParticipant_FullMethodName: {},
-}
+	campaignv1.ParticipantService_CreateParticipant_FullMethodName: commandids.ParticipantJoin,
+	campaignv1.ParticipantService_UpdateParticipant_FullMethodName: commandids.ParticipantUpdate,
+	campaignv1.ParticipantService_DeleteParticipant_FullMethodName: commandids.ParticipantLeave,
 
-// blockedCharacterMethods lists CharacterService mutators blocked during an active
-// session to protect turn-based state snapshots from mid-session mutation.
-var blockedCharacterMethods = map[string]struct{}{
-	campaignv1.CharacterService_CreateCharacter_FullMethodName:       {},
-	campaignv1.CharacterService_SetDefaultControl_FullMethodName:     {},
-	campaignv1.CharacterService_PatchCharacterProfile_FullMethodName: {},
-}
+	campaignv1.InviteService_CreateInvite_FullMethodName: commandids.InviteCreate,
+	campaignv1.InviteService_ClaimInvite_FullMethodName:  commandids.InviteClaim,
 
-// blockedSnapshotMethods lists SnapshotService mutators blocked during an active
-// session because snapshots are a derived state layer that must track session progress.
-var blockedSnapshotMethods = map[string]struct{}{
-	campaignv1.SnapshotService_PatchCharacterState_FullMethodName: {},
+	campaignv1.CharacterService_CreateCharacter_FullMethodName:                commandids.CharacterCreate,
+	campaignv1.CharacterService_UpdateCharacter_FullMethodName:                commandids.CharacterUpdate,
+	campaignv1.CharacterService_DeleteCharacter_FullMethodName:                commandids.CharacterDelete,
+	campaignv1.CharacterService_SetDefaultControl_FullMethodName:              commandids.CharacterUpdate,
+	campaignv1.CharacterService_PatchCharacterProfile_FullMethodName:          commandids.CharacterProfileUpdate,
+	campaignv1.CharacterService_ApplyCharacterCreationStep_FullMethodName:     commandids.CharacterProfileUpdate,
+	campaignv1.CharacterService_ApplyCharacterCreationWorkflow_FullMethodName: commandids.CharacterProfileUpdate,
+	campaignv1.CharacterService_ResetCharacterCreationWorkflow_FullMethodName: commandids.CharacterProfileUpdate,
+
+	campaignv1.ForkService_ForkCampaign_FullMethodName: commandids.CampaignFork,
 }
 
 // campaignIDGetter extracts campaign_id from gRPC request messages.
 type campaignIDGetter interface {
 	GetCampaignId() string
+}
+
+// sourceCampaignIDGetter extracts source_campaign_id from gRPC request messages.
+type sourceCampaignIDGetter interface {
+	GetSourceCampaignId() string
 }
 
 // SessionLockInterceptor blocks campaign service mutators when a campaign has
@@ -57,7 +68,7 @@ func SessionLockInterceptor(sessionStore storage.SessionStore) grpc.UnaryServerI
 
 		campaignID := campaignIDFromRequest(req)
 		if campaignID == "" {
-			return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+			return nil, status.Errorf(codes.InvalidArgument, "%s is required", requiredCampaignIDField(info.FullMethod))
 		}
 		if sessionStore == nil {
 			return nil, status.Error(codes.Internal, "session store is not configured")
@@ -81,28 +92,30 @@ func SessionLockInterceptor(sessionStore storage.SessionStore) grpc.UnaryServerI
 
 // isBlockedMethod reports whether a method is a mutator blocked during active sessions.
 func isBlockedMethod(fullMethod string) bool {
-	if strings.HasPrefix(fullMethod, participantServicePrefix) {
-		_, blocked := blockedParticipantMethods[fullMethod]
-		return blocked
+	cmdType, ok := blockedMethodCommandTypes[fullMethod]
+	if !ok {
+		return false
 	}
-	if strings.HasPrefix(fullMethod, characterServicePrefix) {
-		_, blocked := blockedCharacterMethods[fullMethod]
-		return blocked
-	}
-	if strings.HasPrefix(fullMethod, snapshotServicePrefix) {
-		_, blocked := blockedSnapshotMethods[fullMethod]
-		return blocked
-	}
-	return false
+	policy, classified := engine.ActiveSessionPolicyForCommandType(cmdType)
+	return classified && policy == engine.ActiveSessionCommandPolicyBlocked
 }
 
 // campaignIDFromRequest extracts the campaign_id field from a request if present.
 func campaignIDFromRequest(req any) string {
-	getter, ok := req.(campaignIDGetter)
-	if !ok {
-		return ""
+	if getter, ok := req.(campaignIDGetter); ok {
+		return strings.TrimSpace(getter.GetCampaignId())
 	}
-	return strings.TrimSpace(getter.GetCampaignId())
+	if getter, ok := req.(sourceCampaignIDGetter); ok {
+		return strings.TrimSpace(getter.GetSourceCampaignId())
+	}
+	return ""
+}
+
+func requiredCampaignIDField(fullMethod string) string {
+	if fullMethod == campaignv1.ForkService_ForkCampaign_FullMethodName {
+		return "source_campaign_id"
+	}
+	return "campaign_id"
 }
 
 // logCampaignWriteBlocked emits a structured log for blocked campaign writes.
