@@ -58,12 +58,24 @@ func TestStartSession_CampaignArchivedDisallowed(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
+	domain := &fakeDomainEngine{result: engine.Result{
+		Decision: command.Reject(command.Rejection{
+			Code:    "SESSION_READINESS_CAMPAIGN_STATUS_DISALLOWS_START",
+			Message: "campaign status does not allow session start",
+		}),
+	}}
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusArchived,
 	}
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	svc := NewSessionService(Stores{
+		Campaign:    campaignStore,
+		Session:     sessionStore,
+		Participant: participantStore,
+		Event:       eventStore,
+		Domain:      domain,
+	})
 	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
@@ -73,6 +85,12 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
+	domain := &fakeDomainEngine{result: engine.Result{
+		Decision: command.Reject(command.Rejection{
+			Code:    "SESSION_READINESS_ACTIVE_SESSION_EXISTS",
+			Message: "an active session already exists",
+		}),
+	}}
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
@@ -84,7 +102,13 @@ func TestStartSession_ActiveSessionExists(t *testing.T) {
 	}
 	sessionStore.activeSession["c1"] = "s1"
 
-	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
+	svc := NewSessionService(Stores{
+		Campaign:    campaignStore,
+		Session:     sessionStore,
+		Participant: participantStore,
+		Event:       eventStore,
+		Domain:      domain,
+	})
 	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
@@ -95,7 +119,7 @@ func TestStartSession_RequiresDomainEngine(t *testing.T) {
 	participantStore := sessionManagerParticipantStore("c1")
 	eventStore := newFakeEventStore()
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusDraft, CanStartSession: true}
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{ID: "c1", Status: campaign.StatusDraft}
 
 	svc := NewSessionService(Stores{Campaign: campaignStore, Session: sessionStore, Participant: participantStore, Event: eventStore})
 	_, err := svc.StartSession(contextWithParticipantID("manager-1"), &statev1.StartSessionRequest{CampaignId: "c1"})
@@ -110,12 +134,11 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:              "c1",
-		Name:            "Test Campaign",
-		Status:          campaign.StatusDraft,
-		System:          commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode:          campaign.GmModeHuman,
-		CanStartSession: true,
+		ID:     "c1",
+		Name:   "Test Campaign",
+		Status: campaign.StatusDraft,
+		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode: campaign.GmModeHuman,
 	}
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
 		Decision: command.Accept(
@@ -191,9 +214,8 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:              "c1",
-		Status:          campaign.StatusActive,
-		CanStartSession: true,
+		ID:     "c1",
+		Status: campaign.StatusActive,
 	}
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
 		Decision: command.Accept(event.Event{
@@ -237,9 +259,8 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:              "c1",
-		Status:          campaign.StatusActive,
-		CanStartSession: true,
+		ID:     "c1",
+		Status: campaign.StatusActive,
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{

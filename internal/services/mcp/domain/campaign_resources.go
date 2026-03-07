@@ -245,7 +245,6 @@ func CampaignResourceHandler(client statev1.CampaignServiceClient) mcp.ResourceH
 				GmMode:           gmModeToString(campaign.GetGmMode()),
 				ParticipantCount: int(campaign.GetParticipantCount()),
 				CharacterCount:   int(campaign.GetCharacterCount()),
-				CanStartSession:  campaign.GetCanStartSession(),
 				GmFear:           0, // GM Fear is now in Snapshot, not Campaign
 				ThemePrompt:      campaign.GetThemePrompt(),
 				CreatedAt:        formatTimestamp(campaign.GetCreatedAt()),

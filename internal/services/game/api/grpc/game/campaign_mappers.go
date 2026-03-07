@@ -17,7 +17,6 @@ func campaignToProto(c storage.CampaignRecord) *campaignv1.Campaign {
 		Locale:           platformi18n.NormalizeLocale(c.Locale),
 		System:           gameSystemToProto(c.System),
 		Status:           campaignStatusToProto(c.Status),
-		CanStartSession:  c.CanStartSession,
 		GmMode:           gmModeToProto(c.GmMode),
 		Intent:           campaignIntentToProto(c.Intent),
 		AccessPolicy:     campaignAccessPolicyToProto(c.AccessPolicy),

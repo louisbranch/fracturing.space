@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -88,7 +89,7 @@ func TestSessionStartRoute_ReturnsSessionStartRejectionImmediately(t *testing.T)
 	}
 }
 
-func TestSessionStartRoute_BlankCampaignStatusDefaultsToDraft(t *testing.T) {
+func TestSessionStartRoute_BlankCampaignStatusFailsClosed(t *testing.T) {
 	decision := sessionStartRoute(
 		CoreDecider{},
 		readySessionStartAggregateState(""),
@@ -101,14 +102,50 @@ func TestSessionStartRoute_BlankCampaignStatusDefaultsToDraft(t *testing.T) {
 		},
 		func() time.Time { return time.Date(2026, 3, 1, 13, 5, 0, 0, time.UTC) },
 	)
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("rejections = %d, want 0", len(decision.Rejections))
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
 	}
-	if len(decision.Events) != 2 {
-		t.Fatalf("events = %d, want 2", len(decision.Events))
+	if decision.Rejections[0].Code != readiness.RejectionCodeSessionReadinessCampaignStatusDisallowsStart {
+		t.Fatalf(
+			"rejection code = %s, want %s",
+			decision.Rejections[0].Code,
+			readiness.RejectionCodeSessionReadinessCampaignStatusDisallowsStart,
+		)
 	}
-	if decision.Events[0].Type != campaign.EventTypeUpdated {
-		t.Fatalf("event[0].Type = %s, want %s", decision.Events[0].Type, campaign.EventTypeUpdated)
+	if len(decision.Events) != 0 {
+		t.Fatalf("events = %d, want 0 when readiness rejects", len(decision.Events))
+	}
+}
+
+func TestSessionStartRoute_ActiveSessionRejectedByReadiness(t *testing.T) {
+	state := readySessionStartAggregateState(campaign.StatusActive)
+	state.Session.Started = true
+
+	decision := sessionStartRoute(
+		CoreDecider{},
+		state,
+		command.Command{
+			CampaignID:  "camp-1",
+			Type:        session.CommandTypeStart,
+			ActorType:   command.ActorTypeParticipant,
+			ActorID:     "gm-1",
+			PayloadJSON: []byte(`{"session_id":"sess-1"}`),
+		},
+		func() time.Time { return time.Date(2026, 3, 1, 13, 7, 0, 0, time.UTC) },
+	)
+
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != readiness.RejectionCodeSessionReadinessActiveSessionExists {
+		t.Fatalf(
+			"rejection code = %s, want %s",
+			decision.Rejections[0].Code,
+			readiness.RejectionCodeSessionReadinessActiveSessionExists,
+		)
+	}
+	if len(decision.Events) != 0 {
+		t.Fatalf("events = %d, want 0 when readiness rejects", len(decision.Events))
 	}
 }
 

@@ -121,6 +121,56 @@ func TestCoreDeciderSessionStart_ReadinessFailureRejected(t *testing.T) {
 	}
 }
 
+func TestCoreDeciderSessionStart_ActiveSessionBoundaryRejected(t *testing.T) {
+	decision := CoreDecider{}.Decide(
+		aggregate.State{
+			Campaign: campaign.State{Created: true, Status: campaign.StatusActive},
+			Session:  session.State{Started: true},
+			Participants: map[string]participant.State{
+				"gm-1": {
+					ParticipantID: "gm-1",
+					Joined:        true,
+					Role:          string(participant.RoleGM),
+				},
+				"player-1": {
+					ParticipantID: "player-1",
+					Joined:        true,
+					Role:          string(participant.RolePlayer),
+				},
+			},
+			Characters: map[string]character.State{
+				"char-1": {
+					CharacterID:   "char-1",
+					Created:       true,
+					ParticipantID: "player-1",
+				},
+			},
+		},
+		command.Command{
+			CampaignID:  "camp-1",
+			Type:        session.CommandTypeStart,
+			ActorType:   command.ActorTypeParticipant,
+			ActorID:     "gm-1",
+			PayloadJSON: []byte(`{"session_id":"sess-1"}`),
+		},
+		nil,
+	)
+
+	if len(decision.Events) != 0 {
+		t.Fatalf("events = %d, want 0", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != readiness.RejectionCodeSessionReadinessActiveSessionExists {
+		t.Fatalf(
+			"rejection code = %s, want %s",
+			decision.Rejections[0].Code,
+			readiness.RejectionCodeSessionReadinessActiveSessionExists,
+		)
+	}
+}
+
 func TestCoreDeciderSessionStart_UsesSystemCharacterReadinessChecker(t *testing.T) {
 	systems := module.NewRegistry()
 	if err := systems.Register(stubReadinessModule{ready: false, reason: "class is required"}); err != nil {
