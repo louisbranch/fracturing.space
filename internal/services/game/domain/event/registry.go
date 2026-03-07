@@ -93,6 +93,7 @@ type Event struct {
 	ActorType      ActorType
 	ActorID        string
 	SessionID      string
+	SceneID        string
 	RequestID      string
 	InvocationID   string
 	EntityType     string
@@ -291,6 +292,7 @@ func (r *Registry) normalizeAppendEnvelope(evt Event) (Event, Definition, error)
 	}
 
 	evt.SessionID = strings.TrimSpace(evt.SessionID)
+	evt.SceneID = strings.TrimSpace(evt.SceneID)
 	evt.RequestID = strings.TrimSpace(evt.RequestID)
 	evt.InvocationID = strings.TrimSpace(evt.InvocationID)
 	evt.EntityType = strings.TrimSpace(evt.EntityType)

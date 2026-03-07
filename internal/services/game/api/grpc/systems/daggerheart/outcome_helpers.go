@@ -73,6 +73,7 @@ type daggerheartSystemCommandInput struct {
 	campaignID      string
 	commandType     command.Type
 	sessionID       string
+	sceneID         string
 	requestID       string
 	invocationID    string
 	correlationID   string
@@ -89,6 +90,7 @@ func (s *DaggerheartService) executeAndApplyDaggerheartSystemCommand(ctx context
 		CampaignID:    in.campaignID,
 		Type:          in.commandType,
 		SessionID:     in.sessionID,
+		SceneID:       in.sceneID,
 		RequestID:     in.requestID,
 		InvocationID:  in.invocationID,
 		CorrelationID: in.correlationID,
@@ -256,7 +258,7 @@ func (s *DaggerheartService) buildGMConsequenceOutcomeEffects(
 	return effects, nil
 }
 
-func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaignID, sessionID string, rollSeq uint64, rollRequestID string) error {
+func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaignID, sessionID, sceneID string, rollSeq uint64, rollRequestID string) error {
 	res, err := s.resolveGMConsequence(ctx, campaignID, sessionID, rollSeq, rollRequestID)
 	if err != nil {
 		return err
@@ -268,6 +270,7 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionGateOpen,
 			SessionID:    sessionID,
+			SceneID:      sceneID,
 			RequestID:    rollRequestID,
 			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 			EntityType:   "session_gate",
@@ -285,6 +288,7 @@ func (s *DaggerheartService) openGMConsequenceGate(ctx context.Context, campaign
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionSpotlightSet,
 			SessionID:    sessionID,
+			SceneID:      sceneID,
 			RequestID:    rollRequestID,
 			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 			EntityType:   "session_spotlight",

@@ -45,6 +45,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if in.GetRollSeq() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "roll seq is required")
 	}
@@ -131,7 +132,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 	}
 	if alreadyApplied {
 		if requiresComplication {
-			if err := s.openGMConsequenceGate(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID); err != nil {
+			if err := s.openGMConsequenceGate(ctx, campaignID, sessionID, sceneID, in.GetRollSeq(), rollRequestID); err != nil {
 				return nil, err
 			}
 		}
@@ -182,6 +183,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 			campaignID:      campaignID,
 			commandType:     commandTypeDaggerheartGMFearSet,
 			sessionID:       sessionID,
+			sceneID:         sceneID,
 			requestID:       rollRequestID,
 			invocationID:    invocationID,
 			correlationID:   rollRequestID,
@@ -251,6 +253,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 					campaignID:      campaignID,
 					commandType:     commandTypeDaggerheartCharacterStatePatch,
 					sessionID:       sessionID,
+					sceneID:         sceneID,
 					requestID:       rollRequestID,
 					invocationID:    invocationID,
 					correlationID:   rollRequestID,
@@ -319,6 +322,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 		CampaignID:    campaignID,
 		Type:          commandTypeActionOutcomeApply,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     rollRequestID,
 		InvocationID:  invocationID,
 		CorrelationID: rollRequestID,

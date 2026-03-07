@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package game.v1;
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
+
+// SceneService manages scene lifecycle within a session.
+service SceneService {
+  // Create a new scene within the active session.
+  rpc CreateScene(CreateSceneRequest) returns (CreateSceneResponse);
+
+  // Update scene metadata (name, description).
+  rpc UpdateScene(UpdateSceneRequest) returns (UpdateSceneResponse);
+
+  // End an active scene.
+  rpc EndScene(EndSceneRequest) returns (EndSceneResponse);
+
+  // Add a character to a scene.
+  rpc AddCharacterToScene(AddCharacterToSceneRequest) returns (AddCharacterToSceneResponse);
+
+  // Remove a character from a scene.
+  rpc RemoveCharacterFromScene(RemoveCharacterFromSceneRequest) returns (RemoveCharacterFromSceneResponse);
+
+  // Transfer a character from one scene to another.
+  rpc TransferCharacter(TransferCharacterRequest) returns (TransferCharacterResponse);
+
+  // Transition a scene to a new scene (atomic move of all characters).
+  rpc TransitionScene(TransitionSceneRequest) returns (TransitionSceneResponse);
+
+  // Open a gate that blocks scene actions until resolved.
+  rpc OpenSceneGate(OpenSceneGateRequest) returns (OpenSceneGateResponse);
+
+  // Resolve an open scene gate.
+  rpc ResolveSceneGate(ResolveSceneGateRequest) returns (ResolveSceneGateResponse);
+
+  // Abandon an open scene gate.
+  rpc AbandonSceneGate(AbandonSceneGateRequest) returns (AbandonSceneGateResponse);
+
+  // Set the scene spotlight.
+  rpc SetSceneSpotlight(SetSceneSpotlightRequest) returns (SetSceneSpotlightResponse);
+
+  // Clear the scene spotlight.
+  rpc ClearSceneSpotlight(ClearSceneSpotlightRequest) returns (ClearSceneSpotlightResponse);
+}
+
+message CreateSceneRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated string character_ids = 5;
+}
+
+message CreateSceneResponse {
+  string scene_id = 1;
+}
+
+message UpdateSceneRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string name = 3;
+  string description = 4;
+}
+
+message UpdateSceneResponse {}
+
+message EndSceneRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string reason = 3;
+}
+
+message EndSceneResponse {}
+
+message AddCharacterToSceneRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string character_id = 3;
+}
+
+message AddCharacterToSceneResponse {}
+
+message RemoveCharacterFromSceneRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string character_id = 3;
+}
+
+message RemoveCharacterFromSceneResponse {}
+
+message TransferCharacterRequest {
+  string campaign_id = 1;
+  string source_scene_id = 2;
+  string target_scene_id = 3;
+  string character_id = 4;
+}
+
+message TransferCharacterResponse {}
+
+message TransitionSceneRequest {
+  string campaign_id = 1;
+  string source_scene_id = 2;
+  string name = 3;
+  string description = 4;
+}
+
+message TransitionSceneResponse {
+  string new_scene_id = 1;
+}
+
+message OpenSceneGateRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string gate_type = 3;
+  string reason = 4;
+  string gate_id = 5;
+}
+
+message OpenSceneGateResponse {}
+
+message ResolveSceneGateRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string gate_id = 3;
+  string decision = 4;
+}
+
+message ResolveSceneGateResponse {}
+
+message AbandonSceneGateRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string gate_id = 3;
+  string reason = 4;
+}
+
+message AbandonSceneGateResponse {}
+
+message SetSceneSpotlightRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string type = 3;
+  string character_id = 4;
+}
+
+message SetSceneSpotlightResponse {}
+
+message ClearSceneSpotlightRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string reason = 3;
+}
+
+message ClearSceneSpotlightResponse {}

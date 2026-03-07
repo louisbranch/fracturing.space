@@ -15,6 +15,7 @@ func EventDeclarations() (*filtering.Declarations, error) {
 	return filtering.NewDeclarations(
 		filtering.DeclareStandardFunctions(),
 		filtering.DeclareIdent("session_id", filtering.TypeString),
+		filtering.DeclareIdent("scene_id", filtering.TypeString),
 		filtering.DeclareIdent("type", filtering.TypeString),
 		filtering.DeclareIdent("actor_type", filtering.TypeString),
 		filtering.DeclareIdent("actor_id", filtering.TypeString),
@@ -37,6 +38,7 @@ type SQLCondition struct {
 // fieldMapping maps filter field names to SQL column names.
 var fieldMapping = map[string]string{
 	"session_id":     "session_id",
+	"scene_id":       "scene_id",
 	"type":           "event_type",
 	"actor_type":     "actor_type",
 	"actor_id":       "actor_id",

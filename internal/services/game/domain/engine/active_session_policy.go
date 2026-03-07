@@ -32,7 +32,7 @@ func ActiveSessionPolicyForCommandType(cmdType command.Type) (ActiveSessionComma
 	switch commandNamespace(cmdType) {
 	case "campaign", "participant", "seat", "invite", "character":
 		return ActiveSessionCommandPolicyBlocked, true
-	case "session", "action", "story", "sys":
+	case "session", "scene", "action", "story", "sys":
 		return ActiveSessionCommandPolicyAllowed, true
 	default:
 		return "", false

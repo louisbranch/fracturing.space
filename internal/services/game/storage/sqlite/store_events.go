@@ -117,6 +117,7 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		Timestamp:      toMillis(evt.Timestamp),
 		EventType:      string(evt.Type),
 		SessionID:      evt.SessionID,
+		SceneID:        evt.SceneID,
 		RequestID:      evt.RequestID,
 		InvocationID:   evt.InvocationID,
 		ActorType:      string(evt.ActorType),
@@ -258,6 +259,7 @@ func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]
 			Timestamp:      toMillis(evt.Timestamp),
 			EventType:      string(evt.Type),
 			SessionID:      evt.SessionID,
+			SceneID:        evt.SceneID,
 			RequestID:      evt.RequestID,
 			InvocationID:   evt.InvocationID,
 			ActorType:      string(evt.ActorType),
@@ -575,7 +577,7 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 
 	// Build and execute the query
 	query := fmt.Sprintf(
-		"SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type, session_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json FROM events WHERE %s %s %s",
+		"SELECT campaign_id, seq, event_hash, prev_event_hash, chain_hash, signature_key_id, event_signature, timestamp, event_type, session_id, scene_id, request_id, invocation_id, actor_type, actor_id, entity_type, entity_id, system_id, system_version, correlation_id, causation_id, payload_json FROM events WHERE %s %s %s",
 		plan.whereClause,
 		plan.orderClause,
 		plan.limitClause,
@@ -601,6 +603,7 @@ func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRe
 			&row.Timestamp,
 			&row.EventType,
 			&row.SessionID,
+			&row.SceneID,
 			&row.RequestID,
 			&row.InvocationID,
 			&row.ActorType,
@@ -675,6 +678,7 @@ type eventRowData struct {
 	Timestamp      int64
 	EventType      string
 	SessionID      string
+	SceneID        string
 	RequestID      string
 	InvocationID   string
 	ActorType      string
@@ -700,6 +704,7 @@ func eventRowDataToDomain(row eventRowData) (event.Event, error) {
 		Timestamp:      fromMillis(row.Timestamp),
 		Type:           event.Type(row.EventType),
 		SessionID:      row.SessionID,
+		SceneID:        row.SceneID,
 		RequestID:      row.RequestID,
 		InvocationID:   row.InvocationID,
 		ActorType:      event.ActorType(row.ActorType),
@@ -726,6 +731,7 @@ func eventRowDataFromEvent(row db.Event) eventRowData {
 		Timestamp:      row.Timestamp,
 		EventType:      row.EventType,
 		SessionID:      row.SessionID,
+		SceneID:        row.SceneID,
 		RequestID:      row.RequestID,
 		InvocationID:   row.InvocationID,
 		ActorType:      row.ActorType,
@@ -752,6 +758,7 @@ func eventRowDataFromGetEventByHashRow(row db.GetEventByHashRow) eventRowData {
 		Timestamp:      row.Timestamp,
 		EventType:      row.EventType,
 		SessionID:      row.SessionID,
+		SceneID:        row.SceneID,
 		RequestID:      row.RequestID,
 		InvocationID:   row.InvocationID,
 		ActorType:      row.ActorType,
@@ -778,6 +785,7 @@ func eventRowDataFromGetEventBySeqRow(row db.GetEventBySeqRow) eventRowData {
 		Timestamp:      row.Timestamp,
 		EventType:      row.EventType,
 		SessionID:      row.SessionID,
+		SceneID:        row.SceneID,
 		RequestID:      row.RequestID,
 		InvocationID:   row.InvocationID,
 		ActorType:      row.ActorType,
@@ -804,6 +812,7 @@ func eventRowDataFromListEventsRow(row db.ListEventsRow) eventRowData {
 		Timestamp:      row.Timestamp,
 		EventType:      row.EventType,
 		SessionID:      row.SessionID,
+		SceneID:        row.SceneID,
 		RequestID:      row.RequestID,
 		InvocationID:   row.InvocationID,
 		ActorType:      row.ActorType,
@@ -830,6 +839,7 @@ func eventRowDataFromListEventsBySessionRow(row db.ListEventsBySessionRow) event
 		Timestamp:      row.Timestamp,
 		EventType:      row.EventType,
 		SessionID:      row.SessionID,
+		SceneID:        row.SceneID,
 		RequestID:      row.RequestID,
 		InvocationID:   row.InvocationID,
 		ActorType:      row.ActorType,

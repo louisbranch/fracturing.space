@@ -30,6 +30,7 @@ var defaultCampaignProjectionScopes = []string{
 	"campaign_sessions",
 	"campaign_characters",
 	"campaign_invites",
+	"campaign_scenes",
 }
 
 // EventService implements the game.v1.EventService gRPC API.
@@ -391,6 +392,7 @@ func eventToProto(evt event.Event) *campaignv1.Event {
 		SystemId:      evt.SystemID,
 		SystemVersion: evt.SystemVersion,
 		SessionId:     evt.SessionID,
+		SceneId:       evt.SceneID,
 		RequestId:     evt.RequestID,
 		InvocationId:  evt.InvocationID,
 		ActorType:     string(evt.ActorType),
@@ -443,6 +445,8 @@ func projectionScopesForEventType(eventType string) []string {
 		return []string{"campaign_participants", "campaign_summary"}
 	case strings.HasPrefix(eventType, "session."):
 		return []string{"campaign_sessions"}
+	case strings.HasPrefix(eventType, "scene."):
+		return []string{"campaign_scenes"}
 	case strings.HasPrefix(eventType, "character."):
 		return []string{"campaign_characters", "campaign_summary"}
 	case strings.HasPrefix(eventType, "invite."):

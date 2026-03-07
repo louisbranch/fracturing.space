@@ -354,6 +354,7 @@ type Event struct {
 	SystemID       string `json:"system_id"`
 	SystemVersion  string `json:"system_version"`
 	SessionID      string `json:"session_id"`
+	SceneID        string `json:"scene_id"`
 	RequestID      string `json:"request_id"`
 	InvocationID   string `json:"invocation_id"`
 	ActorType      string `json:"actor_type"`

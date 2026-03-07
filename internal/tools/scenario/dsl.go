@@ -261,6 +261,18 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "prefab", Function: scenarioPrefab},
 	{Name: "set_spotlight", Function: scenarioSetSpotlight},
 	{Name: "clear_spotlight", Function: scenarioClearSpotlight},
+	{Name: "create_scene", Function: scenarioCreateScene},
+	{Name: "end_scene", Function: scenarioEndScene},
+	{Name: "scene_add_character", Function: scenarioSceneAddCharacter},
+	{Name: "scene_remove_character", Function: scenarioSceneRemoveCharacter},
+	{Name: "scene_transfer_character", Function: scenarioSceneTransferCharacter},
+	{Name: "scene_transition", Function: scenarioSceneTransition},
+	{Name: "scene_gate_open", Function: scenarioSceneGateOpen},
+	{Name: "scene_gate_resolve", Function: scenarioSceneGateResolve},
+	{Name: "scene_gate_abandon", Function: scenarioSceneGateAbandon},
+	{Name: "scene_set_spotlight", Function: scenarioSceneSetSpotlight},
+	{Name: "scene_clear_spotlight", Function: scenarioSceneClearSpotlight},
+	{Name: "update_scene", Function: scenarioUpdateScene},
 }
 
 var (

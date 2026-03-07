@@ -48,6 +48,7 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
@@ -143,6 +144,7 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 		Type:          commandTypeDaggerheartDamageApply,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",
@@ -196,6 +198,7 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
@@ -290,6 +293,7 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 		Type:          commandTypeDaggerheartAdversaryDamageApply,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",

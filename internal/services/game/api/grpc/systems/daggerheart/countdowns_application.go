@@ -36,6 +36,7 @@ func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.Dagg
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	name := strings.TrimSpace(in.GetName())
 	if name == "" {
 		return nil, status.Error(codes.InvalidArgument, "name is required")
@@ -115,6 +116,7 @@ func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.Dagg
 		Type:          commandTypeDaggerheartCountdownCreate,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "countdown",
@@ -153,6 +155,7 @@ func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.Dagg
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	countdownID := strings.TrimSpace(in.GetCountdownId())
 	if countdownID == "" {
 		return nil, status.Error(codes.InvalidArgument, "countdown id is required")
@@ -230,6 +233,7 @@ func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.Dagg
 		Type:          commandTypeDaggerheartCountdownUpdate,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "countdown",
@@ -271,6 +275,7 @@ func (s *DaggerheartService) runDeleteCountdown(ctx context.Context, in *pb.Dagg
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	countdownID := strings.TrimSpace(in.GetCountdownId())
 	if countdownID == "" {
 		return nil, status.Error(codes.InvalidArgument, "countdown id is required")
@@ -319,6 +324,7 @@ func (s *DaggerheartService) runDeleteCountdown(ctx context.Context, in *pb.Dagg
 		Type:          commandTypeDaggerheartCountdownDelete,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "countdown",
@@ -366,6 +372,7 @@ func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
@@ -404,6 +411,7 @@ func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.
 		Type:          commandTypeDaggerheartCharacterStatePatch,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",

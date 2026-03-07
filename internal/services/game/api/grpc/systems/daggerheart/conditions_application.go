@@ -49,6 +49,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
@@ -196,6 +197,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 			Type:          commandTypeDaggerheartConditionChange,
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     sessionID,
+			SceneID:       sceneID,
 			RequestID:     requestID,
 			InvocationID:  invocationID,
 			EntityType:    "character",
@@ -224,6 +226,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 			Type:          commandTypeDaggerheartCharacterStatePatch,
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     sessionID,
+			SceneID:       sceneID,
 			RequestID:     requestID,
 			InvocationID:  invocationID,
 			EntityType:    "character",
@@ -282,6 +285,7 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
@@ -393,6 +397,7 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 		Type:          commandTypeDaggerheartAdversaryCondition,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",
@@ -434,6 +439,7 @@ func (s *DaggerheartService) runApplyGmMove(ctx context.Context, in *pb.Daggerhe
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	move := strings.TrimSpace(in.GetMove())
 	if move == "" {
 		return nil, status.Error(codes.InvalidArgument, "move is required")
@@ -493,6 +499,7 @@ func (s *DaggerheartService) runApplyGmMove(ctx context.Context, in *pb.Daggerhe
 			Type:          commandTypeDaggerheartGMFearSet,
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     sessionID,
+			SceneID:       sceneID,
 			RequestID:     requestID,
 			InvocationID:  invocationID,
 			EntityType:    "campaign",

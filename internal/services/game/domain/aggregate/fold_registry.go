@@ -1,6 +1,7 @@
 package aggregate
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
@@ -9,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -110,5 +112,46 @@ func coreFoldEntries() []foldEntry {
 				return foldEntityKeyed(&state.Invites, evt, "invite", invite.Fold)
 			},
 		},
+		{
+			types: scene.FoldHandledTypes,
+			fold:  foldScene,
+		},
 	}
+}
+
+// foldScene routes scene events to the correct scene state entry.
+//
+// Scene events use different EntityID conventions depending on event type:
+// most use the SceneID as EntityID, but gate events use the GateID. To
+// handle both patterns uniformly, foldScene extracts the scene_id from
+// the event payload.
+func foldScene(state *State, evt event.Event) error {
+	sceneID, err := extractSceneID(evt)
+	if err != nil {
+		return fmt.Errorf("scene fold: %w", err)
+	}
+	if state.Scenes == nil {
+		state.Scenes = make(map[string]scene.State)
+	}
+	sub := state.Scenes[sceneID]
+	updated, err := scene.Fold(sub, evt)
+	if err != nil {
+		return err
+	}
+	state.Scenes[sceneID] = updated
+	return nil
+}
+
+// extractSceneID reads the scene_id field from any scene event payload.
+func extractSceneID(evt event.Event) (string, error) {
+	var envelope struct {
+		SceneID string `json:"scene_id"`
+	}
+	if err := json.Unmarshal(evt.PayloadJSON, &envelope); err != nil {
+		return "", fmt.Errorf("extract scene_id from %s payload: %w", evt.Type, err)
+	}
+	if envelope.SceneID == "" {
+		return "", fmt.Errorf("scene_id is empty in %s payload", evt.Type)
+	}
+	return envelope.SceneID, nil
 }

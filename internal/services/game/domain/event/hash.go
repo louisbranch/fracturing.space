@@ -50,6 +50,9 @@ func addOptionalFields(envelope map[string]any, evt Event) {
 	if evt.SessionID != "" {
 		envelope["session_id"] = evt.SessionID
 	}
+	if evt.SceneID != "" {
+		envelope["scene_id"] = evt.SceneID
+	}
 	if evt.RequestID != "" {
 		envelope["request_id"] = evt.RequestID
 	}

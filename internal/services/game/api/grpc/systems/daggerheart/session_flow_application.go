@@ -44,6 +44,7 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	characterID := strings.TrimSpace(in.GetCharacterId())
 	if characterID == "" {
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
@@ -157,6 +158,7 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 				CampaignID:   campaignID,
 				Type:         commandTypeDaggerheartHopeSpend,
 				SessionID:    sessionID,
+				SceneID:      sceneID,
 				RequestID:    requestID,
 				InvocationID: invocationID,
 				EntityType:   "character",
@@ -262,6 +264,7 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 		CampaignID:   campaignID,
 		Type:         commandTypeActionRollResolve,
 		SessionID:    sessionID,
+		SceneID:      sceneID,
 		RequestID:    requestID,
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "roll",

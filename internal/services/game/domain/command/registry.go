@@ -56,6 +56,8 @@ const (
 	GateScopeNone GateScope = "none"
 	// GateScopeSession indicates the command is gated when a session gate is open.
 	GateScopeSession GateScope = "session"
+	// GateScopeScene indicates the command is gated when a scene gate is open.
+	GateScopeScene GateScope = "scene"
 )
 
 // GatePolicy declares how a command behaves when a session gate is open.
@@ -86,6 +88,7 @@ type Command struct {
 	ActorType     ActorType
 	ActorID       string
 	SessionID     string
+	SceneID       string
 	RequestID     string
 	InvocationID  string
 	EntityType    string

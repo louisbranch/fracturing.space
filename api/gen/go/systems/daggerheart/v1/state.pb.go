@@ -443,21 +443,21 @@ type DaggerheartProfile struct {
 	CommunityId string `protobuf:"bytes,20,opt,name=community_id,json=communityId,proto3" json:"community_id,omitempty"`
 	// Step 3: whether traits were explicitly assigned during creation.
 	TraitsAssigned *wrapperspb.BoolValue `protobuf:"bytes,21,opt,name=traits_assigned,json=traitsAssigned,proto3" json:"traits_assigned,omitempty"`
-	// Step 6: free-form background text.
+	// Step 8: free-form background text.
 	Background string `protobuf:"bytes,22,opt,name=background,proto3" json:"background,omitempty"`
-	// Step 8: selected domain card ids.
+	// Step 6: selected domain card ids.
 	DomainCardIds []string `protobuf:"bytes,23,rep,name=domain_card_ids,json=domainCardIds,proto3" json:"domain_card_ids,omitempty"`
 	// Step 9: free-form character connections text.
 	Connections string `protobuf:"bytes,24,opt,name=connections,proto3" json:"connections,omitempty"`
-	// Step 4: whether additional character details were explicitly recorded.
+	// Step 7: whether additional character details were explicitly recorded.
 	DetailsRecorded *wrapperspb.BoolValue `protobuf:"bytes,25,opt,name=details_recorded,json=detailsRecorded,proto3" json:"details_recorded,omitempty"`
-	// Step 5: selected starting weapon ids.
+	// Step 4: selected starting weapon ids.
 	StartingWeaponIds []string `protobuf:"bytes,26,rep,name=starting_weapon_ids,json=startingWeaponIds,proto3" json:"starting_weapon_ids,omitempty"`
-	// Step 5: selected starting armor id.
+	// Step 4: selected starting armor id.
 	StartingArmorId string `protobuf:"bytes,27,opt,name=starting_armor_id,json=startingArmorId,proto3" json:"starting_armor_id,omitempty"`
-	// Step 5: selected starting potion item id.
+	// Step 4: selected starting potion item id.
 	StartingPotionItemId string `protobuf:"bytes,28,opt,name=starting_potion_item_id,json=startingPotionItemId,proto3" json:"starting_potion_item_id,omitempty"`
-	// Step 4: free-form character description (appearance, personality, etc.).
+	// Step 7: free-form character description (appearance, personality, etc.).
 	Description   string `protobuf:"bytes,29,opt,name=description,proto3" json:"description,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -889,7 +889,7 @@ func (x *DaggerheartCreationStepTraitsInput) GetKnowledge() int32 {
 	return 0
 }
 
-// DaggerheartCreationStepDetailsInput applies creation step 4
+// DaggerheartCreationStepDetailsInput applies creation step 7
 // (record additional character details).
 type DaggerheartCreationStepDetailsInput struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -936,7 +936,7 @@ func (x *DaggerheartCreationStepDetailsInput) GetDescription() string {
 	return ""
 }
 
-// DaggerheartCreationStepEquipmentInput applies creation step 5
+// DaggerheartCreationStepEquipmentInput applies creation step 4
 // (choose starting equipment).
 type DaggerheartCreationStepEquipmentInput struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -998,7 +998,7 @@ func (x *DaggerheartCreationStepEquipmentInput) GetPotionItemId() string {
 	return ""
 }
 
-// DaggerheartCreationStepBackgroundInput applies creation step 6 (background).
+// DaggerheartCreationStepBackgroundInput applies creation step 8 (background).
 type DaggerheartCreationStepBackgroundInput struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Background    string                 `protobuf:"bytes,1,opt,name=background,proto3" json:"background,omitempty"`
@@ -1043,7 +1043,7 @@ func (x *DaggerheartCreationStepBackgroundInput) GetBackground() string {
 	return ""
 }
 
-// DaggerheartCreationStepExperiencesInput applies creation step 7 (experiences).
+// DaggerheartCreationStepExperiencesInput applies creation step 5 (experiences).
 type DaggerheartCreationStepExperiencesInput struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Experiences   []*DaggerheartExperience `protobuf:"bytes,1,rep,name=experiences,proto3" json:"experiences,omitempty"`
@@ -1088,7 +1088,7 @@ func (x *DaggerheartCreationStepExperiencesInput) GetExperiences() []*Daggerhear
 	return nil
 }
 
-// DaggerheartCreationStepDomainCardsInput applies creation step 8 (domain cards).
+// DaggerheartCreationStepDomainCardsInput applies creation step 6 (domain cards).
 type DaggerheartCreationStepDomainCardsInput struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DomainCardIds []string               `protobuf:"bytes,1,rep,name=domain_card_ids,json=domainCardIds,proto3" json:"domain_card_ids,omitempty"`

@@ -12,6 +12,7 @@ type CoreInput struct {
 	ActorType     command.ActorType
 	ActorID       string
 	SessionID     string
+	SceneID       string
 	RequestID     string
 	InvocationID  string
 	CorrelationID string
@@ -28,6 +29,7 @@ func Core(in CoreInput) command.Command {
 		ActorType:     in.ActorType,
 		ActorID:       in.ActorID,
 		SessionID:     in.SessionID,
+		SceneID:       in.SceneID,
 		RequestID:     in.RequestID,
 		InvocationID:  in.InvocationID,
 		CorrelationID: in.CorrelationID,
@@ -42,6 +44,7 @@ type CoreSystemInput struct {
 	CampaignID    string
 	Type          command.Type
 	SessionID     string
+	SceneID       string
 	RequestID     string
 	InvocationID  string
 	CorrelationID string
@@ -57,6 +60,7 @@ func CoreSystem(in CoreSystemInput) command.Command {
 		Type:          in.Type,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     in.SessionID,
+		SceneID:       in.SceneID,
 		RequestID:     in.RequestID,
 		InvocationID:  in.InvocationID,
 		CorrelationID: in.CorrelationID,
@@ -85,6 +89,7 @@ type DaggerheartSystemCommandInput struct {
 	CampaignID    string
 	Type          command.Type
 	SessionID     string
+	SceneID       string
 	RequestID     string
 	InvocationID  string
 	CorrelationID string
@@ -102,6 +107,7 @@ func DaggerheartSystemCommand(in DaggerheartSystemCommandInput) command.Command 
 			Type:          in.Type,
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     in.SessionID,
+			SceneID:       in.SceneID,
 			RequestID:     in.RequestID,
 			InvocationID:  in.InvocationID,
 			CorrelationID: in.CorrelationID,

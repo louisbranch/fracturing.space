@@ -9,6 +9,7 @@ import (
 type scenarioEnv struct {
 	campaignClient    gamev1.CampaignServiceClient
 	sessionClient     gamev1.SessionServiceClient
+	sceneClient       gamev1.SceneServiceClient
 	characterClient   gamev1.CharacterServiceClient
 	participantClient gamev1.ParticipantServiceClient
 	snapshotClient    gamev1.SnapshotServiceClient
@@ -32,6 +33,8 @@ type scenarioState struct {
 	campaignSystem       commonv1.GameSystem
 	ownerParticipantID   string
 	sessionID            string
+	activeSceneID        string
+	scenes               map[string]string
 	actors               map[string]string
 	participants         map[string]string
 	adversaries          map[string]string
