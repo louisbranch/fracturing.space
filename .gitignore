@@ -1,9 +1,5 @@
-coverage.out
-coverage.html
-coverage.raw
-coverage.log
-coverage-treemap.svg
-coverage.func
+coverage.*
+coverage-*
 data/
 .env
 .env.local

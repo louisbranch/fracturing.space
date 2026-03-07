@@ -33,6 +33,7 @@ wait_for_services_ready() {
   log_every="$(normalize_positive_int "${DEVCONTAINER_READY_LOG_EVERY:-5}" 5)"
 
   local services=(
+    "status"
     "game"
     "auth"
     "social"
@@ -47,6 +48,7 @@ wait_for_services_ready() {
   )
 
   local markers=(
+    "status server listening at"
     "game server listening at"
     "auth server listening at"
     "social server listening at"

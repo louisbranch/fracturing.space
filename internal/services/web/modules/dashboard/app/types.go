@@ -15,6 +15,10 @@ type ServiceHealthEntry struct {
 	Available bool
 }
 
+// HealthProvider returns current service health entries.
+// Called on each dashboard load to get live status.
+type HealthProvider func(ctx context.Context) []ServiceHealthEntry
+
 // DashboardView is the web-dashboard view model derived from userhub state.
 type DashboardView struct {
 	ShowPendingProfileBlock bool

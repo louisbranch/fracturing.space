@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package status.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/status/v1;statusv1";
+
+// CapabilityStatus indicates the health of a single capability.
+enum CapabilityStatus {
+  CAPABILITY_STATUS_UNSPECIFIED = 0;
+  CAPABILITY_STATUS_OPERATIONAL = 1;
+  CAPABILITY_STATUS_DEGRADED = 2;
+  CAPABILITY_STATUS_UNAVAILABLE = 3;
+  CAPABILITY_STATUS_MAINTENANCE = 4;
+}
+
+// OverrideReason classifies why an operator override was applied.
+enum OverrideReason {
+  OVERRIDE_REASON_UNSPECIFIED = 0;
+  OVERRIDE_REASON_MAINTENANCE = 1;
+  OVERRIDE_REASON_KNOWN_ISSUE = 2;
+  OVERRIDE_REASON_DEGRADED = 3;
+  OVERRIDE_REASON_UNAVAILABLE = 4;
+}
+
+// CapabilityReport is a single capability health observation from a service.
+message CapabilityReport {
+  string name = 1;
+  CapabilityStatus status = 2;
+  string detail = 3;
+  google.protobuf.Timestamp observed_at = 4;
+}
+
+// ServiceStatusReport is a push from a service containing its capability health.
+message ServiceStatusReport {
+  string service = 1;
+  repeated CapabilityReport capabilities = 2;
+  google.protobuf.Timestamp reported_at = 3;
+}
+
+// CapabilityOverride represents an operator-set override for a capability.
+message CapabilityOverride {
+  string capability = 1;
+  CapabilityStatus status = 2;
+  OverrideReason reason = 3;
+  string detail = 4;
+  google.protobuf.Timestamp set_at = 5;
+}
+
+// CapabilitySnapshot is the resolved view of a capability combining report and override.
+message CapabilitySnapshot {
+  string name = 1;
+  CapabilityStatus reported_status = 2;
+  string reported_detail = 3;
+  CapabilityStatus effective_status = 4;
+  bool has_override = 5;
+  CapabilityOverride override = 6;
+  google.protobuf.Timestamp observed_at = 7;
+}
+
+// ServiceStatus is the aggregate health view of one service.
+message ServiceStatus {
+  string service = 1;
+  CapabilityStatus aggregate_status = 2;
+  repeated CapabilitySnapshot capabilities = 3;
+  google.protobuf.Timestamp last_report_at = 4;
+  bool has_overrides = 5;
+}
+
+// ReportStatusRequest pushes capability health from a service.
+message ReportStatusRequest {
+  ServiceStatusReport report = 1;
+}
+
+// ReportStatusResponse acknowledges a status report.
+message ReportStatusResponse {}
+
+// GetSystemStatusRequest queries aggregate system health.
+message GetSystemStatusRequest {}
+
+// GetSystemStatusResponse returns the health of all known services.
+message GetSystemStatusResponse {
+  repeated ServiceStatus services = 1;
+}
+
+// SetOverrideRequest applies an operator override to a capability.
+message SetOverrideRequest {
+  string service = 1;
+  string capability = 2;
+  CapabilityStatus status = 3;
+  OverrideReason reason = 4;
+  string detail = 5;
+}
+
+// SetOverrideResponse acknowledges an override.
+message SetOverrideResponse {}
+
+// ClearOverrideRequest removes an operator override from a capability.
+message ClearOverrideRequest {
+  string service = 1;
+  string capability = 2;
+}
+
+// ClearOverrideResponse acknowledges an override removal.
+message ClearOverrideResponse {}
+
+// StatusService provides system-wide capability health aggregation and operator overrides.
+service StatusService {
+  rpc ReportStatus(ReportStatusRequest) returns (ReportStatusResponse);
+  rpc GetSystemStatus(GetSystemStatusRequest) returns (GetSystemStatusResponse);
+  rpc SetOverride(SetOverrideRequest) returns (SetOverrideResponse);
+  rpc ClearOverride(ClearOverrideRequest) returns (ClearOverrideResponse);
+}

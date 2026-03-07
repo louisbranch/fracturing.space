@@ -46,6 +46,8 @@ func (s *Server) Serve(ctx context.Context) error {
 	defer stopOutboxWorker()
 	stopOutboxShadowWorker := s.startProjectionApplyOutboxShadowWorker(ctx)
 	defer stopOutboxShadowWorker()
+	stopStatusReporter := s.startStatusReporter(ctx)
+	defer stopStatusReporter()
 
 	log.Printf("game server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)
@@ -266,6 +268,11 @@ func (s *Server) closeResources() {
 	if s.aiConn != nil {
 		if err := s.aiConn.Close(); err != nil {
 			log.Printf("close ai conn: %v", err)
+		}
+	}
+	if s.statusConn != nil {
+		if err := s.statusConn.Close(); err != nil {
+			log.Printf("close status conn: %v", err)
 		}
 	}
 }

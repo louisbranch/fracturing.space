@@ -92,7 +92,10 @@ func TestLoadDashboardHandlesErrorsAndDegradedDependencies(t *testing.T) {
 func TestLoadDashboardAdventureVisibility(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&gatewayStub{snapshot: DashboardSnapshot{}}, nil, []ServiceHealthEntry{{Label: "Campaigns", Available: true}})
+	healthProvider := func(ctx context.Context) []ServiceHealthEntry {
+		return []ServiceHealthEntry{{Label: "Campaigns", Available: true}}
+	}
+	svc := NewService(&gatewayStub{snapshot: DashboardSnapshot{}}, nil, healthProvider)
 	view, err := svc.LoadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("LoadDashboard() error = %v", err)

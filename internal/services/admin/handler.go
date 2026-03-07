@@ -11,6 +11,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
@@ -76,6 +77,7 @@ type Handler struct {
 	// gameClientEnsureInProgress tracks whether a background game bootstrap is running.
 	gameClientInitInProgress bool
 	grpcAddr                 string
+	statusClient             statusv1.StatusServiceClient
 	authConfig               *AuthConfig
 	introspector             TokenIntrospector
 }
@@ -83,10 +85,11 @@ type Handler struct {
 // NewServiceHandler builds a handler instance without attaching transport routing
 // or auth middleware wrappers. Callers can reuse this service surface inside
 // alternative composition layers.
-func NewServiceHandler(clientProvider GRPCClientProvider, grpcAddr string, authCfg *AuthConfig) *Handler {
+func NewServiceHandler(clientProvider GRPCClientProvider, grpcAddr string, authCfg *AuthConfig, statusClient statusv1.StatusServiceClient) *Handler {
 	handler := &Handler{
 		clientProvider: clientProvider,
 		grpcAddr:       strings.TrimSpace(grpcAddr),
+		statusClient:   statusClient,
 		authConfig:     authCfg,
 	}
 	if authCfg != nil && authCfg.IntrospectURL != "" && authCfg.LoginURL != "" {
@@ -97,14 +100,14 @@ func NewServiceHandler(clientProvider GRPCClientProvider, grpcAddr string, authC
 
 // NewHandler builds the HTTP handler for the admin server (no auth).
 func NewHandler(clientProvider GRPCClientProvider) http.Handler {
-	return NewHandlerWithConfig(clientProvider, "", nil)
+	return NewHandlerWithConfig(clientProvider, "", nil, nil)
 }
 
 // NewHandlerWithConfig builds the HTTP handler with explicit configuration.
 // When authCfg is non-nil and fully populated, requests are guarded by
 // token introspection; otherwise admin runs without authentication.
-func NewHandlerWithConfig(clientProvider GRPCClientProvider, grpcAddr string, authCfg *AuthConfig) http.Handler {
-	handler := NewServiceHandler(clientProvider, grpcAddr, authCfg)
+func NewHandlerWithConfig(clientProvider GRPCClientProvider, grpcAddr string, authCfg *AuthConfig, statusClient statusv1.StatusServiceClient) http.Handler {
+	handler := NewServiceHandler(clientProvider, grpcAddr, authCfg, statusClient)
 	mux := handler.routes()
 	mux = handler.withGameClientBootstrap(mux)
 	if handler.introspector == nil {
@@ -175,8 +178,9 @@ func (h *Handler) routes() http.Handler {
 	}
 	composed, err := composition.ComposeAppHandler(composition.ComposeInput{
 		Modules: modules.BuildInput{
-			Base:     modulehandler.NewBase(h.clientProvider),
-			GRPCAddr: h.grpcAddr,
+			Base:         modulehandler.NewBase(h.clientProvider),
+			GRPCAddr:     h.grpcAddr,
+			StatusClient: h.statusClient,
 		},
 	})
 	if err != nil {

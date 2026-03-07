@@ -31,6 +31,8 @@ const (
 	ServiceUserHub = "userhub"
 	// ServiceWeb is the web login HTTP service identity.
 	ServiceWeb = "web"
+	// ServiceStatus is the status gRPC service identity.
+	ServiceStatus = "status"
 	// ServiceWorker is the worker gRPC service identity.
 	ServiceWorker = "worker"
 )
@@ -43,6 +45,7 @@ var grpcPorts = map[string]int{
 	ServiceAI:            8087,
 	ServiceNotifications: 8088,
 	ServiceWorker:        8089,
+	ServiceStatus:        8093,
 	ServiceUserHub:       8092,
 }
 

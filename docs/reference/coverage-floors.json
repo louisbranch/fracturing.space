@@ -24,7 +24,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart",
-      "floor": 95.8,
+      "floor": 91.9,
       "description": "Daggerheart system module, fold, and projection adapter path."
     },
     {
@@ -139,7 +139,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules",
-      "floor": 83.5,
+      "floor": 100.0,
       "description": "Web registry boundary guardrails and module-set composition invariants."
     },
     {

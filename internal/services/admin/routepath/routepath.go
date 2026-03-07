@@ -92,6 +92,14 @@ const (
 )
 
 const (
+	AppStatus    = "/app/status"
+	Status       = AppStatus
+	StatusRows   = "/app/status?fragment=rows"
+	StatusTable  = StatusRows
+	StatusPrefix = "/app/status/"
+)
+
+const (
 	AppSystemPattern = SystemsPrefix + "{systemID}"
 )
 

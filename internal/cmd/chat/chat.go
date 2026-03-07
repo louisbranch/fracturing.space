@@ -5,9 +5,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log"
 
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	server "github.com/louisbranch/fracturing.space/internal/services/chat/app"
 )
 
@@ -19,6 +23,7 @@ type Config struct {
 	AIAddr              string `env:"FRACTURING_SPACE_AI_ADDR"`
 	AuthBaseURL         string `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL"    envDefault:"http://localhost:8084"`
 	OAuthResourceSecret string `env:"FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET"`
+	StatusAddr          string `env:"FRACTURING_SPACE_STATUS_ADDR"`
 }
 
 // ParseConfig parses environment and flags into a Config.
@@ -30,6 +35,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
 	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
 	cfg.AIAddr = discovery.OrDefaultGRPCAddr(cfg.AIAddr, discovery.ServiceAI)
+	cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "chat HTTP listen address")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "auth service gRPC address")
@@ -46,6 +52,27 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 // Run builds the chat app and starts realtime transport behavior.
 func Run(ctx context.Context, cfg Config) error {
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceChat, func(context.Context) error {
+		// Status reporter.
+		statusConn := platformgrpc.DialLenient(ctx, cfg.StatusAddr, log.Printf)
+		if statusConn != nil {
+			defer func() {
+				if err := statusConn.Close(); err != nil {
+					log.Printf("close status connection: %v", err)
+				}
+			}()
+		}
+		var statusClient statusv1.StatusServiceClient
+		if statusConn != nil {
+			statusClient = statusv1.NewStatusServiceClient(statusConn)
+		}
+		reporter := platformstatus.NewReporter("chat", statusClient)
+		reporter.Register("chat.realtime", platformstatus.Operational)
+		reporter.Register("chat.game.integration", platformstatus.Operational)
+		reporter.Register("chat.ai.integration", platformstatus.Operational)
+		reporter.Register("chat.auth.integration", platformstatus.Operational)
+		stopReporter := reporter.Start(ctx)
+		defer stopReporter()
+
 		if err := server.Run(ctx, server.Config{
 			HTTPAddr:            cfg.HTTPAddr,
 			AuthAddr:            cfg.AuthAddr,

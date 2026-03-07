@@ -1,32 +1,9 @@
 package modules
 
-import (
-	"strings"
+import "strings"
 
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
-)
-
-// DeriveServiceHealth builds health entries from modules that implement
-// HealthReporter. Each module is the single source of truth for its own
-// availability — new dependencies automatically affect health without
-// manual registry updates.
-func DeriveServiceHealth(modules []Module) []dashboard.ServiceHealthEntry {
-	var entries []dashboard.ServiceHealthEntry
-	for _, m := range modules {
-		hr, ok := m.(module.HealthReporter)
-		if !ok {
-			continue
-		}
-		entries = append(entries, dashboard.ServiceHealthEntry{
-			Label:     capitalizeLabel(m.ID()),
-			Available: hr.Healthy(),
-		})
-	}
-	return entries
-}
-
-// capitalizeLabel centralizes this web behavior in one helper seam.
+// capitalizeLabel capitalizes the first character of a module or service ID
+// for display in health entries.
 func capitalizeLabel(id string) string {
 	if id == "" {
 		return id

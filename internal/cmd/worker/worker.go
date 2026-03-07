@@ -4,10 +4,14 @@ package worker
 import (
 	"context"
 	"flag"
+	"log"
 	"time"
 
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	workerserver "github.com/louisbranch/fracturing.space/internal/services/worker/app"
 )
 
@@ -25,6 +29,7 @@ type Config struct {
 	RetryBackoff      time.Duration `env:"FRACTURING_SPACE_WORKER_RETRY_BACKOFF" envDefault:"5s"`
 	RetryMaxDelay     time.Duration `env:"FRACTURING_SPACE_WORKER_RETRY_MAX_DELAY" envDefault:"5m"`
 	GRPCDialTimeout   time.Duration `env:"FRACTURING_SPACE_WORKER_DIAL_TIMEOUT" envDefault:"2s"`
+	StatusAddr        string        `env:"FRACTURING_SPACE_STATUS_ADDR"`
 }
 
 // ParseConfig parses environment and flags into a Config.
@@ -36,6 +41,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
 	cfg.SocialAddr = discovery.OrDefaultGRPCAddr(cfg.SocialAddr, discovery.ServiceSocial)
 	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
+	cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The worker health gRPC server port")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "The auth gRPC server address")
 	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "The social gRPC server address")
@@ -57,6 +63,27 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 // Run starts the worker runtime.
 func Run(ctx context.Context, cfg Config) error {
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceWorker, func(context.Context) error {
+		// Status reporter.
+		statusConn := platformgrpc.DialLenient(ctx, cfg.StatusAddr, log.Printf)
+		if statusConn != nil {
+			defer func() {
+				if err := statusConn.Close(); err != nil {
+					log.Printf("close status connection: %v", err)
+				}
+			}()
+		}
+		var statusClient statusv1.StatusServiceClient
+		if statusConn != nil {
+			statusClient = statusv1.NewStatusServiceClient(statusConn)
+		}
+		reporter := platformstatus.NewReporter("worker", statusClient)
+		reporter.Register("worker.processing", platformstatus.Operational)
+		reporter.Register("worker.auth.integration", platformstatus.Operational)
+		reporter.Register("worker.social.integration", platformstatus.Operational)
+		reporter.Register("worker.notifications.integration", platformstatus.Operational)
+		stopReporter := reporter.Start(ctx)
+		defer stopReporter()
+
 		return workerserver.Run(ctx, workerserver.RuntimeConfig{
 			Port:              cfg.Port,
 			AuthAddr:          cfg.AuthAddr,

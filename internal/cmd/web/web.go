@@ -15,12 +15,14 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
@@ -39,6 +41,7 @@ type Config struct {
 	AIAddr              string        `env:"FRACTURING_SPACE_AI_ADDR"`
 	NotificationsAddr   string        `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`
 	UserHubAddr         string        `env:"FRACTURING_SPACE_USERHUB_ADDR"`
+	StatusAddr          string        `env:"FRACTURING_SPACE_STATUS_ADDR"`
 	AssetBaseURL        string        `env:"FRACTURING_SPACE_ASSET_BASE_URL"`
 	GRPCDialTimeout     time.Duration `env:"FRACTURING_SPACE_WEB_DIAL_TIMEOUT" envDefault:"2s"`
 }
@@ -58,6 +61,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	cfg.AIAddr = discovery.OrDefaultGRPCAddr(cfg.AIAddr, discovery.ServiceAI)
 	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
 	cfg.UserHubAddr = discovery.OrDefaultGRPCAddr(cfg.UserHubAddr, discovery.ServiceUserHub)
+	cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
 	fs.StringVar(&cfg.ChatHTTPAddr, "chat-http-addr", cfg.ChatHTTPAddr, "Chat HTTP listen address")
@@ -240,13 +244,15 @@ func closeDependencyConnections(conns []*grpc.ClientConn) {
 	}
 }
 
-// dialDependency dials one dependency endpoint with health checks and shared defaults.
+// dialDependency dials one dependency endpoint leniently.
+// Returns nil connection on failure instead of an error.
 func dialDependency(
 	ctx context.Context,
 	address string,
-	timeout time.Duration,
+	_ time.Duration,
 ) (*grpc.ClientConn, error) {
-	return platformgrpc.DialWithHealth(ctx, nil, address, timeout, log.Printf, platformgrpc.DefaultClientDialOptions()...)
+	conn := platformgrpc.DialLenient(ctx, address, log.Printf)
+	return conn, nil
 }
 
 // Run starts the web service process.
@@ -266,6 +272,34 @@ func Run(ctx context.Context, cfg Config) error {
 		for _, warning := range dependencyStatusWarnings(statuses) {
 			log.Printf("web startup: %s", warning)
 		}
+
+		// Status reporter.
+		statusConn := platformgrpc.DialLenient(ctx, cfg.StatusAddr, log.Printf)
+		if statusConn != nil {
+			defer func() {
+				if err := statusConn.Close(); err != nil {
+					log.Printf("close status connection: %v", err)
+				}
+			}()
+		}
+		var statusClient statusv1.StatusServiceClient
+		if statusConn != nil {
+			statusClient = statusv1.NewStatusServiceClient(statusConn)
+		}
+		reporter := platformstatus.NewReporter("web", statusClient)
+		for _, dep := range []string{"auth", "social", "game", "ai", "userhub", "notifications"} {
+			capName := "web." + dep + ".integration"
+			if s, ok := statuses[dep]; ok && s.State == dependencyDialStateConnected {
+				reporter.Register(capName, platformstatus.Operational)
+			} else {
+				reporter.Register(capName, platformstatus.Unavailable)
+			}
+		}
+		stopReporter := reporter.Start(ctx)
+		defer stopReporter()
+
+		// Share the status client with modules for dashboard health queries.
+		dependencies.Modules.StatusClient = statusClient
 
 		server, err := web.NewServer(ctx, web.Config{
 			HTTPAddr:            cfg.HTTPAddr,

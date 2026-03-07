@@ -12,7 +12,9 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	admingrpcdial "github.com/louisbranch/fracturing.space/internal/services/admin/integration/grpcdial"
 	"google.golang.org/grpc"
@@ -26,6 +28,7 @@ type Config struct {
 	HTTPAddr        string
 	GRPCAddr        string
 	AuthAddr        string
+	StatusAddr      string
 	GRPCDialTimeout time.Duration
 	// AuthConfig enables token-based authentication when set.
 	AuthConfig *AuthConfig
@@ -37,6 +40,7 @@ type Server struct {
 	grpcAddr    string
 	authAddr    string
 	grpcClients *grpcClients
+	statusConn  *grpc.ClientConn
 	httpServer  *http.Server
 }
 
@@ -313,7 +317,17 @@ func NewServer(ctx context.Context, cfg Config) (*Server, error) {
 		}
 	}
 
-	handler := NewHandlerWithConfig(clients, cfg.GRPCAddr, cfg.AuthConfig)
+	// Status service client for the status admin module.
+	var statusClient statusv1.StatusServiceClient
+	var statusConn *grpc.ClientConn
+	if strings.TrimSpace(cfg.StatusAddr) != "" {
+		statusConn = platformgrpc.DialLenient(ctx, cfg.StatusAddr, log.Printf)
+		if statusConn != nil {
+			statusClient = statusv1.NewStatusServiceClient(statusConn)
+		}
+	}
+
+	handler := NewHandlerWithConfig(clients, cfg.GRPCAddr, cfg.AuthConfig, statusClient)
 	httpServer := &http.Server{
 		Addr:              httpAddr,
 		Handler:           handler,
@@ -325,6 +339,7 @@ func NewServer(ctx context.Context, cfg Config) (*Server, error) {
 		grpcAddr:    cfg.GRPCAddr,
 		authAddr:    cfg.AuthAddr,
 		grpcClients: clients,
+		statusConn:  statusConn,
 		httpServer:  httpServer,
 	}, nil
 }
@@ -368,6 +383,11 @@ func (s *Server) Close() {
 	}
 	if s.grpcClients != nil {
 		s.grpcClients.Close()
+	}
+	if s.statusConn != nil {
+		if err := s.statusConn.Close(); err != nil {
+			log.Printf("close admin status gRPC connection: %v", err)
+		}
 	}
 	if s.httpServer != nil {
 		_ = s.httpServer.Close()

@@ -1,0 +1,62 @@
+package templates
+
+// StatusFullPage renders status content in the base layout.
+templ StatusFullPage(page PageContext) {
+	@Layout(T(page.Loc, "title.status", AppName()), "Status", page.Loc, page) {
+		@StatusPage(page.Loc)
+	}
+}
+
+// StatusPage renders the status page content.
+templ StatusPage(loc Localizer) {
+	@StatusLoading(loc)
+}
+
+// StatusLoading renders the HTMX loading placeholder.
+templ StatusLoading(loc Localizer) {
+	@LazyLoad("/app/status?fragment=rows", T(loc, "status.loading"))
+}
+
+// StatusTable renders the status capability grid grouped by service.
+templ StatusTable(groups []StatusServiceGroup, message string, loc Localizer) {
+	if message != "" {
+		<p>{message}</p>
+	} else if len(groups) == 0 {
+		<p>{T(loc, "status.no_services")}</p>
+	} else {
+		for _, group := range groups {
+			<div class="mb-6">
+				<h3 class="text-lg font-bold mb-2">
+					{group.Service}
+					@StatusBadge(group.AggregateStatus, group.StatusVariant)
+				</h3>
+				<table class="table table-zebra">
+					<thead>
+						<tr>
+							<th>{T(loc, "status.table.capability")}</th>
+							<th>{T(loc, "status.table.reported")}</th>
+							<th>{T(loc, "status.table.effective")}</th>
+							<th>{T(loc, "status.table.override")}</th>
+						</tr>
+					</thead>
+					<tbody>
+						for _, cap := range group.Capabilities {
+							<tr>
+								<td>{cap.Capability}</td>
+								<td>{cap.ReportedStatus}</td>
+								<td>@StatusBadge(cap.EffectiveStatus, cap.StatusVariant)</td>
+								<td>
+									if cap.HasOverride {
+										{cap.OverrideDetail}
+									} else {
+										<span class="opacity-40">—</span>
+									}
+								</td>
+							</tr>
+						}
+					</tbody>
+				</table>
+			</div>
+		}
+	}
+}
