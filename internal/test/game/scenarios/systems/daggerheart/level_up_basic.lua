@@ -18,6 +18,7 @@ dh:level_up{
   level_after = 2,
   advancements = {
     { type = "trait_increase", trait = "agility" },
+    { type = "add_hp_slots" },
   },
 }
 

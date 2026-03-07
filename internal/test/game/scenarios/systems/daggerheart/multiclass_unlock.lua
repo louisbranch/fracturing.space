@@ -15,9 +15,9 @@ scn:pc("Frodo")
 scn:start_session("Multiclass")
 
 -- Levels 1 through 5.
-dh:level_up{ target = "Frodo", level_after = 2, advancements = { { type = "trait_increase", trait = "agility" } } }
-dh:level_up{ target = "Frodo", level_after = 3, advancements = { { type = "trait_increase", trait = "strength" } } }
-dh:level_up{ target = "Frodo", level_after = 4, advancements = { { type = "trait_increase", trait = "finesse" } } }
+dh:level_up{ target = "Frodo", level_after = 2, advancements = { { type = "trait_increase", trait = "agility" }, { type = "add_hp_slots" } } }
+dh:level_up{ target = "Frodo", level_after = 3, advancements = { { type = "trait_increase", trait = "strength" }, { type = "add_hp_slots" } } }
+dh:level_up{ target = "Frodo", level_after = 4, advancements = { { type = "trait_increase", trait = "finesse" }, { type = "add_hp_slots" } } }
 dh:level_up{ target = "Frodo", level_after = 5, advancements = { { type = "increase_proficiency" } } }
 
 -- Level 5 to 6: take multiclass advancement.

@@ -18,21 +18,21 @@ scn:start_session("Tier Entry")
 dh:level_up{
   target = "Frodo",
   level_after = 2,
-  advancements = { { type = "trait_increase", trait = "agility" } },
+  advancements = { { type = "trait_increase", trait = "agility" }, { type = "add_hp_slots" } },
 }
 
 -- Level 2 to 3.
 dh:level_up{
   target = "Frodo",
   level_after = 3,
-  advancements = { { type = "trait_increase", trait = "strength" } },
+  advancements = { { type = "trait_increase", trait = "strength" }, { type = "add_hp_slots" } },
 }
 
 -- Level 3 to 4.
 dh:level_up{
   target = "Frodo",
   level_after = 4,
-  advancements = { { type = "trait_increase", trait = "finesse" } },
+  advancements = { { type = "trait_increase", trait = "finesse" }, { type = "add_hp_slots" } },
 }
 
 -- Level 4 to 5: tier entry from T2 to T3.
