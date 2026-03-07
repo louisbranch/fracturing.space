@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-07T17:09:16Z",
+  "updated_at": "2026-03-07T17:43:54Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -10,7 +10,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate",
-      "floor": 91.4,
+      "floor": 91.8,
       "description": "Aggregate fold routing and typed state reconstruction."
     },
     {
