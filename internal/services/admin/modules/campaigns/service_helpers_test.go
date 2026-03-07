@@ -9,14 +9,15 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestCampaignHelpersFormatters(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 
 	if got := formatGmMode(statev1.GmMode_HUMAN, loc); got != loc.Sprintf("label.human") {
 		t.Fatalf("formatGmMode(HUMAN) = %q", got)
@@ -55,11 +56,11 @@ func TestCampaignHelpersFormatters(t *testing.T) {
 	if got := formatCreatedDate(nil); got != "" {
 		t.Fatalf("formatCreatedDate(nil) = %q", got)
 	}
-	if got := formatTimestamp(ts); got != "2026-03-02 15:04:05" {
-		t.Fatalf("formatTimestamp() = %q", got)
+	if got := eventview.FormatTimestamp(ts); got != "2026-03-02 15:04:05" {
+		t.Fatalf("eventview.FormatTimestamp() = %q", got)
 	}
-	if got := formatTimestamp(nil); got != "" {
-		t.Fatalf("formatTimestamp(nil) = %q", got)
+	if got := eventview.FormatTimestamp(nil); got != "" {
+		t.Fatalf("eventview.FormatTimestamp(nil) = %q", got)
 	}
 
 	if got := truncateText("hello world", 5); got != "hello..." {
@@ -126,7 +127,7 @@ func TestCampaignHelpersFormatters(t *testing.T) {
 }
 
 func TestCampaignHelpersBuilders(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 	now := timestamppb.New(time.Date(2026, time.March, 2, 15, 4, 5, 0, time.UTC))
 
 	rows := buildCampaignRows([]*statev1.Campaign{
@@ -248,7 +249,7 @@ func TestCampaignHelpersBuilders(t *testing.T) {
 		t.Fatalf("buildSessionDetail(nil) = %#v", empty)
 	}
 
-	eventRows := buildEventRows([]*statev1.Event{
+	eventRows := eventview.BuildEventRows([]*statev1.Event{
 		nil,
 		{
 			CampaignId:  "camp-1",
@@ -264,7 +265,7 @@ func TestCampaignHelpersBuilders(t *testing.T) {
 		},
 	}, loc)
 	if len(eventRows) != 1 || eventRows[0].Seq != 5 || eventRows[0].EntityID != "char-1" {
-		t.Fatalf("buildEventRows() unexpected rows: %#v", eventRows)
+		t.Fatalf("eventview.BuildEventRows() unexpected rows: %#v", eventRows)
 	}
 }
 
@@ -274,12 +275,12 @@ func TestCampaignHelpersEventFilters(t *testing.T) {
 		"/?session_id=s-1&event_type=created&actor_type=system&entity_type=character&start_date=2026-01-01&end_date=2026-12-31",
 		nil,
 	)
-	filters := parseEventFilters(req)
+	filters := eventview.ParseEventFilters(req)
 	if filters.SessionID != "s-1" || filters.EventType != "created" || filters.EndDate != "2026-12-31" {
-		t.Fatalf("parseEventFilters() = %#v", filters)
+		t.Fatalf("eventview.ParseEventFilters() = %#v", filters)
 	}
 
-	got := buildEventFilterExpression(templates.EventFilterOptions{
+	got := eventview.BuildEventFilterExpression(templates.EventFilterOptions{
 		SessionID:  "s-1",
 		EventType:  `a"b\c`,
 		ActorType:  "participant",
@@ -288,24 +289,24 @@ func TestCampaignHelpersEventFilters(t *testing.T) {
 		EndDate:    "2026-01-02",
 	})
 	if !strings.Contains(got, `session_id = "s-1"`) || !strings.Contains(got, `type = "a\"b\\c"`) {
-		t.Fatalf("buildEventFilterExpression() = %q", got)
+		t.Fatalf("eventview.BuildEventFilterExpression() = %q", got)
 	}
 	if strings.Count(got, " AND ") != 5 {
-		t.Fatalf("buildEventFilterExpression() AND count = %d", strings.Count(got, " AND "))
+		t.Fatalf("eventview.BuildEventFilterExpression() AND count = %d", strings.Count(got, " AND "))
 	}
 
-	if escaped := escapeAIP160StringLiteral(`x"y\z`); escaped != `x\"y\\z` {
-		t.Fatalf("escapeAIP160StringLiteral() = %q", escaped)
+	if escaped := eventview.EscapeAIP160StringLiteral(`x"y\z`); escaped != `x\"y\\z` {
+		t.Fatalf("eventview.EscapeAIP160StringLiteral() = %q", escaped)
 	}
 
-	pushURL := eventFilterPushURL("/app/campaigns/camp-1/events", filters, "p-1")
+	pushURL := eventview.EventFilterPushURL("/app/campaigns/camp-1/events", filters, "p-1")
 	if !strings.Contains(pushURL, "page_token=p-1") || !strings.Contains(pushURL, "session_id=s-1") {
-		t.Fatalf("eventFilterPushURL() = %q", pushURL)
+		t.Fatalf("eventview.EventFilterPushURL() = %q", pushURL)
 	}
 }
 
 func TestCampaignHelpersEventTypeFormatting(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 	tests := []struct {
 		name  string
 		input string
@@ -349,8 +350,8 @@ func TestCampaignHelpersEventTypeFormatting(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := formatEventType(tc.input, loc); got != tc.want {
-				t.Fatalf("formatEventType(%q) = %q, want %q", tc.input, got, tc.want)
+			if got := eventview.FormatEventType(tc.input, loc); got != tc.want {
+				t.Fatalf("eventview.FormatEventType(%q) = %q, want %q", tc.input, got, tc.want)
 			}
 		})
 	}
@@ -368,16 +369,16 @@ func TestCampaignHelpersEventTypeFormatting(t *testing.T) {
 	}
 	for _, tc := range actorTests {
 		t.Run("actor_"+tc.name, func(t *testing.T) {
-			if got := formatActorType(tc.input, loc); got != tc.want {
-				t.Fatalf("formatActorType(%q) = %q, want %q", tc.input, got, tc.want)
+			if got := eventview.FormatActorType(tc.input, loc); got != tc.want {
+				t.Fatalf("eventview.FormatActorType(%q) = %q, want %q", tc.input, got, tc.want)
 			}
 		})
 	}
 
-	if got := formatEventDescription(nil, loc); got != "" {
-		t.Fatalf("formatEventDescription(nil) = %q", got)
+	if got := eventview.FormatEventDescription(nil, loc); got != "" {
+		t.Fatalf("eventview.FormatEventDescription(nil) = %q", got)
 	}
-	if got := formatEventDescription(&statev1.Event{Type: "campaign.created"}, loc); got != loc.Sprintf("event.campaign_created") {
-		t.Fatalf("formatEventDescription(event) = %q", got)
+	if got := eventview.FormatEventDescription(&statev1.Event{Type: "campaign.created"}, loc); got != loc.Sprintf("event.campaign_created") {
+		t.Fatalf("eventview.FormatEventDescription(event) = %q", got)
 	}
 }

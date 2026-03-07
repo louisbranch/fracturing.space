@@ -1,19 +1,45 @@
 package dashboard
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func TestDashboardServiceNilClients(t *testing.T) {
-	svc := service{base: modulehandler.NewBase(nil)}
+// testUnavailableConn implements grpc.ClientConnInterface and returns
+// codes.Unavailable for every RPC, simulating a disconnected backend.
+type testUnavailableConn struct{}
+
+func (testUnavailableConn) Invoke(context.Context, string, any, any, ...grpc.CallOption) error {
+	return status.Error(codes.Unavailable, "test: service not connected")
+}
+
+func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, ...grpc.CallOption) (grpc.ClientStream, error) {
+	return nil, status.Error(codes.Unavailable, "test: service not connected")
+}
+
+func TestDashboardServiceUnavailableClients(t *testing.T) {
+	var conn testUnavailableConn
+	svc := service{
+		base:             modulehandler.NewBase(),
+		statisticsClient: statev1.NewStatisticsServiceClient(conn),
+		systemClient:     statev1.NewSystemServiceClient(conn),
+		authClient:       authv1.NewAuthServiceClient(conn),
+		campaignClient:   statev1.NewCampaignServiceClient(conn),
+		eventClient:      statev1.NewEventServiceClient(conn),
+	}
 
 	rec := httptest.NewRecorder()
 	svc.HandleDashboard(rec, httptest.NewRequest(http.MethodGet, "/app/dashboard", nil))
@@ -29,7 +55,7 @@ func TestDashboardServiceNilClients(t *testing.T) {
 }
 
 func TestDashboardHelpersFormatting(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 
 	tests := []struct {
 		name  string
@@ -74,24 +100,24 @@ func TestDashboardHelpersFormatting(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := formatEventType(tc.input, loc); got != tc.want {
-				t.Fatalf("formatEventType(%q) = %q, want %q", tc.input, got, tc.want)
+			if got := eventview.FormatEventType(tc.input, loc); got != tc.want {
+				t.Fatalf("FormatEventType(%q) = %q, want %q", tc.input, got, tc.want)
 			}
 		})
 	}
 
-	if got := formatEventDescription(nil, loc); got != "" {
-		t.Fatalf("formatEventDescription(nil) = %q", got)
+	if got := eventview.FormatEventDescription(nil, loc); got != "" {
+		t.Fatalf("FormatEventDescription(nil) = %q", got)
 	}
-	if got := formatEventDescription(&statev1.Event{Type: "campaign.created"}, loc); got != loc.Sprintf("event.campaign_created") {
-		t.Fatalf("formatEventDescription(event) = %q", got)
+	if got := eventview.FormatEventDescription(&statev1.Event{Type: "campaign.created"}, loc); got != loc.Sprintf("event.campaign_created") {
+		t.Fatalf("FormatEventDescription(event) = %q", got)
 	}
 
 	ts := timestamppb.New(time.Date(2026, time.March, 2, 15, 4, 5, 0, time.UTC))
-	if got := formatTimestamp(ts); got != "2026-03-02 15:04:05" {
-		t.Fatalf("formatTimestamp() = %q", got)
+	if got := eventview.FormatTimestamp(ts); got != "2026-03-02 15:04:05" {
+		t.Fatalf("FormatTimestamp() = %q", got)
 	}
-	if got := formatTimestamp(nil); got != "" {
-		t.Fatalf("formatTimestamp(nil) = %q", got)
+	if got := eventview.FormatTimestamp(nil); got != "" {
+		t.Fatalf("FormatTimestamp(nil) = %q", got)
 	}
 }

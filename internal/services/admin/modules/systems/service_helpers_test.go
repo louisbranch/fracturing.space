@@ -1,18 +1,34 @@
 package systems
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
+// testUnavailableConn implements grpc.ClientConnInterface and returns
+// codes.Unavailable for every RPC, simulating a disconnected backend.
+type testUnavailableConn struct{}
+
+func (testUnavailableConn) Invoke(context.Context, string, any, any, ...grpc.CallOption) error {
+	return status.Error(codes.Unavailable, "test: service not connected")
+}
+
+func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, ...grpc.CallOption) (grpc.ClientStream, error) {
+	return nil, status.Error(codes.Unavailable, "test: service not connected")
+}
+
 func TestSystemHelpersFormatAndParse(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 
 	tests := []struct {
 		input string
@@ -53,7 +69,7 @@ func TestSystemHelpersFormatAndParse(t *testing.T) {
 }
 
 func TestSystemHelpersBuilders(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 
 	rows := buildSystemRows([]*statev1.GameSystemInfo{
 		nil,
@@ -90,8 +106,12 @@ func TestSystemHelpersBuilders(t *testing.T) {
 	}
 }
 
-func TestSystemServiceNilClients(t *testing.T) {
-	svc := service{base: modulehandler.NewBase(nil)}
+func TestSystemServiceUnavailableClients(t *testing.T) {
+	var conn testUnavailableConn
+	svc := service{
+		base:         modulehandler.NewBase(),
+		systemClient: statev1.NewSystemServiceClient(conn),
+	}
 
 	rec := httptest.NewRecorder()
 	svc.HandleSystemsPage(rec, httptest.NewRequest(http.MethodGet, "/app/systems", nil))

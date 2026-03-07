@@ -32,9 +32,6 @@ func newActivityService(
 
 // listRecent returns the newest activity records across campaigns.
 func (s activityService) listRecent(ctx context.Context) []activityRecord {
-	if s.campaignClient == nil || s.eventClient == nil {
-		return nil
-	}
 	campaignsResp, err := s.campaignClient.ListCampaigns(ctx, &statev1.ListCampaignsRequest{})
 	if err != nil || campaignsResp == nil {
 		return nil

@@ -6,23 +6,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
-	"runtime/debug"
 	"strings"
-	"sync/atomic"
-	"time"
 
+	sharedhttpx "github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
 const htmxHeader = "HX-Request"
 const htmxRedirectHeader = "HX-Redirect"
-
-// Middleware wraps an HTTP handler.
-type Middleware func(http.Handler) http.Handler
-
-var requestIDCounter atomic.Uint64
 
 // MethodNotAllowed writes a 405 response with an Allow header.
 func MethodNotAllowed(allow string) http.HandlerFunc {
@@ -35,23 +27,8 @@ func MethodNotAllowed(allow string) http.HandlerFunc {
 	}
 }
 
-// Chain applies middleware in declaration order.
-func Chain(handler http.Handler, middleware ...Middleware) http.Handler {
-	if handler == nil {
-		handler = http.NotFoundHandler()
-	}
-	wrapped := handler
-	for idx := len(middleware) - 1; idx >= 0; idx-- {
-		if middleware[idx] == nil {
-			continue
-		}
-		wrapped = middleware[idx](wrapped)
-	}
-	return wrapped
-}
-
 // RequireMethod rejects requests outside the allowed method.
-func RequireMethod(method string) Middleware {
+func RequireMethod(method string) sharedhttpx.Middleware {
 	return func(next http.Handler) http.Handler {
 		if next == nil {
 			next = http.NotFoundHandler()
@@ -62,59 +39,6 @@ func RequireMethod(method string) Middleware {
 				w.WriteHeader(http.StatusMethodNotAllowed)
 				return
 			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-// RequestID injects and echoes a request id for correlation.
-func RequestID() Middleware {
-	return func(next http.Handler) http.Handler {
-		if next == nil {
-			next = http.NotFoundHandler()
-		}
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			requestID := r.Header.Get("X-Request-ID")
-			if requestID == "" {
-				requestID = fmt.Sprintf("web-%d-%d", time.Now().UnixNano(), requestIDCounter.Add(1))
-				r.Header.Set("X-Request-ID", requestID)
-			}
-			w.Header().Set("X-Request-ID", requestID)
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-// RecoverPanic converts panics into HTTP 500 responses.
-func RecoverPanic() Middleware {
-	return func(next http.Handler) http.Handler {
-		if next == nil {
-			next = http.NotFoundHandler()
-		}
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			defer func() {
-				if recovered := recover(); recovered != nil {
-					path := "-"
-					method := "-"
-					requestID := "-"
-					if r != nil {
-						path = strings.TrimSpace(r.URL.Path)
-						method = strings.TrimSpace(r.Method)
-						if rid := strings.TrimSpace(r.Header.Get("X-Request-ID")); rid != "" {
-							requestID = rid
-						}
-					}
-					log.Printf(
-						"panic recovered method=%s path=%s request_id=%s panic=%v stack=%s",
-						method,
-						path,
-						requestID,
-						recovered,
-						strings.TrimSpace(string(debug.Stack())),
-					)
-					w.WriteHeader(http.StatusInternalServerError)
-				}
-			}()
 			next.ServeHTTP(w, r)
 		})
 	}

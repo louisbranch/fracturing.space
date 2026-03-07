@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
+	sharedhttpx "github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/composition"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/observability"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	webstatic "github.com/louisbranch/fracturing.space/internal/services/web/static"
@@ -64,16 +64,16 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	rootMux := http.NewServeMux()
 	rootMux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.FS(webstatic.FS))))
 	rootMux.Handle("/", h)
-	return httpx.Chain(rootMux,
-		httpx.RecoverPanic(),
-		httpx.RequestID(),
+	return sharedhttpx.Chain(rootMux,
+		sharedhttpx.RecoverPanic(),
+		sharedhttpx.RequestID("web"),
 		withRequestPrincipalState(),
 		observability.RequestLogger(log.Default()),
 	), nil
 }
 
 // withRequestPrincipalState centralizes this web behavior in one helper seam.
-func withRequestPrincipalState() httpx.Middleware {
+func withRequestPrincipalState() sharedhttpx.Middleware {
 	return func(next http.Handler) http.Handler {
 		if next == nil {
 			next = http.NotFoundHandler()

@@ -9,11 +9,11 @@ import (
 	"github.com/a-h/templ"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	"golang.org/x/text/message"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -23,12 +23,14 @@ const (
 
 // service provides module-local user handlers backed by shared module dependencies.
 type service struct {
-	base modulehandler.Base
+	base         modulehandler.Base
+	authClient   authv1.AuthServiceClient
+	inviteClient statev1.InviteServiceClient
 }
 
 // NewService returns the users module service implementation.
-func NewService(base modulehandler.Base) Service {
-	return &service{base: base}
+func NewService(base modulehandler.Base, authClient authv1.AuthServiceClient, inviteClient statev1.InviteServiceClient) Service {
+	return &service{base: base, authClient: authClient, inviteClient: inviteClient}
 }
 
 // HandleUsersPage renders the users page shell.
@@ -58,16 +60,10 @@ func (s *service) HandleUsersPage(w http.ResponseWriter, r *http.Request) {
 // HandleUsersTable renders the users table via HTMX.
 func (s *service) HandleUsersTable(w http.ResponseWriter, r *http.Request) {
 	loc, _ := s.base.Localizer(w, r)
-	client := s.base.AuthClient()
-	if client == nil {
-		s.renderUsersTable(w, r, nil, loc.Sprintf("error.user_service_unavailable"), loc)
-		return
-	}
-
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
 
-	response, err := client.ListUsers(ctx, &authv1.ListUsersRequest{PageSize: 50})
+	response, err := s.authClient.ListUsers(ctx, &authv1.ListUsersRequest{PageSize: 50})
 	if err != nil {
 		log.Printf("list users: %v", err)
 		s.renderUsersTable(w, r, nil, loc.Sprintf("error.users_unavailable"), loc)
@@ -175,18 +171,14 @@ func (s *service) loadUserDetail(ctx context.Context, userID string, loc *messag
 	if userID == "" {
 		return nil, loc.Sprintf("error.user_id_required")
 	}
-	client := s.base.AuthClient()
-	if client == nil {
-		return nil, loc.Sprintf("error.user_service_unavailable")
-	}
-	response, err := client.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
+	response, err := s.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
 	if err != nil || response.GetUser() == nil {
 		log.Printf("get user: %v", err)
 		return nil, loc.Sprintf("error.user_not_found")
 	}
 	detail := buildUserDetail(response.GetUser())
 	if detail != nil {
-		emails, err := client.ListUserEmails(ctx, &authv1.ListUserEmailsRequest{UserId: userID})
+		emails, err := s.authClient.ListUserEmails(ctx, &authv1.ListUserEmailsRequest{UserId: userID})
 		if err != nil {
 			log.Printf("list user emails: %v", err)
 		} else {
@@ -210,15 +202,10 @@ func (s *service) listPendingInvitesForUser(ctx context.Context, userID string, 
 	if userID == "" {
 		return nil, loc.Sprintf("users.invites.empty")
 	}
-	inviteClient := s.base.InviteClient()
-	if inviteClient == nil {
-		return nil, loc.Sprintf("error.pending_invites_unavailable")
-	}
-
 	rows := make([]templates.InviteRow, 0)
 	pageToken := ""
 	for {
-		resp, err := inviteClient.ListPendingInvitesForUser(ctx, &statev1.ListPendingInvitesForUserRequest{
+		resp, err := s.inviteClient.ListPendingInvitesForUser(ctx, &statev1.ListPendingInvitesForUserRequest{
 			PageSize:  inviteListPageSize,
 			PageToken: pageToken,
 		})
@@ -259,7 +246,7 @@ func (s *service) listPendingInvitesForUser(ctx context.Context, userID string, 
 			if inv != nil {
 				inviteID = inv.GetId()
 				status = inv.GetStatus()
-				createdAt = formatTimestamp(inv.GetCreatedAt())
+				createdAt = eventview.FormatTimestamp(inv.GetCreatedAt())
 			}
 			statusLabel, statusVariant := formatInviteStatus(status, loc)
 
@@ -288,75 +275,4 @@ func (s *service) listPendingInvitesForUser(ctx context.Context, userID string, 
 
 func (s *service) renderUsersTable(w http.ResponseWriter, r *http.Request, rows []templates.UserRow, message string, loc *message.Printer) {
 	templ.Handler(templates.UsersTable(rows, message, loc)).ServeHTTP(w, r)
-}
-
-func buildUserRows(users []*authv1.User) []templates.UserRow {
-	rows := make([]templates.UserRow, 0, len(users))
-	for _, user := range users {
-		if user == nil {
-			continue
-		}
-		rows = append(rows, templates.UserRow{
-			ID:        user.GetId(),
-			Email:     user.GetEmail(),
-			CreatedAt: formatTimestamp(user.GetCreatedAt()),
-			UpdatedAt: formatTimestamp(user.GetUpdatedAt()),
-		})
-	}
-	return rows
-}
-
-func buildUserDetail(user *authv1.User) *templates.UserDetail {
-	if user == nil {
-		return nil
-	}
-	return &templates.UserDetail{
-		ID:        user.GetId(),
-		Email:     user.GetEmail(),
-		CreatedAt: formatTimestamp(user.GetCreatedAt()),
-		UpdatedAt: formatTimestamp(user.GetUpdatedAt()),
-	}
-}
-
-func buildUserEmailRows(emails []*authv1.UserEmail, loc *message.Printer) []templates.UserEmailRow {
-	rows := make([]templates.UserEmailRow, 0, len(emails))
-	for _, email := range emails {
-		if email == nil {
-			continue
-		}
-		verified := "-"
-		if email.GetVerifiedAt() != nil {
-			verified = formatTimestamp(email.GetVerifiedAt())
-		}
-		rows = append(rows, templates.UserEmailRow{
-			Email:      email.GetEmail(),
-			VerifiedAt: verified,
-			CreatedAt:  formatTimestamp(email.GetCreatedAt()),
-			UpdatedAt:  formatTimestamp(email.GetUpdatedAt()),
-		})
-	}
-	if len(rows) == 0 {
-		return nil
-	}
-	return rows
-}
-
-func formatInviteStatus(status statev1.InviteStatus, loc *message.Printer) (string, string) {
-	switch status {
-	case statev1.InviteStatus_PENDING:
-		return loc.Sprintf("label.invite_pending"), "warning"
-	case statev1.InviteStatus_CLAIMED:
-		return loc.Sprintf("label.invite_claimed"), "success"
-	case statev1.InviteStatus_REVOKED:
-		return loc.Sprintf("label.invite_revoked"), "error"
-	default:
-		return loc.Sprintf("label.unspecified"), "secondary"
-	}
-}
-
-func formatTimestamp(value *timestamppb.Timestamp) string {
-	if value == nil {
-		return ""
-	}
-	return value.AsTime().Format("2006-01-02 15:04:05")
 }
