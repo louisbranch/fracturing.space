@@ -42,6 +42,7 @@ func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.Dagg
 	if in.SessionId != nil {
 		sessionID = strings.TrimSpace(in.SessionId.GetValue())
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 
 	stats, err := normalizeAdversaryStats(adversaryStatsInput{
 		HP:            in.Hp,
@@ -114,6 +115,7 @@ func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.Dagg
 		Type:          commandTypeDaggerheartAdversaryCreate,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",
@@ -196,6 +198,7 @@ func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.Dagg
 	if in.SessionId != nil {
 		sessionID = strings.TrimSpace(in.SessionId.GetValue())
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	notes := current.Notes
 	if in.Notes != nil {
 		notes = strings.TrimSpace(in.Notes.GetValue())
@@ -257,6 +260,7 @@ func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.Dagg
 		Type:          commandTypeDaggerheartAdversaryUpdate,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",
@@ -313,6 +317,7 @@ func (s *DaggerheartService) runDeleteAdversary(ctx context.Context, in *pb.Dagg
 	}
 
 	sessionID := strings.TrimSpace(current.SessionID)
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if sessionID != "" {
 		if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 			return nil, err
@@ -336,6 +341,7 @@ func (s *DaggerheartService) runDeleteAdversary(ctx context.Context, in *pb.Dagg
 		Type:          commandTypeDaggerheartAdversaryDelete,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",

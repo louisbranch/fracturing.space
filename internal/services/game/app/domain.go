@@ -55,16 +55,18 @@ func buildDomainEngine(eventStore storage.EventStore, registries engine.Registri
 		Folder:       folder,
 		StateFactory: func() any { return aggregate.State{} },
 	}
+	gateStateLoader := engine.ReplayGateStateLoader{StateLoader: stateLoader}
 	return engine.NewHandler(engine.HandlerConfig{
-		Commands:        registries.Commands,
-		Events:          registries.Events,
-		Journal:         gamegrpc.NewJournalAdapter(eventStore),
-		Checkpoints:     checkpoints,
-		Snapshots:       checkpoints,
-		Gate:            engine.DecisionGate{Registry: registries.Commands},
-		GateStateLoader: engine.ReplayGateStateLoader{StateLoader: stateLoader},
-		StateLoader:     stateLoader,
-		Decider:         decider,
-		Folder:          folder,
+		Commands:             registries.Commands,
+		Events:               registries.Events,
+		Journal:              gamegrpc.NewJournalAdapter(eventStore),
+		Checkpoints:          checkpoints,
+		Snapshots:            checkpoints,
+		Gate:                 engine.DecisionGate{Registry: registries.Commands},
+		GateStateLoader:      gateStateLoader,
+		SceneGateStateLoader: gateStateLoader,
+		StateLoader:          stateLoader,
+		Decider:              decider,
+		Folder:               folder,
 	})
 }

@@ -27,7 +27,8 @@ func TestStoresValidate(t *testing.T) {
 		for _, name := range []string{
 			"Campaign", "Participant", "ClaimIndex", "Invite",
 			"Character", "SystemStores.Daggerheart", "Session", "SessionGate",
-			"SessionSpotlight", "Event", "Audit", "Statistics",
+			"SessionSpotlight", "Scene", "SceneCharacter", "SceneGate",
+			"SceneSpotlight", "Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
 			"Domain", "WriteRuntime",
 		} {
@@ -62,6 +63,10 @@ func validStores() Stores {
 		Session:            newFakeSessionStore(),
 		SessionGate:        &fakeSessionGateStore{},
 		SessionSpotlight:   &fakeSessionSpotlightStore{},
+		Scene:              stubSceneStore{},
+		SceneCharacter:     stubSceneCharacterStore{},
+		SceneGate:          stubSceneGateStore{},
+		SceneSpotlight:     stubSceneSpotlightStore{},
 		Event:              newFakeEventStore(),
 		Audit:              stubAudit{},
 		Statistics:         &fakeStatisticsStore{},
@@ -124,3 +129,8 @@ type stubSnapshot struct{ storage.SnapshotStore }
 type stubDaggerheartContent struct {
 	storage.DaggerheartContentReadStore
 }
+
+type stubSceneStore struct{ storage.SceneStore }
+type stubSceneCharacterStore struct{ storage.SceneCharacterStore }
+type stubSceneGateStore struct{ storage.SceneGateStore }
+type stubSceneSpotlightStore struct{ storage.SceneSpotlightStore }

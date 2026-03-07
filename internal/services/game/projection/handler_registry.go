@@ -1,7 +1,6 @@
 package projection
 
 import (
-	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -38,6 +37,10 @@ const (
 	needSession
 	needSessionGate
 	needSessionSpotlight
+	needScene
+	needSceneCharacter
+	needSceneGate
+	needSceneSpotlight
 	needAdapters
 	// ClaimIndex is intentionally absent — handlers that use it perform soft
 	// nil checks and skip claim logic when the store is nil.
@@ -98,12 +101,17 @@ func buildCoreRouter() *CoreRouter {
 	HandleProjection(r, session.EventTypeSpotlightSet, needSessionSpotlight, requireSessionID, Applier.applySessionSpotlightSet)
 	HandleProjectionRaw(r, session.EventTypeSpotlightCleared, needSessionSpotlight, requireSessionID, Applier.applySessionSpotlightCleared)
 
-	// scene — scene state is replayed from the aggregate fold; projection
-	// handlers are registered as no-ops to satisfy parity checks. Dedicated
-	// scene projection stores can be wired here later.
-	for _, t := range scene.ProjectionHandledTypes() {
-		HandleProjectionRaw(r, t, 0, 0, noopProjection)
-	}
+	// scene
+	HandleProjection(r, scene.EventTypeCreated, needScene|needSceneCharacter, requireCampaignID, Applier.applySceneCreated)
+	HandleProjection(r, scene.EventTypeUpdated, needScene, requireCampaignID, Applier.applySceneUpdated)
+	HandleProjection(r, scene.EventTypeEnded, needScene|needSceneSpotlight, requireCampaignID, Applier.applySceneEnded)
+	HandleProjection(r, scene.EventTypeCharacterAdded, needSceneCharacter, requireCampaignID, Applier.applySceneCharacterAdded)
+	HandleProjection(r, scene.EventTypeCharacterRemoved, needSceneCharacter, requireCampaignID, Applier.applySceneCharacterRemoved)
+	HandleProjection(r, scene.EventTypeGateOpened, needSceneGate, requireCampaignID, Applier.applySceneGateOpened)
+	HandleProjection(r, scene.EventTypeGateResolved, needSceneGate, requireCampaignID, Applier.applySceneGateResolved)
+	HandleProjection(r, scene.EventTypeGateAbandoned, needSceneGate, requireCampaignID, Applier.applySceneGateAbandoned)
+	HandleProjection(r, scene.EventTypeSpotlightSet, needSceneSpotlight, requireCampaignID, Applier.applySceneSpotlightSet)
+	HandleProjection(r, scene.EventTypeSpotlightCleared, needSceneSpotlight, requireCampaignID, Applier.applySceneSpotlightCleared)
 
 	return r
 }
@@ -137,6 +145,10 @@ var storeChecks = []storeCheck{
 	{needSession, "session", func(a Applier) bool { return a.Session == nil }},
 	{needSessionGate, "session gate", func(a Applier) bool { return a.SessionGate == nil }},
 	{needSessionSpotlight, "session spotlight", func(a Applier) bool { return a.SessionSpotlight == nil }},
+	{needScene, "scene", func(a Applier) bool { return a.Scene == nil }},
+	{needSceneCharacter, "scene character", func(a Applier) bool { return a.SceneCharacter == nil }},
+	{needSceneGate, "scene gate", func(a Applier) bool { return a.SceneGate == nil }},
+	{needSceneSpotlight, "scene spotlight", func(a Applier) bool { return a.SceneSpotlight == nil }},
 	{needAdapters, "system adapters", func(a Applier) bool { return a.Adapters == nil }},
 }
 
@@ -166,13 +178,6 @@ func (a Applier) ValidateStorePreconditions() error {
 	if missing := checkMissingStores(required, a); len(missing) > 0 {
 		return fmt.Errorf("projection stores not configured: %s", strings.Join(missing, ", "))
 	}
-	return nil
-}
-
-// noopProjection is a placeholder handler for event types that have no
-// projection store yet. Scene events are replayed via the aggregate fold;
-// projection-side handling will be added when scene read-model stores exist.
-func noopProjection(_ Applier, _ context.Context, _ event.Event) error {
 	return nil
 }
 

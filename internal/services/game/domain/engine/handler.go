@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/replay"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -38,6 +39,11 @@ var (
 // gate policy evaluation is required.
 type GateStateLoader interface {
 	LoadSession(ctx context.Context, campaignID, sessionID string) (session.State, error)
+}
+
+// SceneGateStateLoader loads scene state for scene-scoped gate checks.
+type SceneGateStateLoader interface {
+	LoadScene(ctx context.Context, campaignID, sceneID string) (scene.State, error)
 }
 
 // StateLoader loads domain state for deciders.
@@ -85,32 +91,34 @@ type Decider interface {
 // 6) apply events to in-memory state,
 // 7) checkpoint and snapshot state for fast future replays.
 type Handler struct {
-	Commands        *command.Registry
-	Events          *event.Registry
-	Journal         EventJournal
-	Checkpoints     replay.CheckpointStore
-	Snapshots       StateSnapshotStore
-	Gate            DecisionGate
-	GateStateLoader GateStateLoader
-	StateLoader     StateLoader
-	Decider         Decider
-	Folder          Folder
-	Now             func() time.Time
+	Commands             *command.Registry
+	Events               *event.Registry
+	Journal              EventJournal
+	Checkpoints          replay.CheckpointStore
+	Snapshots            StateSnapshotStore
+	Gate                 DecisionGate
+	GateStateLoader      GateStateLoader
+	SceneGateStateLoader SceneGateStateLoader
+	StateLoader          StateLoader
+	Decider              Decider
+	Folder               Folder
+	Now                  func() time.Time
 }
 
 // HandlerConfig holds the dependencies for constructing a Handler.
 type HandlerConfig struct {
-	Commands        *command.Registry
-	Events          *event.Registry
-	Journal         EventJournal
-	Checkpoints     replay.CheckpointStore
-	Snapshots       StateSnapshotStore
-	Gate            DecisionGate
-	GateStateLoader GateStateLoader
-	StateLoader     StateLoader
-	Decider         Decider
-	Folder          Folder
-	Now             func() time.Time
+	Commands             *command.Registry
+	Events               *event.Registry
+	Journal              EventJournal
+	Checkpoints          replay.CheckpointStore
+	Snapshots            StateSnapshotStore
+	Gate                 DecisionGate
+	GateStateLoader      GateStateLoader
+	SceneGateStateLoader SceneGateStateLoader
+	StateLoader          StateLoader
+	Decider              Decider
+	Folder               Folder
+	Now                  func() time.Time
 }
 
 // NewHandler validates required dependencies and returns a configured Handler.
@@ -131,17 +139,18 @@ func NewHandler(cfg HandlerConfig) (Handler, error) {
 		return Handler{}, ErrDeciderRequired
 	}
 	return Handler{
-		Commands:        cfg.Commands,
-		Events:          cfg.Events,
-		Journal:         cfg.Journal,
-		Checkpoints:     cfg.Checkpoints,
-		Snapshots:       cfg.Snapshots,
-		Gate:            cfg.Gate,
-		GateStateLoader: cfg.GateStateLoader,
-		StateLoader:     cfg.StateLoader,
-		Decider:         cfg.Decider,
-		Folder:          cfg.Folder,
-		Now:             cfg.Now,
+		Commands:             cfg.Commands,
+		Events:               cfg.Events,
+		Journal:              cfg.Journal,
+		Checkpoints:          cfg.Checkpoints,
+		Snapshots:            cfg.Snapshots,
+		Gate:                 cfg.Gate,
+		GateStateLoader:      cfg.GateStateLoader,
+		SceneGateStateLoader: cfg.SceneGateStateLoader,
+		StateLoader:          cfg.StateLoader,
+		Decider:              cfg.Decider,
+		Folder:               cfg.Folder,
+		Now:                  cfg.Now,
 	}, nil
 }
 
@@ -209,6 +218,14 @@ func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (com
 		return validated, nil, gateDecision, nil
 	}
 
+	sceneGateDecision, shortCircuit, err := h.evaluateSceneGate(ctx, validated)
+	if err != nil {
+		return command.Command{}, nil, command.Decision{}, err
+	}
+	if shortCircuit {
+		return validated, nil, sceneGateDecision, nil
+	}
+
 	state, err := h.loadState(ctx, validated)
 	if err != nil {
 		return command.Command{}, nil, command.Decision{}, err
@@ -260,6 +277,31 @@ func (h Handler) evaluateSessionGate(ctx context.Context, cmd command.Command) (
 		return command.Decision{}, false, err
 	}
 	decision := h.Gate.Check(state, cmd)
+	if len(decision.Rejections) > 0 {
+		return decision, true, nil
+	}
+	return command.Decision{}, false, nil
+}
+
+func (h Handler) evaluateSceneGate(ctx context.Context, cmd command.Command) (command.Decision, bool, error) {
+	def, ok := h.Commands.Definition(cmd.Type)
+	if !ok || def.Gate.Scope != command.GateScopeScene {
+		return command.Decision{}, false, nil
+	}
+	if cmd.SceneID == "" {
+		// No scene context — nothing to gate.
+		return command.Decision{}, false, nil
+	}
+	if h.SceneGateStateLoader == nil {
+		// Scene gate loader is truly optional; only required for scene-scoped commands
+		// that carry a SceneID. Fall back to loading scene state from the aggregate.
+		return command.Decision{}, false, nil
+	}
+	state, err := h.SceneGateStateLoader.LoadScene(ctx, cmd.CampaignID, cmd.SceneID)
+	if err != nil {
+		return command.Decision{}, false, err
+	}
+	decision := h.Gate.CheckScene(state, cmd)
 	if len(decision.Rejections) > 0 {
 		return decision, true, nil
 	}

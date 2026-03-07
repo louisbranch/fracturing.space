@@ -24,6 +24,10 @@ type Stores struct {
 	Session          storage.SessionStore
 	SessionGate      storage.SessionGateStore
 	SessionSpotlight storage.SessionSpotlightStore
+	Scene            storage.SceneStore
+	SceneCharacter   storage.SceneCharacterStore
+	SceneGate        storage.SceneGateStore
+	SceneSpotlight   storage.SceneSpotlightStore
 	CampaignFork     storage.CampaignForkStore
 
 	// SystemStores groups system-specific projection stores used by
@@ -98,6 +102,10 @@ func (s Stores) TryApplier() (projection.Applier, error) {
 		Session:          s.Session,
 		SessionGate:      s.SessionGate,
 		SessionSpotlight: s.SessionSpotlight,
+		Scene:            s.Scene,
+		SceneCharacter:   s.SceneCharacter,
+		SceneGate:        s.SceneGate,
+		SceneSpotlight:   s.SceneSpotlight,
 		Adapters:         adapters,
 	}, nil
 }
@@ -134,6 +142,18 @@ func (s *Stores) Validate() error {
 	}
 	if s.SessionSpotlight == nil {
 		missing = append(missing, "SessionSpotlight")
+	}
+	if s.Scene == nil {
+		missing = append(missing, "Scene")
+	}
+	if s.SceneCharacter == nil {
+		missing = append(missing, "SceneCharacter")
+	}
+	if s.SceneGate == nil {
+		missing = append(missing, "SceneGate")
+	}
+	if s.SceneSpotlight == nil {
+		missing = append(missing, "SceneSpotlight")
 	}
 	if s.Event == nil {
 		missing = append(missing, "Event")

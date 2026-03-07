@@ -108,6 +108,7 @@ func TestContentEnvelope_OptionalFieldsBranchCoverage(t *testing.T) {
 		ActorType:     ActorTypeSystem,
 		PayloadJSON:   []byte(`{"ok":true}`),
 		SessionID:     "sess-1",
+		SceneID:       "scene-1",
 		RequestID:     "req-1",
 		InvocationID:  "inv-1",
 		ActorID:       "actor-1",
@@ -121,6 +122,7 @@ func TestContentEnvelope_OptionalFieldsBranchCoverage(t *testing.T) {
 	envelope := contentEnvelope(withAll)
 	for key := range map[string]string{
 		"session_id":     withAll.SessionID,
+		"scene_id":       withAll.SceneID,
 		"request_id":     withAll.RequestID,
 		"invocation_id":  withAll.InvocationID,
 		"actor_id":       withAll.ActorID,
@@ -146,6 +148,7 @@ func TestContentEnvelope_OptionalFieldsBranchCoverage(t *testing.T) {
 	envelope = contentEnvelope(withNone)
 	for _, key := range []string{
 		"session_id",
+		"scene_id",
 		"request_id",
 		"invocation_id",
 		"actor_id",

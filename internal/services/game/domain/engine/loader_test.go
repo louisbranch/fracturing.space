@@ -252,3 +252,180 @@ func TestReplayGateStateLoader_LoadSessionErrorBranches(t *testing.T) {
 		}
 	})
 }
+
+func TestReplayGateStateLoader_LoadScene(t *testing.T) {
+	t.Run("returns scene state from aggregate", func(t *testing.T) {
+		registry := event.NewRegistry()
+		if err := registry.Register(event.Definition{
+			Type:  event.Type("scene.created"),
+			Owner: event.OwnerCore,
+		}); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+		store := journal.NewMemory(registry)
+		_, err := store.Append(context.Background(), event.Event{
+			CampaignID:  "camp-1",
+			Type:        event.Type("scene.created"),
+			Timestamp:   time.Unix(0, 0).UTC(),
+			ActorType:   event.ActorTypeSystem,
+			SceneID:     "scene-1",
+			PayloadJSON: []byte(`{"scene_id":"scene-1","session_id":"sess-1","name":"Battle"}`),
+		})
+		if err != nil {
+			t.Fatalf("append event: %v", err)
+		}
+
+		stateLoader := ReplayStateLoader{
+			Events:      store,
+			Checkpoints: checkpoint.NewMemory(),
+			Folder:      &aggregate.Folder{},
+			StateFactory: func() any {
+				return aggregate.State{}
+			},
+		}
+		loader := ReplayGateStateLoader{StateLoader: stateLoader}
+		state, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")
+		if err != nil {
+			t.Fatalf("load scene: %v", err)
+		}
+		// Scene state is populated from the fold.
+		_ = state
+	})
+
+	t.Run("returns scene state from aggregate pointer", func(t *testing.T) {
+		registry := event.NewRegistry()
+		if err := registry.Register(event.Definition{
+			Type:  event.Type("scene.created"),
+			Owner: event.OwnerCore,
+		}); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+		store := journal.NewMemory(registry)
+		_, err := store.Append(context.Background(), event.Event{
+			CampaignID:  "camp-1",
+			Type:        event.Type("scene.created"),
+			Timestamp:   time.Unix(0, 0).UTC(),
+			ActorType:   event.ActorTypeSystem,
+			SceneID:     "scene-1",
+			PayloadJSON: []byte(`{"scene_id":"scene-1","session_id":"sess-1","name":"Battle"}`),
+		})
+		if err != nil {
+			t.Fatalf("append event: %v", err)
+		}
+
+		stateLoader := ReplayStateLoader{
+			Events:      store,
+			Checkpoints: checkpoint.NewMemory(),
+			Folder:      &aggregate.Folder{},
+			StateFactory: func() any {
+				return &aggregate.State{}
+			},
+		}
+		loader := ReplayGateStateLoader{StateLoader: stateLoader}
+		state, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")
+		if err != nil {
+			t.Fatalf("load scene: %v", err)
+		}
+		_ = state
+	})
+
+	t.Run("returns empty state for unknown scene from pointer", func(t *testing.T) {
+		stateLoader := ReplayStateLoader{
+			Events:      &trackingReplayEventStore{},
+			Checkpoints: checkpoint.NewMemory(),
+			Folder:      &aggregate.Folder{},
+			StateFactory: func() any {
+				return &aggregate.State{}
+			},
+		}
+		loader := ReplayGateStateLoader{StateLoader: stateLoader}
+		state, err := loader.LoadScene(context.Background(), "camp-1", "nonexistent")
+		if err != nil {
+			t.Fatalf("load scene: %v", err)
+		}
+		if state.GateOpen || state.GateID != "" {
+			t.Fatalf("expected empty scene state, got %+v", state)
+		}
+	})
+
+	t.Run("returns empty state for unknown scene", func(t *testing.T) {
+		stateLoader := ReplayStateLoader{
+			Events:      &trackingReplayEventStore{},
+			Checkpoints: checkpoint.NewMemory(),
+			Folder:      &aggregate.Folder{},
+			StateFactory: func() any {
+				return aggregate.State{}
+			},
+		}
+		loader := ReplayGateStateLoader{StateLoader: stateLoader}
+		state, err := loader.LoadScene(context.Background(), "camp-1", "nonexistent")
+		if err != nil {
+			t.Fatalf("load scene: %v", err)
+		}
+		if state.GateOpen || state.GateID != "" {
+			t.Fatalf("expected empty scene state, got %+v", state)
+		}
+	})
+
+	t.Run("nil reconstructed state", func(t *testing.T) {
+		loader := ReplayGateStateLoader{
+			StateLoader: ReplayStateLoader{
+				Events:      &trackingReplayEventStore{},
+				Checkpoints: checkpoint.NewMemory(),
+				Folder:      &aggregate.Folder{},
+			},
+		}
+		_, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")
+		if err == nil || err.Error() != "state is required" {
+			t.Fatalf("LoadScene() error = %v, want state is required", err)
+		}
+	})
+
+	t.Run("typed nil aggregate pointer", func(t *testing.T) {
+		loader := ReplayGateStateLoader{
+			StateLoader: ReplayStateLoader{
+				Events:      &trackingReplayEventStore{},
+				Checkpoints: checkpoint.NewMemory(),
+				Folder:      &aggregate.Folder{},
+				StateFactory: func() any {
+					var state *aggregate.State
+					return state
+				},
+			},
+		}
+		_, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")
+		if err == nil || err.Error() != "state is required" {
+			t.Fatalf("LoadScene() error = %v, want state is required", err)
+		}
+	})
+
+	t.Run("unsupported state type", func(t *testing.T) {
+		loader := ReplayGateStateLoader{
+			StateLoader: ReplayStateLoader{
+				Events:      &trackingReplayEventStore{},
+				Checkpoints: checkpoint.NewMemory(),
+				Folder:      &aggregate.Folder{},
+				StateFactory: func() any {
+					return struct{}{}
+				},
+			},
+		}
+		_, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")
+		if err == nil || err.Error() != "unsupported state type" {
+			t.Fatalf("LoadScene() error = %v, want unsupported state type", err)
+		}
+	})
+
+	t.Run("propagates state loader error", func(t *testing.T) {
+		loader := ReplayGateStateLoader{
+			StateLoader: ReplayStateLoader{
+				Checkpoints: checkpoint.NewMemory(),
+				Folder:      &aggregate.Folder{},
+			},
+		}
+		_, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")
+		if !errors.Is(err, replay.ErrEventStoreRequired) {
+			t.Fatalf("expected ErrEventStoreRequired, got %v", err)
+		}
+	})
+}

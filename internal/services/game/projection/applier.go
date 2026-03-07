@@ -35,6 +35,14 @@ type Applier struct {
 	SessionGate storage.SessionGateStore
 	// SessionSpotlight writes session spotlight state.
 	SessionSpotlight storage.SessionSpotlightStore
+	// Scene writes scene metadata read models.
+	Scene storage.SceneStore
+	// SceneCharacter writes scene character membership.
+	SceneCharacter storage.SceneCharacterStore
+	// SceneGate writes scene gate state.
+	SceneGate storage.SceneGateStore
+	// SceneSpotlight writes scene spotlight state.
+	SceneSpotlight storage.SceneSpotlightStore
 	// Adapters holds extension-specific projection hooks including
 	// system event application and character profile updates.
 	Adapters *bridge.AdapterRegistry

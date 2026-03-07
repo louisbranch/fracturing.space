@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -388,6 +389,130 @@ type SessionSpotlightStore interface {
 	PutSessionSpotlight(ctx context.Context, spotlight SessionSpotlight) error
 	// ClearSessionSpotlight removes the spotlight for a session.
 	ClearSessionSpotlight(ctx context.Context, campaignID, sessionID string) error
+}
+
+// SceneRecord captures scene lifecycle metadata for projection reads.
+type SceneRecord struct {
+	CampaignID  string
+	SceneID     string
+	SessionID   string
+	Name        string
+	Description string
+	Active      bool
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+	EndedAt     *time.Time
+}
+
+// ScenePage describes a page of scene records.
+type ScenePage struct {
+	Scenes        []SceneRecord
+	NextPageToken string
+}
+
+// SceneCharacterRecord captures a character's presence in a scene.
+type SceneCharacterRecord struct {
+	CampaignID  string
+	SceneID     string
+	CharacterID string
+	AddedAt     time.Time
+}
+
+// SceneGate describes one gate and its resolution lifecycle within a scene.
+type SceneGate struct {
+	CampaignID          string
+	SceneID             string
+	GateID              string
+	GateType            string
+	Status              session.GateStatus
+	Reason              string
+	CreatedAt           time.Time
+	CreatedByActorType  string
+	CreatedByActorID    string
+	ResolvedAt          *time.Time
+	ResolvedByActorType string
+	ResolvedByActorID   string
+	MetadataJSON        []byte
+	ResolutionJSON      []byte
+}
+
+// SceneSpotlight captures spotlight turn ownership within a scene.
+type SceneSpotlight struct {
+	CampaignID         string
+	SceneID            string
+	SpotlightType      scene.SpotlightType
+	CharacterID        string
+	UpdatedAt          time.Time
+	UpdatedByActorType string
+	UpdatedByActorID   string
+}
+
+// SceneReader provides read-only access to scene projections.
+type SceneReader interface {
+	// GetScene retrieves a scene by campaign ID and scene ID.
+	GetScene(ctx context.Context, campaignID, sceneID string) (SceneRecord, error)
+	// ListScenes returns a page of scene records for a session.
+	ListScenes(ctx context.Context, campaignID, sessionID string, pageSize int, pageToken string) (ScenePage, error)
+	// ListActiveScenes returns all active scenes for a campaign.
+	ListActiveScenes(ctx context.Context, campaignID string) ([]SceneRecord, error)
+}
+
+// SceneStore owns scene lifecycle read state. Projection handlers use
+// the full interface; read-only consumers should prefer SceneReader.
+type SceneStore interface {
+	SceneReader
+	// PutScene stores a scene record.
+	PutScene(ctx context.Context, s SceneRecord) error
+	// EndScene marks a scene as ended.
+	EndScene(ctx context.Context, campaignID, sceneID string, endedAt time.Time) error
+}
+
+// SceneCharacterReader provides read-only access to scene character projections.
+type SceneCharacterReader interface {
+	// ListSceneCharacters returns all characters in a scene.
+	ListSceneCharacters(ctx context.Context, campaignID, sceneID string) ([]SceneCharacterRecord, error)
+}
+
+// SceneCharacterStore owns scene character membership. Projection handlers use
+// the full interface; read-only consumers should prefer SceneCharacterReader.
+type SceneCharacterStore interface {
+	SceneCharacterReader
+	// PutSceneCharacter adds a character to a scene.
+	PutSceneCharacter(ctx context.Context, rec SceneCharacterRecord) error
+	// DeleteSceneCharacter removes a character from a scene.
+	DeleteSceneCharacter(ctx context.Context, campaignID, sceneID, characterID string) error
+}
+
+// SceneGateReader provides read-only access to scene gate projections.
+type SceneGateReader interface {
+	// GetSceneGate retrieves a gate by id.
+	GetSceneGate(ctx context.Context, campaignID, sceneID, gateID string) (SceneGate, error)
+	// GetOpenSceneGate retrieves the currently open gate for a scene.
+	GetOpenSceneGate(ctx context.Context, campaignID, sceneID string) (SceneGate, error)
+}
+
+// SceneGateStore owns scene gate lifecycle state. Projection handlers use
+// the full interface; read-only consumers should prefer SceneGateReader.
+type SceneGateStore interface {
+	SceneGateReader
+	// PutSceneGate stores a gate record.
+	PutSceneGate(ctx context.Context, gate SceneGate) error
+}
+
+// SceneSpotlightReader provides read-only access to scene spotlight projections.
+type SceneSpotlightReader interface {
+	// GetSceneSpotlight retrieves the current spotlight for a scene.
+	GetSceneSpotlight(ctx context.Context, campaignID, sceneID string) (SceneSpotlight, error)
+}
+
+// SceneSpotlightStore owns scene spotlight turn state. Projection handlers use
+// the full interface; read-only consumers should prefer SceneSpotlightReader.
+type SceneSpotlightStore interface {
+	SceneSpotlightReader
+	// PutSceneSpotlight stores the current spotlight for a scene.
+	PutSceneSpotlight(ctx context.Context, spotlight SceneSpotlight) error
+	// ClearSceneSpotlight removes the spotlight for a scene.
+	ClearSceneSpotlight(ctx context.Context, campaignID, sceneID string) error
 }
 
 // Snapshot is a materialized campaign/session state checkpoint derived from the event journal.

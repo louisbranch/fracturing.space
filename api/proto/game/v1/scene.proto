@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package game.v1;
 
+import "google/protobuf/timestamp.proto";
+
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
 
 // SceneService manages scene lifecycle within a session.
@@ -41,6 +43,12 @@ service SceneService {
 
   // Clear the scene spotlight.
   rpc ClearSceneSpotlight(ClearSceneSpotlightRequest) returns (ClearSceneSpotlightResponse);
+
+  // Get a scene by campaign and scene ID.
+  rpc GetScene(GetSceneRequest) returns (GetSceneResponse);
+
+  // List scenes for a session.
+  rpc ListScenes(ListScenesRequest) returns (ListScenesResponse);
 }
 
 message CreateSceneRequest {
@@ -152,3 +160,37 @@ message ClearSceneSpotlightRequest {
 }
 
 message ClearSceneSpotlightResponse {}
+
+// Scene represents a narrative scope within a session.
+message Scene {
+  string scene_id = 1;
+  string session_id = 2;
+  string name = 3;
+  string description = 4;
+  bool active = 5;
+  repeated string character_ids = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+  google.protobuf.Timestamp ended_at = 9;
+}
+
+message GetSceneRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+}
+
+message GetSceneResponse {
+  Scene scene = 1;
+}
+
+message ListScenesRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  int32 page_size = 3;
+  string page_token = 4;
+}
+
+message ListScenesResponse {
+  repeated Scene scenes = 1;
+  string next_page_token = 2;
+}
