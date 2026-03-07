@@ -183,6 +183,9 @@ func (h *Handler) routes() http.Handler {
 		log.Printf("admin: failed to compose app handler: %v", err)
 		composed = http.NotFoundHandler()
 	}
+	rootMux.HandleFunc(http.MethodGet+" "+routepath.Root+"{$}", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, routepath.AppDashboard, http.StatusFound)
+	})
 	rootMux.Handle(routepath.Root, composed)
 	return rootMux
 }
