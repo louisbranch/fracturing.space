@@ -44,7 +44,7 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 		campaignSessions:          []CampaignSession{{ID: "sess-1", Name: "Session One"}},
 		campaignSessionReadiness:  CampaignSessionReadiness{Ready: true},
 		campaignInvites:           []CampaignInvite{{ID: "inv-1", ParticipantID: "p1", RecipientUserID: "user-2", Status: "Pending"}},
-		authorizationDecision:     campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision:     AuthorizationDecision{Evaluated: true, Allowed: true},
 		characterCreationProgress: CampaignCharacterCreationProgress{NextStep: 1},
 		characterCreationCatalog:  CampaignCharacterCreationCatalog{},
 		characterCreationProfile:  CampaignCharacterCreationProfile{},

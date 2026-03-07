@@ -43,7 +43,7 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 			}},
 		},
 	})
-	m := NewStableWithGateway(NewGRPCGateway(deps), modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -84,12 +84,13 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 func TestMountCampaignsPageEscapesCampaignIDsInCardLinks(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{
 		ID:               "camp/1",
 		Name:             "Escaped Campaign",
 		ParticipantCount: "1",
 		CharacterCount:   "1",
-	}}}, modulehandler.NewTestBase(), "", nil)
+	}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -122,7 +123,7 @@ func TestMountCampaignsPageRendersCardIconsFromCatalog(t *testing.T) {
 			}},
 		},
 	})
-	m := NewStableWithGateway(NewGRPCGateway(deps), modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -152,7 +153,7 @@ func TestMountCampaignsPageRendersCardIconsFromCatalog(t *testing.T) {
 func TestMountCampaignsPageRendersHeadingWithStartLink(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -179,7 +180,7 @@ func TestMountCampaignsPageRendersHeadingWithStartLink(t *testing.T) {
 func TestMountCampaignsPageOmitsBreadcrumbsAtRoot(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -201,7 +202,7 @@ func TestMountCampaignsPageOmitsBreadcrumbsAtRoot(t *testing.T) {
 func TestMountCampaignsHTMXRendersHeadingWithStartLink(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -232,7 +233,7 @@ func TestMountCampaignsHTMXRendersHeadingWithStartLink(t *testing.T) {
 func TestMountCampaignStartNewGetRendersChoiceCards(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -262,7 +263,7 @@ func TestMountCampaignStartNewGetRendersChoiceCards(t *testing.T) {
 func TestMountCampaignCreateGetRendersCreateForm(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -296,7 +297,7 @@ func TestMountCampaignCreateGetRendersCreateForm(t *testing.T) {
 func TestMountCampaignCreateGetRendersPTBRCopy(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -326,7 +327,7 @@ func TestMountCampaignCreateGetRendersPTBRCopy(t *testing.T) {
 func TestMountCampaignCreatePostCreatesCampaignAndRedirects(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}, createdCampaignID: "camp-777"}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}, createdCampaignID: "camp-777"}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -355,7 +356,7 @@ func TestMountCampaignCreatePostUsesHTMXRedirect(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{createCampaignResult: CreateCampaignResult{CampaignID: "camp-htmx"}}
-	m := NewStableWithGateway(gateway, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: gateway, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -380,7 +381,7 @@ func TestMountCampaignCreatePostAppliesDefaults(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{createCampaignResult: CreateCampaignResult{CampaignID: "camp-1"}}
-	m := NewStableWithGateway(gateway, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: gateway, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -406,7 +407,7 @@ func TestMountCampaignCreatePostAppliesDefaults(t *testing.T) {
 func TestMountCampaignCreatePostRejectsEmptyName(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}, createdCampaignID: "camp-777"}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}, createdCampaignID: "camp-777"}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -429,7 +430,7 @@ func TestMountCampaignCreatePostRejectsEmptyName(t *testing.T) {
 func TestMountCampaignCreateValidationErrorIsLocalizedForPTBR(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{}, modulehandler.NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil), "", nil)
+	m := New(Config{Gateway: fakeGateway{}, Base: modulehandler.NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -454,7 +455,7 @@ func TestMountCampaignCreatePostUsesResolvedLanguageLocaleWhenUsingDependenciesC
 	deps := completeGRPCDeps(GRPCGatewayDeps{
 		CampaignClient: client,
 	})
-	m := NewStableWithGateway(NewGRPCGateway(deps), modulehandler.NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil), "", nil)
+	m := New(Config{Gateway: NewGRPCGateway(deps), Base: modulehandler.NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -480,7 +481,7 @@ func TestMountCampaignCreatePostUsesResolvedLanguageLocaleWhenUsingDependenciesC
 func TestMountCampaignCreatePostRejectsUnsupportedMethod(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -500,7 +501,7 @@ func TestMountCampaignCreatePostRejectsUnsupportedMethod(t *testing.T) {
 func TestMountCampaignCreatePostRejectsInvalidSystemAndGMMode(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -532,7 +533,7 @@ func TestMountCampaignCreatePostRejectsInvalidSystemAndGMMode(t *testing.T) {
 func TestMountCampaignCreatePostMapsServiceErrorStatus(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{createErr: apperrors.E(apperrors.KindForbidden, "forbidden")}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{createErr: apperrors.E(apperrors.KindForbidden, "forbidden")}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -552,7 +553,7 @@ func TestMountCampaignCreatePostMapsServiceErrorStatus(t *testing.T) {
 func TestMountCampaignCreatePostReturnsBadRequestOnFormParseFailure(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

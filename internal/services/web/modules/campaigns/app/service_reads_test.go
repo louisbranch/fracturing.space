@@ -236,7 +236,7 @@ func TestCampaignParticipantsHydratesEditabilityFromBatchAuthorization(t *testin
 			{ID: "p-a", Name: "Aria", Role: "GM", CampaignAccess: "Owner"},
 			{ID: "p-b", Name: "Bram", Role: "Player", CampaignAccess: "Member"},
 		},
-		batchAuthorizationDecisions: []campaignAuthorizationDecision{
+		batchAuthorizationDecisions: []AuthorizationDecision{
 			{CheckID: "p-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 			{CheckID: "p-b", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
 		},
@@ -292,12 +292,12 @@ func TestCampaignParticipantEditorLoadsAccessOptions(t *testing.T) {
 			CampaignAccess: "Owner",
 			Pronouns:       "she/her",
 		},
-		authorizationDecision: campaignAuthorizationDecision{
+		authorizationDecision: AuthorizationDecision{
 			Evaluated:  true,
 			Allowed:    true,
 			ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL",
 		},
-		batchAuthorizationDecisions: []campaignAuthorizationDecision{
+		batchAuthorizationDecisions: []AuthorizationDecision{
 			{CheckID: "member", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_LAST_OWNER_GUARD"},
 			{CheckID: "manager", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_LAST_OWNER_GUARD"},
 			{CheckID: "owner", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
@@ -325,7 +325,7 @@ func TestCampaignParticipantEditorDeniesWhenManageParticipantForbidden(t *testin
 
 	gateway := &campaignGatewayStub{
 		campaignParticipant: CampaignParticipant{ID: "p-a", Name: "Aria", Role: "GM", CampaignAccess: "Owner"},
-		authorizationDecision: campaignAuthorizationDecision{
+		authorizationDecision: AuthorizationDecision{
 			Evaluated:  true,
 			Allowed:    false,
 			ReasonCode: "AUTHZ_DENY_TARGET_IS_OWNER",
@@ -385,7 +385,7 @@ func TestCampaignCharactersHydratesEditabilityFromBatchAuthorization(t *testing.
 			{ID: "ch-z", Name: "Zara", Kind: "NPC", Controller: "Moss"},
 			{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne"},
 		},
-		batchAuthorizationDecisions: []campaignAuthorizationDecision{
+		batchAuthorizationDecisions: []AuthorizationDecision{
 			{CheckID: "ch-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
 			{CheckID: "ch-z", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_NOT_RESOURCE_OWNER"},
 		},
@@ -438,7 +438,7 @@ func TestCampaignCharactersHydratesEditabilityForDuplicateCharacterIDs(t *testin
 			{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne"},
 			{ID: "ch-a", Name: "Aria Clone", Kind: "PC", Controller: "Ariadne"},
 		},
-		batchAuthorizationDecisions: []campaignAuthorizationDecision{
+		batchAuthorizationDecisions: []AuthorizationDecision{
 			{CheckID: "ch-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
 		},
 	}

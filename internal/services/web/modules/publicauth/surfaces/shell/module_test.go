@@ -10,7 +10,7 @@ import (
 func TestModuleIDAndPrefix(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGatewayAndPolicy(nil, requestmeta.SchemePolicy{})
+	m := New(Config{Gateway: nil, RequestMeta: requestmeta.SchemePolicy{}})
 	if got := m.ID(); got != "public" {
 		t.Fatalf("ID() = %q, want %q", got, "public")
 	}

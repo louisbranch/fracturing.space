@@ -7,155 +7,6 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
-// AuthorizationDecision captures one authorization check result.
-type AuthorizationDecision struct {
-	CheckID    string
-	Evaluated  bool
-	Allowed    bool
-	ReasonCode string
-}
-
-// ParticipantGovernanceOperation scopes participant authz intent for policy evaluation.
-type ParticipantGovernanceOperation string
-
-const (
-	ParticipantGovernanceOperationUnspecified  ParticipantGovernanceOperation = ""
-	ParticipantGovernanceOperationMutate       ParticipantGovernanceOperation = "mutate"
-	ParticipantGovernanceOperationAccessChange ParticipantGovernanceOperation = "access_change"
-	ParticipantGovernanceOperationRemove       ParticipantGovernanceOperation = "remove"
-)
-
-// AuthorizationTarget scopes a check to a specific resource instance.
-type AuthorizationTarget struct {
-	ResourceID              string
-	OwnerParticipantID      string
-	TargetParticipantID     string
-	TargetCampaignAccess    string
-	RequestedCampaignAccess string
-	ParticipantOperation    ParticipantGovernanceOperation
-}
-
-// AuthorizationCheck describes one authz request in batch evaluation.
-type AuthorizationCheck struct {
-	CheckID  string
-	Action   AuthorizationAction
-	Resource AuthorizationResource
-	Target   *AuthorizationTarget
-}
-
-// AuthorizationGateway performs unary campaign action checks.
-type AuthorizationGateway interface {
-	CanCampaignAction(context.Context, string, AuthorizationAction, AuthorizationResource, *AuthorizationTarget) (AuthorizationDecision, error)
-}
-
-// BatchAuthorizationGateway performs batched campaign action checks.
-type BatchAuthorizationGateway interface {
-	BatchCanCampaignAction(context.Context, string, []AuthorizationCheck) ([]AuthorizationDecision, error)
-}
-
-// AuthzGateway combines unary and batch authorization checks.
-type AuthzGateway interface {
-	AuthorizationGateway
-	BatchAuthorizationGateway
-}
-
-// --- Authorization policy table ---
-
-// AuthorizationAction defines an action dimension for campaign authz checks.
-type AuthorizationAction string
-
-// AuthorizationResource defines a resource dimension for campaign authz checks.
-type AuthorizationResource string
-
-const (
-	AuthorizationActionManage AuthorizationAction = "manage"
-	AuthorizationActionMutate AuthorizationAction = "mutate"
-
-	AuthorizationResourceSession     AuthorizationResource = "session"
-	AuthorizationResourceCampaign    AuthorizationResource = "campaign"
-	AuthorizationResourceParticipant AuthorizationResource = "participant"
-	AuthorizationResourceCharacter   AuthorizationResource = "character"
-	AuthorizationResourceInvite      AuthorizationResource = "invite"
-)
-
-// Compatibility aliases keep package-local service/test names stable while the
-// exported contracts are consumed by sibling packages.
-type campaignAuthorizationDecision = AuthorizationDecision
-
-// campaignAuthorizationTarget defines an internal contract used at this web package boundary.
-type campaignAuthorizationTarget = AuthorizationTarget
-
-// campaignAuthorizationCheck defines an internal contract used at this web package boundary.
-type campaignAuthorizationCheck = AuthorizationCheck
-
-// campaignAuthorizationGateway defines an internal contract used at this web package boundary.
-type campaignAuthorizationGateway = AuthorizationGateway
-
-// campaignBatchAuthorizationGateway defines an internal contract used at this web package boundary.
-type campaignBatchAuthorizationGateway = BatchAuthorizationGateway
-
-// campaignAuthzGateway defines an internal contract used at this web package boundary.
-type campaignAuthzGateway = AuthzGateway
-
-// campaignAuthorizationAction defines an internal contract used at this web package boundary.
-type campaignAuthorizationAction = AuthorizationAction
-
-// campaignAuthorizationResource defines an internal contract used at this web package boundary.
-type campaignAuthorizationResource = AuthorizationResource
-
-// mutationAuthzPolicy declares the authorization requirement for a single
-// mutation gateway method.
-type mutationAuthzPolicy struct {
-	action   campaignAuthorizationAction
-	resource campaignAuthorizationResource
-	denyKey  string
-	denyMsg  string
-}
-
-const (
-	campaignAuthzActionManage campaignAuthorizationAction = AuthorizationActionManage
-	campaignAuthzActionMutate campaignAuthorizationAction = AuthorizationActionMutate
-
-	campaignAuthzResourceSession     campaignAuthorizationResource = AuthorizationResourceSession
-	campaignAuthzResourceCampaign    campaignAuthorizationResource = AuthorizationResourceCampaign
-	campaignAuthzResourceParticipant campaignAuthorizationResource = AuthorizationResourceParticipant
-	campaignAuthzResourceCharacter   campaignAuthorizationResource = AuthorizationResourceCharacter
-	campaignAuthzResourceInvite      campaignAuthorizationResource = AuthorizationResourceInvite
-)
-
-var (
-	policyManageSession = mutationAuthzPolicy{
-		action:   campaignAuthzActionManage,
-		resource: campaignAuthzResourceSession,
-		denyKey:  "error.web.message.manager_or_owner_access_required_for_session_action",
-		denyMsg:  "manager or owner access required for session action",
-	}
-	policyManageCampaign = mutationAuthzPolicy{
-		action:   campaignAuthzActionManage,
-		resource: campaignAuthzResourceCampaign,
-		denyKey:  "error.web.message.manager_or_owner_access_required_for_campaign_action",
-		denyMsg:  "manager or owner access required for campaign action",
-	}
-	policyMutateCharacter = mutationAuthzPolicy{
-		action:   campaignAuthzActionMutate,
-		resource: campaignAuthzResourceCharacter,
-		denyKey:  "error.web.message.campaign_membership_required_for_character_action",
-		denyMsg:  "campaign membership required for character action",
-	}
-	policyManageInvite = mutationAuthzPolicy{
-		action:   campaignAuthzActionManage,
-		resource: campaignAuthzResourceInvite,
-		denyKey:  "error.web.message.manager_or_owner_access_required_for_invite_action",
-		denyMsg:  "manager or owner access required for invite action",
-	}
-	policyManageParticipant = mutationAuthzPolicy{
-		action:   campaignAuthzActionManage,
-		resource: campaignAuthzResourceParticipant,
-		denyKey:  "error.web.message.manager_or_owner_access_required_for_participant_action",
-		denyMsg:  "manager or owner access required for participant action",
-	}
-)
-
 // --- Service-level authz helpers ---
 
 // requireManageCampaign enforces campaign-manage access for owner/manager workflows.
@@ -170,16 +21,16 @@ func (s service) requirePolicy(ctx context.Context, campaignID string, p mutatio
 
 // requirePolicyWithTarget enforces a policy-table authorization check scoped to a specific resource.
 func (s service) requirePolicyWithTarget(ctx context.Context, campaignID string, p mutationAuthzPolicy, resourceID string) error {
-	return s.requireCampaignActionAccess(ctx, campaignID, p.action, p.resource, &campaignAuthorizationTarget{ResourceID: resourceID}, p.denyKey, p.denyMsg)
+	return s.requireCampaignActionAccess(ctx, campaignID, p.action, p.resource, &AuthorizationTarget{ResourceID: resourceID}, p.denyKey, p.denyMsg)
 }
 
 // requireCampaignActionAccess enforces this package invariant before continuing flow.
 func (s service) requireCampaignActionAccess(
 	ctx context.Context,
 	campaignID string,
-	action campaignAuthorizationAction,
-	resource campaignAuthorizationResource,
-	target *campaignAuthorizationTarget,
+	action AuthorizationAction,
+	resource AuthorizationResource,
+	target *AuthorizationTarget,
 	denyMessageKey string,
 	denyMessage string,
 ) error {
@@ -204,63 +55,4 @@ func (s service) requireCampaignActionAccess(
 		return apperrors.EK(apperrors.KindForbidden, denyMessageKey, denyMessage)
 	}
 	return nil
-}
-
-// hydrateCharacterEditability centralizes this web behavior in one helper seam.
-func (s service) hydrateCharacterEditability(ctx context.Context, campaignID string, characters []CampaignCharacter) {
-	if len(characters) == 0 {
-		return
-	}
-	if s.authzGateway == nil {
-		return
-	}
-
-	checks := make([]campaignAuthorizationCheck, 0, len(characters))
-	indexesByCheckID := make(map[string][]int, len(characters))
-	for idx := range characters {
-		characterID := strings.TrimSpace(characters[idx].ID)
-		if characterID == "" {
-			continue
-		}
-		indexesByCheckID[characterID] = append(indexesByCheckID[characterID], idx)
-		if len(indexesByCheckID[characterID]) > 1 {
-			continue
-		}
-		checks = append(checks, campaignAuthorizationCheck{
-			CheckID:  characterID,
-			Action:   campaignAuthzActionMutate,
-			Resource: campaignAuthzResourceCharacter,
-			Target: &campaignAuthorizationTarget{
-				ResourceID: characterID,
-			},
-		})
-	}
-	if len(checks) == 0 {
-		return
-	}
-
-	decisions, err := s.authzGateway.BatchCanCampaignAction(ctx, campaignID, checks)
-	if err != nil {
-		return
-	}
-
-	for idx, decision := range decisions {
-		checkID := strings.TrimSpace(decision.CheckID)
-		if checkID == "" && idx < len(checks) {
-			checkID = strings.TrimSpace(checks[idx].CheckID)
-		}
-		if checkID == "" {
-			continue
-		}
-		characterIndexes, found := indexesByCheckID[checkID]
-		if !found {
-			continue
-		}
-		for _, characterIndex := range characterIndexes {
-			characters[characterIndex].EditReasonCode = strings.TrimSpace(decision.ReasonCode)
-			if decision.Evaluated && decision.Allowed {
-				characters[characterIndex].CanEdit = true
-			}
-		}
-	}
 }

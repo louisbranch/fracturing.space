@@ -30,7 +30,7 @@ import (
 func TestModuleIDReturnsCampaigns(t *testing.T) {
 	t.Parallel()
 
-	if got := New().ID(); got != "campaigns" {
+	if got := New(Config{}).ID(); got != "campaigns" {
 		t.Fatalf("ID() = %q, want %q", got, "campaigns")
 	}
 }
@@ -38,11 +38,11 @@ func TestModuleIDReturnsCampaigns(t *testing.T) {
 func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	t.Parallel()
 
-	if New().Healthy() {
+	if New(Config{}).Healthy() {
 		t.Fatalf("New().Healthy() = true, want false for degraded module")
 	}
-	if !NewStableWithGateway(fakeGateway{}, modulehandler.NewTestBase(), "", nil).Healthy() {
-		t.Fatalf("NewStableWithGateway(...).Healthy() = false, want true")
+	if !New(Config{Gateway: fakeGateway{}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil}).Healthy() {
+		t.Fatalf("New(Config{...}).Healthy() = false, want true")
 	}
 }
 
@@ -64,7 +64,7 @@ func TestMapCampaignCharacterCreationStepToProtoWrapper(t *testing.T) {
 func TestMountServesCampaignsGet(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}, {ID: "c2", Name: "Second"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}, {ID: "c2", Name: "Second"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -90,7 +90,7 @@ func TestMountServesCampaignsGet(t *testing.T) {
 func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -114,7 +114,7 @@ func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 func TestMountRejectsCampaignsNonGet(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.CampaignsPrefix+"123", nil)
 	rr := httptest.NewRecorder()
@@ -127,7 +127,7 @@ func TestMountRejectsCampaignsNonGet(t *testing.T) {
 func TestMountMapsCampaignGatewayErrorToHTTPStatus(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{err: apperrors.E(apperrors.KindUnauthorized, "missing session")}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{err: apperrors.E(apperrors.KindUnauthorized, "missing session")}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -143,7 +143,7 @@ func TestMountMapsCampaignGatewayErrorToHTTPStatus(t *testing.T) {
 func TestMountCampaignsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{err: status.Error(codes.NotFound, "campaign not found")}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{err: status.Error(codes.NotFound, "campaign not found")}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -167,7 +167,7 @@ func TestMountCampaignsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 func TestMountCampaignsInternalErrorRendersServerErrorPage(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{err: errors.New("boom")}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{err: errors.New("boom")}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -186,7 +186,7 @@ func TestMountCampaignsInternalErrorRendersServerErrorPage(t *testing.T) {
 func TestMountCampaignsGRPCNotFoundHTMXRendersErrorFragment(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{err: status.Error(codes.NotFound, "campaign not found")}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{err: status.Error(codes.NotFound, "campaign not found")}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -211,7 +211,7 @@ func TestMountCampaignsGRPCNotFoundHTMXRendersErrorFragment(t *testing.T) {
 func TestMountCampaignDetailMissingCampaignReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -235,7 +235,7 @@ func TestMountCampaignDetailMissingCampaignReturnsNotFound(t *testing.T) {
 func TestMountCampaignsUnknownSubpathRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -259,7 +259,7 @@ func TestMountCampaignsUnknownSubpathRendersNotFoundPage(t *testing.T) {
 func TestMountCampaignsLegacyChatSubpathRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -284,7 +284,7 @@ func TestMountUsesDependenciesCampaignClientWhenGatewayNotProvided(t *testing.T)
 			response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "remote-1", Name: "Remote Campaign"}}},
 		},
 	})
-	m := NewStableWithGateway(NewGRPCGateway(deps), modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -303,7 +303,7 @@ func TestMountUsesDependenciesCampaignClientWhenGatewayNotProvided(t *testing.T)
 func TestMountServesCampaignsGetWithEmptyList(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -339,7 +339,7 @@ func TestMountServesCampaignsGetWithEmptyList(t *testing.T) {
 func TestMountCampaignsGetWithEmptyListUsesHXRedirect(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

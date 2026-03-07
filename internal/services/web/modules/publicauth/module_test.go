@@ -23,13 +23,13 @@ import (
 )
 
 func newModuleWithClient(client publicauthgateway.AuthClient) Module {
-	return NewWithGateway(publicauthgateway.NewGRPCGateway(client))
+	return New(Config{Gateway: publicauthgateway.NewGRPCGateway(client), Surface: SurfaceAll})
 }
 
 func TestModuleIDReturnsPublic(t *testing.T) {
 	t.Parallel()
 
-	if got := NewWithGateway(nil).ID(); got != "public" {
+	if got := New(Config{Gateway: nil, Surface: SurfaceAll}).ID(); got != "public" {
 		t.Fatalf("ID() = %q, want %q", got, "public")
 	}
 }
@@ -43,9 +43,9 @@ func TestSplitPublicConstructorsExposeStableIDsAndMountPrefixes(t *testing.T) {
 		wantID string
 		prefix string
 	}{
-		{name: "shell", mod: NewShellWithGateway(nil), wantID: "public", prefix: routepath.Root},
-		{name: "passkeys", mod: NewPasskeysWithGateway(nil), wantID: "public-passkeys", prefix: routepath.PasskeysPrefix},
-		{name: "auth-redirect", mod: NewAuthRedirectWithGateway(nil), wantID: "public-auth-redirect", prefix: routepath.AuthPrefix},
+		{name: "shell", mod: New(Config{Gateway: nil, Surface: SurfaceShell}), wantID: "public", prefix: routepath.Root},
+		{name: "passkeys", mod: New(Config{Gateway: nil, Surface: SurfacePasskeys}), wantID: "public-passkeys", prefix: routepath.PasskeysPrefix},
+		{name: "auth-redirect", mod: New(Config{Gateway: nil, Surface: SurfaceAuthRedirect}), wantID: "public-auth-redirect", prefix: routepath.AuthPrefix},
 	}
 
 	for _, tc := range cases {
@@ -69,7 +69,7 @@ func TestSplitPublicConstructorsExposeStableIDsAndMountPrefixes(t *testing.T) {
 func TestMountServesRootAndLogin(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -93,7 +93,7 @@ func TestMountServesRootAndLogin(t *testing.T) {
 func TestMountServesHeadForAuthReads(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -112,7 +112,7 @@ func TestMountServesHeadForAuthReads(t *testing.T) {
 func TestMountAuthLocaleSwitchPersistsCookieAndHighlightsSelection(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?lang=pt-BR", nil)
 	rr := httptest.NewRecorder()
@@ -137,7 +137,7 @@ func TestMountAuthLocaleSwitchPersistsCookieAndHighlightsSelection(t *testing.T)
 func TestMountAuthLocaleUsesLanguageCookie(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	req.AddCookie(&http.Cookie{Name: "fs_lang", Value: "pt-BR"})
@@ -159,7 +159,7 @@ func TestMountAuthLocaleUsesLanguageCookie(t *testing.T) {
 func TestMountAuthLocaleRendersPortugueseCopy(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 
 	for _, path := range []string{routepath.Root, routepath.Login} {
@@ -186,7 +186,7 @@ func TestMountAuthLocaleRendersPortugueseCopy(t *testing.T) {
 func TestMountAuthLocaleRendersPortuguesePasskeyScriptStrings(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?lang=pt-BR", nil)
 	rr := httptest.NewRecorder()
@@ -207,7 +207,7 @@ func TestMountAuthLocaleRendersPortuguesePasskeyScriptStrings(t *testing.T) {
 func TestMountLoginPublishesPasskeyEndpointDataAttributes(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.Login, nil)
 	rr := httptest.NewRecorder()
@@ -252,7 +252,7 @@ func assertAuthShellMarkers(t *testing.T, path, body string) {
 func TestMountAuthLoginRedirectsToLogin(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, routepath.AuthLogin, nil)
 	rr := httptest.NewRecorder()
@@ -409,7 +409,7 @@ func TestMountPasskeyLoginFinishSetsSecureCookieForHTTPS(t *testing.T) {
 func TestMountLogoutClearsSessionCookieAndRedirectsToLogin(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, "/logout", nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "user-1"})
@@ -439,7 +439,7 @@ func TestMountLogoutClearsSessionCookieAndRedirectsToLogin(t *testing.T) {
 func TestMountLogoutSetsSecureClearingCookieForHTTPS(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, "https://app.example.test"+routepath.Logout, nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "user-1"})
@@ -462,7 +462,7 @@ func TestMountLogoutSetsSecureClearingCookieForHTTPS(t *testing.T) {
 func TestMountLogoutRejectsGetMethod(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodGet, "/logout", nil)
 	rr := httptest.NewRecorder()
@@ -479,7 +479,7 @@ func TestMountLogoutRejectsGetMethod(t *testing.T) {
 func TestMountLogoutRejectsCookieMutationWithoutSameOriginProof(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(nil)
+	m := New(Config{Gateway: nil, Surface: SurfaceAll})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.Logout, nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "user-1"})

@@ -16,14 +16,20 @@ type Module struct {
 	healthProvider dashboardapp.HealthProvider
 }
 
-// New returns a dashboard module with zero-value dependencies (degraded mode).
-func New() Module {
-	return Module{}
+// Config defines constructor dependencies for a dashboard module.
+type Config struct {
+	Gateway        DashboardGateway
+	Base           modulehandler.Base
+	HealthProvider dashboardapp.HealthProvider
 }
 
-// NewWithGateway returns a dashboard module with explicit gateway and handler dependencies.
-func NewWithGateway(gateway DashboardGateway, base modulehandler.Base, healthProvider dashboardapp.HealthProvider) Module {
-	return Module{gateway: gateway, base: base, healthProvider: healthProvider}
+// New returns a dashboard module with explicit dependencies.
+func New(config Config) Module {
+	return Module{
+		gateway:        config.Gateway,
+		base:           config.Base,
+		healthProvider: config.HealthProvider,
+	}
 }
 
 // ID returns a stable module identifier.

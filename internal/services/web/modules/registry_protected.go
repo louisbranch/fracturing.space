@@ -34,11 +34,22 @@ func buildProtectedModules(
 ) ([]Module, []dashboard.ServiceHealthEntry) {
 	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
 	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort, defaultCampaignWorkflows(deps))
-	settingsMod := settings.New(settings.WithGateway(settingsgateway.NewGRPCGateway(deps.SettingsSocialClient, deps.AccountClient, deps.CredentialClient)), settings.WithBase(base), settings.WithSchemePolicy(opts.RequestSchemePolicy))
-	notifMod := notifications.NewWithGateway(notificationsgateway.NewGRPCGateway(deps.NotificationClient), base)
+	settingsMod := settings.New(settings.Config{
+		Gateway:   settingsgateway.NewGRPCGateway(deps.SettingsSocialClient, deps.AccountClient, deps.CredentialClient),
+		Base:      base,
+		FlashMeta: opts.RequestSchemePolicy,
+	})
+	notifMod := notifications.New(notifications.Config{
+		Gateway: notificationsgateway.NewGRPCGateway(deps.NotificationClient),
+		Base:    base,
+	})
 
 	dashGw := dashboardgateway.NewGRPCGateway(deps.UserHubClient)
-	dashMod := dashboard.NewWithGateway(dashGw, base, statusHealthProvider(deps.StatusClient))
+	dashMod := dashboard.New(dashboard.Config{
+		Gateway:        dashGw,
+		Base:           base,
+		HealthProvider: statusHealthProvider(deps.StatusClient),
+	})
 	return []Module{dashMod, settingsMod, notifMod, campaignMod}, nil
 }
 
@@ -52,7 +63,12 @@ func defaultCampaignWorkflows(deps Dependencies) map[string]campaigns.CharacterC
 
 // newCampaignModule returns the campaigns module with stable route ownership.
 func newCampaignModule(deps Dependencies, base modulehandler.Base, chatFallbackPort string, workflows map[string]campaigns.CharacterCreationWorkflow) Module {
-	return campaigns.NewStableWithGateway(newCampaignGateway(deps), base, chatFallbackPort, workflows)
+	return campaigns.New(campaigns.Config{
+		Gateway:          newCampaignGateway(deps),
+		Base:             base,
+		ChatFallbackPort: chatFallbackPort,
+		Workflows:        workflows,
+	})
 }
 
 // statusHealthTimeout caps a per-request status service query.

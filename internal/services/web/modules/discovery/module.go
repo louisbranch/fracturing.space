@@ -13,12 +13,14 @@ type Module struct {
 	gateway Gateway
 }
 
-// New returns a discovery module with no discovery backend (fail-closed).
-func New() Module { return Module{} }
+// Config defines constructor dependencies for a discovery module.
+type Config struct {
+	Gateway Gateway
+}
 
-// NewWithGateway returns a discovery module backed by the given gateway.
-func NewWithGateway(gw Gateway) Module {
-	return Module{gateway: gw}
+// New returns a discovery module with explicit dependencies.
+func New(config Config) Module {
+	return Module{gateway: config.Gateway}
 }
 
 // ID returns a stable module identifier.

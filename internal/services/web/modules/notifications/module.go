@@ -15,14 +15,15 @@ type Module struct {
 	base    modulehandler.Base
 }
 
-// New returns a notifications module with zero-value dependencies (degraded mode).
-func New() Module {
-	return Module{}
+// Config defines constructor dependencies for a notifications module.
+type Config struct {
+	Gateway NotificationGateway
+	Base    modulehandler.Base
 }
 
-// NewWithGateway returns a notifications module with explicit gateway and handler dependencies.
-func NewWithGateway(gateway NotificationGateway, base modulehandler.Base) Module {
-	return Module{gateway: gateway, base: base}
+// New returns a notifications module with explicit dependencies.
+func New(config Config) Module {
+	return Module{gateway: config.Gateway, base: config.Base}
 }
 
 // ID returns a stable module identifier.

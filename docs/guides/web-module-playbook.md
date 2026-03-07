@@ -44,6 +44,9 @@ inside the same area boundary:
 - Keep one root package owner per area. Subpackages may exist for that area,
   but sibling area imports remain forbidden.
 - Accept service integrations through constructors/interfaces.
+- Use one constructor shape per module: `New(Config) Module`.
+  Avoid variant constructors (`NewWith...`, option builders, mixed positional
+  constructors) because they fragment test and composition seams.
 - For campaigns/settings/profile-style modules, build production gateways in
   composition (registry composition files under `modules/registry_*.go`) rather
   than inside `Mount`.
@@ -154,6 +157,8 @@ Public/auth route ownership is split into explicit surface modules under:
 ## Registering a Module
 
 1. Implement the module package.
+   Ensure the module root has `type Config struct { ... }` and
+   `func New(config Config) Module`.
 2. Add module constructor wiring in registry composition (`modules/registry_*.go`).
 3. Choose public or protected group.
 4. Choose route exposure tier:

@@ -76,7 +76,7 @@ type Service interface {
 type service struct {
 	readGateway     campaignReadGateway
 	mutationGateway campaignMutationGateway
-	authzGateway    campaignAuthzGateway
+	authzGateway    AuthzGateway
 	workflows       map[string]CharacterCreationWorkflow
 }
 
@@ -109,8 +109,8 @@ func newServiceWithWorkflows(gateway CampaignGateway, workflows map[string]Chara
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
-	var authz campaignAuthzGateway
-	if checker, ok := gateway.(campaignAuthzGateway); ok {
+	var authz AuthzGateway
+	if checker, ok := gateway.(AuthzGateway); ok {
 		authz = checker
 	}
 	return service{

@@ -12,7 +12,7 @@ import (
 func TestMountServesDiscoveryGet(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -34,7 +34,7 @@ func TestMountServesDiscoveryGet(t *testing.T) {
 func TestMountServesDiscoveryHead(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -50,7 +50,7 @@ func TestMountServesDiscoveryHead(t *testing.T) {
 func TestModuleIDReturnsDiscovery(t *testing.T) {
 	t.Parallel()
 
-	if got := New().ID(); got != "discovery" {
+	if got := New(Config{}).ID(); got != "discovery" {
 		t.Fatalf("ID() = %q, want %q", got, "discovery")
 	}
 }
@@ -58,7 +58,7 @@ func TestModuleIDReturnsDiscovery(t *testing.T) {
 func TestMountRejectsDiscoveryNonGet(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodDelete, routepath.DiscoverPrefix+"campaigns", nil)
 	rr := httptest.NewRecorder()
@@ -68,10 +68,10 @@ func TestMountRejectsDiscoveryNonGet(t *testing.T) {
 	}
 }
 
-func TestNewWithGatewayIsHealthy(t *testing.T) {
+func TestNewConfigGatewayIsHealthy(t *testing.T) {
 	t.Parallel()
 
-	m := NewWithGateway(stubGateway{})
+	m := New(Config{Gateway: stubGateway{}})
 	if !m.Healthy() {
 		t.Fatal("Healthy() = false, want true")
 	}
@@ -80,7 +80,7 @@ func TestNewWithGatewayIsHealthy(t *testing.T) {
 func TestNewWithoutGatewayIsNotHealthy(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	if m.Healthy() {
 		t.Fatal("Healthy() = true, want false with nil gateway")
 	}

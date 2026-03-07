@@ -12,9 +12,19 @@ type Module struct {
 	inner publicauth.Module
 }
 
-// NewWithGatewayAndPolicy builds the passkeys module with explicit gateway/policy dependencies.
-func NewWithGatewayAndPolicy(gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
-	return Module{inner: publicauth.NewPasskeysWithGatewayAndPolicy(gateway, policy)}
+// Config defines constructor dependencies for the passkeys module.
+type Config struct {
+	Gateway     publicauthapp.Gateway
+	RequestMeta requestmeta.SchemePolicy
+}
+
+// New builds the passkeys module with explicit dependencies.
+func New(config Config) Module {
+	return Module{inner: publicauth.New(publicauth.Config{
+		Gateway:     config.Gateway,
+		RequestMeta: config.RequestMeta,
+		Surface:     publicauth.SurfacePasskeys,
+	})}
 }
 
 // ID returns the stable module identifier.

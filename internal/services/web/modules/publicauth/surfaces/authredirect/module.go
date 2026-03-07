@@ -12,9 +12,19 @@ type Module struct {
 	inner publicauth.Module
 }
 
-// NewWithGatewayAndPolicy builds the auth redirect module with explicit gateway/policy dependencies.
-func NewWithGatewayAndPolicy(gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
-	return Module{inner: publicauth.NewAuthRedirectWithGatewayAndPolicy(gateway, policy)}
+// Config defines constructor dependencies for the auth redirect module.
+type Config struct {
+	Gateway     publicauthapp.Gateway
+	RequestMeta requestmeta.SchemePolicy
+}
+
+// New builds the auth redirect module with explicit dependencies.
+func New(config Config) Module {
+	return Module{inner: publicauth.New(publicauth.Config{
+		Gateway:     config.Gateway,
+		RequestMeta: config.RequestMeta,
+		Surface:     publicauth.SurfaceAuthRedirect,
+	})}
 }
 
 // ID returns the stable module identifier.

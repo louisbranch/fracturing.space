@@ -189,7 +189,7 @@ func (s service) updateParticipant(ctx context.Context, campaignID string, input
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_access_value_is_invalid", "campaign access value is invalid")
 	}
 
-	target := &campaignAuthorizationTarget{
+	target := &AuthorizationTarget{
 		ResourceID:           participantID,
 		TargetParticipantID:  participantID,
 		ParticipantOperation: ParticipantGovernanceOperationMutate,

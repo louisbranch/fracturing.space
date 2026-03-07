@@ -55,7 +55,7 @@ func TestCampaignCharacterCreationForwardsCatalogLocale(t *testing.T) {
 func TestCharacterCreationMutationMethodsDelegateToGateway(t *testing.T) {
 	t.Parallel()
 
-	gateway := &campaignGatewayStub{authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true}}
+	gateway := &campaignGatewayStub{authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true}}
 	svc := newService(gateway)
 	ctx := contextWithResolvedUserID("user-1")
 

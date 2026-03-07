@@ -19,54 +19,48 @@ type Module struct {
 	registerRoutes func(*http.ServeMux, handlers)
 }
 
-// NewWithGateway returns a public/auth module with an explicit gateway.
-func NewWithGateway(gateway publicauthapp.Gateway) Module {
-	return NewWithGatewayAndPolicy(gateway, requestmeta.SchemePolicy{})
+// Surface classifies which route subset this module instance mounts.
+type Surface string
+
+const (
+	SurfaceAll          Surface = "all"
+	SurfaceShell        Surface = "shell"
+	SurfacePasskeys     Surface = "passkeys"
+	SurfaceAuthRedirect Surface = "auth-redirect"
+)
+
+// Config defines constructor dependencies for a publicauth module.
+type Config struct {
+	Gateway     publicauthapp.Gateway
+	RequestMeta requestmeta.SchemePolicy
+	Surface     Surface
 }
 
-// NewWithGatewayAndPolicy returns a public/auth module with explicit request metadata policy.
-func NewWithGatewayAndPolicy(gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
-	return newPublicModule("public", routepath.Root, registerRoutes, gateway, policy)
-}
-
-// NewShellWithGateway returns an auth shell module with explicit routes and policy.
-func NewShellWithGateway(gateway publicauthapp.Gateway) Module {
-	return NewShellWithGatewayAndPolicy(gateway, requestmeta.SchemePolicy{})
-}
-
-// NewShellWithGatewayAndPolicy returns the shell/public entrypoint routes module.
-func NewShellWithGatewayAndPolicy(gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
-	return newPublicModule("public", routepath.Root, registerShellRoutes, gateway, policy)
-}
-
-// NewPasskeysWithGateway returns a module containing passkey JSON endpoints.
-func NewPasskeysWithGateway(gateway publicauthapp.Gateway) Module {
-	return NewPasskeysWithGatewayAndPolicy(gateway, requestmeta.SchemePolicy{})
-}
-
-// NewPasskeysWithGatewayAndPolicy returns the passkey routes module.
-func NewPasskeysWithGatewayAndPolicy(gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
-	return newPublicModule("public-passkeys", routepath.PasskeysPrefix, registerPasskeyRoutes, gateway, policy)
-}
-
-// NewAuthRedirectWithGateway returns an auth-redirect module.
-func NewAuthRedirectWithGateway(gateway publicauthapp.Gateway) Module {
-	return NewAuthRedirectWithGatewayAndPolicy(gateway, requestmeta.SchemePolicy{})
-}
-
-// NewAuthRedirectWithGatewayAndPolicy returns the auth-redirect route module.
-func NewAuthRedirectWithGatewayAndPolicy(gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
-	return newPublicModule("public-auth-redirect", routepath.AuthPrefix, registerAuthRedirectRoutes, gateway, policy)
-}
-
-// newPublicModule builds package wiring for this web seam.
-func newPublicModule(id string, prefix string, registerRoutes func(*http.ServeMux, handlers), gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
+// New returns a publicauth module with explicit dependencies.
+func New(config Config) Module {
+	id, prefix, register := resolveSurface(config.Surface)
 	return Module{
-		gateway:        gateway,
-		requestMeta:    policy,
-		id:             strings.TrimSpace(id),
-		prefix:         strings.TrimSpace(prefix),
-		registerRoutes: registerRoutes,
+		gateway:        config.Gateway,
+		requestMeta:    config.RequestMeta,
+		id:             id,
+		prefix:         prefix,
+		registerRoutes: register,
+	}
+}
+
+// resolveSurface converts surface selection into mount metadata.
+func resolveSurface(surface Surface) (string, string, func(*http.ServeMux, handlers)) {
+	switch surface {
+	case SurfaceShell:
+		return "public", routepath.Root, registerShellRoutes
+	case SurfacePasskeys:
+		return "public-passkeys", routepath.PasskeysPrefix, registerPasskeyRoutes
+	case SurfaceAuthRedirect:
+		return "public-auth-redirect", routepath.AuthPrefix, registerAuthRedirectRoutes
+	case SurfaceAll, "":
+		return "public", routepath.Root, registerRoutes
+	default:
+		return "public", routepath.Root, registerRoutes
 	}
 }
 

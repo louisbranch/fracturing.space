@@ -17,7 +17,7 @@ import (
 func TestModuleIDReturnsDashboard(t *testing.T) {
 	t.Parallel()
 
-	if got := New().ID(); got != "dashboard" {
+	if got := New(Config{}).ID(); got != "dashboard" {
 		t.Fatalf("ID() = %q, want %q", got, "dashboard")
 	}
 }
@@ -25,18 +25,18 @@ func TestModuleIDReturnsDashboard(t *testing.T) {
 func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	t.Parallel()
 
-	if New().Healthy() {
+	if New(Config{}).Healthy() {
 		t.Fatalf("New().Healthy() = true, want false for degraded module")
 	}
-	if !NewWithGateway(&fakeGateway{}, modulehandler.NewTestBase(), nil).Healthy() {
-		t.Fatalf("NewWithGateway(...).Healthy() = false, want true")
+	if !New(Config{Gateway: &fakeGateway{}, Base: modulehandler.NewTestBase(), HealthProvider: nil}).Healthy() {
+		t.Fatalf("New(Config{...}).Healthy() = false, want true")
 	}
 }
 
 func TestMountServesDashboardGet(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -67,7 +67,7 @@ func TestMountServesDashboardGet(t *testing.T) {
 func TestMountServesDashboardHead(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -83,7 +83,7 @@ func TestMountServesDashboardHead(t *testing.T) {
 func TestMountDashboardHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -115,7 +115,7 @@ func TestMountRendersPendingProfileBlockFromUserHubState(t *testing.T) {
 		func(*http.Request) string { return "pt-BR" },
 		nil,
 	)
-	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
+	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -148,7 +148,7 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
+	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -186,7 +186,7 @@ func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
+	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -223,7 +223,7 @@ func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *test
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
+	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -258,7 +258,7 @@ func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := NewWithGateway(dashboardgateway.NewGRPCGateway(client), base, nil)
+	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
