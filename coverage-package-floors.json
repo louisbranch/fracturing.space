@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-07T06:46:14Z",
+  "updated_at": "2026-03-07T07:00:24Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -35,7 +35,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics",
-      "floor": 95.5,
+      "floor": 96.1,
       "description": "Pure Daggerheart mechanics seam used by folder and adapter paths."
     },
     {
