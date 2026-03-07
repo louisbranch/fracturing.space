@@ -26,7 +26,7 @@ func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) w
 	view.SecondaryWeapons = mapCreationWeapons(creation.SecondaryWeapons)
 	view.Armor = mapCreationArmor(creation.Armor)
 	view.PotionItems = mapCreationItems(creation.PotionItems)
-	view.DomainCards = mapCreationDomainCards(creation.DomainCards)
+	view.DomainCards = mapCreationDomainCards(creation.DomainCards, cdn)
 
 	return view
 }
@@ -269,12 +269,17 @@ func mapCreationItems(items []campaignapp.CatalogItem) []webtemplates.CampaignCr
 }
 
 // mapCreationDomainCards maps domain-card entries to template rows.
-func mapCreationDomainCards(cards []campaignapp.CatalogDomainCard) []webtemplates.CampaignCreationDomainCardView {
+func mapCreationDomainCards(cards []campaignapp.CatalogDomainCard, cdn imagecdn.ImageCDN) []webtemplates.CampaignCreationDomainCardView {
 	mapped := make([]webtemplates.CampaignCreationDomainCardView, 0, len(cards))
 	for _, card := range cards {
+		imageURL := strings.TrimSpace(card.Illustration.URL)
+		if imageURL == "" {
+			imageURL = resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeDomainCard, card.ID, catalog.DaggerheartAssetTypeDomainCardIllustration)
+		}
 		mapped = append(mapped, webtemplates.CampaignCreationDomainCardView{
 			ID:          card.ID,
 			Name:        card.Name,
+			ImageURL:    imageURL,
 			DomainID:    card.DomainID,
 			DomainName:  card.DomainName,
 			Level:       card.Level,

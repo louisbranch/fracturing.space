@@ -71,6 +71,30 @@ func creationCardSelectedClass(cardID, selectedID string) string {
 	return ""
 }
 
+// creationCardSelectedClassFromChecked returns selected-state classes when the option is checked.
+func creationCardSelectedClassFromChecked(checked bool) string {
+	if checked {
+		return "border-primary ring-2 ring-primary/20"
+	}
+	return ""
+}
+
+// creationCardDisabledClass returns disabled classes for non-interactive option cards.
+func creationCardDisabledClass(disabled bool) string {
+	if disabled {
+		return "opacity-60 cursor-not-allowed pointer-events-none"
+	}
+	return ""
+}
+
+// creationOptionInputType normalizes selectable-card input type to radio or checkbox.
+func creationOptionInputType(inputType string) string {
+	if strings.EqualFold(strings.TrimSpace(inputType), "checkbox") {
+		return "checkbox"
+	}
+	return "radio"
+}
+
 // creationFormatHP formats HP for display.
 func creationFormatHP(hp int32) string {
 	return fmt.Sprintf("HP %d", hp)
@@ -242,9 +266,24 @@ templ creationFeatureList(features []CampaignCreationClassFeatureView) {
 	}
 }
 
-// creationOptionCard is the shared card shell used by class and subclass selection cards.
-templ creationOptionCard(id string, name string, imageURL string, radioName string, selectedID string, domainWatermarks []CampaignCreationDomainWatermarkView) {
-	<label class={ "card relative bg-base-100 border border-base-300 shadow-sm cursor-pointer hover:shadow-md transition-shadow md:card-side overflow-hidden " + creationCardSelectedClass(id, selectedID) }>
+// creationSelectableOptionCard is the shared shell used by selectable creation cards.
+templ creationSelectableOptionCard(
+	id string,
+	name string,
+	imageURL string,
+	inputName string,
+	inputType string,
+	checked bool,
+	required bool,
+	disabled bool,
+	showImageFrame bool,
+	optionKind string,
+	domainWatermarks []CampaignCreationDomainWatermarkView,
+) {
+	<label
+		class={ "card relative bg-base-100 border border-base-300 shadow-sm cursor-pointer hover:shadow-md transition-shadow md:card-side overflow-hidden " + creationCardSelectedClassFromChecked(checked) + " " + creationCardDisabledClass(disabled) }
+		data-creation-option-kind={ strings.TrimSpace(optionKind) }
+	>
 		if creationHasDomainWatermarkIcons(domainWatermarks) {
 			<div class="pointer-events-none absolute right-0 top-3 z-10" data-class-domain-watermarks="true" aria-hidden="true">
 				<div class="flex h-24 w-14 flex-col items-center justify-center gap-1.5 rounded-l-xl border border-r-0 border-base-200 bg-white/5 p-2 shadow-sm md:h-28 md:w-16">
@@ -258,7 +297,7 @@ templ creationOptionCard(id string, name string, imageURL string, radioName stri
 				</div>
 			</div>
 		}
-		if imageURL != "" {
+		if showImageFrame {
 			<figure class="h-48 md:h-auto md:w-48 bg-base-300 shrink-0">
 				@AppImage(AppImageView{
 					Src:        imageURL,
@@ -268,12 +307,58 @@ templ creationOptionCard(id string, name string, imageURL string, radioName stri
 				})
 			</figure>
 		}
-		<input type="radio" name={ radioName } value={ id } class="hidden" required checked?={ campaignCreationOptionSelected(id, selectedID) }/>
+		<input
+			type={ creationOptionInputType(inputType) }
+			name={ inputName }
+			value={ id }
+			class="hidden"
+			required?={ required }
+			checked?={ checked }
+			disabled?={ disabled }
+		/>
 		<div class="card-body gap-2 p-4">
 			<h4 class="card-title text-base">{ name }</h4>
 			{ children... }
 		</div>
 	</label>
+}
+
+// creationOptionCard is the shared radio-card shell used by class/subclass/heritage selection.
+templ creationOptionCard(id string, name string, imageURL string, radioName string, selectedID string, domainWatermarks []CampaignCreationDomainWatermarkView) {
+	@creationSelectableOptionCard(
+		id,
+		name,
+		imageURL,
+		radioName,
+		"radio",
+		campaignCreationOptionSelected(id, selectedID),
+		true,
+		false,
+		strings.TrimSpace(imageURL) != "",
+		"",
+		domainWatermarks,
+	) {
+		{ children... }
+	}
+}
+
+// creationCheckboxOptionCard renders a checkbox version of the shared selectable card shell.
+templ creationCheckboxOptionCard(id string, name string, imageURL string, checkboxName string, selected []string, disabled bool, showImageFrame bool, optionKind string) {
+	@creationSelectableOptionCard(
+		id,
+		name,
+		imageURL,
+		checkboxName,
+		"checkbox",
+		campaignCreationOptionInSet(id, selected),
+		false,
+		disabled,
+		showImageFrame,
+		optionKind,
+		nil,
+	) {
+		{ children... }
+	}
 }
 
 templ CharacterCreationPage(view CharacterCreationPageView, loc Localizer) {
@@ -1095,35 +1180,32 @@ templ creationStepDomainCards(view CharacterCreationPageView, loc Localizer) {
 		<p class="text-sm opacity-70">{ T(loc, "game.character_creation.domain_cards_hint") }</p>
 		<div class="grid gap-3 md:grid-cols-2">
 			for _, card := range view.Creation.DomainCards {
-				<label class="card bg-base-100 border border-base-300 shadow-sm cursor-pointer hover:shadow-md transition-shadow">
-					<div class="card-body gap-2 p-4">
-						<div class="flex items-start gap-3">
-							if campaignCreationOptionInSet(card.ID, view.Creation.DomainCardIDs) {
-								<input type="checkbox" name="domain_card_id" value={ card.ID } class="checkbox checkbox-primary mt-1" checked/>
-							} else {
-								<input type="checkbox" name="domain_card_id" value={ card.ID } class="checkbox checkbox-primary mt-1"/>
-							}
-							<div class="flex-1">
-								<h4 class="font-semibold">{ card.Name }</h4>
-								<div class="flex flex-wrap gap-2 mt-1 text-xs">
-									if card.DomainName != "" {
-										<span class="badge badge-outline badge-sm">{ card.DomainName }</span>
-									}
-									if card.Type != "" {
-										<span class="badge badge-ghost badge-sm">{ card.Type }</span>
-									}
-									<span class="badge badge-outline badge-sm">{ T(loc, "game.character_creation.label_level") }{ card.Level }</span>
-									if creationFormatRecallCost(card.RecallCost) != "" {
-										<span class="badge badge-outline badge-sm">{ creationFormatRecallCost(card.RecallCost) }</span>
-									}
-								</div>
-								if card.FeatureText != "" {
-									<p class="text-xs opacity-70 mt-2">{ card.FeatureText }</p>
-								}
-							</div>
-						</div>
+				@creationCheckboxOptionCard(
+					card.ID,
+					card.Name,
+					card.ImageURL,
+					"domain_card_id",
+					view.Creation.DomainCardIDs,
+					len(view.Creation.DomainCardIDs) >= 2 && !campaignCreationOptionInSet(card.ID, view.Creation.DomainCardIDs),
+					true,
+					"domain-card",
+				) {
+					<div class="flex flex-wrap gap-2 text-xs">
+						if card.DomainName != "" {
+							<span class="badge badge-outline badge-sm">{ card.DomainName }</span>
+						}
+						if card.Type != "" {
+							<span class="badge badge-ghost badge-sm">{ card.Type }</span>
+						}
+						<span class="badge badge-outline badge-sm">{ T(loc, "game.character_creation.label_level") }{ card.Level }</span>
+						if creationFormatRecallCost(card.RecallCost) != "" {
+							<span class="badge badge-outline badge-sm">{ creationFormatRecallCost(card.RecallCost) }</span>
+						}
 					</div>
-				</label>
+					if card.FeatureText != "" {
+						<p class="text-xs opacity-70 mt-2">{ card.FeatureText }</p>
+					}
+				}
 			}
 		</div>
 		<div class="flex justify-end">
@@ -1137,12 +1219,18 @@ templ creationStepDomainCards(view CharacterCreationPageView, loc Localizer) {
 			var maxCards = 2;
 			function updateCheckboxes() {
 				var checked = form.querySelectorAll('input[name="domain_card_id"]:checked');
-				var unchecked = form.querySelectorAll('input[name="domain_card_id"]:not(:checked)');
-				if (checked.length >= maxCards) {
-					unchecked.forEach(function(cb) { cb.disabled = true; });
-				} else {
-					unchecked.forEach(function(cb) { cb.disabled = false; });
-				}
+				var options = form.querySelectorAll('[data-creation-option-kind="domain-card"]');
+				options.forEach(function(option) {
+					var checkbox = option.querySelector('input[name="domain_card_id"]');
+					if (!checkbox) return;
+					var shouldDisable = checked.length >= maxCards && !checkbox.checked;
+					checkbox.disabled = shouldDisable;
+					if (shouldDisable) {
+						option.classList.add('opacity-60', 'cursor-not-allowed', 'pointer-events-none');
+					} else {
+						option.classList.remove('opacity-60', 'cursor-not-allowed', 'pointer-events-none');
+					}
+				});
 			}
 			form.addEventListener('change', function(e) {
 				if (e.target.name === 'domain_card_id') updateCheckboxes();

@@ -3,6 +3,7 @@ package templates
 import (
 	"bytes"
 	"context"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -123,6 +124,71 @@ func TestCreationStepClassSubclassSkipsWatermarkContainerWhenAllIconsMissing(t *
 	got := buf.String()
 	if strings.Contains(got, `data-class-domain-watermarks="true"`) {
 		t.Fatalf("class-subclass output unexpectedly rendered empty watermark container: %q", got)
+	}
+}
+
+func TestCreationStepDomainCardsUsesSharedSelectableCardShell(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			DomainCardIDs: []string{"dc1"},
+			DomainCards: []CampaignCreationDomainCardView{
+				{ID: "dc1", Name: "Runeward", ImageURL: "https://cdn.example.com/domain-cards/runeward.png", DomainName: "Arcana", Level: 1},
+				{ID: "dc2", Name: "Wallwalk", DomainName: "Arcana", Level: 1},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	err := creationStepDomainCards(view, testLocalizer{}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render creationStepDomainCards: %v", err)
+	}
+
+	markup := strings.SplitN(buf.String(), "<script>", 2)[0]
+	if strings.Count(markup, `data-creation-option-kind="domain-card"`) != 2 {
+		t.Fatalf("domain-card selectable cards = %d, want 2", strings.Count(markup, `data-creation-option-kind="domain-card"`))
+	}
+	for _, marker := range []string{
+		`type="checkbox"`,
+		`data-image-frame="true"`,
+		`data-image-skeleton="true"`,
+		`border-primary ring-2 ring-primary/20`,
+	} {
+		if !strings.Contains(markup, marker) {
+			t.Fatalf("domain-cards output missing marker %q: %q", marker, markup)
+		}
+	}
+}
+
+func TestCreationStepDomainCardsDisablesUnselectedWhenLimitReached(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			DomainCardIDs: []string{"dc1", "dc2"},
+			DomainCards: []CampaignCreationDomainCardView{
+				{ID: "dc1", Name: "Runeward", Level: 1},
+				{ID: "dc2", Name: "Wallwalk", Level: 1},
+				{ID: "dc3", Name: "Whirlwind", Level: 1},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	err := creationStepDomainCards(view, testLocalizer{}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render creationStepDomainCards: %v", err)
+	}
+
+	markup := strings.SplitN(buf.String(), "<script>", 2)[0]
+	if !regexp.MustCompile(`value="dc3"[^>]*disabled`).MatchString(markup) {
+		t.Fatalf("expected unselected dc3 checkbox to be disabled when two cards are already selected: %q", markup)
 	}
 }
 

@@ -274,3 +274,50 @@ func TestCreationViewClassDomainWatermarksSkipMissingIconsAndCapAtTwo(t *testing
 		t.Fatalf("second domain watermark id = %q, want %q", view.Classes[0].DomainWatermarks[1].ID, "domain.bone")
 	}
 }
+
+func TestCreationViewUsesCatalogDomainCardIllustrationURL(t *testing.T) {
+	t.Parallel()
+
+	creation := campaignapp.CampaignCharacterCreation{
+		DomainCards: []campaignapp.CatalogDomainCard{
+			{
+				ID:   "domain_card.arcana-runeward",
+				Name: "Runeward",
+				Illustration: campaignapp.CatalogAssetReference{
+					URL: "https://cdn.example.com/domain-cards/runeward.png",
+				},
+			},
+		},
+	}
+
+	view := New("").CreationView(creation)
+	if len(view.DomainCards) != 1 {
+		t.Fatalf("domain cards = %d, want 1", len(view.DomainCards))
+	}
+	if view.DomainCards[0].ImageURL != "https://cdn.example.com/domain-cards/runeward.png" {
+		t.Fatalf("domain card image url = %q, want %q", view.DomainCards[0].ImageURL, "https://cdn.example.com/domain-cards/runeward.png")
+	}
+}
+
+func TestCreationViewResolvesDomainCardImageURLFallback(t *testing.T) {
+	t.Parallel()
+
+	creation := campaignapp.CampaignCharacterCreation{
+		DomainCards: []campaignapp.CatalogDomainCard{
+			{
+				ID:   "domain_card.arcana-runeward",
+				Name: "Runeward",
+			},
+		},
+	}
+
+	viewNoURL := New("").CreationView(creation)
+	if len(viewNoURL.DomainCards) != 1 || viewNoURL.DomainCards[0].ImageURL != "" {
+		t.Fatalf("expected empty domain card image url without AssetBaseURL, got %q", viewNoURL.DomainCards[0].ImageURL)
+	}
+
+	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
+	if len(viewWithURL.DomainCards) != 1 || viewWithURL.DomainCards[0].ImageURL == "" {
+		t.Fatalf("expected non-empty domain card image url with AssetBaseURL, got %q", viewWithURL.DomainCards[0].ImageURL)
+	}
+}
