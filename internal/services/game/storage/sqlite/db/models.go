@@ -169,6 +169,7 @@ type DaggerheartCharacterProfile struct {
 	Background            string `json:"background"`
 	DomainCardIdsJson     string `json:"domain_card_ids_json"`
 	Connections           string `json:"connections"`
+	Description           string `json:"description"`
 }
 
 type DaggerheartCharacterState struct {

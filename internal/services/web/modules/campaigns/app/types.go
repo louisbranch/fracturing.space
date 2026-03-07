@@ -144,6 +144,12 @@ type CampaignCharacterCreationProgress struct {
 	UnmetReasons []string                        `json:"unmetReasons"`
 }
 
+// CatalogFeature stores a named feature with its description text.
+type CatalogFeature struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}
+
 // CatalogAssetReference stores one resolved image reference for content entities.
 type CatalogAssetReference struct {
 	URL     string `json:"url"`
@@ -154,19 +160,25 @@ type CatalogAssetReference struct {
 
 // CatalogClass stores class catalog data used by workflow forms.
 type CatalogClass struct {
-	ID           string                `json:"id"`
-	Name         string                `json:"name"`
-	DomainIDs    []string              `json:"domainIds"`
-	Illustration CatalogAssetReference `json:"illustration"`
-	Icon         CatalogAssetReference `json:"icon"`
+	ID              string                `json:"id"`
+	Name            string                `json:"name"`
+	DomainIDs       []string              `json:"domainIds"`
+	StartingHP      int32                 `json:"startingHp"`
+	StartingEvasion int32                 `json:"startingEvasion"`
+	HopeFeature     CatalogFeature        `json:"hopeFeature"`
+	Features        []CatalogFeature      `json:"features"`
+	Illustration    CatalogAssetReference `json:"illustration"`
+	Icon            CatalogAssetReference `json:"icon"`
 }
 
 // CatalogSubclass stores subclass catalog data used by workflow forms.
 type CatalogSubclass struct {
-	ID           string                `json:"id"`
-	Name         string                `json:"name"`
-	ClassID      string                `json:"classId"`
-	Illustration CatalogAssetReference `json:"illustration"`
+	ID             string                `json:"id"`
+	Name           string                `json:"name"`
+	ClassID        string                `json:"classId"`
+	SpellcastTrait string                `json:"spellcastTrait"`
+	Foundation     []CatalogFeature      `json:"foundation"`
+	Illustration   CatalogAssetReference `json:"illustration"`
 }
 
 // CatalogHeritage stores ancestry/community catalog data.
@@ -174,6 +186,7 @@ type CatalogHeritage struct {
 	ID           string                `json:"id"`
 	Name         string                `json:"name"`
 	Kind         string                `json:"kind"`
+	Features     []CatalogFeature      `json:"features"`
 	Illustration CatalogAssetReference `json:"illustration"`
 }
 
@@ -191,19 +204,27 @@ type CatalogWeapon struct {
 	Name     string `json:"name"`
 	Category string `json:"category"`
 	Tier     int32  `json:"tier"`
+	Trait    string `json:"trait"`
+	Range    string `json:"range"`
+	Damage   string `json:"damage"`
+	Feature  string `json:"feature"`
 }
 
 // CatalogArmor stores armor catalog data used by equipment forms.
 type CatalogArmor struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Tier int32  `json:"tier"`
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Tier           int32  `json:"tier"`
+	ArmorScore     int32  `json:"armorScore"`
+	BaseThresholds string `json:"baseThresholds"`
+	Feature        string `json:"feature"`
 }
 
 // CatalogItem stores item catalog data used by equipment forms.
 type CatalogItem struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 // CatalogDomainCard stores domain card catalog data used by forms.
@@ -211,7 +232,11 @@ type CatalogDomainCard struct {
 	ID           string                `json:"id"`
 	Name         string                `json:"name"`
 	DomainID     string                `json:"domainId"`
+	DomainName   string                `json:"domainName"`
 	Level        int32                 `json:"level"`
+	Type         string                `json:"type"`
+	RecallCost   int32                 `json:"recallCost"`
+	FeatureText  string                `json:"featureText"`
 	Illustration CatalogAssetReference `json:"illustration"`
 }
 
@@ -244,27 +269,34 @@ type CampaignCharacterCreationCatalog struct {
 	Environments []CatalogEnvironment `json:"environments"`
 }
 
+// CampaignCharacterCreationExperience stores one experience name+modifier pair.
+type CampaignCharacterCreationExperience struct {
+	Name     string `json:"name"`
+	Modifier string `json:"modifier"`
+}
+
 // CampaignCharacterCreationProfile stores selected workflow fields used for filtering options.
 type CampaignCharacterCreationProfile struct {
-	ClassID            string   `json:"classId"`
-	SubclassID         string   `json:"subclassId"`
-	AncestryID         string   `json:"ancestryId"`
-	CommunityID        string   `json:"communityId"`
-	Agility            string   `json:"agility"`
-	Strength           string   `json:"strength"`
-	Finesse            string   `json:"finesse"`
-	Instinct           string   `json:"instinct"`
-	Presence           string   `json:"presence"`
-	Knowledge          string   `json:"knowledge"`
-	PrimaryWeaponID    string   `json:"primaryWeaponId"`
-	SecondaryWeaponID  string   `json:"secondaryWeaponId"`
-	ArmorID            string   `json:"armorId"`
-	PotionItemID       string   `json:"potionItemId"`
-	Background         string   `json:"background"`
-	ExperienceName     string   `json:"experienceName"`
-	ExperienceModifier string   `json:"experienceModifier"`
-	DomainCardIDs      []string `json:"domainCardIds"`
-	Connections        string   `json:"connections"`
+	CharacterName     string                                `json:"characterName"`
+	ClassID           string                                `json:"classId"`
+	SubclassID        string                                `json:"subclassId"`
+	AncestryID        string                                `json:"ancestryId"`
+	CommunityID       string                                `json:"communityId"`
+	Agility           string                                `json:"agility"`
+	Strength          string                                `json:"strength"`
+	Finesse           string                                `json:"finesse"`
+	Instinct          string                                `json:"instinct"`
+	Presence          string                                `json:"presence"`
+	Knowledge         string                                `json:"knowledge"`
+	PrimaryWeaponID   string                                `json:"primaryWeaponId"`
+	SecondaryWeaponID string                                `json:"secondaryWeaponId"`
+	ArmorID           string                                `json:"armorId"`
+	PotionItemID      string                                `json:"potionItemId"`
+	Background        string                                `json:"background"`
+	Description       string                                `json:"description"`
+	Experiences       []CampaignCharacterCreationExperience `json:"experiences"`
+	DomainCardIDs     []string                              `json:"domainCardIds"`
+	Connections       string                                `json:"connections"`
 }
 
 // CampaignCharacterCreationStepInput stores one character creation step in domain form.
@@ -303,7 +335,9 @@ type CampaignCharacterCreationStepTraits struct {
 }
 
 // CampaignCharacterCreationStepDetails stores details step input.
-type CampaignCharacterCreationStepDetails struct{}
+type CampaignCharacterCreationStepDetails struct {
+	Description string `json:"description"`
+}
 
 // CampaignCharacterCreationStepEquipment stores equipment step input.
 type CampaignCharacterCreationStepEquipment struct {
@@ -351,6 +385,13 @@ type CampaignCharacterCreation struct {
 	Armor            []CatalogArmor                    `json:"armor"`
 	PotionItems      []CatalogItem                     `json:"potionItems"`
 	DomainCards      []CatalogDomainCard               `json:"domainCards"`
+	Domains          []CatalogDomain                   `json:"domains"`
+}
+
+// UpdateCharacterInput stores character update form values.
+type UpdateCharacterInput struct {
+	Name     string
+	Pronouns string
 }
 
 // CreateCampaignInput stores create-campaign form values.

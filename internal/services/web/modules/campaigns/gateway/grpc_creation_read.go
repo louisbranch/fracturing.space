@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -111,6 +112,23 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			}
 			domainIDs = append(domainIDs, trimmedDomainID)
 		}
+		features := make([]campaignapp.CatalogFeature, 0, len(class.GetFeatures()))
+		for _, f := range class.GetFeatures() {
+			name := strings.TrimSpace(f.GetName())
+			if name != "" {
+				features = append(features, campaignapp.CatalogFeature{
+					Name:        name,
+					Description: strings.TrimSpace(f.GetDescription()),
+				})
+			}
+		}
+		hopeFeature := campaignapp.CatalogFeature{}
+		if hf := class.GetHopeFeature(); hf != nil {
+			hopeFeature = campaignapp.CatalogFeature{
+				Name:        strings.TrimSpace(hf.GetName()),
+				Description: strings.TrimSpace(hf.GetDescription()),
+			}
+		}
 		classIllustration := mapCatalogAssetReference(
 			g.AssetBaseURL,
 			assetLookup.get(classID, "class", daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION),
@@ -120,11 +138,15 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			assetLookup.get(classID, "class", daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ICON),
 		)
 		catalog.Classes = append(catalog.Classes, campaignapp.CatalogClass{
-			ID:           classID,
-			Name:         strings.TrimSpace(class.GetName()),
-			DomainIDs:    domainIDs,
-			Illustration: classIllustration,
-			Icon:         classIcon,
+			ID:              classID,
+			Name:            strings.TrimSpace(class.GetName()),
+			DomainIDs:       domainIDs,
+			StartingHP:      class.GetStartingHp(),
+			StartingEvasion: class.GetStartingEvasion(),
+			HopeFeature:     hopeFeature,
+			Features:        features,
+			Illustration:    classIllustration,
+			Icon:            classIcon,
 		})
 	}
 
@@ -137,10 +159,22 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if subclassID == "" {
 			continue
 		}
+		foundation := make([]campaignapp.CatalogFeature, 0, len(subclass.GetFoundationFeatures()))
+		for _, f := range subclass.GetFoundationFeatures() {
+			name := strings.TrimSpace(f.GetName())
+			if name != "" {
+				foundation = append(foundation, campaignapp.CatalogFeature{
+					Name:        name,
+					Description: strings.TrimSpace(f.GetDescription()),
+				})
+			}
+		}
 		catalog.Subclasses = append(catalog.Subclasses, campaignapp.CatalogSubclass{
-			ID:      subclassID,
-			Name:    strings.TrimSpace(subclass.GetName()),
-			ClassID: strings.TrimSpace(subclass.GetClassId()),
+			ID:             subclassID,
+			Name:           strings.TrimSpace(subclass.GetName()),
+			ClassID:        strings.TrimSpace(subclass.GetClassId()),
+			SpellcastTrait: strings.TrimSpace(subclass.GetSpellcastTrait()),
+			Foundation:     foundation,
 			Illustration: mapCatalogAssetReference(
 				g.AssetBaseURL,
 				assetLookup.get(
@@ -161,6 +195,16 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		if heritageID == "" {
 			continue
 		}
+		heritageFeatures := make([]campaignapp.CatalogFeature, 0, len(heritage.GetFeatures()))
+		for _, f := range heritage.GetFeatures() {
+			name := strings.TrimSpace(f.GetName())
+			if name != "" {
+				heritageFeatures = append(heritageFeatures, campaignapp.CatalogFeature{
+					Name:        name,
+					Description: strings.TrimSpace(f.GetDescription()),
+				})
+			}
+		}
 		kind := daggerheartHeritageKindLabel(heritage.GetKind())
 		assetType := daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_UNSPECIFIED
 		switch kind {
@@ -170,9 +214,10 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			assetType = daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_COMMUNITY_ILLUSTRATION
 		}
 		catalog.Heritages = append(catalog.Heritages, campaignapp.CatalogHeritage{
-			ID:   heritageID,
-			Name: strings.TrimSpace(heritage.GetName()),
-			Kind: kind,
+			ID:       heritageID,
+			Name:     strings.TrimSpace(heritage.GetName()),
+			Kind:     kind,
+			Features: heritageFeatures,
 			Illustration: mapCatalogAssetReference(
 				g.AssetBaseURL,
 				assetLookup.get(heritageID, kind, assetType),
@@ -225,6 +270,10 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			Name:     strings.TrimSpace(weapon.GetName()),
 			Category: daggerheartWeaponCategoryLabel(weapon.GetCategory()),
 			Tier:     weapon.GetTier(),
+			Trait:    strings.TrimSpace(weapon.GetTrait()),
+			Range:    strings.TrimSpace(weapon.GetRange()),
+			Damage:   formatDamageDice(weapon.GetDamageDice()),
+			Feature:  strings.TrimSpace(weapon.GetFeature()),
 		})
 	}
 
@@ -238,9 +287,12 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			continue
 		}
 		catalog.Armor = append(catalog.Armor, campaignapp.CatalogArmor{
-			ID:   armorID,
-			Name: strings.TrimSpace(armor.GetName()),
-			Tier: armor.GetTier(),
+			ID:             armorID,
+			Name:           strings.TrimSpace(armor.GetName()),
+			Tier:           armor.GetTier(),
+			ArmorScore:     armor.GetArmorScore(),
+			BaseThresholds: fmt.Sprintf("Major %d / Severe %d", armor.GetBaseMajorThreshold(), armor.GetBaseSevereThreshold()),
+			Feature:        strings.TrimSpace(armor.GetFeature()),
 		})
 	}
 
@@ -254,8 +306,9 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			continue
 		}
 		catalog.Items = append(catalog.Items, campaignapp.CatalogItem{
-			ID:   itemID,
-			Name: strings.TrimSpace(item.GetName()),
+			ID:          itemID,
+			Name:        strings.TrimSpace(item.GetName()),
+			Description: strings.TrimSpace(item.GetDescription()),
 		})
 	}
 
@@ -269,10 +322,13 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 			continue
 		}
 		catalog.DomainCards = append(catalog.DomainCards, campaignapp.CatalogDomainCard{
-			ID:       domainCardID,
-			Name:     strings.TrimSpace(domainCard.GetName()),
-			DomainID: strings.TrimSpace(domainCard.GetDomainId()),
-			Level:    domainCard.GetLevel(),
+			ID:          domainCardID,
+			Name:        strings.TrimSpace(domainCard.GetName()),
+			DomainID:    strings.TrimSpace(domainCard.GetDomainId()),
+			Level:       domainCard.GetLevel(),
+			Type:        daggerheartDomainCardTypeLabel(domainCard.GetType()),
+			RecallCost:  domainCard.GetRecallCost(),
+			FeatureText: strings.TrimSpace(domainCard.GetFeatureText()),
 			Illustration: mapCatalogAssetReference(
 				g.AssetBaseURL,
 				assetLookup.get(
@@ -431,10 +487,16 @@ func (g GRPCGateway) CharacterCreationProfile(ctx context.Context, campaignID st
 	if err != nil {
 		return campaignapp.CampaignCharacterCreationProfile{}, err
 	}
-	if resp == nil || resp.GetProfile() == nil || resp.GetProfile().GetDaggerheart() == nil {
+	if resp == nil {
 		return campaignapp.CampaignCharacterCreationProfile{}, nil
 	}
+	if resp.GetProfile() == nil || resp.GetProfile().GetDaggerheart() == nil {
+		return campaignapp.CampaignCharacterCreationProfile{
+			CharacterName: characterDisplayName(resp.GetCharacter()),
+		}, nil
+	}
 	profile := resp.GetProfile().GetDaggerheart()
+	characterName := characterDisplayName(resp.GetCharacter())
 
 	startingWeaponIDs := make([]string, 0, len(profile.GetStartingWeaponIds()))
 	for _, weaponID := range profile.GetStartingWeaponIds() {
@@ -462,32 +524,41 @@ func (g GRPCGateway) CharacterCreationProfile(ctx context.Context, campaignID st
 		domainCardIDs = append(domainCardIDs, trimmedDomainCardID)
 	}
 
-	experienceName := ""
-	experienceModifier := ""
-	if len(profile.GetExperiences()) > 0 && profile.GetExperiences()[0] != nil {
-		experienceName = strings.TrimSpace(profile.GetExperiences()[0].GetName())
-		experienceModifier = strconv.FormatInt(int64(profile.GetExperiences()[0].GetModifier()), 10)
+	experiences := make([]campaignapp.CampaignCharacterCreationExperience, 0, len(profile.GetExperiences()))
+	for _, exp := range profile.GetExperiences() {
+		if exp == nil {
+			continue
+		}
+		name := strings.TrimSpace(exp.GetName())
+		if name == "" {
+			continue
+		}
+		experiences = append(experiences, campaignapp.CampaignCharacterCreationExperience{
+			Name:     name,
+			Modifier: strconv.FormatInt(int64(exp.GetModifier()), 10),
+		})
 	}
 
 	return campaignapp.CampaignCharacterCreationProfile{
-		ClassID:            strings.TrimSpace(profile.GetClassId()),
-		SubclassID:         strings.TrimSpace(profile.GetSubclassId()),
-		AncestryID:         strings.TrimSpace(profile.GetAncestryId()),
-		CommunityID:        strings.TrimSpace(profile.GetCommunityId()),
-		Agility:            int32ValueString(profile.GetAgility()),
-		Strength:           int32ValueString(profile.GetStrength()),
-		Finesse:            int32ValueString(profile.GetFinesse()),
-		Instinct:           int32ValueString(profile.GetInstinct()),
-		Presence:           int32ValueString(profile.GetPresence()),
-		Knowledge:          int32ValueString(profile.GetKnowledge()),
-		PrimaryWeaponID:    primaryWeaponID,
-		SecondaryWeaponID:  secondaryWeaponID,
-		ArmorID:            strings.TrimSpace(profile.GetStartingArmorId()),
-		PotionItemID:       strings.TrimSpace(profile.GetStartingPotionItemId()),
-		Background:         strings.TrimSpace(profile.GetBackground()),
-		ExperienceName:     experienceName,
-		ExperienceModifier: experienceModifier,
-		DomainCardIDs:      domainCardIDs,
-		Connections:        strings.TrimSpace(profile.GetConnections()),
+		CharacterName:     characterName,
+		ClassID:           strings.TrimSpace(profile.GetClassId()),
+		SubclassID:        strings.TrimSpace(profile.GetSubclassId()),
+		AncestryID:        strings.TrimSpace(profile.GetAncestryId()),
+		CommunityID:       strings.TrimSpace(profile.GetCommunityId()),
+		Agility:           int32ValueString(profile.GetAgility()),
+		Strength:          int32ValueString(profile.GetStrength()),
+		Finesse:           int32ValueString(profile.GetFinesse()),
+		Instinct:          int32ValueString(profile.GetInstinct()),
+		Presence:          int32ValueString(profile.GetPresence()),
+		Knowledge:         int32ValueString(profile.GetKnowledge()),
+		PrimaryWeaponID:   primaryWeaponID,
+		SecondaryWeaponID: secondaryWeaponID,
+		ArmorID:           strings.TrimSpace(profile.GetStartingArmorId()),
+		PotionItemID:      strings.TrimSpace(profile.GetStartingPotionItemId()),
+		Background:        strings.TrimSpace(profile.GetBackground()),
+		Description:       strings.TrimSpace(profile.GetDescription()),
+		Experiences:       experiences,
+		DomainCardIDs:     domainCardIDs,
+		Connections:       strings.TrimSpace(profile.GetConnections()),
 	}, nil
 }

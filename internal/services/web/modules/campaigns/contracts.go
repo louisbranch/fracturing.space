@@ -51,6 +51,7 @@ type (
 	CreateInviteInput                          = campaignapp.CreateInviteInput
 	RevokeInviteInput                          = campaignapp.RevokeInviteInput
 	CreateCharacterInput                       = campaignapp.CreateCharacterInput
+	UpdateCharacterInput                       = campaignapp.UpdateCharacterInput
 	CreateCharacterResult                      = campaignapp.CreateCharacterResult
 	UpdateParticipantInput                     = campaignapp.UpdateParticipantInput
 	CampaignGateway                            = campaignapp.CampaignGateway

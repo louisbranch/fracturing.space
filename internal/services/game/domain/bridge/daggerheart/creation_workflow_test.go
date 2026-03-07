@@ -40,8 +40,9 @@ func TestEvaluateCreationProgress_NextStepAdvancesInOrder(t *testing.T) {
 		Background:           "Guard captain",
 		Experiences: []daggerheartprofile.Experience{
 			{Name: "Tactics", Modifier: 2},
+			{Name: "Patrol routes", Modifier: 2},
 		},
-		DomainCardIDs: []string{"domain-card.ward"},
+		DomainCardIDs: []string{"domain-card.ward", "domain-card.blade-strike"},
 		Connections:   "Owes the blacksmith a favor",
 	})
 	if progress.NextStep != 0 {

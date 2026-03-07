@@ -41,8 +41,8 @@ func TestHandleCharacterCreationStepRouteAppliesStepAndRedirects(t *testing.T) {
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("c1", "char-1") {
-		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("c1", "char-1"))
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacterCreation("c1", "char-1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacterCreation("c1", "char-1"))
 	}
 	if !gateway.applyCalled {
 		t.Fatalf("expected apply step call")
@@ -94,15 +94,15 @@ func TestHandleCharacterCreationStepRouteUsesHXRedirect(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignCharacter("c1", "char-1") {
-		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignCharacter("c1", "char-1"))
+	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignCharacterCreation("c1", "char-1") {
+		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignCharacterCreation("c1", "char-1"))
 	}
 	if !gateway.applyCalled {
 		t.Fatalf("expected apply step call")
 	}
 }
 
-func TestHandleCharacterCreationStepRouteRejectsInvalidCharacterCreationForm(t *testing.T) {
+func TestHandleCharacterCreationStepRouteRedirectsWithFlashOnInvalidForm(t *testing.T) {
 	t.Parallel()
 
 	m := NewStableWithGateway(fakeGateway{
@@ -122,12 +122,24 @@ func TestHandleCharacterCreationStepRouteRejectsInvalidCharacterCreationForm(t *
 	rr := httptest.NewRecorder()
 
 	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d (flash redirect)", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacterCreation("c1", "char-1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacterCreation("c1", "char-1"))
+	}
+	hasFlash := false
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.Name == "fs_flash" {
+			hasFlash = true
+		}
+	}
+	if !hasFlash {
+		t.Fatalf("expected flash cookie to be set")
 	}
 }
 
-func TestHandleCharacterCreationStepRouteReturnsBadRequestWhenWorkflowReady(t *testing.T) {
+func TestHandleCharacterCreationStepRouteRedirectsWithFlashWhenWorkflowReady(t *testing.T) {
 	t.Parallel()
 
 	gateway := &workflowCaptureGateway{
@@ -149,8 +161,11 @@ func TestHandleCharacterCreationStepRouteReturnsBadRequestWhenWorkflowReady(t *t
 	rr := httptest.NewRecorder()
 
 	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d (flash redirect)", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacterCreation("c1", "char-1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacterCreation("c1", "char-1"))
 	}
 	if gateway.applyCalled {
 		t.Fatalf("unexpected apply step call when workflow is ready")
@@ -178,8 +193,8 @@ func TestHandleCharacterCreationResetRouteRedirectsAndCallsGateway(t *testing.T)
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("c1", "char-1") {
-		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("c1", "char-1"))
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacterCreation("c1", "char-1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacterCreation("c1", "char-1"))
 	}
 	if !gateway.resetCalled {
 		t.Fatalf("expected reset workflow call")
@@ -214,8 +229,8 @@ func TestHandleCharacterCreationResetRouteUsesHXRedirect(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignCharacter("c1", "char-1") {
-		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignCharacter("c1", "char-1"))
+	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignCharacterCreation("c1", "char-1") {
+		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignCharacterCreation("c1", "char-1"))
 	}
 }
 

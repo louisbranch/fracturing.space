@@ -209,8 +209,9 @@ func TestModule_ImplementsCharacterReadinessChecker(t *testing.T) {
 			"background":              "Former watch captain",
 			"experiences": []map[string]any{
 				{"name": "Shield tactics", "modifier": 2},
+				{"name": "Patrol routes", "modifier": 2},
 			},
-			"domain_card_ids": []string{"domain-card.ward"},
+			"domain_card_ids": []string{"domain-card.ward", "domain-card.blade-strike"},
 			"connections":     "Trusted by the town guard",
 		},
 	})

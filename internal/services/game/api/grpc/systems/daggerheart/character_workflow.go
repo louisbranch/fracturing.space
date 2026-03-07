@@ -267,11 +267,11 @@ func creationStepSequenceFromWorkflowInput(input *daggerheartv1.DaggerheartCreat
 		{Step: &daggerheartv1.DaggerheartCreationStepInput_ClassSubclassInput{ClassSubclassInput: input.GetClassSubclassInput()}},
 		{Step: &daggerheartv1.DaggerheartCreationStepInput_HeritageInput{HeritageInput: input.GetHeritageInput()}},
 		{Step: &daggerheartv1.DaggerheartCreationStepInput_TraitsInput{TraitsInput: input.GetTraitsInput()}},
-		{Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: input.GetDetailsInput()}},
 		{Step: &daggerheartv1.DaggerheartCreationStepInput_EquipmentInput{EquipmentInput: input.GetEquipmentInput()}},
-		{Step: &daggerheartv1.DaggerheartCreationStepInput_BackgroundInput{BackgroundInput: input.GetBackgroundInput()}},
 		{Step: &daggerheartv1.DaggerheartCreationStepInput_ExperiencesInput{ExperiencesInput: input.GetExperiencesInput()}},
 		{Step: &daggerheartv1.DaggerheartCreationStepInput_DomainCardsInput{DomainCardsInput: input.GetDomainCardsInput()}},
+		{Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: input.GetDetailsInput()}},
+		{Step: &daggerheartv1.DaggerheartCreationStepInput_BackgroundInput{BackgroundInput: input.GetBackgroundInput()}},
 		{Step: &daggerheartv1.DaggerheartCreationStepInput_ConnectionsInput{ConnectionsInput: input.GetConnectionsInput()}},
 	}, nil
 }
@@ -287,6 +287,7 @@ func resetCreationWorkflowFields(profile storage.DaggerheartCharacterProfile) st
 	profile.StartingArmorID = ""
 	profile.StartingPotionItemID = ""
 	profile.Background = ""
+	profile.Description = ""
 	profile.Experiences = nil
 	profile.DomainCardIDs = nil
 	profile.Connections = ""
@@ -430,7 +431,12 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 		profile.HpMax = class.StartingHP
 		profile.StressMax = daggerheartprofile.PCStressMax
 		profile.Evasion = class.StartingEvasion
+		desc := strings.TrimSpace(step.DetailsInput.GetDescription())
+		if desc == "" {
+			return status.Error(codes.InvalidArgument, "description is required")
+		}
 		profile.DetailsRecorded = true
+		profile.Description = desc
 		profile.MajorThreshold, profile.SevereThreshold = daggerheartprofile.DeriveThresholds(
 			profile.Level,
 			profile.ArmorScore,
@@ -547,8 +553,8 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 
 	case *daggerheartv1.DaggerheartCreationStepInput_ExperiencesInput:
 		items := step.ExperiencesInput.GetExperiences()
-		if len(items) == 0 {
-			return status.Error(codes.InvalidArgument, "at least one experience is required")
+		if len(items) != 2 {
+			return status.Error(codes.InvalidArgument, "exactly two experiences are required")
 		}
 		experiences := make([]storage.DaggerheartExperience, 0, len(items))
 		for _, item := range items {
@@ -558,7 +564,7 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 			}
 			experiences = append(experiences, storage.DaggerheartExperience{
 				Name:     name,
-				Modifier: int(item.GetModifier()),
+				Modifier: 2,
 			})
 		}
 		profile.Experiences = experiences
@@ -588,8 +594,8 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 		}
 
 		domainCardIDs := step.DomainCardsInput.GetDomainCardIds()
-		if len(domainCardIDs) == 0 {
-			return status.Error(codes.InvalidArgument, "at least one domain_card_id is required")
+		if len(domainCardIDs) != 2 {
+			return status.Error(codes.InvalidArgument, "exactly two domain cards are required")
 		}
 		normalizedIDs := make([]string, 0, len(domainCardIDs))
 		for _, domainCardID := range domainCardIDs {
@@ -603,6 +609,9 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 					return status.Errorf(codes.InvalidArgument, "domain_card_id %q is not found", trimmed)
 				}
 				return status.Errorf(codes.Internal, "get domain card: %v", err)
+			}
+			if card.Level != 1 {
+				return status.Errorf(codes.InvalidArgument, "domain_card_id %q is level %d, only level 1 cards are allowed at creation", trimmed, card.Level)
 			}
 			if _, ok := allowedDomains[strings.TrimSpace(card.DomainID)]; !ok {
 				return status.Errorf(codes.InvalidArgument, "domain_card_id %q is not in class domains", trimmed)

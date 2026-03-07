@@ -457,7 +457,7 @@ func CharacterCreationWorkflowApplyHandler(client statev1.CharacterServiceClient
 						CommunityId: input.CommunityID,
 					},
 					TraitsInput:  &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: int32(input.Agility), Strength: int32(input.Strength), Finesse: int32(input.Finesse), Instinct: int32(input.Instinct), Presence: int32(input.Presence), Knowledge: int32(input.Knowledge)},
-					DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{},
+					DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: input.Description},
 					EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{
 						WeaponIds:    append([]string(nil), input.WeaponIDs...),
 						ArmorId:      input.ArmorID,

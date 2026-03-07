@@ -58,7 +58,7 @@ func TestAssembleCatalogSkipsEmptyIDs(t *testing.T) {
 	}
 }
 
-func TestAssembleCatalogFiltersSubclassesBySelectedClass(t *testing.T) {
+func TestAssembleCatalogIncludesAllSubclassesWhenClassSelected(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
@@ -71,11 +71,8 @@ func TestAssembleCatalogFiltersSubclassesBySelectedClass(t *testing.T) {
 		},
 		campaignapp.CampaignCharacterCreationProfile{ClassID: "bard"},
 	)
-	if len(creation.Subclasses) != 1 {
-		t.Fatalf("subclasses = %d, want 1", len(creation.Subclasses))
-	}
-	if creation.Subclasses[0].ID != "s1" {
-		t.Fatalf("subclass = %q, want s1", creation.Subclasses[0].ID)
+	if len(creation.Subclasses) != 2 {
+		t.Fatalf("subclasses = %d, want 2 (all subclasses passed to template for client-side filtering)", len(creation.Subclasses))
 	}
 }
 
@@ -227,7 +224,7 @@ func TestAssembleCatalogIncludesAllDomainCardsWhenNoClassSelected(t *testing.T) 
 	}
 }
 
-func TestAssembleCatalogSortsDomainCardsByLevelThenName(t *testing.T) {
+func TestAssembleCatalogFiltersAndSortsDomainCardsByLevel(t *testing.T) {
 	t.Parallel()
 
 	creation := Workflow{}.AssembleCatalog(
@@ -241,18 +238,15 @@ func TestAssembleCatalogSortsDomainCardsByLevelThenName(t *testing.T) {
 		},
 		campaignapp.CampaignCharacterCreationProfile{},
 	)
-	if len(creation.DomainCards) != 3 {
-		t.Fatalf("domain cards = %d, want 3", len(creation.DomainCards))
+	// Level 2 card is excluded at character creation (SRD: only level 1)
+	if len(creation.DomainCards) != 2 {
+		t.Fatalf("domain cards = %d, want 2 (level 1 only)", len(creation.DomainCards))
 	}
-	// Level 1 first (Arcane Shield, Zephyr), then level 2 (Arcane Bolt)
 	if creation.DomainCards[0].ID != "dc1" {
-		t.Fatalf("domain cards[0] = %q, want dc1 (Arcane Shield, level 1)", creation.DomainCards[0].ID)
+		t.Fatalf("domain cards[0] = %q, want dc1 (Arcane Shield)", creation.DomainCards[0].ID)
 	}
 	if creation.DomainCards[1].ID != "dc3" {
-		t.Fatalf("domain cards[1] = %q, want dc3 (Zephyr, level 1)", creation.DomainCards[1].ID)
-	}
-	if creation.DomainCards[2].ID != "dc2" {
-		t.Fatalf("domain cards[2] = %q, want dc2 (Arcane Bolt, level 2)", creation.DomainCards[2].ID)
+		t.Fatalf("domain cards[1] = %q, want dc3 (Zephyr)", creation.DomainCards[1].ID)
 	}
 }
 

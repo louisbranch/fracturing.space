@@ -30,8 +30,9 @@ func ensureMCPCharacterCreationReadiness(t *testing.T, ctx context.Context, clie
 			"armor_id":        "armor.gambeson-armor",
 			"potion_item_id":  "item.minor-health-potion",
 			"background":      "integration background",
-			"experiences":     []map[string]any{{"name": "integration experience", "modifier": 1}},
-			"domain_card_ids": []string{"domain_card.valor-bare-bones"},
+			"experiences":     []map[string]any{{"name": "integration experience", "modifier": 2}, {"name": "integration patrol", "modifier": 2}},
+			"domain_card_ids": []string{"domain_card.valor-bare-bones", "domain_card.valor-shield-wall"},
+			"description":     "integration description",
 			"connections":     "integration connections",
 		},
 	})

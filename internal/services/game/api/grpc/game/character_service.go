@@ -412,6 +412,7 @@ func daggerheartProfileToProto(campaignID, characterID string, dh storage.Dagger
 				StartingArmorId:      dh.StartingArmorID,
 				StartingPotionItemId: dh.StartingPotionItemID,
 				Background:           dh.Background,
+				Description:          dh.Description,
 				DomainCardIds:        append([]string(nil), dh.DomainCardIDs...),
 				Connections:          dh.Connections,
 			},

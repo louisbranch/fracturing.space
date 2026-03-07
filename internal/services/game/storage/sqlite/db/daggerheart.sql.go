@@ -330,7 +330,7 @@ func (q *Queries) GetDaggerheartBeastform(ctx context.Context, id string) (Dagge
 const getDaggerheartCharacterProfile = `-- name: GetDaggerheartCharacterProfile :one
 
 
-SELECT campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold, agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max, experiences_json, class_id, subclass_id, ancestry_id, community_id, traits_assigned, details_recorded, starting_weapon_ids_json, starting_armor_id, starting_potion_item_id, background, domain_card_ids_json, connections FROM daggerheart_character_profiles
+SELECT campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold, agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max, experiences_json, class_id, subclass_id, ancestry_id, community_id, traits_assigned, details_recorded, starting_weapon_ids_json, starting_armor_id, starting_potion_item_id, background, domain_card_ids_json, connections, description FROM daggerheart_character_profiles
 WHERE campaign_id = ? AND character_id = ?
 `
 
@@ -375,6 +375,7 @@ func (q *Queries) GetDaggerheartCharacterProfile(ctx context.Context, arg GetDag
 		&i.Background,
 		&i.DomainCardIdsJson,
 		&i.Connections,
+		&i.Description,
 	)
 	return i, err
 }
@@ -411,6 +412,7 @@ SELECT
     dcp.community_id,
     dcp.traits_assigned,
     dcp.background,
+    dcp.description,
     dcp.details_recorded,
     dcp.starting_weapon_ids_json,
     dcp.starting_armor_id,
@@ -465,6 +467,7 @@ type GetDaggerheartCharacterSheetRow struct {
 	CommunityID           sql.NullString `json:"community_id"`
 	TraitsAssigned        sql.NullInt64  `json:"traits_assigned"`
 	Background            sql.NullString `json:"background"`
+	Description           sql.NullString `json:"description"`
 	DetailsRecorded       sql.NullInt64  `json:"details_recorded"`
 	StartingWeaponIdsJson sql.NullString `json:"starting_weapon_ids_json"`
 	StartingArmorID       sql.NullString `json:"starting_armor_id"`
@@ -514,6 +517,7 @@ func (q *Queries) GetDaggerheartCharacterSheet(ctx context.Context, arg GetDagge
 		&i.CommunityID,
 		&i.TraitsAssigned,
 		&i.Background,
+		&i.Description,
 		&i.DetailsRecorded,
 		&i.StartingWeaponIdsJson,
 		&i.StartingArmorID,
@@ -1920,9 +1924,9 @@ INSERT INTO daggerheart_character_profiles (
     campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold,
     agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max,
     experiences_json, class_id, subclass_id, ancestry_id, community_id, traits_assigned,
-    background, details_recorded, starting_weapon_ids_json, starting_armor_id, starting_potion_item_id,
+    background, description, details_recorded, starting_weapon_ids_json, starting_armor_id, starting_potion_item_id,
     domain_card_ids_json, connections
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     level = excluded.level,
     hp_max = excluded.hp_max,
@@ -1946,6 +1950,7 @@ ON CONFLICT(campaign_id, character_id) DO UPDATE SET
     community_id = excluded.community_id,
     traits_assigned = excluded.traits_assigned,
     background = excluded.background,
+    description = excluded.description,
     details_recorded = excluded.details_recorded,
     starting_weapon_ids_json = excluded.starting_weapon_ids_json,
     starting_armor_id = excluded.starting_armor_id,
@@ -1979,6 +1984,7 @@ type PutDaggerheartCharacterProfileParams struct {
 	CommunityID           string `json:"community_id"`
 	TraitsAssigned        int64  `json:"traits_assigned"`
 	Background            string `json:"background"`
+	Description           string `json:"description"`
 	DetailsRecorded       int64  `json:"details_recorded"`
 	StartingWeaponIdsJson string `json:"starting_weapon_ids_json"`
 	StartingArmorID       string `json:"starting_armor_id"`
@@ -2013,6 +2019,7 @@ func (q *Queries) PutDaggerheartCharacterProfile(ctx context.Context, arg PutDag
 		arg.CommunityID,
 		arg.TraitsAssigned,
 		arg.Background,
+		arg.Description,
 		arg.DetailsRecorded,
 		arg.StartingWeaponIdsJson,
 		arg.StartingArmorID,

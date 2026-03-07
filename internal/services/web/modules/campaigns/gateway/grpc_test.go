@@ -387,8 +387,11 @@ func TestCharacterCreationProfileMapsDaggerheartFields(t *testing.T) {
 	if profile.ArmorID != "armor.chain" || profile.PotionItemID != "item.minor-health-potion" {
 		t.Fatalf("equipment values = %#v", profile)
 	}
-	if profile.Background != "Raised by sailors." || profile.ExperienceName != "Cartographer" || profile.ExperienceModifier != "2" || profile.Connections != "Bonded with the harbor watch." {
+	if profile.Background != "Raised by sailors." || profile.Connections != "Bonded with the harbor watch." {
 		t.Fatalf("text values = %#v", profile)
+	}
+	if len(profile.Experiences) != 1 || profile.Experiences[0].Name != "Cartographer" || profile.Experiences[0].Modifier != "2" {
+		t.Fatalf("experience values = %#v", profile.Experiences)
 	}
 	if len(profile.DomainCardIDs) != 2 || profile.DomainCardIDs[0] != "card.guard" || profile.DomainCardIDs[1] != "card.cleave" {
 		t.Fatalf("domain cards = %#v", profile.DomainCardIDs)
@@ -636,6 +639,10 @@ func (f *fakeCharacterWorkflowClient) CreateCharacter(_ context.Context, req *st
 	return &statev1.CreateCharacterResponse{Character: &statev1.Character{Id: "char-created"}}, nil
 }
 
+func (f *fakeCharacterWorkflowClient) UpdateCharacter(_ context.Context, _ *statev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+	return &statev1.UpdateCharacterResponse{}, nil
+}
+
 func (f *fakeCharacterWorkflowClient) GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
 	if f.sheetErr != nil {
 		return nil, f.sheetErr
@@ -677,6 +684,7 @@ var _ moduleCharacterClientContract = (*fakeCharacterWorkflowClient)(nil)
 type moduleCharacterClientContract interface {
 	ListCharacters(context.Context, *statev1.ListCharactersRequest, ...grpc.CallOption) (*statev1.ListCharactersResponse, error)
 	CreateCharacter(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error)
+	UpdateCharacter(context.Context, *statev1.UpdateCharacterRequest, ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error)
 	GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error)
 	GetCharacterCreationProgress(context.Context, *statev1.GetCharacterCreationProgressRequest, ...grpc.CallOption) (*statev1.GetCharacterCreationProgressResponse, error)
 	ApplyCharacterCreationStep(context.Context, *statev1.ApplyCharacterCreationStepRequest, ...grpc.CallOption) (*statev1.ApplyCharacterCreationStepResponse, error)

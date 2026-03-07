@@ -28,6 +28,7 @@ type campaignMutationGateway interface {
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
 	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
+	UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	StartSession(context.Context, string, StartSessionInput) error
 	EndSession(context.Context, string, EndSessionInput) error
@@ -60,6 +61,7 @@ type Service interface {
 	StartSession(context.Context, string, StartSessionInput) error
 	EndSession(context.Context, string, EndSessionInput) error
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
+	UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	CreateInvite(context.Context, string, CreateInviteInput) error
 	RevokeInvite(context.Context, string, RevokeInviteInput) error

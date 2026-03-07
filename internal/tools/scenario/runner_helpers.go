@@ -277,7 +277,7 @@ func (r *Runner) ensureDaggerheartCharacterReadiness(
 					Presence:  0,
 					Knowledge: -1,
 				},
-				DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{},
+				DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: "A brave adventurer."},
 				EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{
 					WeaponIds:    []string{"weapon.longsword"},
 					ArmorId:      "armor.readiness-light",
@@ -287,13 +287,13 @@ func (r *Runner) ensureDaggerheartCharacterReadiness(
 					Background: "scenario background",
 				},
 				ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{
-					Experiences: []*daggerheartv1.DaggerheartExperience{{
-						Name:     "scenario experience",
-						Modifier: 1,
-					}},
+					Experiences: []*daggerheartv1.DaggerheartExperience{
+						{Name: "scenario experience", Modifier: 2},
+						{Name: "scenario patrol", Modifier: 2},
+					},
 				},
 				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{
-					DomainCardIds: []string{"domain_card.valor-bare-bones"},
+					DomainCardIds: []string{"domain_card.valor-bare-bones", "domain_card.valor-forceful-push"},
 				},
 				ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{
 					Connections: "scenario connections",

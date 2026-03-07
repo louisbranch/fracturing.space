@@ -426,9 +426,9 @@ async page => {
     throw new Error("Expected character create status 302, got: " + characterCreateResp.status());
   }
   const characterLocation = (characterCreateResp.headers()["location"] || "").trim();
-  const characterMatch = characterLocation.match(/^\/app\/campaigns\/([^/?#]+)\/characters\/([^/?#]+)\$/);
+  const characterMatch = characterLocation.match(/^\/app\/campaigns\/([^/?#]+)\/characters\/([^/?#]+)(\/creation)?$/);
   if (!characterMatch) {
-    throw new Error("Character create location did not match detail route: " + characterLocation);
+    throw new Error("Character create location did not match expected route: " + characterLocation);
   }
   const characterID = characterMatch[2];
 

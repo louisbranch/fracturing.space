@@ -100,6 +100,11 @@ func (unavailableGateway) CreateCharacter(context.Context, string, CreateCharact
 	return CreateCharacterResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+// UpdateCharacter applies this package workflow transition.
+func (unavailableGateway) UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
 // UpdateParticipant applies this package workflow transition.
 func (unavailableGateway) UpdateParticipant(context.Context, string, UpdateParticipantInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")

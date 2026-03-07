@@ -33,7 +33,7 @@ func buildProtectedModules(
 	opts ProtectedModuleOptions,
 ) ([]Module, []dashboard.ServiceHealthEntry) {
 	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
-	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort)
+	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort, defaultCampaignWorkflows(deps))
 	settingsMod := settings.New(settings.WithGateway(settingsgateway.NewGRPCGateway(deps.SettingsSocialClient, deps.AccountClient, deps.CredentialClient)), settings.WithBase(base), settings.WithSchemePolicy(opts.RequestSchemePolicy))
 	notifMod := notifications.NewWithGateway(notificationsgateway.NewGRPCGateway(deps.NotificationClient), base)
 
@@ -44,15 +44,15 @@ func buildProtectedModules(
 
 // defaultCampaignWorkflows returns the production workflow implementations
 // keyed by their system label (lowercase).
-func defaultCampaignWorkflows() map[string]campaigns.CharacterCreationWorkflow {
+func defaultCampaignWorkflows(deps Dependencies) map[string]campaigns.CharacterCreationWorkflow {
 	return map[string]campaigns.CharacterCreationWorkflow{
-		"daggerheart": daggerheart.New(),
+		"daggerheart": daggerheart.New(deps.AssetBaseURL),
 	}
 }
 
 // newCampaignModule returns the campaigns module with stable route ownership.
-func newCampaignModule(deps Dependencies, base modulehandler.Base, chatFallbackPort string) Module {
-	return campaigns.NewStableWithGateway(newCampaignGateway(deps), base, chatFallbackPort, defaultCampaignWorkflows())
+func newCampaignModule(deps Dependencies, base modulehandler.Base, chatFallbackPort string, workflows map[string]campaigns.CharacterCreationWorkflow) Module {
+	return campaigns.NewStableWithGateway(newCampaignGateway(deps), base, chatFallbackPort, workflows)
 }
 
 // statusHealthTimeout caps a per-request status service query.

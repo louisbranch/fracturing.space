@@ -228,6 +228,11 @@ func (f *campaignGatewayStub) CreateCharacter(context.Context, string, CreateCha
 	return f.createCharacterResult, nil
 }
 
+func (f *campaignGatewayStub) UpdateCharacter(_ context.Context, _ string, _ string, _ UpdateCharacterInput) error {
+	f.calls = append(f.calls, "update-character")
+	return nil
+}
+
 func (f *campaignGatewayStub) UpdateParticipant(_ context.Context, _ string, input UpdateParticipantInput) error {
 	f.lastUpdateParticipantInput = input
 	f.calls = append(f.calls, "update-participant")

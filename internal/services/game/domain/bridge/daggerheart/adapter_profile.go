@@ -38,6 +38,7 @@ type profilePayload struct {
 	StartingArmorID      string                     `json:"starting_armor_id"`
 	StartingPotionItemID string                     `json:"starting_potion_item_id"`
 	Background           string                     `json:"background"`
+	Description          string                     `json:"description"`
 	DomainCardIDs        []string                   `json:"domain_card_ids"`
 	Connections          string                     `json:"connections"`
 	Reset                bool                       `json:"reset,omitempty"`
@@ -133,6 +134,7 @@ func (a *Adapter) ApplyProfile(ctx context.Context, campaignID, characterID stri
 		StartingArmorID:      profile.StartingArmorID,
 		StartingPotionItemID: profile.StartingPotionItemID,
 		Background:           profile.Background,
+		Description:          profile.Description,
 		DomainCardIDs:        append([]string(nil), profile.DomainCardIDs...),
 		Connections:          profile.Connections,
 		Agility:              profile.Agility,

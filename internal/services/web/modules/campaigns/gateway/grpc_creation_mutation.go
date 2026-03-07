@@ -104,7 +104,9 @@ func mapCampaignCharacterCreationStepToProto(step *campaignapp.CampaignCharacter
 	}
 	if step.Details != nil {
 		return &daggerheartv1.DaggerheartCreationStepInput{
-			Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{}},
+			Step: &daggerheartv1.DaggerheartCreationStepInput_DetailsInput{DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{
+				Description: strings.TrimSpace(step.Details.Description),
+			}},
 		}, nil
 	}
 	if step.Equipment != nil {

@@ -11,6 +11,7 @@ import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/grpcpaging"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // CampaignCharacters centralizes this web behavior in one helper seam.
@@ -116,6 +117,42 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string) 
 			}, true
 		},
 	)
+}
+
+// UpdateCharacter applies a character update via gRPC.
+func (g GRPCGateway) UpdateCharacter(ctx context.Context, campaignID string, characterID string, input campaignapp.UpdateCharacterInput) error {
+	if g.CharacterClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_name_is_required", "character name is required")
+	}
+
+	req := &statev1.UpdateCharacterRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+		Name:        wrapperspb.String(name),
+	}
+	pronounsValue := strings.TrimSpace(input.Pronouns)
+	if pronounsValue != "" {
+		req.Pronouns = pronouns.ToProto(pronounsValue)
+	}
+
+	_, err := g.CharacterClient.UpdateCharacter(ctx, req)
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_update_character",
+			FallbackMessage: "failed to update character",
+		})
+	}
+	return nil
 }
 
 // CreateCharacter executes package-scoped creation behavior for this flow.

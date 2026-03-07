@@ -30,6 +30,7 @@ type DaggerheartCharacterProfile struct {
 	StartingArmorID      string
 	StartingPotionItemID string
 	Background           string
+	Description          string
 	DomainCardIDs        []string
 	Connections          string
 	// Gold tracking

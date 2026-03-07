@@ -118,8 +118,11 @@ func TestHasExperiences_AndHasDomainCardIDs_Branches(t *testing.T) {
 	if hasExperiences([]daggerheartprofile.Experience{{Name: " "}}) {
 		t.Fatal("expected hasExperiences(blank name) = false")
 	}
-	if !hasExperiences([]daggerheartprofile.Experience{{Name: "Scout"}}) {
-		t.Fatal("expected hasExperiences(valid) = true")
+	if hasExperiences([]daggerheartprofile.Experience{{Name: "Scout"}}) {
+		t.Fatal("expected hasExperiences(1 experience) = false (need exactly 2)")
+	}
+	if !hasExperiences([]daggerheartprofile.Experience{{Name: "Scout"}, {Name: "Patrol"}}) {
+		t.Fatal("expected hasExperiences(2 valid) = true")
 	}
 
 	if hasDomainCardIDs(nil) {
@@ -128,7 +131,10 @@ func TestHasExperiences_AndHasDomainCardIDs_Branches(t *testing.T) {
 	if hasDomainCardIDs([]string{"card-1", " "}) {
 		t.Fatal("expected hasDomainCardIDs(blank id) = false")
 	}
-	if !hasDomainCardIDs([]string{"card-1"}) {
-		t.Fatal("expected hasDomainCardIDs(valid) = true")
+	if hasDomainCardIDs([]string{"card-1"}) {
+		t.Fatal("expected hasDomainCardIDs(1 card) = false (need exactly 2)")
+	}
+	if !hasDomainCardIDs([]string{"card-1", "card-2"}) {
+		t.Fatal("expected hasDomainCardIDs(2 valid) = true")
 	}
 }
