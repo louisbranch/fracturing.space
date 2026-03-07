@@ -2,26 +2,18 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	statuscmd "github.com/louisbranch/fracturing.space/internal/cmd/status"
+	platformcmd "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 )
 
 func main() {
-	cfg, err := statuscmd.ParseConfig(flag.CommandLine, os.Args[1:])
-	if err != nil {
-		log.Fatalf("parse flags: %v", err)
-	}
-	log.SetPrefix("[STATUS] ")
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	if err := statuscmd.Run(ctx, cfg); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	if err := platformcmd.RunServiceMain(platformcmd.ServiceMainOptions[statuscmd.Config]{
+		Service:     platformcmd.ServiceStatus,
+		ParseConfig: statuscmd.ParseConfig,
+		Run:         statuscmd.Run,
+	}); err != nil {
+		log.Fatal(err)
 	}
 }

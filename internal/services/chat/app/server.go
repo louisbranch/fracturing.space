@@ -297,7 +297,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		if room == nil {
 			return
 		}
-		if err := syncRoomAIContextFromGame(context.Background(), campaignAIClient, room); err != nil {
+		if err := syncRoomAIContextFromGame(ctx, campaignAIClient, room); err != nil {
 			log.Printf("chat: sync ai room context failed campaign=%q event=%q err=%v", campaignID, eventType, err)
 			room.clearAISessionGrant()
 			return
@@ -306,7 +306,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 			room.clearAISessionGrant()
 			return
 		}
-		if err := issueAISessionGrantForRoom(context.Background(), campaignAIClient, room, ""); err != nil {
+		if err := issueAISessionGrantForRoom(ctx, campaignAIClient, room, ""); err != nil {
 			log.Printf("chat: refresh ai session grant failed campaign=%q event=%q err=%v", campaignID, eventType, err)
 			room.clearAISessionGrant()
 			return
@@ -315,8 +315,8 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 			ensureAITurnSubscription(campaignID, room.currentSessionID(), room.aiAgentIDValue())
 		}
 	}
-	ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription, campaignUpdateStop, campaignUpdateDone := startCampaignEventCommittedSubscriptionWorker(eventClient, onCampaignEvent)
-	ensureAITurnSubscription, releaseAITurnSubscription, aiTurnStop, aiTurnDone := startCampaignAITurnSubscriptionWorker(aiInvocationClient, roomHub)
+	ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription, campaignUpdateStop, campaignUpdateDone := startCampaignEventCommittedSubscriptionWorker(ctx, eventClient, onCampaignEvent)
+	ensureAITurnSubscription, releaseAITurnSubscription, aiTurnStop, aiTurnDone := startCampaignAITurnSubscriptionWorker(ctx, aiInvocationClient, roomHub)
 	httpServer := &http.Server{
 		Addr: httpAddr,
 		Handler: newHandler(

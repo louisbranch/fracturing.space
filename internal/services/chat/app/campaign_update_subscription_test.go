@@ -110,6 +110,15 @@ func TestCampaignEventCommittedInitialAfterSeqReturnsZeroOnListError(t *testing.
 	}
 }
 
+func TestCampaignEventCommittedInitialAfterSeqReturnsZeroOnNilContext(t *testing.T) {
+	client := &testCampaignUpdateEventClient{headSeq: 17}
+
+	afterSeq := campaignEventCommittedInitialAfterSeq(nil, client, "camp-1")
+	if afterSeq != 0 {
+		t.Fatalf("after seq = %d, want %d", afterSeq, 0)
+	}
+}
+
 func TestConsumeCampaignEventCommittedUpdatesEmitsEvents(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -163,7 +172,10 @@ func TestConsumeCampaignEventCommittedUpdatesRetriesOnSubscribeError(t *testing.
 }
 
 func TestCampaignEventSubscriptionWorkerLifecycle(t *testing.T) {
-	if ensure, release, stop, done := startCampaignEventCommittedSubscriptionWorker(nil, nil); ensure != nil || release != nil || stop != nil || done != nil {
+	if ensure, release, stop, done := startCampaignEventCommittedSubscriptionWorker(nil, &testCampaignUpdateEventClient{}, nil); ensure != nil || release != nil || stop != nil || done != nil {
+		t.Fatal("expected nil worker hooks when context is nil")
+	}
+	if ensure, release, stop, done := startCampaignEventCommittedSubscriptionWorker(context.Background(), nil, nil); ensure != nil || release != nil || stop != nil || done != nil {
 		t.Fatal("expected nil worker hooks when event client is nil")
 	}
 

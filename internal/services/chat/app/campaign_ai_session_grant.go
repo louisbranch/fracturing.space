@@ -14,6 +14,9 @@ func issueAISessionGrantForRoom(ctx context.Context, campaignAIClient statev1.Ca
 	if campaignAIClient == nil || room == nil {
 		return nil
 	}
+	if ctx == nil {
+		return fmt.Errorf("context is required")
+	}
 	if !room.aiRelayEnabled() {
 		room.clearAISessionGrant()
 		return nil
@@ -29,9 +32,6 @@ func issueAISessionGrantForRoom(ctx context.Context, campaignAIClient statev1.Ca
 		return fmt.Errorf("ai agent id is required")
 	}
 	callCtx := ctx
-	if callCtx == nil {
-		callCtx = context.Background()
-	}
 	if strings.TrimSpace(userID) != "" {
 		callCtx = grpcauthctx.WithUserID(callCtx, userID)
 	}
@@ -62,11 +62,10 @@ func syncRoomAIContextFromGame(ctx context.Context, campaignAIClient statev1.Cam
 	if campaignAIClient == nil || room == nil {
 		return nil
 	}
-	callCtx := ctx
-	if callCtx == nil {
-		callCtx = context.Background()
+	if ctx == nil {
+		return fmt.Errorf("context is required")
 	}
-	resp, err := campaignAIClient.GetCampaignAIAuthState(callCtx, &statev1.GetCampaignAIAuthStateRequest{
+	resp, err := campaignAIClient.GetCampaignAIAuthState(ctx, &statev1.GetCampaignAIAuthStateRequest{
 		CampaignId: room.campaignID,
 	})
 	if err != nil {

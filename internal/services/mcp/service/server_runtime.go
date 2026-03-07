@@ -19,6 +19,28 @@ import (
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
+var dialGameRuntimeConn = dialGameGRPC
+
+const (
+	defaultHealthMonitorInterval = 30 * time.Second
+	defaultHealthCheckTimeout    = 5 * time.Second
+)
+
+var (
+	newHealthMonitorTicker = func(interval time.Duration) (<-chan time.Time, func()) {
+		ticker := time.NewTicker(interval)
+		return ticker.C, ticker.Stop
+	}
+	checkConnectionHealth = func(ctx context.Context, conn *grpc.ClientConn) (grpc_health_v1.HealthCheckResponse_ServingStatus, error) {
+		healthClient := grpc_health_v1.NewHealthClient(conn)
+		response, err := healthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: ""})
+		if err != nil {
+			return grpc_health_v1.HealthCheckResponse_UNKNOWN, err
+		}
+		return response.GetStatus(), nil
+	}
+)
+
 // completionHandler handles completion/complete requests with empty results.
 // Returning empty completions is intentional today because MCP prompt/resource
 // completion is still experimental in this codebase and would be unreliable
@@ -82,12 +104,7 @@ func runWithHTTPTransport(ctx context.Context, cfg Config) error {
 		httpAddr = "localhost:8081"
 	}
 
-	addr := grpcAddress(cfg.GRPCAddr)
-	conn, err := dialGameGRPC(ctx, addr)
-	if err != nil {
-		return err
-	}
-	mcpServer, err := newServer(conn)
+	mcpServer, err := newRuntimeServer(ctx, cfg.GRPCAddr)
 	if err != nil {
 		return err
 	}
@@ -112,28 +129,28 @@ func runWithHTTPTransport(ctx context.Context, cfg Config) error {
 // the HTTP server, allowing for graceful degradation while still surfacing
 // connector issues quickly.
 func (s *Server) monitorHealth(ctx context.Context) {
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
+	ticks, stopTicker := newHealthMonitorTicker(defaultHealthMonitorInterval)
+	defer stopTicker()
 
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
-			if s.conn == nil {
+		case <-ticks:
+			conn := s.grpcConn()
+			if conn == nil {
 				log.Printf("gRPC connection is nil, health check skipped")
 				continue
 			}
 
-			healthClient := grpc_health_v1.NewHealthClient(s.conn)
-			callCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-			response, err := healthClient.Check(callCtx, &grpc_health_v1.HealthCheckRequest{Service: ""})
+			callCtx, cancel := context.WithTimeout(ctx, defaultHealthCheckTimeout)
+			status, err := checkConnectionHealth(callCtx, conn)
 			cancel()
 
 			if err != nil {
 				log.Printf("gRPC health check failed: %v", err)
-			} else if response.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
-				log.Printf("gRPC health check status: %s", response.GetStatus().String())
+			} else if status != grpc_health_v1.HealthCheckResponse_SERVING {
+				log.Printf("gRPC health check status: %s", status.String())
 			}
 			// Note: We log but don't fail - HTTP server continues to operate
 			// Individual requests will handle gRPC errors appropriately
@@ -158,13 +175,17 @@ func (s *Server) ServeWithTransport(ctx context.Context, transport mcp.Transport
 
 // Close releases the gRPC connection held by the server.
 func (s *Server) Close() error {
-	if s == nil || s.conn == nil {
+	if s == nil {
 		return nil
 	}
-	if err := s.conn.Close(); err != nil {
+	conn := s.takeConn()
+	if conn == nil {
+		return nil
+	}
+	if err := closeGRPCConn(conn); err != nil {
+		s.restoreConn(conn)
 		return err
 	}
-	s.conn = nil
 	return nil
 }
 
@@ -217,16 +238,21 @@ func (s *Server) getContext() domain.Context {
 
 // runWithTransport creates a server and serves it over the provided transport.
 func runWithTransport(ctx context.Context, grpcAddr string, transport mcp.Transport) error {
-	addr := grpcAddress(grpcAddr)
-	conn, err := dialGameGRPC(ctx, addr)
+	mcpServer, err := newRuntimeServer(ctx, grpcAddr)
 	if err != nil {
 		return err
 	}
-	mcpServer, err := newServer(conn)
-	if err != nil {
-		return err
-	}
+	defer mcpServer.Close()
 	return mcpServer.serveWithTransport(ctx, transport)
+}
+
+func newRuntimeServer(ctx context.Context, grpcAddr string) (*Server, error) {
+	addr := grpcAddress(grpcAddr)
+	conn, err := dialGameRuntimeConn(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
+	return buildServerFromConn(conn)
 }
 
 func dialGameGRPC(ctx context.Context, addr string) (*grpc.ClientConn, error) {
@@ -288,12 +314,44 @@ func grpcAddress(fallback string) string {
 }
 
 func (s *Server) waitForHealth(ctx context.Context) error {
-	if s == nil || s.conn == nil {
+	conn := s.grpcConn()
+	if conn == nil {
 		return fmt.Errorf("gRPC connection is not configured")
 	}
 
 	logf := func(format string, args ...any) {
 		log.Printf("game %s", fmt.Sprintf(format, args...))
 	}
-	return platformgrpc.WaitForHealth(ctx, s.conn, "", logf)
+	return platformgrpc.WaitForHealth(ctx, conn, "", logf)
+}
+
+func (s *Server) grpcConn() *grpc.ClientConn {
+	if s == nil {
+		return nil
+	}
+	s.connMu.RLock()
+	defer s.connMu.RUnlock()
+	return s.conn
+}
+
+func (s *Server) takeConn() *grpc.ClientConn {
+	if s == nil {
+		return nil
+	}
+	s.connMu.Lock()
+	defer s.connMu.Unlock()
+	conn := s.conn
+	s.conn = nil
+	return conn
+}
+
+func (s *Server) restoreConn(conn *grpc.ClientConn) {
+	if s == nil || conn == nil {
+		return
+	}
+	s.connMu.Lock()
+	defer s.connMu.Unlock()
+	if s.conn == nil {
+		s.conn = conn
+	}
 }

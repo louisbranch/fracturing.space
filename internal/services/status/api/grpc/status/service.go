@@ -3,13 +3,14 @@ package status
 
 import (
 	"context"
-	"fmt"
 	"sort"
 	"strings"
 	"time"
 
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/status/domain"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -42,12 +43,12 @@ func NewService(aggregator *domain.Aggregator, overrides OverrideStore, now func
 // ReportStatus accepts a capability health push from a service.
 func (s *Service) ReportStatus(_ context.Context, req *statusv1.ReportStatusRequest) (*statusv1.ReportStatusResponse, error) {
 	if req == nil || req.Report == nil {
-		return nil, fmt.Errorf("report is required")
+		return nil, status.Error(codes.InvalidArgument, "report is required")
 	}
 	report := req.Report
 	service := strings.TrimSpace(report.Service)
 	if service == "" {
-		return nil, fmt.Errorf("service name is required")
+		return nil, status.Error(codes.InvalidArgument, "service name is required")
 	}
 
 	caps := make([]domain.CapabilityReport, 0, len(report.Capabilities))
@@ -90,13 +91,16 @@ func (s *Service) GetSystemStatus(_ context.Context, _ *statusv1.GetSystemStatus
 
 // SetOverride applies an operator override to a specific capability.
 func (s *Service) SetOverride(ctx context.Context, req *statusv1.SetOverrideRequest) (*statusv1.SetOverrideResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "set override request is required")
+	}
 	service := strings.TrimSpace(req.GetService())
 	capability := strings.TrimSpace(req.GetCapability())
 	if service == "" {
-		return nil, fmt.Errorf("service is required")
+		return nil, status.Error(codes.InvalidArgument, "service is required")
 	}
 	if capability == "" {
-		return nil, fmt.Errorf("capability is required")
+		return nil, status.Error(codes.InvalidArgument, "capability is required")
 	}
 
 	ov := domain.Override{
@@ -112,7 +116,7 @@ func (s *Service) SetOverride(ctx context.Context, req *statusv1.SetOverrideRequ
 
 	if s.overrides != nil {
 		if err := s.overrides.PutOverride(ctx, ov); err != nil {
-			return nil, fmt.Errorf("persist override: %w", err)
+			return nil, status.Errorf(codes.Internal, "persist override: %v", err)
 		}
 	}
 	return &statusv1.SetOverrideResponse{}, nil
@@ -120,20 +124,23 @@ func (s *Service) SetOverride(ctx context.Context, req *statusv1.SetOverrideRequ
 
 // ClearOverride removes an operator override from a capability.
 func (s *Service) ClearOverride(ctx context.Context, req *statusv1.ClearOverrideRequest) (*statusv1.ClearOverrideResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "clear override request is required")
+	}
 	service := strings.TrimSpace(req.GetService())
 	capability := strings.TrimSpace(req.GetCapability())
 	if service == "" {
-		return nil, fmt.Errorf("service is required")
+		return nil, status.Error(codes.InvalidArgument, "service is required")
 	}
 	if capability == "" {
-		return nil, fmt.Errorf("capability is required")
+		return nil, status.Error(codes.InvalidArgument, "capability is required")
 	}
 
 	s.aggregator.ClearOverride(service, capability)
 
 	if s.overrides != nil {
 		if err := s.overrides.DeleteOverride(ctx, service, capability); err != nil {
-			return nil, fmt.Errorf("delete override: %w", err)
+			return nil, status.Errorf(codes.Internal, "delete override: %v", err)
 		}
 	}
 	return &statusv1.ClearOverrideResponse{}, nil

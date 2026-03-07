@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -48,6 +49,7 @@ type Server struct {
 	httpServer   *http.Server
 	oauthStore   *oauth.Store
 	oauthServer  *oauth.Server
+	closeOnce    sync.Once
 }
 
 // New creates a configured auth server and binds identity transport boundaries.
@@ -130,6 +132,9 @@ func (s *Server) Addr() string {
 
 // Run creates and serves an auth server until the context ends.
 func Run(ctx context.Context, port int, httpAddr string) error {
+	if ctx == nil {
+		return errors.New("context is required")
+	}
 	grpcServer, err := New(port, httpAddr)
 	if err != nil {
 		return err
@@ -142,12 +147,15 @@ func Run(ctx context.Context, port int, httpAddr string) error {
 // This is the lifecycle boundary where authentication state, token cleanup, and
 // transport shutdown are coordinated together.
 func (s *Server) Serve(ctx context.Context) error {
+	if s == nil {
+		return errors.New("server is nil")
+	}
 	if ctx == nil {
-		ctx = context.Background()
+		return errors.New("context is required")
 	}
 	serverCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	defer s.closeStore()
+	defer s.Close()
 
 	if s.oauthServer != nil {
 		s.oauthServer.StartCleanup(serverCtx, 5*time.Minute)
@@ -225,16 +233,40 @@ func openAuthStore(path string) (*authsqlite.Store, error) {
 	return store, nil
 }
 
-// closeStore releases the auth SQLite handle at process shutdown.
-func (s *Server) closeStore() {
+// Close releases transport and storage resources for the auth runtime.
+func (s *Server) Close() {
 	if s == nil {
 		return
 	}
-	if s.store != nil {
-		if err := s.store.Close(); err != nil {
-			log.Printf("close auth store: %v", err)
+
+	s.closeOnce.Do(func() {
+		if s.health != nil {
+			s.health.Shutdown()
 		}
-	}
+		if s.grpcServer != nil {
+			s.grpcServer.Stop()
+		}
+		if s.listener != nil {
+			if err := s.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+				log.Printf("close auth listener: %v", err)
+			}
+		}
+		if s.httpServer != nil {
+			shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			_ = s.httpServer.Shutdown(shutdownCtx)
+		}
+		if s.httpListener != nil {
+			if err := s.httpListener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+				log.Printf("close auth http listener: %v", err)
+			}
+		}
+		if s.store != nil {
+			if err := s.store.Close(); err != nil {
+				log.Printf("close auth store: %v", err)
+			}
+		}
+	})
 }
 
 // defaultOAuthIssuer infers the OAuth issuer URL for metadata when none is set.

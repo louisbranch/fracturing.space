@@ -52,6 +52,43 @@ func TestNewSuccess(t *testing.T) {
 	}
 }
 
+func TestNewWithAddrContextRequiresContext(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
+	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
+	setAISessionGrantEnv(t)
+
+	if _, err := NewWithAddrContext(nil, "127.0.0.1:0"); err == nil || err.Error() != "context is required" {
+		t.Fatalf("NewWithAddrContext error = %v, want context is required", err)
+	}
+}
+
+func TestRunWithAddrRequiresContext(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
+	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
+	setAISessionGrantEnv(t)
+
+	if err := RunWithAddr(nil, "127.0.0.1:0"); err == nil || err.Error() != "context is required" {
+		t.Fatalf("RunWithAddr error = %v, want context is required", err)
+	}
+}
+
+func TestServeRequiresContext(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
+	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))
+	setAISessionGrantEnv(t)
+
+	srv, err := New(0)
+	if err != nil {
+		t.Fatalf("new server for nil-context test: %v", err)
+	}
+	t.Cleanup(func() {
+		srv.Close()
+	})
+	if err := srv.Serve(nil); err == nil || err.Error() != "context is required" {
+		t.Fatalf("Serve error = %v, want context is required", err)
+	}
+}
+
 func TestServerCloseReleasesListener(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AI_DB_PATH", filepath.Join(t.TempDir(), "ai.db"))
 	t.Setenv("FRACTURING_SPACE_AI_ENCRYPTION_KEY", base64.RawStdEncoding.EncodeToString([]byte("0123456789abcdef0123456789abcdef")))

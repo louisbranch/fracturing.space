@@ -2,8 +2,10 @@ package service
 
 import (
 	"context"
+	"errors"
 	"net"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -163,9 +165,19 @@ func TestMonitorHealthExitsOnCancel(t *testing.T) {
 
 // TestMonitorHealthNilConn ensures monitorHealth handles a nil connection gracefully.
 func TestMonitorHealthNilConn(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	restore := stubMonitorHealthDependencies(t)
+	defer restore()
+	ticks := make(chan time.Time, 1)
+	newHealthMonitorTicker = func(time.Duration) (<-chan time.Time, func()) {
+		return ticks, func() {}
+	}
+	checkCalls := 0
+	checkConnectionHealth = func(context.Context, *grpc.ClientConn) (grpc_health_v1.HealthCheckResponse_ServingStatus, error) {
+		checkCalls++
+		return grpc_health_v1.HealthCheckResponse_SERVING, nil
+	}
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
 	server := &Server{conn: nil}
 
 	done := make(chan struct{})
@@ -173,44 +185,131 @@ func TestMonitorHealthNilConn(t *testing.T) {
 		server.monitorHealth(ctx)
 		close(done)
 	}()
+	ticks <- time.Now()
+	time.Sleep(10 * time.Millisecond)
+	cancel()
 
 	select {
 	case <-done:
-		// returned after context timeout
+		// returned after cancellation
 	case <-time.After(2 * time.Second):
-		t.Fatal("monitorHealth did not exit after context timeout")
+		t.Fatal("monitorHealth did not exit after context cancellation")
+	}
+	if checkCalls != 0 {
+		t.Fatalf("health checks = %d, want 0", checkCalls)
 	}
 }
 
 // TestMonitorHealthChecksGRPC ensures monitorHealth performs health checks against a real gRPC server.
 func TestMonitorHealthChecksGRPC(t *testing.T) {
-	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
-	defer stop()
+	restore := stubMonitorHealthDependencies(t)
+	defer restore()
 
-	conn, err := newGRPCConn(addr)
-	if err != nil {
-		t.Fatalf("dial: %v", err)
+	ticks := make(chan time.Time, 1)
+	newHealthMonitorTicker = func(time.Duration) (<-chan time.Time, func()) {
+		return ticks, func() {}
 	}
-	defer conn.Close()
+	checkedConn := make(chan *grpc.ClientConn, 1)
+	checkConnectionHealth = func(_ context.Context, conn *grpc.ClientConn) (grpc_health_v1.HealthCheckResponse_ServingStatus, error) {
+		checkedConn <- conn
+		return grpc_health_v1.HealthCheckResponse_SERVING, nil
+	}
 
-	// Use a short-lived context so the test doesn't wait 30s for a tick.
-	// We just need monitorHealth to exit cleanly.
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := &Server{conn: conn}
+	server := &Server{conn: &grpc.ClientConn{}}
 
 	done := make(chan struct{})
 	go func() {
 		server.monitorHealth(ctx)
 		close(done)
 	}()
+	ticks <- time.Now()
 
 	select {
-	case <-done:
-		// exited after context timeout
+	case conn := <-checkedConn:
+		if conn == nil {
+			t.Fatal("expected non-nil connection for health check")
+		}
 	case <-time.After(2 * time.Second):
-		t.Fatal("monitorHealth did not exit")
+		t.Fatal("monitorHealth did not run a health check")
+	}
+	cancel()
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("monitorHealth did not exit after cancellation")
+	}
+}
+
+func TestCloseIsIdempotent(t *testing.T) {
+	previousClose := closeGRPCConn
+	t.Cleanup(func() {
+		closeGRPCConn = previousClose
+	})
+
+	var closeCalls int32
+	closeGRPCConn = func(*grpc.ClientConn) error {
+		atomic.AddInt32(&closeCalls, 1)
+		return nil
+	}
+
+	server := &Server{conn: &grpc.ClientConn{}}
+	errCh := make(chan error, 2)
+	go func() {
+		errCh <- server.Close()
+	}()
+	go func() {
+		errCh <- server.Close()
+	}()
+
+	for i := 0; i < 2; i++ {
+		if err := <-errCh; err != nil {
+			t.Fatalf("close error: %v", err)
+		}
+	}
+	if got := atomic.LoadInt32(&closeCalls); got != 1 {
+		t.Fatalf("close calls = %d, want 1", got)
+	}
+	if server.grpcConn() != nil {
+		t.Fatal("expected connection to be cleared")
+	}
+}
+
+func TestCloseRestoresConnectionOnCloseError(t *testing.T) {
+	previousClose := closeGRPCConn
+	t.Cleanup(func() {
+		closeGRPCConn = previousClose
+	})
+
+	closeErr := errors.New("close failed")
+	var closeCalls int32
+	closeGRPCConn = func(*grpc.ClientConn) error {
+		call := atomic.AddInt32(&closeCalls, 1)
+		if call == 1 {
+			return closeErr
+		}
+		return nil
+	}
+
+	server := &Server{conn: &grpc.ClientConn{}}
+	err := server.Close()
+	if !errors.Is(err, closeErr) {
+		t.Fatalf("close error = %v, want %v", err, closeErr)
+	}
+	if server.grpcConn() == nil {
+		t.Fatal("expected connection to be restored after close failure")
+	}
+
+	if err := server.Close(); err != nil {
+		t.Fatalf("second close error: %v", err)
+	}
+	if server.grpcConn() != nil {
+		t.Fatal("expected connection to be cleared after successful close")
+	}
+	if got := atomic.LoadInt32(&closeCalls); got != 2 {
+		t.Fatalf("close calls = %d, want 2", got)
 	}
 }
 
@@ -237,5 +336,77 @@ func TestServeWithTransportCloseError(t *testing.T) {
 	err = server.serveWithTransport(nil, failingTransport{})
 	if err == nil {
 		t.Fatal("expected error from failing transport")
+	}
+}
+
+func TestNewClosesConnectionWhenServerBuildFails(t *testing.T) {
+	previousDial := dialGameLazyConn
+	previousBuild := buildMCPServerFromConn
+	previousClose := closeGRPCConn
+
+	dialGameLazyConn = func(string) (*grpc.ClientConn, error) {
+		return nil, nil
+	}
+	buildMCPServerFromConn = func(*grpc.ClientConn) (*Server, error) {
+		return nil, errors.New("build failed")
+	}
+	closeCalls := 0
+	closeGRPCConn = func(*grpc.ClientConn) error {
+		closeCalls++
+		return nil
+	}
+	t.Cleanup(func() {
+		dialGameLazyConn = previousDial
+		buildMCPServerFromConn = previousBuild
+		closeGRPCConn = previousClose
+	})
+
+	_, err := New("127.0.0.1:8082")
+	if err == nil || !strings.Contains(err.Error(), "build failed") {
+		t.Fatalf("New error = %v, want build failure", err)
+	}
+	if closeCalls != 1 {
+		t.Fatalf("close calls = %d, want 1", closeCalls)
+	}
+}
+
+func TestRunWithTransportClosesConnectionWhenServerBuildFails(t *testing.T) {
+	previousDial := dialGameRuntimeConn
+	previousBuild := buildMCPServerFromConn
+	previousClose := closeGRPCConn
+
+	dialGameRuntimeConn = func(context.Context, string) (*grpc.ClientConn, error) {
+		return nil, nil
+	}
+	buildMCPServerFromConn = func(*grpc.ClientConn) (*Server, error) {
+		return nil, errors.New("build failed")
+	}
+	closeCalls := 0
+	closeGRPCConn = func(*grpc.ClientConn) error {
+		closeCalls++
+		return nil
+	}
+	t.Cleanup(func() {
+		dialGameRuntimeConn = previousDial
+		buildMCPServerFromConn = previousBuild
+		closeGRPCConn = previousClose
+	})
+
+	err := runWithTransport(context.Background(), "127.0.0.1:8082", &mcp.StdioTransport{})
+	if err == nil || !strings.Contains(err.Error(), "build failed") {
+		t.Fatalf("runWithTransport error = %v, want build failure", err)
+	}
+	if closeCalls != 1 {
+		t.Fatalf("close calls = %d, want 1", closeCalls)
+	}
+}
+
+func stubMonitorHealthDependencies(t *testing.T) func() {
+	t.Helper()
+	previousTicker := newHealthMonitorTicker
+	previousCheck := checkConnectionHealth
+	return func() {
+		newHealthMonitorTicker = previousTicker
+		checkConnectionHealth = previousCheck
 	}
 }

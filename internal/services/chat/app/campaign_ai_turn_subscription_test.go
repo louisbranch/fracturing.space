@@ -80,10 +80,13 @@ func (s *testCampaignTurnStream) SendMsg(any) error { return nil }
 func (s *testCampaignTurnStream) RecvMsg(any) error { return nil }
 
 func TestStartCampaignAITurnSubscriptionWorkerRequiresDependencies(t *testing.T) {
-	if ensure, release, stop, done := startCampaignAITurnSubscriptionWorker(nil, newRoomHub()); ensure != nil || release != nil || stop != nil || done != nil {
+	if ensure, release, stop, done := startCampaignAITurnSubscriptionWorker(nil, &testInvocationClient{}, newRoomHub()); ensure != nil || release != nil || stop != nil || done != nil {
+		t.Fatal("expected nil worker hooks when context is nil")
+	}
+	if ensure, release, stop, done := startCampaignAITurnSubscriptionWorker(context.Background(), nil, newRoomHub()); ensure != nil || release != nil || stop != nil || done != nil {
 		t.Fatal("expected nil worker hooks when invocation client is nil")
 	}
-	if ensure, release, stop, done := startCampaignAITurnSubscriptionWorker(&testInvocationClient{}, nil); ensure != nil || release != nil || stop != nil || done != nil {
+	if ensure, release, stop, done := startCampaignAITurnSubscriptionWorker(context.Background(), &testInvocationClient{}, nil); ensure != nil || release != nil || stop != nil || done != nil {
 		t.Fatal("expected nil worker hooks when room hub is nil")
 	}
 }

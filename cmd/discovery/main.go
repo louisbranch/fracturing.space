@@ -2,26 +2,18 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	discoverycmd "github.com/louisbranch/fracturing.space/internal/cmd/discovery"
+	platformcmd "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 )
 
 func main() {
-	cfg, err := discoverycmd.ParseConfig(flag.CommandLine, os.Args[1:])
-	if err != nil {
-		log.Fatalf("parse flags: %v", err)
-	}
-	log.SetPrefix("[DISCOVERY] ")
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	if err := discoverycmd.Run(ctx, cfg); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	if err := platformcmd.RunServiceMain(platformcmd.ServiceMainOptions[discoverycmd.Config]{
+		Service:     platformcmd.ServiceDiscovery,
+		ParseConfig: discoverycmd.ParseConfig,
+		Run:         discoverycmd.Run,
+	}); err != nil {
+		log.Fatal(err)
 	}
 }

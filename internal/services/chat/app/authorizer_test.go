@@ -17,6 +17,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 type fakeParticipantClient struct {
@@ -38,8 +39,9 @@ func (f *fakeSessionClient) ListSessions(ctx context.Context, req *statev1.ListS
 	if f.err != nil {
 		return nil, f.err
 	}
-	clone := *req
-	f.calls = append(f.calls, &clone)
+	if req != nil {
+		f.calls = append(f.calls, proto.Clone(req).(*statev1.ListSessionsRequest))
+	}
 	if resp, ok := f.pages[req.GetPageToken()]; ok {
 		return resp, nil
 	}
@@ -98,8 +100,9 @@ func (f *fakeCampaignClient) GetCampaign(_ context.Context, req *statev1.GetCamp
 	if f.err != nil {
 		return nil, f.err
 	}
-	clone := *req
-	f.calls = append(f.calls, &clone)
+	if req != nil {
+		f.calls = append(f.calls, proto.Clone(req).(*statev1.GetCampaignRequest))
+	}
 	if f.response != nil {
 		return f.response, nil
 	}
@@ -154,8 +157,9 @@ func (f *fakeWebSessionAuthClient) GetWebSession(_ context.Context, req *authv1.
 	if f.err != nil {
 		return nil, f.err
 	}
-	clone := *req
-	f.calls = append(f.calls, &clone)
+	if req != nil {
+		f.calls = append(f.calls, proto.Clone(req).(*authv1.GetWebSessionRequest))
+	}
 	if f.response != nil {
 		return f.response, nil
 	}
@@ -167,8 +171,9 @@ func (f *fakeParticipantClient) ListParticipants(ctx context.Context, req *state
 	if f.err != nil {
 		return nil, f.err
 	}
-	clone := *req
-	f.calls = append(f.calls, &clone)
+	if req != nil {
+		f.calls = append(f.calls, proto.Clone(req).(*statev1.ListParticipantsRequest))
+	}
 	if resp, ok := f.pages[req.GetPageToken()]; ok {
 		return resp, nil
 	}

@@ -2,26 +2,18 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	socialcmd "github.com/louisbranch/fracturing.space/internal/cmd/social"
+	platformcmd "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 )
 
 func main() {
-	cfg, err := socialcmd.ParseConfig(flag.CommandLine, os.Args[1:])
-	if err != nil {
-		log.Fatalf("parse flags: %v", err)
-	}
-	log.SetPrefix("[SOCIAL] ")
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	if err := socialcmd.Run(ctx, cfg); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	if err := platformcmd.RunServiceMain(platformcmd.ServiceMainOptions[socialcmd.Config]{
+		Service:     platformcmd.ServiceSocial,
+		ParseConfig: socialcmd.ParseConfig,
+		Run:         socialcmd.Run,
+	}); err != nil {
+		log.Fatal(err)
 	}
 }

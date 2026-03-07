@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
@@ -41,6 +42,7 @@ type Server struct {
 	grpcServer *grpc.Server
 	health     *health.Server
 	store      *statussqlite.Store
+	closeOnce  sync.Once
 }
 
 // New creates a configured status server listening on the provided port.
@@ -48,8 +50,13 @@ func New(port int) (*Server, error) {
 	return NewWithAddr(fmt.Sprintf(":%d", port))
 }
 
-// NewWithAddr creates a configured status server for the provided address.
-func NewWithAddr(addr string) (*Server, error) {
+// NewWithAddrContext creates a configured status server for the provided address.
+// Startup I/O is bound to ctx so callers can own cancellation for runtime boot.
+func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
+	if ctx == nil {
+		return nil, errors.New("context is required")
+	}
+
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen on %s: %w", addr, err)
@@ -62,20 +69,17 @@ func NewWithAddr(addr string) (*Server, error) {
 	}
 
 	aggregator := domain.NewAggregator(0, nil)
-
-	// Restore persisted overrides into the aggregator.
-	if store != nil {
-		overrides, err := store.ListOverrides(context.Background())
-		if err != nil {
-			log.Printf("load persisted overrides: %v", err)
-		} else {
-			for _, ov := range overrides {
-				aggregator.SetOverride(ov)
-			}
-			if len(overrides) > 0 {
-				log.Printf("restored %d persisted overrides", len(overrides))
-			}
-		}
+	overrides, err := store.ListOverrides(ctx)
+	if err != nil {
+		_ = store.Close()
+		_ = listener.Close()
+		return nil, fmt.Errorf("load persisted overrides: %w", err)
+	}
+	for _, ov := range overrides {
+		aggregator.SetOverride(ov)
+	}
+	if len(overrides) > 0 {
+		log.Printf("restored %d persisted overrides", len(overrides))
 	}
 
 	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
@@ -94,6 +98,11 @@ func NewWithAddr(addr string) (*Server, error) {
 	}, nil
 }
 
+// NewWithAddr creates a configured status server for the provided address.
+func NewWithAddr(addr string) (*Server, error) {
+	return NewWithAddrContext(context.Background(), addr)
+}
+
 // Addr returns the listener address.
 func (s *Server) Addr() string {
 	if s == nil || s.listener == nil {
@@ -104,16 +113,12 @@ func (s *Server) Addr() string {
 
 // Run creates and serves a status server until context cancellation.
 func Run(ctx context.Context, port int) error {
-	srv, err := New(port)
-	if err != nil {
-		return err
-	}
-	return srv.Serve(ctx)
+	return RunWithAddr(ctx, fmt.Sprintf(":%d", port))
 }
 
 // RunWithAddr creates and serves a status server until context cancellation.
 func RunWithAddr(ctx context.Context, addr string) error {
-	srv, err := NewWithAddr(addr)
+	srv, err := NewWithAddrContext(ctx, addr)
 	if err != nil {
 		return err
 	}
@@ -126,7 +131,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		return errors.New("server is nil")
 	}
 	if ctx == nil {
-		ctx = context.Background()
+		return errors.New("context is required")
 	}
 	defer s.Close()
 
@@ -160,20 +165,22 @@ func (s *Server) Close() {
 	if s == nil {
 		return
 	}
-	if s.health != nil {
-		s.health.Shutdown()
-	}
-	if s.grpcServer != nil {
-		s.grpcServer.Stop()
-	}
-	if s.listener != nil {
-		_ = s.listener.Close()
-	}
-	if s.store != nil {
-		if err := s.store.Close(); err != nil {
-			log.Printf("close status store: %v", err)
+	s.closeOnce.Do(func() {
+		if s.health != nil {
+			s.health.Shutdown()
 		}
-	}
+		if s.grpcServer != nil {
+			s.grpcServer.Stop()
+		}
+		if s.listener != nil {
+			_ = s.listener.Close()
+		}
+		if s.store != nil {
+			if err := s.store.Close(); err != nil {
+				log.Printf("close status store: %v", err)
+			}
+		}
+	})
 }
 
 func openStore(path string) (*statussqlite.Store, error) {

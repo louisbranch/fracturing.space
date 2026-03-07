@@ -24,6 +24,7 @@ Exact and integration-facing contracts.
 - Event system mechanics and troubleshooting: [event-system-reference.md](event-system-reference.md)
 - Core choice primitive contracts: [core-choice-primitive-contracts.md](core-choice-primitive-contracts.md)
 - Contributor map: [contributor-map.md](contributor-map.md)
+- Small services topology: [small-services-topology.md](small-services-topology.md)
 - Icon rendering: [icon-rendering.md](icon-rendering.md)
 - Icon catalog: [icon-catalog.md](icon-catalog.md)
 - I18n status artifact: [i18n-status.md](i18n-status.md)

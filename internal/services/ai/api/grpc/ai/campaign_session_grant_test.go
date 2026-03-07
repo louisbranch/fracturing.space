@@ -11,10 +11,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 type fakeCampaignAIAuthStateClient struct {
-	states  []gamev1.GetCampaignAIAuthStateResponse
+	states  []*gamev1.GetCampaignAIAuthStateResponse
 	errs    []error
 	calls   int
 	lastReq *gamev1.GetCampaignAIAuthStateRequest
@@ -36,12 +37,10 @@ func (f *fakeCampaignAIAuthStateClient) GetCampaignAIAuthState(_ context.Context
 		return nil, f.errs[idx]
 	}
 	if idx >= 0 && idx < len(f.states) {
-		state := f.states[idx]
-		return &state, nil
+		return proto.Clone(f.states[idx]).(*gamev1.GetCampaignAIAuthStateResponse), nil
 	}
 	if len(f.states) > 0 {
-		state := f.states[len(f.states)-1]
-		return &state, nil
+		return proto.Clone(f.states[len(f.states)-1]).(*gamev1.GetCampaignAIAuthStateResponse), nil
 	}
 	return &gamev1.GetCampaignAIAuthStateResponse{}, nil
 }
@@ -83,7 +82,7 @@ func TestValidateSessionGrantConfig(t *testing.T) {
 func TestGetCampaignAIAuthStateUsesCache(t *testing.T) {
 	now := time.Date(2026, 3, 2, 6, 0, 0, 0, time.UTC)
 	client := &fakeCampaignAIAuthStateClient{
-		states: []gamev1.GetCampaignAIAuthStateResponse{{
+		states: []*gamev1.GetCampaignAIAuthStateResponse{{
 			CampaignId:      "camp-1",
 			AiAgentId:       "agent-1",
 			ActiveSessionId: "session-1",
@@ -144,7 +143,7 @@ func TestValidateCampaignSessionGrantRefreshesOnceOnMismatch(t *testing.T) {
 	}
 
 	client := &fakeCampaignAIAuthStateClient{
-		states: []gamev1.GetCampaignAIAuthStateResponse{
+		states: []*gamev1.GetCampaignAIAuthStateResponse{
 			{CampaignId: "camp-1", AiAgentId: "agent-1", ActiveSessionId: "session-1", AuthEpoch: 21},
 			{CampaignId: "camp-1", AiAgentId: "agent-1", ActiveSessionId: "session-1", AuthEpoch: 22},
 		},
@@ -178,7 +177,7 @@ func TestValidateCampaignSessionGrantRejectsStaleAfterRefresh(t *testing.T) {
 	}
 
 	client := &fakeCampaignAIAuthStateClient{
-		states: []gamev1.GetCampaignAIAuthStateResponse{
+		states: []*gamev1.GetCampaignAIAuthStateResponse{
 			{CampaignId: "camp-1", AiAgentId: "agent-1", ActiveSessionId: "session-1", AuthEpoch: 21},
 			{CampaignId: "camp-1", AiAgentId: "agent-1", ActiveSessionId: "session-1", AuthEpoch: 21},
 		},

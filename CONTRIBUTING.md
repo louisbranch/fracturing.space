@@ -36,7 +36,8 @@ use the Make targets documented in [integration tests](docs/running/integration-
 
 ## Code and Structure Guidelines
 
-- Entrypoints belong in `cmd/admin`, `cmd/game`, or `cmd/mcp`.
+- Entrypoints belong in `cmd/*` and should stay thin (`internal/cmd/*` owns
+  flag/env parsing and runtime orchestration).
 - Shared logic goes in `internal/` (preferred) or `pkg/`.
 - Keep files focused; split large files by responsibility.
 - Avoid reformatting unrelated code.

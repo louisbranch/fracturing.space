@@ -2,26 +2,18 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	notificationscmd "github.com/louisbranch/fracturing.space/internal/cmd/notifications"
+	platformcmd "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 )
 
 func main() {
-	cfg, err := notificationscmd.ParseConfig(flag.CommandLine, os.Args[1:])
-	if err != nil {
-		log.Fatalf("parse flags: %v", err)
-	}
-	log.SetPrefix("[NOTIFICATIONS] ")
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	if err := notificationscmd.Run(ctx, cfg); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	if err := platformcmd.RunServiceMain(platformcmd.ServiceMainOptions[notificationscmd.Config]{
+		Service:     platformcmd.ServiceNotifications,
+		ParseConfig: notificationscmd.ParseConfig,
+		Run:         notificationscmd.Run,
+	}); err != nil {
+		log.Fatal(err)
 	}
 }

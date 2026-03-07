@@ -21,12 +21,12 @@ type campaignEventCommittedSubscriptionWorker struct {
 	wg          sync.WaitGroup
 }
 
-func startCampaignEventCommittedSubscriptionWorker(eventClient statev1.EventServiceClient, onEvent func(string, string)) (func(string), func(string), context.CancelFunc, chan struct{}) {
-	if eventClient == nil {
+func startCampaignEventCommittedSubscriptionWorker(ctx context.Context, eventClient statev1.EventServiceClient, onEvent func(string, string)) (func(string), func(string), context.CancelFunc, chan struct{}) {
+	if ctx == nil || eventClient == nil {
 		return nil, nil, nil, nil
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	worker := &campaignEventCommittedSubscriptionWorker{
 		ctx:         ctx,
 		eventClient: eventClient,
@@ -139,11 +139,8 @@ func consumeCampaignEventCommittedUpdates(ctx context.Context, eventClient state
 
 func campaignEventCommittedInitialAfterSeq(ctx context.Context, eventClient statev1.EventServiceClient, campaignID string) uint64 {
 	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" || eventClient == nil {
+	if ctx == nil || campaignID == "" || eventClient == nil {
 		return 0
-	}
-	if ctx == nil {
-		ctx = context.Background()
 	}
 
 	resp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
