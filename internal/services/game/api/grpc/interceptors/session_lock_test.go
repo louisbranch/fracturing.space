@@ -110,6 +110,19 @@ func TestSessionLockInterceptor_CreateParticipant_WithActiveSession_Blocks(t *te
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
+func TestSessionLockInterceptor_UpdateCampaign_WithActiveSession_Blocks(t *testing.T) {
+	sessionStore := newFakeSessionStore()
+	now := time.Now().UTC()
+	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
+
+	interceptor := SessionLockInterceptor(sessionStore)
+	info := serverInfo(statev1.CampaignService_UpdateCampaign_FullMethodName)
+	req := &statev1.UpdateCampaignRequest{CampaignId: "c1"}
+
+	_, err := interceptor(context.Background(), req, info, fakeHandler)
+	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
 func TestSessionLockInterceptor_CreateCharacter_WithActiveSession_Blocks(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
@@ -149,7 +162,7 @@ func TestSessionLockInterceptor_PatchCharacterProfile_WithActiveSession_Blocks(t
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
-func TestSessionLockInterceptor_PatchCharacterState_WithActiveSession_Blocks(t *testing.T) {
+func TestSessionLockInterceptor_PatchCharacterState_WithActiveSession_NotBlocked(t *testing.T) {
 	sessionStore := newFakeSessionStore()
 	now := time.Now().UTC()
 	sessionStore.activeSession["c1"] = storage.SessionRecord{ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now}
@@ -157,6 +170,29 @@ func TestSessionLockInterceptor_PatchCharacterState_WithActiveSession_Blocks(t *
 	interceptor := SessionLockInterceptor(sessionStore)
 	info := serverInfo(statev1.SnapshotService_PatchCharacterState_FullMethodName)
 	req := &statev1.PatchCharacterStateRequest{CampaignId: "c1", CharacterId: "ch1"}
+
+	resp, err := interceptor(context.Background(), req, info, fakeHandler)
+	if err != nil {
+		t.Fatalf("interceptor returned error: %v", err)
+	}
+	if resp != "success" {
+		t.Errorf("response = %v, want %q", resp, "success")
+	}
+}
+
+func TestSessionLockInterceptor_ForkCampaign_WithActiveSession_BlocksUsingSourceCampaignID(t *testing.T) {
+	sessionStore := newFakeSessionStore()
+	now := time.Now().UTC()
+	sessionStore.activeSession["source-c1"] = storage.SessionRecord{
+		ID:         "s1",
+		CampaignID: "source-c1",
+		Status:     session.StatusActive,
+		StartedAt:  now,
+	}
+
+	interceptor := SessionLockInterceptor(sessionStore)
+	info := serverInfo(statev1.ForkService_ForkCampaign_FullMethodName)
+	req := &statev1.ForkCampaignRequest{SourceCampaignId: "source-c1"}
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -171,6 +207,19 @@ func TestSessionLockInterceptor_BlockedMethod_MissingCampaignId_ReturnsInvalidAr
 
 	_, err := interceptor(context.Background(), req, info, fakeHandler)
 	assertStatusCode(t, err, codes.InvalidArgument)
+	assertStatusMessage(t, err, "campaign_id is required")
+}
+
+func TestSessionLockInterceptor_ForkCampaign_MissingSourceCampaignID_ReturnsInvalidArgument(t *testing.T) {
+	sessionStore := newFakeSessionStore()
+	interceptor := SessionLockInterceptor(sessionStore)
+
+	info := serverInfo(statev1.ForkService_ForkCampaign_FullMethodName)
+	req := &statev1.ForkCampaignRequest{} // No SourceCampaignId
+
+	_, err := interceptor(context.Background(), req, info, fakeHandler)
+	assertStatusCode(t, err, codes.InvalidArgument)
+	assertStatusMessage(t, err, "source_campaign_id is required")
 }
 
 func TestSessionLockInterceptor_BlockedMethod_NilSessionStore_ReturnsInternal(t *testing.T) {
@@ -297,18 +346,33 @@ func TestIsBlockedMethod(t *testing.T) {
 		blocked bool
 	}{
 		// Blocked methods
+		{statev1.CampaignService_UpdateCampaign_FullMethodName, true},
+		{statev1.CampaignService_SetCampaignCover_FullMethodName, true},
+		{statev1.CampaignService_SetCampaignAIBinding_FullMethodName, true},
+		{statev1.CampaignService_ClearCampaignAIBinding_FullMethodName, true},
 		{statev1.ParticipantService_CreateParticipant_FullMethodName, true},
+		{statev1.ParticipantService_UpdateParticipant_FullMethodName, true},
+		{statev1.ParticipantService_DeleteParticipant_FullMethodName, true},
+		{statev1.InviteService_CreateInvite_FullMethodName, true},
+		{statev1.InviteService_ClaimInvite_FullMethodName, true},
 		{statev1.CharacterService_CreateCharacter_FullMethodName, true},
+		{statev1.CharacterService_UpdateCharacter_FullMethodName, true},
+		{statev1.CharacterService_DeleteCharacter_FullMethodName, true},
 		{statev1.CharacterService_SetDefaultControl_FullMethodName, true},
 		{statev1.CharacterService_PatchCharacterProfile_FullMethodName, true},
-		{statev1.SnapshotService_PatchCharacterState_FullMethodName, true},
+		{statev1.CharacterService_ApplyCharacterCreationStep_FullMethodName, true},
+		{statev1.CharacterService_ApplyCharacterCreationWorkflow_FullMethodName, true},
+		{statev1.CharacterService_ResetCharacterCreationWorkflow_FullMethodName, true},
+		{statev1.ForkService_ForkCampaign_FullMethodName, true},
 
 		// Not blocked methods
 		{statev1.ParticipantService_ListParticipants_FullMethodName, false},
 		{statev1.ParticipantService_GetParticipant_FullMethodName, false},
+		{statev1.InviteService_RevokeInvite_FullMethodName, false},
 		{statev1.CharacterService_ListCharacters_FullMethodName, false},
 		{statev1.CharacterService_GetCharacterSheet_FullMethodName, false},
 		{statev1.SnapshotService_GetSnapshot_FullMethodName, false},
+		{statev1.SnapshotService_PatchCharacterState_FullMethodName, false},
 		{statev1.SnapshotService_UpdateSnapshotState_FullMethodName, false},
 		{"/game.v1.CampaignService/CreateCampaign", false},
 		{"/game.v1.SessionService/StartSession", false},
@@ -344,6 +408,11 @@ func TestCampaignIDFromRequest(t *testing.T) {
 			name:   "PatchCharacterStateRequest",
 			req:    &statev1.PatchCharacterStateRequest{CampaignId: "c3"},
 			wantID: "c3",
+		},
+		{
+			name:   "ForkCampaignRequest",
+			req:    &statev1.ForkCampaignRequest{SourceCampaignId: "source-c1"},
+			wantID: "source-c1",
 		},
 		{
 			name:   "WhitespaceOnly",
@@ -390,5 +459,19 @@ func assertStatusCode(t *testing.T, err error, want codes.Code) {
 	}
 	if statusErr.Code() != want {
 		t.Fatalf("status code = %v, want %v (message: %s)", statusErr.Code(), want, statusErr.Message())
+	}
+}
+
+func assertStatusMessage(t *testing.T, err error, want string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("expected error with message %q", want)
+	}
+	statusErr, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected gRPC status error, got %T", err)
+	}
+	if statusErr.Message() != want {
+		t.Fatalf("status message = %q, want %q", statusErr.Message(), want)
 	}
 }

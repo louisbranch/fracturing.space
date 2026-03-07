@@ -52,6 +52,9 @@ func (d CoreDecider) Decide(state any, cmd command.Command, now func() time.Time
 		}
 		return decision
 	}
+	if decision, blocked := RejectActiveSessionBlockedCommand(current.Session, cmd); blocked {
+		return decision
+	}
 	routes := d.routes
 	if routes == nil {
 		routes = staticCoreCommandRoutes()

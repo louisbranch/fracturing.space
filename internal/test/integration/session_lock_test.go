@@ -9,12 +9,14 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
@@ -32,6 +34,8 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 
 	campaignClient := statev1.NewCampaignServiceClient(conn)
 	characterClient := statev1.NewCharacterServiceClient(conn)
+	inviteClient := statev1.NewInviteServiceClient(conn)
+	snapshotClient := statev1.NewSnapshotServiceClient(conn)
 	sessionClient := statev1.NewSessionServiceClient(conn)
 	participantClient := statev1.NewParticipantServiceClient(conn)
 
@@ -62,6 +66,20 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 	}
 	ownerID := participantsResp.Participants[0].Id
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, createResp.Campaign.Id, ownerID)
+	charactersResp, err := characterClient.ListCharacters(ctxWithUser, &statev1.ListCharactersRequest{
+		CampaignId: createResp.Campaign.Id,
+		PageSize:   100,
+	})
+	if err != nil {
+		t.Fatalf("list characters: %v", err)
+	}
+	if len(charactersResp.GetCharacters()) == 0 {
+		t.Fatal("expected at least one character")
+	}
+	characterID := strings.TrimSpace(charactersResp.GetCharacters()[0].GetId())
+	if characterID == "" {
+		t.Fatal("expected non-empty character id")
+	}
 	participantCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.ParticipantIDHeader, ownerID))
 	startResp, err := sessionClient.StartSession(participantCtx, &statev1.StartSessionRequest{
 		CampaignId: createResp.Campaign.Id,
@@ -73,28 +91,47 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 	if startResp == nil || startResp.Session == nil || startResp.Session.Id == "" {
 		t.Fatal("expected session response")
 	}
+
+	_, err = campaignClient.UpdateCampaign(participantCtx, &statev1.UpdateCampaignRequest{
+		CampaignId: createResp.Campaign.Id,
+		Name:       wrapperspb.String("Locked Campaign Rename"),
+	})
+	assertActiveSessionLockError(t, err, startResp.GetSession().GetId())
+
 	_, err = participantClient.CreateParticipant(participantCtx, &statev1.CreateParticipantRequest{
 		CampaignId: createResp.Campaign.Id,
 		Name:       "Player One",
 		Role:       statev1.ParticipantRole_PLAYER,
 		Controller: statev1.Controller_CONTROLLER_HUMAN,
 	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	st, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("expected grpc status error, got %v", err)
-	}
-	if st.Code() != codes.FailedPrecondition {
-		t.Fatalf("expected failed precondition, got %v", st.Code())
-	}
-	if !strings.Contains(st.Message(), "campaign has an active session") {
-		t.Fatalf("expected active session message, got %q", st.Message())
-	}
-	expectedSessionID := "active_session_id=" + startResp.Session.Id
-	if !strings.Contains(st.Message(), expectedSessionID) {
-		t.Fatalf("expected active session id in message, got %q", st.Message())
+	assertActiveSessionLockError(t, err, startResp.GetSession().GetId())
+
+	_, err = inviteClient.CreateInvite(participantCtx, &statev1.CreateInviteRequest{
+		CampaignId:    createResp.Campaign.Id,
+		ParticipantId: ownerID,
+	})
+	assertActiveSessionLockError(t, err, startResp.GetSession().GetId())
+
+	_, err = characterClient.CreateCharacter(participantCtx, &statev1.CreateCharacterRequest{
+		CampaignId: createResp.Campaign.Id,
+		Name:       "Locked Character",
+		Kind:       statev1.CharacterKind_PC,
+	})
+	assertActiveSessionLockError(t, err, startResp.GetSession().GetId())
+
+	_, err = snapshotClient.PatchCharacterState(ctxWithUser, &statev1.PatchCharacterStateRequest{
+		CampaignId:  createResp.Campaign.Id,
+		CharacterId: characterID,
+		SystemStatePatch: &statev1.PatchCharacterStateRequest_Daggerheart{
+			Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+				Hp:     1,
+				Hope:   1,
+				Stress: 1,
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("patch character state during active session should be allowed: %v", err)
 	}
 
 	endResp, err := sessionClient.EndSession(participantCtx, &statev1.EndSessionRequest{
@@ -130,5 +167,26 @@ func runSessionLockTests(t *testing.T, grpcAddr string, authAddr string) {
 	})
 	if err != nil {
 		t.Fatalf("list participants: %v", err)
+	}
+}
+
+func assertActiveSessionLockError(t *testing.T, err error, sessionID string) {
+	t.Helper()
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected grpc status error, got %v", err)
+	}
+	if st.Code() != codes.FailedPrecondition {
+		t.Fatalf("expected failed precondition, got %v", st.Code())
+	}
+	if !strings.Contains(st.Message(), "campaign has an active session") {
+		t.Fatalf("expected active session message, got %q", st.Message())
+	}
+	expectedSessionID := "active_session_id=" + sessionID
+	if !strings.Contains(st.Message(), expectedSessionID) {
+		t.Fatalf("expected active session id in message, got %q", st.Message())
 	}
 }

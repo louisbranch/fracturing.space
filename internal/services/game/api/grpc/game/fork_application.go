@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -51,6 +52,21 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageCampaign, sourceCampaign); err != nil {
 		return storage.CampaignRecord{}, nil, 0, err
+	}
+	// Stores.Validate guarantees Session in production wiring; keep a nil guard so
+	// focused unit tests with partial stores remain supported.
+	if a.stores.Session != nil {
+		activeSession, err := a.stores.Session.GetActiveSession(ctx, sourceCampaignID)
+		if err == nil {
+			return storage.CampaignRecord{}, nil, 0, status.Errorf(
+				codes.FailedPrecondition,
+				"campaign has an active session: active_session_id=%s",
+				activeSession.ID,
+			)
+		}
+		if !errors.Is(err, storage.ErrNotFound) {
+			return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "check active session: %v", err)
+		}
 	}
 
 	// Determine fork point

@@ -167,6 +167,9 @@ func (b registryBootstrap) validateRegistryContracts(domains []CoreDomain) error
 			return ValidateCoreDeciderCommandCoverage(state.commandRegistry)
 		},
 		func(state registryBootstrap) error {
+			return ValidateActiveSessionPolicyCoverage(state.commandRegistry)
+		},
+		func(state registryBootstrap) error {
 			return ValidateFoldCoverage(state.eventRegistry)
 		},
 		func(state registryBootstrap) error {
