@@ -133,11 +133,6 @@
       "description": "Web startup composition contract from resolvers/dependencies to module sets."
     },
     {
-      "package": "github.com/louisbranch/fracturing.space/internal/services/web/i18n",
-      "floor": 90.0,
-      "description": "Web locale resolution wrappers and language preference persistence contracts."
-    },
-    {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/modules",
       "floor": 100.0,
       "description": "Web registry boundary guardrails and module-set composition invariants."

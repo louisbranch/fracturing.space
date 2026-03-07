@@ -1,7 +1,10 @@
 package modules
 
 import (
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/campaigns"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/dashboard"
@@ -15,9 +18,21 @@ import (
 
 // BuildInput carries dependencies required to build module sets.
 type BuildInput struct {
-	Base         modulehandler.Base
-	GRPCAddr     string
-	StatusClient statusv1.StatusServiceClient
+	Base     modulehandler.Base
+	GRPCAddr string
+
+	// Individual gRPC clients used by modules.
+	AuthClient               authv1.AuthServiceClient
+	CampaignClient           statev1.CampaignServiceClient
+	CharacterClient          statev1.CharacterServiceClient
+	ParticipantClient        statev1.ParticipantServiceClient
+	InviteClient             statev1.InviteServiceClient
+	SessionClient            statev1.SessionServiceClient
+	EventClient              statev1.EventServiceClient
+	StatisticsClient         statev1.StatisticsServiceClient
+	SystemClient             statev1.SystemServiceClient
+	DaggerheartContentClient daggerheartv1.DaggerheartContentServiceClient
+	StatusClient             statusv1.StatusServiceClient
 }
 
 // BuildOutput contains composed module sets.
@@ -33,14 +48,31 @@ func NewRegistry() Registry { return Registry{} }
 
 // Build composes module sets for admin.
 func (Registry) Build(input BuildInput) BuildOutput {
+	input.ensureClients()
 	return BuildOutput{Modules: []Module{
-		dashboard.New(dashboard.NewService(input.Base)),
-		campaigns.New(campaigns.NewService(input.Base)),
-		systems.New(systems.NewService(input.Base)),
-		catalog.New(catalog.NewService(input.Base)),
+		dashboard.New(dashboard.NewService(
+			input.Base,
+			input.StatisticsClient,
+			input.SystemClient,
+			input.AuthClient,
+			input.CampaignClient,
+			input.EventClient,
+		)),
+		campaigns.New(campaigns.NewService(
+			input.Base,
+			input.CampaignClient,
+			input.CharacterClient,
+			input.ParticipantClient,
+			input.InviteClient,
+			input.SessionClient,
+			input.EventClient,
+			input.AuthClient,
+		)),
+		systems.New(systems.NewService(input.Base, input.SystemClient)),
+		catalog.New(catalog.NewService(input.Base, input.DaggerheartContentClient)),
 		icons.New(icons.NewService(input.Base)),
-		users.New(users.NewService(input.Base)),
-		scenarios.New(scenarios.NewService(input.Base, input.GRPCAddr)),
+		users.New(users.NewService(input.Base, input.AuthClient, input.InviteClient)),
+		scenarios.New(scenarios.NewService(input.Base, input.GRPCAddr, input.EventClient, input.CampaignClient)),
 		status.New(status.NewService(input.Base, input.StatusClient)),
 	}}
 }

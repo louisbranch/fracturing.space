@@ -1,7 +1,6 @@
 package templates
 
 import (
-	admini18n "github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	sharedi18n "github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
 	"golang.org/x/text/language"
 )
@@ -11,7 +10,7 @@ type LanguageOption = sharedi18n.LanguageOption
 
 // LanguageOptions returns supported language options with active selection.
 func LanguageOptions(page PageContext, loc Localizer) []LanguageOption {
-	return sharedi18n.BuildLanguageOptions(admini18n.Supported(), page.Lang, func(tag language.Tag) string {
+	return sharedi18n.BuildLanguageOptions(sharedi18n.Supported(), page.Lang, func(tag language.Tag) string {
 		return T(loc, sharedi18n.LanguageKeyLabel(tag))
 	})
 }

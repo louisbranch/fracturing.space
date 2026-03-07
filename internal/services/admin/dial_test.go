@@ -8,7 +8,9 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
 	gogrpc "google.golang.org/grpc"
+
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
@@ -282,9 +284,9 @@ func startCampaignHealthServer(
 
 func TestGameGRPCCallContextOmitsAdminOverride(t *testing.T) {
 	// Admin override is injected by connection-level interceptors, not per-call.
-	// gameGRPCCallContext must NOT add admin override to outgoing metadata.
-	h := &Handler{}
-	ctx, cancel := h.gameGRPCCallContext(context.Background())
+	// GameGRPCCallContext must NOT add admin override to outgoing metadata.
+	base := modulehandler.NewBase()
+	ctx, cancel := base.GameGRPCCallContext(context.Background())
 	defer cancel()
 
 	md, _ := metadata.FromOutgoingContext(ctx)

@@ -9,41 +9,12 @@ import (
 	"strings"
 	"sync"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
-	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
-	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/composition"
-	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
-	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
-	"golang.org/x/text/message"
-)
-
-const (
-	// grpcRequestTimeout caps the gRPC request time for admin requests.
-	grpcRequestTimeout = timeouts.GRPCRequest
-	// campaignThemePromptLimit caps the number of characters shown in the table.
-	campaignThemePromptLimit = 80
-	// sessionListPageSize caps the number of sessions shown in the UI.
-	sessionListPageSize = 10
-	// eventListPageSize caps the number of events shown per page.
-	eventListPageSize = 50
-	// inviteListPageSize caps the number of invites shown per page.
-	inviteListPageSize = 50
-	// catalogListPageSize caps the number of catalog entries shown per page.
-	catalogListPageSize = 25
-	// catalogDescriptionLimit caps the number of characters shown in catalog tables.
-	catalogDescriptionLimit = 80
-	// maxScenarioScriptSize caps scenario scripts to limit resource usage.
-	maxScenarioScriptSize = 100 * 1024
-	// scenarioTempDirEnv configures the temp directory for scenario scripts.
-	scenarioTempDirEnv = "FRACTURING_SPACE_SCENARIO_TMPDIR"
+	sharedhttpx "github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 )
 
 //go:embed static/*
@@ -53,25 +24,9 @@ var resolveStaticFS = func() (fs.FS, error) {
 	return fs.Sub(staticAssets, "static")
 }
 
-// GRPCClientProvider supplies gRPC clients for request handling.
-type GRPCClientProvider interface {
-	AuthClient() authv1.AuthServiceClient
-	AccountClient() authv1.AccountServiceClient
-	CampaignClient() statev1.CampaignServiceClient
-	SessionClient() statev1.SessionServiceClient
-	CharacterClient() statev1.CharacterServiceClient
-	ParticipantClient() statev1.ParticipantServiceClient
-	InviteClient() statev1.InviteServiceClient
-	SnapshotClient() statev1.SnapshotServiceClient
-	EventClient() statev1.EventServiceClient
-	StatisticsClient() statev1.StatisticsServiceClient
-	SystemClient() statev1.SystemServiceClient
-	DaggerheartContentClient() daggerheartv1.DaggerheartContentServiceClient
-}
-
 // Handler routes admin dashboard requests.
 type Handler struct {
-	clientProvider GRPCClientProvider
+	grpcClients *grpcClients
 	// gameClientInitMu serializes on-demand game client bootstrap attempts.
 	gameClientInitMu sync.Mutex
 	// gameClientEnsureInProgress tracks whether a background game bootstrap is running.
@@ -85,12 +40,12 @@ type Handler struct {
 // NewServiceHandler builds a handler instance without attaching transport routing
 // or auth middleware wrappers. Callers can reuse this service surface inside
 // alternative composition layers.
-func NewServiceHandler(clientProvider GRPCClientProvider, grpcAddr string, authCfg *AuthConfig, statusClient statusv1.StatusServiceClient) *Handler {
+func NewServiceHandler(clients *grpcClients, grpcAddr string, authCfg *AuthConfig, statusClient statusv1.StatusServiceClient) *Handler {
 	handler := &Handler{
-		clientProvider: clientProvider,
-		grpcAddr:       strings.TrimSpace(grpcAddr),
-		statusClient:   statusClient,
-		authConfig:     authCfg,
+		grpcClients:  clients,
+		grpcAddr:     strings.TrimSpace(grpcAddr),
+		statusClient: statusClient,
+		authConfig:   authCfg,
 	}
 	if authCfg != nil && authCfg.IntrospectURL != "" && authCfg.LoginURL != "" {
 		handler.introspector = newHTTPIntrospector(authCfg.IntrospectURL, authCfg.ResourceSecret)
@@ -99,71 +54,45 @@ func NewServiceHandler(clientProvider GRPCClientProvider, grpcAddr string, authC
 }
 
 // NewHandler builds the HTTP handler for the admin server (no auth).
-func NewHandler(clientProvider GRPCClientProvider) http.Handler {
-	return NewHandlerWithConfig(clientProvider, "", nil, nil)
+func NewHandler(clients *grpcClients) http.Handler {
+	return NewHandlerWithConfig(clients, "", nil, nil)
 }
 
 // NewHandlerWithConfig builds the HTTP handler with explicit configuration.
 // When authCfg is non-nil and fully populated, requests are guarded by
 // token introspection; otherwise admin runs without authentication.
-func NewHandlerWithConfig(clientProvider GRPCClientProvider, grpcAddr string, authCfg *AuthConfig, statusClient statusv1.StatusServiceClient) http.Handler {
-	handler := NewServiceHandler(clientProvider, grpcAddr, authCfg, statusClient)
+func NewHandlerWithConfig(clients *grpcClients, grpcAddr string, authCfg *AuthConfig, statusClient statusv1.StatusServiceClient) http.Handler {
+	handler := NewServiceHandler(clients, grpcAddr, authCfg, statusClient)
 	mux := handler.routes()
 	mux = handler.withGameClientBootstrap(mux)
+	root := sharedhttpx.Chain(mux, sharedhttpx.RecoverPanic(), sharedhttpx.RequestID("admin"))
 	if handler.introspector == nil {
-		return mux
+		return root
 	}
-	return requireAuth(mux, handler.introspector, authCfg.LoginURL)
+	return requireAuth(root, handler.introspector, authCfg.LoginURL)
 }
 
-func (h *Handler) localizer(w http.ResponseWriter, r *http.Request) (*message.Printer, string) {
-	tag, persist := i18n.ResolveTag(r)
-	if persist {
-		i18n.SetLanguageCookie(w, tag)
+// moduleBuildInput extracts individual gRPC clients from the handler's grpcClients
+// and assembles a BuildInput for the module registry.
+func (h *Handler) moduleBuildInput() modules.BuildInput {
+	input := modules.BuildInput{
+		Base:         modulehandler.NewBase(),
+		GRPCAddr:     h.grpcAddr,
+		StatusClient: h.statusClient,
 	}
-	return i18n.Printer(tag), tag.String()
-}
-
-func (h *Handler) pageContext(lang string, loc *message.Printer, r *http.Request) templates.PageContext {
-	path := ""
-	query := ""
-	if r != nil && r.URL != nil {
-		path = r.URL.Path
-		query = r.URL.RawQuery
+	if c := h.grpcClients; c != nil {
+		input.AuthClient = c.AuthClient()
+		input.CampaignClient = c.CampaignClient()
+		input.CharacterClient = c.CharacterClient()
+		input.ParticipantClient = c.ParticipantClient()
+		input.InviteClient = c.InviteClient()
+		input.SessionClient = c.SessionClient()
+		input.EventClient = c.EventClient()
+		input.StatisticsClient = c.StatisticsClient()
+		input.SystemClient = c.SystemClient()
+		input.DaggerheartContentClient = c.DaggerheartContentClient()
 	}
-	return templates.PageContext{
-		Lang:         lang,
-		Loc:          loc,
-		CurrentPath:  path,
-		CurrentQuery: query,
-	}
-}
-
-// gameGRPCCallContext creates a bounded game RPC context with user identity.
-// Admin override is injected by connection-level interceptors, not per-call.
-func (h *Handler) gameGRPCCallContext(parent context.Context) (context.Context, context.CancelFunc) {
-	if parent == nil {
-		parent = context.Background()
-	}
-	ctx, cancel := context.WithTimeout(parent, grpcRequestTimeout)
-	if userID := strings.TrimSpace(requestctx.UserIDFromContext(parent)); userID != "" {
-		ctx = grpcauthctx.WithUserID(ctx, userID)
-	}
-	return ctx, cancel
-}
-
-func withStaticMime(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch path := strings.ToLower(r.URL.Path); {
-		case strings.HasSuffix(path, ".css"):
-			w.Header().Set("Content-Type", "text/css")
-		case strings.HasSuffix(path, ".js"):
-			w.Header().Set("Content-Type", "application/javascript")
-		case strings.HasSuffix(path, ".svg"):
-			w.Header().Set("Content-Type", "image/svg+xml")
-		}
-		next.ServeHTTP(w, r)
-	})
+	return input
 }
 
 // routes wires the HTTP routes for the admin handler.
@@ -172,16 +101,12 @@ func (h *Handler) routes() http.Handler {
 	staticFS, err := resolveStaticFS()
 	if err == nil {
 		staticHandler := http.StripPrefix(routepath.StaticPrefix, http.FileServer(http.FS(staticFS)))
-		rootMux.Handle(routepath.StaticPrefix, withStaticMime(staticHandler))
+		rootMux.Handle(routepath.StaticPrefix, staticHandler)
 	} else {
 		log.Printf("admin: failed to initialize static assets: %v", err)
 	}
 	composed, err := composition.ComposeAppHandler(composition.ComposeInput{
-		Modules: modules.BuildInput{
-			Base:         modulehandler.NewBase(h.clientProvider),
-			GRPCAddr:     h.grpcAddr,
-			StatusClient: h.statusClient,
-		},
+		Modules: h.moduleBuildInput(),
 	})
 	if err != nil {
 		log.Printf("admin: failed to compose app handler: %v", err)
@@ -206,13 +131,10 @@ func (h *Handler) withGameClientBootstrap(next http.Handler) http.Handler {
 }
 
 func (h *Handler) ensureGameClients(ctx context.Context) {
-	if h == nil || h.clientProvider == nil {
+	if h == nil || h.grpcClients == nil {
 		return
 	}
-	clients, ok := h.clientProvider.(*grpcClients)
-	if !ok || clients == nil {
-		return
-	}
+	clients := h.grpcClients
 	if clients.HasGameConnection() {
 		return
 	}

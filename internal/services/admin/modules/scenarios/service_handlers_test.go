@@ -1,17 +1,35 @@
 package scenarios
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-func TestScenarioServiceHandlersWithNilClients(t *testing.T) {
-	svcIface := NewService(modulehandler.NewBase(nil), "localhost:8080")
+// testUnavailableConn implements grpc.ClientConnInterface and returns
+// codes.Unavailable for every RPC, simulating a disconnected backend.
+type testUnavailableConn struct{}
+
+func (testUnavailableConn) Invoke(context.Context, string, any, any, ...grpc.CallOption) error {
+	return status.Error(codes.Unavailable, "test: service not connected")
+}
+
+func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, ...grpc.CallOption) (grpc.ClientStream, error) {
+	return nil, status.Error(codes.Unavailable, "test: service not connected")
+}
+
+func TestScenarioServiceHandlersWithUnavailableClients(t *testing.T) {
+	var conn testUnavailableConn
+	svcIface := NewService(modulehandler.NewBase(), "localhost:8080", statev1.NewEventServiceClient(conn), statev1.NewCampaignServiceClient(conn))
 	svc, ok := svcIface.(*service)
 	if !ok {
 		t.Fatalf("NewService() type = %T, want *service", svcIface)
@@ -64,7 +82,12 @@ func TestScenarioServiceHandlersWithNilClients(t *testing.T) {
 }
 
 func TestScenarioServiceRunScriptMkdirError(t *testing.T) {
-	svc := &service{base: modulehandler.NewBase(nil)}
+	var conn testUnavailableConn
+	svc := &service{
+		base:           modulehandler.NewBase(),
+		eventClient:    statev1.NewEventServiceClient(conn),
+		campaignClient: statev1.NewCampaignServiceClient(conn),
+	}
 
 	file, err := os.CreateTemp("", "scenario-tmpfile-*")
 	if err != nil {
@@ -86,8 +109,12 @@ func TestScenarioServiceRunScriptMkdirError(t *testing.T) {
 }
 
 func TestScenarioServiceGetCampaignNameFallback(t *testing.T) {
-	svc := &service{base: modulehandler.NewBase(nil)}
-	loc := i18n.Printer(i18n.Default())
+	var conn testUnavailableConn
+	svc := &service{
+		base:           modulehandler.NewBase(),
+		campaignClient: statev1.NewCampaignServiceClient(conn),
+	}
+	loc := i18nhttp.Printer(i18nhttp.Default())
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	if got := svc.getCampaignName(req, "camp-1", loc); got == "" {
 		t.Fatal("getCampaignName() returned empty fallback")

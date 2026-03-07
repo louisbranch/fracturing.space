@@ -1,15 +1,14 @@
 package httpx
 
 import (
-	"bytes"
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	sharedhttpx "github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
@@ -30,7 +29,7 @@ func TestChainAppliesMiddlewareInOrder(t *testing.T) {
 		})
 	}
 
-	h := Chain(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	h := sharedhttpx.Chain(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		called += "h"
 		w.WriteHeader(http.StatusNoContent)
 	}), mw1, mw2)
@@ -78,7 +77,7 @@ func TestMethodNotAllowedWritesAllowHeaderAndStatus(t *testing.T) {
 func TestRequestIDAddsHeaderWhenMissing(t *testing.T) {
 	t.Parallel()
 
-	h := RequestID()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := sharedhttpx.RequestID("web")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Request-ID") == "" {
 			t.Fatalf("expected request header to include request id")
 		}
@@ -98,7 +97,7 @@ func TestRequestIDAddsHeaderWhenMissing(t *testing.T) {
 func TestRecoverPanicReturnsInternalServerError(t *testing.T) {
 	t.Parallel()
 
-	h := RecoverPanic()(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+	h := sharedhttpx.RecoverPanic()(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		panic("boom")
 	}))
 	rr := httptest.NewRecorder()
@@ -106,33 +105,6 @@ func TestRecoverPanicReturnsInternalServerError(t *testing.T) {
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
-	}
-}
-
-func TestRecoverPanicLogsRequestContext(t *testing.T) {
-	t.Parallel()
-
-	prevWriter := log.Writer()
-	defer log.SetOutput(prevWriter)
-	var buffer bytes.Buffer
-	log.SetOutput(&buffer)
-
-	h := RecoverPanic()(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		panic("boom")
-	}))
-	rr := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/panic", nil)
-	req.Header.Set("X-Request-ID", "req-123")
-	h.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
-	}
-	logLine := buffer.String()
-	for _, marker := range []string{"panic recovered", "path=/panic", "request_id=req-123"} {
-		if !strings.Contains(logLine, marker) {
-			t.Fatalf("panic log missing marker %q: %q", marker, logLine)
-		}
 	}
 }
 
@@ -330,7 +302,7 @@ func TestRequestContextIsNilSafe(t *testing.T) {
 func TestRequestIDPreservesIncomingHeader(t *testing.T) {
 	t.Parallel()
 
-	h := RequestID()(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	h := sharedhttpx.RequestID("web")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("X-Request-ID"); got != "req-123" {
 			t.Fatalf("request id = %q, want %q", got, "req-123")
 		}
@@ -350,7 +322,7 @@ func TestRequestIDPreservesIncomingHeader(t *testing.T) {
 func TestChainHandlesNilHandlerAndMiddleware(t *testing.T) {
 	t.Parallel()
 
-	h := Chain(nil, nil)
+	h := sharedhttpx.Chain(nil, nil)
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/no-route", nil)
 	h.ServeHTTP(rr, req)

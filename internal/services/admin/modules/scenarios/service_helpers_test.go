@@ -9,8 +9,9 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -45,7 +46,7 @@ func TestScenarioHelpersScenarioScript(t *testing.T) {
 }
 
 func TestScenarioHelpersOriginChecks(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 
 	req := httptest.NewRequest(http.MethodPost, "http://example.com/app/scenarios", nil)
 	req.Host = "example.com"
@@ -113,7 +114,7 @@ func TestScenarioHelpersOriginChecks(t *testing.T) {
 }
 
 func TestScenarioHelpersFiltersAndFormatting(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 	now := timestamppb.New(time.Date(2026, time.March, 2, 15, 4, 5, 0, time.UTC))
 
 	req := httptest.NewRequest(
@@ -121,12 +122,12 @@ func TestScenarioHelpersFiltersAndFormatting(t *testing.T) {
 		"/?session_id=s-1&event_type=created&actor_type=system&entity_type=character&start_date=2026-01-01&end_date=2026-12-31",
 		nil,
 	)
-	filters := parseEventFilters(req)
+	filters := eventview.ParseEventFilters(req)
 	if filters.SessionID != "s-1" || filters.EventType != "created" || filters.EndDate != "2026-12-31" {
-		t.Fatalf("parseEventFilters() = %#v", filters)
+		t.Fatalf("eventview.ParseEventFilters() = %#v", filters)
 	}
 
-	expression := buildEventFilterExpression(templates.EventFilterOptions{
+	expression := eventview.BuildEventFilterExpression(templates.EventFilterOptions{
 		SessionID:  "s-1",
 		EventType:  `a"b\c`,
 		ActorType:  "participant",
@@ -135,46 +136,46 @@ func TestScenarioHelpersFiltersAndFormatting(t *testing.T) {
 		EndDate:    "2026-01-02",
 	})
 	if !strings.Contains(expression, `session_id = "s-1"`) || !strings.Contains(expression, `type = "a\"b\\c"`) {
-		t.Fatalf("buildEventFilterExpression() = %q", expression)
+		t.Fatalf("eventview.BuildEventFilterExpression() = %q", expression)
 	}
 	if strings.Count(expression, " AND ") != 5 {
-		t.Fatalf("buildEventFilterExpression() AND count = %d", strings.Count(expression, " AND "))
+		t.Fatalf("eventview.BuildEventFilterExpression() AND count = %d", strings.Count(expression, " AND "))
 	}
 
-	if escaped := escapeAIP160StringLiteral(`x"y\z`); escaped != `x\"y\\z` {
-		t.Fatalf("escapeAIP160StringLiteral() = %q", escaped)
+	if escaped := eventview.EscapeAIP160StringLiteral(`x"y\z`); escaped != `x\"y\\z` {
+		t.Fatalf("eventview.EscapeAIP160StringLiteral() = %q", escaped)
 	}
 
-	pushURL := eventFilterPushURL("/app/scenarios/camp-1/events", filters, "next-page")
+	pushURL := eventview.EventFilterPushURL("/app/scenarios/camp-1/events", filters, "next-page")
 	if !strings.Contains(pushURL, "page_token=next-page") || !strings.Contains(pushURL, "session_id=s-1") {
-		t.Fatalf("eventFilterPushURL() = %q", pushURL)
+		t.Fatalf("eventview.EventFilterPushURL() = %q", pushURL)
 	}
 
-	if got := formatTimestamp(now); got != "2026-03-02 15:04:05" {
-		t.Fatalf("formatTimestamp() = %q", got)
+	if got := eventview.FormatTimestamp(now); got != "2026-03-02 15:04:05" {
+		t.Fatalf("eventview.FormatTimestamp() = %q", got)
 	}
-	if got := formatTimestamp(nil); got != "" {
-		t.Fatalf("formatTimestamp(nil) = %q", got)
-	}
-
-	if got := formatActorType("system", loc); got != loc.Sprintf("filter.actor.system") {
-		t.Fatalf("formatActorType(system) = %q", got)
-	}
-	if got := formatActorType("other", loc); got != "other" {
-		t.Fatalf("formatActorType(other) = %q", got)
-	}
-	if got := formatActorType("", loc); got != "" {
-		t.Fatalf("formatActorType(empty) = %q", got)
+	if got := eventview.FormatTimestamp(nil); got != "" {
+		t.Fatalf("eventview.FormatTimestamp(nil) = %q", got)
 	}
 
-	if got := formatEventDescription(nil, loc); got != "" {
-		t.Fatalf("formatEventDescription(nil) = %q", got)
+	if got := eventview.FormatActorType("system", loc); got != loc.Sprintf("filter.actor.system") {
+		t.Fatalf("eventview.FormatActorType(system) = %q", got)
 	}
-	if got := formatEventDescription(&statev1.Event{Type: "campaign.created"}, loc); got != loc.Sprintf("event.campaign_created") {
-		t.Fatalf("formatEventDescription(event) = %q", got)
+	if got := eventview.FormatActorType("other", loc); got != "other" {
+		t.Fatalf("eventview.FormatActorType(other) = %q", got)
+	}
+	if got := eventview.FormatActorType("", loc); got != "" {
+		t.Fatalf("eventview.FormatActorType(empty) = %q", got)
 	}
 
-	eventRows := buildEventRows([]*statev1.Event{
+	if got := eventview.FormatEventDescription(nil, loc); got != "" {
+		t.Fatalf("eventview.FormatEventDescription(nil) = %q", got)
+	}
+	if got := eventview.FormatEventDescription(&statev1.Event{Type: "campaign.created"}, loc); got != loc.Sprintf("event.campaign_created") {
+		t.Fatalf("eventview.FormatEventDescription(event) = %q", got)
+	}
+
+	eventRows := eventview.BuildEventRows([]*statev1.Event{
 		nil,
 		{
 			CampaignId:  "camp-1",
@@ -190,12 +191,12 @@ func TestScenarioHelpersFiltersAndFormatting(t *testing.T) {
 		},
 	}, loc)
 	if len(eventRows) != 1 || eventRows[0].Seq != 9 || eventRows[0].EntityID != "char-1" {
-		t.Fatalf("buildEventRows() = %#v", eventRows)
+		t.Fatalf("eventview.BuildEventRows() = %#v", eventRows)
 	}
 }
 
 func TestScenarioHelpersTimeline(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 	now := timestamppb.New(time.Date(2026, time.March, 2, 15, 4, 5, 0, time.UTC))
 
 	fields := buildScenarioTimelineFields([]*statev1.ProjectionField{
@@ -253,7 +254,7 @@ func TestScenarioHelpersTimeline(t *testing.T) {
 }
 
 func TestScenarioHelpersEventTypeFormatting(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 	tests := []struct {
 		name  string
 		input string
@@ -297,8 +298,8 @@ func TestScenarioHelpersEventTypeFormatting(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := formatEventType(tc.input, loc); got != tc.want {
-				t.Fatalf("formatEventType(%q) = %q, want %q", tc.input, got, tc.want)
+			if got := eventview.FormatEventType(tc.input, loc); got != tc.want {
+				t.Fatalf("eventview.FormatEventType(%q) = %q, want %q", tc.input, got, tc.want)
 			}
 		})
 	}

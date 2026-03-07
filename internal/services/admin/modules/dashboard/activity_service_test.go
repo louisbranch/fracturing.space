@@ -179,8 +179,13 @@ func TestActivityServiceListRecentSkipsFailedCampaignEventLoads(t *testing.T) {
 	}
 }
 
-func TestActivityServiceListRecentWithMissingClients(t *testing.T) {
-	if records := newActivityService(nil, nil).listRecent(context.Background()); len(records) != 0 {
+func TestActivityServiceListRecentWithUnavailableClients(t *testing.T) {
+	var conn testUnavailableConn
+	svc := newActivityService(
+		statev1.NewCampaignServiceClient(conn),
+		statev1.NewEventServiceClient(conn),
+	)
+	if records := svc.listRecent(context.Background()); len(records) != 0 {
 		t.Fatalf("record count = %d, want 0", len(records))
 	}
 }

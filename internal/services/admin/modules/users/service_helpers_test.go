@@ -1,6 +1,7 @@
 package users
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -8,13 +9,29 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// testUnavailableConn implements grpc.ClientConnInterface and returns
+// codes.Unavailable for every RPC, simulating a disconnected backend.
+type testUnavailableConn struct{}
+
+func (testUnavailableConn) Invoke(context.Context, string, any, any, ...grpc.CallOption) error {
+	return status.Error(codes.Unavailable, "test: service not connected")
+}
+
+func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, ...grpc.CallOption) (grpc.ClientStream, error) {
+	return nil, status.Error(codes.Unavailable, "test: service not connected")
+}
+
 func TestUserHelpersBuildersAndFormatters(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 	now := timestamppb.New(time.Date(2026, time.March, 2, 15, 4, 5, 0, time.UTC))
 
 	rows := buildUserRows([]*authv1.User{
@@ -59,17 +76,22 @@ func TestUserHelpersBuildersAndFormatters(t *testing.T) {
 		t.Fatalf("formatInviteStatus(unspecified) = (%q,%q)", label, variant)
 	}
 
-	if got := formatTimestamp(now); got != "2026-03-02 15:04:05" {
-		t.Fatalf("formatTimestamp() = %q", got)
+	if got := eventview.FormatTimestamp(now); got != "2026-03-02 15:04:05" {
+		t.Fatalf("eventview.FormatTimestamp() = %q", got)
 	}
-	if got := formatTimestamp(nil); got != "" {
-		t.Fatalf("formatTimestamp(nil) = %q", got)
+	if got := eventview.FormatTimestamp(nil); got != "" {
+		t.Fatalf("eventview.FormatTimestamp(nil) = %q", got)
 	}
 }
 
-func TestUserServiceNilClients(t *testing.T) {
-	svc := &service{base: modulehandler.NewBase(nil)}
-	loc := i18n.Printer(i18n.Default())
+func TestUserServiceUnavailableClients(t *testing.T) {
+	var conn testUnavailableConn
+	svc := &service{
+		base:         modulehandler.NewBase(),
+		authClient:   authv1.NewAuthServiceClient(conn),
+		inviteClient: statev1.NewInviteServiceClient(conn),
+	}
+	loc := i18nhttp.Printer(i18nhttp.Default())
 
 	rec := httptest.NewRecorder()
 	svc.HandleUsersPage(rec, httptest.NewRequest(http.MethodGet, "/app/users", nil))

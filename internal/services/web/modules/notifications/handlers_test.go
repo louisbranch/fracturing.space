@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
+	webi18n "github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
 	"golang.org/x/text/language"
 )
 

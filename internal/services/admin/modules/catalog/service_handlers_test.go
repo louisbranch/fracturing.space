@@ -1,18 +1,36 @@
 package catalog
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
-func TestCatalogServiceHandlersWithNilClient(t *testing.T) {
-	svcIface := NewService(modulehandler.NewBase(nil))
+// testUnavailableConn implements grpc.ClientConnInterface and returns
+// codes.Unavailable for every RPC, simulating a disconnected backend.
+type testUnavailableConn struct{}
+
+func (testUnavailableConn) Invoke(context.Context, string, any, any, ...grpc.CallOption) error {
+	return status.Error(codes.Unavailable, "test: service not connected")
+}
+
+func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, ...grpc.CallOption) (grpc.ClientStream, error) {
+	return nil, status.Error(codes.Unavailable, "test: service not connected")
+}
+
+func TestCatalogServiceHandlersWithUnavailableClient(t *testing.T) {
+	var conn testUnavailableConn
+	svcIface := NewService(modulehandler.NewBase(), daggerheartv1.NewDaggerheartContentServiceClient(conn))
 	svc, ok := svcIface.(*service)
 	if !ok {
 		t.Fatalf("NewService() type = %T, want *service", svcIface)
@@ -25,15 +43,7 @@ func TestCatalogServiceHandlersWithNilClient(t *testing.T) {
 		t.Fatalf("HandleCatalogPage(GET) status = %d", rec.Code)
 	}
 
-	req = httptest.NewRequest(http.MethodPost, "/app/catalog", nil)
-	rec = httptest.NewRecorder()
-	svc.HandleCatalogPage(rec, req)
-	if rec.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("HandleCatalogPage(POST) status = %d", rec.Code)
-	}
-	if allow := rec.Header().Get("Allow"); allow != http.MethodGet {
-		t.Fatalf("HandleCatalogPage(POST) Allow = %q", allow)
-	}
+	// Method enforcement is handled by the mux (routes registered with method prefix).
 
 	req = httptest.NewRequest(http.MethodGet, "/app/catalog/daggerheart/classes", nil)
 	rec = httptest.NewRecorder()

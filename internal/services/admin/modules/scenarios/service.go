@@ -12,14 +12,14 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
+	adminerrors "github.com/louisbranch/fracturing.space/internal/services/admin/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
 	routepath "github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
 	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 	"golang.org/x/text/message"
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 const (
@@ -33,15 +33,24 @@ const (
 
 // service provides module-local scenario handlers backed by shared module dependencies.
 type service struct {
-	base     modulehandler.Base
-	grpcAddr string
+	base           modulehandler.Base
+	grpcAddr       string
+	eventClient    statev1.EventServiceClient
+	campaignClient statev1.CampaignServiceClient
 }
 
 // NewService returns the scenarios module service implementation.
-func NewService(base modulehandler.Base, grpcAddr string) Service {
+func NewService(
+	base modulehandler.Base,
+	grpcAddr string,
+	eventClient statev1.EventServiceClient,
+	campaignClient statev1.CampaignServiceClient,
+) Service {
 	return &service{
-		base:     base,
-		grpcAddr: strings.TrimSpace(grpcAddr),
+		base:           base,
+		grpcAddr:       strings.TrimSpace(grpcAddr),
+		eventClient:    eventClient,
+		campaignClient: campaignClient,
 	}
 }
 
@@ -94,32 +103,28 @@ func (s *service) HandleScenarioEventsTable(w http.ResponseWriter, r *http.Reque
 	var events []templates.EventRow
 	var totalCount int32
 	var nextToken, prevToken string
-	filters := parseEventFilters(r)
+	filters := eventview.ParseEventFilters(r)
 	pageToken := r.URL.Query().Get("page_token")
 
-	if eventClient := s.base.EventClient(); eventClient != nil {
-		ctx, cancel := s.base.GameGRPCCallContext(r.Context())
-		defer cancel()
+	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
+	defer cancel()
 
-		filterExpr := buildEventFilterExpression(filters)
-		eventsResp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
-			CampaignId: campaignID,
-			PageSize:   eventListPageSize,
-			PageToken:  pageToken,
-			OrderBy:    "seq desc",
-			Filter:     filterExpr,
-		})
-		if err != nil {
-			log.Printf("list scenario events: %v", err)
-			message = loc.Sprintf("error.events_unavailable")
-		} else if eventsResp != nil {
-			events = buildEventRows(eventsResp.GetEvents(), loc)
-			totalCount = eventsResp.GetTotalSize()
-			nextToken = eventsResp.GetNextPageToken()
-			prevToken = eventsResp.GetPreviousPageToken()
-		}
-	} else {
-		message = loc.Sprintf("error.event_service_unavailable")
+	filterExpr := eventview.BuildEventFilterExpression(filters)
+	eventsResp, err := s.eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
+		CampaignId: campaignID,
+		PageSize:   eventListPageSize,
+		PageToken:  pageToken,
+		OrderBy:    "seq desc",
+		Filter:     filterExpr,
+	})
+	if err != nil {
+		adminerrors.LogError(r, "list scenario events: %v", err)
+		message = loc.Sprintf("error.events_unavailable")
+	} else if eventsResp != nil {
+		events = eventview.BuildEventRows(eventsResp.GetEvents(), loc)
+		totalCount = eventsResp.GetTotalSize()
+		nextToken = eventsResp.GetNextPageToken()
+		prevToken = eventsResp.GetPreviousPageToken()
 	}
 
 	view := templates.ScenarioEventsView{
@@ -132,7 +137,7 @@ func (s *service) HandleScenarioEventsTable(w http.ResponseWriter, r *http.Reque
 		Message:    message,
 	}
 
-	if pushURL := eventFilterPushURL(routepath.ScenarioEvents(campaignID), filters, pageToken); pushURL != "" {
+	if pushURL := eventview.EventFilterPushURL(routepath.ScenarioEvents(campaignID), filters, pageToken); pushURL != "" {
 		w.Header().Set("HX-Push-Url", pushURL)
 	}
 
@@ -153,7 +158,7 @@ func (s *service) handleScenarioRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := r.ParseForm(); err != nil {
-		log.Printf("parse scenario form: %v", err)
+		adminerrors.LogError(r, "parse scenario form: %v", err)
 		view := templates.ScenarioPageView{
 			Logs:        loc.Sprintf("scenarios.error.parse_failed"),
 			Status:      loc.Sprintf("scenarios.status.failed"),
@@ -219,32 +224,28 @@ func (s *service) buildScenarioEventsView(r *http.Request, campaignID string, lo
 	var events []templates.EventRow
 	var totalCount int32
 	var nextToken, prevToken string
-	filters := parseEventFilters(r)
+	filters := eventview.ParseEventFilters(r)
 	pageToken := r.URL.Query().Get("page_token")
 
-	if eventClient := s.base.EventClient(); eventClient != nil {
-		ctx, cancel := s.base.GameGRPCCallContext(r.Context())
-		defer cancel()
+	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
+	defer cancel()
 
-		filterExpr := buildEventFilterExpression(filters)
-		eventsResp, err := eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
-			CampaignId: campaignID,
-			PageSize:   eventListPageSize,
-			PageToken:  pageToken,
-			OrderBy:    "seq desc",
-			Filter:     filterExpr,
-		})
-		if err != nil {
-			log.Printf("list scenario events: %v", err)
-			message = loc.Sprintf("error.events_unavailable")
-		} else if eventsResp != nil {
-			events = buildEventRows(eventsResp.GetEvents(), loc)
-			totalCount = eventsResp.GetTotalSize()
-			nextToken = eventsResp.GetNextPageToken()
-			prevToken = eventsResp.GetPreviousPageToken()
-		}
-	} else {
-		message = loc.Sprintf("error.event_service_unavailable")
+	filterExpr := eventview.BuildEventFilterExpression(filters)
+	eventsResp, err := s.eventClient.ListEvents(ctx, &statev1.ListEventsRequest{
+		CampaignId: campaignID,
+		PageSize:   eventListPageSize,
+		PageToken:  pageToken,
+		OrderBy:    "seq desc",
+		Filter:     filterExpr,
+	})
+	if err != nil {
+		adminerrors.LogError(r, "list scenario events: %v", err)
+		message = loc.Sprintf("error.events_unavailable")
+	} else if eventsResp != nil {
+		events = eventview.BuildEventRows(eventsResp.GetEvents(), loc)
+		totalCount = eventsResp.GetTotalSize()
+		nextToken = eventsResp.GetNextPageToken()
+		prevToken = eventsResp.GetPreviousPageToken()
 	}
 
 	campaignName := s.getCampaignName(r, campaignID, loc)
@@ -267,27 +268,23 @@ func (s *service) buildScenarioTimelineView(r *http.Request, campaignID string, 
 	var nextToken, prevToken string
 	pageToken := r.URL.Query().Get("page_token")
 
-	if eventClient := s.base.EventClient(); eventClient != nil {
-		ctx, cancel := s.base.GameGRPCCallContext(r.Context())
-		defer cancel()
+	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
+	defer cancel()
 
-		resp, err := eventClient.ListTimelineEntries(ctx, &statev1.ListTimelineEntriesRequest{
-			CampaignId: campaignID,
-			PageSize:   eventListPageSize,
-			PageToken:  pageToken,
-			OrderBy:    "seq",
-		})
-		if err != nil {
-			log.Printf("list scenario timeline: %v", err)
-			message = loc.Sprintf("error.events_unavailable")
-		} else if resp != nil {
-			entries = buildScenarioTimelineEntries(resp.GetEntries(), loc)
-			totalCount = resp.GetTotalSize()
-			nextToken = resp.GetNextPageToken()
-			prevToken = resp.GetPreviousPageToken()
-		}
-	} else {
-		message = loc.Sprintf("error.event_service_unavailable")
+	resp, err := s.eventClient.ListTimelineEntries(ctx, &statev1.ListTimelineEntriesRequest{
+		CampaignId: campaignID,
+		PageSize:   eventListPageSize,
+		PageToken:  pageToken,
+		OrderBy:    "seq",
+	})
+	if err != nil {
+		adminerrors.LogError(r, "list scenario timeline: %v", err)
+		message = loc.Sprintf("error.events_unavailable")
+	} else if resp != nil {
+		entries = buildScenarioTimelineEntries(resp.GetEntries(), loc)
+		totalCount = resp.GetTotalSize()
+		nextToken = resp.GetNextPageToken()
+		prevToken = resp.GetPreviousPageToken()
 	}
 
 	return templates.ScenarioTimelineView{
@@ -355,15 +352,10 @@ func (s *service) scenarioGRPCAddr() string {
 }
 
 func (s *service) getCampaignName(r *http.Request, campaignID string, loc *message.Printer) string {
-	campaignClient := s.base.CampaignClient()
-	if campaignClient == nil {
-		return loc.Sprintf("label.campaign")
-	}
-
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
 
-	response, err := campaignClient.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
+	response, err := s.campaignClient.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
 	if err != nil || response == nil || response.GetCampaign() == nil {
 		return loc.Sprintf("label.campaign")
 	}
@@ -456,264 +448,4 @@ func requestScheme(r *http.Request) string {
 		return "https"
 	}
 	return "http"
-}
-
-func buildEventRows(events []*statev1.Event, loc *message.Printer) []templates.EventRow {
-	rows := make([]templates.EventRow, 0, len(events))
-	for _, event := range events {
-		if event == nil {
-			continue
-		}
-		rows = append(rows, templates.EventRow{
-			CampaignID:       event.GetCampaignId(),
-			Seq:              event.GetSeq(),
-			Hash:             event.GetHash(),
-			Type:             event.GetType(),
-			TypeDisplay:      formatEventType(event.GetType(), loc),
-			Timestamp:        formatTimestamp(event.GetTs()),
-			SessionID:        event.GetSessionId(),
-			ActorType:        event.GetActorType(),
-			ActorTypeDisplay: formatActorType(event.GetActorType(), loc),
-			ActorName:        "",
-			EntityType:       event.GetEntityType(),
-			EntityID:         event.GetEntityId(),
-			EntityName:       event.GetEntityId(),
-			Description:      formatEventDescription(event, loc),
-			PayloadJSON:      string(event.GetPayloadJson()),
-		})
-	}
-	return rows
-}
-
-func buildScenarioTimelineEntries(entries []*statev1.TimelineEntry, loc *message.Printer) []templates.ScenarioTimelineEntry {
-	rows := make([]templates.ScenarioTimelineEntry, 0, len(entries))
-	for _, entry := range entries {
-		if entry == nil {
-			continue
-		}
-		projection := entry.GetProjection()
-		title := strings.TrimSpace(projection.GetTitle())
-		eventTypeDisplay := formatEventType(entry.GetEventType(), loc)
-		if title == "" {
-			title = eventTypeDisplay
-		}
-		subtitle := strings.TrimSpace(projection.GetSubtitle())
-		status := strings.TrimSpace(projection.GetStatus())
-		iconID := entry.GetIconId()
-		if iconID == commonv1.IconId_ICON_ID_UNSPECIFIED {
-			iconID = commonv1.IconId_ICON_ID_GENERIC
-		}
-		rows = append(rows, templates.ScenarioTimelineEntry{
-			Seq:              entry.GetSeq(),
-			EventType:        entry.GetEventType(),
-			EventTypeDisplay: eventTypeDisplay,
-			EventTime:        formatTimestamp(entry.GetEventTime()),
-			IconID:           iconID,
-			Title:            title,
-			Subtitle:         subtitle,
-			Status:           status,
-			StatusBadge:      timelineStatusBadgeVariant(status),
-			Fields:           buildScenarioTimelineFields(projection.GetFields()),
-			PayloadJSON:      strings.TrimSpace(entry.GetEventPayloadJson()),
-		})
-	}
-	return rows
-}
-
-func buildScenarioTimelineFields(fields []*statev1.ProjectionField) []templates.ScenarioTimelineField {
-	if len(fields) == 0 {
-		return nil
-	}
-	result := make([]templates.ScenarioTimelineField, 0, len(fields))
-	for _, field := range fields {
-		if field == nil {
-			continue
-		}
-		label := strings.TrimSpace(field.GetLabel())
-		value := strings.TrimSpace(field.GetValue())
-		if label == "" && value == "" {
-			continue
-		}
-		result = append(result, templates.ScenarioTimelineField{
-			Label: label,
-			Value: value,
-		})
-	}
-	return result
-}
-
-func timelineStatusBadgeVariant(status string) string {
-	if status == "" {
-		return "secondary"
-	}
-	normalized := strings.ToUpper(strings.TrimSpace(status))
-	switch normalized {
-	case "ACTIVE":
-		return "success"
-	case "DRAFT":
-		return "warning"
-	case "COMPLETED":
-		return "success"
-	case "ARCHIVED", "ENDED":
-		return "neutral"
-	default:
-		return "secondary"
-	}
-}
-
-func parseEventFilters(r *http.Request) templates.EventFilterOptions {
-	return templates.EventFilterOptions{
-		SessionID:  r.URL.Query().Get("session_id"),
-		EventType:  r.URL.Query().Get("event_type"),
-		ActorType:  r.URL.Query().Get("actor_type"),
-		EntityType: r.URL.Query().Get("entity_type"),
-		StartDate:  r.URL.Query().Get("start_date"),
-		EndDate:    r.URL.Query().Get("end_date"),
-	}
-}
-
-func eventFilterPushURL(basePath string, filters templates.EventFilterOptions, pageToken string) string {
-	pushURL := templates.EventFilterBaseURL(basePath, filters)
-	if pageToken != "" {
-		return templates.AppendQueryParam(pushURL, "page_token", pageToken)
-	}
-	return pushURL
-}
-
-func escapeAIP160StringLiteral(value string) string {
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	value = strings.ReplaceAll(value, `"`, `\"`)
-	return value
-}
-
-func buildEventFilterExpression(filters templates.EventFilterOptions) string {
-	var parts []string
-
-	if filters.SessionID != "" {
-		parts = append(parts, "session_id = \""+escapeAIP160StringLiteral(filters.SessionID)+"\"")
-	}
-	if filters.EventType != "" {
-		parts = append(parts, "type = \""+escapeAIP160StringLiteral(filters.EventType)+"\"")
-	}
-	if filters.ActorType != "" {
-		parts = append(parts, "actor_type = \""+escapeAIP160StringLiteral(filters.ActorType)+"\"")
-	}
-	if filters.EntityType != "" {
-		parts = append(parts, "entity_type = \""+escapeAIP160StringLiteral(filters.EntityType)+"\"")
-	}
-	if filters.StartDate != "" {
-		parts = append(parts, "ts >= timestamp(\""+escapeAIP160StringLiteral(filters.StartDate)+"T00:00:00Z\")")
-	}
-	if filters.EndDate != "" {
-		parts = append(parts, "ts <= timestamp(\""+escapeAIP160StringLiteral(filters.EndDate)+"T23:59:59Z\")")
-	}
-
-	return strings.Join(parts, " AND ")
-}
-
-func formatEventType(eventType string, loc *message.Printer) string {
-	switch eventType {
-	case "campaign.created":
-		return loc.Sprintf("event.campaign_created")
-	case "campaign.forked":
-		return loc.Sprintf("event.campaign_forked")
-	case "campaign.updated":
-		return loc.Sprintf("event.campaign_updated")
-	case "participant.joined":
-		return loc.Sprintf("event.participant_joined")
-	case "participant.left":
-		return loc.Sprintf("event.participant_left")
-	case "participant.updated":
-		return loc.Sprintf("event.participant_updated")
-	case "character.created":
-		return loc.Sprintf("event.character_created")
-	case "character.deleted":
-		return loc.Sprintf("event.character_deleted")
-	case "character.updated":
-		return loc.Sprintf("event.character_updated")
-	case "character.profile_updated":
-		return loc.Sprintf("event.character_profile_updated")
-	case "session.started":
-		return loc.Sprintf("event.session_started")
-	case "session.ended":
-		return loc.Sprintf("event.session_ended")
-	case "session.gate_opened":
-		return loc.Sprintf("event.session_gate_opened")
-	case "session.gate_resolved":
-		return loc.Sprintf("event.session_gate_resolved")
-	case "session.gate_abandoned":
-		return loc.Sprintf("event.session_gate_abandoned")
-	case "session.spotlight_set":
-		return loc.Sprintf("event.session_spotlight_set")
-	case "session.spotlight_cleared":
-		return loc.Sprintf("event.session_spotlight_cleared")
-	case "invite.created":
-		return loc.Sprintf("event.invite_created")
-	case "invite.updated":
-		return loc.Sprintf("event.invite_updated")
-	case "action.roll_resolved":
-		return loc.Sprintf("event.action_roll_resolved")
-	case "action.outcome_applied":
-		return loc.Sprintf("event.action_outcome_applied")
-	case "action.outcome_rejected":
-		return loc.Sprintf("event.action_outcome_rejected")
-	case "action.note_added":
-		return loc.Sprintf("event.action_note_added")
-	case "action.character_state_patched":
-		return loc.Sprintf("event.action_character_state_patched")
-	case "action.gm_fear_changed":
-		return loc.Sprintf("event.action_gm_fear_changed")
-	case "action.death_move_resolved":
-		return loc.Sprintf("event.action_death_move_resolved")
-	case "action.blaze_of_glory_resolved":
-		return loc.Sprintf("event.action_blaze_of_glory_resolved")
-	case "action.attack_resolved":
-		return loc.Sprintf("event.action_attack_resolved")
-	case "action.reaction_resolved":
-		return loc.Sprintf("event.action_reaction_resolved")
-	case "action.damage_roll_resolved":
-		return loc.Sprintf("event.action_damage_roll_resolved")
-	case "action.adversary_action_resolved":
-		return loc.Sprintf("event.action_adversary_action_resolved")
-	default:
-		parts := strings.Split(eventType, ".")
-		if len(parts) > 0 {
-			last := parts[len(parts)-1]
-			if len(last) > 0 {
-				formatted := strings.ReplaceAll(last, "_", " ")
-				return strings.ToUpper(formatted[:1]) + formatted[1:]
-			}
-		}
-		return eventType
-	}
-}
-
-func formatActorType(actorType string, loc *message.Printer) string {
-	if actorType == "" {
-		return ""
-	}
-	switch actorType {
-	case "system":
-		return loc.Sprintf("filter.actor.system")
-	case "participant":
-		return loc.Sprintf("filter.actor.participant")
-	case "gm":
-		return loc.Sprintf("filter.actor.gm")
-	default:
-		return actorType
-	}
-}
-
-func formatEventDescription(event *statev1.Event, loc *message.Printer) string {
-	if event == nil {
-		return ""
-	}
-	return formatEventType(event.GetType(), loc)
-}
-
-func formatTimestamp(value *timestamppb.Timestamp) string {
-	if value == nil {
-		return ""
-	}
-	return value.AsTime().Format("2006-01-02 15:04:05")
 }

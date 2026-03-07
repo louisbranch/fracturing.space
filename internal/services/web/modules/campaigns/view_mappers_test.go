@@ -6,7 +6,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/i18n"
+	webi18n "github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"golang.org/x/text/language"
 )

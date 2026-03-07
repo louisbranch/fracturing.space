@@ -9,91 +9,13 @@ import (
 	"testing"
 
 	"github.com/a-h/templ"
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/requestctx"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc/metadata"
 )
 
-type fakeClientProvider struct {
-	authCalled         bool
-	accountCalled      bool
-	campaignCalled     bool
-	sessionCalled      bool
-	characterCalled    bool
-	participantCalled  bool
-	inviteCalled       bool
-	snapshotCalled     bool
-	eventCalled        bool
-	statsCalled        bool
-	systemCalled       bool
-	contentClientCalle bool
-}
-
-func (f *fakeClientProvider) AuthClient() authv1.AuthServiceClient {
-	f.authCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) AccountClient() authv1.AccountServiceClient {
-	f.accountCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) CampaignClient() statev1.CampaignServiceClient {
-	f.campaignCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) SessionClient() statev1.SessionServiceClient {
-	f.sessionCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) CharacterClient() statev1.CharacterServiceClient {
-	f.characterCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) ParticipantClient() statev1.ParticipantServiceClient {
-	f.participantCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) InviteClient() statev1.InviteServiceClient {
-	f.inviteCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) SnapshotClient() statev1.SnapshotServiceClient {
-	f.snapshotCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) EventClient() statev1.EventServiceClient {
-	f.eventCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) StatisticsClient() statev1.StatisticsServiceClient {
-	f.statsCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) SystemClient() statev1.SystemServiceClient {
-	f.systemCalled = true
-	return nil
-}
-
-func (f *fakeClientProvider) DaggerheartContentClient() daggerheartv1.DaggerheartContentServiceClient {
-	f.contentClientCalle = true
-	return nil
-}
-
 func TestBaseLocalizerAndContext(t *testing.T) {
-	base := NewBase(nil)
+	base := NewBase()
 	req := httptest.NewRequest(http.MethodGet, "/app/dashboard?lang=en-US", nil)
 	rec := httptest.NewRecorder()
 
@@ -115,7 +37,7 @@ func TestBaseLocalizerAndContext(t *testing.T) {
 }
 
 func TestBaseGameContextAndHelpers(t *testing.T) {
-	base := NewBase(nil)
+	base := NewBase()
 
 	ctx, cancel := base.GameGRPCCallContext(requestctx.WithUserID(context.Background(), "user-1"))
 	defer cancel()
@@ -150,9 +72,8 @@ func TestBaseGameContextAndHelpers(t *testing.T) {
 	}
 }
 
-func TestBaseRenderPageAndAccessors(t *testing.T) {
-	provider := &fakeClientProvider{}
-	base := NewBase(provider)
+func TestBaseRenderPage(t *testing.T) {
+	base := NewBase()
 
 	component := templ.ComponentFunc(func(_ context.Context, w io.Writer) error {
 		_, err := io.WriteString(w, "<main>content</main>")
@@ -164,49 +85,5 @@ func TestBaseRenderPageAndAccessors(t *testing.T) {
 	base.RenderPage(rec, req, component, component, "<title>Demo</title>")
 	if !strings.Contains(rec.Body.String(), "content") {
 		t.Fatalf("RenderPage() body = %q", rec.Body.String())
-	}
-
-	_ = base.AuthClient()
-	_ = base.AccountClient()
-	_ = base.CampaignClient()
-	_ = base.SessionClient()
-	_ = base.CharacterClient()
-	_ = base.ParticipantClient()
-	_ = base.InviteClient()
-	_ = base.SnapshotClient()
-	_ = base.EventClient()
-	_ = base.StatisticsClient()
-	_ = base.SystemClient()
-	_ = base.DaggerheartContentClient()
-
-	if !provider.authCalled ||
-		!provider.accountCalled ||
-		!provider.campaignCalled ||
-		!provider.sessionCalled ||
-		!provider.characterCalled ||
-		!provider.participantCalled ||
-		!provider.inviteCalled ||
-		!provider.snapshotCalled ||
-		!provider.eventCalled ||
-		!provider.statsCalled ||
-		!provider.systemCalled ||
-		!provider.contentClientCalle {
-		t.Fatal("expected all provider accessors to be called")
-	}
-
-	nilBase := NewBase(nil)
-	if nilBase.AuthClient() != nil ||
-		nilBase.AccountClient() != nil ||
-		nilBase.CampaignClient() != nil ||
-		nilBase.SessionClient() != nil ||
-		nilBase.CharacterClient() != nil ||
-		nilBase.ParticipantClient() != nil ||
-		nilBase.InviteClient() != nil ||
-		nilBase.SnapshotClient() != nil ||
-		nilBase.EventClient() != nil ||
-		nilBase.StatisticsClient() != nil ||
-		nilBase.SystemClient() != nil ||
-		nilBase.DaggerheartContentClient() != nil {
-		t.Fatal("nil provider accessors should return nil clients")
 	}
 }

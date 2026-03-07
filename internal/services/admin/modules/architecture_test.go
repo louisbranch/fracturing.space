@@ -1,11 +1,13 @@
 package modules
 
 import (
+	"bufio"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"os"
 	"path/filepath"
+	"reflect"
 	"runtime"
 	"sort"
 	"strings"
@@ -28,6 +30,12 @@ var requiredModuleFiles = []string{
 	"module_test.go",
 }
 
+// sharedModulePackages are shared utility packages under modules/ that any
+// module may import. These are not treated as sibling modules.
+var sharedModulePackages = []string{
+	"eventview",
+}
+
 func TestAreaModulesDoNotImportSiblingModules(t *testing.T) {
 	t.Parallel()
 
@@ -48,6 +56,9 @@ func TestAreaModulesDoNotImportSiblingModules(t *testing.T) {
 					continue
 				}
 				if strings.HasPrefix(path, moduleImportPrefix+name) {
+					continue
+				}
+				if isSharedModulePackage(path) {
 					continue
 				}
 				t.Fatalf("%s imports sibling area module %q; keep area ownership local", file, path)
@@ -229,6 +240,65 @@ func TestRootAdminDoesNotContainModuleScopedTestFiles(t *testing.T) {
 	}
 }
 
+func TestModulesDoNotContainNilClientChecks(t *testing.T) {
+	t.Parallel()
+
+	root := moduleRoot(t)
+	for _, name := range discoverAreaModules(t, root) {
+		dir := filepath.Join(root, name)
+		for _, file := range moduleGoFiles(t, dir) {
+			f, err := os.Open(file)
+			if err != nil {
+				t.Fatalf("open %s: %v", file, err)
+			}
+			defer f.Close()
+			scanner := bufio.NewScanner(f)
+			scanner.Buffer(make([]byte, 0, 256*1024), 256*1024)
+			lineNo := 0
+			for scanner.Scan() {
+				lineNo++
+				line := scanner.Text()
+				trimmed := strings.TrimSpace(line)
+				if strings.Contains(trimmed, "Client == nil") || strings.Contains(trimmed, "Client != nil") {
+					t.Fatalf("%s:%d contains nil-client check %q; clients are guaranteed non-nil via unavailable stubs", file, lineNo, trimmed)
+				}
+			}
+			if err := scanner.Err(); err != nil {
+				t.Fatalf("scan %s: %v", file, err)
+			}
+		}
+	}
+}
+
+func TestEnsureClientsFillsAllFields(t *testing.T) {
+	t.Parallel()
+
+	input := BuildInput{}
+	input.ensureClients()
+
+	v := reflect.ValueOf(input)
+	typ := v.Type()
+	for i := 0; i < v.NumField(); i++ {
+		field := typ.Field(i)
+		fv := v.Field(i)
+		if !strings.HasSuffix(field.Name, "Client") {
+			continue
+		}
+		if fv.Kind() == reflect.Interface && fv.IsNil() {
+			t.Fatalf("ensureClients() did not fill BuildInput.%s", field.Name)
+		}
+	}
+}
+
+func isSharedModulePackage(importPath string) bool {
+	for _, pkg := range sharedModulePackages {
+		if strings.HasPrefix(importPath, moduleImportPrefix+pkg) {
+			return true
+		}
+	}
+	return false
+}
+
 func moduleRoot(t *testing.T) string {
 	t.Helper()
 
@@ -253,6 +323,9 @@ func discoverAreaModules(t *testing.T, root string) []string {
 		}
 		name := strings.TrimSpace(entry.Name())
 		if name == "" || strings.HasPrefix(name, ".") {
+			continue
+		}
+		if isSharedModulePackage(moduleImportPrefix + name) {
 			continue
 		}
 		names = append(names, name)

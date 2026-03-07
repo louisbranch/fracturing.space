@@ -6,14 +6,14 @@ import (
 	"testing"
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/admin/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func TestCatalogSectionColumns(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 
 	if cols := catalogSectionColumns("missing", loc); cols != nil {
 		t.Fatalf("catalogSectionColumns(missing) = %#v", cols)
@@ -118,7 +118,7 @@ func TestCatalogRowsBuilders(t *testing.T) {
 }
 
 func TestCatalogDetailBuilders(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 
 	classDetail := buildCatalogClassDetail(
 		templates.CatalogSectionClasses,
@@ -287,7 +287,7 @@ func TestCatalogDetailBuilders(t *testing.T) {
 }
 
 func TestCatalogHelpersShared(t *testing.T) {
-	loc := i18n.Printer(i18n.Default())
+	loc := i18nhttp.Printer(i18nhttp.Default())
 
 	if label := catalogPrimaryLabel("", "id-1"); label != "id-1" {
 		t.Fatalf("catalogPrimaryLabel() = %q", label)
