@@ -29,7 +29,31 @@ const (
 	defaultOpenRetryMaxDelay    = 2 * time.Second
 )
 
-var openContentStore = storagesqlite.OpenContent
+type contentStore interface {
+	storage.DaggerheartContentStore
+	storage.DaggerheartCatalogReadinessStore
+	Close() error
+}
+
+type openContentStoreFunc func(path string) (contentStore, error)
+
+type runDeps struct {
+	openStore openContentStoreFunc
+	nowUTC    func() time.Time
+}
+
+func defaultRunDeps() runDeps {
+	return runDeps{
+		openStore: openSQLiteContentStore,
+		nowUTC: func() time.Time {
+			return time.Now().UTC()
+		},
+	}
+}
+
+func openSQLiteContentStore(path string) (contentStore, error) {
+	return storagesqlite.OpenContent(path)
+}
 
 // Config holds configuration for the catalog importer.
 type Config struct {
@@ -68,11 +92,23 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 // Run executes the importer using the provided Config.
 func Run(ctx context.Context, cfg Config, out io.Writer) error {
+	return runWithDeps(ctx, cfg, out, defaultRunDeps())
+}
+
+func runWithDeps(ctx context.Context, cfg Config, out io.Writer, deps runDeps) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if out == nil {
 		out = io.Discard
+	}
+	if !cfg.DryRun && deps.openStore == nil {
+		return errors.New("content store opener is required")
+	}
+	if deps.nowUTC == nil {
+		deps.nowUTC = func() time.Time {
+			return time.Now().UTC()
+		}
 	}
 
 	dir := strings.TrimSpace(cfg.Dir)
@@ -95,9 +131,9 @@ func Run(ctx context.Context, cfg Config, out io.Writer) error {
 		return fmt.Errorf("base-locale %s not found in %s", baseLocale, dir)
 	}
 
-	var store storage.DaggerheartContentStore
+	var store contentStore
 	if !cfg.DryRun {
-		contentStore, err := openContentStoreWithRetry(ctx, cfg.DBPath, out)
+		contentStore, err := openContentStoreWithRetry(ctx, cfg.DBPath, out, deps.openStore)
 		if err != nil {
 			return fmt.Errorf("open content store: %w", err)
 		}
@@ -117,21 +153,8 @@ func Run(ctx context.Context, cfg Config, out io.Writer) error {
 	}
 
 	for _, locale := range locales {
-		localeDir := filepath.Join(dir, locale)
-		payloads, err := readLocalePayloads(localeDir)
-		if err != nil {
-			return fmt.Errorf("read %s: %w", locale, err)
-		}
-		if err := validateLocalePayloads(locale, payloads); err != nil {
-			return fmt.Errorf("validate %s: %w", locale, err)
-		}
-
-		isBase := locale == baseLocale
-		if !cfg.DryRun {
-			now := time.Now().UTC()
-			if err := upsertLocale(ctx, store, locale, isBase, payloads, now); err != nil {
-				return fmt.Errorf("import %s: %w", locale, err)
-			}
+		if err := processLocale(ctx, store, dir, locale, baseLocale, cfg.DryRun, deps.nowUTC()); err != nil {
+			return err
 		}
 	}
 
@@ -143,17 +166,40 @@ func Run(ctx context.Context, cfg Config, out io.Writer) error {
 	return err
 }
 
-func openContentStoreWithRetry(ctx context.Context, dbPath string, out io.Writer) (*storagesqlite.Store, error) {
+func processLocale(ctx context.Context, store storage.DaggerheartContentStore, rootDir, locale, baseLocale string, dryRun bool, now time.Time) error {
+	localeDir := filepath.Join(rootDir, locale)
+	payloads, err := readLocalePayloads(localeDir)
+	if err != nil {
+		return fmt.Errorf("read %s: %w", locale, err)
+	}
+	if err := validateLocalePayloads(locale, payloads); err != nil {
+		return fmt.Errorf("validate %s: %w", locale, err)
+	}
+	if dryRun {
+		return nil
+	}
+
+	isBase := locale == baseLocale
+	if err := upsertLocale(ctx, store, locale, isBase, payloads, now); err != nil {
+		return fmt.Errorf("import %s: %w", locale, err)
+	}
+	return nil
+}
+
+func openContentStoreWithRetry(ctx context.Context, dbPath string, out io.Writer, openStore openContentStoreFunc) (contentStore, error) {
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if out == nil {
 		out = io.Discard
 	}
+	if openStore == nil {
+		return nil, errors.New("content store opener is required")
+	}
 
 	delay := defaultOpenRetryBaseDelay
 	for attempt := 1; attempt <= defaultOpenRetryMaxAttempts; attempt++ {
-		store, err := openContentStore(dbPath)
+		store, err := openStore(dbPath)
 		if err == nil {
 			return store, nil
 		}

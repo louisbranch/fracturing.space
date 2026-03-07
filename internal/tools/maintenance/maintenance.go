@@ -1,10 +1,9 @@
-package maintenance
-
 // Package maintenance contains event/replay tooling entrypoints for projection and
 // outbox recovery operations.
 //
 // These commands are intentionally operational (not business-critical runtime)
 // and are invoked when read model state must be reconstructed or validated.
+package maintenance
 
 import (
 	"context"
@@ -29,10 +28,26 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 )
 
-const adminReplayPageSize = 200
+const (
+	adminReplayPageSize = 200
+	defaultOutboxLimit  = 50
+)
+
+// Command identifies which maintenance operation to execute.
+type Command string
+
+const (
+	commandReplay           Command = "replay"
+	commandOutboxReport     Command = "outbox-report"
+	commandOutboxRequeue    Command = "outbox-requeue"
+	commandOutboxRequeueAll Command = "outbox-requeue-dead"
+	commandGapDetect        Command = "gap-detect"
+	commandGapRepair        Command = "gap-repair"
+)
 
 // Config holds maintenance command configuration.
 type Config struct {
+	Command                 Command
 	CampaignID              string
 	CampaignIDs             string
 	EventsDBPath            string        `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
@@ -45,16 +60,11 @@ type Config struct {
 	Integrity               bool
 	WarningsCap             int
 	JSONOutput              bool
-	OutboxReport            bool
 	OutboxStatus            string
 	OutboxLimit             int
-	OutboxRequeue           bool
-	OutboxRequeueDead       bool
 	OutboxRequeueDeadLimit  int
 	OutboxRequeueCampaignID string
 	OutboxRequeueSeq        uint64
-	GapDetect               bool
-	GapRepair               bool
 }
 
 type envConfig struct {
@@ -65,6 +75,68 @@ type envConfig struct {
 
 // ParseConfig parses flags into a Config.
 func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
+	_ = fs
+	cfg, err := defaultConfig()
+	if err != nil {
+		return Config{}, err
+	}
+	if len(args) == 0 {
+		return Config{}, fmt.Errorf("maintenance subcommand is required\n\n%s", maintenanceUsage())
+	}
+
+	command := Command(strings.TrimSpace(args[0]))
+	commandArgs := args[1:]
+	switch command {
+	case commandReplay:
+		flags := flag.NewFlagSet(string(commandReplay), flag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		bindReplayFlags(flags, &cfg)
+		if err := flags.Parse(commandArgs); err != nil {
+			return Config{}, err
+		}
+	case commandOutboxReport:
+		flags := flag.NewFlagSet(string(commandOutboxReport), flag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		bindOutboxReportFlags(flags, &cfg)
+		if err := flags.Parse(commandArgs); err != nil {
+			return Config{}, err
+		}
+	case commandOutboxRequeue:
+		flags := flag.NewFlagSet(string(commandOutboxRequeue), flag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		bindOutboxRequeueFlags(flags, &cfg)
+		if err := flags.Parse(commandArgs); err != nil {
+			return Config{}, err
+		}
+	case commandOutboxRequeueAll:
+		flags := flag.NewFlagSet(string(commandOutboxRequeueAll), flag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		bindOutboxRequeueDeadFlags(flags, &cfg)
+		if err := flags.Parse(commandArgs); err != nil {
+			return Config{}, err
+		}
+	case commandGapDetect:
+		flags := flag.NewFlagSet(string(commandGapDetect), flag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		bindGapFlags(flags, &cfg)
+		if err := flags.Parse(commandArgs); err != nil {
+			return Config{}, err
+		}
+	case commandGapRepair:
+		flags := flag.NewFlagSet(string(commandGapRepair), flag.ContinueOnError)
+		flags.SetOutput(io.Discard)
+		bindGapFlags(flags, &cfg)
+		if err := flags.Parse(commandArgs); err != nil {
+			return Config{}, err
+		}
+	default:
+		return Config{}, fmt.Errorf("unknown maintenance subcommand %q\n\n%s", command, maintenanceUsage())
+	}
+	cfg.Command = command
+	return cfg, nil
+}
+
+func defaultConfig() (Config, error) {
 	var envCfg envConfig
 	if err := env.Parse(&envCfg); err != nil {
 		return Config{}, fmt.Errorf("parse env: %w", err)
@@ -75,7 +147,6 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 		ProjectionsDBPath: envCfg.ProjectionsDBPath,
 		Timeout:           envCfg.Timeout,
 		WarningsCap:       25,
-		OutboxLimit:       50,
 	}
 	if cfg.EventsDBPath == "" {
 		cfg.EventsDBPath = filepath.Join("data", "game-events.db")
@@ -83,11 +154,13 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if cfg.ProjectionsDBPath == "" {
 		cfg.ProjectionsDBPath = filepath.Join("data", "game-projections.db")
 	}
+	return cfg, nil
+}
 
+func bindReplayFlags(fs *flag.FlagSet, cfg *Config) {
+	bindAllStoreFlags(fs, cfg)
 	fs.StringVar(&cfg.CampaignID, "campaign-id", "", "campaign ID to replay snapshot-related events")
 	fs.StringVar(&cfg.CampaignIDs, "campaign-ids", "", "comma-separated campaign IDs to replay snapshot-related events")
-	fs.StringVar(&cfg.EventsDBPath, "events-db-path", cfg.EventsDBPath, "path to events sqlite database (default: FRACTURING_SPACE_GAME_EVENTS_DB_PATH or data/game-events.db)")
-	fs.StringVar(&cfg.ProjectionsDBPath, "projections-db-path", cfg.ProjectionsDBPath, "path to projections sqlite database (default: FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH or data/game-projections.db)")
 	fs.Uint64Var(&cfg.UntilSeq, "until-seq", 0, "replay up to this event sequence (0 = latest)")
 	fs.Uint64Var(&cfg.AfterSeq, "after-seq", 0, "start replay after this event sequence")
 	fs.BoolVar(&cfg.DryRun, "dry-run", false, "scan snapshot-related events without applying projections")
@@ -95,21 +168,61 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.BoolVar(&cfg.Integrity, "integrity", false, "replay snapshot-related events into a scratch store and compare against stored projections")
 	fs.IntVar(&cfg.WarningsCap, "warnings-cap", cfg.WarningsCap, "max warnings to print (0 = no limit)")
 	fs.BoolVar(&cfg.JSONOutput, "json", false, "output JSON reports")
-	fs.BoolVar(&cfg.OutboxReport, "outbox-report", false, "report projection apply outbox depth and rows")
+}
+
+func bindOutboxReportFlags(fs *flag.FlagSet, cfg *Config) {
+	bindEventStoreFlags(fs, cfg)
+	if cfg.OutboxLimit <= 0 {
+		cfg.OutboxLimit = defaultOutboxLimit
+	}
+	fs.BoolVar(&cfg.JSONOutput, "json", false, "output JSON reports")
 	fs.StringVar(&cfg.OutboxStatus, "outbox-status", "", "optional outbox status filter (pending|processing|failed|dead)")
 	fs.IntVar(&cfg.OutboxLimit, "outbox-limit", cfg.OutboxLimit, "max outbox rows to print/list")
-	fs.BoolVar(&cfg.OutboxRequeue, "outbox-requeue", false, "requeue one dead projection apply outbox row")
-	fs.BoolVar(&cfg.OutboxRequeueDead, "outbox-requeue-dead", false, "requeue a bounded batch of dead projection apply outbox rows")
-	fs.IntVar(&cfg.OutboxRequeueDeadLimit, "outbox-requeue-dead-limit", 0, "max dead outbox rows to requeue (required with -outbox-requeue-dead)")
+}
+
+func bindOutboxRequeueFlags(fs *flag.FlagSet, cfg *Config) {
+	bindEventStoreFlags(fs, cfg)
+	fs.BoolVar(&cfg.JSONOutput, "json", false, "output JSON reports")
 	fs.StringVar(&cfg.OutboxRequeueCampaignID, "outbox-requeue-campaign-id", "", "campaign id for outbox requeue")
 	fs.Uint64Var(&cfg.OutboxRequeueSeq, "outbox-requeue-seq", 0, "event sequence for outbox requeue")
-	fs.BoolVar(&cfg.GapDetect, "gap-detect", false, "detect projection gaps (dry-run: reports gaps without repairing)")
-	fs.BoolVar(&cfg.GapRepair, "gap-repair", false, "detect and repair projection gaps by replaying missing events")
+}
+
+func bindOutboxRequeueDeadFlags(fs *flag.FlagSet, cfg *Config) {
+	bindEventStoreFlags(fs, cfg)
+	fs.BoolVar(&cfg.JSONOutput, "json", false, "output JSON reports")
+	fs.IntVar(&cfg.OutboxRequeueDeadLimit, "outbox-requeue-dead-limit", 0, "max dead outbox rows to requeue (required with -outbox-requeue-dead)")
+}
+
+func bindGapFlags(fs *flag.FlagSet, cfg *Config) {
+	bindAllStoreFlags(fs, cfg)
+	fs.BoolVar(&cfg.JSONOutput, "json", false, "output JSON reports")
+}
+
+func bindEventStoreFlags(fs *flag.FlagSet, cfg *Config) {
+	fs.StringVar(&cfg.EventsDBPath, "events-db-path", cfg.EventsDBPath, "path to events sqlite database (default: FRACTURING_SPACE_GAME_EVENTS_DB_PATH or data/game-events.db)")
 	fs.DurationVar(&cfg.Timeout, "timeout", cfg.Timeout, "overall timeout")
-	if err := fs.Parse(args); err != nil {
-		return Config{}, err
-	}
-	return cfg, nil
+}
+
+func bindAllStoreFlags(fs *flag.FlagSet, cfg *Config) {
+	bindEventStoreFlags(fs, cfg)
+	fs.StringVar(&cfg.ProjectionsDBPath, "projections-db-path", cfg.ProjectionsDBPath, "path to projections sqlite database (default: FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH or data/game-projections.db)")
+}
+
+func maintenanceUsage() string {
+	return strings.TrimSpace(`
+Usage:
+  maintenance replay [flags]
+  maintenance outbox-report [flags]
+  maintenance outbox-requeue [flags]
+  maintenance outbox-requeue-dead [flags]
+  maintenance gap-detect [flags]
+  maintenance gap-repair [flags]
+
+Examples:
+  maintenance replay -campaign-id <id> -validate
+  maintenance outbox-report -outbox-status failed -outbox-limit 50
+  maintenance gap-repair -json
+`)
 }
 
 // Run executes the maintenance command.
@@ -121,136 +234,50 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 		errOut = io.Discard
 	}
 
+	if err := validateCommandConfig(cfg); err != nil {
+		return err
+	}
+
+	switch cfg.Command {
+	case commandReplay:
+		return runReplayCommand(ctx, cfg, out, errOut)
+	case commandOutboxReport:
+		return runOutboxReportCommand(ctx, cfg, out, errOut)
+	case commandOutboxRequeue:
+		return runOutboxRequeueCommand(ctx, cfg, out, errOut)
+	case commandOutboxRequeueAll:
+		return runOutboxRequeueDeadCommand(ctx, cfg, out, errOut)
+	case commandGapDetect:
+		return runGapCommand(ctx, cfg, false, out, errOut)
+	case commandGapRepair:
+		return runGapCommand(ctx, cfg, true, out, errOut)
+	default:
+		return fmt.Errorf("unknown maintenance subcommand %q\n\n%s", cfg.Command, maintenanceUsage())
+	}
+}
+
+func validateCommandConfig(cfg Config) error {
+	switch cfg.Command {
+	case commandReplay:
+		return validateReplayConfig(cfg)
+	case commandOutboxReport:
+		return validateOutboxReportConfig(cfg)
+	case commandOutboxRequeue:
+		return validateOutboxRequeueConfig(cfg)
+	case commandOutboxRequeueAll:
+		return validateOutboxRequeueDeadConfig(cfg)
+	case commandGapDetect, commandGapRepair:
+		return validateGapConfig(cfg)
+	case "":
+		return fmt.Errorf("maintenance subcommand is required\n\n%s", maintenanceUsage())
+	default:
+		return nil
+	}
+}
+
+func validateReplayConfig(cfg Config) error {
 	if cfg.Validate {
 		cfg.DryRun = true
-	}
-	if cfg.OutboxRequeueDead {
-		if cfg.OutboxRequeue {
-			return errors.New("-outbox-requeue-dead cannot be combined with -outbox-requeue")
-		}
-		if cfg.OutboxReport {
-			return errors.New("-outbox-requeue-dead cannot be combined with -outbox-report")
-		}
-		if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
-			return errors.New("-outbox-requeue-dead cannot be combined with -campaign-id or -campaign-ids")
-		}
-		if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
-			return errors.New("-outbox-requeue-dead cannot be combined with replay/scan flags")
-		}
-		if cfg.OutboxRequeueDeadLimit <= 0 {
-			return errors.New("-outbox-requeue-dead-limit must be > 0")
-		}
-		if strings.TrimSpace(cfg.OutboxRequeueCampaignID) != "" || cfg.OutboxRequeueSeq > 0 {
-			return errors.New("-outbox-requeue-dead cannot be combined with -outbox-requeue-campaign-id or -outbox-requeue-seq")
-		}
-
-		eventStore, err := openEventStore(ctx, cfg.EventsDBPath)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if closeErr := eventStore.Close(); closeErr != nil {
-				fmt.Fprintf(errOut, "Error: close event store: %v\n", closeErr)
-			}
-		}()
-		return runOutboxRequeueDeadRows(
-			ctx,
-			eventStore,
-			cfg.OutboxRequeueDeadLimit,
-			time.Now().UTC(),
-			cfg.JSONOutput,
-			out,
-			errOut,
-		)
-	}
-	if cfg.OutboxRequeue {
-		if cfg.OutboxReport {
-			return errors.New("-outbox-requeue cannot be combined with -outbox-report")
-		}
-		if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
-			return errors.New("-outbox-requeue cannot be combined with -campaign-id or -campaign-ids")
-		}
-		if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
-			return errors.New("-outbox-requeue cannot be combined with replay/scan flags")
-		}
-		if strings.TrimSpace(cfg.OutboxRequeueCampaignID) == "" {
-			return errors.New("-outbox-requeue-campaign-id is required")
-		}
-		if cfg.OutboxRequeueSeq == 0 {
-			return errors.New("-outbox-requeue-seq must be > 0")
-		}
-
-		eventStore, err := openEventStore(ctx, cfg.EventsDBPath)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if closeErr := eventStore.Close(); closeErr != nil {
-				fmt.Fprintf(errOut, "Error: close event store: %v\n", closeErr)
-			}
-		}()
-		return runOutboxRequeue(
-			ctx,
-			eventStore,
-			cfg.OutboxRequeueCampaignID,
-			cfg.OutboxRequeueSeq,
-			time.Now().UTC(),
-			cfg.JSONOutput,
-			out,
-			errOut,
-		)
-	}
-	if cfg.OutboxReport {
-		if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
-			return errors.New("-outbox-report cannot be combined with -campaign-id or -campaign-ids")
-		}
-		if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
-			return errors.New("-outbox-report cannot be combined with replay/scan flags")
-		}
-		if cfg.OutboxLimit <= 0 {
-			return errors.New("-outbox-limit must be > 0")
-		}
-
-		eventStore, err := openEventStore(ctx, cfg.EventsDBPath)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if closeErr := eventStore.Close(); closeErr != nil {
-				fmt.Fprintf(errOut, "Error: close event store: %v\n", closeErr)
-			}
-		}()
-		return runOutboxReport(ctx, eventStore, cfg.OutboxStatus, cfg.OutboxLimit, cfg.JSONOutput, out, errOut)
-	}
-	if cfg.GapDetect || cfg.GapRepair {
-		if cfg.GapDetect && cfg.GapRepair {
-			return errors.New("-gap-detect cannot be combined with -gap-repair")
-		}
-		if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
-			return errors.New("-gap-detect/-gap-repair cannot be combined with -campaign-id or -campaign-ids")
-		}
-		if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
-			return errors.New("-gap-detect/-gap-repair cannot be combined with replay/scan flags")
-		}
-		if cfg.OutboxReport || cfg.OutboxRequeue || cfg.OutboxRequeueDead {
-			return errors.New("-gap-detect/-gap-repair cannot be combined with outbox flags")
-		}
-		eventStore, projStore, err := openStores(ctx, cfg.EventsDBPath, cfg.ProjectionsDBPath)
-		if err != nil {
-			return err
-		}
-		defer func() {
-			if closeErr := eventStore.Close(); closeErr != nil {
-				fmt.Fprintf(errOut, "Error: close event store: %v\n", closeErr)
-			}
-			if closeErr := projStore.Close(); closeErr != nil {
-				fmt.Fprintf(errOut, "Error: close projection store: %v\n", closeErr)
-			}
-		}()
-		if cfg.GapDetect {
-			return runGapDetect(ctx, eventStore, projStore, cfg.JSONOutput, out, errOut)
-		}
-		return runGapRepair(ctx, eventStore, projStore, cfg.JSONOutput, out, errOut)
 	}
 	if cfg.Integrity && (cfg.DryRun || cfg.Validate) {
 		return errors.New("-integrity cannot be combined with -dry-run or -validate")
@@ -258,20 +285,155 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 	if cfg.Integrity && cfg.AfterSeq > 0 {
 		return errors.New("-integrity does not support -after-seq; replay must start at the beginning")
 	}
-
 	if _, err := resolveCampaignIDs(cfg.CampaignID, cfg.CampaignIDs); err != nil {
 		return err
 	}
 	if cfg.WarningsCap < 0 {
 		return errors.New("-warnings-cap must be >= 0")
 	}
+	return nil
+}
 
+func validateOutboxReportConfig(cfg Config) error {
+	if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
+		return errors.New("-outbox-report cannot be combined with -campaign-id or -campaign-ids")
+	}
+	if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
+		return errors.New("-outbox-report cannot be combined with replay/scan flags")
+	}
+	if cfg.OutboxLimit <= 0 {
+		return errors.New("-outbox-limit must be > 0")
+	}
+	if cfg.OutboxRequeueDeadLimit > 0 || strings.TrimSpace(cfg.OutboxRequeueCampaignID) != "" || cfg.OutboxRequeueSeq > 0 {
+		return errors.New("-outbox-report cannot be combined with outbox requeue flags")
+	}
+	return nil
+}
+
+func validateOutboxRequeueConfig(cfg Config) error {
+	if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
+		return errors.New("-outbox-requeue cannot be combined with -campaign-id or -campaign-ids")
+	}
+	if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
+		return errors.New("-outbox-requeue cannot be combined with replay/scan flags")
+	}
+	if strings.TrimSpace(cfg.OutboxStatus) != "" || cfg.OutboxLimit > 0 {
+		return errors.New("-outbox-requeue cannot be combined with -outbox-status or -outbox-limit")
+	}
+	if strings.TrimSpace(cfg.OutboxRequeueCampaignID) == "" {
+		return errors.New("-outbox-requeue-campaign-id is required")
+	}
+	if cfg.OutboxRequeueSeq == 0 {
+		return errors.New("-outbox-requeue-seq must be > 0")
+	}
+	if cfg.OutboxRequeueDeadLimit > 0 {
+		return errors.New("-outbox-requeue cannot be combined with -outbox-requeue-dead-limit")
+	}
+	return nil
+}
+
+func validateOutboxRequeueDeadConfig(cfg Config) error {
+	if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
+		return errors.New("-outbox-requeue-dead cannot be combined with -campaign-id or -campaign-ids")
+	}
+	if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
+		return errors.New("-outbox-requeue-dead cannot be combined with replay/scan flags")
+	}
+	if strings.TrimSpace(cfg.OutboxStatus) != "" || cfg.OutboxLimit > 0 {
+		return errors.New("-outbox-requeue-dead cannot be combined with -outbox-status or -outbox-limit")
+	}
+	if cfg.OutboxRequeueDeadLimit <= 0 {
+		return errors.New("-outbox-requeue-dead-limit must be > 0")
+	}
+	if strings.TrimSpace(cfg.OutboxRequeueCampaignID) != "" || cfg.OutboxRequeueSeq > 0 {
+		return errors.New("-outbox-requeue-dead cannot be combined with -outbox-requeue-campaign-id or -outbox-requeue-seq")
+	}
+	return nil
+}
+
+func validateGapConfig(cfg Config) error {
+	if cfg.CampaignID != "" || cfg.CampaignIDs != "" {
+		return errors.New("-gap-detect/-gap-repair cannot be combined with -campaign-id or -campaign-ids")
+	}
+	if cfg.DryRun || cfg.Validate || cfg.Integrity || cfg.AfterSeq > 0 || cfg.UntilSeq > 0 {
+		return errors.New("-gap-detect/-gap-repair cannot be combined with replay/scan flags")
+	}
+	if cfg.OutboxLimit > 0 || cfg.OutboxRequeueDeadLimit > 0 || strings.TrimSpace(cfg.OutboxStatus) != "" || strings.TrimSpace(cfg.OutboxRequeueCampaignID) != "" || cfg.OutboxRequeueSeq != 0 {
+		return errors.New("-gap-detect/-gap-repair cannot be combined with outbox flags")
+	}
+	return nil
+}
+
+func runReplayCommand(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
 	eventStore, projStore, err := openStores(ctx, cfg.EventsDBPath, cfg.ProjectionsDBPath)
 	if err != nil {
 		return err
 	}
-
 	return runWithDeps(ctx, cfg, eventStore, projStore, out, errOut)
+}
+
+func runOutboxReportCommand(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
+	eventStore, err := openEventStore(ctx, cfg.EventsDBPath)
+	if err != nil {
+		return err
+	}
+	defer closeStore(errOut, "event store", eventStore)
+	return runOutboxReport(ctx, eventStore, cfg.OutboxStatus, cfg.OutboxLimit, cfg.JSONOutput, out, errOut)
+}
+
+func runOutboxRequeueCommand(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
+	eventStore, err := openEventStore(ctx, cfg.EventsDBPath)
+	if err != nil {
+		return err
+	}
+	defer closeStore(errOut, "event store", eventStore)
+	return runOutboxRequeue(
+		ctx,
+		eventStore,
+		cfg.OutboxRequeueCampaignID,
+		cfg.OutboxRequeueSeq,
+		time.Now().UTC(),
+		cfg.JSONOutput,
+		out,
+		errOut,
+	)
+}
+
+func runOutboxRequeueDeadCommand(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
+	eventStore, err := openEventStore(ctx, cfg.EventsDBPath)
+	if err != nil {
+		return err
+	}
+	defer closeStore(errOut, "event store", eventStore)
+	return runOutboxRequeueDeadRows(
+		ctx,
+		eventStore,
+		cfg.OutboxRequeueDeadLimit,
+		time.Now().UTC(),
+		cfg.JSONOutput,
+		out,
+		errOut,
+	)
+}
+
+func runGapCommand(ctx context.Context, cfg Config, repair bool, out io.Writer, errOut io.Writer) error {
+	eventStore, projStore, err := openStores(ctx, cfg.EventsDBPath, cfg.ProjectionsDBPath)
+	if err != nil {
+		return err
+	}
+	defer closeStore(errOut, "event store", eventStore)
+	defer closeStore(errOut, "projection store", projStore)
+
+	if repair {
+		return runGapRepair(ctx, eventStore, projStore, cfg.JSONOutput, out, errOut)
+	}
+	return runGapDetect(ctx, eventStore, projStore, cfg.JSONOutput, out, errOut)
+}
+
+func closeStore(errOut io.Writer, name string, store interface{ Close() error }) {
+	if err := store.Close(); err != nil {
+		fmt.Fprintf(errOut, "Error: close %s: %v\n", name, err)
+	}
 }
 
 // runWithDeps contains the core maintenance logic with injectable dependencies.

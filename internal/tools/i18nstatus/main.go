@@ -3,8 +3,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"math"
 	"os"
 	"path/filepath"
@@ -40,32 +42,79 @@ type namespaceStatus struct {
 	Completion float64 `json:"completion"`
 }
 
+type codedError struct {
+	code int
+	err  error
+}
+
+func (e codedError) Error() string {
+	return e.err.Error()
+}
+
+func (e codedError) Unwrap() error {
+	return e.err
+}
+
+func withExitCode(err error, code int) error {
+	if err == nil {
+		return nil
+	}
+	return codedError{code: code, err: err}
+}
+
+func exitCode(err error) int {
+	var codeErr codedError
+	if errors.As(err, &codeErr) {
+		return codeErr.code
+	}
+	return 1
+}
+
 func main() {
+	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
+		os.Exit(exitCode(err))
+	}
+}
+
+func run(args []string, stdout, stderr io.Writer) error {
 	var baseLocale string
 	var markdownOut string
 	var jsonOut string
 
-	flag.StringVar(&baseLocale, "base-locale", i18ncatalog.BaseLocale, "base locale used as translation source of truth")
-	flag.StringVar(&markdownOut, "out", "docs/reference/i18n-status.md", "markdown output path")
-	flag.StringVar(&jsonOut, "json-out", "docs/reference/i18n-status.json", "json output path")
-	flag.Parse()
+	flags := flag.NewFlagSet("i18nstatus", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	flags.StringVar(&baseLocale, "base-locale", i18ncatalog.BaseLocale, "base locale used as translation source of truth")
+	flags.StringVar(&markdownOut, "out", "docs/reference/i18n-status.md", "markdown output path")
+	flags.StringVar(&jsonOut, "json-out", "docs/reference/i18n-status.json", "json output path")
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return withExitCode(err, 2)
+	}
 
 	bundle, err := i18ncatalog.LoadEmbedded()
 	if err != nil {
-		fatalf("load i18n catalogs: %v", err)
+		fmt.Fprintf(stderr, "load i18n catalogs: %v\n", err)
+		return withExitCode(err, 1)
 	}
 	if !bundle.HasLocale(baseLocale) {
-		fatalf("base locale %q is missing from catalogs", baseLocale)
+		err := fmt.Errorf("base locale %q is missing from catalogs", baseLocale)
+		fmt.Fprintf(stderr, "%v\n", err)
+		return withExitCode(err, 1)
 	}
 
 	rep := buildReport(bundle, baseLocale)
 	if err := writeJSON(jsonOut, rep); err != nil {
-		fatalf("write json report: %v", err)
+		fmt.Fprintf(stderr, "write json report: %v\n", err)
+		return withExitCode(err, 1)
 	}
 	if err := writeMarkdown(markdownOut, rep); err != nil {
-		fatalf("write markdown report: %v", err)
+		fmt.Fprintf(stderr, "write markdown report: %v\n", err)
+		return withExitCode(err, 1)
 	}
-	fmt.Printf("wrote %s and %s\n", markdownOut, jsonOut)
+	fmt.Fprintf(stdout, "wrote %s and %s\n", markdownOut, jsonOut)
+	return nil
 }
 
 func buildReport(bundle *i18ncatalog.Bundle, baseLocale string) report {
@@ -243,9 +292,4 @@ func percent(numerator int, denominator int) float64 {
 	}
 	value := float64(numerator) * 100 / float64(denominator)
 	return math.Round(value*10) / 10
-}
-
-func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(1)
 }

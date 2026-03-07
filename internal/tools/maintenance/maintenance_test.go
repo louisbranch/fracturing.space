@@ -110,7 +110,7 @@ func TestCapWarnings(t *testing.T) {
 
 func TestParseConfigDefaults(t *testing.T) {
 	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, nil)
+	cfg, err := ParseConfig(fs, []string{"replay"})
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
@@ -129,7 +129,7 @@ func TestParseConfigIgnoresUntaggedEnv(t *testing.T) {
 	t.Setenv("CAMPAIGNID", "c1")
 
 	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, nil)
+	cfg, err := ParseConfig(fs, []string{"replay"})
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
@@ -144,6 +144,7 @@ func TestParseConfigOverrides(t *testing.T) {
 
 	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
 	args := []string{
+		"replay",
 		"-events-db-path", "flag-events",
 		"-projections-db-path", "flag-projections",
 		"-warnings-cap", "5",
@@ -166,7 +167,7 @@ func TestParseConfigOverrides(t *testing.T) {
 func TestParseConfigOutboxFlags(t *testing.T) {
 	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
 	args := []string{
-		"-outbox-report",
+		"outbox-report",
 		"-outbox-status", "failed",
 		"-outbox-limit", "7",
 	}
@@ -174,8 +175,8 @@ func TestParseConfigOutboxFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
-	if !cfg.OutboxReport {
-		t.Fatal("expected outbox report mode to be enabled")
+	if cfg.Command != commandOutboxReport {
+		t.Fatalf("expected command %q, got %q", commandOutboxReport, cfg.Command)
 	}
 	if cfg.OutboxStatus != "failed" {
 		t.Fatalf("expected failed status filter, got %q", cfg.OutboxStatus)
@@ -188,7 +189,7 @@ func TestParseConfigOutboxFlags(t *testing.T) {
 func TestParseConfigOutboxRequeueFlags(t *testing.T) {
 	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
 	args := []string{
-		"-outbox-requeue",
+		"outbox-requeue",
 		"-outbox-requeue-campaign-id", "camp-1",
 		"-outbox-requeue-seq", "9",
 	}
@@ -196,8 +197,8 @@ func TestParseConfigOutboxRequeueFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
-	if !cfg.OutboxRequeue {
-		t.Fatal("expected outbox requeue mode to be enabled")
+	if cfg.Command != commandOutboxRequeue {
+		t.Fatalf("expected command %q, got %q", commandOutboxRequeue, cfg.Command)
 	}
 	if cfg.OutboxRequeueCampaignID != "camp-1" {
 		t.Fatalf("expected outbox requeue campaign id camp-1, got %q", cfg.OutboxRequeueCampaignID)
@@ -210,18 +211,40 @@ func TestParseConfigOutboxRequeueFlags(t *testing.T) {
 func TestParseConfigOutboxRequeueDeadFlags(t *testing.T) {
 	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
 	args := []string{
-		"-outbox-requeue-dead",
+		"outbox-requeue-dead",
 		"-outbox-requeue-dead-limit", "25",
 	}
 	cfg, err := ParseConfig(fs, args)
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
 	}
-	if !cfg.OutboxRequeueDead {
-		t.Fatal("expected outbox requeue dead mode to be enabled")
+	if cfg.Command != commandOutboxRequeueAll {
+		t.Fatalf("expected command %q, got %q", commandOutboxRequeueAll, cfg.Command)
 	}
 	if cfg.OutboxRequeueDeadLimit != 25 {
 		t.Fatalf("expected outbox requeue dead limit 25, got %d", cfg.OutboxRequeueDeadLimit)
+	}
+}
+
+func TestParseConfigRequiresSubcommand(t *testing.T) {
+	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
+	_, err := ParseConfig(fs, nil)
+	if err == nil {
+		t.Fatal("expected error when subcommand is missing")
+	}
+	if !strings.Contains(err.Error(), "maintenance subcommand is required") {
+		t.Fatalf("expected missing subcommand error, got %v", err)
+	}
+}
+
+func TestParseConfigRejectsUnknownSubcommand(t *testing.T) {
+	fs := flag.NewFlagSet("maintenance", flag.ContinueOnError)
+	_, err := ParseConfig(fs, []string{"unknown"})
+	if err == nil {
+		t.Fatal("expected error for unknown subcommand")
+	}
+	if !strings.Contains(err.Error(), `unknown maintenance subcommand "unknown"`) {
+		t.Fatalf("expected unknown subcommand error, got %v", err)
 	}
 }
 
@@ -333,7 +356,7 @@ func TestRunOutboxReportModeNoCampaignIDs(t *testing.T) {
 	}
 
 	cfg := Config{
-		OutboxReport: true,
+		Command:      commandOutboxReport,
 		OutboxLimit:  10,
 		EventsDBPath: eventsPath,
 	}
@@ -356,9 +379,9 @@ func TestRunOutboxReportModeNoCampaignIDs(t *testing.T) {
 func TestRunOutboxReportValidationErrors(t *testing.T) {
 	t.Run("campaign id conflict", func(t *testing.T) {
 		cfg := Config{
-			CampaignID:   "camp-1",
-			OutboxReport: true,
-			OutboxLimit:  10,
+			Command:     commandOutboxReport,
+			CampaignID:  "camp-1",
+			OutboxLimit: 10,
 		}
 		err := Run(t.Context(), cfg, nil, nil)
 		if err == nil || !strings.Contains(err.Error(), "-outbox-report cannot be combined with -campaign-id or -campaign-ids") {
@@ -368,8 +391,8 @@ func TestRunOutboxReportValidationErrors(t *testing.T) {
 
 	t.Run("invalid outbox limit", func(t *testing.T) {
 		cfg := Config{
-			OutboxReport: true,
-			OutboxLimit:  0,
+			Command:     commandOutboxReport,
+			OutboxLimit: 0,
 		}
 		err := Run(t.Context(), cfg, nil, nil)
 		if err == nil || !strings.Contains(err.Error(), "-outbox-limit must be > 0") {
@@ -403,9 +426,9 @@ func TestRunOutboxReportHelperErrors(t *testing.T) {
 
 func TestRunOutboxReportValidationReplayFlagConflict(t *testing.T) {
 	cfg := Config{
-		OutboxReport: true,
-		OutboxLimit:  10,
-		DryRun:       true,
+		Command:     commandOutboxReport,
+		OutboxLimit: 10,
+		DryRun:      true,
 	}
 	err := Run(t.Context(), cfg, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "-outbox-report cannot be combined with replay/scan flags") {
@@ -466,7 +489,7 @@ func TestRunOutboxRequeueModeRequeuesDeadRow(t *testing.T) {
 	}
 
 	cfg := Config{
-		OutboxRequeue:           true,
+		Command:                 commandOutboxRequeue,
 		OutboxRequeueCampaignID: stored.CampaignID,
 		OutboxRequeueSeq:        stored.Seq,
 		EventsDBPath:            eventsPath,
@@ -569,7 +592,7 @@ func TestRunOutboxRequeueDeadModeRequeuesRows(t *testing.T) {
 	markDead(storedC.CampaignID, storedC.Seq, time.Date(2026, 2, 16, 13, 3, 0, 0, time.UTC))
 
 	cfg := Config{
-		OutboxRequeueDead:      true,
+		Command:                commandOutboxRequeueAll,
 		OutboxRequeueDeadLimit: 2,
 		EventsDBPath:           eventsPath,
 	}
@@ -610,7 +633,7 @@ func TestRunOutboxRequeueDeadModeRequeuesRows(t *testing.T) {
 func TestRunOutboxRequeueValidationErrors(t *testing.T) {
 	t.Run("missing campaign id", func(t *testing.T) {
 		cfg := Config{
-			OutboxRequeue:    true,
+			Command:          commandOutboxRequeue,
 			OutboxRequeueSeq: 1,
 		}
 		err := Run(t.Context(), cfg, nil, nil)
@@ -621,7 +644,7 @@ func TestRunOutboxRequeueValidationErrors(t *testing.T) {
 
 	t.Run("missing seq", func(t *testing.T) {
 		cfg := Config{
-			OutboxRequeue:           true,
+			Command:                 commandOutboxRequeue,
 			OutboxRequeueCampaignID: "camp-1",
 		}
 		err := Run(t.Context(), cfg, nil, nil)
@@ -632,20 +655,20 @@ func TestRunOutboxRequeueValidationErrors(t *testing.T) {
 
 	t.Run("conflict with outbox report", func(t *testing.T) {
 		cfg := Config{
-			OutboxRequeue:           true,
+			Command:                 commandOutboxRequeue,
 			OutboxRequeueCampaignID: "camp-1",
 			OutboxRequeueSeq:        1,
-			OutboxReport:            true,
+			OutboxStatus:            "failed",
 		}
 		err := Run(t.Context(), cfg, nil, nil)
-		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue cannot be combined with -outbox-report") {
+		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue cannot be combined with -outbox-status or -outbox-limit") {
 			t.Fatalf("expected outbox mode conflict error, got %v", err)
 		}
 	})
 
 	t.Run("conflict with replay flags", func(t *testing.T) {
 		cfg := Config{
-			OutboxRequeue:           true,
+			Command:                 commandOutboxRequeue,
 			OutboxRequeueCampaignID: "camp-1",
 			OutboxRequeueSeq:        1,
 			DryRun:                  true,
@@ -660,7 +683,7 @@ func TestRunOutboxRequeueValidationErrors(t *testing.T) {
 func TestRunOutboxRequeueDeadValidationErrors(t *testing.T) {
 	t.Run("missing limit", func(t *testing.T) {
 		cfg := Config{
-			OutboxRequeueDead: true,
+			Command: commandOutboxRequeueAll,
 		}
 		err := Run(t.Context(), cfg, nil, nil)
 		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue-dead-limit must be > 0") {
@@ -670,19 +693,19 @@ func TestRunOutboxRequeueDeadValidationErrors(t *testing.T) {
 
 	t.Run("conflict with outbox requeue", func(t *testing.T) {
 		cfg := Config{
-			OutboxRequeueDead:      true,
-			OutboxRequeueDeadLimit: 5,
-			OutboxRequeue:          true,
+			Command:                 commandOutboxRequeueAll,
+			OutboxRequeueDeadLimit:  5,
+			OutboxRequeueCampaignID: "camp-1",
 		}
 		err := Run(t.Context(), cfg, nil, nil)
-		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue-dead cannot be combined with -outbox-requeue") {
+		if err == nil || !strings.Contains(err.Error(), "-outbox-requeue-dead cannot be combined with -outbox-requeue-campaign-id or -outbox-requeue-seq") {
 			t.Fatalf("expected outbox requeue conflict error, got %v", err)
 		}
 	})
 
 	t.Run("conflict with replay flags", func(t *testing.T) {
 		cfg := Config{
-			OutboxRequeueDead:      true,
+			Command:                commandOutboxRequeueAll,
 			OutboxRequeueDeadLimit: 5,
 			DryRun:                 true,
 		}
@@ -977,6 +1000,7 @@ func TestPrintResult(t *testing.T) {
 func TestRunValidationErrors(t *testing.T) {
 	t.Run("integrity with dry-run", func(t *testing.T) {
 		cfg := Config{
+			Command:    commandReplay,
 			CampaignID: "c1",
 			Integrity:  true,
 			DryRun:     true,
@@ -989,6 +1013,7 @@ func TestRunValidationErrors(t *testing.T) {
 
 	t.Run("integrity with validate", func(t *testing.T) {
 		cfg := Config{
+			Command:    commandReplay,
 			CampaignID: "c1",
 			Integrity:  true,
 			Validate:   true,
@@ -1001,6 +1026,7 @@ func TestRunValidationErrors(t *testing.T) {
 
 	t.Run("integrity with after-seq", func(t *testing.T) {
 		cfg := Config{
+			Command:    commandReplay,
 			CampaignID: "c1",
 			Integrity:  true,
 			AfterSeq:   10,
@@ -1012,7 +1038,7 @@ func TestRunValidationErrors(t *testing.T) {
 	})
 
 	t.Run("no campaign IDs", func(t *testing.T) {
-		cfg := Config{}
+		cfg := Config{Command: commandReplay}
 		err := Run(t.Context(), cfg, nil, nil)
 		if err == nil {
 			t.Fatal("expected error for no campaign IDs")
@@ -1021,6 +1047,7 @@ func TestRunValidationErrors(t *testing.T) {
 
 	t.Run("negative warnings cap", func(t *testing.T) {
 		cfg := Config{
+			Command:     commandReplay,
 			CampaignID:  "c1",
 			WarningsCap: -1,
 		}
@@ -1679,22 +1706,22 @@ func TestRunGapDetect_NoGaps(t *testing.T) {
 
 func TestParseConfig_GapDetect(t *testing.T) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, []string{"-gap-detect"})
+	cfg, err := ParseConfig(fs, []string{"gap-detect"})
 	if err != nil {
 		t.Fatalf("ParseConfig: %v", err)
 	}
-	if !cfg.GapDetect {
-		t.Fatal("expected GapDetect to be true")
+	if cfg.Command != commandGapDetect {
+		t.Fatalf("expected command %q, got %q", commandGapDetect, cfg.Command)
 	}
 }
 
 func TestParseConfig_GapRepair(t *testing.T) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, []string{"-gap-repair"})
+	cfg, err := ParseConfig(fs, []string{"gap-repair"})
 	if err != nil {
 		t.Fatalf("ParseConfig: %v", err)
 	}
-	if !cfg.GapRepair {
-		t.Fatal("expected GapRepair to be true")
+	if cfg.Command != commandGapRepair {
+		t.Fatalf("expected command %q, got %q", commandGapRepair, cfg.Command)
 	}
 }

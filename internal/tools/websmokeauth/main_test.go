@@ -1,6 +1,10 @@
 package main
 
-import "testing"
+import (
+	"bytes"
+	"strings"
+	"testing"
+)
 
 func TestSanitizeEmailPrefix(t *testing.T) {
 	t.Parallel()
@@ -26,5 +30,73 @@ func TestSanitizeEmailPrefix(t *testing.T) {
 				t.Fatalf("sanitizeEmailPrefix(%q) = %q, want %q", tc.input, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestRunAuthAddrRequired(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run([]string{"-auth-addr", "   "}, &stdout, &stderr)
+	if got := exitCode(err); got != 1 {
+		t.Fatalf("exitCode(run) = %d, want 1 (err=%v)", got, err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "websmokeauth: auth address is required") {
+		t.Fatalf("stderr = %q, want auth address message", stderr.String())
+	}
+}
+
+func TestRunTTLMustBePositive(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run([]string{"-ttl-seconds", "0"}, &stdout, &stderr)
+	if got := exitCode(err); got != 1 {
+		t.Fatalf("exitCode(run) = %d, want 1 (err=%v)", got, err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "websmokeauth: ttl-seconds must be > 0") {
+		t.Fatalf("stderr = %q, want ttl validation message", stderr.String())
+	}
+}
+
+func TestRunTimeoutMustBePositive(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run([]string{"-timeout", "0s"}, &stdout, &stderr)
+	if got := exitCode(err); got != 1 {
+		t.Fatalf("exitCode(run) = %d, want 1 (err=%v)", got, err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "websmokeauth: timeout must be > 0") {
+		t.Fatalf("stderr = %q, want timeout validation message", stderr.String())
+	}
+}
+
+func TestRunUnknownFlag(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run([]string{"-unknown"}, &stdout, &stderr)
+	if got := exitCode(err); got != 2 {
+		t.Fatalf("exitCode(run) = %d, want 2 (err=%v)", got, err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "flag provided but not defined") {
+		t.Fatalf("stderr = %q, want flag parse error", stderr.String())
 	}
 }

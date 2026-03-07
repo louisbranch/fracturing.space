@@ -14,12 +14,19 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-var (
-	createSeedUserFn = createSeedUser
-	startMCPClient   = func(ctx context.Context, repoRoot, grpcAddr string) (mcpClient, error) {
-		return StartMCPClient(ctx, repoRoot, grpcAddr)
+type runDeps struct {
+	startMCPClient func(ctx context.Context, repoRoot, grpcAddr string) (mcpClient, error)
+	createSeedUser func(ctx context.Context, authAddr string) (string, error)
+}
+
+func defaultRunDeps() runDeps {
+	return runDeps{
+		startMCPClient: func(ctx context.Context, repoRoot, grpcAddr string) (mcpClient, error) {
+			return StartMCPClient(ctx, repoRoot, grpcAddr)
+		},
+		createSeedUser: createSeedUser,
 	}
-)
+}
 
 // Config holds seed runner configuration.
 type Config struct {
@@ -42,6 +49,17 @@ func DefaultConfig() Config {
 
 // Run executes seed scenarios against the MCP server.
 func Run(ctx context.Context, cfg Config) error {
+	return runWithDeps(ctx, cfg, defaultRunDeps())
+}
+
+func runWithDeps(ctx context.Context, cfg Config, deps runDeps) error {
+	if deps.startMCPClient == nil {
+		return fmt.Errorf("MCP client starter is required")
+	}
+	if deps.createSeedUser == nil {
+		return fmt.Errorf("seed user creator is required")
+	}
+
 	fixturesPath := filepath.Join(cfg.RepoRoot, cfg.FixturesDir, "*.json")
 	if cfg.Scenario != "" {
 		fixturesPath = filepath.Join(cfg.RepoRoot, cfg.FixturesDir, cfg.Scenario+".json")
@@ -56,7 +74,7 @@ func Run(ctx context.Context, cfg Config) error {
 		fmt.Fprintf(os.Stderr, "Loaded %d fixture(s)\n", len(fixtures))
 	}
 
-	client, err := startMCPClient(ctx, cfg.RepoRoot, cfg.GRPCAddr)
+	client, err := deps.startMCPClient(ctx, cfg.RepoRoot, cfg.GRPCAddr)
 	if err != nil {
 		return fmt.Errorf("start MCP client: %w", err)
 	}
@@ -66,7 +84,7 @@ func Run(ctx context.Context, cfg Config) error {
 	if authAddr == "" {
 		return fmt.Errorf("auth server address is required")
 	}
-	userID, err := createSeedUserFn(ctx, authAddr)
+	userID, err := deps.createSeedUser(ctx, authAddr)
 	if err != nil {
 		return err
 	}

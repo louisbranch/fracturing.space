@@ -1,9 +1,12 @@
+// Package main bootstraps auth users and session ids for web smoke workflows.
 package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"time"
@@ -23,15 +26,27 @@ type config struct {
 }
 
 func main() {
-	cfg := parseConfig()
+	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
+		os.Exit(exitCode(err))
+	}
+}
+
+func run(args []string, stdout, stderr io.Writer) error {
+	cfg, err := parseConfig(args, stderr)
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return &exitError{code: 2, err: err}
+	}
 	if strings.TrimSpace(cfg.authAddr) == "" {
-		fatalf("auth address is required")
+		return failf(stderr, 1, "auth address is required")
 	}
 	if cfg.ttlSeconds <= 0 {
-		fatalf("ttl-seconds must be > 0")
+		return failf(stderr, 1, "ttl-seconds must be > 0")
 	}
 	if cfg.requestTimeout <= 0 {
-		fatalf("timeout must be > 0")
+		return failf(stderr, 1, "timeout must be > 0")
 	}
 
 	email := strings.TrimSpace(cfg.email)
@@ -48,45 +63,56 @@ func main() {
 		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
 	)
 	if err != nil {
-		fatalf("dial auth %q: %v", cfg.authAddr, err)
+		return failf(stderr, 1, "dial auth %q: %v", cfg.authAddr, err)
 	}
 	defer conn.Close()
 
 	client := authv1.NewAuthServiceClient(conn)
-	userID := createUserID(ctx, client, email)
+	userID, err := createUserID(ctx, client, email)
+	if err != nil {
+		return failf(stderr, 1, "%v", err)
+	}
 	recipientEmail := generatedEmail(sanitizeEmailPrefix(cfg.emailPrefix) + "-recipient")
-	recipientUserID := createUserID(ctx, client, recipientEmail)
+	recipientUserID, err := createUserID(ctx, client, recipientEmail)
+	if err != nil {
+		return failf(stderr, 1, "%v", err)
+	}
 
 	createSessionResp, err := client.CreateWebSession(ctx, &authv1.CreateWebSessionRequest{
 		UserId:     userID,
 		TtlSeconds: cfg.ttlSeconds,
 	})
 	if err != nil {
-		fatalf("create web session for user %q: %v", userID, err)
+		return failf(stderr, 1, "create web session for user %q: %v", userID, err)
 	}
 
 	sessionID := strings.TrimSpace(createSessionResp.GetSession().GetId())
 	if sessionID == "" {
-		fatalf("create web session for user %q: missing session id", userID)
+		return failf(stderr, 1, "create web session for user %q: missing session id", userID)
 	}
 
-	fmt.Printf("WEB_SMOKE_AUTH_EMAIL=%s\n", email)
-	fmt.Printf("WEB_SMOKE_USER_ID=%s\n", userID)
-	fmt.Printf("WEB_SMOKE_AUTH_RECIPIENT_EMAIL=%s\n", recipientEmail)
-	fmt.Printf("WEB_SMOKE_RECIPIENT_USER_ID=%s\n", recipientUserID)
-	fmt.Printf("WEB_SMOKE_SESSION_ID=%s\n", sessionID)
+	fmt.Fprintf(stdout, "WEB_SMOKE_AUTH_EMAIL=%s\n", email)
+	fmt.Fprintf(stdout, "WEB_SMOKE_USER_ID=%s\n", userID)
+	fmt.Fprintf(stdout, "WEB_SMOKE_AUTH_RECIPIENT_EMAIL=%s\n", recipientEmail)
+	fmt.Fprintf(stdout, "WEB_SMOKE_RECIPIENT_USER_ID=%s\n", recipientUserID)
+	fmt.Fprintf(stdout, "WEB_SMOKE_SESSION_ID=%s\n", sessionID)
+	return nil
 }
 
 // parseConfig parses CLI flags into a config.
-func parseConfig() config {
+func parseConfig(args []string, stderr io.Writer) (config, error) {
 	var cfg config
-	flag.StringVar(&cfg.authAddr, "auth-addr", "127.0.0.1:8083", "auth gRPC address")
-	flag.StringVar(&cfg.email, "email", "", "explicit email to create (optional)")
-	flag.StringVar(&cfg.emailPrefix, "email-prefix", "web-smoke", "generated email prefix when -email is empty")
-	flag.Int64Var(&cfg.ttlSeconds, "ttl-seconds", 3600, "web session ttl in seconds")
-	flag.DurationVar(&cfg.requestTimeout, "timeout", 10*time.Second, "request timeout for auth RPC calls")
-	flag.Parse()
-	return cfg
+	fs := flag.NewFlagSet("websmokeauth", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	fs.StringVar(&cfg.authAddr, "auth-addr", "127.0.0.1:8083", "auth gRPC address")
+	fs.StringVar(&cfg.email, "email", "", "explicit email to create (optional)")
+	fs.StringVar(&cfg.emailPrefix, "email-prefix", "web-smoke", "generated email prefix when -email is empty")
+	fs.Int64Var(&cfg.ttlSeconds, "ttl-seconds", 3600, "web session ttl in seconds")
+	fs.DurationVar(&cfg.requestTimeout, "timeout", 10*time.Second, "request timeout for auth RPC calls")
+	if err := fs.Parse(args); err != nil {
+		return config{}, err
+	}
+	return cfg, nil
 }
 
 // sanitizeEmailPrefix normalizes arbitrary prefixes into a safe local-part stem.
@@ -121,19 +147,51 @@ func generatedEmail(prefix string) string {
 	return fmt.Sprintf("%s-%d@example.com", prefix, time.Now().UTC().UnixNano())
 }
 
-func createUserID(ctx context.Context, client authv1.AuthServiceClient, email string) string {
+func createUserID(ctx context.Context, client authv1.AuthServiceClient, email string) (string, error) {
 	createUserResp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{Email: email})
 	if err != nil {
-		fatalf("create auth user %q: %v", email, err)
+		return "", fmt.Errorf("create auth user %q: %w", email, err)
 	}
 	userID := strings.TrimSpace(createUserResp.GetUser().GetId())
 	if userID == "" {
-		fatalf("create auth user %q: missing user id", email)
+		return "", fmt.Errorf("create auth user %q: missing user id", email)
 	}
-	return userID
+	return userID, nil
 }
 
-func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "websmokeauth: "+format+"\n", args...)
-	os.Exit(1)
+type exitError struct {
+	code int
+	err  error
+}
+
+func (e *exitError) Error() string {
+	if e.err != nil {
+		return e.err.Error()
+	}
+	return fmt.Sprintf("exit code %d", e.code)
+}
+
+func (e *exitError) Unwrap() error {
+	return e.err
+}
+
+func (e *exitError) ExitCode() int {
+	return e.code
+}
+
+func exitCode(err error) int {
+	if err == nil {
+		return 0
+	}
+	var coded interface{ ExitCode() int }
+	if errors.As(err, &coded) {
+		return coded.ExitCode()
+	}
+	return 1
+}
+
+func failf(stderr io.Writer, code int, format string, args ...any) error {
+	msg := fmt.Sprintf(format, args...)
+	fmt.Fprintf(stderr, "websmokeauth: %s\n", msg)
+	return &exitError{code: code, err: errors.New(msg)}
 }

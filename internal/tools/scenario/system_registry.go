@@ -27,99 +27,9 @@ type scenarioSystemRegistration struct {
 	characterNeedsReadiness  systemCharacterNeedsReadinessRunner
 }
 
-var scenarioSystemRegistry = map[string]scenarioSystemRegistration{
-	"DAGGERHEART": {
-		id:         "DAGGERHEART",
-		gameSystem: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		dslMethods: daggerheartSystemMethods,
-		stepKinds:  daggerheartSystemStepKinds,
-	},
-}
-
-var daggerheartSystemMethods = []lua.RegistryFunction{
-	{Name: "adversary", Function: scenarioAdversary},
-	{Name: "gm_fear", Function: scenarioGMFear},
-	{Name: "reaction", Function: scenarioReaction},
-	{Name: "group_reaction", Function: scenarioGroupReaction},
-	{Name: "attack", Function: scenarioAttack},
-	{Name: "multi_attack", Function: scenarioMultiAttack},
-	{Name: "combined_damage", Function: scenarioCombinedDamage},
-	{Name: "adversary_attack", Function: scenarioAdversaryAttack},
-	{Name: "adversary_reaction", Function: scenarioAdversaryReaction},
-	{Name: "adversary_update", Function: scenarioAdversaryUpdate},
-	{Name: "apply_condition", Function: scenarioApplyCondition},
-	{Name: "gm_spend_fear", Function: scenarioGMSpendFear},
-	{Name: "group_action", Function: scenarioGroupAction},
-	{Name: "tag_team", Function: scenarioTagTeam},
-	{Name: "temporary_armor", Function: scenarioTemporaryArmor},
-	{Name: "rest", Function: scenarioRest},
-	{Name: "downtime_move", Function: scenarioDowntimeMove},
-	{Name: "death_move", Function: scenarioDeathMove},
-	{Name: "blaze_of_glory", Function: scenarioBlazeOfGlory},
-	{Name: "swap_loadout", Function: scenarioSwapLoadout},
-	{Name: "countdown_create", Function: scenarioCountdownCreate},
-	{Name: "countdown_update", Function: scenarioCountdownUpdate},
-	{Name: "countdown_delete", Function: scenarioCountdownDelete},
-	{Name: "action_roll", Function: scenarioActionRoll},
-	{Name: "reaction_roll", Function: scenarioReactionRoll},
-	{Name: "damage_roll", Function: scenarioDamageRoll},
-	{Name: "adversary_attack_roll", Function: scenarioAdversaryAttackRoll},
-	{Name: "apply_roll_outcome", Function: scenarioApplyRollOutcome},
-	{Name: "apply_attack_outcome", Function: scenarioApplyAttackOutcome},
-	{Name: "apply_adversary_attack_outcome", Function: scenarioApplyAdversaryAttackOutcome},
-	{Name: "apply_reaction_outcome", Function: scenarioApplyReactionOutcome},
-	{Name: "mitigate_damage", Function: scenarioMitigateDamage},
-	{Name: "level_up", Function: scenarioLevelUp},
-	{Name: "update_gold", Function: scenarioUpdateGold},
-	{Name: "acquire_domain_card", Function: scenarioAcquireDomainCard},
-	{Name: "swap_equipment", Function: scenarioSwapEquipment},
-	{Name: "use_consumable", Function: scenarioUseConsumable},
-	{Name: "acquire_consumable", Function: scenarioAcquireConsumable},
-}
-
-var daggerheartSystemStepKinds = map[string]struct{}{
-	"adversary":                      {},
-	"gm_fear":                        {},
-	"reaction":                       {},
-	"group_reaction":                 {},
-	"gm_spend_fear":                  {},
-	"apply_condition":                {},
-	"group_action":                   {},
-	"tag_team":                       {},
-	"temporary_armor":                {},
-	"rest":                           {},
-	"downtime_move":                  {},
-	"death_move":                     {},
-	"blaze_of_glory":                 {},
-	"attack":                         {},
-	"multi_attack":                   {},
-	"combined_damage":                {},
-	"adversary_attack":               {},
-	"adversary_reaction":             {},
-	"adversary_update":               {},
-	"swap_loadout":                   {},
-	"countdown_create":               {},
-	"countdown_update":               {},
-	"countdown_delete":               {},
-	"action_roll":                    {},
-	"reaction_roll":                  {},
-	"damage_roll":                    {},
-	"adversary_attack_roll":          {},
-	"apply_roll_outcome":             {},
-	"apply_attack_outcome":           {},
-	"apply_adversary_attack_outcome": {},
-	"apply_reaction_outcome":         {},
-	"mitigate_damage":                {},
-	"level_up":                       {},
-	"update_gold":                    {},
-	"acquire_domain_card":            {},
-	"swap_equipment":                 {},
-	"use_consumable":                 {},
-	"acquire_consumable":             {},
-}
-
 var (
 	scenarioSystemRegistryOnce       sync.Once
+	scenarioSystemRegistryInitErr    error
 	scenarioSystemIDsSorted          []string
 	scenarioSystemByID               map[string]scenarioSystemRegistration
 	scenarioSystemByGameSystem       map[commonv1.GameSystem]scenarioSystemRegistration
@@ -140,14 +50,16 @@ func indexScenarioSystemRegistry() {
 				continue
 			}
 			if _, exists := normalizedRegistry[normalizedID]; exists {
-				panic(fmt.Sprintf("invalid scenario system registry: duplicate key %q after normalization", normalizedID))
+				scenarioSystemRegistryInitErr = fmt.Errorf("duplicate key %q after normalization", normalizedID)
+				return
 			}
 			registration = bindScenarioSystemRuntimeHooks(registration)
 			normalizedRegistry[normalizedID] = registration
 			ids = append(ids, normalizedID)
 		}
 		if err := validateScenarioSystemRegistry(normalizedRegistry); err != nil {
-			panic(fmt.Sprintf("invalid scenario system registry: %v", err))
+			scenarioSystemRegistryInitErr = err
+			return
 		}
 		sort.Strings(ids)
 		scenarioSystemIDsSorted = ids
@@ -188,43 +100,66 @@ func indexScenarioSystemRegistry() {
 	})
 }
 
-func registeredScenarioSystemIDs() []string {
+func ensureScenarioSystemRegistry() error {
 	indexScenarioSystemRegistry()
+	if scenarioSystemRegistryInitErr != nil {
+		return fmt.Errorf("invalid scenario system registry: %w", scenarioSystemRegistryInitErr)
+	}
+	return nil
+}
+
+func registeredScenarioSystemIDs() []string {
+	if err := ensureScenarioSystemRegistry(); err != nil {
+		return nil
+	}
 	return append([]string(nil), scenarioSystemIDsSorted...)
 }
 
 func registeredScenarioSystemMethods() []lua.RegistryFunction {
-	indexScenarioSystemRegistry()
+	if err := ensureScenarioSystemRegistry(); err != nil {
+		return nil
+	}
 	return append([]lua.RegistryFunction(nil), scenarioSystemHandleMethods...)
 }
 
-func scenarioSystemForID(systemID string) (scenarioSystemRegistration, bool) {
-	indexScenarioSystemRegistry()
+func scenarioSystemForID(systemID string) (scenarioSystemRegistration, bool, error) {
+	if err := ensureScenarioSystemRegistry(); err != nil {
+		return scenarioSystemRegistration{}, false, err
+	}
 	normalized := strings.ToUpper(strings.TrimSpace(systemID))
 	registration, ok := scenarioSystemByID[normalized]
-	return registration, ok
+	return registration, ok, nil
 }
 
-func scenarioSystemForGameSystem(system commonv1.GameSystem) (scenarioSystemRegistration, bool) {
-	indexScenarioSystemRegistry()
+func scenarioSystemForGameSystem(system commonv1.GameSystem) (scenarioSystemRegistration, bool, error) {
+	if err := ensureScenarioSystemRegistry(); err != nil {
+		return scenarioSystemRegistration{}, false, err
+	}
 	registration, ok := scenarioSystemByGameSystem[system]
-	return registration, ok
+	return registration, ok, nil
 }
 
-func isKnownScenarioSystemStepKind(stepKind string) bool {
-	indexScenarioSystemRegistry()
+func isKnownScenarioSystemStepKind(stepKind string) (bool, error) {
+	if err := ensureScenarioSystemRegistry(); err != nil {
+		return false, err
+	}
 	_, ok := scenarioSystemKnownStepKinds[stepKind]
-	return ok
+	return ok, nil
 }
 
-func registeredSystemsForStepKind(stepKind string) []string {
-	indexScenarioSystemRegistry()
+func registeredSystemsForStepKind(stepKind string) ([]string, error) {
+	if err := ensureScenarioSystemRegistry(); err != nil {
+		return nil, err
+	}
 	systems := scenarioSystemStepKindsToSystems[stepKind]
-	return append([]string(nil), systems...)
+	return append([]string(nil), systems...), nil
 }
 
 func registeredScenarioSystemIDForGameSystem(system commonv1.GameSystem) (string, error) {
-	registration, ok := scenarioSystemForGameSystem(system)
+	registration, ok, err := scenarioSystemForGameSystem(system)
+	if err != nil {
+		return "", err
+	}
 	if !ok {
 		return "", unsupportedScenarioSystemError(strings.TrimPrefix(system.String(), "GAME_SYSTEM_"))
 	}
@@ -247,7 +182,10 @@ func scenarioSystemForState(state *scenarioState) (scenarioSystemRegistration, b
 	if state == nil || state.campaignSystem == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
 		return scenarioSystemRegistration{}, false, nil
 	}
-	registration, ok := scenarioSystemForGameSystem(state.campaignSystem)
+	registration, ok, err := scenarioSystemForGameSystem(state.campaignSystem)
+	if err != nil {
+		return scenarioSystemRegistration{}, false, err
+	}
 	if !ok {
 		return scenarioSystemRegistration{}, false, unsupportedScenarioSystemError(strings.TrimPrefix(state.campaignSystem.String(), "GAME_SYSTEM_"))
 	}
@@ -255,6 +193,9 @@ func scenarioSystemForState(state *scenarioState) (scenarioSystemRegistration, b
 }
 
 func unsupportedScenarioSystemError(value string) error {
+	if err := ensureScenarioSystemRegistry(); err != nil {
+		return err
+	}
 	normalized := strings.ToUpper(strings.TrimSpace(value))
 	registered := registeredScenarioSystemIDs()
 	if len(registered) == 0 {

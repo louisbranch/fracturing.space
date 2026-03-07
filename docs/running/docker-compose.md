@@ -67,7 +67,7 @@ docker compose -f docker-compose.yml -f topology/generated/docker-compose.servic
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm join-grant-key
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm seed
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/systems/daggerheart/basic_flow.lua
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm maintenance -- -campaign-id <id> -validate
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm maintenance -- replay -campaign-id <id> -validate
 docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm catalog-importer
 ```
 

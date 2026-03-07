@@ -1,11 +1,14 @@
+// Package main summarizes go test JSON output into runtime reports and budget checks.
 package main
 
 import (
 	"bufio"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -48,31 +51,77 @@ type budgetFile struct {
 	Runs map[string]runBudget `json:"runs"`
 }
 
+type codedError struct {
+	code int
+	err  error
+}
+
+func (e codedError) Error() string {
+	return e.err.Error()
+}
+
+func (e codedError) Unwrap() error {
+	return e.err
+}
+
+func withExitCode(err error, code int) error {
+	if err == nil {
+		return nil
+	}
+	return codedError{code: code, err: err}
+}
+
+func exitCode(err error) int {
+	var codeErr codedError
+	if errors.As(err, &codeErr) {
+		return codeErr.code
+	}
+	return 1
+}
+
 func main() {
+	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
+		os.Exit(exitCode(err))
+	}
+}
+
+func run(args []string, stdout, stderr io.Writer) error {
 	var inputDir string
 	var outJSON string
 	var outCSV string
 	var budgetPath string
 	var enforceBudget bool
 
-	flag.StringVar(&inputDir, "input-dir", "", "Directory containing go test -json output files (*.jsonl)")
-	flag.StringVar(&outJSON, "out-json", "", "Write report JSON to this file path")
-	flag.StringVar(&outCSV, "out-csv", "", "Write report CSV to this file path")
-	flag.StringVar(&budgetPath, "budget-file", "", "Optional runtime budget JSON file")
-	flag.BoolVar(&enforceBudget, "enforce-budget", false, "Fail when a budget regression is detected")
-	flag.Parse()
+	flags := flag.NewFlagSet("testruntimereport", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	flags.StringVar(&inputDir, "input-dir", "", "Directory containing go test -json output files (*.jsonl)")
+	flags.StringVar(&outJSON, "out-json", "", "Write report JSON to this file path")
+	flags.StringVar(&outCSV, "out-csv", "", "Write report CSV to this file path")
+	flags.StringVar(&budgetPath, "budget-file", "", "Optional runtime budget JSON file")
+	flags.BoolVar(&enforceBudget, "enforce-budget", false, "Fail when a budget regression is detected")
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return withExitCode(err, 2)
+	}
 
 	if strings.TrimSpace(inputDir) == "" {
-		fatalf("input-dir is required")
+		err := errors.New("input-dir is required")
+		fmt.Fprintf(stderr, "ERROR: %v\n", err)
+		return withExitCode(err, 1)
 	}
 
 	pattern := filepath.Join(inputDir, "*.jsonl")
 	files, err := filepath.Glob(pattern)
 	if err != nil {
-		fatalf("glob %s: %v", pattern, err)
+		fmt.Fprintf(stderr, "ERROR: glob %s: %v\n", pattern, err)
+		return withExitCode(err, 1)
 	}
 	if len(files) == 0 {
-		fatalf("no jsonl files found in %s", inputDir)
+		err := fmt.Errorf("no jsonl files found in %s", inputDir)
+		fmt.Fprintf(stderr, "ERROR: %v\n", err)
+		return withExitCode(err, 1)
 	}
 	sort.Strings(files)
 
@@ -81,7 +130,8 @@ func main() {
 		label := strings.TrimSuffix(filepath.Base(path), filepath.Ext(path))
 		summary, err := parseRunFile(path, label)
 		if err != nil {
-			fatalf("parse %s: %v", path, err)
+			fmt.Fprintf(stderr, "ERROR: parse %s: %v\n", path, err)
+			return withExitCode(err, 1)
 		}
 		runs = append(runs, summary)
 	}
@@ -98,29 +148,33 @@ func main() {
 
 	if outJSON != "" {
 		if err := writeJSON(outJSON, output); err != nil {
-			fatalf("write json report: %v", err)
+			fmt.Fprintf(stderr, "ERROR: write json report: %v\n", err)
+			return withExitCode(err, 1)
 		}
 	}
 	if outCSV != "" {
 		if err := writeCSV(outCSV, runs); err != nil {
-			fatalf("write csv report: %v", err)
+			fmt.Fprintf(stderr, "ERROR: write csv report: %v\n", err)
+			return withExitCode(err, 1)
 		}
 	}
 
-	printConsoleSummary(output)
+	printConsoleSummary(stdout, output)
 
 	if budgetPath != "" {
 		violations, err := checkBudgets(budgetPath, runs)
 		if err != nil {
-			fatalf("check budgets: %v", err)
+			fmt.Fprintf(stderr, "ERROR: check budgets: %v\n", err)
+			return withExitCode(err, 1)
 		}
 		for _, violation := range violations {
-			fmt.Fprintf(os.Stderr, "RUNTIME_BUDGET_WARNING: %s\n", violation)
+			fmt.Fprintf(stderr, "RUNTIME_BUDGET_WARNING: %s\n", violation)
 		}
 		if enforceBudget && len(violations) > 0 {
-			os.Exit(1)
+			return withExitCode(errors.New("runtime budget regression detected"), 1)
 		}
 	}
+	return nil
 }
 
 func parseRunFile(path, label string) (runSummary, error) {
@@ -250,19 +304,19 @@ func writeCSV(path string, runs []runSummary) error {
 	return nil
 }
 
-func printConsoleSummary(output report) {
-	fmt.Printf("Runtime report generated at %s\n", output.GeneratedAtUTC)
+func printConsoleSummary(stdout io.Writer, output report) {
+	fmt.Fprintf(stdout, "Runtime report generated at %s\n", output.GeneratedAtUTC)
 	for _, run := range output.Runs {
-		fmt.Printf("- %s: status=%s elapsed=%.3fs package=%s\n", run.Label, run.Status, run.ElapsedSeconds, run.Package)
+		fmt.Fprintf(stdout, "- %s: status=%s elapsed=%.3fs package=%s\n", run.Label, run.Status, run.ElapsedSeconds, run.Package)
 		limit := len(run.Tests)
 		if limit > 5 {
 			limit = 5
 		}
 		for i := 0; i < limit; i++ {
-			fmt.Printf("  %d. %s %.3fs\n", i+1, run.Tests[i].Name, run.Tests[i].ElapsedSeconds)
+			fmt.Fprintf(stdout, "  %d. %s %.3fs\n", i+1, run.Tests[i].Name, run.Tests[i].ElapsedSeconds)
 		}
 	}
-	fmt.Printf("Total elapsed seconds across runs: %.3f\n", output.TotalElapsed)
+	fmt.Fprintf(stdout, "Total elapsed seconds across runs: %.3f\n", output.TotalElapsed)
 }
 
 func checkBudgets(path string, runs []runSummary) ([]string, error) {
@@ -303,9 +357,4 @@ func checkBudgets(path string, runs []runSummary) ([]string, error) {
 	}
 	sort.Strings(violations)
 	return violations, nil
-}
-
-func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "ERROR: "+format+"\n", args...)
-	os.Exit(1)
 }

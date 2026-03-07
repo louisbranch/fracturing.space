@@ -1,9 +1,8 @@
-package main
-
 // Package main generates documentation catalogs for domain events and commands.
 //
 // This utility is intentionally read-only and lives near the API boundary so
 // onboarding can regenerate docs after domain/event language changes.
+package main
 
 import (
 	"bytes"
@@ -20,6 +19,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/louisbranch/fracturing.space/internal/tools/cli"
 )
 
 type eventDef struct {
@@ -70,21 +71,15 @@ func main() {
 	flag.StringVar(&rootFlag, "root", "", "repo root (defaults to locating go.mod)")
 	flag.Parse()
 
-	root, err := resolveRoot(rootFlag)
+	root, err := cli.ResolveRoot(rootFlag)
 	if err != nil {
 		fatal(err)
 	}
-	catalogOutput := outPath
-	if !filepath.IsAbs(catalogOutput) {
-		catalogOutput = filepath.Join(root, outPath)
-	}
-	usageOutput := usageOutPath
-	if !filepath.IsAbs(usageOutput) {
-		usageOutput = filepath.Join(root, usageOutPath)
-	}
+	catalogOutput := cli.ResolvePath(root, outPath)
+	usageOutput := cli.ResolvePath(root, usageOutPath)
 	commandsOutput := strings.TrimSpace(commandsOutPath)
 	if commandsOutput != "" && !filepath.IsAbs(commandsOutput) {
-		commandsOutput = filepath.Join(root, commandsOutput)
+		commandsOutput = cli.ResolvePath(root, commandsOutput)
 	}
 
 	eventPackageGroups := []struct {
@@ -174,32 +169,6 @@ func writeOutput(path, content, label string) error {
 		return fmt.Errorf("write %s: %w", label, err)
 	}
 	return nil
-}
-
-func resolveRoot(flagRoot string) (string, error) {
-	if flagRoot != "" {
-		return filepath.Clean(flagRoot), nil
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("get working dir: %w", err)
-	}
-	return findModuleRoot(wd)
-}
-
-func findModuleRoot(start string) (string, error) {
-	dir := start
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return "", fmt.Errorf("go.mod not found above %s", start)
 }
 
 func parsePackage(dir, root, owner string) (packageDefs, error) {

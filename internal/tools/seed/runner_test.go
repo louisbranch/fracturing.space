@@ -273,6 +273,26 @@ func TestRunFixtures_ReadError(t *testing.T) {
 	}
 }
 
+func TestRunWithDepsRequiresDependencies(t *testing.T) {
+	cfg := Config{
+		RepoRoot:    t.TempDir(),
+		FixturesDir: "fixtures",
+	}
+
+	if err := runWithDeps(t.Context(), cfg, runDeps{}); err == nil || !strings.Contains(err.Error(), "MCP client starter is required") {
+		t.Fatalf("expected missing starter error, got: %v", err)
+	}
+
+	deps := runDeps{
+		startMCPClient: func(context.Context, string, string) (mcpClient, error) {
+			return &fakeMCPClient{}, nil
+		},
+	}
+	if err := runWithDeps(t.Context(), cfg, deps); err == nil || !strings.Contains(err.Error(), "seed user creator is required") {
+		t.Fatalf("expected missing seed user creator error, got: %v", err)
+	}
+}
+
 func TestRun_UsesInjectedMCPClientLauncherAndSeedUserCreator(t *testing.T) {
 	repoRoot := t.TempDir()
 	fixtureDir := filepath.Join(repoRoot, "fixtures")
@@ -285,13 +305,6 @@ func TestRun_UsesInjectedMCPClientLauncherAndSeedUserCreator(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	originalLauncher := startMCPClient
-	originalUserCreator := createSeedUserFn
-	t.Cleanup(func() {
-		startMCPClient = originalLauncher
-		createSeedUserFn = originalUserCreator
-	})
-
 	client := &fakeMCPClient{
 		writeMessage: func(_ any) error { return nil },
 		readResponseForID: func(_ context.Context, requestID any, _ time.Duration) (any, []byte, error) {
@@ -301,13 +314,15 @@ func TestRun_UsesInjectedMCPClientLauncherAndSeedUserCreator(t *testing.T) {
 	}
 	var receivedRepoRoot string
 	var receivedGRPCAddr string
-	startMCPClient = func(_ context.Context, repoRoot string, grpcAddr string) (mcpClient, error) {
-		receivedRepoRoot = repoRoot
-		receivedGRPCAddr = grpcAddr
-		return client, nil
-	}
-	createSeedUserFn = func(context.Context, string) (string, error) {
-		return "seed-user", nil
+	deps := runDeps{
+		startMCPClient: func(_ context.Context, repoRoot string, grpcAddr string) (mcpClient, error) {
+			receivedRepoRoot = repoRoot
+			receivedGRPCAddr = grpcAddr
+			return client, nil
+		},
+		createSeedUser: func(context.Context, string) (string, error) {
+			return "seed-user", nil
+		},
 	}
 
 	cfg := Config{
@@ -316,8 +331,8 @@ func TestRun_UsesInjectedMCPClientLauncherAndSeedUserCreator(t *testing.T) {
 		AuthAddr:    "auth.example:0",
 		FixturesDir: "fixtures",
 	}
-	if err := Run(t.Context(), cfg); err != nil {
-		t.Fatalf("Run returned error: %v", err)
+	if err := runWithDeps(t.Context(), cfg, deps); err != nil {
+		t.Fatalf("runWithDeps returned error: %v", err)
 	}
 
 	if !client.closed {
@@ -341,20 +356,15 @@ func TestRun_ReturnsLauncherError(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	originalLauncher := startMCPClient
-	originalUserCreator := createSeedUserFn
-	t.Cleanup(func() {
-		startMCPClient = originalLauncher
-		createSeedUserFn = originalUserCreator
-	})
-
-	startMCPClient = func(context.Context, string, string) (mcpClient, error) {
-		return nil, fmt.Errorf("spawn blocked")
-	}
 	createSeedUserCalled := false
-	createSeedUserFn = func(context.Context, string) (string, error) {
-		createSeedUserCalled = true
-		return "seed-user", nil
+	deps := runDeps{
+		startMCPClient: func(context.Context, string, string) (mcpClient, error) {
+			return nil, fmt.Errorf("spawn blocked")
+		},
+		createSeedUser: func(context.Context, string) (string, error) {
+			createSeedUserCalled = true
+			return "seed-user", nil
+		},
 	}
 
 	cfg := Config{
@@ -363,7 +373,7 @@ func TestRun_ReturnsLauncherError(t *testing.T) {
 		AuthAddr:    "auth.example:0",
 		FixturesDir: "fixtures",
 	}
-	err := Run(t.Context(), cfg)
+	err := runWithDeps(t.Context(), cfg, deps)
 	if err == nil {
 		t.Fatal("expected start error")
 	}
@@ -385,17 +395,12 @@ func TestRun_ClosesClientWhenCreateSeedUserFails(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	originalLauncher := startMCPClient
-	originalUserCreator := createSeedUserFn
-	t.Cleanup(func() {
-		startMCPClient = originalLauncher
-		createSeedUserFn = originalUserCreator
-	})
-
 	client := &fakeMCPClient{}
-	startMCPClient = func(context.Context, string, string) (mcpClient, error) { return client, nil }
-	createSeedUserFn = func(context.Context, string) (string, error) {
-		return "", fmt.Errorf("auth dial failed")
+	deps := runDeps{
+		startMCPClient: func(context.Context, string, string) (mcpClient, error) { return client, nil },
+		createSeedUser: func(context.Context, string) (string, error) {
+			return "", fmt.Errorf("auth dial failed")
+		},
 	}
 
 	cfg := Config{
@@ -404,7 +409,7 @@ func TestRun_ClosesClientWhenCreateSeedUserFails(t *testing.T) {
 		AuthAddr:    "auth.example:0",
 		FixturesDir: "fixtures",
 	}
-	err := Run(t.Context(), cfg)
+	err := runWithDeps(t.Context(), cfg, deps)
 	if err == nil {
 		t.Fatal("expected create user error")
 	}

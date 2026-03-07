@@ -1,3 +1,4 @@
+// Package main checks and ratchets package-level coverage floors.
 package main
 
 import (

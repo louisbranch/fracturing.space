@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -147,6 +148,69 @@ func TestRunManifest_IdempotentSecondRun(t *testing.T) {
 	}
 	if deps.discovery.createCalls != 1 {
 		t.Fatalf("create discovery entry calls = %d, want 1", deps.discovery.createCalls)
+	}
+}
+
+func TestRunManifest_IdempotentSecondRunPreservesStateEntries(t *testing.T) {
+	t.Parallel()
+
+	manifest := Manifest{
+		Name: "local-dev",
+		Users: []ManifestUser{
+			{
+				Key:   "alice",
+				Email: "alice@example.com",
+				PublicProfile: ManifestPublicProfile{
+					Username: "alice",
+					Name:     "Alice",
+				},
+			},
+		},
+		Campaigns: []ManifestCampaign{
+			{
+				Key:          "crimson_vale",
+				OwnerUserKey: "alice",
+				Name:         "The Crimson Vale",
+			},
+		},
+	}
+
+	stateStore := &fakeStateStore{state: defaultState()}
+	deps := newFakeDeps()
+	runner := newRunnerWithClients(Config{ManifestPath: "ignored.json"}, runnerDeps{
+		auth:       deps.auth,
+		social:     deps.social,
+		campaigns:  deps.game,
+		discovery:  deps.discovery,
+		stateStore: stateStore,
+	})
+
+	if err := runner.RunManifest(context.Background(), manifest); err != nil {
+		t.Fatalf("first run: %v", err)
+	}
+	if err := runner.RunManifest(context.Background(), manifest); err != nil {
+		t.Fatalf("second run: %v", err)
+	}
+
+	if deps.auth.createUserCalls != 1 {
+		t.Fatalf("create user calls = %d, want 1", deps.auth.createUserCalls)
+	}
+	if deps.game.createCampaignCalls != 1 {
+		t.Fatalf("create campaign calls = %d, want 1", deps.game.createCampaignCalls)
+	}
+	if stateStore.loadCalls != 2 {
+		t.Fatalf("state load calls = %d, want 2", stateStore.loadCalls)
+	}
+	if stateStore.saveCalls != 2 {
+		t.Fatalf("state save calls = %d, want 2", stateStore.saveCalls)
+	}
+	if len(stateStore.savedStates) != 2 {
+		t.Fatalf("saved states = %d, want 2", len(stateStore.savedStates))
+	}
+	firstEntries := stateStore.savedStates[0].Entries
+	secondEntries := stateStore.savedStates[1].Entries
+	if !reflect.DeepEqual(firstEntries, secondEntries) {
+		t.Fatalf("state entries changed between idempotent runs:\nfirst=%v\nsecond=%v", firstEntries, secondEntries)
 	}
 }
 
@@ -479,4 +543,36 @@ func (f *fakeDiscoveryClient) GetDiscoveryEntry(ctx context.Context, in *discove
 		return &discoveryv1.GetDiscoveryEntryResponse{}, nil
 	}
 	return &discoveryv1.GetDiscoveryEntryResponse{Entry: discoveryEntry}, nil
+}
+
+type fakeStateStore struct {
+	state       seedState
+	loadCalls   int
+	saveCalls   int
+	savedStates []seedState
+}
+
+func (f *fakeStateStore) Load(_ string) (seedState, error) {
+	f.loadCalls++
+	return cloneSeedState(f.state), nil
+}
+
+func (f *fakeStateStore) Save(_ string, state seedState) error {
+	f.saveCalls++
+	clone := cloneSeedState(state)
+	f.state = clone
+	f.savedStates = append(f.savedStates, clone)
+	return nil
+}
+
+func cloneSeedState(state seedState) seedState {
+	cloned := seedState{
+		Version:   state.Version,
+		UpdatedAt: state.UpdatedAt,
+		Entries:   map[string]string{},
+	}
+	for key, value := range state.Entries {
+		cloned.Entries[key] = value
+	}
+	return cloned
 }
