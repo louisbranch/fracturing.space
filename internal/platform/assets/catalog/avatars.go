@@ -16,7 +16,7 @@ const (
 	AvatarSetV1 = AvatarSetPeopleV1
 	// AvatarAssetBlank is the canonical blank avatar image used when identity
 	// linkage is intentionally absent.
-	AvatarAssetBlank = "000"
+	AvatarAssetBlank = "blank_faceless_silhouette"
 
 	// AvatarRoleUser resolves to portrait slot 1.
 	AvatarRoleUser = "user"

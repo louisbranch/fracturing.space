@@ -85,7 +85,7 @@ func TestSetUserProfile_SuccessAndLookup(t *testing.T) {
 			Username:      "Alice_One",
 			Name:          "Alice",
 			AvatarSetId:   "avatar_set_v1",
-			AvatarAssetId: "001",
+			AvatarAssetId: "apothecary_journeyman",
 			Bio:           "Campaign manager",
 			Pronouns:      sharedpronouns.ToProto("she/her"),
 		})
@@ -137,7 +137,7 @@ func TestSetUserProfile_SameCanonicalValueDoesNotChangeTimestamps(t *testing.T) 
 		Username:      "Alice_One",
 		Name:          "Alice",
 		AvatarSetId:   "avatar_set_v1",
-		AvatarAssetId: "001",
+		AvatarAssetId: "apothecary_journeyman",
 		Bio:           "Campaign manager",
 		Pronouns:      sharedpronouns.ToProto("she/her"),
 	})
@@ -151,7 +151,7 @@ func TestSetUserProfile_SameCanonicalValueDoesNotChangeTimestamps(t *testing.T) 
 		Username:      "ALICE_ONE",
 		Name:          "Alice",
 		AvatarSetId:   "avatar_set_v1",
-		AvatarAssetId: "001",
+		AvatarAssetId: "apothecary_journeyman",
 		Bio:           "Campaign manager",
 		Pronouns:      sharedpronouns.ToProto("she/her"),
 	})
@@ -222,7 +222,7 @@ func TestSetUserProfile_InvalidAvatarReturnsInvalidArgument(t *testing.T) {
 		Username:      "alice_one",
 		Name:          "Alice",
 		AvatarSetId:   "missing-set",
-		AvatarAssetId: "001",
+		AvatarAssetId: "apothecary_journeyman",
 		Bio:           "Campaign manager",
 	})
 	if status.Code(err) != codes.InvalidArgument {

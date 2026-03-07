@@ -84,6 +84,10 @@ func resolveAssetURL(baseURL, assetID, extension string, transforms []string) (s
 	if normalizedAssetID == "" {
 		return "", ErrAssetIDRequired
 	}
+	assetPath := buildAssetPath(normalizedAssetID, extension)
+	if assetPath == "" {
+		return "", ErrAssetIDRequired
+	}
 
 	parsed, err := url.Parse(normalizedBaseURL)
 	if err != nil {
@@ -91,9 +95,26 @@ func resolveAssetURL(baseURL, assetID, extension string, transforms []string) (s
 	}
 
 	pathSegments := append([]string(nil), transforms...)
-	pathSegments = append(pathSegments, url.PathEscape(normalizedAssetID)+extension)
+	pathSegments = append(pathSegments, assetPath)
 	parsed.Path = path.Join(parsed.Path, path.Join(pathSegments...))
 	return parsed.String(), nil
+}
+
+func buildAssetPath(assetID, extension string) string {
+	segments := strings.Split(assetID, "/")
+	escapedSegments := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		normalizedSegment := strings.TrimSpace(segment)
+		if normalizedSegment == "" {
+			continue
+		}
+		escapedSegments = append(escapedSegments, url.PathEscape(normalizedSegment))
+	}
+	if len(escapedSegments) == 0 {
+		return ""
+	}
+	escapedSegments[len(escapedSegments)-1] += extension
+	return path.Join(escapedSegments...)
 }
 
 func normalizeExtension(raw string) string {

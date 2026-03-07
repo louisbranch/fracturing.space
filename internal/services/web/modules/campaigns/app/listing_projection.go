@@ -33,9 +33,10 @@ func TruncateCampaignTheme(themePrompt string) string {
 
 // campaignCoverImageURL resolves the final card image URL with a deterministic fallback.
 func campaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID string) string {
-	_, resolvedCoverAssetID := resolveCampaignCoverSelection(campaignID, coverSetID, coverAssetID)
+	resolvedCoverSetID, resolvedCoverAssetID := resolveCampaignCoverSelection(campaignID, coverSetID, coverAssetID)
+	resolvedCDNAssetID := catalog.ResolveCDNAssetID(resolvedCoverSetID, resolvedCoverAssetID)
 	resolvedAssetURL, err := imagecdn.New(assetBaseURL).URL(imagecdn.Request{
-		AssetID:   resolvedCoverAssetID,
+		AssetID:   resolvedCDNAssetID,
 		Extension: ".png",
 	})
 	if err == nil {

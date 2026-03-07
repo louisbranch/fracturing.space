@@ -13,9 +13,10 @@ const avatarPortraitCardWidthPX = 192
 // AvatarImageURL resolves an avatar image URL for a given catalog selection.
 func AvatarImageURL(assetBaseURL, role, entityID, avatarSetID, avatarAssetID string) string {
 	resolvedSetID, resolvedAssetID := ResolveWebAvatarSelection(role, entityID, avatarSetID, avatarAssetID)
+	resolvedCDNAssetID := catalog.ResolveCDNAssetID(resolvedSetID, resolvedAssetID)
 	portrait := ResolveWebAvatarPortrait(role, entityID, resolvedSetID)
 	resolvedAssetURL, err := imagecdn.New(assetBaseURL).URL(imagecdn.Request{
-		AssetID:   resolvedAssetID,
+		AssetID:   resolvedCDNAssetID,
 		Extension: ".png",
 		Crop: &imagecdn.Crop{
 			X:        portrait.X,

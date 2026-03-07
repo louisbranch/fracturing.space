@@ -403,20 +403,22 @@ func TestAppLayoutIncludesHTMXErrorSwapContract(t *testing.T) {
 func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	t.Parallel()
 
-	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "rhea", Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "001"}}}
+	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "rhea", Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "apothecary_journeyman"}}}
+	assetBaseURL := "https://cdn.example.com/avatars"
+	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "avatar_set_v1", "apothecary_journeyman")
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{
 				SessionClient: auth,
 				SocialClient:  social,
-				AssetBaseURL:  "https://cdn.example.com/avatars",
+				AssetBaseURL:  assetBaseURL,
 			},
 			modules.Dependencies{
 				AuthClient:           auth,
 				ProfileSocialClient:  social,
 				SettingsSocialClient: social,
-				AssetBaseURL:         "https://cdn.example.com/avatars",
+				AssetBaseURL:         assetBaseURL,
 				AccountClient:        &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
 				CampaignClient:       defaultCampaignClient(),
 				CredentialClient:     fakeCredentialClient{},
@@ -438,7 +440,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 		t.Fatalf("expected social profile lookup")
 	}
 	for _, marker := range []string{
-		`src="https://cdn.example.com/avatars/001.png"`,
+		`src="` + expectedAvatarURL + `"`,
 		`alt="Rhea Vale"`,
 		`href="/u/rhea"`,
 		`href="/app/settings"`,

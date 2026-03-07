@@ -710,7 +710,7 @@ func TestDecideCharacterUpdate_InvalidAvatarAssetRejected(t *testing.T) {
 	decision := Decide(State{
 		Created:       true,
 		AvatarSetID:   "avatar_set_v1",
-		AvatarAssetID: "001",
+		AvatarAssetID: "apothecary_journeyman",
 	}, cmd, nil)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))

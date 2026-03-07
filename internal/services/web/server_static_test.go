@@ -207,8 +207,13 @@ func TestStaticAppShellScriptIncludesImageFallbackContract(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`initAppImageFallbacks`,
+		`syncAppImageStates`,
+		`document.addEventListener("load"`,
 		`document.addEventListener("error"`,
 		`data-image-el`,
+		`data-image-skeleton`,
+		`hideAppImageSkeleton`,
+		`showAppImageSkeleton`,
 		`target.style.display = "none"`,
 	} {
 		if !strings.Contains(body, marker) {

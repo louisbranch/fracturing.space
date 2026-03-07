@@ -35,7 +35,7 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 				{
 					Id:               "camp-new",
 					Name:             "Newer Campaign",
-					CoverAssetId:     "abandoned_castle_courtyard",
+					CoverAssetId:     "verdant_arch_bridge",
 					ParticipantCount: 12,
 					CharacterCount:   7,
 					CreatedAt:        timestamppb.New(time.Date(2025, 2, 3, 0, 0, 0, 0, time.UTC)),
@@ -62,7 +62,7 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 		`data-image-frame="true"`,
 		`data-image-skeleton="true"`,
 		`aspect-ratio: 16 / 9;`,
-		`/static/campaign-cover-fallback.svg?asset_id=abandoned_castle_courtyard`,
+		`/static/campaign-cover-fallback.svg?asset_id=verdant_arch_bridge`,
 		`Participants: 12`,
 		`Characters: 7`,
 		`Updated`,

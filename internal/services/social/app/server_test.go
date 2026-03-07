@@ -61,7 +61,7 @@ func TestServer_UserProfileRoundTrip(t *testing.T) {
 		Username:      "Alice_One",
 		Name:          "Alice",
 		AvatarSetId:   "avatar_set_v1",
-		AvatarAssetId: "001",
+		AvatarAssetId: "apothecary_journeyman",
 		Bio:           "Campaign manager",
 	})
 	if err != nil {

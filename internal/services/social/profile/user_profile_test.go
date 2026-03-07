@@ -8,7 +8,7 @@ import (
 )
 
 func TestNormalize_ValidInput(t *testing.T) {
-	got, err := Normalize("user-1", "  Alice  ", "avatar_set_v1", "001", "  Campaign manager  ", " she / her ")
+	got, err := Normalize("user-1", "  Alice  ", "avatar_set_v1", "apothecary_journeyman", "  Campaign manager  ", " she / her ")
 	if err != nil {
 		t.Fatalf("normalize: %v", err)
 	}
@@ -18,8 +18,8 @@ func TestNormalize_ValidInput(t *testing.T) {
 	if got.AvatarSetID != "avatar_set_v1" {
 		t.Fatalf("avatar_set_id = %q, want avatar_set_v1", got.AvatarSetID)
 	}
-	if got.AvatarAssetID != "001" {
-		t.Fatalf("avatar_asset_id = %q, want 001", got.AvatarAssetID)
+	if got.AvatarAssetID != "apothecary_journeyman" {
+		t.Fatalf("avatar_asset_id = %q, want apothecary_journeyman", got.AvatarAssetID)
 	}
 	if got.Bio != "Campaign manager" {
 		t.Fatalf("bio = %q, want Campaign manager", got.Bio)
