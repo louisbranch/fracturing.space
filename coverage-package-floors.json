@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-07T19:20:37Z",
+  "updated_at": "2026-03-07T19:39:24Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -177,6 +177,31 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/templates",
       "floor": 100,
       "description": "Template helper contracts for fallback localization and app-error copy mapping."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/tools/i18ncheck",
+      "floor": 73.1,
+      "description": "CLI contract and token parity checks for locale catalogs."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/tools/i18nstatus",
+      "floor": 76.9,
+      "description": "CLI contract and report generation for locale status artifacts."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/tools/testruntimereport",
+      "floor": 61.1,
+      "description": "CLI contract and test runtime budget reporting behavior."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/tools/webdoccheck",
+      "floor": 17,
+      "description": "CLI contract and web docs architecture lint command routing."
+    },
+    {
+      "package": "github.com/louisbranch/fracturing.space/internal/tools/websmokeauth",
+      "floor": 50.5,
+      "description": "CLI contract and smoke auth harness configuration behavior."
     }
   ]
 }
