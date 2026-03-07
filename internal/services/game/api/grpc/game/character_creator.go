@@ -31,6 +31,12 @@ type characterApplication struct {
 	idGenerator func() (string, error)
 }
 
+type characterIdentitySnapshot struct {
+	avatarSetID   string
+	avatarAssetID string
+	pronouns      string
+}
+
 func newCharacterApplication(service *CharacterService) characterApplication {
 	app := characterApplication{stores: service.stores, clock: service.clock, idGenerator: service.idGenerator}
 	if app.clock == nil {
@@ -71,18 +77,40 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if actorID == "" {
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
-	avatarSetID := strings.TrimSpace(in.GetAvatarSetId())
-	avatarAssetID := strings.TrimSpace(in.GetAvatarAssetId())
-	if avatarSetID == "" && avatarAssetID == "" {
-		avatarSetID = assetcatalog.AvatarSetBlankV1
-		avatarAssetID = ""
-	}
 	defaultParticipantID := ""
 	switch {
 	case policyActor.Role == participant.RolePlayer && kind == character.KindPC:
 		defaultParticipantID = strings.TrimSpace(policyActor.ID)
 	case policyActor.Role == participant.RoleGM && kind == character.KindNPC:
 		defaultParticipantID = strings.TrimSpace(policyActor.ID)
+	}
+	avatarSetID := strings.TrimSpace(in.GetAvatarSetId())
+	avatarAssetID := strings.TrimSpace(in.GetAvatarAssetId())
+	pronounsInput := in.GetPronouns()
+	pronounsProvided := pronounsInput != nil
+	pronouns := ""
+	if pronounsProvided {
+		pronouns = strings.TrimSpace(sharedpronouns.FromProto(pronounsInput))
+	}
+	needsIdentitySnapshot := (avatarSetID == "" && avatarAssetID == "") || !pronounsProvided
+	if needsIdentitySnapshot {
+		identitySnapshot, err := c.resolveCharacterIdentitySnapshot(ctx, campaignID, defaultParticipantID)
+		if err != nil {
+			return storage.CharacterRecord{}, err
+		}
+		if avatarSetID == "" && avatarAssetID == "" {
+			avatarSetID = identitySnapshot.avatarSetID
+			avatarAssetID = identitySnapshot.avatarAssetID
+		}
+		if !pronounsProvided {
+			pronouns = identitySnapshot.pronouns
+		}
+	}
+	if avatarSetID == "" && avatarAssetID == "" {
+		// Defensive fallback: should be unreachable because unassigned identity
+		// snapshots default to blank avatar set.
+		avatarSetID = assetcatalog.AvatarSetBlankV1
+		avatarAssetID = ""
 	}
 
 	applier := c.stores.Applier()
@@ -98,7 +126,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		AvatarSetID:        avatarSetID,
 		AvatarAssetID:      avatarAssetID,
 		ParticipantID:      defaultParticipantID,
-		Pronouns:           sharedpronouns.FromProto(in.GetPronouns()),
+		Pronouns:           pronouns,
 		Aliases:            append([]string(nil), in.GetAliases()...),
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -523,22 +551,9 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		return "", "", status.Error(codes.InvalidArgument, "participant id is required")
 	}
 	participantID := strings.TrimSpace(in.GetParticipantId().GetValue())
-	avatarSetID := assetcatalog.AvatarSetBlankV1
-	avatarAssetID := ""
-	if participantID != "" {
-		if c.stores.Participant == nil {
-			return "", "", status.Error(codes.Internal, "participant store is not configured")
-		}
-		participantRecord, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
-		if err != nil {
-			return "", "", err
-		}
-		resolvedSetID := strings.TrimSpace(participantRecord.AvatarSetID)
-		resolvedAssetID := strings.TrimSpace(participantRecord.AvatarAssetID)
-		if resolvedSetID != "" && resolvedAssetID != "" {
-			avatarSetID = resolvedSetID
-			avatarAssetID = resolvedAssetID
-		}
+	identitySnapshot, err := c.resolveCharacterIdentitySnapshot(ctx, campaignID, participantID)
+	if err != nil {
+		return "", "", err
 	}
 	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCharacters, campaignRecord); err != nil {
 		return "", "", err
@@ -552,8 +567,9 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		CharacterID: characterID,
 		Fields: map[string]string{
 			"participant_id":  participantID,
-			"avatar_set_id":   avatarSetID,
-			"avatar_asset_id": avatarAssetID,
+			"avatar_set_id":   identitySnapshot.avatarSetID,
+			"avatar_asset_id": identitySnapshot.avatarAssetID,
+			"pronouns":        identitySnapshot.pronouns,
 		},
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -586,6 +602,42 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 	}
 
 	return characterID, participantID, nil
+}
+
+// resolveCharacterIdentitySnapshot returns character identity defaults for one
+// controller participant snapshot. Unassigned controllers intentionally use the
+// blank avatar set and empty pronouns.
+func (c characterApplication) resolveCharacterIdentitySnapshot(
+	ctx context.Context,
+	campaignID string,
+	participantID string,
+) (characterIdentitySnapshot, error) {
+	snapshot := characterIdentitySnapshot{
+		avatarSetID:   assetcatalog.AvatarSetBlankV1,
+		avatarAssetID: "",
+		pronouns:      "",
+	}
+	participantID = strings.TrimSpace(participantID)
+	if participantID == "" {
+		return snapshot, nil
+	}
+	if c.stores.Participant == nil {
+		return characterIdentitySnapshot{}, status.Error(codes.Internal, "participant store is not configured")
+	}
+
+	participantRecord, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
+	if err != nil {
+		return characterIdentitySnapshot{}, err
+	}
+
+	resolvedSetID := strings.TrimSpace(participantRecord.AvatarSetID)
+	resolvedAssetID := strings.TrimSpace(participantRecord.AvatarAssetID)
+	if resolvedSetID != "" && resolvedAssetID != "" {
+		snapshot.avatarSetID = resolvedSetID
+		snapshot.avatarAssetID = resolvedAssetID
+	}
+	snapshot.pronouns = strings.TrimSpace(participantRecord.Pronouns)
+	return snapshot, nil
 }
 
 func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaignID string, in *campaignv1.PatchCharacterProfileRequest) (string, storage.DaggerheartCharacterProfile, error) {

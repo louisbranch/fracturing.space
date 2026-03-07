@@ -1882,6 +1882,9 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 	if payload.Fields["avatar_asset_id"] != "" {
 		t.Fatalf("avatar_asset_id = %q, want empty", payload.Fields["avatar_asset_id"])
 	}
+	if payload.Fields["pronouns"] != "" {
+		t.Fatalf("pronouns = %q, want empty", payload.Fields["pronouns"])
+	}
 
 	// Verify persisted
 	updated, err := characterStore.GetCharacter(context.Background(), "c1", "ch1")
@@ -1924,6 +1927,7 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 			Name:          "Player 1",
 			AvatarSetID:   assetcatalog.AvatarSetPeopleV1,
 			AvatarAssetID: "009",
+			Pronouns:      "they/them",
 			CreatedAt:     now,
 		},
 	}
@@ -1972,6 +1976,9 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	}
 	if payload.Fields["avatar_asset_id"] != "009" {
 		t.Fatalf("avatar_asset_id = %q, want %q", payload.Fields["avatar_asset_id"], "009")
+	}
+	if payload.Fields["pronouns"] != "they/them" {
+		t.Fatalf("pronouns = %q, want %q", payload.Fields["pronouns"], "they/them")
 	}
 
 	// Verify persisted
