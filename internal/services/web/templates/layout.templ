@@ -528,7 +528,7 @@ templ AppMainContentWithLayout(header *AppMainHeader, layout AppMainLayoutOption
 
 templ AppToastComponent(toast *AppToast) {
 	if appToastMessage(toast) != "" {
-		<div id="app-toast-stack" class="toast toast-top toast-end z-[60]">
+		<div id="app-toast-stack" class="toast toast-top toast-end top-20 z-[60]">
 			<div
 				id="app-toast"
 				class={ "alert shadow-lg " + appToastAlertClass(toast) }
