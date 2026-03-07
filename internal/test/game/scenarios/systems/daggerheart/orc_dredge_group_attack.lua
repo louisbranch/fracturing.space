@@ -1,19 +1,19 @@
-local scene = Scenario.new("orc_dredge_group_attack")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("orc_dredge_group_attack")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the orc raiders making a group attack.
-scene:campaign{
+scn:campaign{
   name = "Orc Raider Group Attack",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "battle"
 }
 
-scene:pc("Aragorn")
+scn:pc("Aragorn")
 dh:adversary("Orc Raiders")
 
 -- The GM spends fear to have the raiders strike as a group.
-scene:start_session("Group Attack")
+scn:start_session("Group Attack")
 dh:gm_fear(1)
 
 -- Example: single group attack roll against Aragorn's Evasion.
@@ -27,6 +27,6 @@ dh:adversary_attack{
 }
 
 -- Close the session after the group strike.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

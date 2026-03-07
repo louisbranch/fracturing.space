@@ -1,19 +1,19 @@
-local scene = Scenario.new("sam_critical_broadsword")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("sam_critical_broadsword")
+local dh = scn:system("DAGGERHEART")
 
 -- Reflect Sam's critical broadsword strike with advantage and reroll.
-scene:campaign{
+scn:campaign{
   name = "Sam Critical Broadsword",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "crit"
 }
 
-scene:pc("Sam")
+scn:pc("Sam")
 dh:adversary("Nazgul")
 
 -- Sam marks stress for advantage and scores a critical.
-scene:start_session("Critical Strike")
+scn:start_session("Critical Strike")
 
 -- Example: critical success adds max damage dice before rolling 2d8 +2.
 -- Partial mapping: attack roll includes declared advantage.
@@ -34,6 +34,6 @@ dh:damage_roll{
 }
 
 -- Close the session after the critical hit.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

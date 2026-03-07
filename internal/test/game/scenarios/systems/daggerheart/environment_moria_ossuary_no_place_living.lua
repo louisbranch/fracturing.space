@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_moria_ossuary_no_place_living")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_moria_ossuary_no_place_living")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the added Hope cost to clear HP in the ossuary.
-scene:campaign{
+scn:campaign{
   name = "Environment Ossuary No Place for the Living",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo", { hope = 2 })
+scn:pc("Frodo", { hope = 2 })
 
 -- Healing actions cost extra Hope here.
-scene:start_session("No Place for the Living")
+scn:start_session("No Place for the Living")
 
 -- Build enough Hope for the explicit spend step.
 dh:action_roll{ actor = "Frodo", trait = "instinct", difficulty = 10, outcome = "success_hope" }
@@ -32,6 +32,6 @@ dh:action_roll{
 dh:apply_roll_outcome{}
 dh:rest{ type = "short", party_size = 1 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

@@ -1,19 +1,19 @@
-local scene = Scenario.new("help_advantage_roll")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("help_advantage_roll")
+local dh = scn:system("DAGGERHEART")
 
 -- Mirror the help action that grants an advantage die.
-scene:campaign{
+scn:campaign{
   name = "Help Advantage Roll",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "help"
 }
 
-scene:pc("Aragorn")
-scene:pc("Gandalf")
+scn:pc("Aragorn")
+scn:pc("Gandalf")
 
 -- Gandalf spends Hope to help Aragorn's Instinct roll.
-scene:start_session("Help an Ally")
+scn:start_session("Help an Ally")
 
 -- Example: help adds an advantage die and a +3 bonus from assistance.
 dh:action_roll{
@@ -29,6 +29,6 @@ dh:action_roll{
 }
 
 -- Close the session after the assisted roll.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

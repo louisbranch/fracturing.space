@@ -1,20 +1,20 @@
-local scene = Scenario.new("skulk_icicle_barb")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("skulk_icicle_barb")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the Fell Beast's Icicle Barb group attack.
-scene:campaign{
+scn:campaign{
   name = "Skulk Icicle Barb",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "adversary"
 }
 
-scene:pc("Frodo")
-scene:pc("Sam")
+scn:pc("Frodo")
+scn:pc("Sam")
 dh:adversary("Fell Beast")
 
 -- The wyrm spends Fear to pin a group with barbs.
-scene:start_session("Icicle Barb")
+scn:start_session("Icicle Barb")
 dh:gm_fear(1)
 
 -- Example: targets take 2d4 damage and become Restrained until they break free.
@@ -40,6 +40,6 @@ dh:adversary_attack{
 dh:apply_condition{ target = "Frodo", add = { "RESTRAINED" }, source = "icicle_barb" }
 dh:apply_condition{ target = "Sam", add = { "RESTRAINED" }, source = "icicle_barb" }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

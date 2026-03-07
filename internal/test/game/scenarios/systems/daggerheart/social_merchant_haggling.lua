@@ -1,19 +1,19 @@
-local scene = Scenario.new("social_merchant_haggling")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("social_merchant_haggling")
+local dh = scn:system("DAGGERHEART")
 
 -- Model social mechanics for haggling with a merchant.
-scene:campaign{
+scn:campaign{
   name = "Social Bilbo Haggling",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "social"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Bree Merchant")
 
 -- The merchant rewards success and penalizes poor rolls.
-scene:start_session("Haggling")
+scn:start_session("Haggling")
 
 -- Example: success grants discounts, failure adds stress and disadvantage.
 -- Partial mapping: discount pressure and runaround consequences are explicit by branch.
@@ -31,6 +31,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_bruinen_ford_undertow")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_bruinen_ford_undertow")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the Bruinen Ford undertow action and its consequences.
-scene:campaign{
+scn:campaign{
   name = "Environment Bruinen Ford Undertow",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The river lashes out during a dangerous crossing.
-scene:start_session("Bruinen Ford")
+scn:start_session("Bruinen Ford")
 dh:gm_fear(1)
 
 -- Example: spend Fear, Agility reaction, damage + movement + Vulnerable on failure.
@@ -25,6 +25,6 @@ dh:apply_reaction_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

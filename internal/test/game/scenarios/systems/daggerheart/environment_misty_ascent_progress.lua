@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_misty_ascent_progress")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_misty_ascent_progress")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the Misty Ascent progress countdown and roll outcomes.
-scene:campaign{
+scn:campaign{
   name = "Environment Misty Ascent Progress",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The party climbs using a progress countdown.
-scene:start_session("Misty Ascent")
+scn:start_session("Misty Ascent")
 
 -- Example: Progress Countdown (12) ticks based on roll outcomes.
 -- Partial mapping: tiered countdown updates are explicit by roll branch.
@@ -31,6 +31,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

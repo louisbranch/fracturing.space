@@ -1,24 +1,24 @@
-local scene = Scenario.new("environment_dark_tower_usurpation_ritual_nexus")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_dark_tower_usurpation_ritual_nexus")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the ritual backlash on failures with Fear.
-scene:campaign{
+scn:campaign{
   name = "Environment Dark Tower Usurpation Ritual Nexus",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Saruman")
 
 -- A Fear failure triggers magical backlash.
-scene:start_session("Ritual Nexus")
+scn:start_session("Ritual Nexus")
 
 -- Stress roll (1d4) on failure with Fear remains unresolved.
 dh:action_roll{ actor = "Frodo", trait = "presence", difficulty = 20, outcome = "fear" }
 dh:apply_roll_outcome{}
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

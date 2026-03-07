@@ -1,18 +1,18 @@
-local scene = Scenario.new("difficulty_setting_examples")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("difficulty_setting_examples")
+local dh = scn:system("DAGGERHEART")
 
 -- Sample a few difficulty settings across common actions.
-scene:campaign{
+scn:campaign{
   name = "Difficulty Setting Examples",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "difficulty"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The GM calls for rolls with escalating difficulty.
-scene:start_session("Difficulty Settings")
+scn:start_session("Difficulty Settings")
 
 -- Example: Agility difficulty 5 to sprint within Close range.
 dh:action_roll{ actor = "Frodo", trait = "agility", difficulty = 5, outcome = "hope" }
@@ -24,6 +24,6 @@ dh:action_roll{ actor = "Frodo", trait = "finesse", difficulty = 15, outcome = "
 dh:action_roll{ actor = "Frodo", trait = "strength", difficulty = 25, outcome = "fear" }
 
 -- Close the session after the difficulty samples.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

@@ -1,22 +1,22 @@
-local scene = Scenario.new("improvised_fear_move_bandit_chain")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("improvised_fear_move_bandit_chain")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the bandit fear-move chain with multiple spotlights.
-scene:campaign{
+scn:campaign{
   name = "Improvised Fear Move Orc Chain",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "gm_fear"
 }
 
-scene:pc("Sam", { armor = 0 })
-scene:pc("Frodo", { armor = 0 })
+scn:pc("Sam", { armor = 0 })
+scn:pc("Frodo", { armor = 0 })
 dh:adversary("Orc Captain")
 dh:adversary("Orc Raider")
 dh:adversary("Orc Minions")
 
 -- The GM spends Fear to escalate the bandit ambush.
-scene:start_session("Orc Ambush")
+scn:start_session("Orc Ambush")
 dh:gm_fear(5)
 
 -- Example: spotlight Orc Captain with a sudden ambush move.
@@ -37,6 +37,6 @@ dh:adversary_attack{ actor = "Orc Minions", target = "Sam", difficulty = 0, seed
 dh:adversary_attack{ actor = "Orc Minions", target = "Frodo", difficulty = 0, seed = 52, damage_type = "physical" }
 
 -- Close the session after the bandit chain.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

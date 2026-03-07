@@ -1,23 +1,23 @@
-local scene = Scenario.new("environment_mirkwood_blight_chaos_magic")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_mirkwood_blight_chaos_magic")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the chaos locus forcing double Fear dice on spellcasting.
-scene:campaign{
+scn:campaign{
   name = "Environment Mirkwood Blight Chaos Magic",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Gandalf")
+scn:pc("Gandalf")
 
 -- Spellcasting draws extra Fear in the corrupted woods.
-scene:start_session("Chaos Magic Locus")
+scn:start_session("Chaos Magic Locus")
 
 -- Missing DSL: roll two Fear dice and take the higher on Spellcast.
 dh:action_roll{ actor = "Gandalf", trait = "spellcast", difficulty = 16, outcome = "fear" }
 dh:apply_roll_outcome{}
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

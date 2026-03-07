@@ -1,19 +1,19 @@
-local scene = Scenario.new("critical_damage")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("critical_damage")
+local dh = scn:system("DAGGERHEART")
 
 -- Frame a duel to showcase critical damage.
-scene:campaign{
+scn:campaign{
   name = "Critical Damage",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "crit"
 }
 
-scene:pc("Frodo", { stress = 1 })
+scn:pc("Frodo", { stress = 1 })
 dh:adversary("Saruman")
 
 -- Frodo pushes for a critical strike.
-scene:start_session("Crits")
+scn:start_session("Crits")
 
 -- The roll is forced to Critical to showcase critical damage flow.
 dh:attack{
@@ -32,6 +32,6 @@ dh:attack{
 }
 
 -- Close the session after the critical blow.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

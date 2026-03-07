@@ -1,19 +1,19 @@
-local scene = Scenario.new("progress_countdown_climb")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("progress_countdown_climb")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the mountain ascent progress countdown from the example of play.
-scene:campaign{
+scn:campaign{
   name = "Progress Countdown Climb",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "countdown"
 }
 
-scene:pc("Frodo")
-scene:pc("Sam")
+scn:pc("Frodo")
+scn:pc("Sam")
 
 -- The GM sets a shorter progress countdown due to helpful guidance.
-scene:start_session("Whitecrest Ascent")
+scn:start_session("Whitecrest Ascent")
 
 -- Example: progress countdown starts at 3 instead of 5.
 dh:countdown_create{ name = "Whitecrest Ascent", kind = "progress", current = 3, max = 3, direction = "decrease" }
@@ -35,6 +35,6 @@ dh:apply_roll_outcome{
 }
 
 -- Close the session after the ascent advances.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

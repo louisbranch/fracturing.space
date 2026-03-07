@@ -1,22 +1,22 @@
-local scene = Scenario.new("combat_objectives_ritual_rescue_capture")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("combat_objectives_ritual_rescue_capture")
+local dh = scn:system("DAGGERHEART")
 
 -- Track multiple combat objectives during a ritual confrontation.
 -- Clarification-gated fixture (P31): do not infer implicit multi-objective fanout.
-scene:campaign{
+scn:campaign{
   name = "Combat Objectives Ritual Rescue Capture",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "objectives"
 }
 
-scene:pc("Frodo")
-scene:pc("Sam")
+scn:pc("Frodo")
+scn:pc("Sam")
 dh:adversary("Saruman")
-scene:npc("Bilbo")
+scn:npc("Bilbo")
 
 -- The party tries to stop a ritual, save Bilbo, and capture Saruman.
-scene:start_session("Ritual Objectives")
+scn:start_session("Ritual Objectives")
 
 -- Example: three objectives run in parallel during the fight.
 -- Missing DSL: connect action rolls to each objective's progress.
@@ -24,6 +24,6 @@ dh:countdown_create{ name = "Ritual Completion", kind = "consequence", current =
 dh:countdown_create{ name = "Bilbo Rescued", kind = "progress", current = 0, max = 4, direction = "increase" }
 dh:countdown_create{ name = "Saruman Captured", kind = "progress", current = 0, max = 4, direction = "increase" }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

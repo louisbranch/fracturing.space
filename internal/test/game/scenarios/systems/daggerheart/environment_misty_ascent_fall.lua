@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_misty_ascent_fall")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_misty_ascent_fall")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the fall action that escalates damage by countdown state.
-scene:campaign{
+scn:campaign{
   name = "Environment Misty Ascent Fall",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- A handhold fails, risking a deadly fall.
-scene:start_session("Misty Fall")
+scn:start_session("Misty Fall")
 dh:gm_fear(1)
 
 -- Example: spend Fear, if not saved next action, damage scales by countdown.
@@ -26,6 +26,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

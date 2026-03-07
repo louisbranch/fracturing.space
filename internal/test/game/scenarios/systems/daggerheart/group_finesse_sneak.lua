@@ -1,21 +1,21 @@
-local scene = Scenario.new("group_finesse_sneak")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("group_finesse_sneak")
+local dh = scn:system("DAGGERHEART")
 
 -- Recreate the group finesse roll to sneak through the courtyard.
-scene:campaign{
+scn:campaign{
   name = "Group Finesse Sneak",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "teamwork"
 }
 
-scene:pc("Aragorn")
-scene:pc("Frodo")
-scene:pc("Gandalf")
-scene:pc("Sam")
+scn:pc("Aragorn")
+scn:pc("Frodo")
+scn:pc("Gandalf")
+scn:pc("Sam")
 
 -- Aragorn leads a group finesse roll while allies contribute.
-scene:start_session("Courtyard Infiltration")
+scn:start_session("Courtyard Infiltration")
 
 -- Example: two allies succeed (+1 each), one fails (-1), net +1 for the leader.
 -- Partial mapping: supporter outcomes encode the +1/+1/-1 contribution pattern.
@@ -32,6 +32,6 @@ dh:group_action{
 }
 
 -- Close the session after the group roll.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

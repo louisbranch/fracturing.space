@@ -183,7 +183,7 @@ func ScenarioScriptPanel(view ScenarioPageView, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Quick start for building a scenario with a campaign and participants.</p><div class=\"space-y-2 font-mono\"><div><code>local scene = Scenario.new(\"My Scenario\")</code></div><div><code>local dh = scene:system(\"DAGGERHEART\")</code></div><div><code>scene:campaign(&#123;name = \"Test\", system = \"DAGGERHEART\"&#125;)</code></div><div><code>scene:participant(&#123;name = \"Ada\", role = \"GM\", controller = \"AI\"&#125;)</code></div><div><code>scene:participant(&#123;name = \"John\"&#125;):character(&#123;name = \"Frodo\"&#125;)</code></div><div><code>return scene</code></div></div></div><label class=\"tab\"><input type=\"radio\" name=\"cheatsheet-tabs\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Quick start for building a scenario with a campaign and participants.</p><div class=\"space-y-2 font-mono\"><div><code>local scn = Scenario.new(\"My Scenario\")</code></div><div><code>local dh = scn:system(\"DAGGERHEART\")</code></div><div><code>scn:campaign(&#123;name = \"Test\", system = \"DAGGERHEART\"&#125;)</code></div><div><code>scn:participant(&#123;name = \"Ada\", role = \"GM\", controller = \"AI\"&#125;)</code></div><div><code>scn:participant(&#123;name = \"John\"&#125;):character(&#123;name = \"Frodo\"&#125;)</code></div><div><code>return scn</code></div></div></div><label class=\"tab\"><input type=\"radio\" name=\"cheatsheet-tabs\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -200,7 +200,7 @@ func ScenarioScriptPanel(view ScenarioPageView, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Create PCs and NPCs and reference them later in the script.</p><div class=\"space-y-2 font-mono\"><div><code>scene:participant(&#123;name = \"John\"&#125;):character(&#123;name = \"Frodo\"&#125;)</code></div><div><code>scene:participant(&#123;name = \"Ada\", role = \"GM\", controller = \"AI\"&#125;):character(&#123;name = \"Sam\", kind = \"NPC\", control = \"gm\"&#125;)</code></div><div><code>scene:pc(\"Frodo\")</code></div><div><code>scene:npc(\"Sam\")</code></div></div></div><label class=\"tab\"><input type=\"radio\" name=\"cheatsheet-tabs\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Create PCs and NPCs and reference them later in the script.</p><div class=\"space-y-2 font-mono\"><div><code>scn:participant(&#123;name = \"John\"&#125;):character(&#123;name = \"Frodo\"&#125;)</code></div><div><code>scn:participant(&#123;name = \"Ada\", role = \"GM\", controller = \"AI\"&#125;):character(&#123;name = \"Sam\", kind = \"NPC\", control = \"gm\"&#125;)</code></div><div><code>scn:pc(\"Frodo\")</code></div><div><code>scn:npc(\"Sam\")</code></div></div></div><label class=\"tab\"><input type=\"radio\" name=\"cheatsheet-tabs\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -217,7 +217,7 @@ func ScenarioScriptPanel(view ScenarioPageView, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Control the active session lifecycle for the scenario.</p><div class=\"space-y-2 font-mono\"><div><code>scene:start_session(\"Session 1\")</code></div><div><code>scene:end_session()</code></div></div></div><label class=\"tab\"><input type=\"radio\" name=\"cheatsheet-tabs\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Control the active session lifecycle for the scenario.</p><div class=\"space-y-2 font-mono\"><div><code>scn:start_session(\"Session 1\")</code></div><div><code>scn:end_session()</code></div></div></div><label class=\"tab\"><input type=\"radio\" name=\"cheatsheet-tabs\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -234,7 +234,7 @@ func ScenarioScriptPanel(view ScenarioPageView, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Focus the spotlight on a character or clear it.</p><div class=\"space-y-2 font-mono\"><div><code>scene:set_spotlight(&#123;target = \"Frodo\"&#125;)</code></div><div><code>scene:clear_spotlight()</code></div></div></div><label class=\"tab\"><input type=\"radio\" name=\"cheatsheet-tabs\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Focus the spotlight on a character or clear it.</p><div class=\"space-y-2 font-mono\"><div><code>scn:set_spotlight(&#123;target = \"Frodo\"&#125;)</code></div><div><code>scn:clear_spotlight()</code></div></div></div><label class=\"tab\"><input type=\"radio\" name=\"cheatsheet-tabs\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -251,7 +251,7 @@ func ScenarioScriptPanel(view ScenarioPageView, loc Localizer) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Trigger action, reaction, and damage rolls.</p><div class=\"space-y-2 font-mono\"><div><code>local dh = scene:system(\"DAGGERHEART\")</code></div><div><code>dh:action_roll(&#123;actor = \"Frodo\", modifier = Modifiers.mod(\"bonus\", 1)&#125;)</code></div><div><code>dh:reaction_roll(&#123;actor = \"Frodo\"&#125;)</code></div><div><code>dh:damage_roll(&#123;actor = \"Frodo\"&#125;)</code></div></div></div></div></div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</label><div class=\"tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100\"><p class=\"text-xs opacity-70 mb-3\">Trigger action, reaction, and damage rolls.</p><div class=\"space-y-2 font-mono\"><div><code>local dh = scn:system(\"DAGGERHEART\")</code></div><div><code>dh:action_roll(&#123;actor = \"Frodo\", modifier = Modifiers.mod(\"bonus\", 1)&#125;)</code></div><div><code>dh:reaction_roll(&#123;actor = \"Frodo\"&#125;)</code></div><div><code>dh:damage_roll(&#123;actor = \"Frodo\"&#125;)</code></div></div></div></div></div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

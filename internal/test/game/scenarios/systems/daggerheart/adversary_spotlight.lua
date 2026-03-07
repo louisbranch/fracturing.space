@@ -1,8 +1,8 @@
-local scene = Scenario.new("adversary_spotlight")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("adversary_spotlight")
+local dh = scn:system("DAGGERHEART")
 
 -- Frame a battlefield with Frodo and a looming Nazgul.
-scene:campaign{
+scn:campaign{
   name = "Frodo Scene",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
@@ -11,11 +11,11 @@ scene:campaign{
 
 -- Frodo clashes with Nazgul while the GM keeps an eye on the battlefield.
 -- Nazgul is present as a looming threat the GM can spotlight.
-scene:pc("Frodo", { armor = 1 })
+scn:pc("Frodo", { armor = 1 })
 dh:adversary("Nazgul")
 
 -- The fight begins with the GM holding a pool of fear.
-scene:start_session("Battlefield")
+scn:start_session("Battlefield")
 dh:gm_fear(6)
 
 -- Frodo strikes Nazgul, but the roll lands on Fear so the GM takes control.
@@ -58,6 +58,6 @@ dh:adversary_attack{
 dh:gm_spend_fear(1):spotlight("Nazgul", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
 
 -- Spotlight returns to the players after the GM move resolves.
-scene:set_spotlight{ target = "Frodo", expect_spotlight = "Frodo" }
+scn:set_spotlight{ target = "Frodo", expect_spotlight = "Frodo" }
 
-return scene
+return scn

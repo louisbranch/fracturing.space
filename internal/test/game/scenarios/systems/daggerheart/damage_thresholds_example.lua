@@ -1,18 +1,18 @@
-local scene = Scenario.new("damage_thresholds_example")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("damage_thresholds_example")
+local dh = scn:system("DAGGERHEART")
 
 -- Recreate the guardian damage threshold example.
-scene:campaign{
+scn:campaign{
   name = "Damage Thresholds Example",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "damage"
 }
 
-scene:npc("Galadriel", { hp_max = 12, hp = 12, major_threshold = 8, severe_threshold = 16 })
+scn:npc("Galadriel", { hp_max = 12, hp = 12, major_threshold = 8, severe_threshold = 16 })
 
 -- A sequence of hits crosses Minor, Major, Severe, and Massive tiers.
-scene:start_session("Thresholds")
+scn:start_session("Thresholds")
 
 -- Example: 8+ is Major, 16+ is Severe, 32+ is Massive.
 -- Missing DSL: assert tier mapping and HP marked for each tier.
@@ -39,6 +39,6 @@ dh:combined_damage{
 }
 
 -- Close the session after the threshold checks.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

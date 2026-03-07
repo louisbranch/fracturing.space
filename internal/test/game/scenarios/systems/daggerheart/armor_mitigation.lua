@@ -1,19 +1,19 @@
-local scene = Scenario.new("armor_mitigation")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("armor_mitigation")
+local dh = scn:system("DAGGERHEART")
 
 -- Frame a duel where armor mitigation should matter.
-scene:campaign{
+scn:campaign{
   name = "Armor Mitigation",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "armor"
 }
 
-scene:pc("Frodo", { armor = 1 })
+scn:pc("Frodo", { armor = 1 })
 dh:adversary("Nazgul")
 
 -- Nazgul pressures Frodo while the GM holds fear to power the assault.
-scene:start_session("Armor")
+scn:start_session("Armor")
 dh:gm_fear(2)
 
 -- Nazgul lands a hit; Frodo is expected to mitigate with armor.
@@ -35,6 +35,6 @@ dh:adversary_attack{
 }
 
 -- Close the session after the mitigation check.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

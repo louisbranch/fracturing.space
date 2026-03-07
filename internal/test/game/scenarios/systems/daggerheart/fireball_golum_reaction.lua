@@ -1,19 +1,19 @@
-local scene = Scenario.new("fireball_golum_reaction")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("fireball_golum_reaction")
+local dh = scn:system("DAGGERHEART")
 
 -- Reflect the fireball versus Golum reaction roll example.
-scene:campaign{
+scn:campaign{
   name = "Fireball Golum Reaction",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "battle"
 }
 
-scene:pc("Gandalf")
+scn:pc("Gandalf")
 dh:adversary("Golum")
 
 -- Gandalf unleashes fire while the GM boosts the thief's reaction.
-scene:start_session("Fireball Chase")
+scn:start_session("Fireball Chase")
 dh:gm_fear(1)
 
 dh:attack{
@@ -30,6 +30,6 @@ dh:attack{
 dh:gm_spend_fear(1):spotlight("Golum")
 
 -- Close the session after the reaction example.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

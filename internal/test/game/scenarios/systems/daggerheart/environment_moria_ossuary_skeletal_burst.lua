@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_moria_ossuary_skeletal_burst")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_moria_ossuary_skeletal_burst")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the skeletal burst shrapnel attack.
-scene:campaign{
+scn:campaign{
   name = "Environment Ossuary Skeletal Burst",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The ossuary detonates around the party.
-scene:start_session("Skeletal Burst")
+scn:start_session("Skeletal Burst")
 
 dh:group_reaction{
   targets = {"Frodo"},
@@ -24,6 +24,6 @@ dh:group_reaction{
   source = "skeletal_burst"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

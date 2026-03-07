@@ -1,19 +1,19 @@
-local scene = Scenario.new("environment_gondor_court_rival_vassals")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_gondor_court_rival_vassals")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the rival vassals social pressure in the court.
-scene:campaign{
+scn:campaign{
   name = "Environment Gondor Court Gondor Vassals",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
-scene:npc("Gondor Vassals")
+scn:pc("Frodo")
+scn:npc("Gondor Vassals")
 
 -- Courtiers compete for favor and feed intrigue.
-scene:start_session("Gondor Vassals")
+scn:start_session("Gondor Vassals")
 dh:gm_fear(1)
 
 -- Partial mapping: rivalry pressure and social fallout are explicit by branch.
@@ -29,8 +29,8 @@ dh:apply_roll_outcome{
     {kind = "set_spotlight", target = "Frodo"},
   },
 }
-scene:set_spotlight{ target = "Frodo" }
+scn:set_spotlight{ target = "Frodo" }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

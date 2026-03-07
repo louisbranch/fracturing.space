@@ -71,22 +71,28 @@ Create a participant and a character with chaining (defaults: participant role =
 
 ```lua
 -- Setup
-local scene = Scenario.new("demo")
-local dh = scene:system("DAGGERHEART")
-scene:campaign({name = "Demo", system = "DAGGERHEART"})
+local scn = Scenario.new("demo")
+local dh = scn:system("DAGGERHEART")
+scn:campaign({name = "Demo", system = "DAGGERHEART"})
 
 -- Participant + character
-scene:participant({name = "John"}):character({name = "Frodo"})
+scn:participant({name = "John"}):character({name = "Frodo"})
 dh:gm_fear(1)
 
-return scene
+return scn
 ```
 
 Use prefab shortcuts for known presets:
 
 ```lua
-scene:prefab("frodo")
+scn:prefab("frodo")
 ```
+
+Root alias convention:
+
+- canonical semantic name: `scenario`
+- preferred shorthand for scripts: `scn`
+- avoid `scene` as the root alias to prevent collision with domain `scene` terminology
 
 ## Mock Auth
 
@@ -141,11 +147,11 @@ Scenarios do not need a new DSL per system. New systems should:
 1. add scenarios under `internal/test/game/scenarios/systems/<system_id>/`,
 2. register system DSL methods + step dispatch in
    `internal/tools/scenario/system_registry.go`,
-3. keep using `scene:system("<SYSTEM_ID>")` handles in Lua scripts.
+3. keep using system handles (`scn:system("<SYSTEM_ID>")`) in Lua scripts.
 
-`scene:campaign` must include `system` explicitly. The runner does not apply an
+`scn:campaign` must include `system` explicitly. The runner does not apply an
 implicit system default.
 
-Legacy scene-level mechanic calls are rejected with migration guidance. Use
-system handles (`local sys = scene:system("<SYSTEM_ID>")`) for all
+Legacy root-level mechanic calls are rejected with migration guidance. Use
+system handles (`local sys = scn:system("<SYSTEM_ID>")`) for all
 system-owned mechanics.

@@ -1,19 +1,19 @@
-local scene = Scenario.new("damage_roll_modifier")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("damage_roll_modifier")
+local dh = scn:system("DAGGERHEART")
 
 -- Reflect the shortbow example to show modifiers on damage rolls.
-scene:campaign{
+scn:campaign{
   name = "Damage Roll Modifier",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "damage"
 }
 
-scene:pc("Sam")
+scn:pc("Sam")
 dh:adversary("Orc Raider")
 
 -- Sam hits with a weapon that adds a flat modifier.
-scene:start_session("Damage Modifier")
+scn:start_session("Damage Modifier")
 
 -- Example: 3d6 (3, 5, 6) + 6 for 20 total physical damage.
 -- Missing DSL: force the damage dice to 3, 5, and 6.
@@ -24,6 +24,6 @@ dh:damage_roll{
 }
 
 -- Close the session after the damage roll.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

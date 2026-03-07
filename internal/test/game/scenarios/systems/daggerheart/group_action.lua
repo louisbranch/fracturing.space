@@ -1,20 +1,20 @@
-local scene = Scenario.new("group_action")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("group_action")
+local dh = scn:system("DAGGERHEART")
 
 -- Assemble Frodo, Sam, and Gandalf for a group action.
-scene:campaign{
+scn:campaign{
   name = "Group Action",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "teamwork"
 }
 
-scene:pc("Frodo")
-scene:pc("Sam")
-scene:pc("Gandalf")
+scn:pc("Frodo")
+scn:pc("Sam")
+scn:pc("Gandalf")
 
 -- The party attempts a coordinated group action led by Frodo.
-scene:start_session("Group Action")
+scn:start_session("Group Action")
 
 -- Sam and Gandalf support Frodo's roll with their own traits.
 dh:group_action{
@@ -31,6 +31,6 @@ dh:group_action{
 }
 
 -- Close the session after the group action.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

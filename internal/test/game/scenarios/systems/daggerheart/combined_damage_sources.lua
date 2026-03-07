@@ -1,20 +1,20 @@
-local scene = Scenario.new("combined_damage_sources")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("combined_damage_sources")
+local dh = scn:system("DAGGERHEART")
 
 -- Introduce two attackers to combine their damage against Bilbo.
-scene:campaign{
+scn:campaign{
   name = "Combined Damage Sources",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "damage"
 }
 
-scene:pc("Frodo")
-scene:pc("Sam")
+scn:pc("Frodo")
+scn:pc("Sam")
 dh:adversary("Bilbo")
 
 -- Frodo and Sam land separate hits that combine into one damage total.
-scene:start_session("Combined Damage")
+scn:start_session("Combined Damage")
 
 -- Their damage is summed before comparing against thresholds.
 dh:combined_damage{
@@ -33,6 +33,6 @@ dh:combined_damage{
 }
 
 -- Close the session after the combined damage check.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

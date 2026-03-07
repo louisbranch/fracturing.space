@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_helms_deep_siege_collateral_damage")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_helms_deep_siege_collateral_damage")
+local dh = scn:system("DAGGERHEART")
 
 -- Model collateral damage from siege weapons after an adversary falls.
-scene:campaign{
+scn:campaign{
   name = "Environment Helms Deep Siege Collateral Damage",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- A stray attack lands where the fight rages.
-scene:start_session("Collateral Damage")
+scn:start_session("Collateral Damage")
 dh:gm_fear(1)
 
 -- Stress-on-success/failure remains unresolved in the fixture DSL.
@@ -27,6 +27,6 @@ dh:group_reaction{
   source = "collateral_damage"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

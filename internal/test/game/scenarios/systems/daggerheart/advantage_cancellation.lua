@@ -1,18 +1,18 @@
-local scene = Scenario.new("advantage_cancellation")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("advantage_cancellation")
+local dh = scn:system("DAGGERHEART")
 
 -- Model advantage/disadvantage cancellation (two up, one down).
-scene:campaign{
+scn:campaign{
   name = "Advantage Cancellation",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "advantage"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- Two sources of advantage and one of disadvantage resolve to advantage.
-scene:start_session("Advantage Cancellation")
+scn:start_session("Advantage Cancellation")
 
 dh:action_roll{
   actor = "Frodo",
@@ -23,6 +23,6 @@ dh:action_roll{
   outcome = "hope"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

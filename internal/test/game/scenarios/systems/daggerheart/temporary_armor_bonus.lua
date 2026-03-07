@@ -1,16 +1,16 @@
-local scene = Scenario.new("temporary_armor_bonus")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("temporary_armor_bonus")
+local dh = scn:system("DAGGERHEART")
 
-scene:campaign{
+scn:campaign{
   name = "Temporary Armor Bonus",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "armor"
 }
 
-scene:pc("Gandalf", { armor = 3 })
+scn:pc("Gandalf", { armor = 3 })
 
-scene:start_session("Armor Bonus")
+scn:start_session("Armor Bonus")
 
 dh:temporary_armor{
   target = "Gandalf",
@@ -46,6 +46,6 @@ dh:rest{
   expect_armor_delta = -2,
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

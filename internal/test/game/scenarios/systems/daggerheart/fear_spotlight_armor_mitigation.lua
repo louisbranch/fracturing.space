@@ -1,19 +1,19 @@
-local scene = Scenario.new("fear_spotlight_armor_mitigation")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("fear_spotlight_armor_mitigation")
+local dh = scn:system("DAGGERHEART")
 
 -- Recreate a fear-triggered spotlight shift with armor mitigation.
-scene:campaign{
+scn:campaign{
   name = "Fear Spotlight Armor Mitigation",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "gm_fear"
 }
 
-scene:pc("Frodo", { armor = 1 })
+scn:pc("Frodo", { armor = 1 })
 dh:adversary("Uruk-hai Brute")
 
 -- Frodo strikes, the roll lands on Fear, and the GM takes over.
-scene:start_session("Spotlight Shift")
+scn:start_session("Spotlight Shift")
 dh:gm_fear(6)
 
 dh:attack{
@@ -40,6 +40,6 @@ dh:adversary_attack{
 }
 
 -- Close the session after the spotlight exchange.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

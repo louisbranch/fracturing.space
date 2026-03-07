@@ -295,7 +295,7 @@ func scenarioTypeMethods() []lua.RegistryFunction {
 
 func legacyScenarioSystemMethod(method string) lua.Function {
 	return func(state *lua.State) int {
-		lua.Errorf(state, "scene:%s requires a system handle, use scene:system(\"<SYSTEM_ID>\"):%s(...)", method, method)
+		lua.Errorf(state, "%s requires a system handle, use <root>:system(\"<SYSTEM_ID>\"):%s(...)", method, method)
 		return 0
 	}
 }
@@ -818,7 +818,7 @@ func checkScenario(state *lua.State) *Scenario {
 func checkSystemHandle(state *lua.State, method string) *systemHandle {
 	if state.TypeOf(1) == lua.TypeUserData {
 		if scenario, ok := state.ToUserData(1).(*Scenario); ok && scenario != nil {
-			lua.Errorf(state, "scene:%s requires a system handle, use scene:system(\"<SYSTEM_ID>\"):%s(...)", method, method)
+			lua.Errorf(state, "%s requires a system handle, use <root>:system(\"<SYSTEM_ID>\"):%s(...)", method, method)
 			return nil
 		}
 	}

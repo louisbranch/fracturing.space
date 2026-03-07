@@ -1,24 +1,24 @@
-local scene = Scenario.new("direct_damage_reaction")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("direct_damage_reaction")
+local dh = scn:system("DAGGERHEART")
 
 -- Spotlight a reaction roll against direct damage.
-scene:campaign{
+scn:campaign{
   name = "Direct Damage Reaction",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "reaction"
 }
 
-scene:pc("Aragorn")
+scn:pc("Aragorn")
 
 -- An explosive spell threatens Aragorn, calling for a reaction roll.
-scene:start_session("Direct Damage")
+scn:start_session("Direct Damage")
 
 -- Example: Agility reaction roll vs Difficulty 16 with a forced total to ensure the fixture is deterministic.
 dh:reaction_roll{ actor = "Aragorn", trait = "agility", difficulty = 16, total = 19, outcome = "hope" }
 dh:apply_reaction_outcome{}
 
 -- Close the session after the reaction.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

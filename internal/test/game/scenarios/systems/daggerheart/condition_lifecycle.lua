@@ -1,19 +1,19 @@
-local scene = Scenario.new("condition_lifecycle")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("condition_lifecycle")
+local dh = scn:system("DAGGERHEART")
 
 -- Introduce Galadriel so conditions can be applied then cleared.
-scene:campaign{
+scn:campaign{
   name = "Condition Lifecycle",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "conditions"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Galadriel")
 
 -- The GM has fear ready to enforce a condition and then clear it.
-scene:start_session("Conditions")
+scn:start_session("Conditions")
 dh:gm_fear(3)
 
 -- Galadriel becomes Vulnerable, then uses a spotlight moment to break free.
@@ -33,6 +33,6 @@ dh:apply_condition{
 }
 
 -- Close the session after the condition clears.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

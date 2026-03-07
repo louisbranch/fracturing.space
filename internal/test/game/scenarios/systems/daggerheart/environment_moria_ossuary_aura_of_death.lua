@@ -1,24 +1,24 @@
-local scene = Scenario.new("environment_moria_ossuary_aura_of_death")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_moria_ossuary_aura_of_death")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture undead healing from the aura of death.
-scene:campaign{
+scn:campaign{
   name = "Environment Ossuary Aura of Death",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Uruk-hai")
 
 -- The aura restores undead HP and Stress.
-scene:start_session("Aura of Death")
+scn:start_session("Aura of Death")
 dh:gm_fear(1)
 
 -- Healing distribution across undead remains unresolved.
 dh:gm_spend_fear(1):spotlight("Uruk-hai")
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

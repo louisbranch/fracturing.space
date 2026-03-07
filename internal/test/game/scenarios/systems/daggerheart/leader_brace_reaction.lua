@@ -1,19 +1,19 @@
-local scene = Scenario.new("leader_brace_reaction")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("leader_brace_reaction")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the Mirkwood Warden Brace reaction reducing HP loss.
-scene:campaign{
+scn:campaign{
   name = "Leader Brace Reaction",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "adversary"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Mirkwood Warden")
 
 -- The Mirkwood Warden marks Stress to reduce HP marked.
-scene:start_session("Brace")
+scn:start_session("Brace")
 
 -- Example: when the Mirkwood Warden marks HP, they can mark Stress to mark 1 fewer.
 -- Partial mapping: explicit stress spend and reaction update are represented.
@@ -32,6 +32,6 @@ dh:adversary_update{
   notes = "brace_reaction"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

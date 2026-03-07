@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_prancing_pony_bar_fight")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_prancing_pony_bar_fight")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the bar fight hazard during tavern movement.
-scene:campaign{
+scn:campaign{
   name = "Environment Prancing Pony Bar Fight",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- A brawl erupts and movement triggers danger.
-scene:start_session("Bar Fight")
+scn:start_session("Bar Fight")
 dh:gm_fear(1)
 
 -- Example: spend Fear; moving requires Agility/Presence or take 1d6+2 damage.
@@ -28,6 +28,6 @@ dh:group_reaction{
   source = "bar_fight_hazard"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

@@ -1,19 +1,19 @@
-local scene = Scenario.new("environment_bree_outpost_shakedown")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_bree_outpost_shakedown")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the crime boss shakedown that the PCs can intervene in.
-scene:campaign{
+scn:campaign{
   name = "Environment Bree Outpost Shakedown",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Orc Boss")
 
 -- The party witnesses intimidation at a general goods store.
-scene:start_session("Shakedown")
+scn:start_session("Shakedown")
 dh:gm_fear(1)
 
 -- Example: the environment action introduces a threat without a roll.
@@ -31,6 +31,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

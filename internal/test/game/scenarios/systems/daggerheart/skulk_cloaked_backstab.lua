@@ -1,19 +1,19 @@
-local scene = Scenario.new("skulk_cloaked_backstab")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("skulk_cloaked_backstab")
+local dh = scn:system("DAGGERHEART")
 
 -- Model a Skulk using Cloaked to set up a Backstab.
-scene:campaign{
+scn:campaign{
   name = "Skulk Cloaked Backstab",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "adversary"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Orc Stalker")
 
 -- The shadow hides, then strikes with advantage for boosted damage.
-scene:start_session("Cloaked Backstab")
+scn:start_session("Cloaked Backstab")
 
 -- Example: Cloaked grants Hidden; Backstab replaces damage on advantaged hit.
 -- Partial mapping: Hidden application and advantaged attack are represented.
@@ -28,6 +28,6 @@ dh:adversary_attack{
   damage_dice = { { sides = 6, count = 1 } }
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

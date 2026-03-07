@@ -1,18 +1,18 @@
-local scene = Scenario.new("death_move")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("death_move")
+local dh = scn:system("DAGGERHEART")
 
 -- Frame Frodo at 0 HP to trigger a death move.
-scene:campaign{
+scn:campaign{
   name = "Death Move",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "death"
 }
 
-scene:pc("Frodo", { hp = 0, stress = 2 })
+scn:pc("Frodo", { hp = 0, stress = 2 })
 
 -- Frodo is down and must confront a death move.
-scene:start_session("Death")
+scn:start_session("Death")
 
 -- Avoid Death is chosen to stay in the fight.
 dh:death_move{
@@ -28,6 +28,6 @@ dh:death_move{
 }
 
 -- Close the session after the death move resolves.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

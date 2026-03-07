@@ -1,8 +1,8 @@
-local scene = Scenario.new("basic_flow")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("basic_flow")
+local dh = scn:system("DAGGERHEART")
 
 -- Open a barebones campaign to show a quiet session.
-scene:campaign{
+scn:campaign{
   name = "Basic Flow Campaign",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
@@ -10,10 +10,10 @@ scene:campaign{
 }
 
 -- A simple onboarding beat: one PC joins the campaign.
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The session opens and closes without any action.
-scene:start_session("First Session")
-scene:end_session()
+scn:start_session("First Session")
+scn:end_session()
 
-return scene
+return scn

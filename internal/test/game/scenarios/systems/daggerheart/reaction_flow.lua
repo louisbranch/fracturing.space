@@ -1,12 +1,12 @@
-local scene = Scenario.new("reaction_flow")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("reaction_flow")
+local dh = scn:system("DAGGERHEART")
 
 -- Introduce Sam to highlight reaction timing.
-scene:campaign{ name = "Reaction Flow", system = "DAGGERHEART", gm_mode = "HUMAN" }
-scene:pc("Sam")
+scn:campaign{ name = "Reaction Flow", system = "DAGGERHEART", gm_mode = "HUMAN" }
+scn:pc("Sam")
 
 -- Open a session to test reaction timing.
-scene:start_session("Reaction")
+scn:start_session("Reaction")
 
 -- Sam makes a reaction roll under pressure.
 dh:reaction{
@@ -19,5 +19,5 @@ dh:reaction{
 }
 
 -- Close the session after the reaction.
-scene:end_session()
-return scene
+scn:end_session()
+return scn

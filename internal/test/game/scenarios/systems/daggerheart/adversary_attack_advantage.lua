@@ -1,19 +1,19 @@
-local scene = Scenario.new("adversary_attack_advantage")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("adversary_attack_advantage")
+local dh = scn:system("DAGGERHEART")
 
 -- Stage Saruman's ambush with a clear edge.
-scene:campaign{
+scn:campaign{
   name = "Adversary Attack Advantage",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "ambush"
 }
 
-scene:pc("Frodo", { armor = 1 })
+scn:pc("Frodo", { armor = 1 })
 dh:adversary("Saruman")
 
 -- Saruman ambushes Frodo with a clear edge.
-scene:start_session("Ambush")
+scn:start_session("Ambush")
 
 -- Advantage and an attack modifier tilt the roll in Saruman's favor.
 dh:adversary_attack{
@@ -36,6 +36,6 @@ dh:adversary_attack{
 }
 
 -- Close the session after the ambush resolves.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

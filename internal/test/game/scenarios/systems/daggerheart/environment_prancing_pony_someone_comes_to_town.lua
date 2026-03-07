@@ -1,25 +1,25 @@
-local scene = Scenario.new("environment_prancing_pony_someone_comes_to_town")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_prancing_pony_someone_comes_to_town")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the arrival of a significant NPC in the tavern.
-scene:campaign{
+scn:campaign{
   name = "Environment Prancing Pony Someone Comes to Town",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
-scene:npc("Elrond")
+scn:pc("Frodo")
+scn:npc("Elrond")
 
 -- A new figure arrives with work or a personal connection.
-scene:start_session("Someone Comes to Town")
+scn:start_session("Someone Comes to Town")
 dh:gm_fear(1)
 
 -- Example: introduce a significant NPC as an environment action.
 -- NPC hook payload and immediate agenda remain unresolved.
 dh:gm_spend_fear(1):spotlight("Elrond")
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

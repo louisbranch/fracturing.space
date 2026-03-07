@@ -1,19 +1,19 @@
-local scene = Scenario.new("tag_team")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("tag_team")
+local dh = scn:system("DAGGERHEART")
 
 -- Pair Frodo and Sam for a tag team maneuver.
-scene:campaign{
+scn:campaign{
   name = "Tag Team",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "teamwork"
 }
 
-scene:pc("Frodo")
-scene:pc("Sam")
+scn:pc("Frodo")
+scn:pc("Sam")
 
 -- Frodo and Sam attempt a tag team maneuver to tackle a shared obstacle.
-scene:start_session("Tag Team")
+scn:start_session("Tag Team")
 
 -- Frodo is selected as the final roller after both contribute.
 dh:tag_team{
@@ -30,6 +30,6 @@ dh:tag_team{
 }
 
 -- Close the session after the tag team attempt.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

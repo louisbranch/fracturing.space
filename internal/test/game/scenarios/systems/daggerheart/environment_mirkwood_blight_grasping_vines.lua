@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_mirkwood_blight_grasping_vines")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_mirkwood_blight_grasping_vines")
+local dh = scn:system("DAGGERHEART")
 
 -- Model the grasping vines restrain + vulnerable action.
-scene:campaign{
+scn:campaign{
   name = "Environment Mirkwood Blight Grasping Vines",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Gandalf")
+scn:pc("Gandalf")
 
 -- Vines whip out and bind a target.
-scene:start_session("Grasping Vines")
+scn:start_session("Grasping Vines")
 
 -- Escape-roll follow-up damage and Hope loss remain unresolved in this fixture.
 dh:group_reaction{
@@ -24,6 +24,6 @@ dh:group_reaction{
   source = "grasping_vines"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

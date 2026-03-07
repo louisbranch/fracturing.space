@@ -1,20 +1,20 @@
-local scene = Scenario.new("fireball_orc_pack_multi")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("fireball_orc_pack_multi")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the fireball example against multiple targets.
-scene:campaign{
+scn:campaign{
   name = "Fireball Orc Pack",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "battle"
 }
 
-scene:pc("Gandalf")
+scn:pc("Gandalf")
 dh:adversary("Orc Pack A")
 dh:adversary("Orc Pack B")
 
 -- Gandalf casts Fireball to catch multiple orc packs at once.
-scene:start_session("Fireball")
+scn:start_session("Fireball")
 
 -- Example: one roll applied to multiple targets.
 -- Missing DSL: assert per-target outcomes and damage tiers.
@@ -29,6 +29,6 @@ dh:multi_attack{
 }
 
 -- Close the session after the multi-target strike.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

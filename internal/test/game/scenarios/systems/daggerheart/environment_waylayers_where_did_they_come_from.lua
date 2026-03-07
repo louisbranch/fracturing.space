@@ -1,19 +1,19 @@
-local scene = Scenario.new("environment_waylayers_where_did_they_come_from")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_waylayers_where_did_they_come_from")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the ambushers' reaction granting advantage on the first strike.
-scene:campaign{
+scn:campaign{
   name = "Environment Orc Waylayers Where Did They Come From",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Orc Waylayers")
 
 -- The PCs spring the trap, shifting the spotlight and boosting the first attack.
-scene:start_session("Ambusher Reaction")
+scn:start_session("Ambusher Reaction")
 dh:gm_fear(2)
 
 -- Example: lose 2 Fear and grant advantage on the first attack roll.
@@ -26,6 +26,6 @@ dh:adversary_attack{
   damage_type = "physical"
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

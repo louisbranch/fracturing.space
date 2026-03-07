@@ -1,18 +1,18 @@
-local scene = Scenario.new("environment_osgiliath_ruins_apocalypse_then")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("environment_osgiliath_ruins_apocalypse_then")
+local dh = scn:system("DAGGERHEART")
 
 -- Capture the apocalypse replay and its escape countdown.
-scene:campaign{
+scn:campaign{
   name = "Environment Osgiliath Ruins Apocalypse Then",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "environment"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 
 -- The GM spends Fear to replay a past disaster.
-scene:start_session("Apocalypse Then")
+scn:start_session("Apocalypse Then")
 dh:gm_fear(1)
 
 -- Example: spend Fear to activate a progress countdown (5).
@@ -25,6 +25,6 @@ dh:apply_roll_outcome{
   },
 }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

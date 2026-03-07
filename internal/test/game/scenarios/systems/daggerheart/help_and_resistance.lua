@@ -1,19 +1,19 @@
-local scene = Scenario.new("help_and_resistance")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("help_and_resistance")
+local dh = scn:system("DAGGERHEART")
 
 -- Frame a duel where help meets resistance.
-scene:campaign{
+scn:campaign{
   name = "Help and Resistance",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "help"
 }
 
-scene:pc("Frodo")
+scn:pc("Frodo")
 dh:adversary("Nazgul")
 
 -- Frodo gets help to land a strike against a resistant foe.
-scene:start_session("Help and Resistance")
+scn:start_session("Help and Resistance")
 
 -- Help spends hope, and resistance should blunt the physical damage.
 dh:attack{
@@ -36,6 +36,6 @@ dh:attack{
 }
 
 -- Close the session after the assisted strike lands.
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn

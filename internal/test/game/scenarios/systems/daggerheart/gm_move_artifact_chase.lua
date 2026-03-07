@@ -1,19 +1,19 @@
-local scene = Scenario.new("gm_move_artifact_chase")
-local dh = scene:system("DAGGERHEART")
+local scn = Scenario.new("gm_move_artifact_chase")
+local dh = scn:system("DAGGERHEART")
 
 -- Model a GM move that steals an artifact and launches a chase.
-scene:campaign{
+scn:campaign{
   name = "GM Move Artifact Chase",
   system = "DAGGERHEART",
   gm_mode = "HUMAN",
   theme = "gm_move"
 }
 
-scene:pc("Gandalf")
+scn:pc("Gandalf")
 dh:adversary("Golum")
 
 -- The GM introduces a chase after a sudden theft.
-scene:start_session("Artifact Theft")
+scn:start_session("Artifact Theft")
 dh:gm_fear(1)
 
 -- Example: GM move steals an artifact and forces a chase.
@@ -31,8 +31,8 @@ dh:apply_roll_outcome{
     {kind = "countdown_update", name = "Thief Escape", delta = 2, reason = "artifact_lost_in_crowd"},
   },
 }
-scene:set_spotlight{ target = "Gandalf" }
+scn:set_spotlight{ target = "Gandalf" }
 
-scene:end_session()
+scn:end_session()
 
-return scene
+return scn
