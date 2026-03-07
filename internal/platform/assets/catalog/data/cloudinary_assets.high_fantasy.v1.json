@@ -1,10 +1,12 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-06T02:50:37+00:00",
+  "generated_at": "2026-03-07T05:46:09+00:00",
   "theme": "high_fantasy",
   "provider": "cloudinary",
   "batch_ids": [
     "dh_classes_try_r4",
+    "dh_domain_card_r1",
+    "dh_domain_card_r2",
     "dh_domain_r1",
     "dh_heritage_r1",
     "dh_subclass_r3",
@@ -1666,7 +1668,35 @@
         {
           "id": "daggerheart_domain_card_set_v1",
           "asset_type": "daggerheart_domain_card_illustration",
-          "asset_ids": []
+          "asset_ids": [
+            "arcana_runeward",
+            "arcana_unleash_chaos",
+            "arcana_wallwalk",
+            "blade_get_back_up",
+            "blade_not_good_enough",
+            "blade_whirlwind",
+            "bone_deft_maneuvers",
+            "bone_i_see_it_coming",
+            "bone_untouchable",
+            "codex_book_of_ava",
+            "codex_book_of_illiat",
+            "codex_book_of_tyfar",
+            "grace_deft_deceiver",
+            "grace_enrapture",
+            "grace_inspirational_words",
+            "midnight_pick_and_pull",
+            "midnight_rain_of_blades",
+            "midnight_uncanny_disguise",
+            "sage_gifted_tracker",
+            "sage_natures_tongue",
+            "sage_vicious_entangle",
+            "splendor_bolt_beacon",
+            "splendor_mending_touch",
+            "splendor_reassurance",
+            "valor_bare_bones",
+            "valor_forceful_push",
+            "valor_i_am_your_shield"
+          ]
         },
         {
           "id": "daggerheart_domain_icon_set_v1",
@@ -1961,6 +1991,195 @@
           "asset_id": "heritage_wildborne"
         },
         {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.arcana-runeward",
+          "entity_type": "domain_card",
+          "asset_id": "arcana_runeward"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.arcana-unleash-chaos",
+          "entity_type": "domain_card",
+          "asset_id": "arcana_unleash_chaos"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.arcana-wallwalk",
+          "entity_type": "domain_card",
+          "asset_id": "arcana_wallwalk"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.blade-get-back-up",
+          "entity_type": "domain_card",
+          "asset_id": "blade_get_back_up"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.blade-not-good-enough",
+          "entity_type": "domain_card",
+          "asset_id": "blade_not_good_enough"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.blade-whirlwind",
+          "entity_type": "domain_card",
+          "asset_id": "blade_whirlwind"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.bone-deft-maneuvers",
+          "entity_type": "domain_card",
+          "asset_id": "bone_deft_maneuvers"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.bone-i-see-it-coming",
+          "entity_type": "domain_card",
+          "asset_id": "bone_i_see_it_coming"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.bone-untouchable",
+          "entity_type": "domain_card",
+          "asset_id": "bone_untouchable"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.codex-book-of-ava",
+          "entity_type": "domain_card",
+          "asset_id": "codex_book_of_ava"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.codex-book-of-illiat",
+          "entity_type": "domain_card",
+          "asset_id": "codex_book_of_illiat"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.codex-book-of-tyfar",
+          "entity_type": "domain_card",
+          "asset_id": "codex_book_of_tyfar"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.grace-deft-deceiver",
+          "entity_type": "domain_card",
+          "asset_id": "grace_deft_deceiver"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.grace-enrapture",
+          "entity_type": "domain_card",
+          "asset_id": "grace_enrapture"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.grace-inspirational-words",
+          "entity_type": "domain_card",
+          "asset_id": "grace_inspirational_words"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.midnight-pick-and-pull",
+          "entity_type": "domain_card",
+          "asset_id": "midnight_pick_and_pull"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.midnight-rain-of-blades",
+          "entity_type": "domain_card",
+          "asset_id": "midnight_rain_of_blades"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.midnight-uncanny-disguise",
+          "entity_type": "domain_card",
+          "asset_id": "midnight_uncanny_disguise"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.sage-gifted-tracker",
+          "entity_type": "domain_card",
+          "asset_id": "sage_gifted_tracker"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.sage-natures-tongue",
+          "entity_type": "domain_card",
+          "asset_id": "sage_natures_tongue"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.sage-vicious-entangle",
+          "entity_type": "domain_card",
+          "asset_id": "sage_vicious_entangle"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.splendor-bolt-beacon",
+          "entity_type": "domain_card",
+          "asset_id": "splendor_bolt_beacon"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.splendor-mending-touch",
+          "entity_type": "domain_card",
+          "asset_id": "splendor_mending_touch"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.splendor-reassurance",
+          "entity_type": "domain_card",
+          "asset_id": "splendor_reassurance"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.valor-bare-bones",
+          "entity_type": "domain_card",
+          "asset_id": "valor_bare_bones"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.valor-forceful-push",
+          "entity_type": "domain_card",
+          "asset_id": "valor_forceful_push"
+        },
+        {
+          "asset_type": "daggerheart_domain_card_illustration",
+          "set_id": "daggerheart_domain_card_set_v1",
+          "entity_id": "domain_card.valor-i-am-your-shield",
+          "entity_type": "domain_card",
+          "asset_id": "valor_i_am_your_shield"
+        },
+        {
           "asset_type": "daggerheart_domain_icon",
           "set_id": "daggerheart_domain_icon_set_v1",
           "entity_id": "domain.arcana",
@@ -2218,570 +2437,3099 @@
   "daggerheart_adversary_illustration": [],
   "daggerheart_ancestry_illustration": [
     {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_dwarf",
+      "request_slug": "heritage_dwarf",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
       "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_dwarf",
+      "output_id": "img_89ce8c3bc28f",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "89ce8c3bc28fc7e86c9f17e8bcd3d0f56002c0a16ef9015fd44a82b854f6c663",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_dwarf",
-        "version": 1772735473
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735473/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_dwarf.png",
+        "version": 1772735473,
+        "uploaded_at": "2026-03-05T18:31:14+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.dwarf",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_elf",
+      "request_slug": "heritage_elf",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
       "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_elf",
+      "output_id": "img_6d5a0a70d387",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6d5a0a70d3878ece554387854e0a2496998974bc99e869971ec65f9c4cef6372",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_elf",
-        "version": 1772735478
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735478/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_elf.png",
+        "version": 1772735478,
+        "uploaded_at": "2026-03-05T18:31:19+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.elf",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_faerie",
+      "request_slug": "heritage_faerie",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
       "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_faerie",
+      "output_id": "img_9585cf003bab",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "9585cf003babffaf3dbe1c63cfc31571aba20e90e3f9c8669a23157052ce2769",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_faerie",
-        "version": 1772735484
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735484/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_faerie.png",
+        "version": 1772735484,
+        "uploaded_at": "2026-03-05T18:31:25+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.faerie",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_goblin",
+      "request_slug": "heritage_goblin",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
       "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_goblin",
+      "output_id": "img_c2d10c5f9fa0",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "c2d10c5f9fa0c4ebb08a098bc9a8e7709f1f52ebd6f23e31e2c4fc9f13ad44ad",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_goblin",
-        "version": 1772735490
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735490/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_goblin.png",
+        "version": 1772735490,
+        "uploaded_at": "2026-03-05T18:31:31+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.goblin",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_human",
+      "request_slug": "heritage_human",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
       "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_human",
+      "output_id": "img_18b3a42c7606",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "18b3a42c7606c68c6303d1b65f46a82e258aed9eb36385419871db3f40590c7c",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_human",
-        "version": 1772735498
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735498/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_human.png",
+        "version": 1772735498,
+        "uploaded_at": "2026-03-05T18:31:39+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.human",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_orc",
+      "request_slug": "heritage_orc",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
       "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_orc",
+      "output_id": "img_9f2728739727",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "9f2728739727b4f89a6127543c7d5aea689be38d90c74b1dcbcbeb8e8b65d423",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_orc",
-        "version": 1772735504
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735504/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_orc.png",
+        "version": 1772735504,
+        "uploaded_at": "2026-03-05T18:31:45+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.orc",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     }
   ],
   "daggerheart_class_icon": [
     {
+      "request_id": "high_fantasy.daggerheart_class_icon.bard",
+      "request_slug": "bard",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_icon",
       "set_id": "daggerheart_class_icon_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "bard",
+      "output_id": "img_b3480a38bd3b",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "b3480a38bd3b3fdb33d7c5eee38793ebcefd095981043d8d1e3bca78ebb93f69",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_icon/v1/bard",
-        "version": 1772735507
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735507/high_fantasy/daggerheart_class_icon/v1/bard.png",
+        "version": 1772735507,
+        "uploaded_at": "2026-03-05T18:31:47+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.bard",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_icon.druid",
+      "request_slug": "druid",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_icon",
       "set_id": "daggerheart_class_icon_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "druid",
+      "output_id": "img_3dce0470f96b",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "3dce0470f96b9707d65c7f47c0b7813785bf744e65662d8d61f8b8195c8e0f1f",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_icon/v1/druid",
-        "version": 1772735509
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735509/high_fantasy/daggerheart_class_icon/v1/druid.png",
+        "version": 1772735509,
+        "uploaded_at": "2026-03-05T18:31:50+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.druid",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_icon.guardian",
+      "request_slug": "guardian",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_icon",
       "set_id": "daggerheart_class_icon_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "guardian",
+      "output_id": "img_b3057e0cf553",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "b3057e0cf55375052f6d399d130922e52be7b3df5a59375dd7fb7bf6d4c97b31",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_icon/v1/guardian",
-        "version": 1772735512
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735512/high_fantasy/daggerheart_class_icon/v1/guardian.png",
+        "version": 1772735512,
+        "uploaded_at": "2026-03-05T18:31:53+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.guardian",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_icon.ranger",
+      "request_slug": "ranger",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_icon",
       "set_id": "daggerheart_class_icon_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "ranger",
+      "output_id": "img_7203104aa147",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "7203104aa147105c41a31c1b3ee5c741665be1f9a3a6e50c8c808f23d0c65b07",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_icon/v1/ranger",
-        "version": 1772735515
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735515/high_fantasy/daggerheart_class_icon/v1/ranger.png",
+        "version": 1772735515,
+        "uploaded_at": "2026-03-05T18:31:55+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.ranger",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_icon.rogue",
+      "request_slug": "rogue",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_icon",
       "set_id": "daggerheart_class_icon_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "rogue",
+      "output_id": "img_a26d193a2267",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "a26d193a226706d352629e75d69a71eeb0824e1b6551c1e63dbc7d5f02ec82e5",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_icon/v1/rogue",
-        "version": 1772735517
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735517/high_fantasy/daggerheart_class_icon/v1/rogue.png",
+        "version": 1772735517,
+        "uploaded_at": "2026-03-05T18:31:58+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.rogue",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_icon.seraph",
+      "request_slug": "seraph",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_icon",
       "set_id": "daggerheart_class_icon_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "seraph",
+      "output_id": "img_1b0800622368",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "1b08006223683e2c6bbe49a47e58c3040fb07f96c9442f5192670e1307e83a89",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_icon/v1/seraph",
-        "version": 1772735520
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735520/high_fantasy/daggerheart_class_icon/v1/seraph.png",
+        "version": 1772735520,
+        "uploaded_at": "2026-03-05T18:32:00+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.seraph",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_icon.sorcerer",
+      "request_slug": "sorcerer",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_icon",
       "set_id": "daggerheart_class_icon_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "sorcerer",
+      "output_id": "img_8ded4f6218a0",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "8ded4f6218a0c86581dbde7028db6527269266c92ba0ff865313b88b53548694",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_icon/v1/sorcerer",
-        "version": 1772735522
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735522/high_fantasy/daggerheart_class_icon/v1/sorcerer.png",
+        "version": 1772735522,
+        "uploaded_at": "2026-03-05T18:32:03+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.sorcerer",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_icon.warrior",
+      "request_slug": "warrior",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_icon",
       "set_id": "daggerheart_class_icon_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "warrior",
+      "output_id": "img_1272b8569229",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "1272b8569229a61a25f645a49f35659cb66bab4b3434abe851f7011b977bd332",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_icon/v1/warrior",
-        "version": 1772735523
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735523/high_fantasy/daggerheart_class_icon/v1/warrior.png",
+        "version": 1772735523,
+        "uploaded_at": "2026-03-05T18:32:04+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.warrior",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_icon.wizard",
+      "request_slug": "wizard",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_icon",
       "set_id": "daggerheart_class_icon_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "wizard",
+      "output_id": "img_2005157d5873",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2005157d587390902d0ecfb55fe7eb9bc6968da56383d540b136a9fa653cec3d",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_icon/v1/wizard",
-        "version": 1772735526
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735526/high_fantasy/daggerheart_class_icon/v1/wizard.png",
+        "version": 1772735526,
+        "uploaded_at": "2026-03-05T18:32:07+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.wizard",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     }
   ],
   "daggerheart_class_illustration": [
     {
+      "request_id": "high_fantasy.daggerheart_class_illustration.bard",
+      "request_slug": "bard",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_illustration",
       "set_id": "daggerheart_class_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "bard",
+      "output_id": "img_57ba33e0dab9",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "57ba33e0dab97001470c82d7b42779944e8e49bf46e028d75c628f036388649b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_illustration/v1/bard",
-        "version": 1772735533
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735533/high_fantasy/daggerheart_class_illustration/v1/bard.png",
+        "version": 1772735533,
+        "uploaded_at": "2026-03-05T18:32:14+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.bard",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_illustration.druid",
+      "request_slug": "druid",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_illustration",
       "set_id": "daggerheart_class_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "druid",
+      "output_id": "img_c59807725df2",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "c59807725df2839a2434d743012cdbd3caee890c9bea52585f027c779f3e5dd0",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_illustration/v1/druid",
-        "version": 1772735538
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735538/high_fantasy/daggerheart_class_illustration/v1/druid.png",
+        "version": 1772735538,
+        "uploaded_at": "2026-03-05T18:32:18+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.druid",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_illustration.guardian",
+      "request_slug": "guardian",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_illustration",
       "set_id": "daggerheart_class_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "guardian",
+      "output_id": "img_dcfb6afd19c8",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "dcfb6afd19c8daaa36a69ae64ce3f6755c4c16e9b934a3729e2b4239678f8b35",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_illustration/v1/guardian",
-        "version": 1772735543
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735543/high_fantasy/daggerheart_class_illustration/v1/guardian.png",
+        "version": 1772735543,
+        "uploaded_at": "2026-03-05T18:32:24+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.guardian",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_illustration.ranger",
+      "request_slug": "ranger",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_illustration",
       "set_id": "daggerheart_class_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "ranger",
+      "output_id": "img_2c7d9398f34c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2c7d9398f34c3e9a4b82540ad4200e2e0500bec4e967ee16c9e77b8518c90c06",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_illustration/v1/ranger",
-        "version": 1772735549
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735549/high_fantasy/daggerheart_class_illustration/v1/ranger.png",
+        "version": 1772735549,
+        "uploaded_at": "2026-03-05T18:32:31+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.ranger",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_illustration.rogue",
+      "request_slug": "rogue",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_illustration",
       "set_id": "daggerheart_class_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "rogue",
+      "output_id": "img_6b9eecdf57ac",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6b9eecdf57acafcf8b583122221682c7d1b4c5ae012b2761add4fa62d9fc2b27",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_illustration/v1/rogue",
-        "version": 1772735555
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735555/high_fantasy/daggerheart_class_illustration/v1/rogue.png",
+        "version": 1772735555,
+        "uploaded_at": "2026-03-05T18:32:36+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.rogue",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_illustration.seraph",
+      "request_slug": "seraph",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_illustration",
       "set_id": "daggerheart_class_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "seraph",
+      "output_id": "img_1758f82444a1",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "1758f82444a1c203fbd825cc32e796b944fb4480ec67203431b3de1343c411ca",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_illustration/v1/seraph",
-        "version": 1772735560
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735560/high_fantasy/daggerheart_class_illustration/v1/seraph.png",
+        "version": 1772735560,
+        "uploaded_at": "2026-03-05T18:32:41+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.seraph",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_illustration.sorcerer",
+      "request_slug": "sorcerer",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_illustration",
       "set_id": "daggerheart_class_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "sorcerer",
+      "output_id": "img_babc49726af9",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "babc49726af94cf1e4fc98c4292fc2a552274639c6bf29e06a5f7e64eb6b5d82",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_illustration/v1/sorcerer",
-        "version": 1772735566
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735566/high_fantasy/daggerheart_class_illustration/v1/sorcerer.png",
+        "version": 1772735566,
+        "uploaded_at": "2026-03-05T18:32:46+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.sorcerer",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_illustration.warrior",
+      "request_slug": "warrior",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_illustration",
       "set_id": "daggerheart_class_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "warrior",
+      "output_id": "img_cd8e5cc464e3",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "cd8e5cc464e3b9dd6d022862880e5b94a49c721577359655feb1e189a3010e5f",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_illustration/v1/warrior",
-        "version": 1772735572
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735572/high_fantasy/daggerheart_class_illustration/v1/warrior.png",
+        "version": 1772735572,
+        "uploaded_at": "2026-03-05T18:32:52+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.warrior",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_class_illustration.wizard",
+      "request_slug": "wizard",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_class_illustration",
       "set_id": "daggerheart_class_set_v1",
+      "batch_id": "dh_classes_try_r4",
       "fs_asset_id": "wizard",
+      "output_id": "img_9e0f4d064ad6",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "9e0f4d064ad60c33098eca67b03542d7777cb3d75dd24b414b54a2b0d163d083",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_class_illustration/v1/wizard",
-        "version": 1772735578
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735578/high_fantasy/daggerheart_class_illustration/v1/wizard.png",
+        "version": 1772735578,
+        "uploaded_at": "2026-03-05T18:32:58+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "class",
+        "entity_id": "class.wizard",
+        "source_file": "classes.json"
+      },
+      "review_flags": []
     }
   ],
   "daggerheart_community_illustration": [
     {
+      "request_id": "high_fantasy.daggerheart_community_illustration.heritage_highborne",
+      "request_slug": "heritage_highborne",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_community_illustration",
       "set_id": "daggerheart_community_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_highborne",
+      "output_id": "img_dd35e8b33c01",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "dd35e8b33c01ce804e2380cc0f2814c9865ea521c934d449c75da2db0434da02",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_community_illustration/v1/heritage_highborne",
-        "version": 1772735584
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735584/high_fantasy/daggerheart_community_illustration/v1/heritage_highborne.png",
+        "version": 1772735584,
+        "uploaded_at": "2026-03-05T18:33:05+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "community",
+        "entity_id": "heritage.highborne",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_community_illustration.heritage_loreborne",
+      "request_slug": "heritage_loreborne",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_community_illustration",
       "set_id": "daggerheart_community_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_loreborne",
+      "output_id": "img_a3a9ac1a9cf8",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "a3a9ac1a9cf8e0820330e2a401d2e2912f25366183275ed8cbdaad535ee8275b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_community_illustration/v1/heritage_loreborne",
-        "version": 1772735590
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735590/high_fantasy/daggerheart_community_illustration/v1/heritage_loreborne.png",
+        "version": 1772735590,
+        "uploaded_at": "2026-03-05T18:33:11+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "community",
+        "entity_id": "heritage.loreborne",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_community_illustration.heritage_orderborne",
+      "request_slug": "heritage_orderborne",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_community_illustration",
       "set_id": "daggerheart_community_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_orderborne",
+      "output_id": "img_9dc02ed92e20",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "9dc02ed92e202b0e0af4ed19adfc2e58013eff3ae92c2258808761720dbf88a0",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_community_illustration/v1/heritage_orderborne",
-        "version": 1772735605
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735605/high_fantasy/daggerheart_community_illustration/v1/heritage_orderborne.png",
+        "version": 1772735605,
+        "uploaded_at": "2026-03-05T18:33:26+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "community",
+        "entity_id": "heritage.orderborne",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_community_illustration.heritage_ridgeborne",
+      "request_slug": "heritage_ridgeborne",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_community_illustration",
       "set_id": "daggerheart_community_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_ridgeborne",
+      "output_id": "img_f4595bbbf4bf",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f4595bbbf4bfd04f69f46272e7e517d9340b3a3fb846bc838dfcc37de796cbcb",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_community_illustration/v1/heritage_ridgeborne",
-        "version": 1772735619
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735619/high_fantasy/daggerheart_community_illustration/v1/heritage_ridgeborne.png",
+        "version": 1772735619,
+        "uploaded_at": "2026-03-05T18:33:40+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "community",
+        "entity_id": "heritage.ridgeborne",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_community_illustration.heritage_seaborne",
+      "request_slug": "heritage_seaborne",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_community_illustration",
       "set_id": "daggerheart_community_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_seaborne",
+      "output_id": "img_a5e2200fa174",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "a5e2200fa174fb02bd690151c1914b965c7c0b07c376fd6fa01ef3ed0e5d852a",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_community_illustration/v1/heritage_seaborne",
-        "version": 1772735629
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735629/high_fantasy/daggerheart_community_illustration/v1/heritage_seaborne.png",
+        "version": 1772735629,
+        "uploaded_at": "2026-03-05T18:33:50+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "community",
+        "entity_id": "heritage.seaborne",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_community_illustration.heritage_slyborne",
+      "request_slug": "heritage_slyborne",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_community_illustration",
       "set_id": "daggerheart_community_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_slyborne",
+      "output_id": "img_ebec84b0d841",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "ebec84b0d8412a9c27674ff8ae8a99f8beee1231cf5bb626f16a79889ff3f2ef",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_community_illustration/v1/heritage_slyborne",
-        "version": 1772735641
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735641/high_fantasy/daggerheart_community_illustration/v1/heritage_slyborne.png",
+        "version": 1772735641,
+        "uploaded_at": "2026-03-05T18:34:03+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "community",
+        "entity_id": "heritage.slyborne",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_community_illustration.heritage_underborne",
+      "request_slug": "heritage_underborne",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_community_illustration",
       "set_id": "daggerheart_community_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_underborne",
+      "output_id": "img_3da664a47f21",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "3da664a47f21aea927ea2864864ad6abebfa7eb938221332bf487d0f043b47c9",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_community_illustration/v1/heritage_underborne",
-        "version": 1772735656
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735656/high_fantasy/daggerheart_community_illustration/v1/heritage_underborne.png",
+        "version": 1772735656,
+        "uploaded_at": "2026-03-05T18:34:16+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "community",
+        "entity_id": "heritage.underborne",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_community_illustration.heritage_wanderborne",
+      "request_slug": "heritage_wanderborne",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_community_illustration",
       "set_id": "daggerheart_community_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_wanderborne",
+      "output_id": "img_e4295a2f1d30",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "e4295a2f1d30715f3ed160bd3f56b4cf96ab838e90f1530709a0685ae133137c",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_community_illustration/v1/heritage_wanderborne",
-        "version": 1772735671
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735671/high_fantasy/daggerheart_community_illustration/v1/heritage_wanderborne.png",
+        "version": 1772735671,
+        "uploaded_at": "2026-03-05T18:34:32+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "community",
+        "entity_id": "heritage.wanderborne",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_community_illustration.heritage_wildborne",
+      "request_slug": "heritage_wildborne",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_community_illustration",
       "set_id": "daggerheart_community_set_v1",
+      "batch_id": "dh_heritage_r1",
       "fs_asset_id": "heritage_wildborne",
+      "output_id": "img_5c7d41eb5c7a",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "5c7d41eb5c7ac1dddcee70a26fdff34bdd05cf75f803db5f7e7395a8824e54ce",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T18:22:11+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_community_illustration/v1/heritage_wildborne",
-        "version": 1772735682
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735682/high_fantasy/daggerheart_community_illustration/v1/heritage_wildborne.png",
+        "version": 1772735682,
+        "uploaded_at": "2026-03-05T18:34:43+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "community",
+        "entity_id": "heritage.wildborne",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
     }
   ],
-  "daggerheart_subclass_illustration": [
+  "daggerheart_domain_card_illustration": [
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "beastbound",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.arcana_runeward",
+      "request_slug": "arcana_runeward",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r1",
+      "fs_asset_id": "arcana_runeward",
+      "output_id": "img_91bdac8b1490",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "91bdac8b1490d59b7ea0b4ffbe7339f2bf150bf80395af7915f633fdb948b919",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/beastbound",
-        "version": 1772735687
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/arcana_runeward",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862195/high_fantasy/daggerheart_domain_card_illustration/v1/arcana_runeward.png",
+        "version": 1772862195,
+        "uploaded_at": "2026-03-07T05:43:16+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.arcana-runeward",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "call_brave",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.arcana_unleash_chaos",
+      "request_slug": "arcana_unleash_chaos",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r1",
+      "fs_asset_id": "arcana_unleash_chaos",
+      "output_id": "img_5ce07ab6c669",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "5ce07ab6c66931d8983d5b91d39036e7a13db5ad7a9e282f3395611644cda43b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/call_brave",
-        "version": 1772735692
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/arcana_unleash_chaos",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862198/high_fantasy/daggerheart_domain_card_illustration/v1/arcana_unleash_chaos.png",
+        "version": 1772862198,
+        "uploaded_at": "2026-03-07T05:43:18+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.arcana-unleash-chaos",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "call_slayer",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.arcana_wallwalk",
+      "request_slug": "arcana_wallwalk",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r1",
+      "fs_asset_id": "arcana_wallwalk",
+      "output_id": "img_d4d65786d3fa",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "d4d65786d3fa23205323b00cbabffffe547156b374d251f39f0b8abc4f694d28",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/call_slayer",
-        "version": 1772735697
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/arcana_wallwalk",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862200/high_fantasy/daggerheart_domain_card_illustration/v1/arcana_wallwalk.png",
+        "version": 1772862200,
+        "uploaded_at": "2026-03-07T05:43:21+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.arcana-wallwalk",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "divine_wielder",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.blade_get_back_up",
+      "request_slug": "blade_get_back_up",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "blade_get_back_up",
+      "output_id": "img_ba1168010cab",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "ba1168010cab9ac047e34c7f92dc5b83ad434955a08b71f1c2591c91d4b3039b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/divine_wielder",
-        "version": 1772735703
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/blade_get_back_up",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862203/high_fantasy/daggerheart_domain_card_illustration/v1/blade_get_back_up.png",
+        "version": 1772862203,
+        "uploaded_at": "2026-03-07T05:43:24+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.blade-get-back-up",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": [
+        "domain_card_sparse_feature_text"
+      ]
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "elemental_origin",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.blade_not_good_enough",
+      "request_slug": "blade_not_good_enough",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "blade_not_good_enough",
+      "output_id": "img_20648f530fa4",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "20648f530fa47ef3af7dc91a46fb86685344f673e465c6e9ea7b2637d35c116c",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/elemental_origin",
-        "version": 1772735710
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/blade_not_good_enough",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862206/high_fantasy/daggerheart_domain_card_illustration/v1/blade_not_good_enough.png",
+        "version": 1772862206,
+        "uploaded_at": "2026-03-07T05:43:26+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.blade-not-good-enough",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": [
+        "domain_card_sparse_feature_text"
+      ]
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "nightwalker",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.blade_whirlwind",
+      "request_slug": "blade_whirlwind",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "blade_whirlwind",
+      "output_id": "img_1787ab1ed239",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "1787ab1ed239aaba431cfad27827cc519b27583d4d8cf86d0a22004145fa83d7",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/nightwalker",
-        "version": 1772735716
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/blade_whirlwind",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862208/high_fantasy/daggerheart_domain_card_illustration/v1/blade_whirlwind.png",
+        "version": 1772862208,
+        "uploaded_at": "2026-03-07T05:43:29+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.blade-whirlwind",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "primal_origin",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.bone_deft_maneuvers",
+      "request_slug": "bone_deft_maneuvers",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "bone_deft_maneuvers",
+      "output_id": "img_254485ff007f",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "254485ff007f7da1d69576ece558dcdb39ec5ff31e13b50fa3863ab9a016f136",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/primal_origin",
-        "version": 1772735723
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/bone_deft_maneuvers",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862211/high_fantasy/daggerheart_domain_card_illustration/v1/bone_deft_maneuvers.png",
+        "version": 1772862211,
+        "uploaded_at": "2026-03-07T05:43:32+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.bone-deft-maneuvers",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "school_knowledge",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.bone_i_see_it_coming",
+      "request_slug": "bone_i_see_it_coming",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "bone_i_see_it_coming",
+      "output_id": "img_035870ac5cb0",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "035870ac5cb092a429bc297ff97351d3b8c1be309c0245ce09bb1ab374c01717",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/school_knowledge",
-        "version": 1772735729
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/bone_i_see_it_coming",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862214/high_fantasy/daggerheart_domain_card_illustration/v1/bone_i_see_it_coming.png",
+        "version": 1772862214,
+        "uploaded_at": "2026-03-07T05:43:34+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.bone-i-see-it-coming",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "school_war",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.bone_untouchable",
+      "request_slug": "bone_untouchable",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "bone_untouchable",
+      "output_id": "img_5dba47b92068",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "5dba47b92068b9426977ae07978cd47e7b4f36a070e93bf5ec094341e832ab54",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/school_war",
-        "version": 1772735737
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/bone_untouchable",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862216/high_fantasy/daggerheart_domain_card_illustration/v1/bone_untouchable.png",
+        "version": 1772862216,
+        "uploaded_at": "2026-03-07T05:43:37+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.bone-untouchable",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": [
+        "domain_card_sparse_feature_text"
+      ]
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "stalwart",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.codex_book_of_ava",
+      "request_slug": "codex_book_of_ava",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "codex_book_of_ava",
+      "output_id": "img_8ada1f40afa6",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "8ada1f40afa604d602cd5ac23b9b54b0c2fb15c475b3bbf20964ea2431d37e64",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/stalwart",
-        "version": 1772735742
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/codex_book_of_ava",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862218/high_fantasy/daggerheart_domain_card_illustration/v1/codex_book_of_ava.png",
+        "version": 1772862218,
+        "uploaded_at": "2026-03-07T05:43:39+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.codex-book-of-ava",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "syndicate",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.codex_book_of_illiat",
+      "request_slug": "codex_book_of_illiat",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "codex_book_of_illiat",
+      "output_id": "img_4cbd1b7862bf",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4cbd1b7862bfdc47e70e4ff69ea9f948e5bd0064e29b515121a00ee3d4c8406e",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/syndicate",
-        "version": 1772735747
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/codex_book_of_illiat",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862221/high_fantasy/daggerheart_domain_card_illustration/v1/codex_book_of_illiat.png",
+        "version": 1772862221,
+        "uploaded_at": "2026-03-07T05:43:41+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.codex-book-of-illiat",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "troubadour",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.codex_book_of_tyfar",
+      "request_slug": "codex_book_of_tyfar",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "codex_book_of_tyfar",
+      "output_id": "img_98f2768cc796",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "98f2768cc7963a887e768aca00a692ec1488e15a14a8da0cefa37e0201ee0c43",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/troubadour",
-        "version": 1772735752
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/codex_book_of_tyfar",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862224/high_fantasy/daggerheart_domain_card_illustration/v1/codex_book_of_tyfar.png",
+        "version": 1772862224,
+        "uploaded_at": "2026-03-07T05:43:44+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.codex-book-of-tyfar",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "vengeance",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.grace_deft_deceiver",
+      "request_slug": "grace_deft_deceiver",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "grace_deft_deceiver",
+      "output_id": "img_0e6743ca4fbc",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "0e6743ca4fbcb4f063f5530d8d35bcb25fa25cfae5320a31630941f7137e7534",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/vengeance",
-        "version": 1772735757
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/grace_deft_deceiver",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862226/high_fantasy/daggerheart_domain_card_illustration/v1/grace_deft_deceiver.png",
+        "version": 1772862226,
+        "uploaded_at": "2026-03-07T05:43:46+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.grace-deft-deceiver",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": [
+        "domain_card_sparse_feature_text"
+      ]
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "warden_elements",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.grace_enrapture",
+      "request_slug": "grace_enrapture",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "grace_enrapture",
+      "output_id": "img_f9d2f94bfa7a",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f9d2f94bfa7aa506e973dafd17df8edb468f74193a95bd507cf7a1b129c05b54",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/warden_elements",
-        "version": 1772735764
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/grace_enrapture",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862228/high_fantasy/daggerheart_domain_card_illustration/v1/grace_enrapture.png",
+        "version": 1772862228,
+        "uploaded_at": "2026-03-07T05:43:49+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.grace-enrapture",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "warden_renewal",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.grace_inspirational_words",
+      "request_slug": "grace_inspirational_words",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "grace_inspirational_words",
+      "output_id": "img_4481552b93b2",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4481552b93b214b5f32afeb4471f196adbb9d7bc35877601459c3b8679882cab",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/warden_renewal",
-        "version": 1772735770
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/grace_inspirational_words",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862230/high_fantasy/daggerheart_domain_card_illustration/v1/grace_inspirational_words.png",
+        "version": 1772862230,
+        "uploaded_at": "2026-03-07T05:43:51+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.grace-inspirational-words",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "wayfinder",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.midnight_pick_and_pull",
+      "request_slug": "midnight_pick_and_pull",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "midnight_pick_and_pull",
+      "output_id": "img_7401d8acd84b",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "7401d8acd84b14196280a3ee45db4143365eec0cb9115f3673939723f1e88bd3",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/wayfinder",
-        "version": 1772735776
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/midnight_pick_and_pull",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862233/high_fantasy/daggerheart_domain_card_illustration/v1/midnight_pick_and_pull.png",
+        "version": 1772862233,
+        "uploaded_at": "2026-03-07T05:43:53+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.midnight-pick-and-pull",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "winged_sentinel",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.midnight_rain_of_blades",
+      "request_slug": "midnight_rain_of_blades",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "midnight_rain_of_blades",
+      "output_id": "img_35360d0ceb69",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "35360d0ceb69a14f09d2f9b660d8c4289f945a6737603adb6c222805a7259dfa",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/winged_sentinel",
-        "version": 1772735781
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/midnight_rain_of_blades",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862235/high_fantasy/daggerheart_domain_card_illustration/v1/midnight_rain_of_blades.png",
+        "version": 1772862235,
+        "uploaded_at": "2026-03-07T05:43:56+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.midnight-rain-of-blades",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     },
     {
-      "set_id": "daggerheart_subclass_set_v1",
-      "fs_asset_id": "wordsmith",
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.midnight_uncanny_disguise",
+      "request_slug": "midnight_uncanny_disguise",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "midnight_uncanny_disguise",
+      "output_id": "img_9267d816518e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "9267d816518eba3a469f2a0902f5f6b6bd658b8e9729085b6115a5f3e4449089",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
       "cloudinary": {
-        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/wordsmith",
-        "version": 1772735786
-      }
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/midnight_uncanny_disguise",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862238/high_fantasy/daggerheart_domain_card_illustration/v1/midnight_uncanny_disguise.png",
+        "version": 1772862238,
+        "uploaded_at": "2026-03-07T05:43:59+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.midnight-uncanny-disguise",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.sage_gifted_tracker",
+      "request_slug": "sage_gifted_tracker",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "sage_gifted_tracker",
+      "output_id": "img_b13a99f2b906",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "b13a99f2b9069de40d7755986b39f1b17b900a8721237e4725ffaab17a8b59a8",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/sage_gifted_tracker",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862240/high_fantasy/daggerheart_domain_card_illustration/v1/sage_gifted_tracker.png",
+        "version": 1772862240,
+        "uploaded_at": "2026-03-07T05:44:01+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.sage-gifted-tracker",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.sage_natures_tongue",
+      "request_slug": "sage_natures_tongue",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "sage_natures_tongue",
+      "output_id": "img_0f187780ba1e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "0f187780ba1e3973013e7f463cb1f15f1c83052596e6ead00121daa4e36e50e3",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/sage_natures_tongue",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862243/high_fantasy/daggerheart_domain_card_illustration/v1/sage_natures_tongue.png",
+        "version": 1772862243,
+        "uploaded_at": "2026-03-07T05:44:04+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.sage-natures-tongue",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.sage_vicious_entangle",
+      "request_slug": "sage_vicious_entangle",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "sage_vicious_entangle",
+      "output_id": "img_3187a6ae2bb5",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "3187a6ae2bb58b24776ffff1199a527cbdb1a3042dd717ee6b0e6c6d30c56d93",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/sage_vicious_entangle",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862246/high_fantasy/daggerheart_domain_card_illustration/v1/sage_vicious_entangle.png",
+        "version": 1772862246,
+        "uploaded_at": "2026-03-07T05:44:06+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.sage-vicious-entangle",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.splendor_bolt_beacon",
+      "request_slug": "splendor_bolt_beacon",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "splendor_bolt_beacon",
+      "output_id": "img_ea21a4060a04",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "ea21a4060a045e230b8898223756e41f8289369c0b3350bcb40fee319e0ee6ee",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/splendor_bolt_beacon",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862248/high_fantasy/daggerheart_domain_card_illustration/v1/splendor_bolt_beacon.png",
+        "version": 1772862248,
+        "uploaded_at": "2026-03-07T05:44:09+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.splendor-bolt-beacon",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.splendor_mending_touch",
+      "request_slug": "splendor_mending_touch",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "splendor_mending_touch",
+      "output_id": "img_06cc6d4224f7",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "06cc6d4224f76a8ebf15ecf1fef945926874b074750369ffd73247634f5d0d09",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/splendor_mending_touch",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862250/high_fantasy/daggerheart_domain_card_illustration/v1/splendor_mending_touch.png",
+        "version": 1772862250,
+        "uploaded_at": "2026-03-07T05:44:11+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.splendor-mending-touch",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.splendor_reassurance",
+      "request_slug": "splendor_reassurance",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "splendor_reassurance",
+      "output_id": "img_31e03807763a",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "31e03807763abc9b223c9231e36963b88690d06b86886ce3fad4f0b67373a776",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/splendor_reassurance",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862253/high_fantasy/daggerheart_domain_card_illustration/v1/splendor_reassurance.png",
+        "version": 1772862253,
+        "uploaded_at": "2026-03-07T05:44:14+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.splendor-reassurance",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.valor_bare_bones",
+      "request_slug": "valor_bare_bones",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "valor_bare_bones",
+      "output_id": "img_4da0a52b6aed",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4da0a52b6aedde7c9b20a2f46c70b9520602add80c0c8b3995a65a75fd954900",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/valor_bare_bones",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862255/high_fantasy/daggerheart_domain_card_illustration/v1/valor_bare_bones.png",
+        "version": 1772862255,
+        "uploaded_at": "2026-03-07T05:44:16+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.valor-bare-bones",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.valor_forceful_push",
+      "request_slug": "valor_forceful_push",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "valor_forceful_push",
+      "output_id": "img_e9a48df155c4",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "e9a48df155c492d4a7cf7087d387a2bc8f189a80fb751d4c5f813a58667fc0d4",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/valor_forceful_push",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862260/high_fantasy/daggerheart_domain_card_illustration/v1/valor_forceful_push.png",
+        "version": 1772862260,
+        "uploaded_at": "2026-03-07T05:44:21+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.valor-forceful-push",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_domain_card_illustration.valor_i_am_your_shield",
+      "request_slug": "valor_i_am_your_shield",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "batch_id": "dh_domain_card_r2",
+      "fs_asset_id": "valor_i_am_your_shield",
+      "output_id": "img_f37ce8118732",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f37ce81187324b6f3ade2c0da73dd5b6cea00ae173d6731bf6da9bb29a754b5b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T05:43:07+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_domain_card_illustration/v1/valor_i_am_your_shield",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772862263/high_fantasy/daggerheart_domain_card_illustration/v1/valor_i_am_your_shield.png",
+        "version": 1772862263,
+        "uploaded_at": "2026-03-07T05:44:24+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain_card",
+        "entity_id": "domain_card.valor-i-am-your-shield",
+        "source_file": "domain_cards.json"
+      },
+      "review_flags": []
     }
   ],
-  "daggerheart_domain_card_illustration": [],
   "daggerheart_domain_icon": [
     {
+      "request_id": "high_fantasy.daggerheart_domain_icon.arcana",
+      "request_slug": "arcana",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_icon",
       "set_id": "daggerheart_domain_icon_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "arcana",
+      "output_id": "img_828779089158",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "82877908915849ddcde8e6ad7b9285aad6aff2065f840dc924accb35bc5d08f2",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_icon/v1/arcana",
-        "version": 1772769283
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769283/high_fantasy/daggerheart_domain_icon/v1/arcana.png",
+        "version": 1772769283,
+        "uploaded_at": "2026-03-06T03:54:44+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.arcana",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_icon.blade",
+      "request_slug": "blade",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_icon",
       "set_id": "daggerheart_domain_icon_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "blade",
+      "output_id": "img_17a900bcc6dd",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "17a900bcc6dd59675c014e8bd2887fe21bee4ce502196ddf1964c3bf3130b7d0",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_icon/v1/blade",
-        "version": 1772769188
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769188/high_fantasy/daggerheart_domain_icon/v1/blade.png",
+        "version": 1772769188,
+        "uploaded_at": "2026-03-06T03:53:09+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.blade",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_icon.bone",
+      "request_slug": "bone",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_icon",
       "set_id": "daggerheart_domain_icon_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "bone",
+      "output_id": "img_1a5005959eee",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "1a5005959eeee0c16bd841433c9977af289f934f902983c093cdaa2e697f1bc6",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_icon/v1/bone",
-        "version": 1772769190
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769190/high_fantasy/daggerheart_domain_icon/v1/bone.png",
+        "version": 1772769190,
+        "uploaded_at": "2026-03-06T03:53:11+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.bone",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_icon.codex",
+      "request_slug": "codex",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_icon",
       "set_id": "daggerheart_domain_icon_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "codex",
+      "output_id": "img_d0274360d088",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "d0274360d088b39699d88a2b05fc9fd7c9ec43488732bc8eb12f2e67a8a1aae8",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_icon/v1/codex",
-        "version": 1772769192
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769192/high_fantasy/daggerheart_domain_icon/v1/codex.png",
+        "version": 1772769192,
+        "uploaded_at": "2026-03-06T03:53:13+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.codex",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_icon.grace",
+      "request_slug": "grace",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_icon",
       "set_id": "daggerheart_domain_icon_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "grace",
+      "output_id": "img_80050c7b12c0",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "80050c7b12c04d42a693ffaaf373ea8500493e44a934b6cf9eaa162cca5226ce",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_icon/v1/grace",
-        "version": 1772769194
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769194/high_fantasy/daggerheart_domain_icon/v1/grace.png",
+        "version": 1772769194,
+        "uploaded_at": "2026-03-06T03:53:14+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.grace",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_icon.midnight",
+      "request_slug": "midnight",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_icon",
       "set_id": "daggerheart_domain_icon_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "midnight",
+      "output_id": "img_fe7e7f0c6ccf",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "fe7e7f0c6ccff2f08ea868618670888c186c7f76ebe10b18ef905fb1a2ef98c7",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_icon/v1/midnight",
-        "version": 1772769195
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769195/high_fantasy/daggerheart_domain_icon/v1/midnight.png",
+        "version": 1772769195,
+        "uploaded_at": "2026-03-06T03:53:16+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.midnight",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_icon.sage",
+      "request_slug": "sage",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_icon",
       "set_id": "daggerheart_domain_icon_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "sage",
+      "output_id": "img_0cae32f4ba24",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "0cae32f4ba243e36e8e1ad56463c64e40e2332d1943a6d7c75020a3bd1b9e5d6",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_icon/v1/sage",
-        "version": 1772769198
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769198/high_fantasy/daggerheart_domain_icon/v1/sage.png",
+        "version": 1772769198,
+        "uploaded_at": "2026-03-06T03:53:18+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.sage",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_icon.splendor",
+      "request_slug": "splendor",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_icon",
       "set_id": "daggerheart_domain_icon_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "splendor",
+      "output_id": "img_dd3269a06d4d",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "dd3269a06d4dc225be8bc39158dbdf6c2f4bbe22eabc0c0bb0c5df03097b341f",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_icon/v1/splendor",
-        "version": 1772769199
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769199/high_fantasy/daggerheart_domain_icon/v1/splendor.png",
+        "version": 1772769199,
+        "uploaded_at": "2026-03-06T03:53:20+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.splendor",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_icon.valor",
+      "request_slug": "valor",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_icon",
       "set_id": "daggerheart_domain_icon_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "valor",
+      "output_id": "img_2a3447db4a6f",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2a3447db4a6f07dfb49c39ceecf69246c7ef161f6a267b9c335a6713c15d48c1",
+      "width": 1024,
+      "height": 1024,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_icon/v1/valor",
-        "version": 1772769201
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769201/high_fantasy/daggerheart_domain_icon/v1/valor.png",
+        "version": 1772769201,
+        "uploaded_at": "2026-03-06T03:53:21+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.valor",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     }
   ],
   "daggerheart_domain_illustration": [
     {
+      "request_id": "high_fantasy.daggerheart_domain_illustration.arcana",
+      "request_slug": "arcana",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_illustration",
       "set_id": "daggerheart_domain_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "arcana",
+      "output_id": "img_744bb412d3bb",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "744bb412d3bba4c83f28634a6384cd576c6794da60fecd4fe09e4229d1f9d69e",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_illustration/v1/arcana",
-        "version": 1772769205
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769205/high_fantasy/daggerheart_domain_illustration/v1/arcana.png",
+        "version": 1772769205,
+        "uploaded_at": "2026-03-06T03:53:26+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.arcana",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_illustration.blade",
+      "request_slug": "blade",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_illustration",
       "set_id": "daggerheart_domain_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "blade",
+      "output_id": "img_4f42cc12b312",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4f42cc12b3125b211359662225ed1d229027fbc2910809a392aa7475698382db",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_illustration/v1/blade",
-        "version": 1772769209
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769209/high_fantasy/daggerheart_domain_illustration/v1/blade.png",
+        "version": 1772769209,
+        "uploaded_at": "2026-03-06T03:53:31+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.blade",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_illustration.bone",
+      "request_slug": "bone",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_illustration",
       "set_id": "daggerheart_domain_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "bone",
+      "output_id": "img_e77f036ba5df",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "e77f036ba5df21eecbb28d7d3771aa7d3608761821bc4d76ab74f208e7137524",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_illustration/v1/bone",
-        "version": 1772769213
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769213/high_fantasy/daggerheart_domain_illustration/v1/bone.png",
+        "version": 1772769213,
+        "uploaded_at": "2026-03-06T03:53:34+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.bone",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_illustration.codex",
+      "request_slug": "codex",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_illustration",
       "set_id": "daggerheart_domain_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "codex",
+      "output_id": "img_4bd7626fe4a0",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4bd7626fe4a0bac20ee1c84d3ba5f7ad9fdb8ab3a9e94da00728b311bef1e130",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_illustration/v1/codex",
-        "version": 1772769221
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769221/high_fantasy/daggerheart_domain_illustration/v1/codex.png",
+        "version": 1772769221,
+        "uploaded_at": "2026-03-06T03:53:42+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.codex",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_illustration.grace",
+      "request_slug": "grace",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_illustration",
       "set_id": "daggerheart_domain_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "grace",
+      "output_id": "img_c6c53450d542",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "c6c53450d5422eb3d342c6a036116e4a495ca4c6f4481ef183c64bdcd70cbea1",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_illustration/v1/grace",
-        "version": 1772769230
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769230/high_fantasy/daggerheart_domain_illustration/v1/grace.png",
+        "version": 1772769230,
+        "uploaded_at": "2026-03-06T03:53:51+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.grace",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_illustration.midnight",
+      "request_slug": "midnight",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_illustration",
       "set_id": "daggerheart_domain_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "midnight",
+      "output_id": "img_081093258473",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "0810932584737a6f6107b4ff073f6fbfe50a66e9b9173e1e280c2d9c1d911268",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_illustration/v1/midnight",
-        "version": 1772769236
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769236/high_fantasy/daggerheart_domain_illustration/v1/midnight.png",
+        "version": 1772769236,
+        "uploaded_at": "2026-03-06T03:53:57+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.midnight",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_illustration.sage",
+      "request_slug": "sage",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_illustration",
       "set_id": "daggerheart_domain_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "sage",
+      "output_id": "img_67d395f57db0",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "67d395f57db01806df94389dc0cdec8bbb0c1c73f3b97f03179c550d52d1fcdd",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_illustration/v1/sage",
-        "version": 1772769240
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769240/high_fantasy/daggerheart_domain_illustration/v1/sage.png",
+        "version": 1772769240,
+        "uploaded_at": "2026-03-06T03:54:01+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.sage",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_illustration.splendor",
+      "request_slug": "splendor",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_illustration",
       "set_id": "daggerheart_domain_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "splendor",
+      "output_id": "img_7484c80e286c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "7484c80e286cdd835b3fc034dc21b73a8e8d2338204ea4c0cb39d231e0d38cec",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_illustration/v1/splendor",
-        "version": 1772769247
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769247/high_fantasy/daggerheart_domain_illustration/v1/splendor.png",
+        "version": 1772769247,
+        "uploaded_at": "2026-03-06T03:54:07+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.splendor",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     },
     {
+      "request_id": "high_fantasy.daggerheart_domain_illustration.valor",
+      "request_slug": "valor",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_domain_illustration",
       "set_id": "daggerheart_domain_set_v1",
+      "batch_id": "dh_domain_r1",
       "fs_asset_id": "valor",
+      "output_id": "img_cf1b7f4d903c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "cf1b7f4d903ce699e7bc12ca112909846d744ab76adb6cd4050e12465cfae862",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-06T02:50:33+00:00",
       "cloudinary": {
+        "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_domain_illustration/v1/valor",
-        "version": 1772769256
-      }
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772769256/high_fantasy/daggerheart_domain_illustration/v1/valor.png",
+        "version": 1772769256,
+        "uploaded_at": "2026-03-06T03:54:17+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "domain",
+        "entity_id": "domain.valor",
+        "source_file": "domains.json"
+      },
+      "review_flags": []
     }
   ],
-  "daggerheart_environment_illustration": []
+  "daggerheart_environment_illustration": [],
+  "daggerheart_subclass_illustration": [
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.beastbound",
+      "request_slug": "beastbound",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "beastbound",
+      "output_id": "img_afcb67bda325",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "afcb67bda32561d9e6e0da284f02d2d59e996ffb30c379858f53b1f6b5b77914",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/beastbound",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735687/high_fantasy/daggerheart_subclass_illustration/v1/beastbound.png",
+        "version": 1772735687,
+        "uploaded_at": "2026-03-05T18:34:48+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.beastbound",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.call_brave",
+      "request_slug": "call_brave",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "call_brave",
+      "output_id": "img_0598ed1d177c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "0598ed1d177c0bac39543028494b05b018642acd0ed8fba50cb1760a6d587afb",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/call_brave",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735692/high_fantasy/daggerheart_subclass_illustration/v1/call_brave.png",
+        "version": 1772735692,
+        "uploaded_at": "2026-03-05T18:34:53+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.call-brave",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.call_slayer",
+      "request_slug": "call_slayer",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "call_slayer",
+      "output_id": "img_4dcb4d03a17c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4dcb4d03a17c2285ce64c8f4529c8f37398ef9f3b3dfc8390172d5382b631df2",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/call_slayer",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735697/high_fantasy/daggerheart_subclass_illustration/v1/call_slayer.png",
+        "version": 1772735697,
+        "uploaded_at": "2026-03-05T18:34:58+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.call-slayer",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.divine_wielder",
+      "request_slug": "divine_wielder",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "divine_wielder",
+      "output_id": "img_2843f0609a6c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2843f0609a6ce071833df4e5a80862b0603b9951ec1f59b45daca04e2f11bd5d",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/divine_wielder",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735703/high_fantasy/daggerheart_subclass_illustration/v1/divine_wielder.png",
+        "version": 1772735703,
+        "uploaded_at": "2026-03-05T18:35:04+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.divine-wielder",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.elemental_origin",
+      "request_slug": "elemental_origin",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "elemental_origin",
+      "output_id": "img_b687816227d5",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "b687816227d5c77dfcd7b583fa4d2b3410801ccaceca2755e605b8b6d9b57858",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/elemental_origin",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735710/high_fantasy/daggerheart_subclass_illustration/v1/elemental_origin.png",
+        "version": 1772735710,
+        "uploaded_at": "2026-03-05T18:35:11+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.elemental-origin",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.nightwalker",
+      "request_slug": "nightwalker",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "nightwalker",
+      "output_id": "img_802e352b6f35",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "802e352b6f353101ee2dd77ed295da3338c85c845a17abe7a4086e186ebaec95",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/nightwalker",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735716/high_fantasy/daggerheart_subclass_illustration/v1/nightwalker.png",
+        "version": 1772735716,
+        "uploaded_at": "2026-03-05T18:35:17+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.nightwalker",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.primal_origin",
+      "request_slug": "primal_origin",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "primal_origin",
+      "output_id": "img_57ed46e4f766",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "57ed46e4f766b3486ca45238afed8ece8ef54cc523a78635a97d3bdfa4ea873c",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/primal_origin",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735723/high_fantasy/daggerheart_subclass_illustration/v1/primal_origin.png",
+        "version": 1772735723,
+        "uploaded_at": "2026-03-05T18:35:24+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.primal-origin",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.school_knowledge",
+      "request_slug": "school_knowledge",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "school_knowledge",
+      "output_id": "img_860c5850e84e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "860c5850e84ea7d00e1404e58a358e898d52267e95186a1933f4e5edb93d914e",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/school_knowledge",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735729/high_fantasy/daggerheart_subclass_illustration/v1/school_knowledge.png",
+        "version": 1772735729,
+        "uploaded_at": "2026-03-05T18:35:30+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.school-knowledge",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.school_war",
+      "request_slug": "school_war",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "school_war",
+      "output_id": "img_cd073be45733",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "cd073be4573378402aeb0e3f44594b25910e584e5cbbc3b47a2619a31da284c5",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/school_war",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735737/high_fantasy/daggerheart_subclass_illustration/v1/school_war.png",
+        "version": 1772735737,
+        "uploaded_at": "2026-03-05T18:35:38+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.school-war",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.stalwart",
+      "request_slug": "stalwart",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "stalwart",
+      "output_id": "img_28dfbcf8342c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "28dfbcf8342cdf14aeddcd0822b15081848142f74c8c782893c3f89a47b9d20d",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/stalwart",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735742/high_fantasy/daggerheart_subclass_illustration/v1/stalwart.png",
+        "version": 1772735742,
+        "uploaded_at": "2026-03-05T18:35:43+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.stalwart",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.syndicate",
+      "request_slug": "syndicate",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "syndicate",
+      "output_id": "img_c573ca39458d",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "c573ca39458dc908002cdd0192a130c1bc40dc66a524c61fc638e99e51295630",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/syndicate",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735747/high_fantasy/daggerheart_subclass_illustration/v1/syndicate.png",
+        "version": 1772735747,
+        "uploaded_at": "2026-03-05T18:35:47+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.syndicate",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.troubadour",
+      "request_slug": "troubadour",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "troubadour",
+      "output_id": "img_2fdd2e7a214a",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2fdd2e7a214ae248e1471ea2d7bdc53ad3c40b5ceaafda1cd9812a8cfe98b792",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/troubadour",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735752/high_fantasy/daggerheart_subclass_illustration/v1/troubadour.png",
+        "version": 1772735752,
+        "uploaded_at": "2026-03-05T18:35:53+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.troubadour",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.vengeance",
+      "request_slug": "vengeance",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "vengeance",
+      "output_id": "img_a70ecdb3e19c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "a70ecdb3e19c1fe4990d29fd2757fd505e5e8f87b6b5bd2c8c6e4908ca8a73d2",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/vengeance",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735757/high_fantasy/daggerheart_subclass_illustration/v1/vengeance.png",
+        "version": 1772735757,
+        "uploaded_at": "2026-03-05T18:35:58+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.vengeance",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.warden_elements",
+      "request_slug": "warden_elements",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "warden_elements",
+      "output_id": "img_4d44a2761ed8",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4d44a2761ed8079c82bde0db4f0f83e846b64c5a5e67684063e25e93dd181dcc",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/warden_elements",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735764/high_fantasy/daggerheart_subclass_illustration/v1/warden_elements.png",
+        "version": 1772735764,
+        "uploaded_at": "2026-03-05T18:36:04+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.warden-elements",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.warden_renewal",
+      "request_slug": "warden_renewal",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "warden_renewal",
+      "output_id": "img_8c7ae82fa818",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "8c7ae82fa8186e4678a7777434a0fbe1f111d3c500823248809df0436e0be1a3",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/warden_renewal",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735770/high_fantasy/daggerheart_subclass_illustration/v1/warden_renewal.png",
+        "version": 1772735770,
+        "uploaded_at": "2026-03-05T18:36:11+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.warden-renewal",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.wayfinder",
+      "request_slug": "wayfinder",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "wayfinder",
+      "output_id": "img_f51b6dfc9616",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f51b6dfc961665f7a93d95d1277f09db744d00faa960857b0f8bc921e462edfc",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/wayfinder",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735776/high_fantasy/daggerheart_subclass_illustration/v1/wayfinder.png",
+        "version": 1772735776,
+        "uploaded_at": "2026-03-05T18:36:17+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.wayfinder",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.winged_sentinel",
+      "request_slug": "winged_sentinel",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "winged_sentinel",
+      "output_id": "img_4ea853063297",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4ea853063297c02876a1cbcb053aec7762c5b6b8d507146bcb2f215ef7f64158",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/winged_sentinel",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735781/high_fantasy/daggerheart_subclass_illustration/v1/winged_sentinel.png",
+        "version": 1772735781,
+        "uploaded_at": "2026-03-05T18:36:22+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.winged-sentinel",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_subclass_illustration.wordsmith",
+      "request_slug": "wordsmith",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_subclass_illustration",
+      "set_id": "daggerheart_subclass_set_v1",
+      "batch_id": "dh_subclass_r3",
+      "fs_asset_id": "wordsmith",
+      "output_id": "img_a1affaa108d9",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "a1affaa108d95b76c4d38e6d26a17422af8277b5d94592212fc0048f76f803c4",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-05T17:08:24+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_subclass_illustration/v1/wordsmith",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735786/high_fantasy/daggerheart_subclass_illustration/v1/wordsmith.png",
+        "version": 1772735786,
+        "uploaded_at": "2026-03-05T18:36:26+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "subclass",
+        "entity_id": "subclass.wordsmith",
+        "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    }
+  ]
 }

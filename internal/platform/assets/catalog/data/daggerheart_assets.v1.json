@@ -70,7 +70,35 @@
     {
       "id": "daggerheart_domain_card_set_v1",
       "asset_type": "daggerheart_domain_card_illustration",
-      "asset_ids": []
+      "asset_ids": [
+        "arcana_runeward",
+        "arcana_unleash_chaos",
+        "arcana_wallwalk",
+        "blade_get_back_up",
+        "blade_not_good_enough",
+        "blade_whirlwind",
+        "bone_deft_maneuvers",
+        "bone_i_see_it_coming",
+        "bone_untouchable",
+        "codex_book_of_ava",
+        "codex_book_of_illiat",
+        "codex_book_of_tyfar",
+        "grace_deft_deceiver",
+        "grace_enrapture",
+        "grace_inspirational_words",
+        "midnight_pick_and_pull",
+        "midnight_rain_of_blades",
+        "midnight_uncanny_disguise",
+        "sage_gifted_tracker",
+        "sage_natures_tongue",
+        "sage_vicious_entangle",
+        "splendor_bolt_beacon",
+        "splendor_mending_touch",
+        "splendor_reassurance",
+        "valor_bare_bones",
+        "valor_forceful_push",
+        "valor_i_am_your_shield"
+      ]
     },
     {
       "id": "daggerheart_domain_icon_set_v1",
@@ -363,6 +391,195 @@
       "entity_id": "heritage.wildborne",
       "entity_type": "community",
       "asset_id": "heritage_wildborne"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.arcana-runeward",
+      "entity_type": "domain_card",
+      "asset_id": "arcana_runeward"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.arcana-unleash-chaos",
+      "entity_type": "domain_card",
+      "asset_id": "arcana_unleash_chaos"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.arcana-wallwalk",
+      "entity_type": "domain_card",
+      "asset_id": "arcana_wallwalk"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.blade-get-back-up",
+      "entity_type": "domain_card",
+      "asset_id": "blade_get_back_up"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.blade-not-good-enough",
+      "entity_type": "domain_card",
+      "asset_id": "blade_not_good_enough"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.blade-whirlwind",
+      "entity_type": "domain_card",
+      "asset_id": "blade_whirlwind"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.bone-deft-maneuvers",
+      "entity_type": "domain_card",
+      "asset_id": "bone_deft_maneuvers"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.bone-i-see-it-coming",
+      "entity_type": "domain_card",
+      "asset_id": "bone_i_see_it_coming"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.bone-untouchable",
+      "entity_type": "domain_card",
+      "asset_id": "bone_untouchable"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.codex-book-of-ava",
+      "entity_type": "domain_card",
+      "asset_id": "codex_book_of_ava"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.codex-book-of-illiat",
+      "entity_type": "domain_card",
+      "asset_id": "codex_book_of_illiat"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.codex-book-of-tyfar",
+      "entity_type": "domain_card",
+      "asset_id": "codex_book_of_tyfar"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.grace-deft-deceiver",
+      "entity_type": "domain_card",
+      "asset_id": "grace_deft_deceiver"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.grace-enrapture",
+      "entity_type": "domain_card",
+      "asset_id": "grace_enrapture"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.grace-inspirational-words",
+      "entity_type": "domain_card",
+      "asset_id": "grace_inspirational_words"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.midnight-pick-and-pull",
+      "entity_type": "domain_card",
+      "asset_id": "midnight_pick_and_pull"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.midnight-rain-of-blades",
+      "entity_type": "domain_card",
+      "asset_id": "midnight_rain_of_blades"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.midnight-uncanny-disguise",
+      "entity_type": "domain_card",
+      "asset_id": "midnight_uncanny_disguise"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.sage-gifted-tracker",
+      "entity_type": "domain_card",
+      "asset_id": "sage_gifted_tracker"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.sage-natures-tongue",
+      "entity_type": "domain_card",
+      "asset_id": "sage_natures_tongue"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.sage-vicious-entangle",
+      "entity_type": "domain_card",
+      "asset_id": "sage_vicious_entangle"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.splendor-bolt-beacon",
+      "entity_type": "domain_card",
+      "asset_id": "splendor_bolt_beacon"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.splendor-mending-touch",
+      "entity_type": "domain_card",
+      "asset_id": "splendor_mending_touch"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.splendor-reassurance",
+      "entity_type": "domain_card",
+      "asset_id": "splendor_reassurance"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.valor-bare-bones",
+      "entity_type": "domain_card",
+      "asset_id": "valor_bare_bones"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.valor-forceful-push",
+      "entity_type": "domain_card",
+      "asset_id": "valor_forceful_push"
+    },
+    {
+      "asset_type": "daggerheart_domain_card_illustration",
+      "set_id": "daggerheart_domain_card_set_v1",
+      "entity_id": "domain_card.valor-i-am-your-shield",
+      "entity_type": "domain_card",
+      "asset_id": "valor_i_am_your_shield"
     },
     {
       "asset_type": "daggerheart_domain_icon",
