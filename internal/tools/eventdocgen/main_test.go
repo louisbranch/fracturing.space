@@ -658,6 +658,7 @@ func TestMainGeneratesCatalogAndUsageMap(t *testing.T) {
 		filepath.Join(root, "internal", "services", "game", "domain", "participant"),
 		filepath.Join(root, "internal", "services", "game", "domain", "session"),
 		filepath.Join(root, "internal", "services", "game", "domain", "action"),
+		filepath.Join(root, "internal", "services", "game", "domain", "scene"),
 	} {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			t.Fatalf("mkdir package dir %s: %v", dir, err)

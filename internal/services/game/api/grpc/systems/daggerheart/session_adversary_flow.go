@@ -42,6 +42,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	adversaryID := strings.TrimSpace(in.GetAdversaryId())
 	if adversaryID == "" {
 		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
@@ -159,6 +160,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 		Type:         commandTypeActionRollResolve,
 		ActorType:    command.ActorTypeSystem,
 		SessionID:    sessionID,
+		SceneID:      sceneID,
 		RequestID:    requestID,
 		InvocationID: invocationID,
 		EntityType:   "adversary",

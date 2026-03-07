@@ -31,6 +31,7 @@ func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	leaderID := strings.TrimSpace(in.GetLeaderCharacterId())
 	if leaderID == "" {
 		return nil, status.Error(codes.InvalidArgument, "leader character id is required")
@@ -66,6 +67,7 @@ func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *
 		rollResp, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 			CampaignId:  campaignID,
 			SessionId:   sessionID,
+			SceneId:     sceneID,
 			CharacterId: supporterID,
 			Trait:       supporterTrait,
 			RollKind:    pb.RollKind_ROLL_KIND_REACTION,
@@ -101,6 +103,7 @@ func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *
 	leaderRoll, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
+		SceneId:     sceneID,
 		CharacterId: leaderID,
 		Trait:       leaderTrait,
 		RollKind:    pb.RollKind_ROLL_KIND_ACTION,
@@ -115,6 +118,7 @@ func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *
 	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
 	leaderOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
+		SceneId:   sceneID,
 		RollSeq:   leaderRoll.GetRollSeq(),
 	})
 	if err != nil {
@@ -153,6 +157,7 @@ func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.S
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if in.GetDifficulty() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "difficulty is required")
 	}
@@ -194,6 +199,7 @@ func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.S
 	firstRoll, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
+		SceneId:     sceneID,
 		CharacterId: firstID,
 		Trait:       firstTrait,
 		RollKind:    pb.RollKind_ROLL_KIND_ACTION,
@@ -208,6 +214,7 @@ func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.S
 	secondRoll, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
+		SceneId:     sceneID,
 		CharacterId: secondID,
 		Trait:       secondTrait,
 		RollKind:    pb.RollKind_ROLL_KIND_ACTION,
@@ -228,6 +235,7 @@ func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.S
 	applyTargets := []string{firstID, secondID}
 	selectedOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
+		SceneId:   sceneID,
 		RollSeq:   selectedRoll.GetRollSeq(),
 		Targets:   applyTargets,
 	})

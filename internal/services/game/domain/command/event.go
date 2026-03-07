@@ -18,6 +18,7 @@ func NewEvent(cmd Command, eventType event.Type, entityType, entityID string, pa
 		ActorType:     event.ActorType(cmd.ActorType),
 		ActorID:       cmd.ActorID,
 		SessionID:     cmd.SessionID,
+		SceneID:       cmd.SceneID,
 		RequestID:     cmd.RequestID,
 		InvocationID:  cmd.InvocationID,
 		EntityType:    entityType,

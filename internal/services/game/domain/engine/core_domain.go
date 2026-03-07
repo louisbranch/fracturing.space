@@ -8,6 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -86,6 +87,15 @@ func CoreDomains() []CoreDomain {
 			FoldHandledTypes:       character.FoldHandledTypes,
 			DeciderHandledCommands: character.DeciderHandledCommands,
 			ProjectionHandledTypes: character.ProjectionHandledTypes,
+		},
+		{
+			name:                   "scene",
+			RegisterCommands:       scene.RegisterCommands,
+			RegisterEvents:         scene.RegisterEvents,
+			EmittableEventTypes:    scene.EmittableEventTypes,
+			FoldHandledTypes:       scene.FoldHandledTypes,
+			DeciderHandledCommands: scene.DeciderHandledCommands,
+			ProjectionHandledTypes: scene.ProjectionHandledTypes,
 		},
 	}
 }

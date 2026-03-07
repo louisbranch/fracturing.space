@@ -1,6 +1,7 @@
 package projection
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -96,6 +98,13 @@ func buildCoreRouter() *CoreRouter {
 	HandleProjection(r, session.EventTypeSpotlightSet, needSessionSpotlight, requireSessionID, Applier.applySessionSpotlightSet)
 	HandleProjectionRaw(r, session.EventTypeSpotlightCleared, needSessionSpotlight, requireSessionID, Applier.applySessionSpotlightCleared)
 
+	// scene — scene state is replayed from the aggregate fold; projection
+	// handlers are registered as no-ops to satisfy parity checks. Dedicated
+	// scene projection stores can be wired here later.
+	for _, t := range scene.ProjectionHandledTypes() {
+		HandleProjectionRaw(r, t, 0, 0, noopProjection)
+	}
+
 	return r
 }
 
@@ -157,6 +166,13 @@ func (a Applier) ValidateStorePreconditions() error {
 	if missing := checkMissingStores(required, a); len(missing) > 0 {
 		return fmt.Errorf("projection stores not configured: %s", strings.Join(missing, ", "))
 	}
+	return nil
+}
+
+// noopProjection is a placeholder handler for event types that have no
+// projection store yet. Scene events are replayed via the aggregate fold;
+// projection-side handling will be added when scene read-model stores exist.
+func noopProjection(_ Applier, _ context.Context, _ event.Event) error {
 	return nil
 }
 

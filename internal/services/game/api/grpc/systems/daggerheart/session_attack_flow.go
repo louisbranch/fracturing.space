@@ -31,6 +31,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	attackerID := strings.TrimSpace(in.GetCharacterId())
 	if attackerID == "" {
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
@@ -53,6 +54,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 	rollResp, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:        campaignID,
 		SessionId:         sessionID,
+		SceneId:           sceneID,
 		CharacterId:       attackerID,
 		Trait:             trait,
 		RollKind:          pb.RollKind_ROLL_KIND_ACTION,
@@ -69,6 +71,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
 	rollOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
+		SceneId:   sceneID,
 		RollSeq:   rollResp.GetRollSeq(),
 	})
 	if err != nil {
@@ -77,6 +80,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 
 	attackOutcome, err := s.ApplyAttackOutcome(ctxWithMeta, &pb.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: sessionID,
+		SceneId:   sceneID,
 		RollSeq:   rollResp.GetRollSeq(),
 		Targets:   []string{targetID},
 	})
@@ -102,6 +106,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 	damageRoll, err := s.SessionDamageRoll(ctx, &pb.SessionDamageRollRequest{
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
+		SceneId:     sceneID,
 		CharacterId: attackerID,
 		Dice:        in.GetDamageDice(),
 		Modifier:    in.GetDamageModifier(),
@@ -127,6 +132,7 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 
 	applyDamage, err := s.ApplyDamage(ctxWithMeta, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:        campaignID,
+		SceneId:           sceneID,
 		CharacterId:       targetID,
 		Damage:            damageReq,
 		RollSeq:           &damageRoll.RollSeq,
@@ -163,6 +169,7 @@ func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	actorID := strings.TrimSpace(in.GetCharacterId())
 	if actorID == "" {
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
@@ -175,6 +182,7 @@ func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.
 	rollResp, err := s.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:   campaignID,
 		SessionId:    sessionID,
+		SceneId:      sceneID,
 		CharacterId:  actorID,
 		Trait:        trait,
 		RollKind:     pb.RollKind_ROLL_KIND_REACTION,
@@ -191,6 +199,7 @@ func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.
 	ctxWithMeta := withCampaignSessionMetadata(ctx, campaignID, sessionID)
 	rollOutcome, err := s.ApplyRollOutcome(ctxWithMeta, &pb.ApplyRollOutcomeRequest{
 		SessionId: sessionID,
+		SceneId:   sceneID,
 		RollSeq:   rollResp.GetRollSeq(),
 	})
 	if err != nil {
@@ -199,6 +208,7 @@ func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.
 
 	reactionOutcome, err := s.ApplyReactionOutcome(ctxWithMeta, &pb.DaggerheartApplyReactionOutcomeRequest{
 		SessionId: sessionID,
+		SceneId:   sceneID,
 		RollSeq:   rollResp.GetRollSeq(),
 	})
 	if err != nil {

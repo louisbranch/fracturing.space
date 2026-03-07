@@ -21,6 +21,7 @@ CREATE TABLE events (
     system_id TEXT NOT NULL DEFAULT '',
     system_version TEXT NOT NULL DEFAULT '',
     session_id TEXT NOT NULL DEFAULT '',
+    scene_id TEXT NOT NULL DEFAULT '',
     request_id TEXT NOT NULL DEFAULT '',
     invocation_id TEXT NOT NULL DEFAULT '',
     actor_type TEXT NOT NULL,
@@ -39,6 +40,9 @@ CREATE INDEX idx_events_session ON events(campaign_id, session_id)
 CREATE INDEX idx_events_type ON events(campaign_id, event_type);
 CREATE INDEX idx_events_system ON events(campaign_id, system_id, system_version)
     WHERE system_id != '';
+
+CREATE INDEX idx_events_scene ON events(campaign_id, scene_id)
+    WHERE scene_id != '';
 
 CREATE TRIGGER events_no_update
 BEFORE UPDATE ON events

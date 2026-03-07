@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -61,6 +62,8 @@ type State struct {
 	Characters map[string]character.State
 	// Invites stores compact invite lifecycle state keyed by invite ID.
 	Invites map[string]invite.State
+	// Scenes stores per-scene state keyed by scene ID.
+	Scenes map[string]scene.State
 	// Systems stores per-game-system runtime state keyed by system module key.
 	Systems map[module.Key]any
 }

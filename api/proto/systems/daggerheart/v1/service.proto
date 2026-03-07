@@ -153,6 +153,7 @@ message DaggerheartApplyDamageRequest {
   DaggerheartDamageRequest damage = 3;
   optional uint64 roll_seq = 4;
   bool require_damage_roll = 5;
+  string scene_id = 6;
 }
 
 message DaggerheartApplyDamageResponse {
@@ -166,6 +167,7 @@ message DaggerheartApplyAdversaryDamageRequest {
   DaggerheartDamageRequest damage = 3;
   optional uint64 roll_seq = 4;
   bool require_damage_roll = 5;
+  string scene_id = 6;
 }
 
 message DaggerheartApplyAdversaryDamageResponse {
@@ -211,6 +213,7 @@ message DaggerheartApplyTemporaryArmorRequest {
   string campaign_id = 1;
   string character_id = 2;
   DaggerheartTemporaryArmor armor = 3;
+  string scene_id = 4;
 }
 
 message DaggerheartApplyTemporaryArmorResponse {
@@ -222,6 +225,7 @@ message DaggerheartSwapLoadoutRequest {
   string campaign_id = 1;
   string character_id = 2;
   DaggerheartLoadoutSwapRequest swap = 3;
+  string scene_id = 4;
 }
 
 message DaggerheartSwapLoadoutResponse {
@@ -236,6 +240,7 @@ message DaggerheartApplyDeathMoveRequest {
   optional int32 hp_clear = 4;
   optional int32 stress_clear = 5;
   common.v1.RngRequest rng = 6;
+  string scene_id = 7;
 }
 
 message DaggerheartDeathMoveResult {
@@ -262,6 +267,7 @@ message DaggerheartApplyConditionsRequest {
   DaggerheartLifeState life_state = 5;
   string source = 6;
   optional uint64 roll_seq = 7;
+  string scene_id = 8;
 }
 
 message DaggerheartApplyConditionsResponse {
@@ -278,6 +284,7 @@ message DaggerheartApplyAdversaryConditionsRequest {
   repeated DaggerheartCondition remove = 4;
   string source = 5;
   optional uint64 roll_seq = 6;
+  string scene_id = 7;
 }
 
 message DaggerheartApplyAdversaryConditionsResponse {
@@ -294,6 +301,7 @@ message DaggerheartApplyGmMoveRequest {
   string description = 4;
   int32 fear_spent = 5;
   string source = 6;
+  string scene_id = 7;
 }
 
 message DaggerheartApplyGmMoveResponse {
@@ -334,6 +342,7 @@ message DaggerheartCreateCountdownRequest {
   int32 max = 7;
   DaggerheartCountdownDirection direction = 8;
   bool looping = 9;
+  string scene_id = 10;
 }
 
 message DaggerheartCreateCountdownResponse {
@@ -347,6 +356,7 @@ message DaggerheartUpdateCountdownRequest {
   int32 delta = 4;
   optional int32 current = 5;
   string reason = 6;
+  string scene_id = 7;
 }
 
 message DaggerheartUpdateCountdownResponse {
@@ -361,6 +371,7 @@ message DaggerheartDeleteCountdownRequest {
   string session_id = 2;
   string countdown_id = 3;
   string reason = 4;
+  string scene_id = 5;
 }
 
 message DaggerheartDeleteCountdownResponse {
@@ -459,6 +470,7 @@ message DaggerheartListAdversariesResponse {
 message DaggerheartResolveBlazeOfGloryRequest {
   string campaign_id = 1;
   string character_id = 2;
+  string scene_id = 3;
 }
 
 message DaggerheartBlazeOfGloryResult {
@@ -647,6 +659,9 @@ message SessionActionRollRequest {
 
   // Optional RNG configuration for deterministic rolls.
   common.v1.RngRequest rng = 12;
+
+  // Optional scene within the session.
+  string scene_id = 13;
 }
 
 message SessionActionRollResponse {
@@ -682,6 +697,9 @@ message SessionDamageRollRequest {
 
   // Optional RNG configuration for deterministic rolls.
   common.v1.RngRequest rng = 7;
+
+  // Optional scene within the session.
+  string scene_id = 8;
 }
 
 message SessionDamageRollResponse {
@@ -724,6 +742,7 @@ message SessionAttackFlowRequest {
   bool damage_critical = 14;
   common.v1.RngRequest action_rng = 15;
   common.v1.RngRequest damage_rng = 16;
+  string scene_id = 17;
 }
 
 message SessionAttackFlowResponse {
@@ -744,6 +763,7 @@ message SessionReactionFlowRequest {
   common.v1.RngRequest reaction_rng = 7;
   int32 advantage = 8;
   int32 disadvantage = 9;
+  string scene_id = 10;
 }
 
 message SessionReactionFlowResponse {
@@ -760,6 +780,7 @@ message SessionAdversaryAttackRollRequest {
   int32 advantage = 5;
   int32 disadvantage = 6;
   common.v1.RngRequest rng = 7;
+  string scene_id = 8;
 }
 
 message SessionAdversaryActionCheckRequest {
@@ -770,6 +791,7 @@ message SessionAdversaryActionCheckRequest {
   bool dramatic = 5;
   int32 modifier = 6;
   common.v1.RngRequest rng = 7;
+  string scene_id = 8;
 }
 
 message SessionAdversaryActionCheckResponse {
@@ -806,6 +828,7 @@ message SessionAdversaryAttackFlowRequest {
   bool damage_critical = 13;
   common.v1.RngRequest attack_rng = 14;
   common.v1.RngRequest damage_rng = 15;
+  string scene_id = 16;
 }
 
 message SessionAdversaryAttackFlowResponse {
@@ -837,6 +860,7 @@ message SessionGroupActionFlowRequest {
   repeated ActionRollModifier leader_modifiers = 6;
   repeated GroupActionSupporter supporters = 7;
   common.v1.RngRequest leader_rng = 8;
+  string scene_id = 9;
 }
 
 message SessionGroupActionFlowResponse {
@@ -862,6 +886,7 @@ message SessionTagTeamFlowRequest {
   TagTeamParticipant second = 4;
   int32 difficulty = 5;
   string selected_character_id = 6;
+  string scene_id = 7;
 }
 
 message SessionTagTeamFlowResponse {
@@ -888,6 +913,9 @@ message ApplyRollOutcomeRequest {
   // Optional list of character IDs to apply the outcome to.
   // If omitted, defaults to the roller character in the roll event.
   repeated string targets = 3;
+
+  // Optional scene within the session.
+  string scene_id = 4;
 }
 
 message ApplyRollOutcomeResponse {
@@ -900,6 +928,7 @@ message DaggerheartApplyAttackOutcomeRequest {
   string session_id = 1;
   uint64 roll_seq = 2;
   repeated string targets = 3;
+  string scene_id = 4;
 }
 
 message DaggerheartApplyAdversaryAttackOutcomeRequest {
@@ -907,6 +936,7 @@ message DaggerheartApplyAdversaryAttackOutcomeRequest {
   uint64 roll_seq = 2;
   repeated string targets = 3;
   int32 difficulty = 4;
+  string scene_id = 5;
 }
 
 message DaggerheartAttackOutcomeResult {
@@ -941,6 +971,7 @@ message DaggerheartApplyAdversaryAttackOutcomeResponse {
 message DaggerheartApplyReactionOutcomeRequest {
   string session_id = 1;
   uint64 roll_seq = 2;
+  string scene_id = 3;
 }
 
 message DaggerheartReactionOutcomeResult {

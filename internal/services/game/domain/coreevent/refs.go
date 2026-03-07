@@ -3,6 +3,7 @@ package coreevent
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	domainevent "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -23,6 +24,17 @@ const (
 	TypeRollResolved            Type = "action.roll_resolved"
 	TypeOutcomeApplied          Type = "action.outcome_applied"
 	TypeOutcomeRejected         Type = "action.outcome_rejected"
+
+	TypeSceneCreated          Type = "scene.created"
+	TypeSceneUpdated          Type = "scene.updated"
+	TypeSceneEnded            Type = "scene.ended"
+	TypeSceneCharacterAdded   Type = "scene.character_added"
+	TypeSceneCharacterRemoved Type = "scene.character_removed"
+	TypeSceneGateOpened       Type = "scene.gate_opened"
+	TypeSceneGateResolved     Type = "scene.gate_resolved"
+	TypeSceneGateAbandoned    Type = "scene.gate_abandoned"
+	TypeSceneSpotlightSet     Type = "scene.spotlight_set"
+	TypeSceneSpotlightCleared Type = "scene.spotlight_cleared"
 )
 
 // SessionGateOpenedPayload aliases the canonical session gate payload.
@@ -30,3 +42,6 @@ type SessionGateOpenedPayload = session.GateOpenedPayload
 
 // RollResolvedPayload aliases the canonical roll resolved payload.
 type RollResolvedPayload = action.RollResolvePayload
+
+// SceneCreatePayload aliases the canonical scene create payload.
+type SceneCreatePayload = scene.CreatePayload

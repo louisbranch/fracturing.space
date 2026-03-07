@@ -14,14 +14,26 @@ import (
 )
 
 var coreStepKinds = map[string]struct{}{
-	"campaign":        {},
-	"participant":     {},
-	"start_session":   {},
-	"end_session":     {},
-	"character":       {},
-	"prefab":          {},
-	"set_spotlight":   {},
-	"clear_spotlight": {},
+	"campaign":                 {},
+	"participant":              {},
+	"start_session":            {},
+	"end_session":              {},
+	"character":                {},
+	"prefab":                   {},
+	"set_spotlight":            {},
+	"clear_spotlight":          {},
+	"create_scene":             {},
+	"end_scene":                {},
+	"scene_add_character":      {},
+	"scene_remove_character":   {},
+	"scene_transfer_character": {},
+	"scene_transition":         {},
+	"scene_gate_open":          {},
+	"scene_gate_resolve":       {},
+	"scene_gate_abandon":       {},
+	"scene_set_spotlight":      {},
+	"scene_clear_spotlight":    {},
+	"update_scene":             {},
 }
 
 func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -56,6 +68,30 @@ func (r *Runner) runCoreStep(ctx context.Context, state *scenarioState, step Ste
 		return r.runSetSpotlightStep(ctx, state, step)
 	case "clear_spotlight":
 		return r.runClearSpotlightStep(ctx, state, step)
+	case "create_scene":
+		return r.runCreateSceneStep(ctx, state, step)
+	case "end_scene":
+		return r.runEndSceneStep(ctx, state, step)
+	case "scene_add_character":
+		return r.runSceneAddCharacterStep(ctx, state, step)
+	case "scene_remove_character":
+		return r.runSceneRemoveCharacterStep(ctx, state, step)
+	case "scene_transfer_character":
+		return r.runSceneTransferCharacterStep(ctx, state, step)
+	case "scene_transition":
+		return r.runSceneTransitionStep(ctx, state, step)
+	case "scene_gate_open":
+		return r.runSceneGateOpenStep(ctx, state, step)
+	case "scene_gate_resolve":
+		return r.runSceneGateResolveStep(ctx, state, step)
+	case "scene_gate_abandon":
+		return r.runSceneGateAbandonStep(ctx, state, step)
+	case "scene_set_spotlight":
+		return r.runSceneSetSpotlightStep(ctx, state, step)
+	case "scene_clear_spotlight":
+		return r.runSceneClearSpotlightStep(ctx, state, step)
+	case "update_scene":
+		return r.runUpdateSceneStep(ctx, state, step)
 	default:
 		return r.failf("unknown core step kind %q", step.Kind)
 	}
@@ -559,6 +595,7 @@ func (r *Runner) runReactionStep(ctx context.Context, state *scenarioState, step
 	response, err := r.env.daggerheartClient.SessionReactionFlow(ctx, &daggerheartv1.SessionReactionFlowRequest{
 		CampaignId:   state.campaignID,
 		SessionId:    state.sessionID,
+		SceneId:      state.activeSceneID,
 		CharacterId:  actorIDValue,
 		Trait:        trait,
 		Difficulty:   int32(difficulty),
@@ -667,6 +704,7 @@ func (r *Runner) runGroupReactionStep(ctx context.Context, state *scenarioState,
 			ctxWithMeta := withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID)
 			_, err = r.env.daggerheartClient.ApplyDamage(ctxWithMeta, &daggerheartv1.DaggerheartApplyDamageRequest{
 				CampaignId:  state.campaignID,
+				SceneId:     state.activeSceneID,
 				CharacterId: targetID,
 				Damage:      buildDamageRequest(step.Args, "", damageSource, int32(appliedDamage)),
 			})
@@ -707,6 +745,7 @@ func (r *Runner) runGMSpendFearStep(ctx context.Context, state *scenarioState, s
 	response, err := r.env.daggerheartClient.ApplyGmMove(ctx, &daggerheartv1.DaggerheartApplyGmMoveRequest{
 		CampaignId:  state.campaignID,
 		SessionId:   state.sessionID,
+		SceneId:     state.activeSceneID,
 		Move:        move,
 		FearSpent:   int32(amount),
 		Description: description,
@@ -832,6 +871,7 @@ func (r *Runner) runApplyConditionStep(ctx context.Context, state *scenarioState
 	if characterErr == nil {
 		request := &daggerheartv1.DaggerheartApplyConditionsRequest{
 			CampaignId:  state.campaignID,
+			SceneId:     state.activeSceneID,
 			CharacterId: characterID,
 			Add:         addValues,
 			Remove:      removeValues,
@@ -871,6 +911,7 @@ func (r *Runner) runApplyConditionStep(ctx context.Context, state *scenarioState
 	}
 	_, err = r.env.daggerheartClient.ApplyAdversaryConditions(withSessionID(ctx, state.sessionID), &daggerheartv1.DaggerheartApplyAdversaryConditionsRequest{
 		CampaignId:  state.campaignID,
+		SceneId:     state.activeSceneID,
 		AdversaryId: adversaryIDValue,
 		Add:         addValues,
 		Remove:      removeValues,
@@ -958,6 +999,7 @@ func (r *Runner) runGroupActionStep(ctx context.Context, state *scenarioState, s
 	_, err = r.env.daggerheartClient.SessionGroupActionFlow(ctx, &daggerheartv1.SessionGroupActionFlowRequest{
 		CampaignId:        state.campaignID,
 		SessionId:         state.sessionID,
+		SceneId:           state.activeSceneID,
 		LeaderCharacterId: leaderID,
 		LeaderTrait:       leaderTrait,
 		Difficulty:        int32(difficulty),
@@ -1111,6 +1153,7 @@ func (r *Runner) runTemporaryArmorStep(ctx context.Context, state *scenarioState
 	ctxWithSession := withSessionID(ctx, state.sessionID)
 	_, err = r.env.daggerheartClient.ApplyTemporaryArmor(ctxWithSession, &daggerheartv1.DaggerheartApplyTemporaryArmorRequest{
 		CampaignId:  state.campaignID,
+		SceneId:     state.activeSceneID,
 		CharacterId: characterID,
 		Armor: &daggerheartv1.DaggerheartTemporaryArmor{
 			Source:   source,
@@ -1281,6 +1324,7 @@ func (r *Runner) runDeathMoveStep(ctx context.Context, state *scenarioState, ste
 	}
 	request := &daggerheartv1.DaggerheartApplyDeathMoveRequest{
 		CampaignId:  state.campaignID,
+		SceneId:     state.activeSceneID,
 		CharacterId: characterID,
 		Move:        parsedMove,
 	}
@@ -1335,6 +1379,7 @@ func (r *Runner) runBlazeOfGloryStep(ctx context.Context, state *scenarioState, 
 	ctxWithSession := withSessionID(ctx, state.sessionID)
 	_, err = r.env.daggerheartClient.ResolveBlazeOfGlory(ctxWithSession, &daggerheartv1.DaggerheartResolveBlazeOfGloryRequest{
 		CampaignId:  state.campaignID,
+		SceneId:     state.activeSceneID,
 		CharacterId: characterID,
 	})
 	if err != nil {
@@ -1389,6 +1434,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 		response, err := r.env.daggerheartClient.SessionAttackFlow(ctx, &daggerheartv1.SessionAttackFlowRequest{
 			CampaignId:        state.campaignID,
 			SessionId:         state.sessionID,
+			SceneId:           state.activeSceneID,
 			CharacterId:       attackerID,
 			Trait:             trait,
 			Difficulty:        int32(difficulty),
@@ -1438,6 +1484,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 	rollResp, err := r.env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
 		CampaignId:   state.campaignID,
 		SessionId:    state.sessionID,
+		SceneId:      state.activeSceneID,
 		CharacterId:  attackerID,
 		Trait:        trait,
 		RollKind:     daggerheartv1.RollKind_ROLL_KIND_ACTION,
@@ -1456,6 +1503,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 
 	rollOutcomeResponse, err := r.env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
 		SessionId: state.sessionID,
+		SceneId:   state.activeSceneID,
 		RollSeq:   rollResp.GetRollSeq(),
 	})
 	if err != nil {
@@ -1469,6 +1517,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 
 	attackOutcome, err := r.env.daggerheartClient.ApplyAttackOutcome(ctxWithMeta, &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: state.sessionID,
+		SceneId:   state.activeSceneID,
 		RollSeq:   rollResp.GetRollSeq(),
 		Targets:   []string{targetID},
 	})
@@ -1485,6 +1534,7 @@ func (r *Runner) runAttackStep(ctx context.Context, state *scenarioState, step S
 		damageRoll, err := r.env.daggerheartClient.SessionDamageRoll(ctx, &daggerheartv1.SessionDamageRollRequest{
 			CampaignId:  state.campaignID,
 			SessionId:   state.sessionID,
+			SceneId:     state.activeSceneID,
 			CharacterId: attackerID,
 			Dice:        dice,
 			Modifier:    0,
@@ -1563,6 +1613,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 	rollResp, err := r.env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
 		CampaignId:  state.campaignID,
 		SessionId:   state.sessionID,
+		SceneId:     state.activeSceneID,
 		CharacterId: attackerID,
 		Trait:       trait,
 		RollKind:    daggerheartv1.RollKind_ROLL_KIND_ACTION,
@@ -1580,6 +1631,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 	ctxWithMeta := withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID)
 	rollOutcomeResponse, err := r.env.daggerheartClient.ApplyRollOutcome(ctxWithMeta, &daggerheartv1.ApplyRollOutcomeRequest{
 		SessionId: state.sessionID,
+		SceneId:   state.activeSceneID,
 		RollSeq:   rollResp.GetRollSeq(),
 	})
 	if err != nil {
@@ -1593,6 +1645,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 
 	attackOutcome, err := r.env.daggerheartClient.ApplyAttackOutcome(ctxWithMeta, &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: state.sessionID,
+		SceneId:   state.activeSceneID,
 		RollSeq:   rollResp.GetRollSeq(),
 		Targets:   targetIDs,
 	})
@@ -1612,6 +1665,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 		damageRoll, err := r.env.daggerheartClient.SessionDamageRoll(ctx, &daggerheartv1.SessionDamageRollRequest{
 			CampaignId:  state.campaignID,
 			SessionId:   state.sessionID,
+			SceneId:     state.activeSceneID,
 			CharacterId: attackerID,
 			Dice:        dice,
 			Modifier:    int32(optionalInt(step.Args, "damage_modifier", 0)),
@@ -1645,6 +1699,7 @@ func (r *Runner) runMultiAttackStep(ctx context.Context, state *scenarioState, s
 			}
 			_, err = r.env.daggerheartClient.ApplyDamage(ctxWithMeta, &daggerheartv1.DaggerheartApplyDamageRequest{
 				CampaignId:        state.campaignID,
+				SceneId:           state.activeSceneID,
 				CharacterId:       target.id,
 				Damage:            buildDamageRequest(step.Args, attackerID, "attack", damageRoll.GetTotal()),
 				RollSeq:           &damageRoll.RollSeq,
@@ -1751,6 +1806,7 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 		}
 		_, err = r.env.daggerheartClient.ApplyDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyDamageRequest{
 			CampaignId:  state.campaignID,
+			SceneId:     state.activeSceneID,
 			CharacterId: targetID,
 			Damage: buildDamageRequestWithSources(
 				step.Args,
@@ -1783,6 +1839,7 @@ func (r *Runner) runCombinedDamageStep(ctx context.Context, state *scenarioState
 
 	_, err = r.env.daggerheartClient.ApplyAdversaryDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId:  state.campaignID,
+		SceneId:     state.activeSceneID,
 		AdversaryId: targetID,
 		Damage: buildDamageRequestWithSources(
 			step.Args,
@@ -1935,6 +1992,7 @@ func (r *Runner) runAdversaryAttackStep(ctx context.Context, state *scenarioStat
 	response, err := r.env.daggerheartClient.SessionAdversaryAttackFlow(ctx, &daggerheartv1.SessionAdversaryAttackFlowRequest{
 		CampaignId:        state.campaignID,
 		SessionId:         state.sessionID,
+		SceneId:           state.activeSceneID,
 		AdversaryId:       adversaryIDValue,
 		TargetId:          targetCharacterID,
 		Difficulty:        int32(difficulty),
@@ -2034,6 +2092,7 @@ func (r *Runner) runAdversaryReactionStep(ctx context.Context, state *scenarioSt
 
 	_, err = r.env.daggerheartClient.ApplyDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyDamageRequest{
 		CampaignId:  state.campaignID,
+		SceneId:     state.activeSceneID,
 		CharacterId: targetID,
 		Damage:      buildDamageRequest(step.Args, "", optionalString(step.Args, "source", "reaction"), int32(damageAmount)),
 	})
@@ -2216,6 +2275,7 @@ func (r *Runner) runCountdownCreateStep(ctx context.Context, state *scenarioStat
 	request := &daggerheartv1.DaggerheartCreateCountdownRequest{
 		CampaignId: state.campaignID,
 		SessionId:  state.sessionID,
+		SceneId:    state.activeSceneID,
 		Name:       name,
 		Kind:       parsedKind,
 		Current:    int32(optionalInt(step.Args, "current", 0)),
@@ -2259,6 +2319,7 @@ func (r *Runner) runCountdownUpdateStep(ctx context.Context, state *scenarioStat
 	request := &daggerheartv1.DaggerheartUpdateCountdownRequest{
 		CampaignId:  state.campaignID,
 		SessionId:   state.sessionID,
+		SceneId:     state.activeSceneID,
 		CountdownId: countdownID,
 		Delta:       int32(delta),
 		Reason:      optionalString(step.Args, "reason", ""),
@@ -2298,6 +2359,7 @@ func (r *Runner) runCountdownDeleteStep(ctx context.Context, state *scenarioStat
 	_, err = r.env.daggerheartClient.DeleteCountdown(ctx, &daggerheartv1.DaggerheartDeleteCountdownRequest{
 		CampaignId:  state.campaignID,
 		SessionId:   state.sessionID,
+		SceneId:     state.activeSceneID,
 		CountdownId: countdownID,
 		Reason:      optionalString(step.Args, "reason", ""),
 	})
@@ -2343,6 +2405,7 @@ func (r *Runner) runActionRollStep(ctx context.Context, state *scenarioState, st
 	response, err := r.env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
 		CampaignId:   state.campaignID,
 		SessionId:    state.sessionID,
+		SceneId:      state.activeSceneID,
 		CharacterId:  actorIDValue,
 		Trait:        trait,
 		RollKind:     daggerheartv1.RollKind_ROLL_KIND_ACTION,
@@ -2391,6 +2454,7 @@ func (r *Runner) runReactionRollStep(ctx context.Context, state *scenarioState, 
 		response, err := r.env.daggerheartClient.SessionActionRoll(ctx, &daggerheartv1.SessionActionRollRequest{
 			CampaignId:   state.campaignID,
 			SessionId:    state.sessionID,
+			SceneId:      state.activeSceneID,
 			CharacterId:  actorIDValue,
 			Trait:        optionalString(step.Args, "trait", "instinct"),
 			RollKind:     daggerheartv1.RollKind_ROLL_KIND_REACTION,
@@ -2423,6 +2487,7 @@ func (r *Runner) runReactionRollStep(ctx context.Context, state *scenarioState, 
 	response, err := r.env.daggerheartClient.SessionAdversaryAttackRoll(ctx, &daggerheartv1.SessionAdversaryAttackRollRequest{
 		CampaignId:     state.campaignID,
 		SessionId:      state.sessionID,
+		SceneId:        state.activeSceneID,
 		AdversaryId:    adversaryIDValue,
 		AttackModifier: int32(optionalInt(step.Args, "attack_modifier", optionalInt(step.Args, "modifier", 0))),
 		Advantage:      int32(optionalInt(step.Args, "advantage", 0)),
@@ -2460,6 +2525,7 @@ func (r *Runner) runDamageRollStep(ctx context.Context, state *scenarioState, st
 	request := &daggerheartv1.SessionDamageRollRequest{
 		CampaignId:  state.campaignID,
 		SessionId:   state.sessionID,
+		SceneId:     state.activeSceneID,
 		CharacterId: actorIDValue,
 		Dice:        buildDamageDice(step.Args),
 		Modifier:    int32(modifier),
@@ -2502,6 +2568,7 @@ func (r *Runner) runAdversaryAttackRollStep(ctx context.Context, state *scenario
 	request := &daggerheartv1.SessionAdversaryAttackRollRequest{
 		CampaignId:     state.campaignID,
 		SessionId:      state.sessionID,
+		SceneId:        state.activeSceneID,
 		AdversaryId:    adversaryIDValue,
 		AttackModifier: int32(optionalInt(step.Args, "attack_modifier", 0)),
 		Advantage:      int32(optionalInt(step.Args, "advantage", 0)),
@@ -2541,6 +2608,7 @@ func (r *Runner) runApplyRollOutcomeStep(ctx context.Context, state *scenarioSta
 	}
 	request := &daggerheartv1.ApplyRollOutcomeRequest{
 		SessionId: state.sessionID,
+		SceneId:   state.activeSceneID,
 		RollSeq:   rollSeq,
 	}
 	targets, err := resolveOutcomeTargets(state, step.Args)
@@ -2622,6 +2690,7 @@ func (r *Runner) runApplyAttackOutcomeStep(ctx context.Context, state *scenarioS
 	}
 	_, err = r.env.daggerheartClient.ApplyAttackOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: state.sessionID,
+		SceneId:   state.activeSceneID,
 		RollSeq:   rollSeq,
 		Targets:   targets,
 	})
@@ -2657,6 +2726,7 @@ func (r *Runner) runApplyAdversaryAttackOutcomeStep(ctx context.Context, state *
 	}
 	_, err = r.env.daggerheartClient.ApplyAdversaryAttackOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeRequest{
 		SessionId:  state.sessionID,
+		SceneId:    state.activeSceneID,
 		RollSeq:    rollSeq,
 		Targets:    targets,
 		Difficulty: int32(difficulty),
@@ -2700,6 +2770,7 @@ func (r *Runner) runApplyReactionOutcomeStep(ctx context.Context, state *scenari
 	}
 	response, err := r.env.daggerheartClient.ApplyReactionOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), &daggerheartv1.DaggerheartApplyReactionOutcomeRequest{
 		SessionId: state.sessionID,
+		SceneId:   state.activeSceneID,
 		RollSeq:   rollSeq,
 	})
 	if err != nil {

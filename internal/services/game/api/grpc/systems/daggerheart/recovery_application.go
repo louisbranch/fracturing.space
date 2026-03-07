@@ -368,6 +368,7 @@ func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
@@ -402,6 +403,7 @@ func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.
 		Type:          commandTypeDaggerheartTemporaryArmorApply,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",
@@ -456,6 +458,7 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
@@ -523,6 +526,7 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 		Type:          commandTypeDaggerheartLoadoutSwap,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",
@@ -563,6 +567,7 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 			Type:          commandTypeDaggerheartStressSpend,
 			ActorType:     command.ActorTypeSystem,
 			SessionID:     sessionID,
+			SceneID:       sceneID,
 			RequestID:     requestID,
 			InvocationID:  invocationID,
 			EntityType:    "character",
@@ -618,6 +623,7 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 	if sessionID == "" {
 		return nil, status.Error(codes.InvalidArgument, "session id is required")
 	}
+	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
 	}
@@ -759,6 +765,7 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 		Type:          commandTypeDaggerheartCharacterStatePatch,
 		ActorType:     command.ActorTypeSystem,
 		SessionID:     sessionID,
+		SceneID:       sceneID,
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",

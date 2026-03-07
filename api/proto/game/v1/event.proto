@@ -228,6 +228,9 @@ message AppendEventRequest {
 
   // Event-specific data as JSON.
   bytes payload_json = 8;
+
+  // The scene this event belongs to (optional).
+  string scene_id = 9;
 }
 
 // AppendEventResponse contains the stored event.
@@ -281,4 +284,7 @@ message Event {
 
   // Event-specific data as JSON.
   bytes payload_json = 15;
+
+  // The scene this event belongs to (empty for non-scene events).
+  string scene_id = 16;
 }

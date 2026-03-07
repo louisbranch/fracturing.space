@@ -67,6 +67,7 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 		campaignClient:    gamev1.NewCampaignServiceClient(conn),
 		participantClient: gamev1.NewParticipantServiceClient(conn),
 		sessionClient:     gamev1.NewSessionServiceClient(conn),
+		sceneClient:       gamev1.NewSceneServiceClient(conn),
 		characterClient:   gamev1.NewCharacterServiceClient(conn),
 		snapshotClient:    gamev1.NewSnapshotServiceClient(conn),
 		eventClient:       gamev1.NewEventServiceClient(conn),
@@ -148,6 +149,7 @@ func (r *Runner) RunScenario(ctx context.Context, scenario *Scenario) error {
 		adversaries:  map[string]string{},
 		countdowns:   map[string]string{},
 		participants: map[string]string{},
+		scenes:       map[string]string{},
 		rollOutcomes: map[uint64]actionRollResult{},
 		userID:       r.userID,
 	}

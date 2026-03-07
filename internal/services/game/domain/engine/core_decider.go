@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -99,6 +100,11 @@ func actionRoute(_ CoreDecider, current aggregate.State, cmd command.Command, no
 // sessionRoute routes session commands to the session decider.
 func sessionRoute(_ CoreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return session.Decide(current.Session, cmd, now)
+}
+
+// sceneRoute routes scene commands to the scene decider with the full scenes map.
+func sceneRoute(_ CoreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return scene.Decide(current.Scenes, cmd, now)
 }
 
 // sessionStartRoute handles session.start with campaign-level readiness checks.
@@ -213,6 +219,18 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		character.CommandTypeUpdate:               characterRoute,
 		character.CommandTypeDelete:               characterRoute,
 		character.CommandTypeProfileUpdate:        characterRoute,
+		scene.CommandTypeCreate:                   sceneRoute,
+		scene.CommandTypeUpdate:                   sceneRoute,
+		scene.CommandTypeEnd:                      sceneRoute,
+		scene.CommandTypeCharacterAdd:             sceneRoute,
+		scene.CommandTypeCharacterRemove:          sceneRoute,
+		scene.CommandTypeCharacterTransfer:        sceneRoute,
+		scene.CommandTypeTransition:               sceneRoute,
+		scene.CommandTypeGateOpen:                 sceneRoute,
+		scene.CommandTypeGateResolve:              sceneRoute,
+		scene.CommandTypeGateAbandon:              sceneRoute,
+		scene.CommandTypeSpotlightSet:             sceneRoute,
+		scene.CommandTypeSpotlightClear:           sceneRoute,
 	}
 }
 

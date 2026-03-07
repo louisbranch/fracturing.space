@@ -40,6 +40,20 @@ const (
 	CharacterDelete         command.Type = "character.delete"
 	CharacterProfileUpdate  command.Type = "character.profile_update"
 
+	// Scene commands.
+	SceneCreate            command.Type = "scene.create"
+	SceneUpdate            command.Type = "scene.update"
+	SceneEnd               command.Type = "scene.end"
+	SceneCharacterAdd      command.Type = "scene.character.add"
+	SceneCharacterRemove   command.Type = "scene.character.remove"
+	SceneCharacterTransfer command.Type = "scene.character.transfer"
+	SceneTransition        command.Type = "scene.transition"
+	SceneGateOpen          command.Type = "scene.gate_open"
+	SceneGateResolve       command.Type = "scene.gate_resolve"
+	SceneGateAbandon       command.Type = "scene.gate_abandon"
+	SceneSpotlightSet      command.Type = "scene.spotlight_set"
+	SceneSpotlightClear    command.Type = "scene.spotlight_clear"
+
 	// Daggerheart system commands.
 	DaggerheartGMFearSet                    command.Type = "sys.daggerheart.gm_fear.set"
 	DaggerheartCharacterStatePatch          command.Type = "sys.daggerheart.character_state.patch"
