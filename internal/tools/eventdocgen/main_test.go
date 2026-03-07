@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/tools/cli"
 )
 
 func TestFindModuleRoot(t *testing.T) {
@@ -22,9 +24,9 @@ func TestFindModuleRoot(t *testing.T) {
 		t.Fatalf("mkdir nested: %v", err)
 	}
 
-	got, err := findModuleRoot(nested)
+	got, err := cli.FindModuleRoot(nested)
 	if err != nil {
-		t.Fatalf("findModuleRoot returned error: %v", err)
+		t.Fatalf("FindModuleRoot returned error: %v", err)
 	}
 	if got != root {
 		t.Fatalf("expected root %s, got %s", root, got)
@@ -33,7 +35,7 @@ func TestFindModuleRoot(t *testing.T) {
 
 func TestFindModuleRootMissing(t *testing.T) {
 	root := t.TempDir()
-	_, err := findModuleRoot(root)
+	_, err := cli.FindModuleRoot(root)
 	if err == nil {
 		t.Fatal("expected error when go.mod is missing")
 	}
@@ -341,7 +343,7 @@ func tokenPosition(file string, line int) token.Position {
 
 func TestResolveRoot(t *testing.T) {
 	t.Run("explicit flag", func(t *testing.T) {
-		got, err := resolveRoot("/some/path")
+		got, err := cli.ResolveRoot("/some/path")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -351,8 +353,8 @@ func TestResolveRoot(t *testing.T) {
 	})
 
 	t.Run("empty flag uses cwd", func(t *testing.T) {
-		// From the project root, findModuleRoot should succeed.
-		got, err := resolveRoot("")
+		// From the project root, FindModuleRoot should succeed.
+		got, err := cli.ResolveRoot("")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -1261,7 +1263,7 @@ func TestParseGateScope(t *testing.T) {
 }
 
 func TestMainGeneratesCommandCatalogFromRepo(t *testing.T) {
-	root, err := resolveRoot("")
+	root, err := cli.ResolveRoot("")
 	if err != nil {
 		t.Fatalf("resolve root: %v", err)
 	}

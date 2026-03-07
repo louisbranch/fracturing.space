@@ -1,9 +1,8 @@
-package main
-
 // Package main generates the icon catalog from the shared icon registry.
 //
 // It is a docs-oriented tooling boundary: source metadata drives generated UX
 // documentation, and no runtime behavior depends on this tool.
+package main
 
 import (
 	"flag"
@@ -13,6 +12,7 @@ import (
 	"path/filepath"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
+	"github.com/louisbranch/fracturing.space/internal/tools/cli"
 )
 
 func main() {
@@ -33,14 +33,11 @@ func run(args []string, stdout io.Writer, stderr io.Writer) error {
 		return err
 	}
 
-	root, err := resolveRoot(rootFlag)
+	root, err := cli.ResolveRoot(rootFlag)
 	if err != nil {
 		return err
 	}
-	output := outPath
-	if !filepath.IsAbs(output) {
-		output = filepath.Join(root, outPath)
-	}
+	output := cli.ResolvePath(root, outPath)
 
 	content := fmt.Sprintf(`---
 title: "Icon Catalog"
@@ -63,34 +60,6 @@ func writeOutput(output, content string) error {
 		return fmt.Errorf("write catalog: %w", err)
 	}
 	return nil
-}
-
-// resolveRoot chooses the repository root so generated docs land in the right tree.
-func resolveRoot(flagRoot string) (string, error) {
-	if flagRoot != "" {
-		return filepath.Clean(flagRoot), nil
-	}
-	wd, err := os.Getwd()
-	if err != nil {
-		return "", fmt.Errorf("get working dir: %w", err)
-	}
-	return findModuleRoot(wd)
-}
-
-// findModuleRoot walks upward to locate the module root for generation.
-func findModuleRoot(start string) (string, error) {
-	dir := start
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			return dir, nil
-		}
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			break
-		}
-		dir = parent
-	}
-	return "", fmt.Errorf("go.mod not found above %s", start)
 }
 
 // fatal reports a generation error and exits immediately.

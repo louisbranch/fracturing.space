@@ -19,6 +19,7 @@ Service-boundary and transport-boundary architecture documentation.
 - [Admin architecture](admin-architecture.md)
 - [I18n and l10n architecture](i18n-l10n-architecture.md)
 - [Asset catalog ownership](asset-catalog-ownership.md)
+- [Developer tools architecture](developer-tools-architecture.md)
 
 Operational/reference addenda:
 

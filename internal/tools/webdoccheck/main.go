@@ -1,12 +1,15 @@
+// Package main enforces documentation comment quality rules for web packages.
 package main
 
 import (
 	"bufio"
+	"errors"
 	"flag"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -19,6 +22,12 @@ const (
 	modeDeclarations = "declarations"
 	modePackages     = "packages"
 	modeQuality      = "quality"
+)
+
+var (
+	scanMissingDeclarationComments = missingDeclarationComments
+	scanMissingPackageComments     = missingPackageComments
+	scanLowSignalCommentEntries    = lowSignalCommentEntries
 )
 
 type declarationEntry struct {
@@ -42,40 +51,53 @@ type qualityEntry struct {
 }
 
 func main() {
+	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
+		os.Exit(exitCode(err))
+	}
+}
+
+func run(args []string, stdout, stderr io.Writer) error {
 	var mode string
 	var baselinePath string
 	var writeBaseline bool
 
-	flag.StringVar(&mode, "mode", modeDeclarations, "check mode: declarations, packages, or quality")
-	flag.StringVar(&baselinePath, "baseline", "", "optional baseline file used for staged rollout")
-	flag.BoolVar(&writeBaseline, "write-baseline", false, "write current missing entries to stdout")
-	flag.Parse()
+	fs := flag.NewFlagSet("webdoccheck", flag.ContinueOnError)
+	fs.SetOutput(stderr)
+	fs.StringVar(&mode, "mode", modeDeclarations, "check mode: declarations, packages, or quality")
+	fs.StringVar(&baselinePath, "baseline", "", "optional baseline file used for staged rollout")
+	fs.BoolVar(&writeBaseline, "write-baseline", false, "write current missing entries to stdout")
+	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return &exitError{code: 2, err: err}
+	}
 
 	switch strings.ToLower(strings.TrimSpace(mode)) {
 	case modeDeclarations:
-		entries, err := missingDeclarationComments()
+		entries, err := scanMissingDeclarationComments()
 		if err != nil {
-			fatalf("scan declaration comments: %v", err)
+			return failf(stderr, 2, "scan declaration comments: %v", err)
 		}
-		handleDeclarationResults(entries, baselinePath, writeBaseline)
+		return handleDeclarationResults(entries, baselinePath, writeBaseline, stdout, stderr)
 	case modePackages:
-		entries, err := missingPackageComments()
+		entries, err := scanMissingPackageComments()
 		if err != nil {
-			fatalf("scan package comments: %v", err)
+			return failf(stderr, 2, "scan package comments: %v", err)
 		}
-		handlePackageResults(entries, baselinePath, writeBaseline)
+		return handlePackageResults(entries, baselinePath, writeBaseline, stdout, stderr)
 	case modeQuality:
-		entries, err := lowSignalCommentEntries()
+		entries, err := scanLowSignalCommentEntries()
 		if err != nil {
-			fatalf("scan comment quality: %v", err)
+			return failf(stderr, 2, "scan comment quality: %v", err)
 		}
-		handleQualityResults(entries, baselinePath, writeBaseline)
+		return handleQualityResults(entries, baselinePath, writeBaseline, stdout, stderr)
 	default:
-		fatalf("unsupported mode %q (expected %q, %q, or %q)", mode, modeDeclarations, modePackages, modeQuality)
+		return failf(stderr, 2, "unsupported mode %q (expected %q, %q, or %q)", mode, modeDeclarations, modePackages, modeQuality)
 	}
 }
 
-func handleDeclarationResults(entries []declarationEntry, baselinePath string, writeBaseline bool) {
+func handleDeclarationResults(entries []declarationEntry, baselinePath string, writeBaseline bool, stdout, stderr io.Writer) error {
 	lines := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		lines = append(lines, fmt.Sprintf("%s:%d %s %s", entry.Path, entry.Line, entry.Kind, entry.Name))
@@ -84,26 +106,26 @@ func handleDeclarationResults(entries []declarationEntry, baselinePath string, w
 
 	if writeBaseline {
 		for _, line := range lines {
-			fmt.Println(line)
+			fmt.Fprintln(stdout, line)
 		}
-		return
+		return nil
 	}
 
 	if strings.TrimSpace(baselinePath) == "" {
 		if len(lines) == 0 {
-			fmt.Println("webdoccheck: declaration comment check passed")
-			return
+			fmt.Fprintln(stdout, "webdoccheck: declaration comment check passed")
+			return nil
 		}
-		fmt.Println("webdoccheck: missing declaration comments")
+		fmt.Fprintln(stdout, "webdoccheck: missing declaration comments")
 		for _, line := range lines {
-			fmt.Println(line)
+			fmt.Fprintln(stdout, line)
 		}
-		os.Exit(1)
+		return &exitError{code: 1, err: errors.New("declaration comment violations found")}
 	}
 
 	baseline, err := readBaseline(baselinePath)
 	if err != nil {
-		fatalf("read baseline %q: %v", baselinePath, err)
+		return failf(stderr, 2, "read baseline %q: %v", baselinePath, err)
 	}
 
 	currentSet := make(map[string]struct{}, len(lines))
@@ -128,21 +150,22 @@ func handleDeclarationResults(entries []declarationEntry, baselinePath string, w
 	sort.Strings(resolvedEntries)
 
 	if len(newEntries) > 0 {
-		fmt.Printf("webdoccheck: %d new declaration comment violations (baseline %s)\n", len(newEntries), baselinePath)
+		fmt.Fprintf(stdout, "webdoccheck: %d new declaration comment violations (baseline %s)\n", len(newEntries), baselinePath)
 		for _, line := range newEntries {
-			fmt.Println(line)
+			fmt.Fprintln(stdout, line)
 		}
-		os.Exit(1)
+		return &exitError{code: 1, err: errors.New("new declaration comment violations found")}
 	}
 
 	if len(resolvedEntries) > 0 {
-		fmt.Printf("webdoccheck: declaration baseline can be ratcheted; %d entries resolved\n", len(resolvedEntries))
-		fmt.Println("run: make web-doc-baseline-update")
+		fmt.Fprintf(stdout, "webdoccheck: declaration baseline can be ratcheted; %d entries resolved\n", len(resolvedEntries))
+		fmt.Fprintln(stdout, "run: make web-doc-baseline-update")
 	}
-	fmt.Println("webdoccheck: declaration comment check passed")
+	fmt.Fprintln(stdout, "webdoccheck: declaration comment check passed")
+	return nil
 }
 
-func handlePackageResults(entries []packageEntry, baselinePath string, writeBaseline bool) {
+func handlePackageResults(entries []packageEntry, baselinePath string, writeBaseline bool, stdout, stderr io.Writer) error {
 	lines := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		lines = append(lines, fmt.Sprintf("%s (%s)", entry.ImportPath, entry.Dir))
@@ -151,28 +174,28 @@ func handlePackageResults(entries []packageEntry, baselinePath string, writeBase
 
 	if writeBaseline {
 		for _, line := range lines {
-			fmt.Println(line)
+			fmt.Fprintln(stdout, line)
 		}
-		return
+		return nil
 	}
 
 	if strings.TrimSpace(baselinePath) != "" {
-		fatalf("-baseline is not supported in packages mode")
+		return failf(stderr, 2, "-baseline is not supported in packages mode")
 	}
 
 	if len(lines) == 0 {
-		fmt.Println("webdoccheck: package comment check passed")
-		return
+		fmt.Fprintln(stdout, "webdoccheck: package comment check passed")
+		return nil
 	}
 
-	fmt.Println("webdoccheck: missing package comments")
+	fmt.Fprintln(stdout, "webdoccheck: missing package comments")
 	for _, line := range lines {
-		fmt.Println(line)
+		fmt.Fprintln(stdout, line)
 	}
-	os.Exit(1)
+	return &exitError{code: 1, err: errors.New("package comment violations found")}
 }
 
-func handleQualityResults(entries []qualityEntry, baselinePath string, writeBaseline bool) {
+func handleQualityResults(entries []qualityEntry, baselinePath string, writeBaseline bool, stdout, stderr io.Writer) error {
 	lines := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		lines = append(lines, fmt.Sprintf("%s:%d %s %s (%s)", entry.Path, entry.Line, entry.Kind, entry.Name, entry.Phrase))
@@ -181,25 +204,25 @@ func handleQualityResults(entries []qualityEntry, baselinePath string, writeBase
 
 	if writeBaseline {
 		for _, line := range lines {
-			fmt.Println(line)
+			fmt.Fprintln(stdout, line)
 		}
-		return
+		return nil
 	}
 
 	if strings.TrimSpace(baselinePath) != "" {
-		fatalf("-baseline is not supported in quality mode")
+		return failf(stderr, 2, "-baseline is not supported in quality mode")
 	}
 
 	if len(lines) == 0 {
-		fmt.Println("webdoccheck: comment quality check passed")
-		return
+		fmt.Fprintln(stdout, "webdoccheck: comment quality check passed")
+		return nil
 	}
 
-	fmt.Println("webdoccheck: low-signal declaration comments found")
+	fmt.Fprintln(stdout, "webdoccheck: low-signal declaration comments found")
 	for _, line := range lines {
-		fmt.Println(line)
+		fmt.Fprintln(stdout, line)
 	}
-	os.Exit(1)
+	return &exitError{code: 1, err: errors.New("low-signal comments found")}
 }
 
 func missingDeclarationComments() ([]declarationEntry, error) {
@@ -499,7 +522,39 @@ func readBaseline(path string) (map[string]struct{}, error) {
 	return entries, nil
 }
 
-func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, "webdoccheck: "+format+"\n", args...)
-	os.Exit(2)
+type exitError struct {
+	code int
+	err  error
+}
+
+func (e *exitError) Error() string {
+	if e.err != nil {
+		return e.err.Error()
+	}
+	return fmt.Sprintf("exit code %d", e.code)
+}
+
+func (e *exitError) Unwrap() error {
+	return e.err
+}
+
+func (e *exitError) ExitCode() int {
+	return e.code
+}
+
+func exitCode(err error) int {
+	if err == nil {
+		return 0
+	}
+	var coded interface{ ExitCode() int }
+	if errors.As(err, &coded) {
+		return coded.ExitCode()
+	}
+	return 1
+}
+
+func failf(stderr io.Writer, code int, format string, args ...any) error {
+	msg := fmt.Sprintf(format, args...)
+	fmt.Fprintf(stderr, "webdoccheck: %s\n", msg)
+	return &exitError{code: code, err: errors.New(msg)}
 }

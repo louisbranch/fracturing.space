@@ -184,17 +184,69 @@ func TestRunSkipIfReadyImportsWhenCatalogNotReady(t *testing.T) {
 	}
 }
 
-func TestOpenContentStoreWithRetryRetriesBusyAndSucceeds(t *testing.T) {
-	originalOpen := openContentStore
-	t.Cleanup(func() {
-		openContentStore = originalOpen
-	})
+func TestRunWithDepsDryRunSkipsStoreOpen(t *testing.T) {
+	openCalls := 0
+	deps := runDeps{
+		openStore: func(string) (contentStore, error) {
+			openCalls++
+			return nil, errors.New("open should not be called during dry-run")
+		},
+		nowUTC: func() time.Time {
+			return time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+		},
+	}
 
+	cfg := Config{
+		Dir:        ".",
+		BaseLocale: defaultBaseLocale,
+		DryRun:     true,
+	}
+	var out bytes.Buffer
+	if err := runWithDeps(context.Background(), cfg, &out, deps); err != nil {
+		t.Fatalf("runWithDeps() error = %v", err)
+	}
+	if openCalls != 0 {
+		t.Fatalf("open store calls = %d, want 0", openCalls)
+	}
+	if !strings.Contains(out.String(), "validated") {
+		t.Fatalf("output = %q, want validation summary", out.String())
+	}
+}
+
+func TestRunWithDepsFixtureValidationError(t *testing.T) {
+	root := t.TempDir()
+	localeDir := filepath.Join(root, defaultBaseLocale)
+	if err := os.MkdirAll(localeDir, 0o755); err != nil {
+		t.Fatalf("mkdir locale: %v", err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(localeDir, "classes.json"),
+		[]byte(`{"system_id":"other","system_version":"v1","source":"seed","locale":"en-US","items":[]}`),
+		0o644,
+	); err != nil {
+		t.Fatalf("write classes fixture: %v", err)
+	}
+
+	cfg := Config{
+		Dir:        root,
+		BaseLocale: defaultBaseLocale,
+		DryRun:     true,
+	}
+	err := runWithDeps(context.Background(), cfg, io.Discard, runDeps{})
+	if err == nil {
+		t.Fatal("expected validation error")
+	}
+	if !strings.Contains(err.Error(), "validate en-US: unsupported system id other") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestOpenContentStoreWithRetryRetriesBusyAndSucceeds(t *testing.T) {
 	busyErr := generateBusySQLiteError(t)
 	successPath := filepath.Join(t.TempDir(), "content.db")
 
 	var attempts int
-	openContentStore = func(string) (*storagesqlite.Store, error) {
+	openStore := func(string) (contentStore, error) {
 		attempts++
 		if attempts < 3 {
 			return nil, busyErr
@@ -202,7 +254,7 @@ func TestOpenContentStoreWithRetryRetriesBusyAndSucceeds(t *testing.T) {
 		return storagesqlite.OpenContent(successPath)
 	}
 
-	store, err := openContentStoreWithRetry(context.Background(), successPath, io.Discard)
+	store, err := openContentStoreWithRetry(context.Background(), successPath, io.Discard, openStore)
 	if err != nil {
 		t.Fatalf("openContentStoreWithRetry() error = %v", err)
 	}
@@ -217,18 +269,13 @@ func TestOpenContentStoreWithRetryRetriesBusyAndSucceeds(t *testing.T) {
 }
 
 func TestOpenContentStoreWithRetryDoesNotRetryNonBusy(t *testing.T) {
-	originalOpen := openContentStore
-	t.Cleanup(func() {
-		openContentStore = originalOpen
-	})
-
 	var attempts int
-	openContentStore = func(string) (*storagesqlite.Store, error) {
+	openStore := func(string) (contentStore, error) {
 		attempts++
 		return nil, errors.New("boom")
 	}
 
-	_, err := openContentStoreWithRetry(context.Background(), filepath.Join(t.TempDir(), "content.db"), io.Discard)
+	_, err := openContentStoreWithRetry(context.Background(), filepath.Join(t.TempDir(), "content.db"), io.Discard, openStore)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -238,20 +285,15 @@ func TestOpenContentStoreWithRetryDoesNotRetryNonBusy(t *testing.T) {
 }
 
 func TestOpenContentStoreWithRetryRespectsContextCancellation(t *testing.T) {
-	originalOpen := openContentStore
-	t.Cleanup(func() {
-		openContentStore = originalOpen
-	})
-
 	busyErr := generateBusySQLiteError(t)
-	openContentStore = func(string) (*storagesqlite.Store, error) {
+	openStore := func(string) (contentStore, error) {
 		return nil, busyErr
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	_, err := openContentStoreWithRetry(ctx, filepath.Join(t.TempDir(), "content.db"), io.Discard)
+	_, err := openContentStoreWithRetry(ctx, filepath.Join(t.TempDir(), "content.db"), io.Discard, openStore)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("expected context canceled error, got %v", err)
 	}

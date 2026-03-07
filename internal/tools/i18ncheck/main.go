@@ -2,8 +2,10 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"sort"
 	"strings"
@@ -12,20 +14,64 @@ import (
 	i18ncatalog "github.com/louisbranch/fracturing.space/internal/platform/i18n/catalog"
 )
 
+type codedError struct {
+	code int
+	err  error
+}
+
+func (e codedError) Error() string {
+	return e.err.Error()
+}
+
+func (e codedError) Unwrap() error {
+	return e.err
+}
+
+func withExitCode(err error, code int) error {
+	if err == nil {
+		return nil
+	}
+	return codedError{code: code, err: err}
+}
+
+func exitCode(err error) int {
+	var codeErr codedError
+	if errors.As(err, &codeErr) {
+		return codeErr.code
+	}
+	return 1
+}
+
 func main() {
+	if err := run(os.Args[1:], os.Stdout, os.Stderr); err != nil {
+		os.Exit(exitCode(err))
+	}
+}
+
+func run(args []string, stdout, stderr io.Writer) error {
 	var baseLocale string
 	var strictMissing bool
-	flag.StringVar(&baseLocale, "base-locale", i18ncatalog.BaseLocale, "base locale used as translation source of truth")
-	flag.BoolVar(&strictMissing, "strict-missing", false, "fail when non-base locales are missing base keys")
-	flag.Parse()
+	flags := flag.NewFlagSet("i18ncheck", flag.ContinueOnError)
+	flags.SetOutput(stderr)
+	flags.StringVar(&baseLocale, "base-locale", i18ncatalog.BaseLocale, "base locale used as translation source of truth")
+	flags.BoolVar(&strictMissing, "strict-missing", false, "fail when non-base locales are missing base keys")
+	if err := flags.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return withExitCode(err, 2)
+	}
 
 	bundle, err := i18ncatalog.LoadEmbedded()
 	if err != nil {
-		fatalf("load i18n catalogs: %v", err)
+		fmt.Fprintf(stderr, "load i18n catalogs: %v\n", err)
+		return withExitCode(err, 1)
 	}
 
 	if !bundle.HasLocale(baseLocale) {
-		fatalf("base locale %q is missing from catalogs", baseLocale)
+		err := fmt.Errorf("base locale %q is missing from catalogs", baseLocale)
+		fmt.Fprintf(stderr, "%v\n", err)
+		return withExitCode(err, 1)
 	}
 
 	failures := make([]string, 0, 32)
@@ -74,15 +120,16 @@ func main() {
 	}
 
 	for _, line := range warnings {
-		fmt.Println(line)
+		fmt.Fprintln(stdout, line)
 	}
 	if len(failures) > 0 {
 		for _, line := range failures {
-			fmt.Fprintf(os.Stderr, "i18n check failure: %s\n", line)
+			fmt.Fprintf(stderr, "i18n check failure: %s\n", line)
 		}
-		os.Exit(1)
+		return withExitCode(errors.New("i18n check failure"), 1)
 	}
-	fmt.Println("i18n catalog check passed")
+	fmt.Fprintln(stdout, "i18n catalog check passed")
+	return nil
 }
 
 func printfTokens(value string) []string {
@@ -167,9 +214,4 @@ func sortedKeys(entries map[string]string) []string {
 	}
 	sort.Strings(keys)
 	return keys
-}
-
-func fatalf(format string, args ...any) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(1)
 }

@@ -79,6 +79,7 @@ type runnerDeps struct {
 	sessions     sessionClient
 	forks        forkClient
 	discovery    discoveryClient
+	stateStore   stateStore
 }
 
 // Config holds declarative runner settings.
@@ -96,6 +97,9 @@ type Runner struct {
 }
 
 func newRunnerWithClients(cfg Config, deps runnerDeps) *Runner {
+	if deps.stateStore == nil {
+		deps.stateStore = newFileStateStore(nil)
+	}
 	return &Runner{
 		cfg:  cfg,
 		deps: deps,
@@ -125,7 +129,7 @@ func (r *Runner) RunManifest(ctx context.Context, manifest Manifest) error {
 	}
 	r.logf("seed manifest %q: loading state", manifest.Name)
 
-	state, err := loadState(r.cfg.StatePath)
+	state, err := r.deps.stateStore.Load(r.cfg.StatePath)
 	if err != nil {
 		return err
 	}
@@ -165,7 +169,7 @@ func (r *Runner) RunManifest(ctx context.Context, manifest Manifest) error {
 	}
 	r.logf("seed manifest %q: saving state", manifest.Name)
 
-	return saveState(r.cfg.StatePath, state)
+	return r.deps.stateStore.Save(r.cfg.StatePath, state)
 }
 
 func (r *Runner) requireDeps() error {
@@ -180,6 +184,9 @@ func (r *Runner) requireDeps() error {
 	}
 	if r.deps.discovery == nil {
 		return fmt.Errorf("discovery client is required")
+	}
+	if r.deps.stateStore == nil {
+		return fmt.Errorf("state store is required")
 	}
 	return nil
 }

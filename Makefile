@@ -20,7 +20,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/status/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-critical-domain cover-package-floors coverage-floors-ratchet cover-treemap test test-unit test-changed integration integration-full integration-smoke integration-smoke-full integration-smoke-pr integration-shard integration-shard-check scenario scenario-full scenario-smoke scenario-shard scenario-shard-check scenario-fast templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check admin-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check ci-go-tests-local fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-critical-domain cover-package-floors coverage-floors-ratchet cover-treemap test test-unit test-changed integration integration-full integration-smoke integration-smoke-full integration-smoke-pr integration-shard integration-shard-check scenario scenario-full scenario-smoke scenario-shard scenario-shard-check scenario-fast templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check admin-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check ci-go-tests-local fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -210,6 +210,12 @@ web-doc-baseline-update:
 
 negative-test-assertion-check:
 	@bash ./scripts/check-negative-test-assertions.sh
+
+tool-cli-contract-check:
+	@bash ./scripts/check-tool-cli-contracts.sh
+
+tools-check: tool-cli-contract-check
+	go test ./internal/tools/...
 
 event-catalog-check:
 	@bash -euo pipefail -c 'go run ./internal/tools/eventdocgen >/dev/null 2>&1; git diff --exit-code -- docs/events/event-catalog.md docs/events/usage-map.md docs/events/command-catalog.md'

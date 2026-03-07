@@ -17,6 +17,37 @@ type seedState struct {
 	Entries   map[string]string `json:"entries"`
 }
 
+// stateStore abstracts state persistence so runner orchestration remains
+// deterministic in tests and file-backed in production.
+type stateStore interface {
+	Load(path string) (seedState, error)
+	Save(path string, state seedState) error
+}
+
+// fileStateStore persists seed state to disk and stamps save timestamps via
+// an injectable clock.
+type fileStateStore struct {
+	nowUTC func() time.Time
+}
+
+// newFileStateStore builds the default on-disk state store.
+func newFileStateStore(nowUTC func() time.Time) fileStateStore {
+	if nowUTC == nil {
+		nowUTC = func() time.Time {
+			return time.Now().UTC()
+		}
+	}
+	return fileStateStore{nowUTC: nowUTC}
+}
+
+func (s fileStateStore) Load(path string) (seedState, error) {
+	return loadState(path)
+}
+
+func (s fileStateStore) Save(path string, state seedState) error {
+	return saveState(path, state, s.nowUTC)
+}
+
 func defaultState() seedState {
 	return seedState{
 		Version: stateVersion,
@@ -50,16 +81,21 @@ func loadState(path string) (seedState, error) {
 	return state, nil
 }
 
-func saveState(path string, state seedState) error {
+func saveState(path string, state seedState, nowUTC func() time.Time) error {
 	trimmed := strings.TrimSpace(path)
 	if trimmed == "" {
 		return nil
+	}
+	if nowUTC == nil {
+		nowUTC = func() time.Time {
+			return time.Now().UTC()
+		}
 	}
 	if state.Entries == nil {
 		state.Entries = map[string]string{}
 	}
 	state.Version = stateVersion
-	state.UpdatedAt = time.Now().UTC().Format(time.RFC3339Nano)
+	state.UpdatedAt = nowUTC().Format(time.RFC3339Nano)
 
 	data, err := json.MarshalIndent(state, "", "  ")
 	if err != nil {

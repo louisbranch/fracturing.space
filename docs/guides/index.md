@@ -13,3 +13,4 @@ How-to documentation and operational workflows.
 - Docs quality checks: [docs-quality-checks.md](docs-quality-checks.md)
 - Web module playbook: [web-module-playbook.md](web-module-playbook.md)
 - Admin module playbook: [admin-module-playbook.md](admin-module-playbook.md)
+- Add a developer tool: [add-new-developer-tool.md](add-new-developer-tool.md)
