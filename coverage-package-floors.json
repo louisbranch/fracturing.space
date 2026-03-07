@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-07T05:38:34Z",
+  "updated_at": "2026-03-07T05:49:27Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -110,7 +110,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness",
-      "floor": 97.1,
+      "floor": 98.1,
       "description": "Session-start readiness invariants from aggregate state."
     },
     {
