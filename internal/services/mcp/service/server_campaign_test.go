@@ -129,6 +129,57 @@ func TestCampaignCreateHandlerMapsRequestAndResponse(t *testing.T) {
 	}
 }
 
+func TestCampaignCreateHandlerDefaultsMissingGmModeToAI(t *testing.T) {
+	client := &fakeCampaignClient{response: &statev1.CreateCampaignResponse{
+		Campaign: &statev1.Campaign{
+			Id:     "camp-123",
+			Name:   "Snowbound",
+			GmMode: statev1.GmMode_AI,
+		},
+		OwnerParticipant: &statev1.Participant{
+			Id: "part-owner",
+		},
+	}}
+
+	result, _, err := domain.CampaignCreateHandler(client, nil)(
+		context.Background(),
+		&mcp.CallToolRequest{},
+		domain.CampaignCreateInput{Name: "Snowbound"},
+	)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	requireToolMetadata(t, result)
+	if client.lastRequest == nil {
+		t.Fatal("expected gRPC request")
+	}
+	if client.lastRequest.GetGmMode() != statev1.GmMode_AI {
+		t.Fatalf("expected gm mode AI, got %v", client.lastRequest.GetGmMode())
+	}
+}
+
+func TestCampaignCreateHandlerRejectsInvalidGmMode(t *testing.T) {
+	client := &fakeCampaignClient{}
+	handler := domain.CampaignCreateHandler(client, nil)
+
+	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignCreateInput{
+		Name:   "New Campaign",
+		GmMode: "NOT_A_MODE",
+	})
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if result != nil {
+		t.Fatal("expected nil result on error")
+	}
+	if !strings.Contains(err.Error(), "invalid") {
+		t.Fatalf("expected invalid gm mode error, got %q", err.Error())
+	}
+	if client.lastRequest != nil {
+		t.Fatal("expected no gRPC request when gm_mode is invalid")
+	}
+}
+
 // TestCampaignEndHandlerMapsRequestAndResponse ensures inputs and outputs map consistently.
 func TestCampaignEndHandlerMapsRequestAndResponse(t *testing.T) {
 	now := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)

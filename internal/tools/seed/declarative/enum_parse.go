@@ -1,6 +1,7 @@
 package declarative
 
 import (
+	"fmt"
 	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -37,15 +38,15 @@ func parseGameSystem(value string) commonv1.GameSystem {
 	return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
 }
 
-func parseGmMode(value string) gamev1.GmMode {
+func parseGmMode(value string) (gamev1.GmMode, error) {
 	candidate := normalizeEnumLabel(value)
 	if candidate == "" {
-		return gamev1.GmMode_HUMAN
+		return gamev1.GmMode_AI, nil
 	}
 	if enumValue, ok := gamev1.GmMode_value[candidate]; ok {
-		return gamev1.GmMode(enumValue)
+		return gamev1.GmMode(enumValue), nil
 	}
-	return gamev1.GmMode_HUMAN
+	return gamev1.GmMode_GM_MODE_UNSPECIFIED, fmt.Errorf("unsupported gm_mode %q", value)
 }
 
 func parseCampaignIntent(value string) gamev1.CampaignIntent {

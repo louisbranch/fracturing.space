@@ -15,18 +15,18 @@ import (
 func TestPickGmMode_VaryFalse(t *testing.T) {
 	g := &Generator{rng: rand.New(rand.NewSource(1))}
 	got := g.pickGmMode(false, 0)
-	if got != statev1.GmMode_HUMAN {
-		t.Fatalf("vary=false: want HUMAN, got %v", got)
+	if got != statev1.GmMode_AI {
+		t.Fatalf("vary=false: want AI, got %v", got)
 	}
 }
 
 func TestPickGmMode_VaryTrue_CyclesThroughModes(t *testing.T) {
 	g := &Generator{rng: rand.New(rand.NewSource(1))}
 	want := []statev1.GmMode{
-		statev1.GmMode_HUMAN,
 		statev1.GmMode_AI,
+		statev1.GmMode_HUMAN,
 		statev1.GmMode_HYBRID,
-		statev1.GmMode_HUMAN, // wraps
+		statev1.GmMode_AI, // wraps
 	}
 	for i, expected := range want {
 		got := g.pickGmMode(true, i)

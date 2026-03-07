@@ -4,7 +4,7 @@ package domain
 type CampaignCreateInput struct {
 	Name         string `json:"name" jsonschema:"campaign name"`
 	System       string `json:"system" jsonschema:"game system (DAGGERHEART)"`
-	GmMode       string `json:"gm_mode" jsonschema:"gm mode (HUMAN, AI, HYBRID)"`
+	GmMode       string `json:"gm_mode,omitempty" jsonschema:"optional gm mode (AI, HUMAN, HYBRID); defaults to AI"`
 	Intent       string `json:"intent,omitempty" jsonschema:"campaign intent (STANDARD, STARTER, SANDBOX)"`
 	AccessPolicy string `json:"access_policy,omitempty" jsonschema:"campaign access policy (PRIVATE, RESTRICTED, PUBLIC)"`
 	ThemePrompt  string `json:"theme_prompt,omitempty" jsonschema:"optional theme prompt"`

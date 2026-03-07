@@ -52,11 +52,18 @@ func newCampaignApplication(service *CampaignService) campaignApplication {
 }
 
 func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.CreateCampaignRequest) (storage.CampaignRecord, storage.ParticipantRecord, error) {
+	gmMode := in.GetGmMode()
+	switch gmMode {
+	case campaignv1.GmMode_GM_MODE_UNSPECIFIED, campaignv1.GmMode_AI, campaignv1.GmMode_HUMAN, campaignv1.GmMode_HYBRID:
+	default:
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "campaign gm mode is invalid")
+	}
+
 	input := campaign.CreateInput{
 		Name:         in.GetName(),
 		Locale:       in.GetLocale(),
 		System:       in.GetSystem(),
-		GmMode:       gmModeFromProto(in.GetGmMode()),
+		GmMode:       gmModeFromProto(gmMode),
 		Intent:       campaignIntentFromProto(in.GetIntent()),
 		AccessPolicy: campaignAccessPolicyFromProto(in.GetAccessPolicy()),
 		ThemePrompt:  in.GetThemePrompt(),

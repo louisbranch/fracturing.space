@@ -123,13 +123,78 @@ func TestCreateCampaign_EmptyName(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateCampaign_MissingGmMode(t *testing.T) {
+func TestCreateCampaign_InvalidGmMode(t *testing.T) {
 	svc := NewCampaignService(newTestStores().build())
 	_, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode: statev1.GmMode(99),
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
+	ts := newTestStores()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{
+		store: ts.Event,
+		resultsByType: map[command.Type]engine.Result{
+			command.Type("campaign.create"): {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("campaign.created"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "campaign",
+					EntityID:    "campaign-123",
+					PayloadJSON: []byte(`{"name":"Test Campaign","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"AI","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
+				}),
+			},
+			command.Type("participant.join"): {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "campaign-123",
+					Type:        event.Type("participant.joined"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "participant",
+					EntityID:    "participant-owner",
+					PayloadJSON: []byte(`{"participant_id":"participant-owner","user_id":"user-123","name":"Owner","role":"PLAYER","controller":"HUMAN","campaign_access":"OWNER"}`),
+				}),
+			},
+		},
+	}
+
+	svc := &CampaignService{
+		stores:      ts.withDomain(domain).build(),
+		clock:       fixedClock(now),
+		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+	}
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
+	resp, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+		Name:   "Test Campaign",
+		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign returned error: %v", err)
+	}
+	if resp.GetCampaign().GetGmMode() != statev1.GmMode_AI {
+		t.Fatalf("Campaign GmMode = %v, want %v", resp.GetCampaign().GetGmMode(), statev1.GmMode_AI)
+	}
+	if resp.GetOwnerParticipant().GetRole() != statev1.ParticipantRole_PLAYER {
+		t.Fatalf("OwnerParticipant Role = %v, want %v", resp.GetOwnerParticipant().GetRole(), statev1.ParticipantRole_PLAYER)
+	}
+	if len(domain.commands) != 3 {
+		t.Fatalf("domain command count = %d, want %d", len(domain.commands), 3)
+	}
+
+	var createPayload campaign.CreatePayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &createPayload); err != nil {
+		t.Fatalf("decode create payload: %v", err)
+	}
+	if createPayload.GmMode != statev1.GmMode_AI.String() {
+		t.Fatalf("create payload gm mode = %q, want %q", createPayload.GmMode, statev1.GmMode_AI.String())
+	}
 }
 
 func TestCreateCampaign_MissingCreatorUserID(t *testing.T) {

@@ -28,7 +28,7 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 		return CreateInput{}, ErrInvalidGameSystem
 	}
 	if input.GmMode == GmModeUnspecified {
-		return CreateInput{}, ErrInvalidGmMode
+		input.GmMode = GmModeAI
 	}
 	input.Locale = platformi18n.NormalizeLocale(input.Locale)
 	if input.Intent == IntentUnspecified {

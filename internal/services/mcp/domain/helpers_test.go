@@ -71,19 +71,24 @@ func TestGmModeToString(t *testing.T) {
 
 func TestGmModeFromString(t *testing.T) {
 	tests := []struct {
-		input string
-		want  statev1.GmMode
+		input   string
+		want    statev1.GmMode
+		wantErr bool
 	}{
-		{"HUMAN", statev1.GmMode_HUMAN},
-		{"human", statev1.GmMode_HUMAN},
-		{"AI", statev1.GmMode_AI},
-		{"HYBRID", statev1.GmMode_HYBRID},
-		{"", statev1.GmMode_GM_MODE_UNSPECIFIED},
-		{"invalid", statev1.GmMode_GM_MODE_UNSPECIFIED},
+		{"HUMAN", statev1.GmMode_HUMAN, false},
+		{"human", statev1.GmMode_HUMAN, false},
+		{"AI", statev1.GmMode_AI, false},
+		{"HYBRID", statev1.GmMode_HYBRID, false},
+		{"", statev1.GmMode_AI, false},
+		{"invalid", statev1.GmMode_GM_MODE_UNSPECIFIED, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			if got := gmModeFromString(tt.input); got != tt.want {
+			got, err := gmModeFromString(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("gmModeFromString(%q) error = %v, wantErr %v", tt.input, err, tt.wantErr)
+			}
+			if got != tt.want {
 				t.Errorf("gmModeFromString(%q) = %v, want %v", tt.input, got, tt.want)
 			}
 		})

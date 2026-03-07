@@ -79,6 +79,19 @@ func TestCampaignToProto(t *testing.T) {
 }
 
 func TestEnumConversions(t *testing.T) {
+	if campaignv1.GmMode_GM_MODE_UNSPECIFIED != 0 {
+		t.Fatal("expected gm mode unspecified to be 0")
+	}
+	if campaignv1.GmMode_AI != 1 {
+		t.Fatal("expected gm mode AI to be 1")
+	}
+	if campaignv1.GmMode_HUMAN != 2 {
+		t.Fatal("expected gm mode HUMAN to be 2")
+	}
+	if campaignv1.GmMode_HYBRID != 3 {
+		t.Fatal("expected gm mode HYBRID to be 3")
+	}
+
 	if campaignStatusToProto(campaign.StatusArchived) != campaignv1.CampaignStatus_ARCHIVED {
 		t.Fatal("expected archived campaign status")
 	}

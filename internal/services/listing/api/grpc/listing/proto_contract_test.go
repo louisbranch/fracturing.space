@@ -17,8 +17,14 @@ func TestProtoContract_CampaignListingGmModeEnumValues(t *testing.T) {
 	if listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_UNSPECIFIED != 0 {
 		t.Fatal("gm mode unspecified should be 0")
 	}
-	if listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_AI != 2 {
-		t.Fatal("gm mode AI should be 2")
+	if listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_AI != 1 {
+		t.Fatal("gm mode AI should be 1")
+	}
+	if listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_HUMAN != 2 {
+		t.Fatal("gm mode HUMAN should be 2")
+	}
+	if listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_HYBRID != 3 {
+		t.Fatal("gm mode HYBRID should be 3")
 	}
 }
 

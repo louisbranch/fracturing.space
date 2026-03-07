@@ -309,6 +309,9 @@ func TestRunCampaignStepDefaults(t *testing.T) {
 	if gotRequest == nil {
 		t.Fatal("expected create campaign request")
 	}
+	if got := gotRequest.GetGmMode(); got != gamev1.GmMode_AI {
+		t.Fatalf("gm mode = %s, want AI", got.String())
+	}
 	if got := gotRequest.GetIntent(); got != gamev1.CampaignIntent_SANDBOX {
 		t.Fatalf("intent = %s, want SANDBOX", got.String())
 	}
@@ -2723,6 +2726,7 @@ func TestParseFunctions(t *testing.T) {
 		{"parseGameSystem invalid", func() error { _, err := parseGameSystem("BOGUS"); return err }},
 		{"parseGameSystem unspecified invalid", func() error { _, err := parseGameSystem("GAME_SYSTEM_UNSPECIFIED"); return err }},
 		{"parseGmMode valid", func() error { _, err := parseGmMode("HUMAN"); return err }},
+		{"parseGmMode hybrid valid", func() error { _, err := parseGmMode("HYBRID"); return err }},
 		{"parseGmMode invalid", func() error { _, err := parseGmMode("BOGUS"); return err }},
 		{"parseCampaignIntent valid", func() error { _, err := parseCampaignIntent("SANDBOX"); return err }},
 		{"parseCampaignIntent invalid", func() error { _, err := parseCampaignIntent("BOGUS"); return err }},

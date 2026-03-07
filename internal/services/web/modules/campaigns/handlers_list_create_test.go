@@ -283,8 +283,8 @@ func TestMountCampaignCreateGetRendersCreateForm(t *testing.T) {
 		`name="gm_mode"`,
 		`name="theme_prompt"`,
 		`<option value="daggerheart" selected>`,
-		`<option value="human" selected>`,
-		`<option value="ai">`,
+		`<option value="ai" selected>`,
+		`<option value="human">`,
 		`<option value="hybrid">`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -398,8 +398,8 @@ func TestMountCampaignCreatePostAppliesDefaults(t *testing.T) {
 	if got := gateway.lastCreateInput.System; got != GameSystemDaggerheart {
 		t.Fatalf("System = %v, want %v", got, GameSystemDaggerheart)
 	}
-	if got := gateway.lastCreateInput.GMMode; got != GmModeHuman {
-		t.Fatalf("GMMode = %v, want %v", got, GmModeHuman)
+	if got := gateway.lastCreateInput.GMMode; got != GmModeAI {
+		t.Fatalf("GMMode = %v, want %v", got, GmModeAI)
 	}
 }
 
