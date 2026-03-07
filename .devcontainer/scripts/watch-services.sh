@@ -92,6 +92,9 @@ export FRACTURING_SPACE_WORKER_PORT="${FRACTURING_SPACE_WORKER_PORT:-8089}"
 export FRACTURING_SPACE_WORKER_AUTH_ADDR="${FRACTURING_SPACE_WORKER_AUTH_ADDR:-localhost:8083}"
 export FRACTURING_SPACE_WORKER_SOCIAL_ADDR="${FRACTURING_SPACE_WORKER_SOCIAL_ADDR:-localhost:8090}"
 export FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR="${FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR:-localhost:8088}"
+export FRACTURING_SPACE_STATUS_PORT="${FRACTURING_SPACE_STATUS_PORT:-8093}"
+export FRACTURING_SPACE_STATUS_ADDR="${FRACTURING_SPACE_STATUS_ADDR:-localhost:8093}"
+export FRACTURING_SPACE_STATUS_DB_PATH="${FRACTURING_SPACE_STATUS_DB_PATH:-data/status.db}"
 
 pids=()
 
@@ -152,12 +155,14 @@ cleanup() {
 
 trap cleanup EXIT INT TERM
 
+start_service status
 start_service game FRACTURING_SPACE_GAME_ADDR=
 start_service auth
 start_service social
 start_service listing
 start_service ai
 start_service notifications
+wait_for_service_log_marker "status" "status server listening at"
 wait_for_service_log_marker "game" "game server listening at"
 wait_for_service_log_marker "auth" "auth server listening at"
 wait_for_service_log_marker "social" "social server listening at"

@@ -9,6 +9,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
@@ -23,9 +24,11 @@ type Server struct {
 	authConn                                 *grpc.ClientConn
 	socialConn                               *grpc.ClientConn
 	aiConn                                   *grpc.ClientConn
+	statusConn                               *grpc.ClientConn
 	projectionApplyOutboxWorkerEnabled       bool
 	projectionApplyOutboxApply               func(context.Context, event.Event) error
 	projectionApplyOutboxShadowWorkerEnabled bool
+	statusReporter                           *platformstatus.Reporter
 }
 
 type authGRPCClients struct {

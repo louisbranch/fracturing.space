@@ -138,7 +138,6 @@ func TestRegistryWiresSplitSocialContracts(t *testing.T) {
 		}
 	}
 	assertRegistryGatewayCallUsesDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 0, "ProfileSocialClient")
-	assertRegistryGatewayCallUsesDepField(t, "registry_protected.go", "profilegateway", "NewGRPCGateway", 0, "ProfileSocialClient")
 	assertRegistryGatewayCallUsesDepField(t, "registry_protected.go", "settingsgateway", "NewGRPCGateway", 0, "SettingsSocialClient")
 }
 

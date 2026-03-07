@@ -1,24 +1,12 @@
 package modules
 
 import (
+	"context"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
-	dashboardgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/gateway"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
-	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
-	profilegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/gateway"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
-	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-)
-
-var (
-	emptyBase   modulehandler.Base
-	emptyPolicy requestmeta.SchemePolicy
+	"google.golang.org/grpc"
 )
 
 func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
@@ -114,107 +102,6 @@ func TestModulesHaveUniquePrefixes(t *testing.T) {
 	}
 }
 
-func TestDeriveServiceHealthAllNilDeps(t *testing.T) {
-	t.Parallel()
-
-	modules := buildHealthModules(Dependencies{})
-	health := DeriveServiceHealth(modules)
-	if len(health) != 5 {
-		t.Fatalf("health entry count = %d, want 5", len(health))
-	}
-	for _, e := range health {
-		if e.Available {
-			t.Fatalf("entry %q Available = true, want false with nil deps", e.Label)
-		}
-	}
-}
-
-func TestDeriveServiceHealthAllPresent(t *testing.T) {
-	t.Parallel()
-
-	deps := Dependencies{
-		CampaignClient:       stubCampaignClient{},
-		ParticipantClient:    stubParticipantClient{},
-		CharacterClient:      stubCharacterClient{},
-		SessionClient:        stubSessionClient{},
-		InviteClient:         stubInviteClient{},
-		AuthorizationClient:  stubAuthorizationClient{},
-		UserHubClient:        stubUserHubClient{},
-		ProfileSocialClient:  stubSocialClient{},
-		SettingsSocialClient: stubSocialClient{},
-		AccountClient:        stubAccountClient{},
-		CredentialClient:     stubCredentialClient{},
-		NotificationClient:   stubNotificationClient{},
-	}
-	modules := buildHealthModules(deps)
-	health := DeriveServiceHealth(modules)
-	if len(health) != 5 {
-		t.Fatalf("health entry count = %d, want 5", len(health))
-	}
-	for _, e := range health {
-		if !e.Available {
-			t.Fatalf("entry %q Available = false, want true with all deps present", e.Label)
-		}
-	}
-}
-
-func TestDeriveServiceHealthMixedDeps(t *testing.T) {
-	t.Parallel()
-
-	deps := Dependencies{
-		CampaignClient: stubCampaignClient{},
-		// Campaigns is missing ParticipantClient etc → degraded
-		// UserHubClient nil → Dashboard degraded
-		// ProfileSocialClient nil → Profile degraded
-		AccountClient:      stubAccountClient{},
-		NotificationClient: stubNotificationClient{},
-		// Settings missing SettingsSocialClient and CredentialClient → degraded
-	}
-	modules := buildHealthModules(deps)
-	health := DeriveServiceHealth(modules)
-
-	want := map[string]bool{
-		"Campaigns":     false, // partial game clients
-		"Dashboard":     false,
-		"Profile":       false,
-		"Settings":      false, // partial settings clients
-		"Notifications": true,
-	}
-	for _, e := range health {
-		expected, ok := want[e.Label]
-		if !ok {
-			t.Fatalf("unexpected health entry label %q", e.Label)
-		}
-		if e.Available != expected {
-			t.Fatalf("entry %q Available = %v, want %v", e.Label, e.Available, expected)
-		}
-	}
-}
-
-func TestModuleHealthyReturnsFalseForUnavailableGateway(t *testing.T) {
-	t.Parallel()
-
-	m := campaigns.New()
-	if m.Healthy() {
-		t.Fatalf("campaigns.New() Healthy = true, want false for zero-value module")
-	}
-
-	dm := dashboard.New()
-	if dm.Healthy() {
-		t.Fatalf("dashboard.New() Healthy = true, want false for zero-value module")
-	}
-
-	sm := settings.New()
-	if sm.Healthy() {
-		t.Fatalf("settings.New() Healthy = true, want false for zero-value module")
-	}
-
-	nm := notifications.New()
-	if nm.Healthy() {
-		t.Fatalf("notifications.New() Healthy = true, want false for zero-value module")
-	}
-}
-
 func TestRegistryBuildComposesExpectedModules(t *testing.T) {
 	t.Parallel()
 
@@ -231,34 +118,119 @@ func TestRegistryBuildComposesExpectedModules(t *testing.T) {
 	if len(built.Protected) != 4 {
 		t.Fatalf("protected module count = %d, want 4", len(built.Protected))
 	}
-	if len(built.Health) != 5 {
-		t.Fatalf("health entry count = %d, want 5", len(built.Health))
+	// Health is nil in tests — no status service available to query.
+	if len(built.Health) != 0 {
+		t.Fatalf("health entry count = %d, want 0 (no status service)", len(built.Health))
 	}
 }
 
-// buildHealthModules constructs modules from deps for health derivation tests.
-func buildHealthModules(deps Dependencies) []Module {
-	return []Module{
-		campaigns.NewStableWithGateway(newCampaignGateway(deps), emptyBase, "", nil),
-		dashboard.NewWithGateway(dashboardgateway.NewGRPCGateway(deps.UserHubClient), emptyBase, nil),
-		profile.NewWithGateway(profilegateway.NewGRPCGateway(deps.ProfileSocialClient), "", nil),
-		settings.New(settings.WithGateway(settingsgateway.NewGRPCGateway(deps.SettingsSocialClient, deps.AccountClient, deps.CredentialClient)), settings.WithBase(emptyBase), settings.WithSchemePolicy(emptyPolicy)),
-		notifications.NewWithGateway(notificationsgateway.NewGRPCGateway(deps.NotificationClient), emptyBase),
+func TestCapitalizeLabel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{input: "", want: ""},
+		{input: "game", want: "Game"},
+		{input: "Game", want: "Game"},
+		{input: "userhub", want: "Userhub"},
+	}
+	for _, tc := range tests {
+		if got := capitalizeLabel(tc.input); got != tc.want {
+			t.Fatalf("capitalizeLabel(%q) = %q, want %q", tc.input, got, tc.want)
+		}
 	}
 }
 
-// Stubs satisfy the client interfaces with embedded interface types.
-// Methods are never called — only nil-checks matter for DeriveServiceHealth.
-type stubCampaignClient struct{ campaigns.CampaignClient }
-type stubParticipantClient struct{ campaigns.ParticipantClient }
-type stubCharacterClient struct{ campaigns.CharacterClient }
-type stubSessionClient struct{ campaigns.SessionClient }
-type stubInviteClient struct{ campaigns.InviteClient }
-type stubAuthorizationClient struct{ campaigns.AuthorizationClient }
-type stubUserHubClient struct{ dashboard.UserHubClient }
-type stubSocialClient struct{ settings.SocialClient }
-type stubAccountClient struct{ settings.AccountClient }
-type stubCredentialClient struct{ settings.CredentialClient }
-type stubNotificationClient struct {
-	notifications.NotificationClient
+// stubStatusClient implements statusv1.StatusServiceClient for unit tests.
+type stubStatusClient struct {
+	statusv1.StatusServiceClient
+	resp *statusv1.GetSystemStatusResponse
+	err  error
 }
+
+func (s *stubStatusClient) GetSystemStatus(_ context.Context, _ *statusv1.GetSystemStatusRequest, _ ...grpc.CallOption) (*statusv1.GetSystemStatusResponse, error) {
+	return s.resp, s.err
+}
+
+func TestStatusHealthProviderNilClient(t *testing.T) {
+	t.Parallel()
+
+	provider := statusHealthProvider(nil)
+	if provider != nil {
+		t.Fatal("expected nil provider for nil client")
+	}
+}
+
+func TestStatusHealthProviderReturnsEntries(t *testing.T) {
+	t.Parallel()
+
+	client := &stubStatusClient{
+		resp: &statusv1.GetSystemStatusResponse{
+			Services: []*statusv1.ServiceStatus{
+				{
+					Service:         "userhub",
+					AggregateStatus: statusv1.CapabilityStatus_CAPABILITY_STATUS_DEGRADED,
+				},
+				{
+					Service:         "game",
+					AggregateStatus: statusv1.CapabilityStatus_CAPABILITY_STATUS_OPERATIONAL,
+				},
+				nil, // nil entry should be skipped
+			},
+		},
+	}
+
+	provider := statusHealthProvider(client)
+	if provider == nil {
+		t.Fatal("expected non-nil provider")
+	}
+
+	entries := provider(context.Background())
+	if len(entries) != 2 {
+		t.Fatalf("entry count = %d, want 2", len(entries))
+	}
+	// Entries should be sorted alphabetically.
+	if entries[0].Label != "Game" {
+		t.Fatalf("entries[0].Label = %q, want %q", entries[0].Label, "Game")
+	}
+	if !entries[0].Available {
+		t.Fatal("entries[0].Available = false, want true")
+	}
+	if entries[1].Label != "Userhub" {
+		t.Fatalf("entries[1].Label = %q, want %q", entries[1].Label, "Userhub")
+	}
+	if entries[1].Available {
+		t.Fatal("entries[1].Available = true, want false")
+	}
+}
+
+func TestStatusHealthProviderErrorReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	client := &stubStatusClient{
+		err: context.DeadlineExceeded,
+	}
+	provider := statusHealthProvider(client)
+	entries := provider(context.Background())
+	if entries != nil {
+		t.Fatalf("expected nil entries on error, got %d", len(entries))
+	}
+}
+
+func TestStatusHealthProviderEmptyServicesReturnsNil(t *testing.T) {
+	t.Parallel()
+
+	client := &stubStatusClient{
+		resp: &statusv1.GetSystemStatusResponse{},
+	}
+	provider := statusHealthProvider(client)
+	entries := provider(context.Background())
+	if entries != nil {
+		t.Fatalf("expected nil entries for empty services, got %d", len(entries))
+	}
+}
+
+// Verify ServiceHealthEntry is properly populated by checking the type contract.
+var _ = []dashboard.ServiceHealthEntry{}

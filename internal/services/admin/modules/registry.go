@@ -1,11 +1,13 @@
 package modules
 
 import (
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/campaigns"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/dashboard"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/icons"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/scenarios"
+	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/status"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/systems"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/users"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
@@ -13,8 +15,9 @@ import (
 
 // BuildInput carries dependencies required to build module sets.
 type BuildInput struct {
-	Base     modulehandler.Base
-	GRPCAddr string
+	Base         modulehandler.Base
+	GRPCAddr     string
+	StatusClient statusv1.StatusServiceClient
 }
 
 // BuildOutput contains composed module sets.
@@ -38,5 +41,6 @@ func (Registry) Build(input BuildInput) BuildOutput {
 		icons.New(icons.NewService(input.Base)),
 		users.New(users.NewService(input.Base)),
 		scenarios.New(scenarios.NewService(input.Base, input.GRPCAddr)),
+		status.New(status.NewService(input.Base, input.StatusClient)),
 	}}
 }

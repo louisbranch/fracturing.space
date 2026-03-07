@@ -43,7 +43,6 @@ func TestParseConfigOverrides(t *testing.T) {
 		"-notifications-addr", "custom-notifications:19002",
 		"-cache-fresh-ttl", "20s",
 		"-cache-stale-ttl", "4m",
-		"-dial-timeout", "3s",
 	})
 	if err != nil {
 		t.Fatalf("parse config: %v", err)
@@ -65,8 +64,5 @@ func TestParseConfigOverrides(t *testing.T) {
 	}
 	if cfg.CacheStaleTTL != 4*time.Minute {
 		t.Fatalf("cache_stale_ttl = %s, want %s", cfg.CacheStaleTTL, 4*time.Minute)
-	}
-	if cfg.GRPCDialTimeout != 3*time.Second {
-		t.Fatalf("dial_timeout = %s, want %s", cfg.GRPCDialTimeout, 3*time.Second)
 	}
 }

@@ -6968,7 +6968,7 @@ func (x *DaggerheartApplyReactionOutcomeResponse) GetResult() *DaggerheartReacti
 
 type DaggerheartLevelUpAdvancement struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Advancement type (e.g. "increase_hp", "increase_proficiency", "new_subclass_card", "multiclass").
+	// Advancement type (e.g. "trait_increase", "add_hp_slots", "add_stress_slots", "increase_evasion", "increase_proficiency", "domain_card", "upgraded_subclass", "multiclass").
 	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
 	// Trait to mark or advance.
 	Trait string `protobuf:"bytes,2,opt,name=trait,proto3" json:"trait,omitempty"`

@@ -11,9 +11,9 @@ import (
 
 // Module provides authenticated dashboard routes.
 type Module struct {
-	gateway DashboardGateway
-	base    modulehandler.Base
-	health  []ServiceHealthEntry
+	gateway        DashboardGateway
+	base           modulehandler.Base
+	healthProvider dashboardapp.HealthProvider
 }
 
 // New returns a dashboard module with zero-value dependencies (degraded mode).
@@ -22,8 +22,8 @@ func New() Module {
 }
 
 // NewWithGateway returns a dashboard module with explicit gateway and handler dependencies.
-func NewWithGateway(gateway DashboardGateway, base modulehandler.Base, health []ServiceHealthEntry) Module {
-	return Module{gateway: gateway, base: base, health: health}
+func NewWithGateway(gateway DashboardGateway, base modulehandler.Base, healthProvider dashboardapp.HealthProvider) Module {
+	return Module{gateway: gateway, base: base, healthProvider: healthProvider}
 }
 
 // ID returns a stable module identifier.
@@ -37,7 +37,7 @@ func (m Module) Healthy() bool {
 // Mount wires dashboard route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	h := newHandlers(dashboardapp.NewService(m.gateway, nil, m.health), m.base)
+	h := newHandlers(dashboardapp.NewService(m.gateway, nil, m.healthProvider), m.base)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.DashboardPrefix, Handler: mux}, nil
 }

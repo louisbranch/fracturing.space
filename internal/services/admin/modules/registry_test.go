@@ -6,8 +6,8 @@ func TestNewRegistryBuildsDefaultModuleOrder(t *testing.T) {
 	t.Parallel()
 
 	built := NewRegistry().Build(BuildInput{})
-	if len(built.Modules) != 7 {
-		t.Fatalf("module count = %d, want %d", len(built.Modules), 7)
+	if len(built.Modules) != 8 {
+		t.Fatalf("module count = %d, want %d", len(built.Modules), 8)
 	}
 
 	want := []string{
@@ -18,6 +18,7 @@ func TestNewRegistryBuildsDefaultModuleOrder(t *testing.T) {
 		"icons",
 		"users",
 		"scenarios",
+		"status",
 	}
 	for i, id := range want {
 		if got := built.Modules[i].ID(); got != id {

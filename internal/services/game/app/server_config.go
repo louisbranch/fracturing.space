@@ -12,6 +12,7 @@ type serverEnv struct {
 	AuthAddr                                 string `env:"FRACTURING_SPACE_AUTH_ADDR"`
 	SocialAddr                               string `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
 	AIAddr                                   string `env:"FRACTURING_SPACE_AI_ADDR"`
+	StatusAddr                               string `env:"FRACTURING_SPACE_STATUS_ADDR"`
 	EventsDBPath                             string `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
 	ProjectionsDBPath                        string `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
 	ContentDBPath                            string `env:"FRACTURING_SPACE_GAME_CONTENT_DB_PATH"`
@@ -35,6 +36,11 @@ func loadServerEnv() serverEnv {
 	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
 	cfg.SocialAddr = discovery.OrDefaultGRPCAddr(cfg.SocialAddr, discovery.ServiceSocial)
 	cfg.AIAddr = discovery.OrDefaultGRPCAddr(cfg.AIAddr, discovery.ServiceAI)
+	// Status address is not defaulted — the status service is optional/advisory.
+	// When unset, the reporter starts with a nil client and accumulates locally.
+	if cfg.StatusAddr != "" {
+		cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
+	}
 	if cfg.EventsDBPath == "" {
 		cfg.EventsDBPath = filepath.Join("data", "game-events.db")
 	}

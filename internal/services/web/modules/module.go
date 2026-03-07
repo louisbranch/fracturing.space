@@ -2,6 +2,7 @@
 package modules
 
 import (
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
@@ -62,4 +63,7 @@ type Dependencies struct {
 
 	// Notification module client.
 	NotificationClient notifications.NotificationClient
+
+	// Status service client for system-wide health queries.
+	StatusClient statusv1.StatusServiceClient
 }

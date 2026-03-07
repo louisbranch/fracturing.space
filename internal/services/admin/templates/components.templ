@@ -80,6 +80,16 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						data-nav-item="true"
 					>{T(loc, "nav.campaigns")}</a>
 				</li>
+				<li>
+					<a
+						href="/app/status"
+						hx-get="/app/status"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
+					>{T(loc, "nav.status")}</a>
+				</li>
 			</ul>
 			<div class="dropdown dropdown-hover dropdown-end">
 				<div tabindex="0" role="button" class="btn btn-ghost btn-sm hover:bg-neutral">
@@ -176,6 +186,16 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						data-nav-item="true"
 
 						>{T(loc, "nav.campaigns")}</a>
+					</li>
+					<li>
+				<a
+						href="/app/status"
+						hx-get="/app/status"
+						hx-target="#main"
+						hx-swap="innerHTML"
+						hx-push-url="true"
+						data-nav-item="true"
+					>{T(loc, "nav.status")}</a>
 					</li>
 					<li>
 						<span>

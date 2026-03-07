@@ -66,6 +66,47 @@ func DefaultClientDialOptions() []gogrpc.DialOption {
 	}
 }
 
+// LenientDialOptions returns dial options without WithBlock, suitable for
+// non-blocking connection attempts where the caller tolerates initial unavailability.
+func LenientDialOptions() []gogrpc.DialOption {
+	return []gogrpc.DialOption{
+		gogrpc.WithTransportCredentials(insecure.NewCredentials()),
+		gogrpc.WithStatsHandler(otelgrpc.NewClientHandler()),
+	}
+}
+
+// DialLenient attempts to connect to a gRPC endpoint with a short timeout.
+// On failure it returns nil conn and logs a warning instead of returning an error.
+// Callers must handle a nil connection gracefully.
+func DialLenient(ctx context.Context, addr string, logf func(string, ...any), opts ...gogrpc.DialOption) *gogrpc.ClientConn {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if logf == nil {
+		logf = func(string, ...any) {}
+	}
+	if len(opts) == 0 {
+		opts = LenientDialOptions()
+	}
+
+	dialCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	conn, err := gogrpc.DialContext(dialCtx, addr, opts...)
+	if err != nil {
+		logf("lenient dial %s failed: %v", addr, err)
+		return nil
+	}
+
+	// Quick health check — don't block if unavailable.
+	if err := WaitForHealth(dialCtx, conn, "", logf); err != nil {
+		logf("lenient dial %s: health check failed, connection may be usable later: %v", addr, err)
+		// Return the connection anyway — gRPC reconnects automatically.
+		return conn
+	}
+	return conn
+}
+
 // DialWithHealth dials a gRPC endpoint and waits for the health check to serve.
 // It closes the connection if the health check fails.
 func DialWithHealth(ctx context.Context, dialer Dialer, addr string, dialTimeout time.Duration, logf func(string, ...any), opts ...gogrpc.DialOption) (*gogrpc.ClientConn, error) {

@@ -285,6 +285,23 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	gamegrpc.SetIntentFilter(projectionRegistries)
 	daggerheartservice.SetIntentFilter(projectionRegistries)
 
+	// Wire status reporter: lenient dial, nil-safe if unreachable.
+	statusConn, statusClient := dialStatusLenient(srvEnv.StatusAddr)
+	defer func() {
+		if err == nil {
+			return
+		}
+		if statusConn != nil {
+			_ = statusConn.Close()
+		}
+	}()
+	statusReporter := initStatusReporter(
+		statusClient,
+		socialClients.socialClient != nil,
+		aiClients.agentClient != nil,
+		hasCatalogContent(bundle.content),
+	)
+
 	server = &Server{
 		listener:                                 listener,
 		grpcServer:                               grpcServer,
@@ -293,9 +310,11 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		authConn:                                 authClients.conn,
 		socialConn:                               socialClients.conn,
 		aiConn:                                   aiClients.conn,
+		statusConn:                               statusConn,
 		projectionApplyOutboxWorkerEnabled:       enableApplyWorker,
 		projectionApplyOutboxApply:               b.config.buildProjectionApplyOutboxApply(bundle.projections, projectionRegistries),
 		projectionApplyOutboxShadowWorkerEnabled: enableShadowWorker,
+		statusReporter:                           statusReporter,
 	}
 
 	listener = nil
@@ -303,6 +322,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 	authClients.conn = nil
 	socialClients.conn = nil
 	aiClients.conn = nil
+	statusConn = nil
 	return server, nil
 }
 

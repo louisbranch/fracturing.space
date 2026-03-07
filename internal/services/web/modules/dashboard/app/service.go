@@ -10,20 +10,20 @@ import (
 
 // service defines an internal contract used at this web package boundary.
 type service struct {
-	readGateway   Gateway
-	logger        *log.Logger
-	serviceHealth []ServiceHealthEntry
+	readGateway    Gateway
+	logger         *log.Logger
+	healthProvider HealthProvider
 }
 
 // NewService constructs a dashboard service with fail-closed gateway defaults.
-func NewService(gateway Gateway, logger *log.Logger, health []ServiceHealthEntry) Service {
+func NewService(gateway Gateway, logger *log.Logger, health HealthProvider) Service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
 	if logger == nil {
 		logger = log.Default()
 	}
-	return service{readGateway: gateway, logger: logger, serviceHealth: health}
+	return service{readGateway: gateway, logger: logger, healthProvider: health}
 }
 
 // LoadDashboard loads the package state needed for this request path.
@@ -45,10 +45,14 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 	if !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameCampaigns) {
 		showAdventureBlock = !snapshot.HasDraftOrActiveCampaign && !snapshot.CampaignsHasMore
 	}
+	var health []ServiceHealthEntry
+	if s.healthProvider != nil {
+		health = s.healthProvider(ctx)
+	}
 	return DashboardView{
 		ShowPendingProfileBlock: snapshot.NeedsProfileCompletion,
 		ShowAdventureBlock:      showAdventureBlock,
-		ServiceHealth:           s.serviceHealth,
+		ServiceHealth:           health,
 	}, nil
 }
 

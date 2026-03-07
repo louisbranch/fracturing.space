@@ -17,9 +17,9 @@ type Config struct {
 	GameAddr          string        `env:"FRACTURING_SPACE_USERHUB_GAME_ADDR"`
 	SocialAddr        string        `env:"FRACTURING_SPACE_USERHUB_SOCIAL_ADDR"`
 	NotificationsAddr string        `env:"FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR"`
+	StatusAddr        string        `env:"FRACTURING_SPACE_USERHUB_STATUS_ADDR"`
 	CacheFreshTTL     time.Duration `env:"FRACTURING_SPACE_USERHUB_CACHE_FRESH_TTL" envDefault:"15s"`
 	CacheStaleTTL     time.Duration `env:"FRACTURING_SPACE_USERHUB_CACHE_STALE_TTL" envDefault:"2m"`
-	GRPCDialTimeout   time.Duration `env:"FRACTURING_SPACE_USERHUB_DIAL_TIMEOUT" envDefault:"2s"`
 }
 
 // ParseConfig parses environment and flags into Config.
@@ -31,6 +31,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
 	cfg.SocialAddr = discovery.OrDefaultGRPCAddr(cfg.SocialAddr, discovery.ServiceSocial)
 	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
+	cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
 
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The userhub gRPC server port")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "The game gRPC server address")
@@ -38,7 +39,6 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "The notifications gRPC server address")
 	fs.DurationVar(&cfg.CacheFreshTTL, "cache-fresh-ttl", cfg.CacheFreshTTL, "The fresh dashboard cache TTL")
 	fs.DurationVar(&cfg.CacheStaleTTL, "cache-stale-ttl", cfg.CacheStaleTTL, "The stale dashboard fallback TTL")
-	fs.DurationVar(&cfg.GRPCDialTimeout, "dial-timeout", cfg.GRPCDialTimeout, "The gRPC dependency dial timeout")
 
 	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
@@ -54,9 +54,9 @@ func Run(ctx context.Context, cfg Config) error {
 			GameAddr:          cfg.GameAddr,
 			SocialAddr:        cfg.SocialAddr,
 			NotificationsAddr: cfg.NotificationsAddr,
+			StatusAddr:        cfg.StatusAddr,
 			CacheFreshTTL:     cfg.CacheFreshTTL,
 			CacheStaleTTL:     cfg.CacheStaleTTL,
-			GRPCDialTimeout:   cfg.GRPCDialTimeout,
 		})
 	})
 }

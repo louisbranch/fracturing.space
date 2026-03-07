@@ -31,6 +31,10 @@
       "grpc_port": 8090
     },
     {
+      "name": "status",
+      "grpc_port": 8093
+    },
+    {
       "name": "listing",
       "grpc_port": 8091
     },
