@@ -869,6 +869,12 @@ func (r *Runner) applyListings(ctx context.Context, manifest Manifest, campaignI
 			DifficultyTier:             parseDifficultyTier(listing.DifficultyTier),
 			ExpectedDurationLabel:      listing.ExpectedDurationLabel,
 			System:                     parseGameSystem(defaultSystemLabel(listing.System)),
+			GmMode:                     parseListingGmMode(listing.GmMode),
+			Intent:                     parseListingIntent(listing.Intent),
+			Level:                      listing.Level,
+			CharacterCount:             listing.CharacterCount,
+			Storyline:                  listing.Storyline,
+			Tags:                       listing.Tags,
 		})
 		if err != nil {
 			return fmt.Errorf("create campaign listing for %s: %w", listing.CampaignKey, err)

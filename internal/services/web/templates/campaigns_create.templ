@@ -13,9 +13,8 @@ templ CampaignStartFragment(loc Localizer) {
 						<h2 class="card-title">{ T(loc, "game.campaigns.new.browse.title") }</h2>
 						<p class="text-sm opacity-80">{ T(loc, "game.campaigns.new.browse.description") }</p>
 						<div class="card-actions mt-2 justify-start">
-							<button class="btn btn-outline w-full sm:w-auto" type="button" disabled aria-disabled="true">{ T(loc, "game.campaigns.new.browse.action") }</button>
+							<a class="btn btn-outline w-full sm:w-auto" href="/discover/">{ T(loc, "game.campaigns.new.browse.action") }</a>
 						</div>
-						<p class="text-xs uppercase tracking-[0.14em] opacity-60">{ T(loc, "game.campaigns.new.browse.disabled") }</p>
 					</div>
 				</article>
 				<div class="divider lg:divider-horizontal mx-4 text-xs font-semibold uppercase tracking-[0.28em] opacity-70" data-campaign-start-divider="or">{ T(loc, "game.campaigns.new.divider_or") }</div>

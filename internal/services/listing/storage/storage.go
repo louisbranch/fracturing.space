@@ -27,6 +27,12 @@ type CampaignListing struct {
 	DifficultyTier             listingv1.CampaignDifficultyTier
 	ExpectedDurationLabel      string
 	System                     commonv1.GameSystem
+	GmMode                     listingv1.CampaignListingGmMode
+	Intent                     listingv1.CampaignListingIntent
+	Level                      int
+	CharacterCount             int
+	Storyline                  string
+	Tags                       []string
 	CreatedAt                  time.Time
 	UpdatedAt                  time.Time
 }

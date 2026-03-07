@@ -14,6 +14,20 @@ enum CampaignDifficultyTier {
   CAMPAIGN_DIFFICULTY_TIER_ADVANCED = 3;
 }
 
+enum CampaignListingGmMode {
+  CAMPAIGN_LISTING_GM_MODE_UNSPECIFIED = 0;
+  CAMPAIGN_LISTING_GM_MODE_HUMAN = 1;
+  CAMPAIGN_LISTING_GM_MODE_AI = 2;
+  CAMPAIGN_LISTING_GM_MODE_HYBRID = 3;
+}
+
+enum CampaignListingIntent {
+  CAMPAIGN_LISTING_INTENT_UNSPECIFIED = 0;
+  CAMPAIGN_LISTING_INTENT_STANDARD = 1;
+  CAMPAIGN_LISTING_INTENT_STARTER = 2;
+  CAMPAIGN_LISTING_INTENT_SANDBOX = 3;
+}
+
 // CampaignListing stores one public listing record for a starter campaign.
 message CampaignListing {
   // The source campaign identifier in game service.
@@ -42,6 +56,24 @@ message CampaignListing {
 
   google.protobuf.Timestamp created_at = 9;
   google.protobuf.Timestamp updated_at = 10;
+
+  // Discovery filter: AI / human / hybrid GM.
+  CampaignListingGmMode gm_mode = 11;
+
+  // Discovery filter: starter / standard / sandbox.
+  CampaignListingIntent intent = 12;
+
+  // Character starting level (1 for beginners).
+  int32 level = 13;
+
+  // Number of pre-included characters.
+  int32 character_count = 14;
+
+  // Full markdown storyline for AI GM context.
+  string storyline = 15;
+
+  // Free-form discovery tags (e.g. "solo", "mystery").
+  repeated string tags = 16;
 }
 
 message CreateCampaignListingRequest {
@@ -53,6 +85,12 @@ message CreateCampaignListingRequest {
   CampaignDifficultyTier difficulty_tier = 6;
   string expected_duration_label = 7;
   common.v1.GameSystem system = 8;
+  CampaignListingGmMode gm_mode = 9;
+  CampaignListingIntent intent = 10;
+  int32 level = 11;
+  int32 character_count = 12;
+  string storyline = 13;
+  repeated string tags = 14;
 }
 
 message CreateCampaignListingResponse {

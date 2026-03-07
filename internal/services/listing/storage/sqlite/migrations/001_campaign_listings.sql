@@ -7,6 +7,12 @@ CREATE TABLE IF NOT EXISTS campaign_listings (
   difficulty_tier INTEGER NOT NULL,
   expected_duration_label TEXT NOT NULL,
   system INTEGER NOT NULL,
+  gm_mode INTEGER NOT NULL DEFAULT 0,
+  intent INTEGER NOT NULL DEFAULT 0,
+  level INTEGER NOT NULL DEFAULT 0,
+  character_count INTEGER NOT NULL DEFAULT 0,
+  storyline TEXT NOT NULL DEFAULT '',
+  tags TEXT NOT NULL DEFAULT '',
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );

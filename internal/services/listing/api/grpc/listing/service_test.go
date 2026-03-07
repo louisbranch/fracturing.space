@@ -116,6 +116,53 @@ func TestCreateCampaignListing_SuccessAndDuplicate(t *testing.T) {
 	}
 }
 
+func TestCreateCampaignListing_RoundTripsNewFields(t *testing.T) {
+	store := newFakeCampaignListingStore()
+	svc := NewService(store)
+	now := time.Date(2026, time.March, 5, 10, 0, 0, 0, time.UTC)
+	svc.clock = func() time.Time { return now }
+
+	req := &listingv1.CreateCampaignListingRequest{
+		CampaignId:                 "camp-solo-1",
+		Title:                      "The Lantern in the Dark",
+		Description:                "A coastal mystery for a solo Guardian.",
+		RecommendedParticipantsMin: 1,
+		RecommendedParticipantsMax: 1,
+		DifficultyTier:             listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER,
+		ExpectedDurationLabel:      "1 session",
+		System:                     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:                     listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_AI,
+		Intent:                     listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_STARTER,
+		Level:                      1,
+		CharacterCount:             1,
+		Storyline:                  "# Test Storyline",
+		Tags:                       []string{"solo", "mystery"},
+	}
+	resp, err := svc.CreateCampaignListing(context.Background(), req)
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	listing := resp.GetListing()
+	if listing.GetGmMode() != listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_AI {
+		t.Fatalf("gm_mode = %v, want AI", listing.GetGmMode())
+	}
+	if listing.GetIntent() != listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_STARTER {
+		t.Fatalf("intent = %v, want STARTER", listing.GetIntent())
+	}
+	if listing.GetLevel() != 1 {
+		t.Fatalf("level = %d, want 1", listing.GetLevel())
+	}
+	if listing.GetCharacterCount() != 1 {
+		t.Fatalf("character_count = %d, want 1", listing.GetCharacterCount())
+	}
+	if listing.GetStoryline() != "# Test Storyline" {
+		t.Fatalf("storyline = %q, want %q", listing.GetStoryline(), "# Test Storyline")
+	}
+	if len(listing.GetTags()) != 2 || listing.GetTags()[0] != "solo" {
+		t.Fatalf("tags = %v, want [solo mystery]", listing.GetTags())
+	}
+}
+
 func TestCreateCampaignListing_ReturnsCreatedListingWhenReadbackFails(t *testing.T) {
 	store := newFakeCampaignListingStore()
 	store.getCampaignListingErr = errors.New("readback timeout")

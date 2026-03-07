@@ -142,6 +142,7 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
 		AIAddr:            "ai:8087",
+		ListingAddr:       "listing:8091",
 		UserHubAddr:       "userhub:8092",
 		NotificationsAddr: "notifications:8088",
 		AssetBaseURL:      "https://cdn.example.com/assets",
@@ -149,14 +150,14 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
-	if len(calls) != 6 {
-		t.Fatalf("dial calls = %d, want %d", len(calls), 6)
+	if len(calls) != 7 {
+		t.Fatalf("dial calls = %d, want %d", len(calls), 7)
 	}
-	if len(conns) != 6 {
-		t.Fatalf("dependency connections = %d, want %d", len(conns), 6)
+	if len(conns) != 7 {
+		t.Fatalf("dependency connections = %d, want %d", len(conns), 7)
 	}
-	if len(statuses) != 6 {
-		t.Fatalf("statuses = %d, want %d", len(statuses), 6)
+	if len(statuses) != 7 {
+		t.Fatalf("statuses = %d, want %d", len(statuses), 7)
 	}
 	for name, status := range statuses {
 		if status.State != dependencyDialStateConnected {
@@ -187,6 +188,9 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 	if bundle.Modules.NotificationClient == nil {
 		t.Fatalf("expected notification client")
 	}
+	if bundle.Modules.ListingClient == nil {
+		t.Fatalf("expected listing client")
+	}
 	if bundle.Principal.AssetBaseURL != "https://cdn.example.com/assets" {
 		t.Fatalf("Principal.AssetBaseURL = %q, want %q", bundle.Principal.AssetBaseURL, "https://cdn.example.com/assets")
 	}
@@ -211,17 +215,18 @@ func TestBootstrapDependenciesOptionalFailuresProduceWarnings(t *testing.T) {
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
 		AIAddr:            "ai:8087",
+		ListingAddr:       "listing:8091",
 		UserHubAddr:       "userhub:8092",
 		NotificationsAddr: "notifications:8088",
 	}, dialer)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
-	if len(conns) != 5 {
-		t.Fatalf("dependency connections = %d, want %d", len(conns), 5)
+	if len(conns) != 6 {
+		t.Fatalf("dependency connections = %d, want %d", len(conns), 6)
 	}
-	if len(calls) != 6 {
-		t.Fatalf("dial calls = %d, want %d", len(calls), 6)
+	if len(calls) != 7 {
+		t.Fatalf("dial calls = %d, want %d", len(calls), 7)
 	}
 	if got := statuses["ai"].State; got != dependencyDialStateDialFailed {
 		t.Fatalf("status[ai].State = %q, want %q", got, dependencyDialStateDialFailed)
@@ -258,17 +263,18 @@ func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
 		AIAddr:            "ai:8087",
+		ListingAddr:       "listing:8091",
 		UserHubAddr:       "userhub:8092",
 		NotificationsAddr: "notifications:8088",
 	}, dialer)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
-	if len(calls) != 6 {
-		t.Fatalf("dial calls = %d, want %d", len(calls), 6)
+	if len(calls) != 7 {
+		t.Fatalf("dial calls = %d, want %d", len(calls), 7)
 	}
-	if len(conns) != 4 {
-		t.Fatalf("dependency connections = %d, want %d", len(conns), 4)
+	if len(conns) != 5 {
+		t.Fatalf("dependency connections = %d, want %d", len(conns), 5)
 	}
 	if got := statuses["ai"].State; got != dependencyDialStateDialFailed {
 		t.Fatalf("status[ai].State = %q, want %q", got, dependencyDialStateDialFailed)
@@ -319,17 +325,18 @@ func TestBootstrapDependenciesNilConnectionProducesWarning(t *testing.T) {
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
 		AIAddr:            "ai:8087",
+		ListingAddr:       "listing:8091",
 		UserHubAddr:       "userhub:8092",
 		NotificationsAddr: "notifications:8088",
 	}, dialer)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
-	if len(calls) != 6 {
-		t.Fatalf("dial calls = %d, want %d", len(calls), 6)
+	if len(calls) != 7 {
+		t.Fatalf("dial calls = %d, want %d", len(calls), 7)
 	}
-	if len(conns) != 5 {
-		t.Fatalf("dependency connections = %d, want %d", len(conns), 5)
+	if len(conns) != 6 {
+		t.Fatalf("dependency connections = %d, want %d", len(conns), 6)
 	}
 	if got := statuses["social"].State; got != dependencyDialStateUnavailable {
 		t.Fatalf("status[social].State = %q, want %q", got, dependencyDialStateUnavailable)

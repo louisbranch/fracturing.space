@@ -93,14 +93,20 @@ type ManifestFork struct {
 
 // ManifestListing defines one listing declaration.
 type ManifestListing struct {
-	CampaignKey                string `json:"campaign_key"`
-	Title                      string `json:"title"`
-	Description                string `json:"description"`
-	RecommendedParticipantsMin int32  `json:"recommended_participants_min"`
-	RecommendedParticipantsMax int32  `json:"recommended_participants_max"`
-	DifficultyTier             string `json:"difficulty_tier,omitempty"`
-	ExpectedDurationLabel      string `json:"expected_duration_label"`
-	System                     string `json:"system,omitempty"`
+	CampaignKey                string   `json:"campaign_key"`
+	Title                      string   `json:"title"`
+	Description                string   `json:"description"`
+	RecommendedParticipantsMin int32    `json:"recommended_participants_min"`
+	RecommendedParticipantsMax int32    `json:"recommended_participants_max"`
+	DifficultyTier             string   `json:"difficulty_tier,omitempty"`
+	ExpectedDurationLabel      string   `json:"expected_duration_label"`
+	System                     string   `json:"system,omitempty"`
+	GmMode                     string   `json:"gm_mode,omitempty"`
+	Intent                     string   `json:"intent,omitempty"`
+	Level                      int32    `json:"level,omitempty"`
+	CharacterCount             int32    `json:"character_count,omitempty"`
+	Storyline                  string   `json:"storyline,omitempty"`
+	Tags                       []string `json:"tags,omitempty"`
 }
 
 func defaultSystemLabel(value string) string {

@@ -9,19 +9,31 @@ import (
 )
 
 // Module provides public discovery routes.
-type Module struct{}
+type Module struct {
+	gateway Gateway
+}
 
-// New returns a discovery module.
+// New returns a discovery module with no listing backend (fail-closed).
 func New() Module { return Module{} }
+
+// NewWithGateway returns a discovery module backed by the given gateway.
+func NewWithGateway(gw Gateway) Module {
+	return Module{gateway: gw}
+}
 
 // ID returns a stable module identifier.
 func (Module) ID() string { return "discovery" }
 
+// Healthy reports whether the discovery module has an operational gateway.
+func (m Module) Healthy() bool {
+	return IsGatewayHealthy(m.gateway)
+}
+
 // Mount wires discovery route handlers.
-func (Module) Mount() (module.Mount, error) {
+func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	base := publichandler.NewBase()
-	h := newHandlers(base)
+	h := newHandlers(base, m.gateway)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.DiscoverPrefix, Handler: mux}, nil
 }
