@@ -5,7 +5,6 @@ import (
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
-	profilegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -17,14 +16,20 @@ type Module struct {
 	resolveSignedIn module.ResolveSignedIn
 }
 
-// New returns a profile module with the given narrow dependencies.
-func New(socialClient SocialClient, assetBaseURL string, resolveSignedIn module.ResolveSignedIn) Module {
-	return NewWithGateway(profilegateway.NewGRPCGateway(socialClient), assetBaseURL, resolveSignedIn)
+// Config defines constructor dependencies for a profile module.
+type Config struct {
+	Gateway         ProfileGateway
+	AssetBaseURL    string
+	ResolveSignedIn module.ResolveSignedIn
 }
 
-// NewWithGateway returns a profile module with an explicit gateway.
-func NewWithGateway(gateway ProfileGateway, assetBaseURL string, resolveSignedIn module.ResolveSignedIn) Module {
-	return Module{gateway: gateway, assetBaseURL: assetBaseURL, resolveSignedIn: resolveSignedIn}
+// New returns a profile module with explicit dependencies.
+func New(config Config) Module {
+	return Module{
+		gateway:         config.Gateway,
+		assetBaseURL:    config.AssetBaseURL,
+		resolveSignedIn: config.ResolveSignedIn,
+	}
 }
 
 // ID returns a stable module identifier.

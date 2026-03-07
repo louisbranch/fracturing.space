@@ -12,13 +12,35 @@ import (
 
 // CreationView maps the domain creation model to the template view type.
 func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
-	// Build domain lookup for resolving class domain labels and icon watermarks.
-	type domainView struct {
-		Name    string
-		IconURL string
-	}
-	domainByID := make(map[string]domainView, len(creation.Domains))
-	for _, domain := range creation.Domains {
+	view := newCreationView(creation)
+	view.Steps = mapCreationSteps(creation.Progress.Steps)
+
+	cdn := creationImageCDN(w.AssetBaseURL)
+	domainByID := domainLookupByID(creation.Domains)
+
+	view.Classes = mapCreationClasses(creation.Classes, domainByID, cdn)
+	view.Subclasses = mapCreationSubclasses(creation.Subclasses, cdn)
+	view.Ancestries = mapCreationHeritages(creation.Ancestries, catalog.DaggerheartEntityTypeAncestry, catalog.DaggerheartAssetTypeAncestryIllustration, cdn)
+	view.Communities = mapCreationHeritages(creation.Communities, catalog.DaggerheartEntityTypeCommunity, catalog.DaggerheartAssetTypeCommunityIllustration, cdn)
+	view.PrimaryWeapons = mapCreationWeapons(creation.PrimaryWeapons)
+	view.SecondaryWeapons = mapCreationWeapons(creation.SecondaryWeapons)
+	view.Armor = mapCreationArmor(creation.Armor)
+	view.PotionItems = mapCreationItems(creation.PotionItems)
+	view.DomainCards = mapCreationDomainCards(creation.DomainCards)
+
+	return view
+}
+
+// domainView supports class-domain label and watermark assembly.
+type domainView struct {
+	Name    string
+	IconURL string
+}
+
+// domainLookupByID builds domain metadata lookup used across class/card mapping.
+func domainLookupByID(domains []campaignapp.CatalogDomain) map[string]domainView {
+	domainByID := make(map[string]domainView, len(domains))
+	for _, domain := range domains {
 		domainID := strings.TrimSpace(domain.ID)
 		if domainID == "" {
 			continue
@@ -32,16 +54,12 @@ func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) w
 			IconURL: strings.TrimSpace(domain.Icon.URL),
 		}
 	}
+	return domainByID
+}
 
-	experiences := make([]webtemplates.CampaignCreationExperienceView, 0, len(creation.Profile.Experiences))
-	for _, exp := range creation.Profile.Experiences {
-		experiences = append(experiences, webtemplates.CampaignCreationExperienceView{
-			Name:     exp.Name,
-			Modifier: exp.Modifier,
-		})
-	}
-
-	view := webtemplates.CampaignCharacterCreationView{
+// newCreationView initializes template view state from normalized creation data.
+func newCreationView(creation campaignapp.CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
+	return webtemplates.CampaignCharacterCreationView{
 		Ready:             creation.Progress.Ready,
 		NextStep:          creation.Progress.NextStep,
 		UnmetReasons:      append([]string(nil), creation.Progress.UnmetReasons...),
@@ -60,129 +78,157 @@ func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) w
 		ArmorID:           creation.Profile.ArmorID,
 		PotionItemID:      creation.Profile.PotionItemID,
 		Background:        creation.Profile.Background,
-		Description:       creation.Profile.Description,
-		Experiences:       experiences,
+		Experiences:       mapCreationExperiences(creation.Profile.Experiences),
 		DomainCardIDs:     append([]string(nil), creation.Profile.DomainCardIDs...),
 		Connections:       creation.Profile.Connections,
-		Steps:             make([]webtemplates.CampaignCharacterCreationStepView, 0, len(creation.Progress.Steps)),
-		Classes:           make([]webtemplates.CampaignCreationClassView, 0, len(creation.Classes)),
-		Subclasses:        make([]webtemplates.CampaignCreationSubclassView, 0, len(creation.Subclasses)),
-		Ancestries:        make([]webtemplates.CampaignCreationHeritageView, 0, len(creation.Ancestries)),
-		Communities:       make([]webtemplates.CampaignCreationHeritageView, 0, len(creation.Communities)),
-		PrimaryWeapons:    make([]webtemplates.CampaignCreationWeaponView, 0, len(creation.PrimaryWeapons)),
-		SecondaryWeapons:  make([]webtemplates.CampaignCreationWeaponView, 0, len(creation.SecondaryWeapons)),
-		Armor:             make([]webtemplates.CampaignCreationArmorView, 0, len(creation.Armor)),
-		PotionItems:       make([]webtemplates.CampaignCreationItemView, 0, len(creation.PotionItems)),
-		DomainCards:       make([]webtemplates.CampaignCreationDomainCardView, 0, len(creation.DomainCards)),
+		Steps:             nil,
+		Classes:           nil,
+		Subclasses:        nil,
+		Ancestries:        nil,
+		Communities:       nil,
+		PrimaryWeapons:    nil,
+		SecondaryWeapons:  nil,
+		Armor:             nil,
+		PotionItems:       nil,
+		DomainCards:       nil,
 	}
-	for _, step := range creation.Progress.Steps {
-		view.Steps = append(view.Steps, webtemplates.CampaignCharacterCreationStepView{
+}
+
+// mapCreationExperiences maps profile experiences to template view rows.
+func mapCreationExperiences(experiences []campaignapp.CampaignCharacterCreationExperience) []webtemplates.CampaignCreationExperienceView {
+	mapped := make([]webtemplates.CampaignCreationExperienceView, 0, len(experiences))
+	for _, exp := range experiences {
+		mapped = append(mapped, webtemplates.CampaignCreationExperienceView{
+			Name:     exp.Name,
+			Modifier: exp.Modifier,
+		})
+	}
+	return mapped
+}
+
+// mapCreationSteps maps progress step state to template view rows.
+func mapCreationSteps(steps []campaignapp.CampaignCharacterCreationStep) []webtemplates.CampaignCharacterCreationStepView {
+	mapped := make([]webtemplates.CampaignCharacterCreationStepView, 0, len(steps))
+	for _, step := range steps {
+		mapped = append(mapped, webtemplates.CampaignCharacterCreationStepView{
 			Step:     step.Step,
 			Key:      step.Key,
 			Complete: step.Complete,
 		})
 	}
-	var cdn imagecdn.ImageCDN
-	if w.AssetBaseURL != "" {
-		cdn = imagecdn.New(w.AssetBaseURL)
+	return mapped
+}
+
+// creationImageCDN returns a CDN client only when asset base URL is configured.
+func creationImageCDN(assetBaseURL string) imagecdn.ImageCDN {
+	if assetBaseURL == "" {
+		return nil
 	}
-	for _, class := range creation.Classes {
-		domainNames := make([]string, 0, len(class.DomainIDs))
-		domainWatermarks := make([]webtemplates.CampaignCreationDomainWatermarkView, 0, 2)
-		for _, domainID := range class.DomainIDs {
-			trimmedDomainID := strings.TrimSpace(domainID)
-			if trimmedDomainID == "" {
-				continue
-			}
-			domain, ok := domainByID[trimmedDomainID]
-			if !ok {
-				continue
-			}
-			domainNames = append(domainNames, domain.Name)
-			if domain.IconURL != "" && len(domainWatermarks) < 2 {
-				domainWatermarks = append(domainWatermarks, webtemplates.CampaignCreationDomainWatermarkView{
-					ID:      trimmedDomainID,
-					Name:    domain.Name,
-					IconURL: domain.IconURL,
-				})
-			}
-		}
-		imageURL := resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeClass, class.ID, catalog.DaggerheartAssetTypeClassIllustration)
-		hopeFeature := webtemplates.CampaignCreationClassFeatureView{
-			Name:        class.HopeFeature.Name,
-			Description: class.HopeFeature.Description,
-		}
-		features := make([]webtemplates.CampaignCreationClassFeatureView, 0, len(class.Features))
-		for _, f := range class.Features {
-			features = append(features, webtemplates.CampaignCreationClassFeatureView{
-				Name:        f.Name,
-				Description: f.Description,
-			})
-		}
-		view.Classes = append(view.Classes, webtemplates.CampaignCreationClassView{
+	return imagecdn.New(assetBaseURL)
+}
+
+// mapCreationClasses maps class catalog entries including derived domain metadata.
+func mapCreationClasses(classes []campaignapp.CatalogClass, domainByID map[string]domainView, cdn imagecdn.ImageCDN) []webtemplates.CampaignCreationClassView {
+	mapped := make([]webtemplates.CampaignCreationClassView, 0, len(classes))
+	for _, class := range classes {
+		domainNames, domainWatermarks := mapClassDomains(class.DomainIDs, domainByID)
+		mapped = append(mapped, webtemplates.CampaignCreationClassView{
 			ID:               class.ID,
 			Name:             class.Name,
-			ImageURL:         imageURL,
+			ImageURL:         resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeClass, class.ID, catalog.DaggerheartAssetTypeClassIllustration),
 			StartingHP:       class.StartingHP,
 			StartingEvasion:  class.StartingEvasion,
-			HopeFeature:      hopeFeature,
-			Features:         features,
+			HopeFeature:      mapFeature(class.HopeFeature),
+			Features:         mapFeatures(class.Features),
 			DomainNames:      domainNames,
 			DomainWatermarks: domainWatermarks,
 		})
 	}
-	for _, subclass := range creation.Subclasses {
-		foundation := make([]webtemplates.CampaignCreationClassFeatureView, 0, len(subclass.Foundation))
-		for _, f := range subclass.Foundation {
-			foundation = append(foundation, webtemplates.CampaignCreationClassFeatureView{
-				Name:        f.Name,
-				Description: f.Description,
+	return mapped
+}
+
+// mapClassDomains derives class domain labels and up to two watermark icons.
+func mapClassDomains(domainIDs []string, domainByID map[string]domainView) ([]string, []webtemplates.CampaignCreationDomainWatermarkView) {
+	names := make([]string, 0, len(domainIDs))
+	watermarks := make([]webtemplates.CampaignCreationDomainWatermarkView, 0, 2)
+	for _, domainID := range domainIDs {
+		trimmedDomainID := strings.TrimSpace(domainID)
+		if trimmedDomainID == "" {
+			continue
+		}
+		domain, ok := domainByID[trimmedDomainID]
+		if !ok {
+			continue
+		}
+		names = append(names, domain.Name)
+		if domain.IconURL != "" && len(watermarks) < 2 {
+			watermarks = append(watermarks, webtemplates.CampaignCreationDomainWatermarkView{
+				ID:      trimmedDomainID,
+				Name:    domain.Name,
+				IconURL: domain.IconURL,
 			})
 		}
-		subclassImageURL := resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeSubclass, subclass.ID, catalog.DaggerheartAssetTypeSubclassIllustration)
-		view.Subclasses = append(view.Subclasses, webtemplates.CampaignCreationSubclassView{
+	}
+	return names, watermarks
+}
+
+// mapCreationSubclasses maps subclass catalog entries to template view rows.
+func mapCreationSubclasses(subclasses []campaignapp.CatalogSubclass, cdn imagecdn.ImageCDN) []webtemplates.CampaignCreationSubclassView {
+	mapped := make([]webtemplates.CampaignCreationSubclassView, 0, len(subclasses))
+	for _, subclass := range subclasses {
+		mapped = append(mapped, webtemplates.CampaignCreationSubclassView{
 			ID:             subclass.ID,
 			Name:           subclass.Name,
-			ImageURL:       subclassImageURL,
+			ImageURL:       resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeSubclass, subclass.ID, catalog.DaggerheartAssetTypeSubclassIllustration),
 			ClassID:        subclass.ClassID,
 			SpellcastTrait: subclass.SpellcastTrait,
-			Foundation:     foundation,
+			Foundation:     mapFeatures(subclass.Foundation),
 		})
 	}
-	for _, ancestry := range creation.Ancestries {
-		ancestryImageURL := resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeAncestry, ancestry.ID, catalog.DaggerheartAssetTypeAncestryIllustration)
-		ancestryFeatures := make([]webtemplates.CampaignCreationClassFeatureView, 0, len(ancestry.Features))
-		for _, f := range ancestry.Features {
-			ancestryFeatures = append(ancestryFeatures, webtemplates.CampaignCreationClassFeatureView{
-				Name:        f.Name,
-				Description: f.Description,
-			})
-		}
-		view.Ancestries = append(view.Ancestries, webtemplates.CampaignCreationHeritageView{
-			ID:       ancestry.ID,
-			Name:     ancestry.Name,
-			ImageURL: ancestryImageURL,
-			Features: ancestryFeatures,
+	return mapped
+}
+
+// mapCreationHeritages maps ancestry/community catalogs with resolved image URLs.
+func mapCreationHeritages(
+	heritages []campaignapp.CatalogHeritage,
+	entityType string,
+	assetType string,
+	cdn imagecdn.ImageCDN,
+) []webtemplates.CampaignCreationHeritageView {
+	mapped := make([]webtemplates.CampaignCreationHeritageView, 0, len(heritages))
+	for _, heritage := range heritages {
+		mapped = append(mapped, webtemplates.CampaignCreationHeritageView{
+			ID:       heritage.ID,
+			Name:     heritage.Name,
+			ImageURL: resolveEntityImageURL(cdn, entityType, heritage.ID, assetType),
+			Features: mapFeatures(heritage.Features),
 		})
 	}
-	for _, community := range creation.Communities {
-		communityImageURL := resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeCommunity, community.ID, catalog.DaggerheartAssetTypeCommunityIllustration)
-		communityFeatures := make([]webtemplates.CampaignCreationClassFeatureView, 0, len(community.Features))
-		for _, f := range community.Features {
-			communityFeatures = append(communityFeatures, webtemplates.CampaignCreationClassFeatureView{
-				Name:        f.Name,
-				Description: f.Description,
-			})
-		}
-		view.Communities = append(view.Communities, webtemplates.CampaignCreationHeritageView{
-			ID:       community.ID,
-			Name:     community.Name,
-			ImageURL: communityImageURL,
-			Features: communityFeatures,
-		})
+	return mapped
+}
+
+// mapFeatures maps catalog features to template feature rows.
+func mapFeatures(features []campaignapp.CatalogFeature) []webtemplates.CampaignCreationClassFeatureView {
+	mapped := make([]webtemplates.CampaignCreationClassFeatureView, 0, len(features))
+	for _, feature := range features {
+		mapped = append(mapped, mapFeature(feature))
 	}
-	for _, weapon := range creation.PrimaryWeapons {
-		view.PrimaryWeapons = append(view.PrimaryWeapons, webtemplates.CampaignCreationWeaponView{
+	return mapped
+}
+
+// mapFeature maps one catalog feature to a template feature row.
+func mapFeature(feature campaignapp.CatalogFeature) webtemplates.CampaignCreationClassFeatureView {
+	return webtemplates.CampaignCreationClassFeatureView{
+		Name:        feature.Name,
+		Description: feature.Description,
+	}
+}
+
+// mapCreationWeapons maps weapon catalog entries to template rows.
+func mapCreationWeapons(weapons []campaignapp.CatalogWeapon) []webtemplates.CampaignCreationWeaponView {
+	mapped := make([]webtemplates.CampaignCreationWeaponView, 0, len(weapons))
+	for _, weapon := range weapons {
+		mapped = append(mapped, webtemplates.CampaignCreationWeaponView{
 			ID:      weapon.ID,
 			Name:    weapon.Name,
 			Trait:   weapon.Trait,
@@ -191,34 +237,42 @@ func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) w
 			Feature: weapon.Feature,
 		})
 	}
-	for _, weapon := range creation.SecondaryWeapons {
-		view.SecondaryWeapons = append(view.SecondaryWeapons, webtemplates.CampaignCreationWeaponView{
-			ID:      weapon.ID,
-			Name:    weapon.Name,
-			Trait:   weapon.Trait,
-			Range:   weapon.Range,
-			Damage:  weapon.Damage,
-			Feature: weapon.Feature,
+	return mapped
+}
+
+// mapCreationArmor maps armor catalog entries to template rows.
+func mapCreationArmor(items []campaignapp.CatalogArmor) []webtemplates.CampaignCreationArmorView {
+	mapped := make([]webtemplates.CampaignCreationArmorView, 0, len(items))
+	for _, item := range items {
+		mapped = append(mapped, webtemplates.CampaignCreationArmorView{
+			ID:             item.ID,
+			Name:           item.Name,
+			ArmorScore:     item.ArmorScore,
+			BaseThresholds: item.BaseThresholds,
+			Feature:        item.Feature,
 		})
 	}
-	for _, armor := range creation.Armor {
-		view.Armor = append(view.Armor, webtemplates.CampaignCreationArmorView{
-			ID:             armor.ID,
-			Name:           armor.Name,
-			ArmorScore:     armor.ArmorScore,
-			BaseThresholds: armor.BaseThresholds,
-			Feature:        armor.Feature,
-		})
-	}
-	for _, item := range creation.PotionItems {
-		view.PotionItems = append(view.PotionItems, webtemplates.CampaignCreationItemView{
+	return mapped
+}
+
+// mapCreationItems maps item catalog entries to template rows.
+func mapCreationItems(items []campaignapp.CatalogItem) []webtemplates.CampaignCreationItemView {
+	mapped := make([]webtemplates.CampaignCreationItemView, 0, len(items))
+	for _, item := range items {
+		mapped = append(mapped, webtemplates.CampaignCreationItemView{
 			ID:          item.ID,
 			Name:        item.Name,
 			Description: item.Description,
 		})
 	}
-	for _, card := range creation.DomainCards {
-		view.DomainCards = append(view.DomainCards, webtemplates.CampaignCreationDomainCardView{
+	return mapped
+}
+
+// mapCreationDomainCards maps domain-card entries to template rows.
+func mapCreationDomainCards(cards []campaignapp.CatalogDomainCard) []webtemplates.CampaignCreationDomainCardView {
+	mapped := make([]webtemplates.CampaignCreationDomainCardView, 0, len(cards))
+	for _, card := range cards {
+		mapped = append(mapped, webtemplates.CampaignCreationDomainCardView{
 			ID:          card.ID,
 			Name:        card.Name,
 			DomainID:    card.DomainID,
@@ -229,7 +283,7 @@ func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) w
 			FeatureText: card.FeatureText,
 		})
 	}
-	return view
+	return mapped
 }
 
 // resolveEntityImageURL resolves a CDN image URL for a daggerheart entity.

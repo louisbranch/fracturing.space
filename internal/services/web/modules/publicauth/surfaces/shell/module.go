@@ -12,9 +12,19 @@ type Module struct {
 	inner publicauth.Module
 }
 
-// NewWithGatewayAndPolicy builds the shell module with explicit gateway/policy dependencies.
-func NewWithGatewayAndPolicy(gateway publicauthapp.Gateway, policy requestmeta.SchemePolicy) Module {
-	return Module{inner: publicauth.NewShellWithGatewayAndPolicy(gateway, policy)}
+// Config defines constructor dependencies for the shell module.
+type Config struct {
+	Gateway     publicauthapp.Gateway
+	RequestMeta requestmeta.SchemePolicy
+}
+
+// New builds the shell module with explicit dependencies.
+func New(config Config) Module {
+	return Module{inner: publicauth.New(publicauth.Config{
+		Gateway:     config.Gateway,
+		RequestMeta: config.RequestMeta,
+		Surface:     publicauth.SurfaceShell,
+	})}
 }
 
 // ID returns the stable module identifier.

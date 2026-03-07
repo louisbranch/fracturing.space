@@ -14,7 +14,7 @@ import (
 
 func TestMountCharacterCreateUsesHXRedirect(t *testing.T) {
 	t.Parallel()
-	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&kind=pc"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -29,7 +29,7 @@ func TestMountCharacterCreateUsesHXRedirect(t *testing.T) {
 func TestMountCharacterCreateRedirectsForNonHTMX(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&kind=pc"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -46,7 +46,7 @@ func TestMountCharacterCreateRedirectsForNonHTMX(t *testing.T) {
 func TestMountCharacterCreateRejectsInvalidKind(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&kind=invalid"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -60,7 +60,7 @@ func TestMountCharacterCreateRejectsInvalidKind(t *testing.T) {
 func TestStableMutationRoutesReturnParseErrorLocalizationKeys(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -129,7 +129,7 @@ func TestStableMutationRoutesReturnParseErrorLocalizationKeys(t *testing.T) {
 func TestStableMutationRoutesReturnRequiredFieldLocalizationKeys(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -184,7 +184,7 @@ func TestStableMutationRoutesReturnRequiredFieldLocalizationKeys(t *testing.T) {
 func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -267,7 +267,7 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -312,7 +312,7 @@ func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
 func TestCampaignUpdateRouteValidatesLocale(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(managerMutationGateway(), managerMutationBase(), "", nil)
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignEdit("c1"), strings.NewReader("name=Campaign+One&theme_prompt=Theme&locale=es-ES"))

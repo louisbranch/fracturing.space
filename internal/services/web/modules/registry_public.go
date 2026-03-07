@@ -15,10 +15,23 @@ func defaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicMod
 	authGateway := publicauthgateway.NewGRPCGateway(deps.AuthClient)
 	discoveryGateway := discovery.NewGRPCGateway(deps.DiscoveryClient)
 	return []Module{
-		shell.NewWithGatewayAndPolicy(authGateway, opts.RequestSchemePolicy),
-		passkeys.NewWithGatewayAndPolicy(authGateway, opts.RequestSchemePolicy),
-		authredirect.NewWithGatewayAndPolicy(authGateway, opts.RequestSchemePolicy),
-		discovery.NewWithGateway(discoveryGateway),
-		profile.NewWithGateway(profilegateway.NewGRPCGateway(deps.ProfileSocialClient), deps.AssetBaseURL, res.ResolveSignedIn),
+		shell.New(shell.Config{
+			Gateway:     authGateway,
+			RequestMeta: opts.RequestSchemePolicy,
+		}),
+		passkeys.New(passkeys.Config{
+			Gateway:     authGateway,
+			RequestMeta: opts.RequestSchemePolicy,
+		}),
+		authredirect.New(authredirect.Config{
+			Gateway:     authGateway,
+			RequestMeta: opts.RequestSchemePolicy,
+		}),
+		discovery.New(discovery.Config{Gateway: discoveryGateway}),
+		profile.New(profile.Config{
+			Gateway:         profilegateway.NewGRPCGateway(deps.ProfileSocialClient),
+			AssetBaseURL:    deps.AssetBaseURL,
+			ResolveSignedIn: res.ResolveSignedIn,
+		}),
 	}
 }

@@ -16,7 +16,7 @@ import (
 func TestMountServesCampaignDetailRoutes(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -45,7 +45,7 @@ func TestMountServesCampaignDetailRoutes(t *testing.T) {
 func TestMountStableCampaignMutationDetailRoutes(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -71,14 +71,15 @@ func TestMountStableCampaignMutationDetailRoutes(t *testing.T) {
 func TestMountCampaignSessionsRouteRendersSessionCards(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		sessions: []CampaignSession{{
 			ID:     "s1",
 			Name:   "First Light",
 			Status: "Active",
 		}},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -106,7 +107,7 @@ func TestMountCampaignSessionsRouteRendersSessionCards(t *testing.T) {
 func TestMountCampaignWorkspaceMenuRendersSessionsSectionAcrossPages(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{
 			ID:               "c1",
 			Name:             "The Guildhouse",
@@ -128,7 +129,8 @@ func TestMountCampaignWorkspaceMenuRendersSessionsSectionAcrossPages(t *testing.
 				StartedAt: "2026-02-02 20:00 UTC",
 			},
 		},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -166,7 +168,7 @@ func TestMountCampaignWorkspaceMenuRendersSessionsSectionAcrossPages(t *testing.
 func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		sessions: []CampaignSession{
 			{
@@ -190,7 +192,8 @@ func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.
 				EndedAt:   "2026-02-02 22:00 UTC",
 			},
 		},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -237,7 +240,7 @@ func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.
 func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		sessionReadiness: CampaignSessionReadiness{
 			Ready: false,
@@ -248,7 +251,8 @@ func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
 				},
 			},
 		},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -277,14 +281,15 @@ func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
 func TestMountCampaignSessionDetailRouteRendersSelectedSession(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		sessions: []CampaignSession{{
 			ID:     "s1",
 			Name:   "First Light",
 			Status: "Active",
 		}},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -311,7 +316,7 @@ func TestMountCampaignSessionDetailRouteRendersSelectedSession(t *testing.T) {
 func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		invites: []CampaignInvite{{
 			ID:              "inv-1",
@@ -319,7 +324,8 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 			RecipientUserID: "user-2",
 			Status:          "Pending",
 		}},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -347,7 +353,7 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		characters: []CampaignCharacter{{
 			ID:         "char-1",
@@ -356,7 +362,8 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 			Controller: "Ariadne",
 			AvatarURL:  "/static/avatars/aria.png",
 		}},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -390,7 +397,7 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 func TestMountCampaignCharacterDetailBreadcrumbUsesCharacterName(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		characters: []CampaignCharacter{{
 			ID:         "char-1",
@@ -398,7 +405,8 @@ func TestMountCampaignCharacterDetailBreadcrumbUsesCharacterName(t *testing.T) {
 			Kind:       "PC",
 			Controller: "Ariadne",
 		}},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -429,7 +437,7 @@ func TestMountCampaignCharacterDetailBreadcrumbUsesCharacterName(t *testing.T) {
 func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
 		characters: []CampaignCharacter{{
 			ID:         "char-1",
@@ -445,7 +453,8 @@ func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 			Classes:    []CatalogClass{{ID: "warrior", Name: "Warrior"}},
 			Subclasses: []CatalogSubclass{{ID: "guardian", Name: "Guardian", ClassID: "warrior"}},
 		},
-	}, modulehandler.NewTestBase(), "", defaultTestWorkflows())
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -472,7 +481,7 @@ func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 func TestMountCampaignCharacterDetailHidesWorkflowForNonDaggerheartCampaigns(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items:           []CampaignSummary{{ID: "c1", Name: "First"}},
 		workspaceSystem: "Pathfinder",
 		characters: []CampaignCharacter{{
@@ -482,7 +491,8 @@ func TestMountCampaignCharacterDetailHidesWorkflowForNonDaggerheartCampaigns(t *
 			Controller: "Ariadne",
 		}},
 		characterCreationProgressErr: errors.New("workflow should not be loaded for non-daggerheart systems"),
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -503,12 +513,13 @@ func TestMountCampaignCharacterDetailHidesWorkflowForNonDaggerheartCampaigns(t *
 func TestMountCampaignOverviewRendersWorkspaceDetailsAndMenu(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{
 		ID:            "c1",
 		Name:          "The Guildhouse",
 		Theme:         "Stormbound intrigue",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
-	}}}, modulehandler.NewTestBase(), "", nil)
+	}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -547,11 +558,12 @@ func TestMountCampaignOverviewRendersWorkspaceDetailsAndMenu(t *testing.T) {
 func TestMountCampaignOverviewAllowsHead(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{
 		ID:            "c1",
 		Name:          "The Guildhouse",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
-	}}}, modulehandler.NewTestBase(), "", nil)
+	}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -568,14 +580,15 @@ func TestMountCampaignOverviewAllowsHead(t *testing.T) {
 func TestMountCampaignEditRequiresManagerOrOwnerAccess(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		authorizationDecision: campaignapp.AuthorizationDecision{
 			Evaluated:  true,
 			Allowed:    false,
 			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
 		},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -592,7 +605,7 @@ func TestMountCampaignEditRequiresManagerOrOwnerAccess(t *testing.T) {
 func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{
 			ID:               "c1",
 			Name:             "The Guildhouse",
@@ -617,7 +630,8 @@ func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 				AvatarURL:      "/static/avatars/aria.png",
 			},
 		},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -681,7 +695,7 @@ func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 func TestMountCampaignParticipantsShowsEditLinkForEditableParticipants(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		participants: []CampaignParticipant{
 			{ID: "p-a", Name: "Aria", Role: "GM", CampaignAccess: "Owner", Controller: "Human", AvatarURL: "/static/avatars/aria.png"},
@@ -691,7 +705,8 @@ func TestMountCampaignParticipantsShowsEditLinkForEditableParticipants(t *testin
 			{CheckID: "p-a", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 			{CheckID: "p-b", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
 		},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -715,7 +730,7 @@ func TestMountCampaignParticipantsShowsEditLinkForEditableParticipants(t *testin
 func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		participant: CampaignParticipant{
 			ID:             "p-a",
@@ -730,7 +745,8 @@ func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
 			{CheckID: "manager", Evaluated: true, Allowed: true},
 			{CheckID: "owner", Evaluated: true, Allowed: true},
 		},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -760,7 +776,7 @@ func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
 func TestMountCampaignParticipantsFailsWhenGatewayReturnsError(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{
 			ID:             "c1",
 			Name:           "The Guildhouse",
@@ -768,7 +784,8 @@ func TestMountCampaignParticipantsFailsWhenGatewayReturnsError(t *testing.T) {
 			CoverImageURL:  "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
 		participantsErr: apperrors.E(apperrors.KindUnavailable, "participants unavailable"),
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -785,9 +802,9 @@ func TestMountCampaignParticipantsFailsWhenGatewayReturnsError(t *testing.T) {
 func TestMountCampaignParticipantsFailsClosedWhenParticipantClientMissing(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	deps := GRPCGatewayDeps{CampaignClient: fakeCampaignClient{}}
-	m = NewStableWithGateway(NewGRPCGateway(deps), modulehandler.NewTestBase(), "", nil)
+	m = New(Config{Gateway: NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -804,7 +821,7 @@ func TestMountCampaignParticipantsFailsClosedWhenParticipantClientMissing(t *tes
 func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{
 			ID:             "c1",
 			Name:           "The Guildhouse",
@@ -827,7 +844,8 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 				AvatarURL:  "/static/avatars/aria.png",
 			},
 		},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -889,7 +907,7 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 func TestMountCampaignCharactersEmptyStateStillShowsCreateForm(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -917,7 +935,7 @@ func TestMountCampaignCharactersEmptyStateStillShowsCreateForm(t *testing.T) {
 func TestMountCampaignCharactersShowsCreationEntryForEditableDaggerheartCharacters(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{
 			ID:            "c1",
 			Name:          "The Guildhouse",
@@ -930,7 +948,8 @@ func TestMountCampaignCharactersShowsCreationEntryForEditableDaggerheartCharacte
 			Controller: "Ariadne",
 		}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{{CheckID: "ch-a", Evaluated: true, Allowed: true}},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -957,7 +976,7 @@ func TestMountCampaignCharactersShowsCreationEntryForEditableDaggerheartCharacte
 func TestMountCampaignCharactersHidesCreationEntryForReadOnlyCharacters(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		characters: []CampaignCharacter{{
 			ID:         "ch-a",
@@ -966,7 +985,8 @@ func TestMountCampaignCharactersHidesCreationEntryForReadOnlyCharacters(t *testi
 			Controller: "Ariadne",
 			CanEdit:    false,
 		}},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -995,7 +1015,7 @@ func TestMountCampaignCharactersHidesCreationEntryForReadOnlyCharacters(t *testi
 func TestMountCampaignCharactersHidesCreationEntryForNonDaggerheartCampaigns(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items:           []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		workspaceSystem: "Pathfinder",
 		characters: []CampaignCharacter{{
@@ -1005,7 +1025,8 @@ func TestMountCampaignCharactersHidesCreationEntryForNonDaggerheartCampaigns(t *
 			Controller: "Ariadne",
 			CanEdit:    true,
 		}},
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1029,14 +1050,15 @@ func TestMountCampaignCharactersHidesCreationEntryForNonDaggerheartCampaigns(t *
 func TestMountCampaignCharactersFailsWhenGatewayReturnsError(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{
+	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{
 			ID:            "c1",
 			Name:          "The Guildhouse",
 			CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
 		charactersErr: apperrors.E(apperrors.KindUnavailable, "characters unavailable"),
-	}, modulehandler.NewTestBase(), "", nil)
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1053,9 +1075,9 @@ func TestMountCampaignCharactersFailsWhenGatewayReturnsError(t *testing.T) {
 func TestMountCampaignCharactersFailsClosedWhenCharacterClientMissing(t *testing.T) {
 	t.Parallel()
 
-	m := New()
+	m := New(Config{})
 	deps := GRPCGatewayDeps{CampaignClient: fakeCampaignClient{}}
-	m = NewStableWithGateway(NewGRPCGateway(deps), modulehandler.NewTestBase(), "", nil)
+	m = New(Config{Gateway: NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1072,7 +1094,7 @@ func TestMountCampaignCharactersFailsClosedWhenCharacterClientMissing(t *testing
 func TestMountCampaignRoutesRenderWorkspaceOverviewMenu(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First", CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First", CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1113,11 +1135,12 @@ func TestMountCampaignRoutesRenderWorkspaceOverviewMenu(t *testing.T) {
 func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{
 		ID:            "c1",
 		Name:          "First",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
-	}}}, modulehandler.NewTestBase(), "", nil)
+	}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1162,7 +1185,7 @@ func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 func TestMountUsesWebLayoutForNonHTMX(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1181,7 +1204,7 @@ func TestMountUsesWebLayoutForNonHTMX(t *testing.T) {
 func TestMountCampaignSessionDetailRendersBreadcrumbs(t *testing.T) {
 	t.Parallel()
 
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1211,7 +1234,7 @@ func TestMountCampaignSessionDetailTruncatesLongBreadcrumbLabels(t *testing.T) {
 
 	longCampaignName := "Campaign-" + strings.Repeat("x", 64)
 	longSessionID := "session-" + strings.Repeat("y", 64)
-	m := NewStableWithGateway(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: longCampaignName}}}, modulehandler.NewTestBase(), "", nil)
+	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: longCampaignName}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

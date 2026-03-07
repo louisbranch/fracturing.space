@@ -17,18 +17,21 @@ type Module struct {
 	workflows        map[string]CharacterCreationWorkflow
 }
 
-// New returns a campaigns module with zero-value dependencies (degraded mode).
-func New() Module {
-	return Module{}
+// Config defines constructor dependencies for a campaigns module.
+type Config struct {
+	Gateway          CampaignGateway
+	Base             modulehandler.Base
+	ChatFallbackPort string
+	Workflows        map[string]CharacterCreationWorkflow
 }
 
-// NewStableWithGateway returns a campaigns module with stable route exposure.
-func NewStableWithGateway(gateway CampaignGateway, base modulehandler.Base, chatFallbackPort string, workflows map[string]CharacterCreationWorkflow) Module {
+// New returns a campaigns module with explicit dependencies.
+func New(config Config) Module {
 	return Module{
-		gateway:          gateway,
-		base:             base,
-		chatFallbackPort: chatFallbackPort,
-		workflows:        workflows,
+		gateway:          config.Gateway,
+		base:             config.Base,
+		chatFallbackPort: config.ChatFallbackPort,
+		workflows:        config.Workflows,
 	}
 }
 

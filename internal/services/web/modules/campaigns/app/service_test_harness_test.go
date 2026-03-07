@@ -51,14 +51,14 @@ type campaignGatewayStub struct {
 	lastCreateInput                   CreateCampaignInput
 	updateCampaignErr                 error
 	lastUpdateCampaignInput           UpdateCampaignInput
-	authorizationDecision             campaignAuthorizationDecision
+	authorizationDecision             AuthorizationDecision
 	authorizationErr                  error
 	authorizationCalls                int
 	authorizationRequests             []campaignAuthorizationRequest
-	batchAuthorizationDecisions       []campaignAuthorizationDecision
+	batchAuthorizationDecisions       []AuthorizationDecision
 	batchAuthorizationErr             error
 	batchAuthorizationCalls           int
-	batchAuthorizationRequests        []campaignAuthorizationCheck
+	batchAuthorizationRequests        []AuthorizationCheck
 	characterCreationProgress         CampaignCharacterCreationProgress
 	characterCreationProgressErr      error
 	characterCreationCatalog          CampaignCharacterCreationCatalog
@@ -80,9 +80,9 @@ type campaignGatewayStub struct {
 }
 
 type campaignAuthorizationRequest struct {
-	Action   campaignAuthorizationAction
-	Resource campaignAuthorizationResource
-	Target   *campaignAuthorizationTarget
+	Action   AuthorizationAction
+	Resource AuthorizationResource
+	Target   *AuthorizationTarget
 }
 
 func (f *campaignGatewayStub) ListCampaigns(context.Context) ([]CampaignSummary, error) {
@@ -264,14 +264,14 @@ func (f *campaignGatewayStub) ResetCharacterCreationWorkflow(context.Context, st
 func (f *campaignGatewayStub) CanCampaignAction(
 	_ context.Context,
 	_ string,
-	action campaignAuthorizationAction,
-	resource campaignAuthorizationResource,
-	target *campaignAuthorizationTarget,
-) (campaignAuthorizationDecision, error) {
+	action AuthorizationAction,
+	resource AuthorizationResource,
+	target *AuthorizationTarget,
+) (AuthorizationDecision, error) {
 	f.authorizationCalls++
 	f.authorizationRequests = append(f.authorizationRequests, campaignAuthorizationRequest{Action: action, Resource: resource, Target: target})
 	if f.authorizationErr != nil {
-		return campaignAuthorizationDecision{}, f.authorizationErr
+		return AuthorizationDecision{}, f.authorizationErr
 	}
 	return f.authorizationDecision, nil
 }
@@ -279,8 +279,8 @@ func (f *campaignGatewayStub) CanCampaignAction(
 func (f *campaignGatewayStub) BatchCanCampaignAction(
 	_ context.Context,
 	_ string,
-	checks []campaignAuthorizationCheck,
-) ([]campaignAuthorizationDecision, error) {
+	checks []AuthorizationCheck,
+) ([]AuthorizationDecision, error) {
 	f.batchAuthorizationCalls++
 	f.batchAuthorizationRequests = append(f.batchAuthorizationRequests, checks...)
 	if f.batchAuthorizationErr != nil {

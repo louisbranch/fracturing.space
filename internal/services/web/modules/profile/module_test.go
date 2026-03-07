@@ -10,6 +10,7 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	profilegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -183,7 +184,7 @@ func TestMountRejectsProfileNonGet(t *testing.T) {
 func TestModuleIDReturnsProfile(t *testing.T) {
 	t.Parallel()
 
-	if got := New(nil, "", nil).ID(); got != "profile" {
+	if got := New(Config{}).ID(); got != "profile" {
 		t.Fatalf("ID() = %q, want %q", got, "profile")
 	}
 }
@@ -191,18 +192,22 @@ func TestModuleIDReturnsProfile(t *testing.T) {
 func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	t.Parallel()
 
-	if New(nil, "", nil).Healthy() {
-		t.Fatalf("New(nil,...).Healthy() = true, want false for degraded module")
+	if New(Config{}).Healthy() {
+		t.Fatalf("New(Config{}).Healthy() = true, want false for degraded module")
 	}
-	if !New(&socialClientStub{}, "", nil).Healthy() {
-		t.Fatalf("New(non-nil social client,...).Healthy() = false, want true")
+	if !New(Config{Gateway: profilegateway.NewGRPCGateway(&socialClientStub{})}).Healthy() {
+		t.Fatalf("New(Config{Gateway: ...}).Healthy() = false, want true")
 	}
 }
 
 func mountProfileModule(t *testing.T, socialClient SocialClient, assetBaseURL string, resolveSignedIn module.ResolveSignedIn) module.Mount {
 	t.Helper()
 
-	mount, err := New(socialClient, assetBaseURL, resolveSignedIn).Mount()
+	mount, err := New(Config{
+		Gateway:         profilegateway.NewGRPCGateway(socialClient),
+		AssetBaseURL:    assetBaseURL,
+		ResolveSignedIn: resolveSignedIn,
+	}).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}

@@ -52,7 +52,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 	}
 	svc := newService(gateway)
 	ctx := contextWithResolvedUserID("user-1")
@@ -113,7 +113,7 @@ func TestMutationMethodsDenyMemberCampaignAccess(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
 	}
 	svc := newService(gateway)
 	err := svc.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
@@ -142,7 +142,7 @@ func TestMutationMethodsAllowManagerAndOwnerCampaignAccess(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			gateway := &campaignGatewayStub{
-				authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+				authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 				campaignParticipants:  []CampaignParticipant{{ID: "p-1", UserID: "user-1", CampaignAccess: tc.access}},
 			}
 			svc := newService(gateway)
@@ -162,7 +162,7 @@ func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
 	t.Run("allow", func(t *testing.T) {
 		t.Parallel()
 		gateway := &campaignGatewayStub{
-			authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+			authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 		}
 		svc := newService(gateway)
 		if err := svc.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"}); err != nil {
@@ -188,7 +188,7 @@ func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
 	t.Run("deny", func(t *testing.T) {
 		t.Parallel()
 		gateway := &campaignGatewayStub{
-			authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+			authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
 		}
 		svc := newService(gateway)
 		err := svc.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
@@ -222,8 +222,8 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 	tests := []struct {
 		name         string
 		run          func(service) error
-		wantAction   campaignAuthorizationAction
-		wantResource campaignAuthorizationResource
+		wantAction   AuthorizationAction
+		wantResource AuthorizationResource
 	}{
 		{
 			name: "update campaign",
@@ -301,7 +301,7 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			gateway := &campaignGatewayStub{
-				authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+				authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 				campaignParticipant: CampaignParticipant{
 					ID:             "p-1",
 					Name:           "Player One",
@@ -331,7 +331,7 @@ func TestCreateCharacterAllowsMemberCampaignAccess(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 	}
 	svc := newService(gateway)
 	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
@@ -345,7 +345,7 @@ func TestCreateCharacterAllowsMemberCampaignAccess(t *testing.T) {
 func TestCreateCharacterValidatesRequiredFields(t *testing.T) {
 	t.Parallel()
 
-	svc := newService(&campaignGatewayStub{authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true}})
+	svc := newService(&campaignGatewayStub{authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true}})
 
 	if _, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "", Kind: CharacterKindPC}); err == nil {
 		t.Fatalf("expected validation error for empty name")
@@ -366,7 +366,7 @@ func TestUpdateParticipantDelegatesToGateway(t *testing.T) {
 			CampaignAccess: "Member",
 			Pronouns:       "they/them",
 		},
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 	}
 	svc := newService(gateway)
 
@@ -401,7 +401,7 @@ func TestUpdateParticipantValidatesRoleAndAccess(t *testing.T) {
 			Role:           "Player",
 			CampaignAccess: "Member",
 		},
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	}
 	svc := newService(gateway)
 
@@ -424,7 +424,7 @@ func TestUpdateParticipantRequiresMeaningfulChange(t *testing.T) {
 			CampaignAccess: "Member",
 			Pronouns:       "they/them",
 		},
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	}
 	svc := newService(gateway)
 
@@ -453,7 +453,7 @@ func TestUpdateCampaignDelegatesToGateway(t *testing.T) {
 			Theme:  "Old Theme",
 			Locale: "English (US)",
 		},
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	}
 	svc := newService(gateway)
 
@@ -492,7 +492,7 @@ func TestUpdateCampaignNoOpReturnsNil(t *testing.T) {
 			Theme:  "Old Theme",
 			Locale: "English (US)",
 		},
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	}
 	svc := newService(gateway)
 
@@ -517,7 +517,7 @@ func TestUpdateCampaignValidatesLocale(t *testing.T) {
 
 	gateway := &campaignGatewayStub{
 		campaignWorkspace:     CampaignWorkspace{ID: "c1", Name: "Campaign One", Locale: "English (US)"},
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	}
 	svc := newService(gateway)
 
@@ -541,7 +541,7 @@ func TestEndSessionValidatesSessionID(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	})
 	err := svc.endSession(contextWithResolvedUserID("user-1"), "c1", EndSessionInput{SessionID: "   "})
 	if err == nil {
@@ -559,7 +559,7 @@ func TestCreateInviteValidatesParticipantID(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	})
 	err := svc.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{
 		ParticipantID:   "   ",
@@ -580,7 +580,7 @@ func TestRevokeInviteValidatesInviteID(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{
-		authorizationDecision: campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	})
 	err := svc.revokeInvite(contextWithResolvedUserID("user-1"), "c1", RevokeInviteInput{InviteID: "   "})
 	if err == nil {
@@ -598,7 +598,7 @@ func TestServiceCreateCharacterRejectsEmptyCreatedCharacterID(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		authorizationDecision:    campaignAuthorizationDecision{Evaluated: true, Allowed: true},
+		authorizationDecision:    AuthorizationDecision{Evaluated: true, Allowed: true},
 		createCharacterResult:    CreateCharacterResult{CharacterID: "   "},
 		createCharacterResultSet: true,
 	}

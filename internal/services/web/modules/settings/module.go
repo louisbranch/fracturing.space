@@ -10,24 +10,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-// Option configures a settings module.
-type Option func(*Module)
-
-// WithGateway sets the settings gateway.
-func WithGateway(g SettingsGateway) Option {
-	return func(m *Module) { m.gateway = g }
-}
-
-// WithBase sets the handler base for authenticated routes.
-func WithBase(b modulehandler.Base) Option {
-	return func(m *Module) { m.base = b }
-}
-
-// WithSchemePolicy sets the request scheme policy for cookie handling.
-func WithSchemePolicy(p requestmeta.SchemePolicy) Option {
-	return func(m *Module) { m.flashMeta = p }
-}
-
 // Module provides authenticated settings routes.
 type Module struct {
 	gateway   SettingsGateway
@@ -35,14 +17,20 @@ type Module struct {
 	flashMeta requestmeta.SchemePolicy
 }
 
-// New returns a settings module configured by the given options.
-// Without options the module starts in degraded mode.
-func New(opts ...Option) Module {
-	var m Module
-	for _, opt := range opts {
-		opt(&m)
+// Config defines constructor dependencies for a settings module.
+type Config struct {
+	Gateway   SettingsGateway
+	Base      modulehandler.Base
+	FlashMeta requestmeta.SchemePolicy
+}
+
+// New returns a settings module with explicit dependencies.
+func New(config Config) Module {
+	return Module{
+		gateway:   config.Gateway,
+		base:      config.Base,
+		flashMeta: config.FlashMeta,
 	}
-	return m
 }
 
 // ID returns a stable module identifier.

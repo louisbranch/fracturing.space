@@ -24,7 +24,7 @@ import (
 func TestMountServesSettingsProfileGet(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -67,7 +67,7 @@ func TestMountServesSettingsProfileGet(t *testing.T) {
 func TestMountSettingsProfileRequiredRedirectWritesToastFlash(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -103,7 +103,7 @@ func TestMountSettingsProfileRequiredRedirectWritesToastFlash(t *testing.T) {
 func TestMountServesSettingsProfileHead(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -119,7 +119,7 @@ func TestMountServesSettingsProfileHead(t *testing.T) {
 func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithBase(settingsTestBase()))
+	m := New(Config{Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -143,11 +143,12 @@ func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 func TestMountSettingsProfileGetRendersPortugueseCopyWhenLanguageResolved(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(modulehandler.NewBase(
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: modulehandler.NewBase(
 		func(*http.Request) string { return "user-1" },
 		func(*http.Request) string { return "pt-BR" },
 		nil,
-	)))
+	)})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -174,7 +175,7 @@ func TestMountSettingsProfileGetRendersPortugueseCopyWhenLanguageResolved(t *tes
 func TestMountSettingsProfileMenuUsesPublicProfileLabelInEnglish(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -194,7 +195,7 @@ func TestMountSettingsProfileMenuUsesPublicProfileLabelInEnglish(t *testing.T) {
 func TestMountRedirectsSettingsRootToProfile(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -215,7 +216,7 @@ func TestMountRedirectsSettingsRootToProfile(t *testing.T) {
 func TestMountSettingsRootHTMXUsesHXRedirect(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -235,7 +236,7 @@ func TestMountSettingsRootHTMXUsesHXRedirect(t *testing.T) {
 func TestMountSettingsProfileRequiredHTMXUsesHXRedirectAndFlash(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -258,7 +259,7 @@ func TestMountSettingsProfileRequiredHTMXUsesHXRedirectAndFlash(t *testing.T) {
 func TestModuleIDReturnsSettings(t *testing.T) {
 	t.Parallel()
 
-	if got := New().ID(); got != "settings" {
+	if got := New(Config{}).ID(); got != "settings" {
 		t.Fatalf("ID() = %q, want %q", got, "settings")
 	}
 }
@@ -266,16 +267,13 @@ func TestModuleIDReturnsSettings(t *testing.T) {
 func TestModuleHealthyAndSchemePolicyOptions(t *testing.T) {
 	t.Parallel()
 
-	if New().Healthy() {
+	if New(Config{}).Healthy() {
 		t.Fatalf("New().Healthy() = true, want false for degraded module")
 	}
 
 	scheme := requestmeta.SchemePolicy{TrustForwardedProto: true}
-	module := New(
-		WithGateway(newPopulatedFakeGateway()),
-		WithBase(settingsTestBase()),
-		WithSchemePolicy(scheme),
-	)
+	module := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase(), FlashMeta: scheme})
+
 	if !module.Healthy() {
 		t.Fatalf("module.Healthy() = false, want true")
 	}
@@ -294,7 +292,7 @@ func TestMountUsesDependenciesSocialClientWhenGatewayNotProvided(t *testing.T) {
 		Bio:      "From dependencies",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -317,7 +315,7 @@ func TestMountSettingsProfileFailsClosedWhenSocialClientMissing(t *testing.T) {
 	t.Parallel()
 
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(WithGateway(settingsgateway.NewGRPCGateway(nil, account, nil)), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(nil, account, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -337,7 +335,7 @@ func TestMountSettingsLocaleFailsClosedWhenAccountClientMissing(t *testing.T) {
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
-	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, nil, nil)), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -357,7 +355,7 @@ func TestMountSettingsAIKeysFailsClosedWhenCredentialClientMissing(t *testing.T)
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
-	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, nil, nil)), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -376,7 +374,7 @@ func TestMountSettingsAIKeysFailsClosedWhenCredentialClientMissing(t *testing.T)
 func TestMountRejectsSettingsUnsupportedMethod(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodDelete, routepath.AppSettingsProfile, nil)
 	rr := httptest.NewRecorder()
@@ -391,7 +389,7 @@ func TestMountMapsSettingsGatewayErrorToHTTPStatus(t *testing.T) {
 
 	gateway := newPopulatedFakeGateway()
 	gateway.loadProfileErr = apperrors.E(apperrors.KindUnauthorized, "missing session")
-	m := New(WithGateway(gateway), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -409,7 +407,7 @@ func TestMountSettingsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 
 	gateway := newPopulatedFakeGateway()
 	gateway.loadProfileErr = status.Error(codes.NotFound, "user profile not found")
-	m := New(WithGateway(gateway), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -435,7 +433,7 @@ func TestMountSettingsInternalErrorRendersServerErrorPage(t *testing.T) {
 
 	gateway := newPopulatedFakeGateway()
 	gateway.loadProfileErr = errors.New("boom")
-	m := New(WithGateway(gateway), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -456,7 +454,7 @@ func TestMountSettingsGRPCNotFoundHTMXRendersErrorFragment(t *testing.T) {
 
 	gateway := newPopulatedFakeGateway()
 	gateway.loadProfileErr = status.Error(codes.NotFound, "user profile not found")
-	m := New(WithGateway(gateway), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -481,7 +479,7 @@ func TestMountSettingsGRPCNotFoundHTMXRendersErrorFragment(t *testing.T) {
 func TestMountServesSettingsSubpaths(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -519,7 +517,7 @@ func TestMountServesSettingsSubpaths(t *testing.T) {
 func TestMountSettingsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -545,7 +543,7 @@ func TestMountProfilePostSavesAndRedirects(t *testing.T) {
 	t.Parallel()
 
 	gateway := newPopulatedFakeGateway()
-	m := New(WithGateway(gateway), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -593,7 +591,7 @@ func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *t
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -650,7 +648,7 @@ func TestMountProfilePostBlankPronounsSavesUnspecifiedPronouns(t *testing.T) {
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(WithGateway(settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{})), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -683,7 +681,7 @@ func TestMountProfilePostBlankPronounsSavesUnspecifiedPronouns(t *testing.T) {
 func TestMountProfilePostValidationErrorRendersBadRequest(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -704,11 +702,12 @@ func TestMountProfilePostValidationErrorRendersBadRequest(t *testing.T) {
 func TestMountProfilePostValidationErrorRendersLocalizedBadRequest(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(modulehandler.NewBase(
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: modulehandler.NewBase(
 		func(*http.Request) string { return "user-1" },
 		func(*http.Request) string { return "pt-BR" },
 		nil,
-	)))
+	)})
+
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -730,7 +729,7 @@ func TestMountLocalePostSavesAndRedirects(t *testing.T) {
 	t.Parallel()
 
 	gateway := newPopulatedFakeGateway()
-	m := New(WithGateway(gateway), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -757,7 +756,7 @@ func TestMountLocalePostSavesAndRedirects(t *testing.T) {
 func TestMountLocalePostValidationErrorRendersBadRequest(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -779,7 +778,7 @@ func TestMountAIKeysCreatePostSavesAndRedirects(t *testing.T) {
 	t.Parallel()
 
 	gateway := newPopulatedFakeGateway()
-	m := New(WithGateway(gateway), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -806,7 +805,7 @@ func TestMountAIKeysCreatePostSavesAndRedirects(t *testing.T) {
 func TestMountAIKeysCreatePostValidationErrorRendersBadRequest(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -828,7 +827,7 @@ func TestMountAIKeyRevokeUsesHTTPRedirect(t *testing.T) {
 	t.Parallel()
 
 	gateway := newPopulatedFakeGateway()
-	m := New(WithGateway(gateway), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -853,7 +852,7 @@ func TestMountAIKeyRevokeUsesHTTPRedirect(t *testing.T) {
 func TestMountAIKeyRevokeHTMXUsesHXRedirect(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -876,7 +875,7 @@ func TestMountAIKeyRevokeHTMXUsesHXRedirect(t *testing.T) {
 func TestMountSettingsUnknownSubpathReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -903,7 +902,7 @@ func TestMountSettingsUnknownSubpathReturnsNotFound(t *testing.T) {
 func TestMountAIKeyRevokeRejectsNonPost(t *testing.T) {
 	t.Parallel()
 
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -924,7 +923,7 @@ func TestMountAIKeyRevokeMapsGatewayErrorStatus(t *testing.T) {
 
 	gateway := newPopulatedFakeGateway()
 	gateway.revokeAIKeyErr = apperrors.E(apperrors.KindForbidden, "forbidden")
-	m := New(WithGateway(gateway), WithBase(settingsTestBase()))
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
