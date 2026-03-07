@@ -34,6 +34,17 @@ const (
 // serverName identifies this MCP server to clients.
 var serverName = branding.AppName + " MCP"
 
+var (
+	dialGameLazyConn       = newGRPCConn
+	buildMCPServerFromConn = newServer
+	closeGRPCConn          = func(conn *grpc.ClientConn) error {
+		if conn == nil {
+			return nil
+		}
+		return conn.Close()
+	}
+)
+
 // TransportKind identifies the MCP transport implementation.
 type TransportKind string
 
@@ -72,6 +83,7 @@ type RequestRateLimiter interface {
 type Server struct {
 	mcpServer *mcp.Server
 	conn      *grpc.ClientConn
+	connMu    sync.RWMutex
 	ctx       domain.Context
 	ctxMu     sync.RWMutex
 }
@@ -80,11 +92,11 @@ type Server struct {
 // gRPC services and hydrates tool/resource handlers from those APIs.
 func New(grpcAddr string) (*Server, error) {
 	addr := grpcAddress(grpcAddr)
-	conn, err := newGRPCConn(addr)
+	conn, err := dialGameLazyConn(addr)
 	if err != nil {
 		return nil, fmt.Errorf("connect to game server at %s: %w", addr, err)
 	}
-	return newServer(conn)
+	return buildServerFromConn(conn)
 }
 
 // newServer creates MCP tool/resource handler bindings once and keeps shared
@@ -139,6 +151,15 @@ func newServer(conn *grpc.ClientConn) (*Server, error) {
 
 	conformance.Register(mcpServer)
 
+	return server, nil
+}
+
+func buildServerFromConn(conn *grpc.ClientConn) (*Server, error) {
+	server, err := buildMCPServerFromConn(conn)
+	if err != nil {
+		_ = closeGRPCConn(conn)
+		return nil, err
+	}
 	return server, nil
 }
 

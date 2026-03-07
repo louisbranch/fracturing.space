@@ -21,12 +21,12 @@ type campaignAITurnSubscriptionWorker struct {
 	wg          sync.WaitGroup
 }
 
-func startCampaignAITurnSubscriptionWorker(invocationClient aiv1.InvocationServiceClient, roomHub *roomHub) (func(string, string, string), func(string), context.CancelFunc, chan struct{}) {
-	if invocationClient == nil || roomHub == nil {
+func startCampaignAITurnSubscriptionWorker(ctx context.Context, invocationClient aiv1.InvocationServiceClient, roomHub *roomHub) (func(string, string, string), func(string), context.CancelFunc, chan struct{}) {
+	if ctx == nil || invocationClient == nil || roomHub == nil {
 		return nil, nil, nil, nil
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	worker := &campaignAITurnSubscriptionWorker{
 		ctx:              ctx,
 		invocationClient: invocationClient,

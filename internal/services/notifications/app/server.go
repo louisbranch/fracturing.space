@@ -16,7 +16,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	notificationsservice "github.com/louisbranch/fracturing.space/internal/services/notifications/api/grpc/notifications"
 	"github.com/louisbranch/fracturing.space/internal/services/notifications/domain"
-	"github.com/louisbranch/fracturing.space/internal/services/notifications/storage"
 	notificationssqlite "github.com/louisbranch/fracturing.space/internal/services/notifications/storage/sqlite"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -28,10 +27,9 @@ const defaultEmailDeliveryWorkerPollInterval = 5 * time.Second
 
 // serverEnv captures env-driven notifications startup settings.
 type serverEnv struct {
-	DBPath                     string `env:"FRACTURING_SPACE_NOTIFICATIONS_DB_PATH"`
-	EmailDeliveryEnabled       string `env:"FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_ENABLED"`
-	EmailDeliveryWorkerEnabled string `env:"FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_ENABLED"`
-	EmailDeliveryWorkerPoll    string `env:"FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_POLL_INTERVAL"`
+	DBPath                  string `env:"FRACTURING_SPACE_NOTIFICATIONS_DB_PATH"`
+	EmailDeliveryEnabled    string `env:"FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_ENABLED"`
+	EmailDeliveryWorkerPoll string `env:"FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_POLL_INTERVAL"`
 }
 
 func loadServerEnv() serverEnv {
@@ -67,16 +65,13 @@ func parseDurationEnv(value string, fallback time.Duration) time.Duration {
 	return parsed
 }
 
-// Server hosts notifications gRPC APIs and optional delivery worker runtime.
+// Server hosts notifications gRPC APIs.
 type Server struct {
 	listener   net.Listener
 	grpcServer *grpc.Server
 	health     *health.Server
 	store      *notificationssqlite.Store
 	closeOnce  sync.Once
-
-	emailDeliveryWorkerEnabled bool
-	emailDeliveryWorkerPoll    time.Duration
 }
 
 // New creates a configured notifications server listening on the given port.
@@ -113,12 +108,10 @@ func NewWithAddr(addr string) (*Server, error) {
 	healthServer.SetServingStatus("notifications.v1.NotificationService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &Server{
-		listener:                   listener,
-		grpcServer:                 grpcServer,
-		health:                     healthServer,
-		store:                      store,
-		emailDeliveryWorkerEnabled: parseBoolEnv(srvEnv.EmailDeliveryWorkerEnabled),
-		emailDeliveryWorkerPoll:    parseDurationEnv(srvEnv.EmailDeliveryWorkerPoll, defaultEmailDeliveryWorkerPollInterval),
+		listener:   listener,
+		grpcServer: grpcServer,
+		health:     healthServer,
+		store:      store,
 	}, nil
 }
 
@@ -148,7 +141,7 @@ func RunWithAddr(ctx context.Context, addr string) error {
 	return server.Serve(ctx)
 }
 
-// Serve starts notifications gRPC serving and optional background workers.
+// Serve starts notifications gRPC serving.
 func (s *Server) Serve(ctx context.Context) error {
 	if s == nil {
 		return errors.New("server is nil")
@@ -157,12 +150,6 @@ func (s *Server) Serve(ctx context.Context) error {
 		ctx = context.Background()
 	}
 	defer s.Close()
-
-	workerCtx, workerCancel := context.WithCancel(ctx)
-	defer workerCancel()
-	if s.emailDeliveryWorkerEnabled {
-		go s.runEmailDeliveryWorker(workerCtx)
-	}
 
 	log.Printf("notifications server listening at %v", s.listener.Addr())
 	serveErr := make(chan error, 1)
@@ -226,36 +213,7 @@ func openNotificationsStore(path string) (*notificationssqlite.Store, error) {
 	return store, nil
 }
 
-func (s *Server) runEmailDeliveryWorker(ctx context.Context) {
-	pollEvery := s.emailDeliveryWorkerPoll
-	if pollEvery <= 0 {
-		pollEvery = defaultEmailDeliveryWorkerPollInterval
-	}
-	ticker := time.NewTicker(pollEvery)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			if err := s.observePendingEmailDeliveries(ctx); err != nil {
-				log.Printf("notifications email delivery worker: %v", err)
-			}
-		}
-	}
-}
-
-func (s *Server) observePendingEmailDeliveries(ctx context.Context) error {
-	if s == nil || s.store == nil {
-		return nil
-	}
-	pending, err := s.store.ListPendingDeliveries(ctx, storage.DeliveryChannelEmail, 50, time.Now().UTC())
-	if err != nil {
-		return fmt.Errorf("list pending email deliveries: %w", err)
-	}
-	if len(pending) > 0 {
-		log.Printf("notifications email delivery worker observed %d pending deliveries (sender scaffold not configured)", len(pending))
-	}
-	return nil
+func buildEmailDeliveryWorker(store *notificationssqlite.Store, env serverEnv) *emailDeliveryWorker {
+	pollEvery := parseDurationEnv(env.EmailDeliveryWorkerPoll, defaultEmailDeliveryWorkerPollInterval)
+	return newEmailDeliveryWorker(store, pollEvery, time.Now, log.Printf)
 }

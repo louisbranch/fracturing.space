@@ -87,6 +87,21 @@ func TestIssueAISessionGrantForRoomRequiresSessionID(t *testing.T) {
 	}
 }
 
+func TestIssueAISessionGrantForRoomRequiresContext(t *testing.T) {
+	room := newCampaignRoom("camp-1")
+	room.setSessionID("session-1")
+	room.setAIBinding("AI", "agent-1")
+	room.setAISessionGrant("old-grant", 1, time.Now().UTC().Add(time.Minute))
+
+	err := issueAISessionGrantForRoom(nil, &fakeCampaignAIServiceClient{}, room, "user-1")
+	if err == nil || err.Error() != "context is required" {
+		t.Fatalf("error = %v, want context is required", err)
+	}
+	if got := room.aiSessionGrantValue(); got != "old-grant" {
+		t.Fatalf("grant = %q, want %q", got, "old-grant")
+	}
+}
+
 func TestIssueAISessionGrantForRoomClearsGrantOnIssueError(t *testing.T) {
 	room := newCampaignRoom("camp-1")
 	room.setSessionID("session-1")
@@ -131,7 +146,7 @@ func TestIssueAISessionGrantForRoomSetsGrantAndMetadata(t *testing.T) {
 			},
 		},
 	}
-	if err := issueAISessionGrantForRoom(nil, client, room, "user-42"); err != nil {
+	if err := issueAISessionGrantForRoom(context.Background(), client, room, "user-42"); err != nil {
 		t.Fatalf("issue ai session grant for room: %v", err)
 	}
 
@@ -172,7 +187,7 @@ func TestSyncRoomAIContextFromGame(t *testing.T) {
 			ActiveSessionId: " session-new ",
 		},
 	}
-	if err := syncRoomAIContextFromGame(nil, client, room); err != nil {
+	if err := syncRoomAIContextFromGame(context.Background(), client, room); err != nil {
 		t.Fatalf("sync room ai context: %v", err)
 	}
 	if client.authStateReq == nil || client.authStateReq.GetCampaignId() != "camp-1" {
@@ -186,6 +201,13 @@ func TestSyncRoomAIContextFromGame(t *testing.T) {
 	}
 	if got := room.gmModeValue(); got != "hybrid" {
 		t.Fatalf("gm mode = %q, want %q", got, "hybrid")
+	}
+}
+
+func TestSyncRoomAIContextFromGameRequiresContext(t *testing.T) {
+	err := syncRoomAIContextFromGame(nil, &fakeCampaignAIServiceClient{}, newCampaignRoom("camp-1"))
+	if err == nil || err.Error() != "context is required" {
+		t.Fatalf("error = %v, want context is required", err)
 	}
 }
 

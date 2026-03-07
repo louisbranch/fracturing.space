@@ -4,11 +4,8 @@ package mcp
 import (
 	"context"
 	"flag"
-	"log"
 
-	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	mcpapp "github.com/louisbranch/fracturing.space/internal/services/mcp/app"
@@ -43,23 +40,13 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 // Run starts the MCP protocol adapter.
 func Run(ctx context.Context, cfg Config) error {
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceMCP, func(context.Context) error {
-		// Status reporter.
-		statusConn := platformgrpc.DialLenient(ctx, cfg.StatusAddr, log.Printf)
-		if statusConn != nil {
-			defer func() {
-				if err := statusConn.Close(); err != nil {
-					log.Printf("close status connection: %v", err)
-				}
-			}()
-		}
-		var statusClient statusv1.StatusServiceClient
-		if statusConn != nil {
-			statusClient = statusv1.NewStatusServiceClient(statusConn)
-		}
-		reporter := platformstatus.NewReporter("mcp", statusClient)
-		reporter.Register("mcp.tools", platformstatus.Operational)
-		reporter.Register("mcp.game.integration", platformstatus.Operational)
-		stopReporter := reporter.Start(ctx)
+		stopReporter := entrypoint.StartStatusReporter(
+			ctx,
+			"mcp",
+			cfg.StatusAddr,
+			entrypoint.Capability("mcp.tools", platformstatus.Operational),
+			entrypoint.Capability("mcp.game.integration", platformstatus.Operational),
+		)
 		defer stopReporter()
 
 		return mcpapp.Run(ctx, cfg.Addr, cfg.HTTPAddr, cfg.Transport)

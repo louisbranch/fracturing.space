@@ -5,27 +5,18 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	chatcmd "github.com/louisbranch/fracturing.space/internal/cmd/chat"
+	platformcmd "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 )
 
 func main() {
-	cfg, err := chatcmd.ParseConfig(flag.CommandLine, os.Args[1:])
-	if err != nil {
-		log.Fatalf("parse flags: %v", err)
-	}
-	log.SetPrefix("[CHAT] ")
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	if err := chatcmd.Run(ctx, cfg); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+	if err := platformcmd.RunServiceMain(platformcmd.ServiceMainOptions[chatcmd.Config]{
+		Service:     platformcmd.ServiceChat,
+		ParseConfig: chatcmd.ParseConfig,
+		Run:         chatcmd.Run,
+	}); err != nil {
+		log.Fatal(err)
 	}
 }

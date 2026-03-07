@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-07"
 ---
 
 # System Architecture
@@ -16,7 +16,7 @@ shape.
 
 Fracturing.Space is organized into four layers:
 
-- **Transport**: service entrypoints (`cmd/game`, `cmd/auth`, `cmd/social`, `cmd/ai`, `cmd/userhub`, `cmd/mcp`, `cmd/admin`).
+- **Transport**: service entrypoints (`cmd/game`, `cmd/auth`, `cmd/social`, `cmd/discovery`, `cmd/ai`, `cmd/notifications`, `cmd/status`, `cmd/userhub`, `cmd/worker`, `cmd/mcp`, `cmd/chat`, `cmd/admin`, `cmd/web`).
 - **Platform**: shared infrastructure (`internal/platform/`).
 - **Domain**: game/auth/social domain logic under `internal/services/*/domain`.
 - **Storage**: service-owned SQLite adapters and data files.
@@ -34,7 +34,11 @@ auth/social domain services.
 - **Social** (`internal/services/social/`): discovery/profile metadata and contacts.
 - **Discovery** (`internal/services/discovery/`): public discovery entry metadata.
 - **AI** (`internal/services/ai/`): AI credential/agent orchestration.
+- **Notifications** (`internal/services/notifications/`): user inbox intent and channel-delivery orchestration.
+- **Status** (`internal/services/status/`): capability health and override state authority.
 - **Userhub** (`internal/services/userhub/`): experience read-model aggregation.
+- **Worker** (`internal/services/worker/`): asynchronous outbox and scheduled processing runtime.
+- **Chat** (`internal/services/chat/`): real-time campaign room transport and AI turn relay surface.
 
 Each service owns transport, orchestration, domain logic, and storage adapters
 within its boundary.

@@ -14,89 +14,20 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
 	aisqlite "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// serverEnv captures startup configuration and optional provider integration.
-type serverEnv struct {
-	DBPath        string `env:"FRACTURING_SPACE_AI_DB_PATH"`
-	EncryptionKey string `env:"FRACTURING_SPACE_AI_ENCRYPTION_KEY"`
-	GameAddr      string `env:"FRACTURING_SPACE_GAME_ADDR"`
-
-	OpenAIOAuthAuthURL      string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL"`
-	OpenAIOAuthTokenURL     string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL"`
-	OpenAIOAuthClientID     string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID"`
-	OpenAIOAuthClientSecret string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
-	OpenAIOAuthRedirectURI  string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
-	OpenAIResponsesURL      string `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
-}
-
-func loadServerEnv() serverEnv {
-	var cfg serverEnv
-	_ = config.ParseEnv(&cfg)
-	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
-	if cfg.DBPath == "" {
-		cfg.DBPath = filepath.Join("data", "ai.db")
-	}
-	return cfg
-}
-
-// openAIOAuthConfigFromEnv loads optional OpenAI OAuth config.
-//
-// If all OpenAI OAuth variables are present they are wired in together; partial
-// configuration is rejected to avoid accidental half-configured runtime.
-func openAIOAuthConfigFromEnv() (*aiservice.OpenAIOAuthConfig, error) {
-	env := loadServerEnv()
-	authURL := strings.TrimSpace(env.OpenAIOAuthAuthURL)
-	tokenURL := strings.TrimSpace(env.OpenAIOAuthTokenURL)
-	clientID := strings.TrimSpace(env.OpenAIOAuthClientID)
-	clientSecret := strings.TrimSpace(env.OpenAIOAuthClientSecret)
-	redirectURI := strings.TrimSpace(env.OpenAIOAuthRedirectURI)
-
-	required := map[string]string{
-		"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL":      authURL,
-		"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL":     tokenURL,
-		"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID":     clientID,
-		"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET": clientSecret,
-		"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI":  redirectURI,
-	}
-
-	setCount := 0
-	missing := make([]string, 0, len(required))
-	for key, value := range required {
-		if value == "" {
-			missing = append(missing, key)
-			continue
-		}
-		setCount++
-	}
-	if setCount == 0 {
-		return nil, nil
-	}
-	if setCount != len(required) {
-		return nil, fmt.Errorf("partial OpenAI OAuth env config; missing: %s", strings.Join(missing, ", "))
-	}
-
-	// Keep provider secrets in-memory only; callers must never log this struct.
-	return &aiservice.OpenAIOAuthConfig{
-		AuthorizationURL: authURL,
-		TokenURL:         tokenURL,
-		ClientID:         clientID,
-		ClientSecret:     clientSecret,
-		RedirectURI:      redirectURI,
-	}, nil
-}
+var listenTCP = net.Listen
 
 // Server hosts the AI service and coordinates gRPC + health serving.
 //
@@ -118,22 +49,42 @@ func New(port int) (*Server, error) {
 
 // NewWithAddr creates a configured AI server listening on the provided address.
 //
-// This is the constructor used by tests and runnables that want explicit binding.
+// This constructor keeps backward compatibility for call sites that do not pass
+// startup context while NewWithAddrContext enables context-bound dependency dial.
 func NewWithAddr(addr string) (*Server, error) {
-	srvEnv := loadServerEnv()
+	return NewWithAddrContext(context.Background(), addr)
+}
 
-	listener, err := net.Listen("tcp", addr)
+// NewWithAddrContext creates a configured AI server using one startup context
+// for dependency dialing and one parsed runtime config snapshot.
+func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
+	if ctx == nil {
+		return nil, errors.New("context is required")
+	}
+	cfg, err := loadRuntimeConfigFromEnv()
+	if err != nil {
+		return nil, err
+	}
+	return newServerWithRuntimeConfig(ctx, addr, cfg)
+}
+
+func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeConfig) (*Server, error) {
+	if ctx == nil {
+		return nil, errors.New("context is required")
+	}
+
+	listener, err := listenTCP("tcp", addr)
 	if err != nil {
 		return nil, fmt.Errorf("listen on %s: %w", addr, err)
 	}
 
-	store, err := openAIStore(srvEnv.DBPath)
+	store, err := openAIStore(cfg.DBPath)
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
 	}
 
-	encryptionKey := strings.TrimSpace(srvEnv.EncryptionKey)
+	encryptionKey := strings.TrimSpace(cfg.EncryptionKey)
 	if encryptionKey == "" {
 		_ = listener.Close()
 		_ = store.Close()
@@ -155,41 +106,26 @@ func NewWithAddr(addr string) (*Server, error) {
 		return nil, fmt.Errorf("build secret sealer: %w", err)
 	}
 
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	service := aiservice.NewService(store, store, sealer)
-	gameConn, gameClient, gameErr := dialGameGRPC(context.Background(), srvEnv.GameAddr)
+
+	gameConn, gameClient, gameErr := dialGameGRPC(ctx, cfg.GameAddr)
 	if gameErr != nil {
 		log.Printf("ai: game client unavailable; agent usage guard disabled: %v", gameErr)
 	} else {
 		service.SetGameCampaignAIClient(gameClient)
 	}
-	sessionGrantConfig, err := aisessiongrant.LoadConfigFromEnv(nil)
-	if err != nil {
-		_ = listener.Close()
-		_ = store.Close()
-		if gameConn != nil {
-			_ = gameConn.Close()
-		}
-		return nil, fmt.Errorf("load ai session grant config: %w", err)
+
+	service.SetSessionGrantConfig(cfg.SessionGrantConfig)
+	if cfg.OpenAIOAuthConfig != nil {
+		service.SetOpenAIOAuthAdapter(aiservice.NewOpenAIOAuthAdapter(*cfg.OpenAIOAuthConfig))
 	}
-	service.SetSessionGrantConfig(sessionGrantConfig)
-	openAIOAuthConfig, err := openAIOAuthConfigFromEnv()
-	if err != nil {
-		_ = listener.Close()
-		_ = store.Close()
-		if gameConn != nil {
-			_ = gameConn.Close()
-		}
-		return nil, fmt.Errorf("load OpenAI OAuth config: %w", err)
-	}
-	if openAIOAuthConfig != nil {
-		service.SetOpenAIOAuthAdapter(aiservice.NewOpenAIOAuthAdapter(*openAIOAuthConfig))
-	}
-	if strings.TrimSpace(srvEnv.OpenAIResponsesURL) != "" {
+	if cfg.OpenAIResponsesURL != "" {
 		service.SetOpenAIInvocationAdapter(aiservice.NewOpenAIInvokeAdapter(aiservice.OpenAIInvokeConfig{
-			ResponsesURL: strings.TrimSpace(srvEnv.OpenAIResponsesURL),
+			ResponsesURL: cfg.OpenAIResponsesURL,
 		}))
 	}
+
 	healthServer := health.NewServer()
 	aiv1.RegisterCredentialServiceServer(grpcServer, service)
 	aiv1.RegisterAgentServiceServer(grpcServer, service)
@@ -223,16 +159,12 @@ func (s *Server) Addr() string {
 
 // Run creates and serves an AI server until the context ends.
 func Run(ctx context.Context, port int) error {
-	server, err := New(port)
-	if err != nil {
-		return err
-	}
-	return server.Serve(ctx)
+	return RunWithAddr(ctx, fmt.Sprintf(":%d", port))
 }
 
 // RunWithAddr creates and serves an AI server until the context ends.
 func RunWithAddr(ctx context.Context, addr string) error {
-	server, err := NewWithAddr(addr)
+	server, err := NewWithAddrContext(ctx, addr)
 	if err != nil {
 		return err
 	}
@@ -245,7 +177,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		return errors.New("server is nil")
 	}
 	if ctx == nil {
-		ctx = context.Background()
+		return errors.New("context is required")
 	}
 	defer s.Close()
 
@@ -267,6 +199,9 @@ func (s *Server) Serve(ctx context.Context) error {
 		}
 		return fmt.Errorf("serve gRPC: %w", err)
 	case err := <-serveErr:
+		if s.health != nil {
+			s.health.Shutdown()
+		}
 		if err == nil || errors.Is(err, grpc.ErrServerStopped) {
 			return nil
 		}
@@ -338,7 +273,7 @@ func dialGameGRPC(ctx context.Context, gameAddr string) (*grpc.ClientConn, gamev
 		return nil, nil, errors.New("game address is required")
 	}
 	if ctx == nil {
-		ctx = context.Background()
+		return nil, nil, errors.New("context is required")
 	}
 	logf := func(format string, args ...any) {
 		log.Printf("ai game %s", fmt.Sprintf(format, args...))

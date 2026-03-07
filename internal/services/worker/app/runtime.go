@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -45,96 +47,112 @@ const (
 	defaultWorkerDB   = "data/worker.db"
 )
 
+var (
+	dialWithHealth  = platformgrpc.DialWithHealth
+	openSQLiteStore = workersqlite.Open
+	listenTCP       = net.Listen
+)
+
+type workerLoop interface {
+	Run(ctx context.Context) error
+}
+
+// Runtime wires worker transport, dependency clients, and loop execution.
+type Runtime struct {
+	listener   net.Listener
+	grpcServer *grpc.Server
+	health     *health.Server
+
+	loop workerLoop
+
+	store             *workersqlite.Store
+	authConn          *grpc.ClientConn
+	notificationsConn *grpc.ClientConn
+	socialConn        *grpc.ClientConn
+
+	closeOnce sync.Once
+}
+
 // Run starts worker runtime dependencies and the background processing loop.
 func Run(ctx context.Context, cfg RuntimeConfig) error {
 	if ctx == nil {
-		ctx = context.Background()
+		return errors.New("context is required")
 	}
-	if strings.TrimSpace(cfg.AuthAddr) == "" {
-		return fmt.Errorf("auth address is required")
+	runtime, err := NewRuntime(ctx, cfg)
+	if err != nil {
+		return err
 	}
-	if strings.TrimSpace(cfg.NotificationsAddr) == "" {
-		return fmt.Errorf("notifications address is required")
+	return runtime.Serve(ctx)
+}
+
+// NewRuntime constructs a configured worker runtime with dependency wiring.
+func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
+	if ctx == nil {
+		return nil, errors.New("context is required")
 	}
-	if strings.TrimSpace(cfg.SocialAddr) == "" {
-		return fmt.Errorf("social address is required")
-	}
-	if cfg.Port <= 0 {
-		cfg.Port = defaultWorkerPort
-	}
-	if strings.TrimSpace(cfg.DBPath) == "" {
-		cfg.DBPath = defaultWorkerDB
-	}
-	if cfg.GRPCDialTimeout <= 0 {
-		cfg.GRPCDialTimeout = timeouts.GRPCDial
+	normalized, err := normalizeRuntimeConfig(cfg)
+	if err != nil {
+		return nil, err
 	}
 
-	if dir := filepath.Dir(cfg.DBPath); dir != "." {
+	if dir := filepath.Dir(normalized.DBPath); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return fmt.Errorf("create worker storage dir: %w", err)
+			return nil, fmt.Errorf("create worker storage dir: %w", err)
 		}
 	}
 
-	workerStore, err := workersqlite.Open(cfg.DBPath)
+	workerStore, err := openSQLiteStore(normalized.DBPath)
 	if err != nil {
-		return fmt.Errorf("open worker sqlite store: %w", err)
+		return nil, fmt.Errorf("open worker sqlite store: %w", err)
 	}
-	defer func() {
+
+	authConn, err := dialWithHealth(
+		ctx,
+		nil,
+		normalized.AuthAddr,
+		normalized.GRPCDialTimeout,
+		log.Printf,
+		platformgrpc.DefaultClientDialOptions()...,
+	)
+	if err != nil {
 		if closeErr := workerStore.Close(); closeErr != nil {
 			log.Printf("close worker sqlite store: %v", closeErr)
 		}
-	}()
+		return nil, fmt.Errorf("dial auth service: %w", err)
+	}
 
-	authConn, err := platformgrpc.DialWithHealth(
+	notificationsConn, err := dialWithHealth(
 		ctx,
 		nil,
-		cfg.AuthAddr,
-		cfg.GRPCDialTimeout,
+		normalized.NotificationsAddr,
+		normalized.GRPCDialTimeout,
 		log.Printf,
 		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		return fmt.Errorf("dial auth service: %w", err)
-	}
-	defer func() {
-		if closeErr := authConn.Close(); closeErr != nil {
-			log.Printf("close auth connection: %v", closeErr)
+		closeWorkerConn(authConn, "auth")
+		if closeErr := workerStore.Close(); closeErr != nil {
+			log.Printf("close worker sqlite store: %v", closeErr)
 		}
-	}()
+		return nil, fmt.Errorf("dial notifications service: %w", err)
+	}
 
-	notificationsConn, err := platformgrpc.DialWithHealth(
+	socialConn, err := dialWithHealth(
 		ctx,
 		nil,
-		cfg.NotificationsAddr,
-		cfg.GRPCDialTimeout,
+		normalized.SocialAddr,
+		normalized.GRPCDialTimeout,
 		log.Printf,
 		platformgrpc.DefaultClientDialOptions()...,
 	)
 	if err != nil {
-		return fmt.Errorf("dial notifications service: %w", err)
-	}
-	defer func() {
-		if closeErr := notificationsConn.Close(); closeErr != nil {
-			log.Printf("close notifications connection: %v", closeErr)
+		closeWorkerConn(notificationsConn, "notifications")
+		closeWorkerConn(authConn, "auth")
+		if closeErr := workerStore.Close(); closeErr != nil {
+			log.Printf("close worker sqlite store: %v", closeErr)
 		}
-	}()
-
-	socialConn, err := platformgrpc.DialWithHealth(
-		ctx,
-		nil,
-		cfg.SocialAddr,
-		cfg.GRPCDialTimeout,
-		log.Printf,
-		platformgrpc.DefaultClientDialOptions()...,
-	)
-	if err != nil {
-		return fmt.Errorf("dial social service: %w", err)
+		return nil, fmt.Errorf("dial social service: %w", err)
 	}
-	defer func() {
-		if closeErr := socialConn.Close(); closeErr != nil {
-			log.Printf("close social connection: %v", closeErr)
-		}
-	}()
 
 	authClient := authv1.NewAuthServiceClient(authConn)
 	notificationsClient := notificationsv1.NewNotificationServiceClient(notificationsConn)
@@ -143,12 +161,12 @@ func Run(ctx context.Context, cfg RuntimeConfig) error {
 	welcomeHandler := workerdomain.NewOnboardingWelcomeHandler(notificationsClient, nil)
 	handler := fanoutEventHandlers(profileHandler, welcomeHandler)
 	loopConfig := Config{
-		Consumer:      cfg.Consumer,
-		PollInterval:  cfg.PollInterval,
-		LeaseTTL:      cfg.LeaseTTL,
-		MaxAttempts:   cfg.MaxAttempts,
-		RetryBackoff:  cfg.RetryBackoff,
-		RetryMaxDelay: cfg.RetryMaxDelay,
+		Consumer:      normalized.Consumer,
+		PollInterval:  normalized.PollInterval,
+		LeaseTTL:      normalized.LeaseTTL,
+		MaxAttempts:   normalized.MaxAttempts,
+		RetryBackoff:  normalized.RetryBackoff,
+		RetryMaxDelay: normalized.RetryMaxDelay,
 	}
 	normalizedLoopConfig := loopConfig.normalized()
 
@@ -162,11 +180,16 @@ func Run(ctx context.Context, cfg RuntimeConfig) error {
 		nil,
 	)
 
-	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", cfg.Port))
+	listener, err := listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
 	if err != nil {
-		return fmt.Errorf("listen on worker port %d: %w", cfg.Port, err)
+		closeWorkerConn(socialConn, "social")
+		closeWorkerConn(notificationsConn, "notifications")
+		closeWorkerConn(authConn, "auth")
+		if closeErr := workerStore.Close(); closeErr != nil {
+			log.Printf("close worker sqlite store: %v", closeErr)
+		}
+		return nil, fmt.Errorf("listen on worker port %d: %w", normalized.Port, err)
 	}
-	defer listener.Close()
 
 	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	healthServer := health.NewServer()
@@ -174,18 +197,182 @@ func Run(ctx context.Context, cfg RuntimeConfig) error {
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("worker.runtime", grpc_health_v1.HealthCheckResponse_SERVING)
 
+	return &Runtime{
+		listener:          listener,
+		grpcServer:        grpcServer,
+		health:            healthServer,
+		loop:              workerLoop,
+		store:             workerStore,
+		authConn:          authConn,
+		notificationsConn: notificationsConn,
+		socialConn:        socialConn,
+	}, nil
+}
+
+// Addr returns the bound worker runtime listener address.
+func (r *Runtime) Addr() string {
+	if r == nil || r.listener == nil {
+		return ""
+	}
+	return r.listener.Addr().String()
+}
+
+// Serve runs health transport and worker loop until cancellation or failure.
+func (r *Runtime) Serve(ctx context.Context) error {
+	if r == nil {
+		return errors.New("runtime is nil")
+	}
+	if r.listener == nil || r.grpcServer == nil || r.loop == nil {
+		return errors.New("runtime is not configured")
+	}
+	if ctx == nil {
+		return errors.New("context is required")
+	}
+	defer r.Close()
+
+	runCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	serveErr := make(chan error, 1)
 	go func() {
-		serveErr <- grpcServer.Serve(listener)
-	}()
-	defer func() {
-		healthServer.Shutdown()
-		grpcServer.GracefulStop()
-		<-serveErr
+		serveErr <- r.grpcServer.Serve(r.listener)
 	}()
 
-	log.Printf("worker server listening at %v", listener.Addr())
-	return workerLoop.Run(ctx)
+	loopErr := make(chan error, 1)
+	go func() {
+		loopErr <- r.loop.Run(runCtx)
+	}()
+
+	log.Printf("worker server listening at %v", r.listener.Addr())
+
+	select {
+	case <-ctx.Done():
+		cancel()
+		r.shutdownGRPC()
+		loopRunErr := <-loopErr
+		grpcRunErr := <-serveErr
+		return firstNonNilErr(
+			normalizeWorkerLoopErr(loopRunErr),
+			normalizeWorkerServeErr(grpcRunErr),
+		)
+	case err := <-loopErr:
+		cancel()
+		r.shutdownGRPC()
+		grpcRunErr := <-serveErr
+		if loopRunErr := normalizeWorkerLoopErr(err); loopRunErr != nil {
+			return loopRunErr
+		}
+		return normalizeWorkerServeErr(grpcRunErr)
+	case err := <-serveErr:
+		cancel()
+		r.shutdownGRPC()
+		loopRunErr := <-loopErr
+		if grpcRunErr := normalizeWorkerServeErr(err); grpcRunErr != nil {
+			if workerErr := normalizeWorkerLoopErr(loopRunErr); workerErr != nil {
+				return firstNonNilErr(grpcRunErr, workerErr)
+			}
+			return grpcRunErr
+		}
+		return normalizeWorkerLoopErr(loopRunErr)
+	}
+}
+
+// Close releases runtime resources.
+func (r *Runtime) Close() {
+	if r == nil {
+		return
+	}
+	r.closeOnce.Do(func() {
+		if r.health != nil {
+			r.health.Shutdown()
+		}
+		if r.grpcServer != nil {
+			r.grpcServer.Stop()
+		}
+		if r.listener != nil {
+			if err := r.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+				log.Printf("close worker listener: %v", err)
+			}
+		}
+		closeWorkerConn(r.socialConn, "social")
+		closeWorkerConn(r.notificationsConn, "notifications")
+		closeWorkerConn(r.authConn, "auth")
+		if r.store != nil {
+			if err := r.store.Close(); err != nil {
+				log.Printf("close worker sqlite store: %v", err)
+			}
+		}
+	})
+}
+
+func normalizeRuntimeConfig(cfg RuntimeConfig) (RuntimeConfig, error) {
+	cfg.AuthAddr = strings.TrimSpace(cfg.AuthAddr)
+	cfg.NotificationsAddr = strings.TrimSpace(cfg.NotificationsAddr)
+	cfg.SocialAddr = strings.TrimSpace(cfg.SocialAddr)
+	if cfg.AuthAddr == "" {
+		return RuntimeConfig{}, fmt.Errorf("auth address is required")
+	}
+	if cfg.NotificationsAddr == "" {
+		return RuntimeConfig{}, fmt.Errorf("notifications address is required")
+	}
+	if cfg.SocialAddr == "" {
+		return RuntimeConfig{}, fmt.Errorf("social address is required")
+	}
+	if cfg.Port <= 0 {
+		cfg.Port = defaultWorkerPort
+	}
+	cfg.DBPath = strings.TrimSpace(cfg.DBPath)
+	if cfg.DBPath == "" {
+		cfg.DBPath = defaultWorkerDB
+	}
+	if cfg.GRPCDialTimeout <= 0 {
+		cfg.GRPCDialTimeout = timeouts.GRPCDial
+	}
+	return cfg, nil
+}
+
+func (r *Runtime) shutdownGRPC() {
+	if r == nil {
+		return
+	}
+	if r.health != nil {
+		r.health.Shutdown()
+	}
+	if r.grpcServer != nil {
+		r.grpcServer.GracefulStop()
+	}
+}
+
+func normalizeWorkerServeErr(err error) error {
+	if err == nil || errors.Is(err, grpc.ErrServerStopped) {
+		return nil
+	}
+	return fmt.Errorf("serve gRPC: %w", err)
+}
+
+func normalizeWorkerLoopErr(err error) error {
+	if err == nil || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return nil
+	}
+	return fmt.Errorf("run worker loop: %w", err)
+}
+
+func closeWorkerConn(conn *grpc.ClientConn, name string) {
+	if conn == nil {
+		return
+	}
+	if err := conn.Close(); err != nil {
+		log.Printf("close %s connection: %v", name, err)
+	}
+}
+
+func firstNonNilErr(errs ...error) error {
+	for _, err := range errs {
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func fanoutEventHandlers(handlers ...EventHandler) EventHandler {

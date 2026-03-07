@@ -7,6 +7,8 @@ import (
 
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/status/domain"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -117,15 +119,15 @@ func TestService_ReportStatus_validation(t *testing.T) {
 	svc := NewService(agg, nil, nil)
 
 	_, err := svc.ReportStatus(context.Background(), nil)
-	if err == nil {
-		t.Fatal("expected error for nil request")
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for nil request, got %v", status.Code(err))
 	}
 
 	_, err = svc.ReportStatus(context.Background(), &statusv1.ReportStatusRequest{
 		Report: &statusv1.ServiceStatusReport{Service: ""},
 	})
-	if err == nil {
-		t.Fatal("expected error for empty service name")
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for empty service, got %v", status.Code(err))
 	}
 }
 
@@ -133,17 +135,41 @@ func TestService_SetOverride_validation(t *testing.T) {
 	agg := domain.NewAggregator(30*time.Second, nil)
 	svc := NewService(agg, nil, nil)
 
-	_, err := svc.SetOverride(context.Background(), &statusv1.SetOverrideRequest{
+	_, err := svc.SetOverride(context.Background(), nil)
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for nil set override request, got %v", status.Code(err))
+	}
+
+	_, err = svc.ClearOverride(context.Background(), nil)
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for nil clear override request, got %v", status.Code(err))
+	}
+
+	_, err = svc.SetOverride(context.Background(), &statusv1.SetOverrideRequest{
 		Service: "", Capability: "cap",
 	})
-	if err == nil {
-		t.Fatal("expected error for empty service")
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for empty set override service, got %v", status.Code(err))
 	}
 
 	_, err = svc.SetOverride(context.Background(), &statusv1.SetOverrideRequest{
 		Service: "game", Capability: "",
 	})
-	if err == nil {
-		t.Fatal("expected error for empty capability")
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for empty set override capability, got %v", status.Code(err))
+	}
+
+	_, err = svc.ClearOverride(context.Background(), &statusv1.ClearOverrideRequest{
+		Service: "", Capability: "cap",
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for empty clear override service, got %v", status.Code(err))
+	}
+
+	_, err = svc.ClearOverride(context.Background(), &statusv1.ClearOverrideRequest{
+		Service: "game", Capability: "",
+	})
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("expected InvalidArgument for empty clear override capability, got %v", status.Code(err))
 	}
 }

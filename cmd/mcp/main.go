@@ -5,28 +5,19 @@
 package main
 
 import (
-	"context"
-	"flag"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 
 	mcpcmd "github.com/louisbranch/fracturing.space/internal/cmd/mcp"
+	platformcmd "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 )
 
 // main starts the MCP server on stdio or HTTP.
 func main() {
-	cfg, err := mcpcmd.ParseConfig(flag.CommandLine, os.Args[1:])
-	if err != nil {
-		log.Fatalf("parse flags: %v", err)
-	}
-	log.SetPrefix("[MCP] ")
-
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	if err := mcpcmd.Run(ctx, cfg); err != nil {
-		log.Fatalf("failed to serve MCP: %v", err)
+	if err := platformcmd.RunServiceMain(platformcmd.ServiceMainOptions[mcpcmd.Config]{
+		Service:     platformcmd.ServiceMCP,
+		ParseConfig: mcpcmd.ParseConfig,
+		Run:         mcpcmd.Run,
+	}); err != nil {
+		log.Fatal(err)
 	}
 }

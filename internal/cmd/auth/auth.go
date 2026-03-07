@@ -4,11 +4,8 @@ package auth
 import (
 	"context"
 	"flag"
-	"log"
 
-	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	server "github.com/louisbranch/fracturing.space/internal/services/auth/app"
@@ -40,23 +37,13 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 // Run starts the auth process by delegating to the auth app server.
 func Run(ctx context.Context, cfg Config) error {
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceAuth, func(context.Context) error {
-		// Status reporter.
-		statusConn := platformgrpc.DialLenient(ctx, cfg.StatusAddr, log.Printf)
-		if statusConn != nil {
-			defer func() {
-				if err := statusConn.Close(); err != nil {
-					log.Printf("close status connection: %v", err)
-				}
-			}()
-		}
-		var statusClient statusv1.StatusServiceClient
-		if statusConn != nil {
-			statusClient = statusv1.NewStatusServiceClient(statusConn)
-		}
-		reporter := platformstatus.NewReporter("auth", statusClient)
-		reporter.Register("auth.identity", platformstatus.Operational)
-		reporter.Register("auth.oauth", platformstatus.Operational)
-		stopReporter := reporter.Start(ctx)
+		stopReporter := entrypoint.StartStatusReporter(
+			ctx,
+			"auth",
+			cfg.StatusAddr,
+			entrypoint.Capability("auth.identity", platformstatus.Operational),
+			entrypoint.Capability("auth.oauth", platformstatus.Operational),
+		)
 		defer stopReporter()
 
 		return server.Run(ctx, cfg.Port, cfg.HTTPAddr)

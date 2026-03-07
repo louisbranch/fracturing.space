@@ -5,11 +5,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"log"
 
-	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	server "github.com/louisbranch/fracturing.space/internal/services/chat/app"
@@ -52,25 +49,15 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 // Run builds the chat app and starts realtime transport behavior.
 func Run(ctx context.Context, cfg Config) error {
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceChat, func(context.Context) error {
-		// Status reporter.
-		statusConn := platformgrpc.DialLenient(ctx, cfg.StatusAddr, log.Printf)
-		if statusConn != nil {
-			defer func() {
-				if err := statusConn.Close(); err != nil {
-					log.Printf("close status connection: %v", err)
-				}
-			}()
-		}
-		var statusClient statusv1.StatusServiceClient
-		if statusConn != nil {
-			statusClient = statusv1.NewStatusServiceClient(statusConn)
-		}
-		reporter := platformstatus.NewReporter("chat", statusClient)
-		reporter.Register("chat.realtime", platformstatus.Operational)
-		reporter.Register("chat.game.integration", platformstatus.Operational)
-		reporter.Register("chat.ai.integration", platformstatus.Operational)
-		reporter.Register("chat.auth.integration", platformstatus.Operational)
-		stopReporter := reporter.Start(ctx)
+		stopReporter := entrypoint.StartStatusReporter(
+			ctx,
+			"chat",
+			cfg.StatusAddr,
+			entrypoint.Capability("chat.realtime", platformstatus.Operational),
+			entrypoint.Capability("chat.game.integration", platformstatus.Operational),
+			entrypoint.Capability("chat.ai.integration", platformstatus.Operational),
+			entrypoint.Capability("chat.auth.integration", platformstatus.Operational),
+		)
 		defer stopReporter()
 
 		if err := server.Run(ctx, server.Config{
