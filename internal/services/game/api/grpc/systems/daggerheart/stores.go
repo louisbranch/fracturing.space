@@ -10,6 +10,7 @@ import (
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -31,6 +32,7 @@ type Stores struct {
 	Event              storage.EventStore
 	Watermarks         storage.ProjectionWatermarkStore
 	Domain             Domain
+	Events             *event.Registry
 
 	// WriteRuntime owns request-path write execution flags (inline apply,
 	// intent filtering). Injected at service construction; used by
@@ -41,38 +43,55 @@ type Stores struct {
 	adapters *bridge.AdapterRegistry
 }
 
+// ProjectionStoreBundle is the projection dependency contract for the
+// Daggerheart gameplay service.
+type ProjectionStoreBundle interface {
+	storage.CampaignStore
+	storage.CharacterStore
+	storage.SessionStore
+	storage.SessionGateStore
+	storage.SessionSpotlightStore
+	storage.DaggerheartStore
+	storage.ProjectionWatermarkStore
+}
+
+// StoresFromProjectionConfig configures NewStoresFromProjection.
+type StoresFromProjectionConfig struct {
+	ProjectionStore ProjectionStoreBundle
+	EventStore      storage.EventStore
+	ContentStore    storage.DaggerheartContentReadStore
+	Domain          Domain
+	WriteRuntime    *domainwrite.Runtime
+	Events          *event.Registry
+}
+
+// NewStoresFromProjection constructs Stores from a projection-oriented bundle
+// plus runtime dependencies. This keeps startup wiring concise and explicit.
+func NewStoresFromProjection(config StoresFromProjectionConfig) Stores {
+	return Stores{
+		Campaign:           config.ProjectionStore,
+		Character:          config.ProjectionStore,
+		Session:            config.ProjectionStore,
+		SessionGate:        config.ProjectionStore,
+		SessionSpotlight:   config.ProjectionStore,
+		Daggerheart:        config.ProjectionStore,
+		DaggerheartContent: config.ContentStore,
+		Event:              config.EventStore,
+		Watermarks:         config.ProjectionStore,
+		Domain:             config.Domain,
+		Events:             config.Events,
+		WriteRuntime:       config.WriteRuntime,
+	}
+}
+
 // Validate checks that Daggerheart gameplay service dependencies are configured
 // and eagerly builds the adapter registry so registration errors surface at
 // startup instead of at runtime.
 func (s *Stores) Validate() error {
 	var missing []string
-	if s.Campaign == nil {
-		missing = append(missing, "Campaign")
-	}
-	if s.Character == nil {
-		missing = append(missing, "Character")
-	}
-	if s.Session == nil {
-		missing = append(missing, "Session")
-	}
-	if s.SessionGate == nil {
-		missing = append(missing, "SessionGate")
-	}
-	if s.SessionSpotlight == nil {
-		missing = append(missing, "SessionSpotlight")
-	}
-	if s.Daggerheart == nil {
-		missing = append(missing, "Daggerheart")
-	}
-	if s.Event == nil {
-		missing = append(missing, "Event")
-	}
-	if s.Domain == nil {
-		missing = append(missing, "Domain")
-	}
-	if s.WriteRuntime == nil {
-		missing = append(missing, "WriteRuntime")
-	}
+	missing = appendMissingRequirements(missing, s.projectionRequirements()...)
+	missing = appendMissingRequirements(missing, s.infrastructureRequirements()...)
+	missing = appendMissingRequirements(missing, s.runtimeRequirements()...)
 	if len(missing) > 0 {
 		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))
 	}
@@ -95,13 +114,52 @@ func (s Stores) ValidateContent() error {
 	return nil
 }
 
+type dependencyRequirement struct {
+	name       string
+	configured bool
+}
+
+func appendMissingRequirements(missing []string, requirements ...dependencyRequirement) []string {
+	for _, requirement := range requirements {
+		if !requirement.configured {
+			missing = append(missing, requirement.name)
+		}
+	}
+	return missing
+}
+
+func (s Stores) projectionRequirements() []dependencyRequirement {
+	return []dependencyRequirement{
+		{name: "Campaign", configured: s.Campaign != nil},
+		{name: "Character", configured: s.Character != nil},
+		{name: "Session", configured: s.Session != nil},
+		{name: "SessionGate", configured: s.SessionGate != nil},
+		{name: "SessionSpotlight", configured: s.SessionSpotlight != nil},
+		{name: "Daggerheart", configured: s.Daggerheart != nil},
+	}
+}
+
+func (s Stores) infrastructureRequirements() []dependencyRequirement {
+	return []dependencyRequirement{
+		{name: "Event", configured: s.Event != nil},
+	}
+}
+
+func (s Stores) runtimeRequirements() []dependencyRequirement {
+	return []dependencyRequirement{
+		{name: "Domain", configured: s.Domain != nil},
+		{name: "WriteRuntime", configured: s.WriteRuntime != nil},
+		{name: "Events", configured: s.Events != nil},
+	}
+}
+
 // Applier returns a projection Applier wired to the stores in this bundle.
 // Only the stores available in the Daggerheart service are mapped; fields not
 // present (e.g., Invite, CampaignFork) remain nil and are unused by dispatch.
 func (s Stores) Applier() projection.Applier {
 	applier, err := s.TryApplier()
 	if err != nil {
-		return projection.Applier{}
+		return projection.Applier{BuildErr: err}
 	}
 	return applier
 }
@@ -124,6 +182,7 @@ func (s Stores) TryApplier() (projection.Applier, error) {
 		}
 	}
 	return projection.Applier{
+		Events:           s.Events,
 		Campaign:         s.Campaign,
 		Character:        s.Character,
 		Session:          s.Session,

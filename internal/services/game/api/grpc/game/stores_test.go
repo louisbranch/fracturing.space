@@ -6,6 +6,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -30,7 +31,7 @@ func TestStoresValidate(t *testing.T) {
 			"SessionSpotlight", "Scene", "SceneCharacter", "SceneGate",
 			"SceneSpotlight", "Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
-			"Domain", "WriteRuntime",
+			"Domain", "WriteRuntime", "Events",
 		} {
 			if !strings.Contains(msg, name) {
 				t.Errorf("error should mention %q, got: %s", name, msg)
@@ -47,6 +48,98 @@ func TestStoresValidate(t *testing.T) {
 		}
 		if !strings.Contains(err.Error(), "Event") {
 			t.Errorf("error should mention Event, got: %s", err.Error())
+		}
+	})
+}
+
+func TestNewStoresFromProjection(t *testing.T) {
+	projectionStore := &projectionStoreBundleStub{
+		CampaignStore:            newFakeCampaignStore(),
+		ParticipantStore:         newFakeParticipantStore(),
+		ClaimIndexStore:          stubClaimIndex{},
+		InviteStore:              newFakeInviteStore(),
+		CharacterStore:           newFakeCharacterStore(),
+		DaggerheartStore:         &fakeDaggerheartStore{},
+		SessionStore:             newFakeSessionStore(),
+		SessionGateStore:         &fakeSessionGateStore{},
+		SessionSpotlightStore:    &fakeSessionSpotlightStore{},
+		SceneStore:               stubSceneStore{},
+		SceneCharacterStore:      stubSceneCharacterStore{},
+		SceneGateStore:           stubSceneGateStore{},
+		SceneSpotlightStore:      stubSceneSpotlightStore{},
+		CampaignForkStore:        &fakeCampaignForkStore{},
+		StatisticsStore:          &fakeStatisticsStore{},
+		SnapshotStore:            stubSnapshot{},
+		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
+	}
+
+	stores := NewStoresFromProjection(StoresFromProjectionConfig{
+		ProjectionStore: projectionStore,
+		EventStore: eventAuditStoreStub{
+			EventStore:      newFakeEventStore(),
+			AuditEventStore: stubAudit{},
+		},
+		ContentStore: stubDaggerheartContent{},
+		Domain:       fakeDomainExecutor{},
+		WriteRuntime: domainwrite.NewRuntime(),
+		Events:       event.NewRegistry(),
+	})
+
+	if stores.Campaign == nil || stores.Participant == nil || stores.Character == nil {
+		t.Fatal("expected projection-backed stores to be populated")
+	}
+	if stores.SystemStores.Daggerheart == nil {
+		t.Fatal("expected Daggerheart system store to be inferred from projection bundle")
+	}
+	if stores.Audit == nil {
+		t.Fatal("expected audit store to be inferred from event store when compatible")
+	}
+	if stores.Domain == nil || stores.WriteRuntime == nil || stores.Events == nil {
+		t.Fatal("expected runtime dependencies to be propagated")
+	}
+}
+
+func TestNewStoresFromProjection_AuditStoreSelection(t *testing.T) {
+	projectionStore := &projectionStoreBundleStub{
+		CampaignStore:            newFakeCampaignStore(),
+		ParticipantStore:         newFakeParticipantStore(),
+		ClaimIndexStore:          stubClaimIndex{},
+		InviteStore:              newFakeInviteStore(),
+		CharacterStore:           newFakeCharacterStore(),
+		DaggerheartStore:         &fakeDaggerheartStore{},
+		SessionStore:             newFakeSessionStore(),
+		SessionGateStore:         &fakeSessionGateStore{},
+		SessionSpotlightStore:    &fakeSessionSpotlightStore{},
+		SceneStore:               stubSceneStore{},
+		SceneCharacterStore:      stubSceneCharacterStore{},
+		SceneGateStore:           stubSceneGateStore{},
+		SceneSpotlightStore:      stubSceneSpotlightStore{},
+		CampaignForkStore:        &fakeCampaignForkStore{},
+		StatisticsStore:          &fakeStatisticsStore{},
+		SnapshotStore:            stubSnapshot{},
+		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
+	}
+
+	t.Run("explicit audit store wins", func(t *testing.T) {
+		explicitAudit := stubAudit{}
+		stores := NewStoresFromProjection(StoresFromProjectionConfig{
+			ProjectionStore: projectionStore,
+			EventStore:      newFakeEventStore(),
+			AuditStore:      explicitAudit,
+		})
+
+		if _, ok := stores.Audit.(stubAudit); !ok {
+			t.Fatalf("stores.Audit type = %T, want %T", stores.Audit, explicitAudit)
+		}
+	})
+
+	t.Run("non-audit event store does not infer audit store", func(t *testing.T) {
+		stores := NewStoresFromProjection(StoresFromProjectionConfig{
+			ProjectionStore: projectionStore,
+			EventStore:      newFakeEventStore(),
+		})
+		if stores.Audit != nil {
+			t.Fatalf("stores.Audit = %T, want nil", stores.Audit)
 		}
 	})
 }
@@ -75,6 +168,7 @@ func validStores() Stores {
 		DaggerheartContent: stubDaggerheartContent{},
 		Domain:             fakeDomainExecutor{},
 		WriteRuntime:       domainwrite.NewRuntime(),
+		Events:             event.NewRegistry(),
 	}
 }
 
@@ -103,6 +197,9 @@ func TestStoresApplier(t *testing.T) {
 	if applier.Adapters == nil {
 		t.Error("expected Adapters to be set")
 	}
+	if applier.Events == nil {
+		t.Error("expected Events registry to be set")
+	}
 	if applier.Session == nil {
 		t.Error("expected Session to be set")
 	}
@@ -126,6 +223,9 @@ func TestStoresApplier(t *testing.T) {
 type stubClaimIndex struct{ storage.ClaimIndexStore }
 type stubAudit struct{ storage.AuditEventStore }
 type stubSnapshot struct{ storage.SnapshotStore }
+type stubProjectionWatermarkStore struct {
+	storage.ProjectionWatermarkStore
+}
 type stubDaggerheartContent struct {
 	storage.DaggerheartContentReadStore
 }
@@ -134,3 +234,28 @@ type stubSceneStore struct{ storage.SceneStore }
 type stubSceneCharacterStore struct{ storage.SceneCharacterStore }
 type stubSceneGateStore struct{ storage.SceneGateStore }
 type stubSceneSpotlightStore struct{ storage.SceneSpotlightStore }
+
+type projectionStoreBundleStub struct {
+	storage.CampaignStore
+	storage.ParticipantStore
+	storage.ClaimIndexStore
+	storage.InviteStore
+	storage.CharacterStore
+	storage.DaggerheartStore
+	storage.SessionStore
+	storage.SnapshotStore
+	storage.CampaignForkStore
+	storage.StatisticsStore
+	storage.ProjectionWatermarkStore
+	storage.SessionGateStore
+	storage.SessionSpotlightStore
+	storage.SceneStore
+	storage.SceneCharacterStore
+	storage.SceneGateStore
+	storage.SceneSpotlightStore
+}
+
+type eventAuditStoreStub struct {
+	storage.EventStore
+	storage.AuditEventStore
+}

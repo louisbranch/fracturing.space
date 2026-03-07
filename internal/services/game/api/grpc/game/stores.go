@@ -1,15 +1,10 @@
 package game
 
 import (
-	"fmt"
-	"strings"
-
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -57,7 +52,33 @@ type Stores struct {
 	Events *event.Registry
 
 	// adapters is built eagerly during Validate and cached for Applier.
-	adapters *bridge.AdapterRegistry
+	adapters adapterRegistry
+}
+
+// ProjectionStoreBundle is the projection dependency contract for game gRPC
+// handlers and appliers. Startup wires one projection implementation into this
+// bundle so callers avoid assigning each projection interface manually.
+type ProjectionStoreBundle interface {
+	storage.ProjectionStore
+	storage.SessionGateStore
+	storage.SessionSpotlightStore
+	storage.SceneStore
+	storage.SceneCharacterStore
+	storage.SceneGateStore
+	storage.SceneSpotlightStore
+}
+
+// StoresFromProjectionConfig configures NewStoresFromProjection.
+type StoresFromProjectionConfig struct {
+	ProjectionStore ProjectionStoreBundle
+	SystemStores    systemmanifest.ProjectionStores
+	EventStore      storage.EventStore
+	AuditStore      storage.AuditEventStore
+	ContentStore    storage.DaggerheartContentReadStore
+	SocialClient    socialv1.SocialServiceClient
+	Domain          Domain
+	WriteRuntime    *domainwrite.Runtime
+	Events          *event.Registry
 }
 
 // NewWriteRuntime creates a new write-path runtime for use by service startup.
@@ -65,138 +86,4 @@ type Stores struct {
 // outside the gRPC package tree.
 func NewWriteRuntime() *domainwrite.Runtime {
 	return domainwrite.NewRuntime()
-}
-
-// Applier returns a projection Applier wired to the stores in this bundle.
-// The returned Applier can apply any event type; unused stores are simply not
-// invoked by the dispatch.
-func (s Stores) Applier() projection.Applier {
-	applier, err := s.TryApplier()
-	if err != nil {
-		return projection.Applier{}
-	}
-	return applier
-}
-
-// TryApplier returns a projection Applier wired to the stores in this bundle.
-// The returned Applier can apply any event type; unused stores are simply not
-// invoked by the dispatch.
-//
-// If Validate was called first the cached adapter registry is used; otherwise
-// a fresh one is built on-the-fly so partial-Stores test helpers keep working.
-func (s Stores) TryApplier() (projection.Applier, error) {
-	adapters := s.adapters
-	if adapters == nil {
-		var err error
-		adapters, err = TryAdapterRegistryForStores(s)
-		if err != nil {
-			return projection.Applier{}, fmt.Errorf("build adapter registry: %w", err)
-		}
-	}
-	return projection.Applier{
-		Campaign:         s.Campaign,
-		Character:        s.Character,
-		CampaignFork:     s.CampaignFork,
-		ClaimIndex:       s.ClaimIndex,
-		Invite:           s.Invite,
-		Participant:      s.Participant,
-		Session:          s.Session,
-		SessionGate:      s.SessionGate,
-		SessionSpotlight: s.SessionSpotlight,
-		Scene:            s.Scene,
-		SceneCharacter:   s.SceneCharacter,
-		SceneGate:        s.SceneGate,
-		SceneSpotlight:   s.SceneSpotlight,
-		Watermarks:       s.Watermarks,
-		Adapters:         adapters,
-	}, nil
-}
-
-// Validate checks that every store field is non-nil and eagerly builds the
-// adapter registry. Call this at service construction time so that handlers
-// do not need per-method nil guards and adapter registration errors surface
-// at startup instead of at runtime.
-func (s *Stores) Validate() error {
-	var missing []string
-	if s.Campaign == nil {
-		missing = append(missing, "Campaign")
-	}
-	if s.Participant == nil {
-		missing = append(missing, "Participant")
-	}
-	if s.ClaimIndex == nil {
-		missing = append(missing, "ClaimIndex")
-	}
-	if s.Invite == nil {
-		missing = append(missing, "Invite")
-	}
-	if s.Character == nil {
-		missing = append(missing, "Character")
-	}
-	if s.SystemStores.Daggerheart == nil {
-		missing = append(missing, "SystemStores.Daggerheart")
-	}
-	if s.Session == nil {
-		missing = append(missing, "Session")
-	}
-	if s.SessionGate == nil {
-		missing = append(missing, "SessionGate")
-	}
-	if s.SessionSpotlight == nil {
-		missing = append(missing, "SessionSpotlight")
-	}
-	if s.Scene == nil {
-		missing = append(missing, "Scene")
-	}
-	if s.SceneCharacter == nil {
-		missing = append(missing, "SceneCharacter")
-	}
-	if s.SceneGate == nil {
-		missing = append(missing, "SceneGate")
-	}
-	if s.SceneSpotlight == nil {
-		missing = append(missing, "SceneSpotlight")
-	}
-	if s.Event == nil {
-		missing = append(missing, "Event")
-	}
-	if s.Audit == nil {
-		missing = append(missing, "Audit")
-	}
-	if s.Statistics == nil {
-		missing = append(missing, "Statistics")
-	}
-	if s.Snapshot == nil {
-		missing = append(missing, "Snapshot")
-	}
-	if s.CampaignFork == nil {
-		missing = append(missing, "CampaignFork")
-	}
-	if s.DaggerheartContent == nil {
-		missing = append(missing, "DaggerheartContent")
-	}
-	if s.Domain == nil {
-		missing = append(missing, "Domain")
-	}
-	if s.WriteRuntime == nil {
-		missing = append(missing, "WriteRuntime")
-	}
-	if len(missing) > 0 {
-		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))
-	}
-
-	adapters, err := TryAdapterRegistryForStores(*s)
-	if err != nil {
-		return fmt.Errorf("build adapter registry: %w", err)
-	}
-	s.adapters = adapters
-
-	applier, err := s.TryApplier()
-	if err != nil {
-		return fmt.Errorf("build projection applier: %w", err)
-	}
-	if err := applier.ValidateStorePreconditions(); err != nil {
-		return err
-	}
-	return nil
 }

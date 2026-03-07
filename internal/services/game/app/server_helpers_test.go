@@ -1320,6 +1320,26 @@ func TestConfigureDomainEnabled_SetsDomain(t *testing.T) {
 	}
 }
 
+func TestConfigureDomainDisabled_SetsDisabledDomain(t *testing.T) {
+	stores := gamegrpc.Stores{}
+
+	registries, err := engine.BuildRegistries(registeredSystemModules()...)
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+
+	if err := configureDomain(serverEnv{DomainEnabled: false}, &stores, registries); err != nil {
+		t.Fatalf("configure domain: %v", err)
+	}
+	if stores.Domain == nil {
+		t.Fatal("expected disabled domain executor to be configured")
+	}
+	_, err = stores.Domain.Execute(context.Background(), command.Command{})
+	if !errors.Is(err, errDomainWritePathDisabled) {
+		t.Fatalf("disabled domain execute error = %v, want %v", err, errDomainWritePathDisabled)
+	}
+}
+
 type fakeDomainEventStore struct {
 	events       map[string][]event.Event
 	nextSeq      map[string]uint64

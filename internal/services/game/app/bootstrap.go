@@ -184,30 +184,14 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 	}()
 
 	writeRuntime := gamegrpc.NewWriteRuntime()
-	stores := gamegrpc.Stores{
-		Campaign:           bundle.projections,
-		Participant:        bundle.projections,
-		ClaimIndex:         bundle.projections,
-		Invite:             bundle.projections,
-		Character:          bundle.projections,
-		SystemStores:       systemmanifest.ProjectionStores{Daggerheart: bundle.projections},
-		Session:            bundle.projections,
-		SessionGate:        bundle.projections,
-		SessionSpotlight:   bundle.projections,
-		Scene:              bundle.projections,
-		SceneCharacter:     bundle.projections,
-		SceneGate:          bundle.projections,
-		SceneSpotlight:     bundle.projections,
-		Event:              bundle.events,
-		Watermarks:         bundle.projections,
-		Audit:              bundle.events,
-		Statistics:         bundle.projections,
-		Snapshot:           bundle.projections,
-		CampaignFork:       bundle.projections,
-		DaggerheartContent: bundle.content,
-		WriteRuntime:       writeRuntime,
-		Events:             registries.Events,
-	}
+	stores := gamegrpc.NewStoresFromProjection(gamegrpc.StoresFromProjectionConfig{
+		ProjectionStore: bundle.projections,
+		SystemStores:    systemmanifest.ProjectionStores{Daggerheart: bundle.projections},
+		EventStore:      bundle.events,
+		ContentStore:    bundle.content,
+		WriteRuntime:    writeRuntime,
+		Events:          registries.Events,
+	})
 	if err := b.config.configureDomain(srvEnv, &stores, registries); err != nil {
 		return nil, wrapStartupError(startupPhaseDomain, "configure domain", err)
 	}
@@ -360,19 +344,14 @@ func (b *serverBootstrap) registerServices(
 	systemRegistry *bridge.MetadataRegistry,
 	sessionGrantConfig aisessiongrant.Config,
 ) error {
-	daggerheartStores := daggerheartservice.Stores{
-		Campaign:           bundle.projections,
-		Character:          bundle.projections,
-		Session:            bundle.projections,
-		SessionGate:        bundle.projections,
-		SessionSpotlight:   bundle.projections,
-		Daggerheart:        bundle.projections,
-		DaggerheartContent: bundle.content,
-		Event:              bundle.events,
-		Watermarks:         bundle.projections,
-		Domain:             stores.Domain,
-		WriteRuntime:       stores.WriteRuntime,
-	}
+	daggerheartStores := daggerheartservice.NewStoresFromProjection(daggerheartservice.StoresFromProjectionConfig{
+		ProjectionStore: bundle.projections,
+		EventStore:      bundle.events,
+		ContentStore:    bundle.content,
+		Domain:          stores.Domain,
+		Events:          stores.Events,
+		WriteRuntime:    stores.WriteRuntime,
+	})
 	daggerheartService, err := daggerheartservice.NewDaggerheartService(daggerheartStores, random.NewSeed)
 	if err != nil {
 		return fmt.Errorf("create daggerheart service: %w", err)

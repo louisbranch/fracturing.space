@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -783,6 +784,7 @@ func validDaggerheartStoresForConstructorTests() Stores {
 		Daggerheart:      &fakeDaggerheartStore{},
 		Event:            &fakeEventStore{},
 		Domain:           &fakeDomainEngine{},
+		Events:           event.NewRegistry(),
 		WriteRuntime:     testRuntime,
 	}
 }

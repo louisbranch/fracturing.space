@@ -123,14 +123,3 @@ func domainCommandTypeForEvent(eventType event.Type) (command.Type, bool) {
 		return "", false
 	}
 }
-
-func commandActorTypeForEventActor(actorType event.ActorType) command.ActorType {
-	switch actorType {
-	case event.ActorTypeParticipant:
-		return command.ActorTypeParticipant
-	case event.ActorTypeGM:
-		return command.ActorTypeGM
-	default:
-		return command.ActorTypeSystem
-	}
-}

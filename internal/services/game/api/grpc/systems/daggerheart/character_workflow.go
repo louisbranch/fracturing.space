@@ -22,7 +22,7 @@ import (
 // the Daggerheart game system. It satisfies workflow.Provider.
 type CreationWorkflowProvider struct{}
 
-func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps workflow.Deps, campaignRecord storage.CampaignRecord, characterID string) (workflow.Progress, error) {
+func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps workflow.CreationDeps, campaignRecord storage.CampaignRecord, characterID string) (workflow.Progress, error) {
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return workflow.Progress{}, err
 	}
@@ -34,7 +34,7 @@ func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps workflow.D
 		return workflow.Progress{}, err
 	}
 
-	profile, err := deps.GetDaggerheartProfile(ctx, campaignRecord.ID, characterID)
+	profile, err := deps.GetCharacterSystemProfile(ctx, campaignRecord.ID, characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return workflow.Progress{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
@@ -46,7 +46,7 @@ func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps workflow.D
 	return progressFromDaggerheart(progress), nil
 }
 
-func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Deps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationStepRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
+func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.CreationDeps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationStepRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
 	characterID := strings.TrimSpace(in.GetCharacterId())
 	if characterID == "" {
 		return nil, workflow.Progress{}, status.Error(codes.InvalidArgument, "character id is required")
@@ -69,7 +69,7 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Dep
 		return nil, workflow.Progress{}, err
 	}
 
-	profile, err := deps.GetDaggerheartProfile(ctx, campaignRecord.ID, characterID)
+	profile, err := deps.GetCharacterSystemProfile(ctx, campaignRecord.ID, characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return nil, workflow.Progress{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
@@ -92,7 +92,7 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Dep
 		)
 	}
 
-	if err := applyCreationStepInput(ctx, deps.DaggerheartContent(), &profile, stepInput); err != nil {
+	if err := applyCreationStepInput(ctx, deps.SystemContent(), &profile, stepInput); err != nil {
 		return nil, workflow.Progress{}, err
 	}
 
@@ -108,7 +108,7 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Dep
 	return deps.ProfileToProto(campaignRecord.ID, characterID, profile), progressFromDaggerheart(nextProgress), nil
 }
 
-func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow.Deps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationWorkflowRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
+func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow.CreationDeps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationWorkflowRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
 	characterID := strings.TrimSpace(in.GetCharacterId())
 	if characterID == "" {
 		return nil, workflow.Progress{}, status.Error(codes.InvalidArgument, "character id is required")
@@ -127,7 +127,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow
 		return nil, workflow.Progress{}, err
 	}
 
-	profile, err := deps.GetDaggerheartProfile(ctx, campaignRecord.ID, characterID)
+	profile, err := deps.GetCharacterSystemProfile(ctx, campaignRecord.ID, characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return nil, workflow.Progress{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
@@ -160,7 +160,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow
 		if stepNumber != expectedStep {
 			return nil, workflow.Progress{}, status.Errorf(codes.InvalidArgument, "daggerheart workflow payload contains out-of-order step %d at position %d", stepNumber, idx+1)
 		}
-		if err := applyCreationStepInput(ctx, deps.DaggerheartContent(), &profile, stepInput); err != nil {
+		if err := applyCreationStepInput(ctx, deps.SystemContent(), &profile, stepInput); err != nil {
 			return nil, workflow.Progress{}, err
 		}
 		if err := validateProfile(profile); err != nil {
@@ -183,7 +183,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow
 	return deps.ProfileToProto(campaignRecord.ID, characterID, profile), progressFromDaggerheart(finalProgress), nil
 }
 
-func (CreationWorkflowProvider) Reset(ctx context.Context, deps workflow.Deps, campaignRecord storage.CampaignRecord, characterID string) (workflow.Progress, error) {
+func (CreationWorkflowProvider) Reset(ctx context.Context, deps workflow.CreationDeps, campaignRecord storage.CampaignRecord, characterID string) (workflow.Progress, error) {
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return workflow.Progress{}, err
 	}

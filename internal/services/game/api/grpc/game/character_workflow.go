@@ -72,7 +72,7 @@ func (c characterApplication) ResetCharacterCreationWorkflow(ctx context.Context
 	return provider.Reset(ctx, c.workflowDeps(), campaignRecord, characterID)
 }
 
-// workflowDeps returns a workflow.Deps implementation backed by this
+// workflowDeps returns a workflow.CreationDeps implementation backed by this
 // characterApplication, bridging game-layer authorization and domain execution
 // into the system-agnostic provider interface.
 func (c characterApplication) workflowDeps() *characterWorkflowDeps {
@@ -87,11 +87,11 @@ func (d *characterWorkflowDeps) GetCharacterRecord(ctx context.Context, campaign
 	return d.app.stores.Character.GetCharacter(ctx, campaignID, characterID)
 }
 
-func (d *characterWorkflowDeps) GetDaggerheartProfile(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error) {
+func (d *characterWorkflowDeps) GetCharacterSystemProfile(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error) {
 	return d.app.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 }
 
-func (d *characterWorkflowDeps) DaggerheartContent() storage.DaggerheartContentReadStore {
+func (d *characterWorkflowDeps) SystemContent() storage.DaggerheartContentReadStore {
 	return d.app.stores.DaggerheartContent
 }
 

@@ -169,6 +169,9 @@ func checkMissingStores(required storeRequirement, a Applier) []string {
 // fast on misconfiguration instead of discovering nil stores at runtime when the
 // first event of a given type arrives.
 func (a Applier) ValidateStorePreconditions() error {
+	if a.BuildErr != nil {
+		return fmt.Errorf("projection applier initialization failed: %w", a.BuildErr)
+	}
 	// Collect the union of all store requirements across router entries.
 	var required storeRequirement
 	for _, h := range coreRouter.handlers {
