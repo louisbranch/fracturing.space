@@ -1,7 +1,6 @@
 package commandbuild
 
 import (
-	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 )
 
@@ -70,24 +69,28 @@ func CoreSystem(in CoreSystemInput) command.Command {
 	})
 }
 
-// DaggerheartSystemInput describes a system command envelope for Daggerheart.
-type DaggerheartSystemInput struct {
+// SystemInput describes a command envelope for system-owned commands.
+type SystemInput struct {
 	CoreInput
+	SystemID      string
+	SystemVersion string
 }
 
-// DaggerheartSystem builds a Daggerheart system-domain command envelope.
-func DaggerheartSystem(in DaggerheartSystemInput) command.Command {
+// System builds a system-domain command envelope.
+func System(in SystemInput) command.Command {
 	cmd := Core(in.CoreInput)
-	cmd.SystemID = daggerheart.SystemID
-	cmd.SystemVersion = daggerheart.SystemVersion
+	cmd.SystemID = in.SystemID
+	cmd.SystemVersion = in.SystemVersion
 	return cmd
 }
 
-// DaggerheartSystemCommandInput describes a Daggerheart command emitted by the
-// system actor.
-type DaggerheartSystemCommandInput struct {
+// SystemCommandInput describes a system-owned command emitted by the system
+// actor.
+type SystemCommandInput struct {
 	CampaignID    string
 	Type          command.Type
+	SystemID      string
+	SystemVersion string
 	SessionID     string
 	SceneID       string
 	RequestID     string
@@ -98,10 +101,10 @@ type DaggerheartSystemCommandInput struct {
 	PayloadJSON   []byte
 }
 
-// DaggerheartSystemCommand builds a Daggerheart system-domain command envelope
-// with ActorType pre-set to system.
-func DaggerheartSystemCommand(in DaggerheartSystemCommandInput) command.Command {
-	return DaggerheartSystem(DaggerheartSystemInput{
+// SystemCommand builds a system-domain command envelope with ActorType pre-set
+// to system.
+func SystemCommand(in SystemCommandInput) command.Command {
+	return System(SystemInput{
 		CoreInput: CoreInput{
 			CampaignID:    in.CampaignID,
 			Type:          in.Type,
@@ -115,5 +118,7 @@ func DaggerheartSystemCommand(in DaggerheartSystemCommandInput) command.Command 
 			EntityID:      in.EntityID,
 			PayloadJSON:   in.PayloadJSON,
 		},
+		SystemID:      in.SystemID,
+		SystemVersion: in.SystemVersion,
 	})
 }

@@ -30,7 +30,7 @@ func applyDaggerheartCharacterStatePatchCommand(
 		ctx,
 		stores,
 		stores.Applier(),
-		commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
+		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignID,
 				Type:         commandTypeDaggerheartCharacterStatePatch,
@@ -43,6 +43,8 @@ func applyDaggerheartCharacterStatePatchCommand(
 				EntityID:     characterID,
 				PayloadJSON:  payloadJSON,
 			},
+			SystemID:      daggerheart.SystemID,
+			SystemVersion: daggerheart.SystemVersion,
 		}),
 		domainwrite.Options{
 			RequireEvents:   true,
@@ -75,7 +77,7 @@ func executeDaggerheartConditionChangeCommand(
 		ctx,
 		stores,
 		stores.Applier(),
-		commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
+		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignID,
 				Type:         commandTypeDaggerheartConditionChange,
@@ -88,6 +90,8 @@ func executeDaggerheartConditionChangeCommand(
 				EntityID:     characterID,
 				PayloadJSON:  payloadJSON,
 			},
+			SystemID:      daggerheart.SystemID,
+			SystemVersion: daggerheart.SystemVersion,
 		}),
 		domainwrite.Options{
 			RequireEvents:   true,

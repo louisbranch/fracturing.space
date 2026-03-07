@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -52,6 +51,9 @@ type Applier struct {
 	// Watermarks tracks per-campaign projection progress so startup can
 	// detect and repair gaps. When nil, watermark tracking is disabled.
 	Watermarks storage.ProjectionWatermarkStore
+	// Now returns the current time used for watermark timestamps. Tests can
+	// override it for deterministic assertions; nil defaults to time.Now.
+	Now func() time.Time
 }
 
 // Apply routes domain events into denormalized read-model stores.
@@ -63,40 +65,15 @@ func (a Applier) Apply(ctx context.Context, evt event.Event) error {
 	if a.BuildErr != nil {
 		return fmt.Errorf("projection applier initialization failed: %w", a.BuildErr)
 	}
-	if a.Events != nil {
-		resolved := a.Events.Resolve(evt.Type)
-		evt.Type = resolved
-		// Skip events that should not be projected (audit-only and replay-only).
-		// ShouldProject centralizes the intent contract.
-		if !a.Events.ShouldProject(resolved) {
-			return nil
-		}
+	resolvedEvent, shouldProject := a.prepareEventForProjection(evt)
+	if !shouldProject {
+		return nil
 	}
-	if err := a.routeEvent(ctx, evt); err != nil {
+	if err := a.routeEvent(ctx, resolvedEvent); err != nil {
 		return err
 	}
-	if a.Watermarks != nil && evt.Seq > 0 && strings.TrimSpace(evt.CampaignID) != "" {
-		// Gap detection: load current watermark to check if events were skipped.
-		// A gap means replay or re-projection is needed to fill missing events.
-		existing, err := a.Watermarks.GetProjectionWatermark(ctx, evt.CampaignID)
-		expectedNext := evt.Seq + 1
-		if err == nil && existing.ExpectedNextSeq > 0 && evt.Seq > existing.ExpectedNextSeq {
-			// Preserve the gap boundary instead of advancing past it. This
-			// keeps the mid-stream gap visible to DetectProjectionGaps so
-			// it can trigger repair without manual CLI invocation.
-			log.Printf("projection gap detected for campaign %s: expected seq %d but got %d",
-				evt.CampaignID, existing.ExpectedNextSeq, evt.Seq)
-			expectedNext = existing.ExpectedNextSeq
-		}
-
-		if err := a.Watermarks.SaveProjectionWatermark(ctx, storage.ProjectionWatermark{
-			CampaignID:      evt.CampaignID,
-			AppliedSeq:      evt.Seq,
-			ExpectedNextSeq: expectedNext,
-			UpdatedAt:       time.Now().UTC(),
-		}); err != nil {
-			return fmt.Errorf("save projection watermark: %w", err)
-		}
+	if err := a.saveProjectionWatermark(ctx, resolvedEvent); err != nil {
+		return fmt.Errorf("save projection watermark: %w", err)
 	}
 	return nil
 }

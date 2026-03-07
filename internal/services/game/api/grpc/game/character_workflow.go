@@ -28,16 +28,20 @@ func characterCreationWorkflowProviderForSystem(system commonv1.GameSystem) (wor
 	return provider, ok
 }
 
-func (c characterApplication) workflowProviderForCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, workflow.Provider, error) {
+func (c characterApplication) workflowProviderForCampaign(ctx context.Context, campaignID string) (workflow.CampaignContext, workflow.Provider, error) {
 	campaignRecord, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, nil, err
+		return workflow.CampaignContext{}, nil, err
 	}
 	provider, ok := characterCreationWorkflowProviderForSystem(campaignRecord.System)
 	if !ok {
-		return storage.CampaignRecord{}, nil, status.Errorf(codes.Unimplemented, "character creation workflow is not supported for game system %s", campaignRecord.System.String())
+		return workflow.CampaignContext{}, nil, status.Errorf(codes.Unimplemented, "character creation workflow is not supported for game system %s", campaignRecord.System.String())
 	}
-	return campaignRecord, provider, nil
+	return workflow.CampaignContext{
+		ID:     campaignRecord.ID,
+		System: campaignRecord.System,
+		Status: campaignRecord.Status,
+	}, provider, nil
 }
 
 func (c characterApplication) GetCharacterCreationProgress(ctx context.Context, campaignID, characterID string) (workflow.Progress, error) {
@@ -83,8 +87,12 @@ type characterWorkflowDeps struct {
 	app characterApplication
 }
 
-func (d *characterWorkflowDeps) GetCharacterRecord(ctx context.Context, campaignID, characterID string) (storage.CharacterRecord, error) {
-	return d.app.stores.Character.GetCharacter(ctx, campaignID, characterID)
+func (d *characterWorkflowDeps) GetCharacterRecord(ctx context.Context, campaignID, characterID string) (workflow.CharacterContext, error) {
+	record, err := d.app.stores.Character.GetCharacter(ctx, campaignID, characterID)
+	if err != nil {
+		return workflow.CharacterContext{}, err
+	}
+	return workflow.CharacterContext{Kind: record.Kind}, nil
 }
 
 func (d *characterWorkflowDeps) GetCharacterSystemProfile(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error) {
@@ -95,12 +103,12 @@ func (d *characterWorkflowDeps) SystemContent() storage.DaggerheartContentReadSt
 	return d.app.stores.DaggerheartContent
 }
 
-func (d *characterWorkflowDeps) ExecuteProfileUpdate(ctx context.Context, campaignRecord storage.CampaignRecord, characterID string, systemProfile map[string]any) error {
-	return d.app.executeCharacterProfileUpdate(ctx, campaignRecord, characterID, systemProfile)
+func (d *characterWorkflowDeps) ExecuteProfileUpdate(ctx context.Context, campaignContext workflow.CampaignContext, characterID string, systemProfile map[string]any) error {
+	return d.app.executeCharacterProfileUpdate(ctx, campaignContext, characterID, systemProfile)
 }
 
-func (d *characterWorkflowDeps) RequireReadPolicy(ctx context.Context, campaignRecord storage.CampaignRecord) error {
-	return requireReadPolicy(ctx, d.app.stores, campaignRecord)
+func (d *characterWorkflowDeps) RequireReadPolicy(ctx context.Context, campaignContext workflow.CampaignContext) error {
+	return requireReadPolicy(ctx, d.app.stores, storage.CampaignRecord{ID: campaignContext.ID})
 }
 
 func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, profile storage.DaggerheartCharacterProfile) *campaignv1.CharacterProfile {
@@ -109,8 +117,8 @@ func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, p
 
 // executeCharacterProfileUpdate builds and executes a character profile update
 // command through the domain engine.
-func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context, campaignRecord storage.CampaignRecord, characterID string, systemProfile map[string]any) error {
-	policyActor, err := requireCharacterMutationPolicy(ctx, c.stores, campaignRecord, characterID)
+func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context, campaignContext workflow.CampaignContext, characterID string, systemProfile map[string]any) error {
+	policyActor, err := requireCharacterMutationPolicy(ctx, c.stores, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
 	if err != nil {
 		return err
 	}
@@ -140,7 +148,7 @@ func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context,
 		c.stores,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignRecord.ID,
+			CampaignID:   campaignContext.ID,
 			Type:         commandTypeCharacterProfileUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,

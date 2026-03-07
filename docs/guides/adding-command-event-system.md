@@ -40,7 +40,19 @@ Canonical how-to for system-extension changes.
 2. Register in `internal/services/mcp/service/server.go`.
 3. Add/update MCP-focused tests.
 
-## 5. Regenerate and verify
+## 5. Startup validation debugging
+
+If game service startup fails after registration changes, error messages are
+already scoped to the failing phase:
+
+- `system module <id>@<version> <step>: <cause>` points to module registration
+  (`register commands`, `register events`, namespace, or emittable checks).
+- `registry validation <step>: <cause>` points to post-registration coverage and
+  consistency checks.
+
+Use these step labels first before deep code tracing.
+
+## 6. Regenerate and verify
 
 - `go test ./...`
 - `make integration`

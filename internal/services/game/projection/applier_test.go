@@ -3429,36 +3429,6 @@ func TestMarshalOptionalMap(t *testing.T) {
 	}
 }
 
-// fakeWatermarkStore records calls to SaveProjectionWatermark.
-type fakeWatermarkStore struct {
-	watermarks map[string]storage.ProjectionWatermark
-}
-
-func newFakeWatermarkStore() *fakeWatermarkStore {
-	return &fakeWatermarkStore{watermarks: make(map[string]storage.ProjectionWatermark)}
-}
-
-func (s *fakeWatermarkStore) GetProjectionWatermark(_ context.Context, campaignID string) (storage.ProjectionWatermark, error) {
-	wm, ok := s.watermarks[campaignID]
-	if !ok {
-		return storage.ProjectionWatermark{}, storage.ErrNotFound
-	}
-	return wm, nil
-}
-
-func (s *fakeWatermarkStore) SaveProjectionWatermark(_ context.Context, wm storage.ProjectionWatermark) error {
-	s.watermarks[wm.CampaignID] = wm
-	return nil
-}
-
-func (s *fakeWatermarkStore) ListProjectionWatermarks(_ context.Context) ([]storage.ProjectionWatermark, error) {
-	var out []storage.ProjectionWatermark
-	for _, wm := range s.watermarks {
-		out = append(out, wm)
-	}
-	return out, nil
-}
-
 func TestApply_SavesWatermarkOnSuccess(t *testing.T) {
 	ctx := context.Background()
 	campaignStore := newProjectionCampaignStore()
@@ -3495,6 +3465,48 @@ func TestApply_SavesWatermarkOnSuccess(t *testing.T) {
 	}
 	if wm.AppliedSeq != 5 {
 		t.Fatalf("applied_seq = %d, want 5", wm.AppliedSeq)
+	}
+}
+
+func TestApply_UsesInjectedNowForWatermarkTimestamp(t *testing.T) {
+	ctx := context.Background()
+	campaignStore := newProjectionCampaignStore()
+	watermarks := newFakeWatermarkStore()
+	frozen := time.Date(2026, 2, 10, 18, 30, 0, 0, time.FixedZone("EST", -5*60*60))
+
+	applier := Applier{
+		Campaign:   campaignStore,
+		Watermarks: watermarks,
+		Now: func() time.Time {
+			return frozen
+		},
+	}
+
+	payload := testevent.CampaignCreatedPayload{
+		Name:       "Test",
+		GameSystem: "DAGGERHEART",
+		GmMode:     "HUMAN",
+	}
+	data, _ := json.Marshal(payload)
+	evt := testevent.Event{
+		CampaignID:  "camp-1",
+		EntityID:    "camp-1",
+		Type:        testevent.TypeCampaignCreated,
+		PayloadJSON: data,
+		Timestamp:   time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC),
+		Seq:         5,
+	}
+
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	wm, err := watermarks.GetProjectionWatermark(ctx, "camp-1")
+	if err != nil {
+		t.Fatalf("get watermark: %v", err)
+	}
+	if !wm.UpdatedAt.Equal(frozen.UTC()) {
+		t.Fatalf("updated_at = %v, want %v", wm.UpdatedAt, frozen.UTC())
 	}
 }
 

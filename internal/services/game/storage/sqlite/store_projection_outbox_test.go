@@ -13,6 +13,33 @@ import (
 	sqlite3 "modernc.org/sqlite/lib"
 )
 
+func TestProcessProjectionApplyOutboxRows_StopsAtFirstError(t *testing.T) {
+	rows := []projectionApplyOutboxRow{
+		{CampaignID: "camp-a", Seq: 1},
+		{CampaignID: "camp-b", Seq: 2},
+		{CampaignID: "camp-c", Seq: 3},
+	}
+	fail := errors.New("handler failed")
+	calls := 0
+
+	processed, err := processProjectionApplyOutboxRows(rows, func(row projectionApplyOutboxRow) error {
+		calls++
+		if row.CampaignID == "camp-b" {
+			return fail
+		}
+		return nil
+	})
+	if !errors.Is(err, fail) {
+		t.Fatalf("processProjectionApplyOutboxRows() error = %v, want %v", err, fail)
+	}
+	if processed != 1 {
+		t.Fatalf("processed rows = %d, want 1", processed)
+	}
+	if calls != 2 {
+		t.Fatalf("handler calls = %d, want 2", calls)
+	}
+}
+
 func TestProcessProjectionApplyOutboxShadowMarksDueRowsFailed(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 

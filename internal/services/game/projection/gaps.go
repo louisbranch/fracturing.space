@@ -15,7 +15,7 @@ type GapRepairResult struct {
 
 // RepairProjectionGaps detects campaigns where projections are behind the
 // event journal and replays the missing events to close the gap.
-func RepairProjectionGaps(ctx context.Context, watermarks storage.ProjectionWatermarkStore, eventStore storage.EventStore, applier Applier) ([]GapRepairResult, error) {
+func RepairProjectionGaps(ctx context.Context, watermarks storage.ProjectionWatermarkStore, eventStore GapRepairEventStore, applier EventApplier) ([]GapRepairResult, error) {
 	gaps, err := DetectProjectionGaps(ctx, watermarks, eventStore)
 	if err != nil {
 		return nil, fmt.Errorf("detect gaps: %w", err)

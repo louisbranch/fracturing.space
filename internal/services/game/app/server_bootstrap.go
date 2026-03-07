@@ -18,6 +18,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 )
@@ -41,7 +42,7 @@ func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
 	return newServerBootstrap().NewWithAddr(ctx, addr)
 }
 
-func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store, eventRegistry *event.Registry) func(context.Context, event.Event) error {
+func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, eventRegistry *event.Registry) func(context.Context, event.Event) error {
 	if projectionStore == nil {
 		return nil
 	}
@@ -57,7 +58,7 @@ func buildProjectionApplyOutboxApply(projectionStore *storagesqlite.Store, event
 		_, err := projectionStore.ApplyProjectionEventExactlyOnce(
 			ctx,
 			evt,
-			func(applyCtx context.Context, applyEvt event.Event, txStore *storagesqlite.Store) error {
+			func(applyCtx context.Context, applyEvt event.Event, txStore storage.ProjectionApplyTxStore) error {
 				systemAdapters, err := systemmanifest.RebindAdapterRegistry(baseAdapters, systemmanifest.ProjectionStores{Daggerheart: txStore})
 				if err != nil {
 					return fmt.Errorf("rebind projection system adapter registry: %w", err)

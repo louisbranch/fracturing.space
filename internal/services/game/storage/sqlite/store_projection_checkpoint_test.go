@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func TestApplyProjectionEventExactlyOnceSkipsDuplicateSeq(t *testing.T) {
@@ -39,7 +40,7 @@ func TestApplyProjectionEventExactlyOnceSkipsDuplicateSeq(t *testing.T) {
 	}
 
 	calls := 0
-	apply := func(ctx context.Context, evt event.Event, txStore *Store) error {
+	apply := func(ctx context.Context, evt event.Event, txStore storage.ProjectionApplyTxStore) error {
 		calls++
 		applier := projection.Applier{
 			Campaign:    txStore,
@@ -103,7 +104,7 @@ func TestApplyProjectionEventExactlyOnceConcurrentDuplicateSeq(t *testing.T) {
 	}
 
 	var callbackCalls atomic.Int32
-	apply := func(_ context.Context, _ event.Event, _ *Store) error {
+	apply := func(_ context.Context, _ event.Event, _ storage.ProjectionApplyTxStore) error {
 		callbackCalls.Add(1)
 		time.Sleep(50 * time.Millisecond)
 		return nil

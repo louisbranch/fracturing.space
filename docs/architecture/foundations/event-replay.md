@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 5
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-06"
+last_reviewed: "2026-03-07"
 ---
 
 # Event Replay and Snapshots
@@ -39,6 +39,19 @@ checkpoints reduce rebuild cost; they do not replace journal truth.
 - **Partial replay**: resume after a known sequence boundary.
 
 Mode selection is operational; invariants stay the same.
+
+## Code-level seam contracts
+
+Replay and gap-repair logic depends on narrow projection-local interfaces instead
+of concrete store/applier implementations:
+
+- `EventApplier`: applies one event to projections
+- `ReplayEventStore`: lists ordered campaign events for replay
+- `GapRepairEventStore`: replay listing + high-water sequence lookup
+
+These contracts live in `internal/services/game/projection/replay_contracts.go`
+and keep replay tests focused on durable behavior (ordering, bounds, gap
+detection) instead of broad infrastructure fake implementations.
 
 ## Checkpoint and snapshot model
 

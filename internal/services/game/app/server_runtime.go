@@ -2,13 +2,10 @@ package server
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"log"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"google.golang.org/grpc"
 )
 
 func (s *Server) Addr() string {
@@ -42,39 +39,27 @@ func (s *Server) Serve(ctx context.Context) error {
 		ctx = context.Background()
 	}
 	defer s.closeResources()
-	stopOutboxWorker := s.startProjectionApplyOutboxWorker(ctx)
-	defer stopOutboxWorker()
-	stopOutboxShadowWorker := s.startProjectionApplyOutboxShadowWorker(ctx)
-	defer stopOutboxShadowWorker()
-	stopStatusReporter := s.startStatusReporter(ctx)
-	defer stopStatusReporter()
-	stopCatalogAvailabilityMonitor := s.startCatalogAvailabilityMonitor(ctx)
-	defer stopCatalogAvailabilityMonitor()
+	stopAncillaryWorkers := composeRuntimeStops(
+		s.startProjectionApplyOutboxWorker(ctx),
+		s.startProjectionApplyOutboxShadowWorker(ctx),
+		s.startStatusReporter(ctx),
+		s.startCatalogAvailabilityMonitor(ctx),
+	)
+	defer stopAncillaryWorkers()
 
 	log.Printf("game server listening at %v", s.listener.Addr())
-	serveErr := make(chan error, 1)
-	go func() {
-		serveErr <- s.grpcServer.Serve(s.listener)
-	}()
-
-	handleErr := func(err error) error {
-		if err == nil || errors.Is(err, grpc.ErrServerStopped) {
-			return nil
-		}
-		return fmt.Errorf("serve gRPC: %w", err)
-	}
-
-	select {
-	case <-ctx.Done():
-		if s.health != nil {
-			s.health.Shutdown()
-		}
-		s.grpcServer.GracefulStop()
-		err := <-serveErr
-		return handleErr(err)
-	case err := <-serveErr:
-		return handleErr(err)
-	}
+	return runGRPCServeLoop(
+		ctx,
+		func() error {
+			return s.grpcServer.Serve(s.listener)
+		},
+		func() {
+			if s.health != nil {
+				s.health.Shutdown()
+			}
+			s.grpcServer.GracefulStop()
+		},
+	)
 }
 
 // startProjectionApplyOutboxShadowWorker launches an optional background shadow worker.
@@ -86,10 +71,7 @@ func (s *Server) startProjectionApplyOutboxShadowWorker(ctx context.Context) fun
 		return func() {}
 	}
 
-	workerCtx, cancel := context.WithCancel(ctx)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
+	return startCancelableLoop(ctx, func(workerCtx context.Context) {
 		runProjectionApplyOutboxShadowWorker(
 			workerCtx,
 			s.stores.events,
@@ -98,12 +80,7 @@ func (s *Server) startProjectionApplyOutboxShadowWorker(ctx context.Context) fun
 			time.Now,
 			log.Printf,
 		)
-	}()
-
-	return func() {
-		cancel()
-		<-done
-	}
+	})
 }
 
 // startProjectionApplyOutboxWorker launches an optional background projection worker.
@@ -114,10 +91,7 @@ func (s *Server) startProjectionApplyOutboxWorker(ctx context.Context) func() {
 		return func() {}
 	}
 
-	workerCtx, cancel := context.WithCancel(ctx)
-	done := make(chan struct{})
-	go func() {
-		defer close(done)
+	return startCancelableLoop(ctx, func(workerCtx context.Context) {
 		runProjectionApplyOutboxWorker(
 			workerCtx,
 			s.stores.events,
@@ -127,12 +101,7 @@ func (s *Server) startProjectionApplyOutboxWorker(ctx context.Context) func() {
 			time.Now,
 			log.Printf,
 		)
-	}()
-
-	return func() {
-		cancel()
-		<-done
-	}
+	})
 }
 
 // runProjectionApplyOutboxShadowWorker drains projection outbox shadow entries.
@@ -169,27 +138,7 @@ func runProjectionApplyOutboxShadowWorker(
 		return processed
 	}
 
-	for {
-		if runPass() < limit {
-			break
-		}
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-	}
-
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			runPass()
-		}
-	}
+	runBatchedPollingLoop(ctx, interval, limit, runPass)
 }
 
 // runProjectionApplyOutboxWorker drains projection outbox entries into projections.
@@ -226,27 +175,7 @@ func runProjectionApplyOutboxWorker(
 		return processed
 	}
 
-	for {
-		if runPass() < limit {
-			break
-		}
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-	}
-
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-ticker.C:
-			runPass()
-		}
-	}
+	runBatchedPollingLoop(ctx, interval, limit, runPass)
 }
 
 // closeResources closes store handles and outbound connections.

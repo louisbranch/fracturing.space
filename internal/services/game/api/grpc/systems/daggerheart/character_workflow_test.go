@@ -170,14 +170,10 @@ func TestCreationStepNumber(t *testing.T) {
 }
 
 func TestDefaultProfileForCharacter(t *testing.T) {
-	rec := storage.CharacterRecord{ID: "ch1", Kind: character.KindPC}
-	profile := defaultProfileForCharacter("c1", rec)
+	profile := defaultProfileForCharacter("c1", character.KindPC)
 
 	if profile.CampaignID != "c1" {
 		t.Fatalf("CampaignID = %q, want %q", profile.CampaignID, "c1")
-	}
-	if profile.CharacterID != "ch1" {
-		t.Fatalf("CharacterID = %q, want %q", profile.CharacterID, "ch1")
 	}
 	if profile.HpMax == 0 {
 		t.Fatal("HpMax should have a default > 0")

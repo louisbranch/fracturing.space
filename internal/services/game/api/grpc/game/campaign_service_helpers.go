@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -38,5 +39,5 @@ func ensureNoActiveSession(ctx context.Context, store storage.SessionStore, camp
 // The default locale is intentional so behavior is stable while auth/web and
 // gRPC metadata propagation is still being aligned for user-facing localization.
 func handleDomainError(err error) error {
-	return apperrors.HandleError(err, apperrors.DefaultLocale)
+	return grpcerror.HandleDomainError(err)
 }

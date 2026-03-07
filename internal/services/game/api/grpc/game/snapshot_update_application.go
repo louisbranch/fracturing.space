@@ -70,7 +70,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 			ctx,
 			a.stores,
 			applier,
-			commandbuild.DaggerheartSystem(commandbuild.DaggerheartSystemInput{
+			commandbuild.System(commandbuild.SystemInput{
 				CoreInput: commandbuild.CoreInput{
 					CampaignID:   campaignID,
 					Type:         commandTypeDaggerheartGMFearSet,
@@ -83,6 +83,8 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 					EntityID:     campaignID,
 					PayloadJSON:  payloadJSON,
 				},
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
 			}),
 			domainwrite.Options{
 				RequireEvents:   true,

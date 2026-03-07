@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 const replayPageSize = 200
@@ -22,13 +21,13 @@ type ReplayOptions struct {
 }
 
 // ReplayCampaign rebuilds campaign-level projections from event 0 onward.
-func ReplayCampaign(ctx context.Context, eventStore storage.EventStore, applier Applier, campaignID string) (uint64, error) {
+func ReplayCampaign(ctx context.Context, eventStore ReplayEventStore, applier EventApplier, campaignID string) (uint64, error) {
 	return ReplayCampaignWith(ctx, eventStore, applier, campaignID, ReplayOptions{})
 }
 
 // ReplaySnapshot replays snapshot-bearing events only, useful for state reconstruction
 // paths that depend on system snapshots.
-func ReplaySnapshot(ctx context.Context, eventStore storage.EventStore, applier Applier, campaignID string, untilSeq uint64) (uint64, error) {
+func ReplaySnapshot(ctx context.Context, eventStore ReplayEventStore, applier EventApplier, campaignID string, untilSeq uint64) (uint64, error) {
 	return ReplayCampaignWith(ctx, eventStore, applier, campaignID, ReplayOptions{
 		UntilSeq: untilSeq,
 		Filter: func(evt event.Event) bool {
@@ -41,9 +40,12 @@ func ReplaySnapshot(ctx context.Context, eventStore storage.EventStore, applier 
 //
 // It exists for operational recovery: one code path for full rebuild and one for
 // bounded/specialized replay flows.
-func ReplayCampaignWith(ctx context.Context, eventStore storage.EventStore, applier Applier, campaignID string, options ReplayOptions) (uint64, error) {
+func ReplayCampaignWith(ctx context.Context, eventStore ReplayEventStore, applier EventApplier, campaignID string, options ReplayOptions) (uint64, error) {
 	if eventStore == nil {
 		return 0, fmt.Errorf("event store is not configured")
+	}
+	if applier == nil {
+		return 0, fmt.Errorf("event applier is not configured")
 	}
 	if strings.TrimSpace(campaignID) == "" {
 		return 0, fmt.Errorf("campaign id is required")

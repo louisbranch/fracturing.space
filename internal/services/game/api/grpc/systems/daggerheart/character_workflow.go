@@ -22,31 +22,31 @@ import (
 // the Daggerheart game system. It satisfies workflow.Provider.
 type CreationWorkflowProvider struct{}
 
-func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps workflow.CreationDeps, campaignRecord storage.CampaignRecord, characterID string) (workflow.Progress, error) {
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
+func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps workflow.CreationDeps, campaignContext workflow.CampaignContext, characterID string) (workflow.Progress, error) {
+	if err := campaign.ValidateCampaignOperation(campaignContext.Status, campaign.CampaignOpRead); err != nil {
 		return workflow.Progress{}, err
 	}
-	if err := deps.RequireReadPolicy(ctx, campaignRecord); err != nil {
-		return workflow.Progress{}, err
-	}
-
-	if _, err := deps.GetCharacterRecord(ctx, campaignRecord.ID, characterID); err != nil {
+	if err := deps.RequireReadPolicy(ctx, campaignContext); err != nil {
 		return workflow.Progress{}, err
 	}
 
-	profile, err := deps.GetCharacterSystemProfile(ctx, campaignRecord.ID, characterID)
+	if _, err := deps.GetCharacterRecord(ctx, campaignContext.ID, characterID); err != nil {
+		return workflow.Progress{}, err
+	}
+
+	profile, err := deps.GetCharacterSystemProfile(ctx, campaignContext.ID, characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return workflow.Progress{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
 		}
-		profile = storage.DaggerheartCharacterProfile{CampaignID: campaignRecord.ID, CharacterID: characterID}
+		profile = storage.DaggerheartCharacterProfile{CampaignID: campaignContext.ID, CharacterID: characterID}
 	}
 
 	progress := daggerheart.EvaluateCreationProgress(creationProfileFromStorage(profile))
 	return progressFromDaggerheart(progress), nil
 }
 
-func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.CreationDeps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationStepRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
+func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.CreationDeps, campaignContext workflow.CampaignContext, in *campaignv1.ApplyCharacterCreationStepRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
 	characterID := strings.TrimSpace(in.GetCharacterId())
 	if characterID == "" {
 		return nil, workflow.Progress{}, status.Error(codes.InvalidArgument, "character id is required")
@@ -60,21 +60,21 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Cre
 		return nil, workflow.Progress{}, err
 	}
 
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
+	if err := campaign.ValidateCampaignOperation(campaignContext.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, workflow.Progress{}, err
 	}
 
-	characterRecord, err := deps.GetCharacterRecord(ctx, campaignRecord.ID, characterID)
+	characterRecord, err := deps.GetCharacterRecord(ctx, campaignContext.ID, characterID)
 	if err != nil {
 		return nil, workflow.Progress{}, err
 	}
 
-	profile, err := deps.GetCharacterSystemProfile(ctx, campaignRecord.ID, characterID)
+	profile, err := deps.GetCharacterSystemProfile(ctx, campaignContext.ID, characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return nil, workflow.Progress{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
 		}
-		profile = defaultProfileForCharacter(campaignRecord.ID, characterRecord)
+		profile = defaultProfileForCharacter(campaignContext.ID, characterRecord.Kind)
 	} else {
 		profile = ensureProfileDefaults(profile, characterRecord.Kind)
 	}
@@ -100,15 +100,15 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Cre
 		return nil, workflow.Progress{}, err
 	}
 
-	if err := deps.ExecuteProfileUpdate(ctx, campaignRecord, characterID, SystemProfileMap(profile)); err != nil {
+	if err := deps.ExecuteProfileUpdate(ctx, campaignContext, characterID, SystemProfileMap(profile)); err != nil {
 		return nil, workflow.Progress{}, err
 	}
 
 	nextProgress := daggerheart.EvaluateCreationProgress(creationProfileFromStorage(profile))
-	return deps.ProfileToProto(campaignRecord.ID, characterID, profile), progressFromDaggerheart(nextProgress), nil
+	return deps.ProfileToProto(campaignContext.ID, characterID, profile), progressFromDaggerheart(nextProgress), nil
 }
 
-func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow.CreationDeps, campaignRecord storage.CampaignRecord, in *campaignv1.ApplyCharacterCreationWorkflowRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
+func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow.CreationDeps, campaignContext workflow.CampaignContext, in *campaignv1.ApplyCharacterCreationWorkflowRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
 	characterID := strings.TrimSpace(in.GetCharacterId())
 	if characterID == "" {
 		return nil, workflow.Progress{}, status.Error(codes.InvalidArgument, "character id is required")
@@ -118,21 +118,21 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow
 		return nil, workflow.Progress{}, status.Error(codes.InvalidArgument, "daggerheart workflow payload is required")
 	}
 
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
+	if err := campaign.ValidateCampaignOperation(campaignContext.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, workflow.Progress{}, err
 	}
 
-	characterRecord, err := deps.GetCharacterRecord(ctx, campaignRecord.ID, characterID)
+	characterRecord, err := deps.GetCharacterRecord(ctx, campaignContext.ID, characterID)
 	if err != nil {
 		return nil, workflow.Progress{}, err
 	}
 
-	profile, err := deps.GetCharacterSystemProfile(ctx, campaignRecord.ID, characterID)
+	profile, err := deps.GetCharacterSystemProfile(ctx, campaignContext.ID, characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return nil, workflow.Progress{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
 		}
-		profile = defaultProfileForCharacter(campaignRecord.ID, characterRecord)
+		profile = defaultProfileForCharacter(campaignContext.ID, characterRecord.Kind)
 	} else {
 		profile = ensureProfileDefaults(profile, characterRecord.Kind)
 	}
@@ -176,23 +176,23 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow
 		return nil, workflow.Progress{}, status.Error(codes.FailedPrecondition, "character creation workflow is incomplete")
 	}
 
-	if err := deps.ExecuteProfileUpdate(ctx, campaignRecord, characterID, SystemProfileMap(profile)); err != nil {
+	if err := deps.ExecuteProfileUpdate(ctx, campaignContext, characterID, SystemProfileMap(profile)); err != nil {
 		return nil, workflow.Progress{}, err
 	}
 
-	return deps.ProfileToProto(campaignRecord.ID, characterID, profile), progressFromDaggerheart(finalProgress), nil
+	return deps.ProfileToProto(campaignContext.ID, characterID, profile), progressFromDaggerheart(finalProgress), nil
 }
 
-func (CreationWorkflowProvider) Reset(ctx context.Context, deps workflow.CreationDeps, campaignRecord storage.CampaignRecord, characterID string) (workflow.Progress, error) {
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
+func (CreationWorkflowProvider) Reset(ctx context.Context, deps workflow.CreationDeps, campaignContext workflow.CampaignContext, characterID string) (workflow.Progress, error) {
+	if err := campaign.ValidateCampaignOperation(campaignContext.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return workflow.Progress{}, err
 	}
 
-	if _, err := deps.GetCharacterRecord(ctx, campaignRecord.ID, characterID); err != nil {
+	if _, err := deps.GetCharacterRecord(ctx, campaignContext.ID, characterID); err != nil {
 		return workflow.Progress{}, err
 	}
 
-	if err := deps.ExecuteProfileUpdate(ctx, campaignRecord, characterID, map[string]any{
+	if err := deps.ExecuteProfileUpdate(ctx, campaignContext, characterID, map[string]any{
 		"daggerheart": map[string]any{"reset": true},
 	}); err != nil {
 		return workflow.Progress{}, err
@@ -693,12 +693,11 @@ func validateProfile(profile storage.DaggerheartCharacterProfile) error {
 	)
 }
 
-func defaultProfileForCharacter(campaignID string, characterRecord storage.CharacterRecord) storage.DaggerheartCharacterProfile {
+func defaultProfileForCharacter(campaignID string, kind character.Kind) storage.DaggerheartCharacterProfile {
 	profile := storage.DaggerheartCharacterProfile{
-		CampaignID:  campaignID,
-		CharacterID: characterRecord.ID,
+		CampaignID: campaignID,
 	}
-	return ensureProfileDefaults(profile, characterRecord.Kind)
+	return ensureProfileDefaults(profile, kind)
 }
 
 func ensureProfileDefaults(profile storage.DaggerheartCharacterProfile, kind character.Kind) storage.DaggerheartCharacterProfile {

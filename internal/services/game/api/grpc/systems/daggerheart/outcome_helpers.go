@@ -83,9 +83,11 @@ type daggerheartSystemCommandInput struct {
 
 func (s *DaggerheartService) executeAndApplyDaggerheartSystemCommand(ctx context.Context, in daggerheartSystemCommandInput) error {
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
-	cmd := commandbuild.DaggerheartSystemCommand(commandbuild.DaggerheartSystemCommandInput{
+	cmd := commandbuild.SystemCommand(commandbuild.SystemCommandInput{
 		CampaignID:    in.campaignID,
 		Type:          in.commandType,
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
 		SessionID:     in.sessionID,
 		SceneID:       in.sceneID,
 		RequestID:     in.requestID,
