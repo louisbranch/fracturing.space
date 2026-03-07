@@ -81,6 +81,12 @@ func (a *Adapter) buildRouter() *module.AdapterRouter {
 	module.HandleAdapter(r, EventTypeAdversaryDamageApplied, a.handleAdversaryDamageApplied)
 	module.HandleAdapter(r, EventTypeAdversaryUpdated, a.handleAdversaryUpdated)
 	module.HandleAdapter(r, EventTypeAdversaryDeleted, a.handleAdversaryDeleted)
+	module.HandleAdapter(r, EventTypeLevelUpApplied, a.handleLevelUpApplied)
+	module.HandleAdapter(r, EventTypeGoldUpdated, a.handleGoldUpdated)
+	module.HandleAdapter(r, EventTypeDomainCardAcquired, a.handleDomainCardAcquired)
+	module.HandleAdapter(r, EventTypeEquipmentSwapped, a.handleEquipmentSwapped)
+	module.HandleAdapter(r, EventTypeConsumableUsed, a.handleConsumableUsed)
+	module.HandleAdapter(r, EventTypeConsumableAcquired, a.handleConsumableAcquired)
 	return r
 }
 
@@ -214,14 +220,17 @@ func (a *Adapter) handleGMFearChanged(ctx context.Context, evt event.Event, payl
 
 func (a *Adapter) handleCountdownCreated(ctx context.Context, evt event.Event, payload CountdownCreatedPayload) error {
 	return a.store.PutDaggerheartCountdown(ctx, storage.DaggerheartCountdown{
-		CampaignID:  evt.CampaignID,
-		CountdownID: payload.CountdownID,
-		Name:        payload.Name,
-		Kind:        payload.Kind,
-		Current:     payload.Current,
-		Max:         payload.Max,
-		Direction:   payload.Direction,
-		Looping:     payload.Looping,
+		CampaignID:        evt.CampaignID,
+		CountdownID:       payload.CountdownID,
+		Name:              payload.Name,
+		Kind:              payload.Kind,
+		Current:           payload.Current,
+		Max:               payload.Max,
+		Direction:         payload.Direction,
+		Looping:           payload.Looping,
+		Variant:           payload.Variant,
+		TriggerEventType:  payload.TriggerEventType,
+		LinkedCountdownID: payload.LinkedCountdownID,
 	})
 }
 
@@ -317,6 +326,123 @@ func (a *Adapter) handleAdversaryDamageApplied(ctx context.Context, evt event.Ev
 
 func (a *Adapter) handleAdversaryDeleted(ctx context.Context, evt event.Event, payload AdversaryDeletedPayload) error {
 	return a.store.DeleteDaggerheartAdversary(ctx, evt.CampaignID, strings.TrimSpace(payload.AdversaryID))
+}
+
+func (a *Adapter) handleLevelUpApplied(ctx context.Context, evt event.Event, payload LevelUpAppliedPayload) error {
+	characterID := strings.TrimSpace(payload.CharacterID)
+	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, evt.CampaignID, characterID)
+	if err != nil {
+		if !errors.Is(err, storage.ErrNotFound) {
+			return fmt.Errorf("get daggerheart character profile for level-up: %w", err)
+		}
+		// No profile yet — nothing to project onto.
+		return nil
+	}
+
+	profile.Level = payload.LevelAfter
+	profile.MajorThreshold += payload.ThresholdDelta
+	profile.SevereThreshold += payload.ThresholdDelta * 2
+
+	for _, adv := range payload.Advancements {
+		switch adv.Type {
+		case "trait_increase":
+			applyProfileTraitIncrease(&profile, adv.Trait)
+		case "add_hp_slots":
+			profile.HpMax++
+		case "add_stress_slots":
+			profile.StressMax++
+		case "increase_evasion":
+			profile.Evasion++
+		case "increase_proficiency":
+			profile.Proficiency++
+		case "increase_experience":
+			// Experience additions are content-level; no profile field change needed.
+		case "domain_card":
+			if adv.DomainCardID != "" {
+				profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, adv.DomainCardID)
+			}
+		case "upgraded_subclass":
+			if adv.SubclassCardID != "" {
+				profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, adv.SubclassCardID)
+			}
+		}
+	}
+
+	// Step 4 domain card acquisition.
+	if payload.NewDomainCardID != "" {
+		profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, payload.NewDomainCardID)
+	}
+
+	return a.store.PutDaggerheartCharacterProfile(ctx, profile)
+}
+
+func applyProfileTraitIncrease(profile *storage.DaggerheartCharacterProfile, trait string) {
+	switch trait {
+	case "agility":
+		profile.Agility++
+	case "strength":
+		profile.Strength++
+	case "finesse":
+		profile.Finesse++
+	case "instinct":
+		profile.Instinct++
+	case "presence":
+		profile.Presence++
+	case "knowledge":
+		profile.Knowledge++
+	}
+}
+
+func (a *Adapter) handleGoldUpdated(ctx context.Context, evt event.Event, payload GoldUpdatedPayload) error {
+	characterID := strings.TrimSpace(payload.CharacterID)
+	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, evt.CampaignID, characterID)
+	if err != nil {
+		if !errors.Is(err, storage.ErrNotFound) {
+			return fmt.Errorf("get daggerheart character profile for gold update: %w", err)
+		}
+		return nil
+	}
+	profile.GoldHandfuls = payload.HandfulsAfter
+	profile.GoldBags = payload.BagsAfter
+	profile.GoldChests = payload.ChestsAfter
+	return a.store.PutDaggerheartCharacterProfile(ctx, profile)
+}
+
+func (a *Adapter) handleDomainCardAcquired(ctx context.Context, evt event.Event, payload DomainCardAcquiredPayload) error {
+	characterID := strings.TrimSpace(payload.CharacterID)
+	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, evt.CampaignID, characterID)
+	if err != nil {
+		if !errors.Is(err, storage.ErrNotFound) {
+			return fmt.Errorf("get daggerheart character profile for domain card acquire: %w", err)
+		}
+		return nil
+	}
+	profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, strings.TrimSpace(payload.CardID))
+	return a.store.PutDaggerheartCharacterProfile(ctx, profile)
+}
+
+func (a *Adapter) handleEquipmentSwapped(_ context.Context, _ event.Event, _ EquipmentSwappedPayload) error {
+	// Equipment state is event-sourced; no projection update needed.
+	return nil
+}
+
+func (a *Adapter) handleConsumableUsed(_ context.Context, _ event.Event, _ ConsumableUsedPayload) error {
+	// Consumable state is event-sourced; no projection update needed.
+	return nil
+}
+
+func (a *Adapter) handleConsumableAcquired(_ context.Context, _ event.Event, _ ConsumableAcquiredPayload) error {
+	// Consumable state is event-sourced; no projection update needed.
+	return nil
+}
+
+func appendUnique(slice []string, value string) []string {
+	for _, v := range slice {
+		if v == value {
+			return slice
+		}
+	}
+	return append(slice, value)
 }
 
 func (a *Adapter) characterArmorMax(ctx context.Context, state storage.DaggerheartCharacterState) (int, error) {

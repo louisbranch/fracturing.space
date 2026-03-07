@@ -46,6 +46,12 @@ func TestAdapterAndFolder_EventVectorParity(t *testing.T) {
 		EventTypeAdversaryDamageApplied,
 		EventTypeAdversaryUpdated,
 		EventTypeAdversaryDeleted,
+		EventTypeLevelUpApplied,
+		EventTypeGoldUpdated,
+		EventTypeDomainCardAcquired,
+		EventTypeEquipmentSwapped,
+		EventTypeConsumableUsed,
+		EventTypeConsumableAcquired,
 	}
 	if got, want := len(sequence), len(daggerheartEventDefinitions); got != want {
 		t.Fatalf("event sequence = %d, definitions = %d", got, want)
@@ -163,13 +169,16 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			HopeAfter:   intPtr(4),
 		},
 		EventTypeCountdownCreated: CountdownCreatedPayload{
-			CountdownID: "cd-1",
-			Name:        "Doom Clock",
-			Kind:        "progress",
-			Current:     0,
-			Max:         4,
-			Direction:   "increase",
-			Looping:     true,
+			CountdownID:       "cd-1",
+			Name:              "Doom Clock",
+			Kind:              "progress",
+			Current:           0,
+			Max:               4,
+			Direction:         "increase",
+			Looping:           true,
+			Variant:           "dynamic",
+			TriggerEventType:  "sys.daggerheart.damage_applied",
+			LinkedCountdownID: "",
 		},
 		EventTypeCountdownUpdated: CountdownUpdatedPayload{
 			CountdownID: "cd-1",
@@ -222,6 +231,49 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 		},
 		EventTypeAdversaryDeleted: AdversaryDeletedPayload{
 			AdversaryID: "adv-1",
+		},
+		EventTypeLevelUpApplied: LevelUpAppliedPayload{
+			CharacterID: "char-1",
+			LevelBefore: 1,
+			LevelAfter:  2,
+			Advancements: []LevelUpAdvancementPayload{
+				{Type: "add_hp_slots"},
+				{Type: "add_stress_slots"},
+			},
+			Tier:           2,
+			PreviousTier:   1,
+			IsTierEntry:    true,
+			ThresholdDelta: 1,
+		},
+		EventTypeGoldUpdated: GoldUpdatedPayload{
+			CharacterID:    "char-1",
+			HandfulsBefore: 0,
+			HandfulsAfter:  3,
+		},
+		EventTypeDomainCardAcquired: DomainCardAcquiredPayload{
+			CharacterID: "char-1",
+			CardID:      "domain-card-new",
+			CardLevel:   2,
+			Destination: "vault",
+		},
+		EventTypeEquipmentSwapped: EquipmentSwappedPayload{
+			CharacterID: "char-1",
+			ItemID:      "sword-1",
+			ItemType:    "weapon",
+			From:        "inventory",
+			To:          "active",
+		},
+		EventTypeConsumableUsed: ConsumableUsedPayload{
+			CharacterID:    "char-1",
+			ConsumableID:   "potion-1",
+			QuantityBefore: 2,
+			QuantityAfter:  1,
+		},
+		EventTypeConsumableAcquired: ConsumableAcquiredPayload{
+			CharacterID:    "char-1",
+			ConsumableID:   "scroll-1",
+			QuantityBefore: 0,
+			QuantityAfter:  1,
 		},
 	}
 }
@@ -435,14 +487,17 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 			continue
 		}
 		state.CountdownStates[stored.CountdownID] = CountdownState{
-			CampaignID:  stored.CampaignID,
-			CountdownID: stored.CountdownID,
-			Name:        stored.Name,
-			Kind:        stored.Kind,
-			Current:     stored.Current,
-			Max:         stored.Max,
-			Direction:   stored.Direction,
-			Looping:     stored.Looping,
+			CampaignID:        stored.CampaignID,
+			CountdownID:       stored.CountdownID,
+			Name:              stored.Name,
+			Kind:              stored.Kind,
+			Current:           stored.Current,
+			Max:               stored.Max,
+			Direction:         stored.Direction,
+			Looping:           stored.Looping,
+			Variant:           stored.Variant,
+			TriggerEventType:  stored.TriggerEventType,
+			LinkedCountdownID: stored.LinkedCountdownID,
 		}
 	}
 	return state
@@ -483,6 +538,8 @@ func cloneAdversary(adversary storage.DaggerheartAdversary) storage.DaggerheartA
 
 func canonicalizeSnapshotForParity(state SnapshotState) SnapshotState {
 	state.EnsureMaps()
+	// DowntimeMovesSinceRest is fold-only state not projected to adapter storage.
+	state.DowntimeMovesSinceRest = 0
 	for id, character := range state.CharacterStates {
 		character.HPMax = 0
 		character.StressMax = 0

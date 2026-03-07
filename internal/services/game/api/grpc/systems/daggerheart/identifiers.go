@@ -29,6 +29,12 @@ const (
 	commandTypeDaggerheartLoadoutSwap          command.Type = "sys.daggerheart.loadout.swap"
 	commandTypeDaggerheartRestTake             command.Type = "sys.daggerheart.rest.take"
 	commandTypeDaggerheartStressSpend          command.Type = "sys.daggerheart.stress.spend"
+	commandTypeDaggerheartLevelUpApply         command.Type = "sys.daggerheart.level_up.apply"
+	commandTypeDaggerheartGoldUpdate           command.Type = "sys.daggerheart.gold.update"
+	commandTypeDaggerheartDomainCardAcquire    command.Type = "sys.daggerheart.domain_card.acquire"
+	commandTypeDaggerheartEquipmentSwap        command.Type = "sys.daggerheart.equipment.swap"
+	commandTypeDaggerheartConsumableUse        command.Type = "sys.daggerheart.consumable.use"
+	commandTypeDaggerheartConsumableAcquire    command.Type = "sys.daggerheart.consumable.acquire"
 )
 
 const (
@@ -37,4 +43,10 @@ const (
 	eventTypeDaggerheartCharacterStatePatch event.Type = "sys.daggerheart.character_state_patched"
 	eventTypeDaggerheartConditionChanged    event.Type = "sys.daggerheart.condition_changed"
 	eventTypeDaggerheartGMFearChanged       event.Type = "sys.daggerheart.gm_fear_changed"
+	eventTypeDaggerheartLevelUpApplied      event.Type = "sys.daggerheart.level_up_applied"
+	eventTypeDaggerheartGoldUpdated         event.Type = "sys.daggerheart.gold_updated"
+	eventTypeDaggerheartDomainCardAcquired  event.Type = "sys.daggerheart.domain_card_acquired"
+	eventTypeDaggerheartEquipmentSwapped    event.Type = "sys.daggerheart.equipment_swapped"
+	eventTypeDaggerheartConsumableUsed      event.Type = "sys.daggerheart.consumable_used"
+	eventTypeDaggerheartConsumableAcquired  event.Type = "sys.daggerheart.consumable_acquired"
 )

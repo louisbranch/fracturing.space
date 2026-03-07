@@ -63,6 +63,12 @@ func registerFoldHandlers(r *module.FoldRouter[*SnapshotState]) {
 	module.HandleFold(r, EventTypeAdversaryCreated, foldAdversaryCreated)
 	module.HandleFold(r, EventTypeAdversaryUpdated, foldAdversaryUpdated)
 	module.HandleFold(r, EventTypeAdversaryDeleted, foldAdversaryDeleted)
+	module.HandleFold(r, EventTypeLevelUpApplied, foldLevelUpApplied)
+	module.HandleFold(r, EventTypeGoldUpdated, foldGoldUpdated)
+	module.HandleFold(r, EventTypeDomainCardAcquired, foldDomainCardAcquired)
+	module.HandleFold(r, EventTypeEquipmentSwapped, foldEquipmentSwapped)
+	module.HandleFold(r, EventTypeConsumableUsed, foldConsumableUsed)
+	module.HandleFold(r, EventTypeConsumableAcquired, foldConsumableAcquired)
 }
 
 // assertSnapshotState converts untyped state to *SnapshotState for the fold
@@ -124,6 +130,7 @@ func foldRestTaken(state *SnapshotState, payload RestTakenPayload) error {
 	if state.GMFear < GMFearMin || state.GMFear > GMFearMax {
 		return fmt.Errorf("rest_taken gm_fear_after must be in range %d..%d", GMFearMin, GMFearMax)
 	}
+	state.DowntimeMovesSinceRest = 0
 	for _, patch := range payload.CharacterStates {
 		applyRestCharacterPatch(state, patch)
 		if payload.RefreshRest || payload.RefreshLongRest {
@@ -141,6 +148,9 @@ func foldCountdownCreated(state *SnapshotState, payload CountdownCreatedPayload)
 		cs.Max = payload.Max
 		cs.Direction = payload.Direction
 		cs.Looping = payload.Looping
+		cs.Variant = payload.Variant
+		cs.TriggerEventType = payload.TriggerEventType
+		cs.LinkedCountdownID = payload.LinkedCountdownID
 	})
 	return nil
 }
@@ -172,6 +182,7 @@ func foldAdversaryDamageApplied(state *SnapshotState, payload AdversaryDamageApp
 
 func foldDowntimeMoveApplied(state *SnapshotState, payload DowntimeMoveAppliedPayload) error {
 	applyDowntimeMove(state, payload.CharacterID, payload.Move, payload.HopeAfter, payload.StressAfter, payload.ArmorAfter)
+	state.DowntimeMovesSinceRest++
 	return nil
 }
 
@@ -193,6 +204,48 @@ func foldAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatedPayload)
 func foldAdversaryDeleted(state *SnapshotState, payload AdversaryDeletedPayload) error {
 	delete(state.AdversaryStates, strings.TrimSpace(payload.AdversaryID))
 	return nil
+}
+
+func foldLevelUpApplied(state *SnapshotState, payload LevelUpAppliedPayload) error {
+	touchCharacter(state, payload.CharacterID)
+	return nil
+}
+
+func foldGoldUpdated(state *SnapshotState, payload GoldUpdatedPayload) error {
+	touchCharacter(state, payload.CharacterID)
+	return nil
+}
+
+func foldDomainCardAcquired(state *SnapshotState, payload DomainCardAcquiredPayload) error {
+	touchCharacter(state, payload.CharacterID)
+	return nil
+}
+
+func foldEquipmentSwapped(state *SnapshotState, payload EquipmentSwappedPayload) error {
+	touchCharacter(state, payload.CharacterID)
+	return nil
+}
+
+func foldConsumableUsed(state *SnapshotState, payload ConsumableUsedPayload) error {
+	touchCharacter(state, payload.CharacterID)
+	return nil
+}
+
+func foldConsumableAcquired(state *SnapshotState, payload ConsumableAcquiredPayload) error {
+	touchCharacter(state, payload.CharacterID)
+	return nil
+}
+
+// touchCharacter ensures a CharacterState entry exists for the given character.
+func touchCharacter(state *SnapshotState, rawID string) {
+	characterID := strings.TrimSpace(rawID)
+	if characterID == "" {
+		return
+	}
+	cs := state.CharacterStates[characterID]
+	cs.CampaignID = state.CampaignID
+	cs.CharacterID = characterID
+	state.CharacterStates[characterID] = cs
 }
 
 func applyCharacterStatePatched(state *SnapshotState, payload CharacterStatePatchedPayload) {

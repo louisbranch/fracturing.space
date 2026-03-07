@@ -27,6 +27,12 @@ const (
 	commandTypeAdversaryUpdate              command.Type = commandids.DaggerheartAdversaryUpdate
 	commandTypeAdversaryDelete              command.Type = commandids.DaggerheartAdversaryDelete
 	commandTypeMultiTargetDamageApply       command.Type = commandids.DaggerheartMultiTargetDamageApply
+	commandTypeLevelUpApply                 command.Type = commandids.DaggerheartLevelUpApply
+	commandTypeGoldUpdate                   command.Type = commandids.DaggerheartGoldUpdate
+	commandTypeDomainCardAcquire            command.Type = commandids.DaggerheartDomainCardAcquire
+	commandTypeEquipmentSwap                command.Type = commandids.DaggerheartEquipmentSwap
+	commandTypeConsumableUse                command.Type = commandids.DaggerheartConsumableUse
+	commandTypeConsumableAcquire            command.Type = commandids.DaggerheartConsumableAcquire
 
 	rejectionCodeGMFearAfterRequired             = "GM_FEAR_AFTER_REQUIRED"
 	rejectionCodeGMFearOutOfRange                = "GM_FEAR_AFTER_OUT_OF_RANGE"
@@ -64,13 +70,19 @@ var daggerheartDecisionHandlers = map[command.Type]daggerheartDecisionHandler{
 	commandTypeCountdownDelete:              wrapDaggerheartDecisionWithoutState(decideCountdownDelete),
 	commandTypeDamageApply:                  decideDamageApply,
 	commandTypeAdversaryDamageApply:         decideAdversaryDamageApply,
-	commandTypeDowntimeMoveApply:            wrapDaggerheartDecisionWithoutState(decideDowntimeMoveApply),
+	commandTypeDowntimeMoveApply:            decideDowntimeMoveApply,
 	commandTypeCharacterTemporaryArmorApply: wrapDaggerheartDecisionWithoutState(decideCharacterTemporaryArmorApply),
 	commandTypeAdversaryConditionChange:     decideAdversaryConditionChange,
 	commandTypeAdversaryCreate:              decideAdversaryCreate,
 	commandTypeAdversaryUpdate:              wrapDaggerheartDecisionWithoutState(decideAdversaryUpdate),
 	commandTypeAdversaryDelete:              wrapDaggerheartDecisionWithoutState(decideAdversaryDelete),
 	commandTypeMultiTargetDamageApply:       decideMultiTargetDamageApply,
+	commandTypeLevelUpApply:                 wrapDaggerheartDecisionWithoutState(decideLevelUpApply),
+	commandTypeGoldUpdate:                   wrapDaggerheartDecisionWithoutState(decideGoldUpdate),
+	commandTypeDomainCardAcquire:            wrapDaggerheartDecisionWithoutState(decideDomainCardAcquire),
+	commandTypeEquipmentSwap:                wrapDaggerheartDecisionWithoutState(decideEquipmentSwap),
+	commandTypeConsumableUse:                wrapDaggerheartDecisionWithoutState(decideConsumableUse),
+	commandTypeConsumableAcquire:            wrapDaggerheartDecisionWithoutState(decideConsumableAcquire),
 }
 
 // DeciderHandledCommands returns the command types this decider handles.

@@ -60,4 +60,10 @@ const (
 	DaggerheartAdversaryUpdate              command.Type = "sys.daggerheart.adversary.update"
 	DaggerheartAdversaryDelete              command.Type = "sys.daggerheart.adversary.delete"
 	DaggerheartMultiTargetDamageApply       command.Type = "sys.daggerheart.multi_target_damage.apply"
+	DaggerheartLevelUpApply                 command.Type = "sys.daggerheart.level_up.apply"
+	DaggerheartGoldUpdate                   command.Type = "sys.daggerheart.gold.update"
+	DaggerheartDomainCardAcquire            command.Type = "sys.daggerheart.domain_card.acquire"
+	DaggerheartEquipmentSwap                command.Type = "sys.daggerheart.equipment.swap"
+	DaggerheartConsumableUse                command.Type = "sys.daggerheart.consumable.use"
+	DaggerheartConsumableAcquire            command.Type = "sys.daggerheart.consumable.acquire"
 )

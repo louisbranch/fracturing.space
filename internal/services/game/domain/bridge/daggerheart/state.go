@@ -25,11 +25,12 @@ const (
 
 // SnapshotState captures campaign-level Daggerheart state.
 type SnapshotState struct {
-	CampaignID      string
-	GMFear          int
-	CharacterStates map[string]CharacterState
-	AdversaryStates map[string]AdversaryState
-	CountdownStates map[string]CountdownState
+	CampaignID             string
+	GMFear                 int
+	DowntimeMovesSinceRest int
+	CharacterStates        map[string]CharacterState
+	AdversaryStates        map[string]AdversaryState
+	CountdownStates        map[string]CountdownState
 }
 
 type TemporaryArmorBucket = mechanics.TemporaryArmorBucket
@@ -72,12 +73,15 @@ func (s *SnapshotState) EnsureMaps() {
 
 // CountdownState captures Daggerheart countdown state for aggregate projections.
 type CountdownState struct {
-	CampaignID  string
-	CountdownID string
-	Name        string
-	Kind        string
-	Current     int
-	Max         int
-	Direction   string
-	Looping     bool
+	CampaignID        string
+	CountdownID       string
+	Name              string
+	Kind              string
+	Current           int
+	Max               int
+	Direction         string
+	Looping           bool
+	Variant           string
+	TriggerEventType  string
+	LinkedCountdownID string
 }

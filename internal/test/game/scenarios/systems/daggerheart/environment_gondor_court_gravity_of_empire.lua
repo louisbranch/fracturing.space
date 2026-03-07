@@ -15,7 +15,8 @@ scn:pc("Frodo")
 scn:start_session("Gravity of Empire")
 dh:gm_fear(1)
 
--- Missing DSL: apply Presence reaction and stress or acceptance on failure.
+-- Narrative spotlight temptation — the reaction roll and conditions model the
+-- mechanical pressure; no gold mechanic is involved.
 dh:gm_spend_fear(1):spotlight("Gondor Court", { description = "golden_opportunity_offer" })
 dh:reaction_roll{ actor = "Frodo", trait = "presence", difficulty = 20, outcome = "failure_fear" }
 dh:apply_reaction_outcome{

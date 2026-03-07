@@ -58,6 +58,12 @@ const (
 	DaggerheartService_ApplyAttackOutcome_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/ApplyAttackOutcome"
 	DaggerheartService_ApplyAdversaryAttackOutcome_FullMethodName = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryAttackOutcome"
 	DaggerheartService_ApplyReactionOutcome_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyReactionOutcome"
+	DaggerheartService_ApplyLevelUp_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/ApplyLevelUp"
+	DaggerheartService_UpdateGold_FullMethodName                  = "/systems.daggerheart.v1.DaggerheartService/UpdateGold"
+	DaggerheartService_AcquireDomainCard_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/AcquireDomainCard"
+	DaggerheartService_SwapEquipment_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/SwapEquipment"
+	DaggerheartService_UseConsumable_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/UseConsumable"
+	DaggerheartService_AcquireConsumable_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/AcquireConsumable"
 )
 
 // DaggerheartServiceClient is the client API for DaggerheartService service.
@@ -144,6 +150,18 @@ type DaggerheartServiceClient interface {
 	ApplyAdversaryAttackOutcome(ctx context.Context, in *DaggerheartApplyAdversaryAttackOutcomeRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryAttackOutcomeResponse, error)
 	// Apply a reaction outcome from a resolved reaction roll.
 	ApplyReactionOutcome(ctx context.Context, in *DaggerheartApplyReactionOutcomeRequest, opts ...grpc.CallOption) (*DaggerheartApplyReactionOutcomeResponse, error)
+	// Apply a level-up to a character (progression).
+	ApplyLevelUp(ctx context.Context, in *DaggerheartApplyLevelUpRequest, opts ...grpc.CallOption) (*DaggerheartApplyLevelUpResponse, error)
+	// Update a character's gold denominations (inventory).
+	UpdateGold(ctx context.Context, in *DaggerheartUpdateGoldRequest, opts ...grpc.CallOption) (*DaggerheartUpdateGoldResponse, error)
+	// Acquire a domain card into a character's vault or loadout (inventory).
+	AcquireDomainCard(ctx context.Context, in *DaggerheartAcquireDomainCardRequest, opts ...grpc.CallOption) (*DaggerheartAcquireDomainCardResponse, error)
+	// Swap equipment between active/inventory/none slots (inventory).
+	SwapEquipment(ctx context.Context, in *DaggerheartSwapEquipmentRequest, opts ...grpc.CallOption) (*DaggerheartSwapEquipmentResponse, error)
+	// Use a consumable, decrementing its quantity (inventory).
+	UseConsumable(ctx context.Context, in *DaggerheartUseConsumableRequest, opts ...grpc.CallOption) (*DaggerheartUseConsumableResponse, error)
+	// Acquire a consumable, incrementing its quantity (inventory).
+	AcquireConsumable(ctx context.Context, in *DaggerheartAcquireConsumableRequest, opts ...grpc.CallOption) (*DaggerheartAcquireConsumableResponse, error)
 }
 
 type daggerheartServiceClient struct {
@@ -534,6 +552,66 @@ func (c *daggerheartServiceClient) ApplyReactionOutcome(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *daggerheartServiceClient) ApplyLevelUp(ctx context.Context, in *DaggerheartApplyLevelUpRequest, opts ...grpc.CallOption) (*DaggerheartApplyLevelUpResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyLevelUpResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyLevelUp_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) UpdateGold(ctx context.Context, in *DaggerheartUpdateGoldRequest, opts ...grpc.CallOption) (*DaggerheartUpdateGoldResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartUpdateGoldResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_UpdateGold_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) AcquireDomainCard(ctx context.Context, in *DaggerheartAcquireDomainCardRequest, opts ...grpc.CallOption) (*DaggerheartAcquireDomainCardResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartAcquireDomainCardResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_AcquireDomainCard_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) SwapEquipment(ctx context.Context, in *DaggerheartSwapEquipmentRequest, opts ...grpc.CallOption) (*DaggerheartSwapEquipmentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartSwapEquipmentResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_SwapEquipment_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) UseConsumable(ctx context.Context, in *DaggerheartUseConsumableRequest, opts ...grpc.CallOption) (*DaggerheartUseConsumableResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartUseConsumableResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_UseConsumable_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) AcquireConsumable(ctx context.Context, in *DaggerheartAcquireConsumableRequest, opts ...grpc.CallOption) (*DaggerheartAcquireConsumableResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartAcquireConsumableResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_AcquireConsumable_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DaggerheartServiceServer is the server API for DaggerheartService service.
 // All implementations must embed UnimplementedDaggerheartServiceServer
 // for forward compatibility.
@@ -618,6 +696,18 @@ type DaggerheartServiceServer interface {
 	ApplyAdversaryAttackOutcome(context.Context, *DaggerheartApplyAdversaryAttackOutcomeRequest) (*DaggerheartApplyAdversaryAttackOutcomeResponse, error)
 	// Apply a reaction outcome from a resolved reaction roll.
 	ApplyReactionOutcome(context.Context, *DaggerheartApplyReactionOutcomeRequest) (*DaggerheartApplyReactionOutcomeResponse, error)
+	// Apply a level-up to a character (progression).
+	ApplyLevelUp(context.Context, *DaggerheartApplyLevelUpRequest) (*DaggerheartApplyLevelUpResponse, error)
+	// Update a character's gold denominations (inventory).
+	UpdateGold(context.Context, *DaggerheartUpdateGoldRequest) (*DaggerheartUpdateGoldResponse, error)
+	// Acquire a domain card into a character's vault or loadout (inventory).
+	AcquireDomainCard(context.Context, *DaggerheartAcquireDomainCardRequest) (*DaggerheartAcquireDomainCardResponse, error)
+	// Swap equipment between active/inventory/none slots (inventory).
+	SwapEquipment(context.Context, *DaggerheartSwapEquipmentRequest) (*DaggerheartSwapEquipmentResponse, error)
+	// Use a consumable, decrementing its quantity (inventory).
+	UseConsumable(context.Context, *DaggerheartUseConsumableRequest) (*DaggerheartUseConsumableResponse, error)
+	// Acquire a consumable, incrementing its quantity (inventory).
+	AcquireConsumable(context.Context, *DaggerheartAcquireConsumableRequest) (*DaggerheartAcquireConsumableResponse, error)
 	mustEmbedUnimplementedDaggerheartServiceServer()
 }
 
@@ -741,6 +831,24 @@ func (UnimplementedDaggerheartServiceServer) ApplyAdversaryAttackOutcome(context
 }
 func (UnimplementedDaggerheartServiceServer) ApplyReactionOutcome(context.Context, *DaggerheartApplyReactionOutcomeRequest) (*DaggerheartApplyReactionOutcomeResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyReactionOutcome not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyLevelUp(context.Context, *DaggerheartApplyLevelUpRequest) (*DaggerheartApplyLevelUpResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyLevelUp not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) UpdateGold(context.Context, *DaggerheartUpdateGoldRequest) (*DaggerheartUpdateGoldResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateGold not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) AcquireDomainCard(context.Context, *DaggerheartAcquireDomainCardRequest) (*DaggerheartAcquireDomainCardResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AcquireDomainCard not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) SwapEquipment(context.Context, *DaggerheartSwapEquipmentRequest) (*DaggerheartSwapEquipmentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SwapEquipment not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) UseConsumable(context.Context, *DaggerheartUseConsumableRequest) (*DaggerheartUseConsumableResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UseConsumable not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) AcquireConsumable(context.Context, *DaggerheartAcquireConsumableRequest) (*DaggerheartAcquireConsumableResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AcquireConsumable not implemented")
 }
 func (UnimplementedDaggerheartServiceServer) mustEmbedUnimplementedDaggerheartServiceServer() {}
 func (UnimplementedDaggerheartServiceServer) testEmbeddedByValue()                            {}
@@ -1447,6 +1555,114 @@ func _DaggerheartService_ApplyReactionOutcome_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaggerheartService_ApplyLevelUp_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyLevelUpRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyLevelUp(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyLevelUp_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyLevelUp(ctx, req.(*DaggerheartApplyLevelUpRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_UpdateGold_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartUpdateGoldRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).UpdateGold(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_UpdateGold_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).UpdateGold(ctx, req.(*DaggerheartUpdateGoldRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_AcquireDomainCard_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartAcquireDomainCardRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).AcquireDomainCard(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_AcquireDomainCard_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).AcquireDomainCard(ctx, req.(*DaggerheartAcquireDomainCardRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_SwapEquipment_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartSwapEquipmentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).SwapEquipment(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_SwapEquipment_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).SwapEquipment(ctx, req.(*DaggerheartSwapEquipmentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_UseConsumable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartUseConsumableRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).UseConsumable(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_UseConsumable_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).UseConsumable(ctx, req.(*DaggerheartUseConsumableRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_AcquireConsumable_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartAcquireConsumableRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).AcquireConsumable(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_AcquireConsumable_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).AcquireConsumable(ctx, req.(*DaggerheartAcquireConsumableRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DaggerheartService_ServiceDesc is the grpc.ServiceDesc for DaggerheartService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -1605,6 +1821,30 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApplyReactionOutcome",
 			Handler:    _DaggerheartService_ApplyReactionOutcome_Handler,
+		},
+		{
+			MethodName: "ApplyLevelUp",
+			Handler:    _DaggerheartService_ApplyLevelUp_Handler,
+		},
+		{
+			MethodName: "UpdateGold",
+			Handler:    _DaggerheartService_UpdateGold_Handler,
+		},
+		{
+			MethodName: "AcquireDomainCard",
+			Handler:    _DaggerheartService_AcquireDomainCard_Handler,
+		},
+		{
+			MethodName: "SwapEquipment",
+			Handler:    _DaggerheartService_SwapEquipment_Handler,
+		},
+		{
+			MethodName: "UseConsumable",
+			Handler:    _DaggerheartService_UseConsumable_Handler,
+		},
+		{
+			MethodName: "AcquireConsumable",
+			Handler:    _DaggerheartService_AcquireConsumable_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

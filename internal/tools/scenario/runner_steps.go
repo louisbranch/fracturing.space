@@ -154,6 +154,18 @@ func (r *Runner) runDaggerheartStep(ctx context.Context, state *scenarioState, s
 		return r.runApplyReactionOutcomeStep(ctx, state, step)
 	case "mitigate_damage":
 		return r.runMitigateDamageStep(ctx, state, step)
+	case "level_up":
+		return r.runLevelUpStep(ctx, state, step)
+	case "update_gold":
+		return r.runUpdateGoldStep(ctx, state, step)
+	case "acquire_domain_card":
+		return r.runAcquireDomainCardStep(ctx, state, step)
+	case "swap_equipment":
+		return r.runSwapEquipmentStep(ctx, state, step)
+	case "use_consumable":
+		return r.runUseConsumableStep(ctx, state, step)
+	case "acquire_consumable":
+		return r.runAcquireConsumableStep(ctx, state, step)
 	default:
 		return r.failf("unknown Daggerheart step kind %q", step.Kind)
 	}

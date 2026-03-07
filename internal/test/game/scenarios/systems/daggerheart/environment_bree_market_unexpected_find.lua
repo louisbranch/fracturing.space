@@ -16,7 +16,8 @@ scn:npc("Bilbo")
 scn:start_session("Unexpected Find")
 dh:gm_fear(1)
 
--- Quest-item payload and non-gold cost semantics remain unresolved.
+-- Quest-item discovery is a narrative event, not a gold mechanic.
+-- The GM spends fear to reveal the item to an NPC merchant.
 dh:gm_spend_fear(1):spotlight("Bilbo")
 
 scn:end_session()

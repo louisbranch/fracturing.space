@@ -753,6 +753,72 @@ func scenarioMitigateDamage(state *lua.State) int {
 	return 0
 }
 
+func scenarioLevelUp(state *lua.State) int {
+	handle := checkSystemHandle(state, "level_up")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "level_up", data)
+	return 0
+}
+
+func scenarioUpdateGold(state *lua.State) int {
+	handle := checkSystemHandle(state, "update_gold")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "update_gold", data)
+	return 0
+}
+
+func scenarioAcquireDomainCard(state *lua.State) int {
+	handle := checkSystemHandle(state, "acquire_domain_card")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "acquire_domain_card", data)
+	return 0
+}
+
+func scenarioSwapEquipment(state *lua.State) int {
+	handle := checkSystemHandle(state, "swap_equipment")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "swap_equipment", data)
+	return 0
+}
+
+func scenarioUseConsumable(state *lua.State) int {
+	handle := checkSystemHandle(state, "use_consumable")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "use_consumable", data)
+	return 0
+}
+
+func scenarioAcquireConsumable(state *lua.State) int {
+	handle := checkSystemHandle(state, "acquire_consumable")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "acquire_consumable", data)
+	return 0
+}
+
 var gmActionMethods = []lua.RegistryFunction{
 	{Name: "spotlight", Function: gmActionSpotlight},
 }

@@ -41,8 +41,8 @@ func TestRegistrySystem_Contract(t *testing.T) {
 		t.Fatalf("Name() = %q, want Daggerheart", system.Name())
 	}
 	metadata := system.RegistryMetadata()
-	if metadata.ImplementationStage != commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL {
-		t.Fatalf("implementation stage = %v, want partial", metadata.ImplementationStage)
+	if metadata.ImplementationStage != commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_COMPLETE {
+		t.Fatalf("implementation stage = %v, want complete", metadata.ImplementationStage)
 	}
 	if metadata.OperationalStatus != commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL {
 		t.Fatalf("operational status = %v, want operational", metadata.OperationalStatus)
