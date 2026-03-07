@@ -31,6 +31,7 @@ func (Workflow) AssembleCatalog(
 			UnmetReasons: append([]string(nil), progress.UnmetReasons...),
 		},
 		Profile: campaignapp.CampaignCharacterCreationProfile{
+			CharacterName:     strings.TrimSpace(profile.CharacterName),
 			ClassID:           strings.TrimSpace(profile.ClassID),
 			SubclassID:        strings.TrimSpace(profile.SubclassID),
 			AncestryID:        strings.TrimSpace(profile.AncestryID),

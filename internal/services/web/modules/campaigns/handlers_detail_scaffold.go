@@ -79,7 +79,7 @@ func (h handlers) handleSessionDetailRoute(w http.ResponseWriter, r *http.Reques
 // breadcrumbs, and renders the detail fragment.
 type campaignDetailSpec struct {
 	marker   string
-	extra    func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem
+	extra    func(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem
 	loadData func(ctx context.Context, campaignID string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error
 }
 
@@ -99,7 +99,7 @@ func (h handlers) renderCampaignDetail(w http.ResponseWriter, r *http.Request, c
 	}
 	var crumbs []sharedtemplates.BreadcrumbItem
 	if spec.extra != nil {
-		crumbs = campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc, spec.extra(page.loc)...)
+		crumbs = campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc, spec.extra(page.loc, view)...)
 	} else {
 		crumbs = campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc)
 	}

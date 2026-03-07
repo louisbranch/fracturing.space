@@ -346,7 +346,7 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 			<div class="space-y-4">
 				<div class="card bg-base-200">
 					<div class="card-body">
-						<h2 class="card-title" data-campaign-character-detail-id={ campaignCharacterByID(view).ID }>{ campaignCharacterByID(view).ID }</h2>
+						<h2 class="card-title" data-campaign-character-detail-id={ campaignCharacterByID(view).ID }>{ campaignCharacterDisplayName(loc, campaignCharacterByID(view)) }</h2>
 						if campaignCharacterByID(view).CanEdit {
 							<form method="post" action={ routepath.AppCampaignCharacter(view.CampaignID, view.CharacterID) } class="space-y-3" data-campaign-character-update-form="true">
 								<label class="form-control">
