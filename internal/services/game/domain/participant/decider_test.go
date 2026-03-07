@@ -918,6 +918,16 @@ func TestDecideSeatReassign_AIControllerIdentityLocked(t *testing.T) {
 }
 
 func TestDecideParticipantJoin_DefaultsAvatarSelection(t *testing.T) {
+	expectedSetID, expectedAssetID, err := assetcatalog.AvatarManifest().ResolveSelection(assetcatalog.SelectionInput{
+		EntityType: assetcatalog.AvatarRoleParticipant,
+		EntityID:   "p-1",
+		SetID:      assetcatalog.AvatarSetBlankV1,
+		AssetID:    "",
+	})
+	if err != nil {
+		t.Fatalf("resolve expected participant avatar: %v", err)
+	}
+
 	cmd := command.Command{
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
@@ -937,15 +947,25 @@ func TestDecideParticipantJoin_DefaultsAvatarSelection(t *testing.T) {
 	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
-	if payload.AvatarSetID != assetcatalog.AvatarSetBlankV1 {
-		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, assetcatalog.AvatarSetBlankV1)
+	if payload.AvatarSetID != expectedSetID {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.AvatarSetID, expectedSetID)
 	}
-	if payload.AvatarAssetID != "000" {
-		t.Fatalf("avatar_asset_id = %q, want %q", payload.AvatarAssetID, "000")
+	if payload.AvatarAssetID != expectedAssetID {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.AvatarAssetID, expectedAssetID)
 	}
 }
 
 func TestDecideParticipantUpdate_UserIDClearedSetsBlankAvatar(t *testing.T) {
+	expectedSetID, expectedAssetID, err := assetcatalog.AvatarManifest().ResolveSelection(assetcatalog.SelectionInput{
+		EntityType: assetcatalog.AvatarRoleParticipant,
+		EntityID:   "p-1",
+		SetID:      assetcatalog.AvatarSetBlankV1,
+		AssetID:    "",
+	})
+	if err != nil {
+		t.Fatalf("resolve expected participant avatar: %v", err)
+	}
+
 	cmd := command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("participant.update"),
@@ -975,11 +995,11 @@ func TestDecideParticipantUpdate_UserIDClearedSetsBlankAvatar(t *testing.T) {
 	if payload.Fields["user_id"] != "" {
 		t.Fatalf("user_id = %q, want empty", payload.Fields["user_id"])
 	}
-	if payload.Fields["avatar_set_id"] != assetcatalog.AvatarSetBlankV1 {
-		t.Fatalf("avatar_set_id = %q, want %q", payload.Fields["avatar_set_id"], assetcatalog.AvatarSetBlankV1)
+	if payload.Fields["avatar_set_id"] != expectedSetID {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.Fields["avatar_set_id"], expectedSetID)
 	}
-	if payload.Fields["avatar_asset_id"] != "000" {
-		t.Fatalf("avatar_asset_id = %q, want %q", payload.Fields["avatar_asset_id"], "000")
+	if payload.Fields["avatar_asset_id"] != expectedAssetID {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.Fields["avatar_asset_id"], expectedAssetID)
 	}
 }
 
@@ -1051,7 +1071,7 @@ func TestDecideParticipantUpdate_InvalidAvatarAssetRejected(t *testing.T) {
 		Joined:        true,
 		UserID:        "user-1",
 		AvatarSetID:   "avatar_set_v1",
-		AvatarAssetID: "001",
+		AvatarAssetID: "apothecary_journeyman",
 	}, cmd, nil)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))

@@ -25,7 +25,7 @@ func TestMountServesProfilePage(t *testing.T) {
 		Name:          "Louis",
 		Pronouns:      sharedpronouns.ToProto("they/them"),
 		AvatarSetId:   "avatar_set_v1",
-		AvatarAssetId: "001",
+		AvatarAssetId: "apothecary_journeyman",
 		Bio:           "Building Fracturing.Space.",
 	}}}, "https://cdn.example.com/avatars", func(*http.Request) bool {
 		return true

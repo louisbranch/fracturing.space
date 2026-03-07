@@ -387,7 +387,7 @@ func TestDecideCampaignUpdate_UpdatesCoverAssetID(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("campaign.update"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"fields":{"cover_asset_id":"  abandoned_castle_courtyard  "}}`),
+		PayloadJSON: []byte(`{"fields":{"cover_asset_id":"  ashen_city_gate  "}}`),
 	}
 
 	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
@@ -402,8 +402,8 @@ func TestDecideCampaignUpdate_UpdatesCoverAssetID(t *testing.T) {
 	if err := json.Unmarshal(decision.Events[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
-	if payload.Fields["cover_asset_id"] != "abandoned_castle_courtyard" {
-		t.Fatalf("payload cover_asset_id = %s, want %s", payload.Fields["cover_asset_id"], "abandoned_castle_courtyard")
+	if payload.Fields["cover_asset_id"] != "ashen_city_gate" {
+		t.Fatalf("payload cover_asset_id = %s, want %s", payload.Fields["cover_asset_id"], "ashen_city_gate")
 	}
 }
 

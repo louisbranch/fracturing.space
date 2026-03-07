@@ -56,7 +56,7 @@ func TestCreateCharacter_UsesBlankAvatarWhenControllerIsUnassigned(t *testing.T)
 					ActorID:     "part-1",
 					EntityType:  "character",
 					EntityID:    "char-123",
-					PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_blank_v1","avatar_asset_id":"000"}`),
+					PayloadJSON: []byte(`{"character_id":"char-123","name":"Hero","kind":"pc","avatar_set_id":"avatar_set_blank_v1","avatar_asset_id":"blank_faceless_silhouette"}`),
 				}),
 			},
 			command.Type("character.profile_update"): {

@@ -23,12 +23,12 @@ func TestIsCampaignCoverAssetID_RejectsBlankValues(t *testing.T) {
 }
 
 func TestNormalizeCampaignCoverAssetID_AcceptsCanonicalValues(t *testing.T) {
-	got, ok := normalizeCampaignCoverAssetID("mountain_pass")
+	got, ok := normalizeCampaignCoverAssetID("ashen_city_gate")
 	if !ok {
-		t.Fatal("expected mountain_pass to normalize successfully")
+		t.Fatal("expected ashen_city_gate to normalize successfully")
 	}
-	if got != "mountain_pass" {
-		t.Fatalf("normalizeCampaignCoverAssetID(mountain_pass) = %q, want %q", got, "mountain_pass")
+	if got != "ashen_city_gate" {
+		t.Fatalf("normalizeCampaignCoverAssetID(ashen_city_gate) = %q, want %q", got, "ashen_city_gate")
 	}
 }
 

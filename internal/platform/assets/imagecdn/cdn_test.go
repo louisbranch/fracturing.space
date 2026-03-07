@@ -24,6 +24,21 @@ func TestFlatCDNURL_IgnoresTransforms(t *testing.T) {
 	}
 }
 
+func TestFlatCDNURL_SupportsNestedAssetPaths(t *testing.T) {
+	cdn := New("https://cdn.example.com/assets")
+	got, err := cdn.URL(Request{
+		AssetID:   "high_fantasy/avatar_set/v1/blank_porcelain_mask",
+		Extension: ".png",
+	})
+	if err != nil {
+		t.Fatalf("resolve url: %v", err)
+	}
+	want := "https://cdn.example.com/assets/high_fantasy/avatar_set/v1/blank_porcelain_mask.png"
+	if got != want {
+		t.Fatalf("cdn.URL(...) = %q, want %q", got, want)
+	}
+}
+
 func TestCloudinaryCDNURL_IncludesCropAndDeliveryTransforms(t *testing.T) {
 	cdn := New("https://res.cloudinary.com/fracturing-space/image/upload")
 	got, err := cdn.URL(Request{
@@ -41,6 +56,28 @@ func TestCloudinaryCDNURL_IncludesCropAndDeliveryTransforms(t *testing.T) {
 		t.Fatalf("resolve url: %v", err)
 	}
 	want := "https://res.cloudinary.com/fracturing-space/image/upload/c_crop,w_512,h_768,x_0,y_0/f_auto,q_auto,dpr_auto,c_limit,w_192/001.png"
+	if got != want {
+		t.Fatalf("cdn.URL(...) = %q, want %q", got, want)
+	}
+}
+
+func TestCloudinaryCDNURL_SupportsNestedAssetPaths(t *testing.T) {
+	cdn := New("https://res.cloudinary.com/fracturing-space/image/upload")
+	got, err := cdn.URL(Request{
+		AssetID:   "high_fantasy/avatar_set/v1/blank_porcelain_mask",
+		Extension: ".png",
+		Crop: &Crop{
+			X:        0,
+			Y:        0,
+			WidthPX:  512,
+			HeightPX: 768,
+		},
+		Delivery: &Delivery{WidthPX: 192},
+	})
+	if err != nil {
+		t.Fatalf("resolve url: %v", err)
+	}
+	want := "https://res.cloudinary.com/fracturing-space/image/upload/c_crop,w_512,h_768,x_0,y_0/f_auto,q_auto,dpr_auto,c_limit,w_192/high_fantasy/avatar_set/v1/blank_porcelain_mask.png"
 	if got != want {
 		t.Fatalf("cdn.URL(...) = %q, want %q", got, want)
 	}

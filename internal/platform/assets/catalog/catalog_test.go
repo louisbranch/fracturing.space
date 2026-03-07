@@ -34,8 +34,8 @@ func TestResolveSelection_DefaultsAssetDeterministically(t *testing.T) {
 	if setA != "avatar_set_blank_v1" {
 		t.Fatalf("default set = %q, want %q", setA, "avatar_set_blank_v1")
 	}
-	if assetA != "000" {
-		t.Fatalf("default asset = %q, want %q", assetA, "000")
+	if !manifest.ValidateAssetInSet(AvatarSetBlankV1, assetA) {
+		t.Fatalf("default asset = %q, want an asset from %q", assetA, AvatarSetBlankV1)
 	}
 	if setA != setB || assetA != assetB {
 		t.Fatalf("expected deterministic result, got %q/%q and %q/%q", setA, assetA, setB, assetB)
@@ -73,7 +73,7 @@ func TestResolveSelection_AcceptsCanonicalCampaignCoverID(t *testing.T) {
 		EntityType: "campaign",
 		EntityID:   "camp-1",
 		SetID:      CampaignCoverSetV1,
-		AssetID:    "mountain_pass",
+		AssetID:    "ashen_city_gate",
 	})
 	if err != nil {
 		t.Fatalf("resolve selection: %v", err)
@@ -81,21 +81,21 @@ func TestResolveSelection_AcceptsCanonicalCampaignCoverID(t *testing.T) {
 	if setID != CampaignCoverSetV1 {
 		t.Fatalf("set id = %q, want %q", setID, CampaignCoverSetV1)
 	}
-	if assetID != "mountain_pass" {
-		t.Fatalf("asset id = %q, want %q", assetID, "mountain_pass")
+	if assetID != "ashen_city_gate" {
+		t.Fatalf("asset id = %q, want %q", assetID, "ashen_city_gate")
 	}
 }
 
 func TestAvatarManifest_ContainsBlankAvatarAssetInBlankSet(t *testing.T) {
 	manifest := AvatarManifest()
-	if !manifest.ValidateAssetInSet("avatar_set_blank_v1", "000") {
-		t.Fatalf("expected %q asset %q to be valid", "avatar_set_blank_v1", "000")
+	if !manifest.ValidateAssetInSet(AvatarSetBlankV1, AvatarAssetBlank) {
+		t.Fatalf("expected %q asset %q to be valid", AvatarSetBlankV1, AvatarAssetBlank)
 	}
 }
 
 func TestAvatarManifest_PeopleSetExcludesBlankAsset(t *testing.T) {
 	manifest := AvatarManifest()
-	if manifest.ValidateAssetInSet(AvatarSetV1, "000") {
-		t.Fatalf("expected %q asset %q to be invalid", AvatarSetV1, "000")
+	if manifest.ValidateAssetInSet(AvatarSetV1, AvatarAssetBlank) {
+		t.Fatalf("expected %q asset %q to be invalid", AvatarSetV1, AvatarAssetBlank)
 	}
 }
