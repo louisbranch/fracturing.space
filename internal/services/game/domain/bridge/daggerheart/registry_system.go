@@ -29,12 +29,14 @@ func (r *RegistrySystem) Name() string {
 }
 
 // RegistryMetadata returns rollout and availability metadata.
+// ImplementationStage and Notes are derived from the mechanics manifest
+// so they stay in sync with actual implementation state.
 func (r *RegistrySystem) RegistryMetadata() bridge.RegistryMetadata {
 	return bridge.RegistryMetadata{
-		ImplementationStage: commonv1.GameSystemImplementationStage_GAME_SYSTEM_IMPLEMENTATION_STAGE_PARTIAL,
+		ImplementationStage: DeriveImplementationStage(),
 		OperationalStatus:   commonv1.GameSystemOperationalStatus_GAME_SYSTEM_OPERATIONAL_STATUS_OPERATIONAL,
 		AccessLevel:         commonv1.GameSystemAccessLevel_GAME_SYSTEM_ACCESS_LEVEL_BETA,
-		Notes:               "partial support",
+		Notes:               deriveImplementationNotes(),
 	}
 }
 

@@ -32,6 +32,10 @@ type DaggerheartCharacterProfile struct {
 	Background           string
 	DomainCardIDs        []string
 	Connections          string
+	// Gold tracking
+	GoldHandfuls int
+	GoldBags     int
+	GoldChests   int
 	// Daggerheart traits
 	Agility   int
 	Strength  int
@@ -78,14 +82,17 @@ type DaggerheartSnapshot struct {
 
 // DaggerheartCountdown stores timed countdown state in session read models.
 type DaggerheartCountdown struct {
-	CampaignID  string
-	CountdownID string
-	Name        string
-	Kind        string
-	Current     int
-	Max         int
-	Direction   string
-	Looping     bool
+	CampaignID        string
+	CountdownID       string
+	Name              string
+	Kind              string
+	Current           int
+	Max               int
+	Direction         string
+	Looping           bool
+	Variant           string
+	TriggerEventType  string
+	LinkedCountdownID string
 }
 
 // DaggerheartAdversary stores adversary read data used by session renderers.

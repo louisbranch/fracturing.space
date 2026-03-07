@@ -135,13 +135,16 @@ type RollRngInfo struct {
 
 // CountdownCreatePayload captures the payload for sys.daggerheart.countdown.create commands.
 type CountdownCreatePayload struct {
-	CountdownID string `json:"countdown_id"`
-	Name        string `json:"name"`
-	Kind        string `json:"kind"`
-	Current     int    `json:"current"`
-	Max         int    `json:"max"`
-	Direction   string `json:"direction"`
-	Looping     bool   `json:"looping"`
+	CountdownID       string `json:"countdown_id"`
+	Name              string `json:"name"`
+	Kind              string `json:"kind"`
+	Current           int    `json:"current"`
+	Max               int    `json:"max"`
+	Direction         string `json:"direction"`
+	Looping           bool   `json:"looping"`
+	Variant           string `json:"variant,omitempty"`             // "standard", "dynamic", "linked"
+	TriggerEventType  string `json:"trigger_event_type,omitempty"`  // For dynamic countdowns: event type that triggers advancement.
+	LinkedCountdownID string `json:"linked_countdown_id,omitempty"` // For linked countdowns: the countdown ID this one is linked to.
 }
 
 // CountdownCreatedPayload captures the payload for sys.daggerheart.countdown_created events.
@@ -305,3 +308,109 @@ type AdversaryDeletePayload struct {
 
 // AdversaryDeletedPayload captures the payload for sys.daggerheart.adversary_deleted events.
 type AdversaryDeletedPayload = AdversaryDeletePayload
+
+// LevelUpApplyPayload captures the payload for sys.daggerheart.level_up.apply commands.
+type LevelUpApplyPayload struct {
+	CharacterID  string                      `json:"character_id"`
+	LevelBefore  int                         `json:"level_before"`
+	LevelAfter   int                         `json:"level_after"`
+	Advancements []LevelUpAdvancementPayload `json:"advancements"`
+
+	// NewDomainCardID is the domain card acquired at SRD Step 4.
+	NewDomainCardID    string `json:"new_domain_card_id,omitempty"`
+	NewDomainCardLevel int    `json:"new_domain_card_level,omitempty"`
+
+	// MarkedTraits lists traits already marked from prior level-ups in this tier.
+	MarkedTraits []string `json:"marked_traits,omitempty"`
+
+	// Derived fields populated by the decider and included in the event.
+	Tier           int      `json:"tier"`
+	PreviousTier   int      `json:"previous_tier"`
+	IsTierEntry    bool     `json:"is_tier_entry"`
+	ClearMarks     bool     `json:"clear_marks"`
+	MarkedAfter    []string `json:"marked_after,omitempty"`
+	ThresholdDelta int      `json:"threshold_delta"`
+}
+
+// LevelUpAdvancementPayload represents a single advancement choice.
+type LevelUpAdvancementPayload struct {
+	Type            string                    `json:"type"`
+	Trait           string                    `json:"trait,omitempty"`
+	DomainCardID    string                    `json:"domain_card_id,omitempty"`
+	DomainCardLevel int                       `json:"domain_card_level,omitempty"`
+	SubclassCardID  string                    `json:"subclass_card_id,omitempty"`
+	Multiclass      *LevelUpMulticlassPayload `json:"multiclass,omitempty"`
+}
+
+// LevelUpMulticlassPayload captures multiclass advancement choices.
+type LevelUpMulticlassPayload struct {
+	SecondaryClassID    string `json:"secondary_class_id"`
+	SecondarySubclassID string `json:"secondary_subclass_id"`
+	FoundationCardID    string `json:"foundation_card_id"`
+	SpellcastTrait      string `json:"spellcast_trait"`
+	DomainID            string `json:"domain_id"`
+}
+
+// LevelUpAppliedPayload captures the payload for sys.daggerheart.level_up_applied events.
+type LevelUpAppliedPayload = LevelUpApplyPayload
+
+// GoldUpdatePayload captures the payload for sys.daggerheart.gold.update commands.
+type GoldUpdatePayload struct {
+	CharacterID    string `json:"character_id"`
+	HandfulsBefore int    `json:"handfuls_before"`
+	HandfulsAfter  int    `json:"handfuls_after"`
+	BagsBefore     int    `json:"bags_before"`
+	BagsAfter      int    `json:"bags_after"`
+	ChestsBefore   int    `json:"chests_before"`
+	ChestsAfter    int    `json:"chests_after"`
+	Reason         string `json:"reason,omitempty"`
+}
+
+// GoldUpdatedPayload captures the payload for sys.daggerheart.gold_updated events.
+type GoldUpdatedPayload = GoldUpdatePayload
+
+// DomainCardAcquirePayload captures the payload for sys.daggerheart.domain_card.acquire commands.
+type DomainCardAcquirePayload struct {
+	CharacterID string `json:"character_id"`
+	CardID      string `json:"card_id"`
+	CardLevel   int    `json:"card_level"`
+	Destination string `json:"destination"` // "vault" or "loadout"
+}
+
+// DomainCardAcquiredPayload captures the payload for sys.daggerheart.domain_card_acquired events.
+type DomainCardAcquiredPayload = DomainCardAcquirePayload
+
+// EquipmentSwapPayload captures the payload for sys.daggerheart.equipment.swap commands.
+type EquipmentSwapPayload struct {
+	CharacterID string `json:"character_id"`
+	ItemID      string `json:"item_id"`
+	ItemType    string `json:"item_type"` // "weapon" or "armor"
+	From        string `json:"from"`      // "active", "inventory", "none"
+	To          string `json:"to"`        // "active", "inventory", "none"
+	StressCost  int    `json:"stress_cost,omitempty"`
+}
+
+// EquipmentSwappedPayload captures the payload for sys.daggerheart.equipment_swapped events.
+type EquipmentSwappedPayload = EquipmentSwapPayload
+
+// ConsumableUsePayload captures the payload for sys.daggerheart.consumable.use commands.
+type ConsumableUsePayload struct {
+	CharacterID    string `json:"character_id"`
+	ConsumableID   string `json:"consumable_id"`
+	QuantityBefore int    `json:"quantity_before"`
+	QuantityAfter  int    `json:"quantity_after"`
+}
+
+// ConsumableUsedPayload captures the payload for sys.daggerheart.consumable_used events.
+type ConsumableUsedPayload = ConsumableUsePayload
+
+// ConsumableAcquirePayload captures the payload for sys.daggerheart.consumable.acquire commands.
+type ConsumableAcquirePayload struct {
+	CharacterID    string `json:"character_id"`
+	ConsumableID   string `json:"consumable_id"`
+	QuantityBefore int    `json:"quantity_before"`
+	QuantityAfter  int    `json:"quantity_after"`
+}
+
+// ConsumableAcquiredPayload captures the payload for sys.daggerheart.consumable_acquired events.
+type ConsumableAcquiredPayload = ConsumableAcquirePayload

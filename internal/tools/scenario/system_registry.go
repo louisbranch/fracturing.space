@@ -69,6 +69,12 @@ var daggerheartSystemMethods = []lua.RegistryFunction{
 	{Name: "apply_adversary_attack_outcome", Function: scenarioApplyAdversaryAttackOutcome},
 	{Name: "apply_reaction_outcome", Function: scenarioApplyReactionOutcome},
 	{Name: "mitigate_damage", Function: scenarioMitigateDamage},
+	{Name: "level_up", Function: scenarioLevelUp},
+	{Name: "update_gold", Function: scenarioUpdateGold},
+	{Name: "acquire_domain_card", Function: scenarioAcquireDomainCard},
+	{Name: "swap_equipment", Function: scenarioSwapEquipment},
+	{Name: "use_consumable", Function: scenarioUseConsumable},
+	{Name: "acquire_consumable", Function: scenarioAcquireConsumable},
 }
 
 var daggerheartSystemStepKinds = map[string]struct{}{
@@ -104,6 +110,12 @@ var daggerheartSystemStepKinds = map[string]struct{}{
 	"apply_adversary_attack_outcome": {},
 	"apply_reaction_outcome":         {},
 	"mitigate_damage":                {},
+	"level_up":                       {},
+	"update_gold":                    {},
+	"acquire_domain_card":            {},
+	"swap_equipment":                 {},
+	"use_consumable":                 {},
+	"acquire_consumable":             {},
 }
 
 var (

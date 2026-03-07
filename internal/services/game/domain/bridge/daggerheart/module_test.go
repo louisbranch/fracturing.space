@@ -39,6 +39,12 @@ func commandValidationCases() []commandValidationCase {
 		{typ: commandTypeAdversaryUpdate, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: commandTypeAdversaryDelete, validPayload: `{"adversary_id":"adv-1"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: commandTypeMultiTargetDamageApply, validPayload: `{"targets":[{"character_id":"char-1","hp_before":6,"hp_after":3}]}`, invalidPayload: `{"targets":[]}`},
+		{typ: commandTypeLevelUpApply, validPayload: `{"character_id":"char-1","level_before":1,"level_after":2,"advancements":[{"type":"add_hp_slots"},{"type":"add_stress_slots"}]}`, invalidPayload: `{"character_id":"","level_before":1,"level_after":2,"advancements":[{"type":"add_hp_slots"}]}`},
+		{typ: commandTypeGoldUpdate, validPayload: `{"character_id":"char-1","handfuls_before":0,"handfuls_after":3,"bags_before":0,"bags_after":0,"chests_before":0,"chests_after":0}`, invalidPayload: `{"character_id":""}`},
+		{typ: commandTypeDomainCardAcquire, validPayload: `{"character_id":"char-1","card_id":"card-1","card_level":1,"destination":"vault"}`, invalidPayload: `{"character_id":"char-1","card_id":"card-1","destination":"backpack"}`},
+		{typ: commandTypeEquipmentSwap, validPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"inventory","to":"active"}`, invalidPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"active","to":"active"}`},
+		{typ: commandTypeConsumableUse, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":2,"quantity_after":1}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":0,"quantity_after":-1}`},
+		{typ: commandTypeConsumableAcquire, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":1,"quantity_after":2}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":5,"quantity_after":6}`},
 	}
 }
 
@@ -68,6 +74,12 @@ func eventValidationCases() []eventValidationCase {
 		{typ: EventTypeAdversaryCreated, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: EventTypeAdversaryUpdated, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: EventTypeAdversaryDeleted, validPayload: `{"adversary_id":"adv-1"}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: EventTypeLevelUpApplied, validPayload: `{"character_id":"char-1","level_before":1,"level_after":2,"advancements":[{"type":"add_hp_slots"},{"type":"add_stress_slots"}]}`, invalidPayload: `{"character_id":"","level_before":1,"level_after":2,"advancements":[{"type":"add_hp_slots"}]}`},
+		{typ: EventTypeGoldUpdated, validPayload: `{"character_id":"char-1","handfuls_before":0,"handfuls_after":3,"bags_before":0,"bags_after":0,"chests_before":0,"chests_after":0}`, invalidPayload: `{"character_id":""}`},
+		{typ: EventTypeDomainCardAcquired, validPayload: `{"character_id":"char-1","card_id":"card-1","card_level":1,"destination":"vault"}`, invalidPayload: `{"character_id":"char-1","card_id":"card-1","destination":"backpack"}`},
+		{typ: EventTypeEquipmentSwapped, validPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"inventory","to":"active"}`, invalidPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"active","to":"active"}`},
+		{typ: EventTypeConsumableUsed, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":2,"quantity_after":1}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":0,"quantity_after":-1}`},
+		{typ: EventTypeConsumableAcquired, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":1,"quantity_after":2}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":5,"quantity_after":6}`},
 	}
 }
 

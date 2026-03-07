@@ -46,6 +46,12 @@ inventory. For exact payload fields and emitter references, use:
 | Story note append | `story.note.add` | `story.note_added` | Event journal narrative stream | Journal-only apply path | Note payload must be non-empty and campaign-scoped |
 | Countdown create/update/delete | `sys.daggerheart.countdown.create`, `sys.daggerheart.countdown.update`, `sys.daggerheart.countdown.delete` | `sys.daggerheart.countdown_created`, `sys.daggerheart.countdown_updated`, `sys.daggerheart.countdown_deleted` | Daggerheart countdown projections | Inline apply mode-controlled | Countdown bounds/rules validated before command |
 | Adversary create/update/delete | `sys.daggerheart.adversary.create`, `sys.daggerheart.adversary.update`, `sys.daggerheart.adversary.delete` | `sys.daggerheart.adversary_created`, `sys.daggerheart.adversary_updated`, `sys.daggerheart.adversary_deleted` | Daggerheart adversary projections | Inline apply mode-controlled | Session-scoped adversary integrity and payload validation |
+| Level-up progression | `sys.daggerheart.level_up.apply` | `sys.daggerheart.level_up_applied` | Daggerheart character profile (level, tier, advancements) | Inline apply mode-controlled | Level bounds valid; tier achievement at correct thresholds; advancement budget within level allowance |
+| Gold/currency tracking | `sys.daggerheart.gold.update` | `sys.daggerheart.gold_updated` | Daggerheart character profile (gold denominations) | Inline apply mode-controlled | Denomination values non-negative; campaign/character valid |
+| Domain card acquisition | `sys.daggerheart.domain_card.acquire` | `sys.daggerheart.domain_card_acquired` | Daggerheart character domain card vault/loadout | Inline apply mode-controlled | Card ID valid; destination (vault/loadout) specified; level-gating validated |
+| Equipment swap | `sys.daggerheart.equipment.swap` | `sys.daggerheart.equipment_swapped` | Daggerheart character equipment slots | Inline apply mode-controlled | Item type valid (weapon/armor); slot tracking consistent; burden limits respected |
+| Consumable use | `sys.daggerheart.consumable.use` | `sys.daggerheart.consumable_used` | Daggerheart character consumable inventory | Inline apply mode-controlled | Consumable exists with sufficient quantity; quantity bounds valid |
+| Consumable acquisition | `sys.daggerheart.consumable.acquire` | `sys.daggerheart.consumable_acquired` | Daggerheart character consumable inventory | Inline apply mode-controlled | Stack max (5) not exceeded; consumable ID valid |
 
 ## ApplyRollOutcome sequencing contract
 

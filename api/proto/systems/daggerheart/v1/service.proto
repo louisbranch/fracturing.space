@@ -127,6 +127,24 @@ service DaggerheartService {
 
   // Apply a reaction outcome from a resolved reaction roll.
   rpc ApplyReactionOutcome(DaggerheartApplyReactionOutcomeRequest) returns (DaggerheartApplyReactionOutcomeResponse);
+
+  // Apply a level-up to a character (progression).
+  rpc ApplyLevelUp(DaggerheartApplyLevelUpRequest) returns (DaggerheartApplyLevelUpResponse);
+
+  // Update a character's gold denominations (inventory).
+  rpc UpdateGold(DaggerheartUpdateGoldRequest) returns (DaggerheartUpdateGoldResponse);
+
+  // Acquire a domain card into a character's vault or loadout (inventory).
+  rpc AcquireDomainCard(DaggerheartAcquireDomainCardRequest) returns (DaggerheartAcquireDomainCardResponse);
+
+  // Swap equipment between active/inventory/none slots (inventory).
+  rpc SwapEquipment(DaggerheartSwapEquipmentRequest) returns (DaggerheartSwapEquipmentResponse);
+
+  // Use a consumable, decrementing its quantity (inventory).
+  rpc UseConsumable(DaggerheartUseConsumableRequest) returns (DaggerheartUseConsumableResponse);
+
+  // Acquire a consumable, incrementing its quantity (inventory).
+  rpc AcquireConsumable(DaggerheartAcquireConsumableRequest) returns (DaggerheartAcquireConsumableResponse);
 }
 
 message DaggerheartApplyDamageRequest {
@@ -937,4 +955,124 @@ message DaggerheartApplyReactionOutcomeResponse {
   uint64 roll_seq = 1;
   string character_id = 2;
   DaggerheartReactionOutcomeResult result = 3;
+}
+
+// --- Progression messages ---
+
+message DaggerheartLevelUpAdvancement {
+  // Advancement type (e.g. "trait_increase", "add_hp_slots", "add_stress_slots", "increase_evasion", "increase_proficiency", "domain_card", "upgraded_subclass", "multiclass").
+  string type = 1;
+  // Trait to mark or advance.
+  string trait = 2;
+  // Domain card to gain.
+  string domain_card_id = 3;
+  // Level of the gained domain card.
+  int32 domain_card_level = 4;
+  // Subclass card to gain.
+  string subclass_card_id = 5;
+  // Multiclass details (only if type == "multiclass").
+  DaggerheartLevelUpMulticlass multiclass = 6;
+}
+
+message DaggerheartLevelUpMulticlass {
+  string secondary_class_id = 1;
+  string secondary_subclass_id = 2;
+  string foundation_card_id = 3;
+  string spellcast_trait = 4;
+  string domain_id = 5;
+}
+
+message DaggerheartApplyLevelUpRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  // Target level after this level-up.
+  int32 level_after = 3;
+  // Advancement choices for this level.
+  repeated DaggerheartLevelUpAdvancement advancements = 4;
+  // Optional domain card gained at this level.
+  string new_domain_card_id = 5;
+  // Level of the new domain card.
+  int32 new_domain_card_level = 6;
+}
+
+message DaggerheartApplyLevelUpResponse {
+  string character_id = 1;
+  int32 level = 2;
+  int32 tier = 3;
+}
+
+// --- Inventory messages ---
+
+message DaggerheartUpdateGoldRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  int32 handfuls_before = 3;
+  int32 handfuls_after = 4;
+  int32 bags_before = 5;
+  int32 bags_after = 6;
+  int32 chests_before = 7;
+  int32 chests_after = 8;
+  string reason = 9;
+}
+
+message DaggerheartUpdateGoldResponse {
+  string character_id = 1;
+  int32 handfuls = 2;
+  int32 bags = 3;
+  int32 chests = 4;
+}
+
+message DaggerheartAcquireDomainCardRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string card_id = 3;
+  int32 card_level = 4;
+  // Destination: "vault" or "loadout".
+  string destination = 5;
+}
+
+message DaggerheartAcquireDomainCardResponse {
+  string character_id = 1;
+}
+
+message DaggerheartSwapEquipmentRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string item_id = 3;
+  // Item type: "weapon" or "armor".
+  string item_type = 4;
+  // Source slot: "active", "inventory", or "none".
+  string from = 5;
+  // Target slot: "active", "inventory", or "none".
+  string to = 6;
+  // Stress cost for mid-session swaps.
+  int32 stress_cost = 7;
+}
+
+message DaggerheartSwapEquipmentResponse {
+  string character_id = 1;
+}
+
+message DaggerheartUseConsumableRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string consumable_id = 3;
+  int32 quantity_before = 4;
+  int32 quantity_after = 5;
+}
+
+message DaggerheartUseConsumableResponse {
+  string character_id = 1;
+}
+
+message DaggerheartAcquireConsumableRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string consumable_id = 3;
+  int32 quantity_before = 4;
+  int32 quantity_after = 5;
+}
+
+message DaggerheartAcquireConsumableResponse {
+  string character_id = 1;
 }

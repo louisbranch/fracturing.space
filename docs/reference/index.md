@@ -22,6 +22,7 @@ Exact and integration-facing contracts.
 - Daggerheart creation workflow: [daggerheart-creation-workflow.md](daggerheart-creation-workflow.md)
 - Daggerheart event timeline contract: [daggerheart-event-timeline-contract.md](daggerheart-event-timeline-contract.md)
 - Event system mechanics and troubleshooting: [event-system-reference.md](event-system-reference.md)
+- Core choice primitive contracts: [core-choice-primitive-contracts.md](core-choice-primitive-contracts.md)
 - Contributor map: [contributor-map.md](contributor-map.md)
 - Icon rendering: [icon-rendering.md](icon-rendering.md)
 - Icon catalog: [icon-catalog.md](icon-catalog.md)

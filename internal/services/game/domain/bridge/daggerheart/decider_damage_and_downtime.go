@@ -127,10 +127,21 @@ func decideAdversaryDamageApply(snapshotState SnapshotState, hasSnapshot bool, c
 		}, now)
 }
 
-func decideDowntimeMoveApply(cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFunc(cmd, EventTypeDowntimeMoveApplied, "character",
+const (
+	downtimeMovesPerRestLimit         = 2
+	rejectionCodeDowntimeMoveLimitHit = "DOWNTIME_MOVE_LIMIT_HIT"
+)
+
+func decideDowntimeMoveApply(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeDowntimeMoveApplied, "character",
 		func(p *DowntimeMoveApplyPayload) string { return strings.TrimSpace(p.CharacterID) },
-		func(p *DowntimeMoveApplyPayload, _ func() time.Time) *command.Rejection {
+		func(s SnapshotState, hasState bool, p *DowntimeMoveApplyPayload, _ func() time.Time) *command.Rejection {
+			if hasState && s.DowntimeMovesSinceRest >= downtimeMovesPerRestLimit {
+				return &command.Rejection{
+					Code:    rejectionCodeDowntimeMoveLimitHit,
+					Message: "downtime move limit reached (2 per rest)",
+				}
+			}
 			p.CharacterID = strings.TrimSpace(p.CharacterID)
 			p.Move = strings.TrimSpace(p.Move)
 			return nil

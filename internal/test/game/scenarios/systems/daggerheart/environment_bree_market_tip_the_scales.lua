@@ -14,7 +14,19 @@ scn:pc("Frodo")
 -- A handful of gold buys advantage on a Presence roll.
 scn:start_session("Tip the Scales")
 
--- Gold spend semantics remain unresolved in this fixture.
+-- Spend gold to bribe the merchant for advantage.
+dh:update_gold{
+  target = "Frodo",
+  handfuls_before = 2,
+  handfuls_after = 1,
+  bags_before = 0,
+  bags_after = 0,
+  chests_before = 0,
+  chests_after = 0,
+  reason = "bribe_merchant",
+}
+
+-- Now roll with advantage from the bribe.
 dh:action_roll{ actor = "Frodo", trait = "presence", difficulty = 10, outcome = "hope", advantage = 1 }
 dh:apply_roll_outcome{}
 

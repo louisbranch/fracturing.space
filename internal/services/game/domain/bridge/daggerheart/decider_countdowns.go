@@ -53,6 +53,24 @@ func decideCountdownCreate(cmd command.Command, now func() time.Time) command.De
 			p.Name = strings.TrimSpace(p.Name)
 			p.Kind = strings.TrimSpace(p.Kind)
 			p.Direction = strings.TrimSpace(p.Direction)
+			p.Variant = strings.TrimSpace(p.Variant)
+			p.TriggerEventType = strings.TrimSpace(p.TriggerEventType)
+			p.LinkedCountdownID = strings.TrimSpace(p.LinkedCountdownID)
+			if p.Variant == "" {
+				p.Variant = "standard"
+			}
+			switch p.Variant {
+			case "standard", "dynamic", "linked":
+				// valid
+			default:
+				return &command.Rejection{Code: "COUNTDOWN_VARIANT_INVALID", Message: fmt.Sprintf("unknown countdown variant %q; must be standard, dynamic, or linked", p.Variant)}
+			}
+			if p.Variant == "dynamic" && p.TriggerEventType == "" {
+				return &command.Rejection{Code: "COUNTDOWN_VARIANT_INVALID", Message: "trigger_event_type is required for dynamic countdowns"}
+			}
+			if p.Variant == "linked" && p.LinkedCountdownID == "" {
+				return &command.Rejection{Code: "COUNTDOWN_VARIANT_INVALID", Message: "linked_countdown_id is required for linked countdowns"}
+			}
 			return nil
 		}, now)
 }

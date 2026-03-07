@@ -575,6 +575,30 @@ func (f *fakeDaggerheartClient) ApplyReactionOutcome(ctx context.Context, in *da
 	return nil, unimplemented("ApplyReactionOutcome")
 }
 
+func (f *fakeDaggerheartClient) ApplyLevelUp(context.Context, *daggerheartv1.DaggerheartApplyLevelUpRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyLevelUpResponse, error) {
+	return nil, unimplemented("ApplyLevelUp")
+}
+
+func (f *fakeDaggerheartClient) UpdateGold(context.Context, *daggerheartv1.DaggerheartUpdateGoldRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateGoldResponse, error) {
+	return nil, unimplemented("UpdateGold")
+}
+
+func (f *fakeDaggerheartClient) AcquireDomainCard(context.Context, *daggerheartv1.DaggerheartAcquireDomainCardRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartAcquireDomainCardResponse, error) {
+	return nil, unimplemented("AcquireDomainCard")
+}
+
+func (f *fakeDaggerheartClient) SwapEquipment(context.Context, *daggerheartv1.DaggerheartSwapEquipmentRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartSwapEquipmentResponse, error) {
+	return nil, unimplemented("SwapEquipment")
+}
+
+func (f *fakeDaggerheartClient) UseConsumable(context.Context, *daggerheartv1.DaggerheartUseConsumableRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartUseConsumableResponse, error) {
+	return nil, unimplemented("UseConsumable")
+}
+
+func (f *fakeDaggerheartClient) AcquireConsumable(context.Context, *daggerheartv1.DaggerheartAcquireConsumableRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartAcquireConsumableResponse, error) {
+	return nil, unimplemented("AcquireConsumable")
+}
+
 // newTestRunner creates a Runner with pre-built clients for testing.
 // Production code should use NewRunner which dials the real gRPC server.
 func newTestRunner(env scenarioEnv, opts ...func(*Runner)) *Runner {

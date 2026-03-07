@@ -21,4 +21,10 @@ const (
 	EventTypeAdversaryDamageApplied    event.Type = "sys.daggerheart.adversary_damage_applied"
 	EventTypeAdversaryUpdated          event.Type = "sys.daggerheart.adversary_updated"
 	EventTypeAdversaryDeleted          event.Type = "sys.daggerheart.adversary_deleted"
+	EventTypeLevelUpApplied            event.Type = "sys.daggerheart.level_up_applied"
+	EventTypeGoldUpdated               event.Type = "sys.daggerheart.gold_updated"
+	EventTypeDomainCardAcquired        event.Type = "sys.daggerheart.domain_card_acquired"
+	EventTypeEquipmentSwapped          event.Type = "sys.daggerheart.equipment_swapped"
+	EventTypeConsumableUsed            event.Type = "sys.daggerheart.consumable_used"
+	EventTypeConsumableAcquired        event.Type = "sys.daggerheart.consumable_acquired"
 )
