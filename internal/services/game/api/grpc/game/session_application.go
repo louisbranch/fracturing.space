@@ -41,25 +41,6 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		return storage.SessionRecord{}, err
 	}
 
-	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionStart); err != nil {
-		return storage.SessionRecord{}, err
-	}
-
-	switch c.Status {
-	case campaign.StatusDraft, campaign.StatusActive:
-		// Allowed to start a session.
-	default:
-		return storage.SessionRecord{}, status.Error(codes.FailedPrecondition, "campaign status does not allow session start")
-	}
-
-	_, err = a.stores.Session.GetActiveSession(ctx, campaignID)
-	if err == nil {
-		return storage.SessionRecord{}, storage.ErrActiveSessionExists
-	}
-	if !errors.Is(err, storage.ErrNotFound) {
-		return storage.SessionRecord{}, status.Errorf(codes.Internal, "check active session: %v", err)
-	}
-
 	sessionID, err := a.idGenerator()
 	if err != nil {
 		return storage.SessionRecord{}, status.Errorf(codes.Internal, "generate session id: %v", err)

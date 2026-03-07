@@ -890,20 +890,18 @@ func TestListCampaigns_AllowsAdminOverride(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	now := time.Now().UTC()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:              "c1",
-		Name:            "Campaign One",
-		Status:          campaign.StatusActive,
-		CanStartSession: true,
-		GmMode:          campaign.GmModeHuman,
-		CreatedAt:       now,
+		ID:        "c1",
+		Name:      "Campaign One",
+		Status:    campaign.StatusActive,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: now,
 	}
 	campaignStore.campaigns["c2"] = storage.CampaignRecord{
-		ID:              "c2",
-		Name:            "Campaign Two",
-		Status:          campaign.StatusDraft,
-		CanStartSession: false,
-		GmMode:          campaign.GmModeAI,
-		CreatedAt:       now,
+		ID:        "c2",
+		Name:      "Campaign Two",
+		Status:    campaign.StatusDraft,
+		GmMode:    campaign.GmModeAI,
+		CreatedAt: now,
 	}
 	svc := NewCampaignService(Stores{Campaign: campaignStore})
 
@@ -927,12 +925,6 @@ func TestListCampaigns_AllowsAdminOverride(t *testing.T) {
 	}
 	if byID["c2"] == nil {
 		t.Fatal("campaign c2 missing from response")
-	}
-	if !byID["c1"].GetCanStartSession() {
-		t.Fatalf("campaign c1 can_start_session = %t, want true", byID["c1"].GetCanStartSession())
-	}
-	if byID["c2"].GetCanStartSession() {
-		t.Fatalf("campaign c2 can_start_session = %t, want false", byID["c2"].GetCanStartSession())
 	}
 }
 
@@ -1116,13 +1108,12 @@ func TestGetCampaign_DeniesMissingIdentity(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:              "c1",
-		Name:            "Test Campaign",
-		System:          commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:          campaign.StatusDraft,
-		CanStartSession: true,
-		GmMode:          campaign.GmModeHuman,
-		CreatedAt:       now,
+		ID:        "c1",
+		Name:      "Test Campaign",
+		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		Status:    campaign.StatusDraft,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: now,
 	}
 
 	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
@@ -1135,13 +1126,12 @@ func TestGetCampaign_DeniesNonMember(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:              "c1",
-		Name:            "Test Campaign",
-		System:          commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:          campaign.StatusDraft,
-		CanStartSession: true,
-		GmMode:          campaign.GmModeHuman,
-		CreatedAt:       now,
+		ID:        "c1",
+		Name:      "Test Campaign",
+		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		Status:    campaign.StatusDraft,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: now,
 	}
 
 	svc := NewCampaignService(Stores{Campaign: campaignStore, Participant: participantStore})
@@ -1154,13 +1144,12 @@ func TestGetCampaign_Success(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	now := time.Now().UTC()
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
-		ID:              "c1",
-		Name:            "Test Campaign",
-		System:          commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		Status:          campaign.StatusDraft,
-		CanStartSession: true,
-		GmMode:          campaign.GmModeHuman,
-		CreatedAt:       now,
+		ID:        "c1",
+		Name:      "Test Campaign",
+		System:    commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		Status:    campaign.StatusDraft,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: now,
 	}
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
 		"participant-1": {
@@ -1185,9 +1174,6 @@ func TestGetCampaign_Success(t *testing.T) {
 	}
 	if resp.Campaign.Name != "Test Campaign" {
 		t.Errorf("Campaign Name = %q, want %q", resp.Campaign.Name, "Test Campaign")
-	}
-	if !resp.Campaign.GetCanStartSession() {
-		t.Errorf("Campaign can_start_session = %t, want true", resp.Campaign.GetCanStartSession())
 	}
 }
 

@@ -13,82 +13,6 @@ import (
 const getCampaign = `-- name: GetCampaign :one
 SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
-	-- TODO(session-readiness): include system-specific readiness in projection
-	-- once system contracts are represented in projection state.
-	CASE
-		WHEN c.status NOT IN ('DRAFT', 'ACTIVE') THEN 0
-		WHEN c.gm_mode IN ('AI', 'HYBRID')
-				AND TRIM(COALESCE(c.ai_agent_id, '')) = '' THEN 0
-		WHEN c.gm_mode IN ('AI', 'HYBRID')
-				AND NOT EXISTS (
-					SELECT 1
-					FROM participants p
-					WHERE p.campaign_id = c.id
-						AND p.role = 'GM'
-						AND p.controller = 'AI'
-				) THEN 0
-		WHEN EXISTS (
-			SELECT 1
-			FROM sessions s
-			WHERE s.campaign_id = c.id
-				AND s.status = 'ACTIVE'
-		) THEN 0
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM participants p
-			WHERE p.campaign_id = c.id
-				AND p.role = 'GM'
-		) THEN 0
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM participants p
-			WHERE p.campaign_id = c.id
-				AND p.role = 'PLAYER'
-		) THEN 0
-		WHEN EXISTS (
-			SELECT 1
-			FROM characters ch
-			WHERE ch.campaign_id = c.id
-				AND TRIM(COALESCE(ch.controller_participant_id, '')) = ''
-		) THEN 0
-		WHEN EXISTS (
-			SELECT 1
-			FROM participants p
-			WHERE p.campaign_id = c.id
-				AND p.role = 'PLAYER'
-				AND NOT EXISTS (
-					SELECT 1
-					FROM characters ch
-					WHERE ch.campaign_id = c.id
-						AND ch.controller_participant_id = p.id
-				)
-		) THEN 0
-		WHEN c.game_system = 'DAGGERHEART'
-				AND EXISTS (
-					SELECT 1
-					FROM characters ch
-					LEFT JOIN daggerheart_character_profiles dcp
-						ON ch.campaign_id = dcp.campaign_id AND ch.id = dcp.character_id
-					WHERE ch.campaign_id = c.id
-						AND (
-							dcp.character_id IS NULL
-							OR TRIM(COALESCE(dcp.class_id, '')) = ''
-							OR TRIM(COALESCE(dcp.subclass_id, '')) = ''
-							OR TRIM(COALESCE(dcp.ancestry_id, '')) = ''
-							OR TRIM(COALESCE(dcp.community_id, '')) = ''
-							OR COALESCE(dcp.traits_assigned, 0) = 0
-							OR COALESCE(dcp.details_recorded, 0) = 0
-							OR COALESCE(json_array_length(dcp.starting_weapon_ids_json), 0) = 0
-							OR TRIM(COALESCE(dcp.starting_armor_id, '')) = ''
-							OR TRIM(COALESCE(dcp.starting_potion_item_id, '')) = ''
-							OR TRIM(COALESCE(dcp.background, '')) = ''
-							OR COALESCE(json_array_length(dcp.experiences_json), 0) = 0
-							OR COALESCE(json_array_length(dcp.domain_card_ids_json), 0) = 0
-							OR TRIM(COALESCE(dcp.connections, '')) = ''
-						)
-				) THEN 0
-		ELSE 1
-	END AS can_start_session,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
 	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.ai_agent_id, c.ai_auth_epoch, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
@@ -105,7 +29,6 @@ type GetCampaignRow struct {
 	GmMode           string         `json:"gm_mode"`
 	Intent           string         `json:"intent"`
 	AccessPolicy     string         `json:"access_policy"`
-	CanStartSession  int64          `json:"can_start_session"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
 	ThemePrompt      string         `json:"theme_prompt"`
@@ -134,7 +57,6 @@ func (q *Queries) GetCampaign(ctx context.Context, id string) (GetCampaignRow, e
 		&i.GmMode,
 		&i.Intent,
 		&i.AccessPolicy,
-		&i.CanStartSession,
 		&i.ParticipantCount,
 		&i.CharacterCount,
 		&i.ThemePrompt,
@@ -156,80 +78,6 @@ func (q *Queries) GetCampaign(ctx context.Context, id string) (GetCampaignRow, e
 const listAllCampaigns = `-- name: ListAllCampaigns :many
 SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
-	CASE
-		WHEN c.status NOT IN ('DRAFT', 'ACTIVE') THEN 0
-		WHEN c.gm_mode IN ('AI', 'HYBRID')
-				AND TRIM(COALESCE(c.ai_agent_id, '')) = '' THEN 0
-		WHEN c.gm_mode IN ('AI', 'HYBRID')
-				AND NOT EXISTS (
-					SELECT 1
-					FROM participants p
-					WHERE p.campaign_id = c.id
-						AND p.role = 'GM'
-						AND p.controller = 'AI'
-				) THEN 0
-		WHEN EXISTS (
-			SELECT 1
-			FROM sessions s
-			WHERE s.campaign_id = c.id
-				AND s.status = 'ACTIVE'
-		) THEN 0
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM participants p
-			WHERE p.campaign_id = c.id
-				AND p.role = 'GM'
-		) THEN 0
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM participants p
-			WHERE p.campaign_id = c.id
-				AND p.role = 'PLAYER'
-		) THEN 0
-		WHEN EXISTS (
-			SELECT 1
-			FROM characters ch
-			WHERE ch.campaign_id = c.id
-				AND TRIM(COALESCE(ch.controller_participant_id, '')) = ''
-		) THEN 0
-		WHEN EXISTS (
-			SELECT 1
-			FROM participants p
-			WHERE p.campaign_id = c.id
-				AND p.role = 'PLAYER'
-				AND NOT EXISTS (
-					SELECT 1
-					FROM characters ch
-					WHERE ch.campaign_id = c.id
-						AND ch.controller_participant_id = p.id
-				)
-		) THEN 0
-		WHEN c.game_system = 'DAGGERHEART'
-				AND EXISTS (
-					SELECT 1
-					FROM characters ch
-					LEFT JOIN daggerheart_character_profiles dcp
-						ON ch.campaign_id = dcp.campaign_id AND ch.id = dcp.character_id
-					WHERE ch.campaign_id = c.id
-						AND (
-							dcp.character_id IS NULL
-							OR TRIM(COALESCE(dcp.class_id, '')) = ''
-							OR TRIM(COALESCE(dcp.subclass_id, '')) = ''
-							OR TRIM(COALESCE(dcp.ancestry_id, '')) = ''
-							OR TRIM(COALESCE(dcp.community_id, '')) = ''
-							OR COALESCE(dcp.traits_assigned, 0) = 0
-							OR COALESCE(dcp.details_recorded, 0) = 0
-							OR COALESCE(json_array_length(dcp.starting_weapon_ids_json), 0) = 0
-							OR TRIM(COALESCE(dcp.starting_armor_id, '')) = ''
-							OR TRIM(COALESCE(dcp.starting_potion_item_id, '')) = ''
-							OR TRIM(COALESCE(dcp.background, '')) = ''
-							OR COALESCE(json_array_length(dcp.experiences_json), 0) = 0
-							OR COALESCE(json_array_length(dcp.domain_card_ids_json), 0) = 0
-							OR TRIM(COALESCE(dcp.connections, '')) = ''
-						)
-				) THEN 0
-		ELSE 1
-	END AS can_start_session,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
 	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.ai_agent_id, c.ai_auth_epoch, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
@@ -248,7 +96,6 @@ type ListAllCampaignsRow struct {
 	GmMode           string         `json:"gm_mode"`
 	Intent           string         `json:"intent"`
 	AccessPolicy     string         `json:"access_policy"`
-	CanStartSession  int64          `json:"can_start_session"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
 	ThemePrompt      string         `json:"theme_prompt"`
@@ -283,7 +130,6 @@ func (q *Queries) ListAllCampaigns(ctx context.Context, limit int64) ([]ListAllC
 			&i.GmMode,
 			&i.Intent,
 			&i.AccessPolicy,
-			&i.CanStartSession,
 			&i.ParticipantCount,
 			&i.CharacterCount,
 			&i.ThemePrompt,
@@ -346,80 +192,6 @@ func (q *Queries) ListCampaignIDsByAIAgent(ctx context.Context, aiAgentID string
 const listCampaigns = `-- name: ListCampaigns :many
 SELECT
 	c.id, c.name, c.locale, c.game_system, c.status, c.gm_mode, c.intent, c.access_policy,
-	CASE
-		WHEN c.status NOT IN ('DRAFT', 'ACTIVE') THEN 0
-		WHEN c.gm_mode IN ('AI', 'HYBRID')
-				AND TRIM(COALESCE(c.ai_agent_id, '')) = '' THEN 0
-		WHEN c.gm_mode IN ('AI', 'HYBRID')
-				AND NOT EXISTS (
-					SELECT 1
-					FROM participants p
-					WHERE p.campaign_id = c.id
-						AND p.role = 'GM'
-						AND p.controller = 'AI'
-				) THEN 0
-		WHEN EXISTS (
-			SELECT 1
-			FROM sessions s
-			WHERE s.campaign_id = c.id
-				AND s.status = 'ACTIVE'
-		) THEN 0
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM participants p
-			WHERE p.campaign_id = c.id
-				AND p.role = 'GM'
-		) THEN 0
-		WHEN NOT EXISTS (
-			SELECT 1
-			FROM participants p
-			WHERE p.campaign_id = c.id
-				AND p.role = 'PLAYER'
-		) THEN 0
-		WHEN EXISTS (
-			SELECT 1
-			FROM characters ch
-			WHERE ch.campaign_id = c.id
-				AND TRIM(COALESCE(ch.controller_participant_id, '')) = ''
-		) THEN 0
-		WHEN EXISTS (
-			SELECT 1
-			FROM participants p
-			WHERE p.campaign_id = c.id
-				AND p.role = 'PLAYER'
-				AND NOT EXISTS (
-					SELECT 1
-					FROM characters ch
-					WHERE ch.campaign_id = c.id
-						AND ch.controller_participant_id = p.id
-				)
-		) THEN 0
-		WHEN c.game_system = 'DAGGERHEART'
-				AND EXISTS (
-					SELECT 1
-					FROM characters ch
-					LEFT JOIN daggerheart_character_profiles dcp
-						ON ch.campaign_id = dcp.campaign_id AND ch.id = dcp.character_id
-					WHERE ch.campaign_id = c.id
-						AND (
-							dcp.character_id IS NULL
-							OR TRIM(COALESCE(dcp.class_id, '')) = ''
-							OR TRIM(COALESCE(dcp.subclass_id, '')) = ''
-							OR TRIM(COALESCE(dcp.ancestry_id, '')) = ''
-							OR TRIM(COALESCE(dcp.community_id, '')) = ''
-							OR COALESCE(dcp.traits_assigned, 0) = 0
-							OR COALESCE(dcp.details_recorded, 0) = 0
-							OR COALESCE(json_array_length(dcp.starting_weapon_ids_json), 0) = 0
-							OR TRIM(COALESCE(dcp.starting_armor_id, '')) = ''
-							OR TRIM(COALESCE(dcp.starting_potion_item_id, '')) = ''
-							OR TRIM(COALESCE(dcp.background, '')) = ''
-							OR COALESCE(json_array_length(dcp.experiences_json), 0) = 0
-							OR COALESCE(json_array_length(dcp.domain_card_ids_json), 0) = 0
-							OR TRIM(COALESCE(dcp.connections, '')) = ''
-						)
-				) THEN 0
-		ELSE 1
-	END AS can_start_session,
 	(SELECT COUNT(*) FROM participants p WHERE p.campaign_id = c.id) AS participant_count,
 	(SELECT COUNT(*) FROM characters ch WHERE ch.campaign_id = c.id) AS character_count,
 	c.theme_prompt, c.cover_asset_id, c.cover_set_id, c.ai_agent_id, c.ai_auth_epoch, c.parent_campaign_id, c.fork_event_seq, c.origin_campaign_id,
@@ -444,7 +216,6 @@ type ListCampaignsRow struct {
 	GmMode           string         `json:"gm_mode"`
 	Intent           string         `json:"intent"`
 	AccessPolicy     string         `json:"access_policy"`
-	CanStartSession  int64          `json:"can_start_session"`
 	ParticipantCount int64          `json:"participant_count"`
 	CharacterCount   int64          `json:"character_count"`
 	ThemePrompt      string         `json:"theme_prompt"`
@@ -479,7 +250,6 @@ func (q *Queries) ListCampaigns(ctx context.Context, arg ListCampaignsParams) ([
 			&i.GmMode,
 			&i.Intent,
 			&i.AccessPolicy,
-			&i.CanStartSession,
 			&i.ParticipantCount,
 			&i.CharacterCount,
 			&i.ThemePrompt,

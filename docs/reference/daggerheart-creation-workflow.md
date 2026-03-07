@@ -121,9 +121,9 @@ Readiness is enforced at two boundaries:
 
 1. **Domain session start**: Daggerheart module `CharacterReady` delegates to
    workflow evaluation and blocks `session.start` when incomplete.
-2. **Projection read model**: campaign `can_start_session` includes Daggerheart
-   completeness predicates so list/get campaign views align with runtime
-   readiness behavior.
+2. **Canonical readiness report API**: `GetCampaignSessionReadiness` evaluates
+   the same domain readiness report used by session-start command handling and
+   returns deterministic blockers for UI/operator consumers.
 
 This keeps transport-level readiness surfaces consistent with domain decisions.
 
@@ -139,5 +139,6 @@ fields.
 - Workflow provider + service dispatch: `internal/services/game/api/grpc/game/character_workflow.go`
 - CharacterService RPC handlers: `internal/services/game/api/grpc/game/character_service.go`
 - Profile adapter/reset handling: `internal/services/game/domain/bridge/daggerheart/adapter_profile.go`
-- Campaign readiness SQL: `internal/services/game/storage/sqlite/queries/campaigns.sql`
+- Session-start readiness evaluator: `internal/services/game/domain/readiness/session_start.go`
+- Campaign readiness RPC: `internal/services/game/api/grpc/game/campaign_readiness_service.go`
 - MCP DTO/handlers: `internal/services/mcp/domain/campaign.go`, `internal/services/mcp/domain/character_handlers.go`

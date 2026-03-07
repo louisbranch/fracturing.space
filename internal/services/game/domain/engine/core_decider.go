@@ -110,11 +110,6 @@ func sessionStartRoute(d CoreDecider, current aggregate.State, cmd command.Comma
 	decisionTime := now().UTC()
 	fixedNow := func() time.Time { return decisionTime }
 
-	startDecision := session.Decide(current.Session, cmd, fixedNow)
-	if len(startDecision.Rejections) > 0 {
-		return startDecision
-	}
-
 	var systemReadiness readiness.CharacterSystemReadiness
 	if d.Systems != nil {
 		systemID := strings.TrimSpace(current.Campaign.GameSystem)
@@ -125,15 +120,22 @@ func sessionStartRoute(d CoreDecider, current aggregate.State, cmd command.Comma
 		}
 	}
 
-	if rejection := readiness.EvaluateSessionStart(current, systemReadiness); rejection != nil {
-		return command.Reject(command.Rejection{Code: rejection.Code, Message: rejection.Message})
+	report := readiness.EvaluateSessionStartReport(current, readiness.ReportOptions{
+		SystemReadiness:        systemReadiness,
+		IncludeSessionBoundary: true,
+		HasActiveSession:       current.Session.Started,
+	})
+	if !report.Ready() {
+		first := report.Blockers[0]
+		return command.Reject(command.Rejection{Code: first.Code, Message: first.Message})
 	}
 
-	campaignStatus := current.Campaign.Status
-	if campaignStatus == "" {
-		campaignStatus = campaign.StatusDraft
+	startDecision := session.Decide(current.Session, cmd, fixedNow)
+	if len(startDecision.Rejections) > 0 {
+		return startDecision
 	}
-	if campaignStatus != campaign.StatusDraft {
+
+	if current.Campaign.Status != campaign.StatusDraft {
 		return startDecision
 	}
 

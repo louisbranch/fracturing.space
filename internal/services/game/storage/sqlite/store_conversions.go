@@ -305,7 +305,6 @@ type campaignRowData struct {
 	Locale           string
 	GameSystem       string
 	Status           string
-	CanStartSession  int64
 	GmMode           string
 	Intent           string
 	AccessPolicy     string
@@ -333,7 +332,6 @@ func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error
 		Locale:           locale,
 		System:           stringToGameSystem(row.GameSystem),
 		Status:           stringToCampaignStatus(row.Status),
-		CanStartSession:  row.CanStartSession != 0,
 		GmMode:           stringToGmMode(row.GmMode),
 		Intent:           stringToCampaignIntent(row.Intent),
 		AccessPolicy:     stringToCampaignAccessPolicy(row.AccessPolicy),
@@ -360,7 +358,6 @@ func dbGetCampaignRowToDomain(row db.GetCampaignRow) (storage.CampaignRecord, er
 		Locale:           row.Locale,
 		GameSystem:       row.GameSystem,
 		Status:           row.Status,
-		CanStartSession:  row.CanStartSession,
 		GmMode:           row.GmMode,
 		Intent:           row.Intent,
 		AccessPolicy:     row.AccessPolicy,
@@ -385,7 +382,6 @@ func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (storage.CampaignRecord
 		Locale:           row.Locale,
 		GameSystem:       row.GameSystem,
 		Status:           row.Status,
-		CanStartSession:  row.CanStartSession,
 		GmMode:           row.GmMode,
 		Intent:           row.Intent,
 		AccessPolicy:     row.AccessPolicy,
@@ -407,9 +403,9 @@ func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (storage.Campaign
 	return campaignRowDataToDomain(campaignRowData{
 		ID:               row.ID,
 		Name:             row.Name,
+		Locale:           row.Locale,
 		GameSystem:       row.GameSystem,
 		Status:           row.Status,
-		CanStartSession:  row.CanStartSession,
 		GmMode:           row.GmMode,
 		Intent:           row.Intent,
 		AccessPolicy:     row.AccessPolicy,
