@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-07T18:44:55Z",
+  "updated_at": "2026-03-07T19:19:18Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -10,7 +10,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate",
-      "floor": 91.8,
+      "floor": 92,
       "description": "Aggregate fold routing and typed state reconstruction."
     },
     {
@@ -20,7 +20,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge",
-      "floor": 97.7,
+      "floor": 98.8,
       "description": "Bridge registry and system metadata routing boundaries."
     },
     {
@@ -55,12 +55,12 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign",
-      "floor": 93.8,
+      "floor": 94.2,
       "description": "Campaign lifecycle domain behavior."
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/character",
-      "floor": 95.2,
+      "floor": 95.6,
       "description": "Character domain invariants and state transitions."
     },
     {
@@ -70,7 +70,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/command",
-      "floor": 91.8,
+      "floor": 92,
       "description": "Command envelope normalization and registry validation."
     },
     {
