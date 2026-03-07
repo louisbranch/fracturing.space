@@ -1,9 +1,13 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-05T15:34:19+00:00",
+  "generated_at": "2026-03-06T02:50:37+00:00",
   "theme": "high_fantasy",
   "provider": "cloudinary",
   "batch_ids": [
+    "dh_classes_try_r4",
+    "dh_domain_r1",
+    "dh_heritage_r1",
+    "dh_subclass_r3",
     "hf_v1_r1"
   ],
   "filters": {
@@ -1605,22 +1609,59 @@
         {
           "id": "daggerheart_ancestry_set_v1",
           "asset_type": "daggerheart_ancestry_illustration",
-          "asset_ids": []
+          "asset_ids": [
+            "heritage_dwarf",
+            "heritage_elf",
+            "heritage_faerie",
+            "heritage_goblin",
+            "heritage_human",
+            "heritage_orc"
+          ]
         },
         {
           "id": "daggerheart_class_icon_set_v1",
           "asset_type": "daggerheart_class_icon",
-          "asset_ids": []
+          "asset_ids": [
+            "bard",
+            "druid",
+            "guardian",
+            "ranger",
+            "rogue",
+            "seraph",
+            "sorcerer",
+            "warrior",
+            "wizard"
+          ]
         },
         {
           "id": "daggerheart_class_set_v1",
           "asset_type": "daggerheart_class_illustration",
-          "asset_ids": []
+          "asset_ids": [
+            "bard",
+            "druid",
+            "guardian",
+            "ranger",
+            "rogue",
+            "seraph",
+            "sorcerer",
+            "warrior",
+            "wizard"
+          ]
         },
         {
           "id": "daggerheart_community_set_v1",
           "asset_type": "daggerheart_community_illustration",
-          "asset_ids": []
+          "asset_ids": [
+            "heritage_highborne",
+            "heritage_loreborne",
+            "heritage_orderborne",
+            "heritage_ridgeborne",
+            "heritage_seaborne",
+            "heritage_slyborne",
+            "heritage_underborne",
+            "heritage_wanderborne",
+            "heritage_wildborne"
+          ]
         },
         {
           "id": "daggerheart_domain_card_set_v1",
@@ -1630,12 +1671,32 @@
         {
           "id": "daggerheart_domain_icon_set_v1",
           "asset_type": "daggerheart_domain_icon",
-          "asset_ids": []
+          "asset_ids": [
+            "arcana",
+            "blade",
+            "bone",
+            "codex",
+            "grace",
+            "midnight",
+            "sage",
+            "splendor",
+            "valor"
+          ]
         },
         {
           "id": "daggerheart_domain_set_v1",
           "asset_type": "daggerheart_domain_illustration",
-          "asset_ids": []
+          "asset_ids": [
+            "arcana",
+            "blade",
+            "bone",
+            "codex",
+            "grace",
+            "midnight",
+            "sage",
+            "splendor",
+            "valor"
+          ]
         },
         {
           "id": "daggerheart_environment_set_v1",
@@ -1645,10 +1706,513 @@
         {
           "id": "daggerheart_subclass_set_v1",
           "asset_type": "daggerheart_subclass_illustration",
-          "asset_ids": []
+          "asset_ids": [
+            "beastbound",
+            "call_brave",
+            "call_slayer",
+            "divine_wielder",
+            "elemental_origin",
+            "nightwalker",
+            "primal_origin",
+            "school_knowledge",
+            "school_war",
+            "stalwart",
+            "syndicate",
+            "troubadour",
+            "vengeance",
+            "warden_elements",
+            "warden_renewal",
+            "wayfinder",
+            "winged_sentinel",
+            "wordsmith"
+          ]
         }
       ],
-      "entity_asset_map": []
+      "entity_asset_map": [
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.dwarf",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_dwarf"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.elf",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_elf"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.faerie",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_faerie"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.goblin",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_goblin"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.human",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_human"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.orc",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_orc"
+        },
+        {
+          "asset_type": "daggerheart_class_icon",
+          "set_id": "daggerheart_class_icon_set_v1",
+          "entity_id": "class.bard",
+          "entity_type": "class",
+          "asset_id": "bard"
+        },
+        {
+          "asset_type": "daggerheart_class_icon",
+          "set_id": "daggerheart_class_icon_set_v1",
+          "entity_id": "class.druid",
+          "entity_type": "class",
+          "asset_id": "druid"
+        },
+        {
+          "asset_type": "daggerheart_class_icon",
+          "set_id": "daggerheart_class_icon_set_v1",
+          "entity_id": "class.guardian",
+          "entity_type": "class",
+          "asset_id": "guardian"
+        },
+        {
+          "asset_type": "daggerheart_class_icon",
+          "set_id": "daggerheart_class_icon_set_v1",
+          "entity_id": "class.ranger",
+          "entity_type": "class",
+          "asset_id": "ranger"
+        },
+        {
+          "asset_type": "daggerheart_class_icon",
+          "set_id": "daggerheart_class_icon_set_v1",
+          "entity_id": "class.rogue",
+          "entity_type": "class",
+          "asset_id": "rogue"
+        },
+        {
+          "asset_type": "daggerheart_class_icon",
+          "set_id": "daggerheart_class_icon_set_v1",
+          "entity_id": "class.seraph",
+          "entity_type": "class",
+          "asset_id": "seraph"
+        },
+        {
+          "asset_type": "daggerheart_class_icon",
+          "set_id": "daggerheart_class_icon_set_v1",
+          "entity_id": "class.sorcerer",
+          "entity_type": "class",
+          "asset_id": "sorcerer"
+        },
+        {
+          "asset_type": "daggerheart_class_icon",
+          "set_id": "daggerheart_class_icon_set_v1",
+          "entity_id": "class.warrior",
+          "entity_type": "class",
+          "asset_id": "warrior"
+        },
+        {
+          "asset_type": "daggerheart_class_icon",
+          "set_id": "daggerheart_class_icon_set_v1",
+          "entity_id": "class.wizard",
+          "entity_type": "class",
+          "asset_id": "wizard"
+        },
+        {
+          "asset_type": "daggerheart_class_illustration",
+          "set_id": "daggerheart_class_set_v1",
+          "entity_id": "class.bard",
+          "entity_type": "class",
+          "asset_id": "bard"
+        },
+        {
+          "asset_type": "daggerheart_class_illustration",
+          "set_id": "daggerheart_class_set_v1",
+          "entity_id": "class.druid",
+          "entity_type": "class",
+          "asset_id": "druid"
+        },
+        {
+          "asset_type": "daggerheart_class_illustration",
+          "set_id": "daggerheart_class_set_v1",
+          "entity_id": "class.guardian",
+          "entity_type": "class",
+          "asset_id": "guardian"
+        },
+        {
+          "asset_type": "daggerheart_class_illustration",
+          "set_id": "daggerheart_class_set_v1",
+          "entity_id": "class.ranger",
+          "entity_type": "class",
+          "asset_id": "ranger"
+        },
+        {
+          "asset_type": "daggerheart_class_illustration",
+          "set_id": "daggerheart_class_set_v1",
+          "entity_id": "class.rogue",
+          "entity_type": "class",
+          "asset_id": "rogue"
+        },
+        {
+          "asset_type": "daggerheart_class_illustration",
+          "set_id": "daggerheart_class_set_v1",
+          "entity_id": "class.seraph",
+          "entity_type": "class",
+          "asset_id": "seraph"
+        },
+        {
+          "asset_type": "daggerheart_class_illustration",
+          "set_id": "daggerheart_class_set_v1",
+          "entity_id": "class.sorcerer",
+          "entity_type": "class",
+          "asset_id": "sorcerer"
+        },
+        {
+          "asset_type": "daggerheart_class_illustration",
+          "set_id": "daggerheart_class_set_v1",
+          "entity_id": "class.warrior",
+          "entity_type": "class",
+          "asset_id": "warrior"
+        },
+        {
+          "asset_type": "daggerheart_class_illustration",
+          "set_id": "daggerheart_class_set_v1",
+          "entity_id": "class.wizard",
+          "entity_type": "class",
+          "asset_id": "wizard"
+        },
+        {
+          "asset_type": "daggerheart_community_illustration",
+          "set_id": "daggerheart_community_set_v1",
+          "entity_id": "heritage.highborne",
+          "entity_type": "community",
+          "asset_id": "heritage_highborne"
+        },
+        {
+          "asset_type": "daggerheart_community_illustration",
+          "set_id": "daggerheart_community_set_v1",
+          "entity_id": "heritage.loreborne",
+          "entity_type": "community",
+          "asset_id": "heritage_loreborne"
+        },
+        {
+          "asset_type": "daggerheart_community_illustration",
+          "set_id": "daggerheart_community_set_v1",
+          "entity_id": "heritage.orderborne",
+          "entity_type": "community",
+          "asset_id": "heritage_orderborne"
+        },
+        {
+          "asset_type": "daggerheart_community_illustration",
+          "set_id": "daggerheart_community_set_v1",
+          "entity_id": "heritage.ridgeborne",
+          "entity_type": "community",
+          "asset_id": "heritage_ridgeborne"
+        },
+        {
+          "asset_type": "daggerheart_community_illustration",
+          "set_id": "daggerheart_community_set_v1",
+          "entity_id": "heritage.seaborne",
+          "entity_type": "community",
+          "asset_id": "heritage_seaborne"
+        },
+        {
+          "asset_type": "daggerheart_community_illustration",
+          "set_id": "daggerheart_community_set_v1",
+          "entity_id": "heritage.slyborne",
+          "entity_type": "community",
+          "asset_id": "heritage_slyborne"
+        },
+        {
+          "asset_type": "daggerheart_community_illustration",
+          "set_id": "daggerheart_community_set_v1",
+          "entity_id": "heritage.underborne",
+          "entity_type": "community",
+          "asset_id": "heritage_underborne"
+        },
+        {
+          "asset_type": "daggerheart_community_illustration",
+          "set_id": "daggerheart_community_set_v1",
+          "entity_id": "heritage.wanderborne",
+          "entity_type": "community",
+          "asset_id": "heritage_wanderborne"
+        },
+        {
+          "asset_type": "daggerheart_community_illustration",
+          "set_id": "daggerheart_community_set_v1",
+          "entity_id": "heritage.wildborne",
+          "entity_type": "community",
+          "asset_id": "heritage_wildborne"
+        },
+        {
+          "asset_type": "daggerheart_domain_icon",
+          "set_id": "daggerheart_domain_icon_set_v1",
+          "entity_id": "domain.arcana",
+          "entity_type": "domain",
+          "asset_id": "arcana"
+        },
+        {
+          "asset_type": "daggerheart_domain_icon",
+          "set_id": "daggerheart_domain_icon_set_v1",
+          "entity_id": "domain.blade",
+          "entity_type": "domain",
+          "asset_id": "blade"
+        },
+        {
+          "asset_type": "daggerheart_domain_icon",
+          "set_id": "daggerheart_domain_icon_set_v1",
+          "entity_id": "domain.bone",
+          "entity_type": "domain",
+          "asset_id": "bone"
+        },
+        {
+          "asset_type": "daggerheart_domain_icon",
+          "set_id": "daggerheart_domain_icon_set_v1",
+          "entity_id": "domain.codex",
+          "entity_type": "domain",
+          "asset_id": "codex"
+        },
+        {
+          "asset_type": "daggerheart_domain_icon",
+          "set_id": "daggerheart_domain_icon_set_v1",
+          "entity_id": "domain.grace",
+          "entity_type": "domain",
+          "asset_id": "grace"
+        },
+        {
+          "asset_type": "daggerheart_domain_icon",
+          "set_id": "daggerheart_domain_icon_set_v1",
+          "entity_id": "domain.midnight",
+          "entity_type": "domain",
+          "asset_id": "midnight"
+        },
+        {
+          "asset_type": "daggerheart_domain_icon",
+          "set_id": "daggerheart_domain_icon_set_v1",
+          "entity_id": "domain.sage",
+          "entity_type": "domain",
+          "asset_id": "sage"
+        },
+        {
+          "asset_type": "daggerheart_domain_icon",
+          "set_id": "daggerheart_domain_icon_set_v1",
+          "entity_id": "domain.splendor",
+          "entity_type": "domain",
+          "asset_id": "splendor"
+        },
+        {
+          "asset_type": "daggerheart_domain_icon",
+          "set_id": "daggerheart_domain_icon_set_v1",
+          "entity_id": "domain.valor",
+          "entity_type": "domain",
+          "asset_id": "valor"
+        },
+        {
+          "asset_type": "daggerheart_domain_illustration",
+          "set_id": "daggerheart_domain_set_v1",
+          "entity_id": "domain.arcana",
+          "entity_type": "domain",
+          "asset_id": "arcana"
+        },
+        {
+          "asset_type": "daggerheart_domain_illustration",
+          "set_id": "daggerheart_domain_set_v1",
+          "entity_id": "domain.blade",
+          "entity_type": "domain",
+          "asset_id": "blade"
+        },
+        {
+          "asset_type": "daggerheart_domain_illustration",
+          "set_id": "daggerheart_domain_set_v1",
+          "entity_id": "domain.bone",
+          "entity_type": "domain",
+          "asset_id": "bone"
+        },
+        {
+          "asset_type": "daggerheart_domain_illustration",
+          "set_id": "daggerheart_domain_set_v1",
+          "entity_id": "domain.codex",
+          "entity_type": "domain",
+          "asset_id": "codex"
+        },
+        {
+          "asset_type": "daggerheart_domain_illustration",
+          "set_id": "daggerheart_domain_set_v1",
+          "entity_id": "domain.grace",
+          "entity_type": "domain",
+          "asset_id": "grace"
+        },
+        {
+          "asset_type": "daggerheart_domain_illustration",
+          "set_id": "daggerheart_domain_set_v1",
+          "entity_id": "domain.midnight",
+          "entity_type": "domain",
+          "asset_id": "midnight"
+        },
+        {
+          "asset_type": "daggerheart_domain_illustration",
+          "set_id": "daggerheart_domain_set_v1",
+          "entity_id": "domain.sage",
+          "entity_type": "domain",
+          "asset_id": "sage"
+        },
+        {
+          "asset_type": "daggerheart_domain_illustration",
+          "set_id": "daggerheart_domain_set_v1",
+          "entity_id": "domain.splendor",
+          "entity_type": "domain",
+          "asset_id": "splendor"
+        },
+        {
+          "asset_type": "daggerheart_domain_illustration",
+          "set_id": "daggerheart_domain_set_v1",
+          "entity_id": "domain.valor",
+          "entity_type": "domain",
+          "asset_id": "valor"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.beastbound",
+          "entity_type": "subclass",
+          "asset_id": "beastbound"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.call-brave",
+          "entity_type": "subclass",
+          "asset_id": "call_brave"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.call-slayer",
+          "entity_type": "subclass",
+          "asset_id": "call_slayer"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.divine-wielder",
+          "entity_type": "subclass",
+          "asset_id": "divine_wielder"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.elemental-origin",
+          "entity_type": "subclass",
+          "asset_id": "elemental_origin"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.nightwalker",
+          "entity_type": "subclass",
+          "asset_id": "nightwalker"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.primal-origin",
+          "entity_type": "subclass",
+          "asset_id": "primal_origin"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.school-knowledge",
+          "entity_type": "subclass",
+          "asset_id": "school_knowledge"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.school-war",
+          "entity_type": "subclass",
+          "asset_id": "school_war"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.stalwart",
+          "entity_type": "subclass",
+          "asset_id": "stalwart"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.syndicate",
+          "entity_type": "subclass",
+          "asset_id": "syndicate"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.troubadour",
+          "entity_type": "subclass",
+          "asset_id": "troubadour"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.vengeance",
+          "entity_type": "subclass",
+          "asset_id": "vengeance"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.warden-elements",
+          "entity_type": "subclass",
+          "asset_id": "warden_elements"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.warden-renewal",
+          "entity_type": "subclass",
+          "asset_id": "warden_renewal"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.wayfinder",
+          "entity_type": "subclass",
+          "asset_id": "wayfinder"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.winged-sentinel",
+          "entity_type": "subclass",
+          "asset_id": "winged_sentinel"
+        },
+        {
+          "asset_type": "daggerheart_subclass_illustration",
+          "set_id": "daggerheart_subclass_set_v1",
+          "entity_id": "subclass.wordsmith",
+          "entity_type": "subclass",
+          "asset_id": "wordsmith"
+        }
+      ]
     }
   },
   "daggerheart_adversary_illustration": [],
@@ -2071,7 +2635,153 @@
     }
   ],
   "daggerheart_domain_card_illustration": [],
-  "daggerheart_domain_icon": [],
-  "daggerheart_domain_illustration": [],
+  "daggerheart_domain_icon": [
+    {
+      "set_id": "daggerheart_domain_icon_set_v1",
+      "fs_asset_id": "arcana",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_icon/v1/arcana",
+        "version": 1772769283
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_icon_set_v1",
+      "fs_asset_id": "blade",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_icon/v1/blade",
+        "version": 1772769188
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_icon_set_v1",
+      "fs_asset_id": "bone",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_icon/v1/bone",
+        "version": 1772769190
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_icon_set_v1",
+      "fs_asset_id": "codex",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_icon/v1/codex",
+        "version": 1772769192
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_icon_set_v1",
+      "fs_asset_id": "grace",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_icon/v1/grace",
+        "version": 1772769194
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_icon_set_v1",
+      "fs_asset_id": "midnight",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_icon/v1/midnight",
+        "version": 1772769195
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_icon_set_v1",
+      "fs_asset_id": "sage",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_icon/v1/sage",
+        "version": 1772769198
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_icon_set_v1",
+      "fs_asset_id": "splendor",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_icon/v1/splendor",
+        "version": 1772769199
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_icon_set_v1",
+      "fs_asset_id": "valor",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_icon/v1/valor",
+        "version": 1772769201
+      }
+    }
+  ],
+  "daggerheart_domain_illustration": [
+    {
+      "set_id": "daggerheart_domain_set_v1",
+      "fs_asset_id": "arcana",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_illustration/v1/arcana",
+        "version": 1772769205
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_set_v1",
+      "fs_asset_id": "blade",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_illustration/v1/blade",
+        "version": 1772769209
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_set_v1",
+      "fs_asset_id": "bone",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_illustration/v1/bone",
+        "version": 1772769213
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_set_v1",
+      "fs_asset_id": "codex",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_illustration/v1/codex",
+        "version": 1772769221
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_set_v1",
+      "fs_asset_id": "grace",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_illustration/v1/grace",
+        "version": 1772769230
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_set_v1",
+      "fs_asset_id": "midnight",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_illustration/v1/midnight",
+        "version": 1772769236
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_set_v1",
+      "fs_asset_id": "sage",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_illustration/v1/sage",
+        "version": 1772769240
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_set_v1",
+      "fs_asset_id": "splendor",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_illustration/v1/splendor",
+        "version": 1772769247
+      }
+    },
+    {
+      "set_id": "daggerheart_domain_set_v1",
+      "fs_asset_id": "valor",
+      "cloudinary": {
+        "public_id": "high_fantasy/daggerheart_domain_illustration/v1/valor",
+        "version": 1772769256
+      }
+    }
+  ],
   "daggerheart_environment_illustration": []
 }

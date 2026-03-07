@@ -76,8 +76,10 @@ func (Workflow) AssembleCatalog(
 		}
 		domainNameByID[domainID] = domainName
 		creation.Domains = append(creation.Domains, campaignapp.CatalogDomain{
-			ID:   domainID,
-			Name: domainName,
+			ID:           domainID,
+			Name:         domainName,
+			Illustration: domain.Illustration,
+			Icon:         domain.Icon,
 		})
 	}
 	sortByName(creation.Domains, func(d campaignapp.CatalogDomain) string { return d.Name }, func(d campaignapp.CatalogDomain) string { return d.ID })

@@ -60,6 +60,7 @@ func TestCreationViewMapsDomainModelAndCopiesSlices(t *testing.T) {
 		Classes: []campaignapp.CatalogClass{{
 			ID:          "class-1",
 			Name:        "Bard",
+			DomainIDs:   []string{"domain.sage", "domain.arcana"},
 			HopeFeature: campaignapp.CatalogFeature{Name: "Make a Scene", Description: "Spend 3 Hope to force an NPC to make a scene."},
 			Features: []campaignapp.CatalogFeature{
 				{Name: "Bardic Knowledge", Description: "You have advantage on knowledge checks related to lore."},
@@ -92,6 +93,10 @@ func TestCreationViewMapsDomainModelAndCopiesSlices(t *testing.T) {
 		Armor:            []campaignapp.CatalogArmor{{ID: "armor-1", Name: "Leather"}},
 		PotionItems:      []campaignapp.CatalogItem{{ID: "item-1", Name: "Minor Potion"}},
 		DomainCards:      []campaignapp.CatalogDomainCard{{ID: "card-1", Name: "Arcane Bolt", DomainID: "arcana", Level: 1}},
+		Domains: []campaignapp.CatalogDomain{
+			{ID: "domain.sage", Name: "Sage", Icon: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/domain/sage-icon.png"}},
+			{ID: "domain.arcana", Name: "Arcana", Icon: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/domain/arcana-icon.png"}},
+		},
 	}
 
 	view := Workflow{}.CreationView(creation)
@@ -116,6 +121,18 @@ func TestCreationViewMapsDomainModelAndCopiesSlices(t *testing.T) {
 	}
 	if len(view.Classes[0].Features) != 1 || view.Classes[0].Features[0].Name != "Bardic Knowledge" || view.Classes[0].Features[0].Description == "" {
 		t.Fatalf("class features mapping mismatch: %+v", view.Classes[0].Features)
+	}
+	if len(view.Classes[0].DomainNames) != 2 || view.Classes[0].DomainNames[0] != "Sage" || view.Classes[0].DomainNames[1] != "Arcana" {
+		t.Fatalf("class domain names mapping mismatch: %+v", view.Classes[0].DomainNames)
+	}
+	if len(view.Classes[0].DomainWatermarks) != 2 {
+		t.Fatalf("class domain watermarks = %d, want 2", len(view.Classes[0].DomainWatermarks))
+	}
+	if view.Classes[0].DomainWatermarks[0].ID != "domain.sage" || view.Classes[0].DomainWatermarks[0].IconURL != "https://cdn.example.com/domain/sage-icon.png" {
+		t.Fatalf("first class domain watermark mismatch: %+v", view.Classes[0].DomainWatermarks[0])
+	}
+	if view.Classes[0].DomainWatermarks[1].ID != "domain.arcana" || view.Classes[0].DomainWatermarks[1].IconURL != "https://cdn.example.com/domain/arcana-icon.png" {
+		t.Fatalf("second class domain watermark mismatch: %+v", view.Classes[0].DomainWatermarks[1])
 	}
 	if len(view.Subclasses) != 1 || view.Subclasses[0].ClassID != "class-1" {
 		t.Fatalf("subclasses mapping mismatch: %+v", view.Subclasses)
@@ -222,5 +239,38 @@ func TestCreationViewResolvesSubclassImageURL(t *testing.T) {
 	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
 	if len(viewWithURL.Subclasses) != 1 || viewWithURL.Subclasses[0].ImageURL == "" {
 		t.Fatalf("expected non-empty ImageURL with AssetBaseURL, got %q", viewWithURL.Subclasses[0].ImageURL)
+	}
+}
+
+func TestCreationViewClassDomainWatermarksSkipMissingIconsAndCapAtTwo(t *testing.T) {
+	t.Parallel()
+
+	creation := campaignapp.CampaignCharacterCreation{
+		Classes: []campaignapp.CatalogClass{
+			{
+				ID:        "class.druid",
+				Name:      "Druid",
+				DomainIDs: []string{"domain.sage", "domain.arcana", "domain.bone"},
+			},
+		},
+		Domains: []campaignapp.CatalogDomain{
+			{ID: "domain.sage", Name: "Sage", Icon: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/domain/sage.png"}},
+			{ID: "domain.arcana", Name: "Arcana", Icon: campaignapp.CatalogAssetReference{URL: ""}},
+			{ID: "domain.bone", Name: "Bone", Icon: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/domain/bone.png"}},
+		},
+	}
+
+	view := Workflow{}.CreationView(creation)
+	if len(view.Classes) != 1 {
+		t.Fatalf("classes = %d, want 1", len(view.Classes))
+	}
+	if len(view.Classes[0].DomainWatermarks) != 2 {
+		t.Fatalf("domain watermarks = %d, want 2", len(view.Classes[0].DomainWatermarks))
+	}
+	if view.Classes[0].DomainWatermarks[0].ID != "domain.sage" {
+		t.Fatalf("first domain watermark id = %q, want %q", view.Classes[0].DomainWatermarks[0].ID, "domain.sage")
+	}
+	if view.Classes[0].DomainWatermarks[1].ID != "domain.bone" {
+		t.Fatalf("second domain watermark id = %q, want %q", view.Classes[0].DomainWatermarks[1].ID, "domain.bone")
 	}
 }
