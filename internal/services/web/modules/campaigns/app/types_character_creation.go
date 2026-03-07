@@ -71,31 +71,34 @@ type CatalogDomain struct {
 
 // CatalogWeapon stores weapon catalog data used by equipment forms.
 type CatalogWeapon struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	Category string `json:"category"`
-	Tier     int32  `json:"tier"`
-	Trait    string `json:"trait"`
-	Range    string `json:"range"`
-	Damage   string `json:"damage"`
-	Feature  string `json:"feature"`
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	Category     string                `json:"category"`
+	Tier         int32                 `json:"tier"`
+	Trait        string                `json:"trait"`
+	Range        string                `json:"range"`
+	Damage       string                `json:"damage"`
+	Feature      string                `json:"feature"`
+	Illustration CatalogAssetReference `json:"illustration"`
 }
 
 // CatalogArmor stores armor catalog data used by equipment forms.
 type CatalogArmor struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Tier           int32  `json:"tier"`
-	ArmorScore     int32  `json:"armorScore"`
-	BaseThresholds string `json:"baseThresholds"`
-	Feature        string `json:"feature"`
+	ID             string                `json:"id"`
+	Name           string                `json:"name"`
+	Tier           int32                 `json:"tier"`
+	ArmorScore     int32                 `json:"armorScore"`
+	BaseThresholds string                `json:"baseThresholds"`
+	Feature        string                `json:"feature"`
+	Illustration   CatalogAssetReference `json:"illustration"`
 }
 
 // CatalogItem stores item catalog data used by equipment forms.
 type CatalogItem struct {
-	ID          string `json:"id"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	Description  string                `json:"description"`
+	Illustration CatalogAssetReference `json:"illustration"`
 }
 
 // CatalogDomainCard stores domain card catalog data used by forms.

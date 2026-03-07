@@ -34,6 +34,7 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 		ParticipantClient:        &contractParticipantClient{},
 		CharacterClient:          &fakeCharacterWorkflowClient{},
 		DaggerheartContentClient: &fakeDaggerheartContentClient{},
+		DaggerheartAssetClient:   &fakeDaggerheartContentClient{},
 		SessionClient:            &contractSessionClient{},
 		InviteClient:             &contractInviteClient{},
 		AuthorizationClient:      contractAuthorizationClient{},

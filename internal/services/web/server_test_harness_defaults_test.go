@@ -30,6 +30,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 					ParticipantClient:        defaultParticipantClient(),
 					CharacterClient:          defaultCharacterClient(),
 					DaggerheartContentClient: defaultDaggerheartContentClient(),
+					DaggerheartAssetClient:   defaultDaggerheartAssetClient(),
 					SessionClient:            defaultSessionClient(),
 					InviteClient:             defaultInviteClient(),
 					AuthorizationClient:      defaultAuthorizationClient(),
@@ -93,6 +94,10 @@ func defaultInviteClient() fakeWebInviteClient {
 
 func defaultDaggerheartContentClient() fakeWebDaggerheartContentClient {
 	return fakeWebDaggerheartContentClient{response: &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{}}}
+}
+
+func defaultDaggerheartAssetClient() fakeWebDaggerheartAssetClient {
+	return fakeWebDaggerheartAssetClient{response: &daggerheartv1.GetDaggerheartAssetMapResponse{AssetMap: &daggerheartv1.DaggerheartAssetMap{}}}
 }
 
 func defaultAuthorizationClient() fakeWebAuthorizationClient {

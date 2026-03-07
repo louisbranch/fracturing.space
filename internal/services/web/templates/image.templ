@@ -49,15 +49,15 @@ func appImageClass(view AppImageView) string {
 
 templ AppImage(view AppImageView) {
 	if appImageFrameStyle(view) != "" {
-		<div class={ appImageFrameClass(view) } style={ appImageFrameStyle(view) }>
-			<div class={ appImageSkeletonClass(view) } aria-hidden="true"></div>
+		<div class={ appImageFrameClass(view) } style={ appImageFrameStyle(view) } data-image-frame="true">
+			<div class={ appImageSkeletonClass(view) } aria-hidden="true" data-image-skeleton="true"></div>
 			if appImageValue(view.Src) != "" {
 				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) }/>
 			}
 		</div>
 	} else {
-		<div class={ appImageFrameClass(view) }>
-			<div class={ appImageSkeletonClass(view) } aria-hidden="true"></div>
+		<div class={ appImageFrameClass(view) } data-image-frame="true">
+			<div class={ appImageSkeletonClass(view) } aria-hidden="true" data-image-skeleton="true"></div>
 			if appImageValue(view.Src) != "" {
 				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) }/>
 			}

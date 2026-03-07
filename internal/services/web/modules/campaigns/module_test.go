@@ -1136,6 +1136,12 @@ func completeGRPCDeps(deps GRPCGatewayDeps) GRPCGatewayDeps {
 	if deps.CharacterClient == nil {
 		deps.CharacterClient = stubCharacterClient{}
 	}
+	if deps.DaggerheartContentClient == nil {
+		deps.DaggerheartContentClient = stubDaggerheartContentClient{}
+	}
+	if deps.DaggerheartAssetClient == nil {
+		deps.DaggerheartAssetClient = stubDaggerheartAssetClient{}
+	}
 	if deps.SessionClient == nil {
 		deps.SessionClient = fakeSessionClient{}
 	}
@@ -1151,4 +1157,6 @@ func completeGRPCDeps(deps GRPCGatewayDeps) GRPCGatewayDeps {
 // Stubs satisfy client interfaces without being called — only non-nil checks matter.
 type stubParticipantClient struct{ ParticipantClient }
 type stubCharacterClient struct{ CharacterClient }
+type stubDaggerheartContentClient struct{ DaggerheartContentClient }
+type stubDaggerheartAssetClient struct{ DaggerheartAssetClient }
 type stubAuthorizationClient struct{ AuthorizationClient }

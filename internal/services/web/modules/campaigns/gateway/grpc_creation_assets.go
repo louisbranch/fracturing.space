@@ -9,12 +9,12 @@ import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 )
 
-// daggerheartContentAssetLookup provides keyed lookup for Daggerheart content asset refs.
-type daggerheartContentAssetLookup map[string]*daggerheartv1.DaggerheartContentAssetRef
+// daggerheartAssetLookup provides keyed lookup for Daggerheart content asset refs.
+type daggerheartAssetLookup map[string]*daggerheartv1.DaggerheartAssetRef
 
-// daggerheartContentAssetLookupFromResponse indexes asset refs by entity and asset type.
-func daggerheartContentAssetLookupFromResponse(resp *daggerheartv1.GetDaggerheartContentAssetMapResponse) daggerheartContentAssetLookup {
-	lookup := daggerheartContentAssetLookup{}
+// daggerheartAssetLookupFromResponse indexes asset refs by entity and asset type.
+func daggerheartAssetLookupFromResponse(resp *daggerheartv1.GetDaggerheartAssetMapResponse) daggerheartAssetLookup {
+	lookup := daggerheartAssetLookup{}
 	if resp == nil || resp.GetAssetMap() == nil {
 		return lookup
 	}
@@ -27,54 +27,54 @@ func daggerheartContentAssetLookupFromResponse(resp *daggerheartv1.GetDaggerhear
 		if entityID == "" || entityType == "" {
 			continue
 		}
-		key := daggerheartContentAssetLookupKey(entityID, entityType, asset.GetType())
+		key := daggerheartAssetLookupKey(entityID, entityType, asset.GetType())
 		lookup[key] = asset
 	}
 	return lookup
 }
 
 // get resolves one asset ref for an entity and requested asset type.
-func (lookup daggerheartContentAssetLookup) get(entityID, entityType string, assetType daggerheartv1.DaggerheartContentAssetType) *daggerheartv1.DaggerheartContentAssetRef {
+func (lookup daggerheartAssetLookup) get(entityID, entityType string, assetType daggerheartv1.DaggerheartAssetType) *daggerheartv1.DaggerheartAssetRef {
 	if lookup == nil {
 		return nil
 	}
-	return lookup[daggerheartContentAssetLookupKey(entityID, entityType, assetType)]
+	return lookup[daggerheartAssetLookupKey(entityID, entityType, assetType)]
 }
 
-// daggerheartContentAssetLookupKey builds the canonical map key for one asset ref.
-func daggerheartContentAssetLookupKey(entityID, entityType string, assetType daggerheartv1.DaggerheartContentAssetType) string {
+// daggerheartAssetLookupKey builds the canonical map key for one asset ref.
+func daggerheartAssetLookupKey(entityID, entityType string, assetType daggerheartv1.DaggerheartAssetType) string {
 	return strings.TrimSpace(entityID) + "\x00" + strings.ToLower(strings.TrimSpace(entityType)) + "\x00" + strconv.FormatInt(int64(assetType), 10)
 }
 
 // mapCatalogAssetReference projects one proto asset ref into the web catalog shape.
-func mapCatalogAssetReference(assetBaseURL string, asset *daggerheartv1.DaggerheartContentAssetRef) campaignapp.CatalogAssetReference {
+func mapCatalogAssetReference(assetBaseURL string, asset *daggerheartv1.DaggerheartAssetRef) campaignapp.CatalogAssetReference {
 	if asset == nil {
 		return campaignapp.CatalogAssetReference{Status: "unavailable"}
 	}
 	return campaignapp.CatalogAssetReference{
-		URL:     resolveDaggerheartContentAssetURL(assetBaseURL, asset.GetCdnAssetId()),
-		Status:  daggerheartContentAssetStatusLabel(asset.GetStatus()),
+		URL:     resolveDaggerheartAssetURL(assetBaseURL, asset.GetCdnAssetId()),
+		Status:  daggerheartAssetStatusLabel(asset.GetStatus()),
 		SetID:   strings.TrimSpace(asset.GetSetId()),
 		AssetID: strings.TrimSpace(asset.GetAssetId()),
 	}
 }
 
-// daggerheartContentAssetStatusLabel maps proto asset statuses to web labels.
-func daggerheartContentAssetStatusLabel(status daggerheartv1.DaggerheartContentAssetResolutionStatus) string {
+// daggerheartAssetStatusLabel maps proto asset statuses to web labels.
+func daggerheartAssetStatusLabel(status daggerheartv1.DaggerheartAssetStatus) string {
 	switch status {
-	case daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED:
+	case daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED:
 		return "mapped"
-	case daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_SET_DEFAULT:
+	case daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_SET_DEFAULT:
 		return "set_default"
-	case daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_UNAVAILABLE:
+	case daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_UNAVAILABLE:
 		return "unavailable"
 	default:
 		return "unavailable"
 	}
 }
 
-// resolveDaggerheartContentAssetURL resolves one CDN URL from a pre-resolved CDN asset id.
-func resolveDaggerheartContentAssetURL(assetBaseURL, cdnAssetID string) string {
+// resolveDaggerheartAssetURL resolves one CDN URL from a pre-resolved CDN asset id.
+func resolveDaggerheartAssetURL(assetBaseURL, cdnAssetID string) string {
 	normalizedAssetID := strings.TrimSpace(cdnAssetID)
 	if normalizedAssetID == "" {
 		return ""

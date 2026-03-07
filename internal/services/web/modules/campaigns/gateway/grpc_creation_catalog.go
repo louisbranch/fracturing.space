@@ -15,8 +15,11 @@ import (
 
 // CharacterCreationCatalog centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag language.Tag) (campaignapp.CampaignCharacterCreationCatalog, error) {
-	if g.DaggerheartClient == nil {
+	if g.DaggerheartContent == nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.daggerheart_content_client_is_not_configured", "daggerheart content client is not configured")
+	}
+	if g.DaggerheartAsset == nil {
+		return campaignapp.CampaignCharacterCreationCatalog{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.daggerheart_content_client_is_not_configured", "daggerheart asset client is not configured")
 	}
 	locale := platformi18n.LocaleForTag(localeTag)
 	locale = platformi18n.NormalizeLocale(locale)
@@ -24,7 +27,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		locale = commonv1.Locale_LOCALE_EN_US
 	}
 
-	resp, err := g.DaggerheartClient.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{Locale: locale})
+	resp, err := g.DaggerheartContent.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{Locale: locale})
 	if err != nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, err
 	}
@@ -32,11 +35,11 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		return campaignapp.CampaignCharacterCreationCatalog{}, nil
 	}
 
-	assetMapResp, err := g.DaggerheartClient.GetContentAssetMap(ctx, &daggerheartv1.GetDaggerheartContentAssetMapRequest{Locale: locale})
+	assetMapResp, err := g.DaggerheartAsset.GetAssetMap(ctx, &daggerheartv1.GetDaggerheartAssetMapRequest{Locale: locale})
 	if err != nil {
 		assetMapResp = nil
 	}
-	assetLookup := daggerheartContentAssetLookupFromResponse(assetMapResp)
+	assetLookup := daggerheartAssetLookupFromResponse(assetMapResp)
 
 	return campaignCharacterCreationCatalogFromProto(resp.GetCatalog(), g.AssetBaseURL, assetLookup, assetMapResp), nil
 }
@@ -45,8 +48,8 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 func campaignCharacterCreationCatalogFromProto(
 	catalogResp *daggerheartv1.DaggerheartContentCatalog,
 	assetBaseURL string,
-	assetLookup daggerheartContentAssetLookup,
-	assetMapResp *daggerheartv1.GetDaggerheartContentAssetMapResponse,
+	assetLookup daggerheartAssetLookup,
+	assetMapResp *daggerheartv1.GetDaggerheartAssetMapResponse,
 ) campaignapp.CampaignCharacterCreationCatalog {
 	if catalogResp == nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}
@@ -57,9 +60,9 @@ func campaignCharacterCreationCatalogFromProto(
 		Subclasses:   mapCatalogSubclasses(catalogResp.GetSubclasses(), assetBaseURL, assetLookup),
 		Heritages:    mapCatalogHeritages(catalogResp.GetHeritages(), assetBaseURL, assetLookup),
 		Domains:      mapCatalogDomains(catalogResp.GetDomains(), assetBaseURL, assetLookup),
-		Weapons:      mapCatalogWeapons(catalogResp.GetWeapons()),
-		Armor:        mapCatalogArmor(catalogResp.GetArmor()),
-		Items:        mapCatalogItems(catalogResp.GetItems()),
+		Weapons:      mapCatalogWeapons(catalogResp.GetWeapons(), assetBaseURL, assetLookup),
+		Armor:        mapCatalogArmor(catalogResp.GetArmor(), assetBaseURL, assetLookup),
+		Items:        mapCatalogItems(catalogResp.GetItems(), assetBaseURL, assetLookup),
 		DomainCards:  mapCatalogDomainCards(catalogResp.GetDomainCards(), assetBaseURL, assetLookup),
 		Adversaries:  mapCatalogAdversaries(catalogResp.GetAdversaries(), assetBaseURL, assetLookup),
 		Environments: mapCatalogEnvironments(catalogResp.GetEnvironments(), assetBaseURL, assetLookup),
@@ -67,7 +70,7 @@ func campaignCharacterCreationCatalogFromProto(
 }
 
 // catalogAssetTheme resolves an optional asset-map theme value used by presentation workflows.
-func catalogAssetTheme(resp *daggerheartv1.GetDaggerheartContentAssetMapResponse) string {
+func catalogAssetTheme(resp *daggerheartv1.GetDaggerheartAssetMapResponse) string {
 	if resp == nil || resp.GetAssetMap() == nil {
 		return ""
 	}
@@ -78,7 +81,7 @@ func catalogAssetTheme(resp *daggerheartv1.GetDaggerheartContentAssetMapResponse
 func mapCatalogClasses(
 	classes []*daggerheartv1.DaggerheartClass,
 	assetBaseURL string,
-	assetLookup daggerheartContentAssetLookup,
+	assetLookup daggerheartAssetLookup,
 ) []campaignapp.CatalogClass {
 	mapped := make([]campaignapp.CatalogClass, 0, len(classes))
 	for _, class := range classes {
@@ -99,11 +102,11 @@ func mapCatalogClasses(
 			Features:        mapCatalogFeatures(class.GetFeatures()),
 			Illustration: mapCatalogAssetReference(
 				assetBaseURL,
-				assetLookup.get(classID, "class", daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION),
+				assetLookup.get(classID, "class", daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_CLASS_ILLUSTRATION),
 			),
 			Icon: mapCatalogAssetReference(
 				assetBaseURL,
-				assetLookup.get(classID, "class", daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ICON),
+				assetLookup.get(classID, "class", daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_CLASS_ICON),
 			),
 		})
 	}
@@ -125,7 +128,7 @@ func mapCatalogHopeFeature(feature *daggerheartv1.DaggerheartHopeFeature) campai
 func mapCatalogSubclasses(
 	subclasses []*daggerheartv1.DaggerheartSubclass,
 	assetBaseURL string,
-	assetLookup daggerheartContentAssetLookup,
+	assetLookup daggerheartAssetLookup,
 ) []campaignapp.CatalogSubclass {
 	mapped := make([]campaignapp.CatalogSubclass, 0, len(subclasses))
 	for _, subclass := range subclasses {
@@ -147,7 +150,7 @@ func mapCatalogSubclasses(
 				assetLookup.get(
 					subclassID,
 					"subclass",
-					daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_SUBCLASS_ILLUSTRATION,
+					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_SUBCLASS_ILLUSTRATION,
 				),
 			),
 		})
@@ -159,7 +162,7 @@ func mapCatalogSubclasses(
 func mapCatalogHeritages(
 	heritages []*daggerheartv1.DaggerheartHeritage,
 	assetBaseURL string,
-	assetLookup daggerheartContentAssetLookup,
+	assetLookup daggerheartAssetLookup,
 ) []campaignapp.CatalogHeritage {
 	mapped := make([]campaignapp.CatalogHeritage, 0, len(heritages))
 	for _, heritage := range heritages {
@@ -186,14 +189,14 @@ func mapCatalogHeritages(
 }
 
 // heritageAssetType resolves the image asset type by normalized heritage kind.
-func heritageAssetType(kind string) daggerheartv1.DaggerheartContentAssetType {
+func heritageAssetType(kind string) daggerheartv1.DaggerheartAssetType {
 	switch kind {
 	case "ancestry":
-		return daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ANCESTRY_ILLUSTRATION
+		return daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ANCESTRY_ILLUSTRATION
 	case "community":
-		return daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_COMMUNITY_ILLUSTRATION
+		return daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_COMMUNITY_ILLUSTRATION
 	default:
-		return daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_UNSPECIFIED
+		return daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_UNSPECIFIED
 	}
 }
 
@@ -201,7 +204,7 @@ func heritageAssetType(kind string) daggerheartv1.DaggerheartContentAssetType {
 func mapCatalogDomains(
 	domains []*daggerheartv1.DaggerheartDomain,
 	assetBaseURL string,
-	assetLookup daggerheartContentAssetLookup,
+	assetLookup daggerheartAssetLookup,
 ) []campaignapp.CatalogDomain {
 	mapped := make([]campaignapp.CatalogDomain, 0, len(domains))
 	for _, domain := range domains {
@@ -220,7 +223,7 @@ func mapCatalogDomains(
 				assetLookup.get(
 					domainID,
 					"domain",
-					daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ILLUSTRATION,
+					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_ILLUSTRATION,
 				),
 			),
 			Icon: mapCatalogAssetReference(
@@ -228,7 +231,7 @@ func mapCatalogDomains(
 				assetLookup.get(
 					domainID,
 					"domain",
-					daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ICON,
+					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_ICON,
 				),
 			),
 		})
@@ -237,7 +240,11 @@ func mapCatalogDomains(
 }
 
 // mapCatalogWeapons projects weapon catalog records into web domain types.
-func mapCatalogWeapons(weapons []*daggerheartv1.DaggerheartWeapon) []campaignapp.CatalogWeapon {
+func mapCatalogWeapons(
+	weapons []*daggerheartv1.DaggerheartWeapon,
+	assetBaseURL string,
+	assetLookup daggerheartAssetLookup,
+) []campaignapp.CatalogWeapon {
 	mapped := make([]campaignapp.CatalogWeapon, 0, len(weapons))
 	for _, weapon := range weapons {
 		if weapon == nil {
@@ -256,13 +263,25 @@ func mapCatalogWeapons(weapons []*daggerheartv1.DaggerheartWeapon) []campaignapp
 			Range:    strings.TrimSpace(weapon.GetRange()),
 			Damage:   formatDamageDice(weapon.GetDamageDice()),
 			Feature:  strings.TrimSpace(weapon.GetFeature()),
+			Illustration: mapCatalogAssetReference(
+				assetBaseURL,
+				assetLookup.get(
+					weaponID,
+					"weapon",
+					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_WEAPON_ILLUSTRATION,
+				),
+			),
 		})
 	}
 	return mapped
 }
 
 // mapCatalogArmor projects armor catalog records into web domain types.
-func mapCatalogArmor(armorSet []*daggerheartv1.DaggerheartArmor) []campaignapp.CatalogArmor {
+func mapCatalogArmor(
+	armorSet []*daggerheartv1.DaggerheartArmor,
+	assetBaseURL string,
+	assetLookup daggerheartAssetLookup,
+) []campaignapp.CatalogArmor {
 	mapped := make([]campaignapp.CatalogArmor, 0, len(armorSet))
 	for _, armor := range armorSet {
 		if armor == nil {
@@ -279,13 +298,25 @@ func mapCatalogArmor(armorSet []*daggerheartv1.DaggerheartArmor) []campaignapp.C
 			ArmorScore:     armor.GetArmorScore(),
 			BaseThresholds: fmt.Sprintf("Major %d / Severe %d", armor.GetBaseMajorThreshold(), armor.GetBaseSevereThreshold()),
 			Feature:        strings.TrimSpace(armor.GetFeature()),
+			Illustration: mapCatalogAssetReference(
+				assetBaseURL,
+				assetLookup.get(
+					armorID,
+					"armor",
+					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ARMOR_ILLUSTRATION,
+				),
+			),
 		})
 	}
 	return mapped
 }
 
 // mapCatalogItems projects item catalog records into web domain types.
-func mapCatalogItems(items []*daggerheartv1.DaggerheartItem) []campaignapp.CatalogItem {
+func mapCatalogItems(
+	items []*daggerheartv1.DaggerheartItem,
+	assetBaseURL string,
+	assetLookup daggerheartAssetLookup,
+) []campaignapp.CatalogItem {
 	mapped := make([]campaignapp.CatalogItem, 0, len(items))
 	for _, item := range items {
 		if item == nil {
@@ -299,6 +330,14 @@ func mapCatalogItems(items []*daggerheartv1.DaggerheartItem) []campaignapp.Catal
 			ID:          itemID,
 			Name:        strings.TrimSpace(item.GetName()),
 			Description: strings.TrimSpace(item.GetDescription()),
+			Illustration: mapCatalogAssetReference(
+				assetBaseURL,
+				assetLookup.get(
+					itemID,
+					"item",
+					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ITEM_ILLUSTRATION,
+				),
+			),
 		})
 	}
 	return mapped
@@ -308,7 +347,7 @@ func mapCatalogItems(items []*daggerheartv1.DaggerheartItem) []campaignapp.Catal
 func mapCatalogDomainCards(
 	domainCards []*daggerheartv1.DaggerheartDomainCard,
 	assetBaseURL string,
-	assetLookup daggerheartContentAssetLookup,
+	assetLookup daggerheartAssetLookup,
 ) []campaignapp.CatalogDomainCard {
 	mapped := make([]campaignapp.CatalogDomainCard, 0, len(domainCards))
 	for _, domainCard := range domainCards {
@@ -332,7 +371,7 @@ func mapCatalogDomainCards(
 				assetLookup.get(
 					domainCardID,
 					"domain_card",
-					daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION,
+					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION,
 				),
 			),
 		})
@@ -344,7 +383,7 @@ func mapCatalogDomainCards(
 func mapCatalogAdversaries(
 	adversaries []*daggerheartv1.DaggerheartAdversaryEntry,
 	assetBaseURL string,
-	assetLookup daggerheartContentAssetLookup,
+	assetLookup daggerheartAssetLookup,
 ) []campaignapp.CatalogAdversary {
 	mapped := make([]campaignapp.CatalogAdversary, 0, len(adversaries))
 	for _, adversary := range adversaries {
@@ -363,7 +402,7 @@ func mapCatalogAdversaries(
 				assetLookup.get(
 					adversaryID,
 					"adversary",
-					daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ADVERSARY_ILLUSTRATION,
+					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ADVERSARY_ILLUSTRATION,
 				),
 			),
 		})
@@ -375,7 +414,7 @@ func mapCatalogAdversaries(
 func mapCatalogEnvironments(
 	environments []*daggerheartv1.DaggerheartEnvironment,
 	assetBaseURL string,
-	assetLookup daggerheartContentAssetLookup,
+	assetLookup daggerheartAssetLookup,
 ) []campaignapp.CatalogEnvironment {
 	mapped := make([]campaignapp.CatalogEnvironment, 0, len(environments))
 	for _, environment := range environments {
@@ -394,7 +433,7 @@ func mapCatalogEnvironments(
 				assetLookup.get(
 					environmentID,
 					"environment",
-					daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ENVIRONMENT_ILLUSTRATION,
+					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ENVIRONMENT_ILLUSTRATION,
 				),
 			),
 		})

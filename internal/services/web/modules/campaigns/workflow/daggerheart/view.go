@@ -22,10 +22,10 @@ func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) w
 	view.Subclasses = mapCreationSubclasses(creation.Subclasses, cdn)
 	view.Ancestries = mapCreationHeritages(creation.Ancestries, catalog.DaggerheartEntityTypeAncestry, catalog.DaggerheartAssetTypeAncestryIllustration, cdn)
 	view.Communities = mapCreationHeritages(creation.Communities, catalog.DaggerheartEntityTypeCommunity, catalog.DaggerheartAssetTypeCommunityIllustration, cdn)
-	view.PrimaryWeapons = mapCreationWeapons(creation.PrimaryWeapons)
-	view.SecondaryWeapons = mapCreationWeapons(creation.SecondaryWeapons)
-	view.Armor = mapCreationArmor(creation.Armor)
-	view.PotionItems = mapCreationItems(creation.PotionItems)
+	view.PrimaryWeapons = mapCreationWeapons(creation.PrimaryWeapons, cdn)
+	view.SecondaryWeapons = mapCreationWeapons(creation.SecondaryWeapons, cdn)
+	view.Armor = mapCreationArmor(creation.Armor, cdn)
+	view.PotionItems = mapCreationItems(creation.PotionItems, cdn)
 	view.DomainCards = mapCreationDomainCards(creation.DomainCards, cdn)
 
 	return view
@@ -225,28 +225,38 @@ func mapFeature(feature campaignapp.CatalogFeature) webtemplates.CampaignCreatio
 }
 
 // mapCreationWeapons maps weapon catalog entries to template rows.
-func mapCreationWeapons(weapons []campaignapp.CatalogWeapon) []webtemplates.CampaignCreationWeaponView {
+func mapCreationWeapons(weapons []campaignapp.CatalogWeapon, cdn imagecdn.ImageCDN) []webtemplates.CampaignCreationWeaponView {
 	mapped := make([]webtemplates.CampaignCreationWeaponView, 0, len(weapons))
 	for _, weapon := range weapons {
+		imageURL := strings.TrimSpace(weapon.Illustration.URL)
+		if imageURL == "" {
+			imageURL = resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeWeapon, weapon.ID, catalog.DaggerheartAssetTypeWeaponIllustration)
+		}
 		mapped = append(mapped, webtemplates.CampaignCreationWeaponView{
-			ID:      weapon.ID,
-			Name:    weapon.Name,
-			Trait:   weapon.Trait,
-			Range:   weapon.Range,
-			Damage:  weapon.Damage,
-			Feature: weapon.Feature,
+			ID:       weapon.ID,
+			Name:     weapon.Name,
+			ImageURL: imageURL,
+			Trait:    weapon.Trait,
+			Range:    weapon.Range,
+			Damage:   weapon.Damage,
+			Feature:  weapon.Feature,
 		})
 	}
 	return mapped
 }
 
 // mapCreationArmor maps armor catalog entries to template rows.
-func mapCreationArmor(items []campaignapp.CatalogArmor) []webtemplates.CampaignCreationArmorView {
+func mapCreationArmor(items []campaignapp.CatalogArmor, cdn imagecdn.ImageCDN) []webtemplates.CampaignCreationArmorView {
 	mapped := make([]webtemplates.CampaignCreationArmorView, 0, len(items))
 	for _, item := range items {
+		imageURL := strings.TrimSpace(item.Illustration.URL)
+		if imageURL == "" {
+			imageURL = resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeArmor, item.ID, catalog.DaggerheartAssetTypeArmorIllustration)
+		}
 		mapped = append(mapped, webtemplates.CampaignCreationArmorView{
 			ID:             item.ID,
 			Name:           item.Name,
+			ImageURL:       imageURL,
 			ArmorScore:     item.ArmorScore,
 			BaseThresholds: item.BaseThresholds,
 			Feature:        item.Feature,
@@ -256,12 +266,17 @@ func mapCreationArmor(items []campaignapp.CatalogArmor) []webtemplates.CampaignC
 }
 
 // mapCreationItems maps item catalog entries to template rows.
-func mapCreationItems(items []campaignapp.CatalogItem) []webtemplates.CampaignCreationItemView {
+func mapCreationItems(items []campaignapp.CatalogItem, cdn imagecdn.ImageCDN) []webtemplates.CampaignCreationItemView {
 	mapped := make([]webtemplates.CampaignCreationItemView, 0, len(items))
 	for _, item := range items {
+		imageURL := strings.TrimSpace(item.Illustration.URL)
+		if imageURL == "" {
+			imageURL = resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeItem, item.ID, catalog.DaggerheartAssetTypeItemIllustration)
+		}
 		mapped = append(mapped, webtemplates.CampaignCreationItemView{
 			ID:          item.ID,
 			Name:        item.Name,
+			ImageURL:    imageURL,
 			Description: item.Description,
 		})
 	}

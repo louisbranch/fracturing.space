@@ -12,6 +12,7 @@ type (
 	ParticipantClient        = campaigngateway.ParticipantClient
 	CharacterClient          = campaigngateway.CharacterClient
 	DaggerheartContentClient = campaigngateway.DaggerheartContentClient
+	DaggerheartAssetClient   = campaigngateway.DaggerheartAssetClient
 	SessionClient            = campaigngateway.SessionClient
 	InviteClient             = campaigngateway.InviteClient
 	AuthorizationClient      = campaigngateway.AuthorizationClient
