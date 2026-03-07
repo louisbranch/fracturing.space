@@ -296,12 +296,16 @@ func TestAssembleCatalogTrimsProfileFields(t *testing.T) {
 		campaignapp.CampaignCharacterCreationProgress{},
 		campaignapp.CampaignCharacterCreationCatalog{},
 		campaignapp.CampaignCharacterCreationProfile{
+			CharacterName: "  Aria  ",
 			ClassID:       "  bard  ",
 			SubclassID:    "  lore  ",
 			Background:    "  noble  ",
 			DomainCardIDs: []string{"  dc1  ", "", "dc2"},
 		},
 	)
+	if creation.Profile.CharacterName != "Aria" {
+		t.Fatalf("CharacterName = %q, want %q", creation.Profile.CharacterName, "Aria")
+	}
 	if creation.Profile.ClassID != "bard" {
 		t.Fatalf("ClassID = %q, want %q", creation.Profile.ClassID, "bard")
 	}

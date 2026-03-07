@@ -49,7 +49,7 @@ func (h handlers) handleCharacterCreationPage(w http.ResponseWriter, r *http.Req
 	// Resolve character name for breadcrumbs from the already-fetched profile.
 	characterName := creation.Profile.CharacterName
 	if characterName == "" {
-		characterName = characterID
+		characterName = webtemplates.T(page.loc, "game.character_detail.title")
 	}
 
 	crumbs := campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc,

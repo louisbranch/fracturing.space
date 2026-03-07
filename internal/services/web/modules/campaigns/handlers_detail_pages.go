@@ -3,6 +3,7 @@ package campaigns
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -28,7 +29,7 @@ func (h handlers) handleOverview(w http.ResponseWriter, r *http.Request, campaig
 func (h handlers) handleCampaignEdit(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerCampaignEdit,
-		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{
 				{Label: webtemplates.T(loc, "game.campaign.menu.overview"), URL: routepath.AppCampaign(campaignID)},
 				{Label: webtemplates.T(loc, "game.campaign.action_edit")},
@@ -49,7 +50,7 @@ func (h handlers) handleCampaignEdit(w http.ResponseWriter, r *http.Request, cam
 func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerParticipants,
-		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{{Label: webtemplates.T(loc, "game.participants.title")}}
 		},
 		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
@@ -67,7 +68,7 @@ func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, cam
 func (h handlers) handleParticipantEdit(w http.ResponseWriter, r *http.Request, campaignID, participantID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerParticipantEdit,
-		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{
 				{Label: webtemplates.T(loc, "game.participants.title"), URL: routepath.AppCampaignParticipants(campaignID)},
 				{Label: webtemplates.T(loc, "game.participants.action_edit")},
@@ -89,7 +90,7 @@ func (h handlers) handleParticipantEdit(w http.ResponseWriter, r *http.Request, 
 func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerCharacters,
-		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{{Label: webtemplates.T(loc, "game.characters.title")}}
 		},
 		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
@@ -107,10 +108,10 @@ func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campa
 func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerCharacterDetail,
-		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+		extra: func(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{
 				{Label: webtemplates.T(loc, "game.characters.title"), URL: routepath.AppCampaignCharacters(campaignID)},
-				{Label: characterID},
+				{Label: campaignCharacterBreadcrumbLabel(loc, view)},
 			}
 		},
 		loadData: func(ctx context.Context, campaignID string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error {
@@ -138,7 +139,7 @@ func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, 
 func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerSessions,
-		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{{Label: webtemplates.T(loc, "game.sessions.title")}}
 		},
 		loadData: func(ctx context.Context, campaignID string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error {
@@ -157,7 +158,7 @@ func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaig
 func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, campaignID, sessionID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerSessionDetail,
-		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{
 				{Label: webtemplates.T(loc, "game.sessions.title"), URL: routepath.AppCampaignSessions(campaignID)},
 				{Label: sessionID},
@@ -175,7 +176,7 @@ func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 func (h handlers) handleInvites(w http.ResponseWriter, r *http.Request, campaignID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerInvites,
-		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
+		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{{Label: webtemplates.T(loc, "game.campaign_invites.title")}}
 		},
 		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
@@ -187,4 +188,23 @@ func (h handlers) handleInvites(w http.ResponseWriter, r *http.Request, campaign
 			return nil
 		},
 	})
+}
+
+// campaignCharacterBreadcrumbLabel resolves the selected character breadcrumb label.
+func campaignCharacterBreadcrumbLabel(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) string {
+	selectedCharacterID := strings.TrimSpace(view.CharacterID)
+	if selectedCharacterID == "" {
+		return webtemplates.T(loc, "game.character_detail.title")
+	}
+	for _, character := range view.Characters {
+		if strings.TrimSpace(character.ID) != selectedCharacterID {
+			continue
+		}
+		characterName := strings.TrimSpace(character.Name)
+		if characterName != "" {
+			return characterName
+		}
+		break
+	}
+	return webtemplates.T(loc, "game.character_detail.title")
 }

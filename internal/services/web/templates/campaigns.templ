@@ -584,7 +584,15 @@ func campaignCharacterByID(view CampaignDetailView) CampaignCharacterView {
 			return character
 		}
 	}
-	return CampaignCharacterView{ID: characterID, Name: characterID, Kind: "Unspecified", Controller: "Unassigned"}
+	return CampaignCharacterView{ID: characterID, Kind: "Unspecified", Controller: "Unassigned"}
+}
+
+func campaignCharacterDisplayName(loc Localizer, character CampaignCharacterView) string {
+	name := strings.TrimSpace(character.Name)
+	if name != "" {
+		return name
+	}
+	return T(loc, "game.character_detail.title")
 }
 
 func campaignCreationStepLabel(loc Localizer, stepKey string) string {

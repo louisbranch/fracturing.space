@@ -2188,9 +2188,9 @@ func CampaignDetailFragment(view CampaignDetailView, loc Localizer) templ.Compon
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var139 string
-			templ_7745c5c3_Var139, templ_7745c5c3_Err = templ.JoinStringErrs(campaignCharacterByID(view).ID)
+			templ_7745c5c3_Var139, templ_7745c5c3_Err = templ.JoinStringErrs(campaignCharacterDisplayName(loc, campaignCharacterByID(view)))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/campaigns_detail.templ`, Line: 349, Col: 130}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/campaigns_detail.templ`, Line: 349, Col: 162}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var139))
 			if templ_7745c5c3_Err != nil {
