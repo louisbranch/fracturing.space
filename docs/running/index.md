@@ -4,7 +4,7 @@ nav_order: 3
 has_children: true
 status: canonical
 owner: engineering
-last_reviewed: "2026-02-26"
+last_reviewed: "2026-03-07"
 ---
 
 # Running
@@ -26,3 +26,4 @@ Canonical runtime entrypoint.
 - [Replay operations](replay-operations.md)
 - [Scenario scripts](scenario-scripts.md)
 - [Translation workflow](translation-workflow.md)
+- [Game server startup phases](game-startup-phases.md)

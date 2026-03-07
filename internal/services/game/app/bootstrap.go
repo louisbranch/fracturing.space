@@ -26,6 +26,16 @@ import (
 )
 
 // serverBootstrap configures each startup phase for the game server.
+//
+// Startup phases (see docs/running/game-startup-phases.md):
+//  1. Registries — command/event/system registries from game modules
+//  2. Network — open gRPC listener
+//  3. Storage — open event journal, projections, and content databases
+//  4. Domain — wire stores, build projection applier
+//  5. Systems — validate system parity, repair projection gaps
+//  6. Dependencies — connect auth (required), social/AI/status (graceful)
+//  7. Transport — register gRPC services and health checks
+//  8. Runtime — configure projection workers and status reporting
 type serverBootstrap struct {
 	config serverBootstrapConfig
 }
@@ -45,7 +55,7 @@ type serverBootstrapConfig struct {
 	newHealthServer                 func() *health.Server
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
 	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
-	buildProjectionApplyOutboxApply func(projectionApplyStore, *event.Registry) func(context.Context, event.Event) error
+	buildProjectionApplyOutboxApply func(projectionApplyStore, systemmanifest.ProjectionStores, *event.Registry) func(context.Context, event.Event) error
 	buildStatusRuntime              func(context.Context, string, *storageBundle, bool, bool) statusRuntimeState
 }
 
@@ -225,6 +235,7 @@ func (b *serverBootstrap) configureProjectionRuntime(
 	srvEnv serverEnv,
 	stores *gamegrpc.Stores,
 	projectionStore projectionApplyStore,
+	systemStores systemmanifest.ProjectionStores,
 	registries engine.Registries,
 	adapters *bridge.AdapterRegistry,
 ) (projectionRuntimeState, error) {
@@ -248,7 +259,7 @@ func (b *serverBootstrap) configureProjectionRuntime(
 	return projectionRuntimeState{
 		enableApplyWorker:  enableApplyWorker,
 		enableShadowWorker: enableShadowWorker,
-		applyOutbox:        b.config.buildProjectionApplyOutboxApply(projectionStore, projectionRegistries),
+		applyOutbox:        b.config.buildProjectionApplyOutboxApply(projectionStore, systemStores, projectionRegistries),
 	}, nil
 }
 
@@ -330,6 +341,9 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 	if err := b.config.validateSystemRegistration(registeredSystemModules(), systemRegistry, storeState.applier.Adapters); err != nil {
 		return nil, wrapStartupError(startupPhaseSystems, "validate system parity", err)
 	}
+	if err := interceptors.ValidateSessionLockPolicyCoverage(interceptors.BlockedCommandNamespaces()); err != nil {
+		return nil, wrapStartupError(startupPhaseSystems, "validate session lock policy", err)
+	}
 	repairProjectionGaps(startupCtx, bundle, storeState.applier)
 
 	authClients, socialClients, aiClients, err := b.dialDependencyClients(startupCtx, srvEnv)
@@ -379,6 +393,7 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		srvEnv,
 		&stores,
 		bundle.projections,
+		stores.SystemStores,
 		registries,
 		storeState.applier.Adapters,
 	)

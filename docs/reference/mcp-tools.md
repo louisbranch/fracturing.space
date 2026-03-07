@@ -2,6 +2,7 @@
 title: "MCP tools"
 parent: "Reference"
 nav_order: 2
+last_reviewed: "2026-03-07"
 ---
 
 # MCP tools

@@ -122,7 +122,6 @@ func countdownUpdateSnapshotRejection(snapshot SnapshotState, payload CountdownU
 		}
 	}
 	if isCountdownUpdateNoMutation(snapshot, payload) {
-		// FIXME(telemetry): metric for idempotent countdown updates.
 		return &command.Rejection{
 			Code:    rejectionCodeCountdownUpdateNoMutation,
 			Message: "countdown update is unchanged",

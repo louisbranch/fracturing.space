@@ -37,6 +37,7 @@ type CampaignRecord struct {
 
 // CampaignReader provides read-only access to campaign projections.
 type CampaignReader interface {
+	// Get retrieves a campaign by ID. Returns ErrNotFound if the campaign does not exist.
 	Get(ctx context.Context, id string) (CampaignRecord, error)
 	// List returns a page of campaign records starting after the page token.
 	List(ctx context.Context, pageSize int, pageToken string) (CampaignPage, error)
@@ -79,6 +80,8 @@ type ParticipantRecord struct {
 
 // ParticipantReader provides read-only access to participant projections.
 type ParticipantReader interface {
+	// GetParticipant retrieves a participant by campaign and participant ID.
+	// Returns ErrNotFound if the participant does not exist.
 	GetParticipant(ctx context.Context, campaignID, participantID string) (ParticipantRecord, error)
 	// CountParticipants returns the number of participants for a campaign.
 	CountParticipants(ctx context.Context, campaignID string) (int, error)
@@ -121,6 +124,7 @@ type InviteRecord struct {
 
 // InviteReader provides read-only access to invite projections.
 type InviteReader interface {
+	// GetInvite retrieves an invite by ID. Returns ErrNotFound if the invite does not exist.
 	GetInvite(ctx context.Context, inviteID string) (InviteRecord, error)
 	ListInvites(ctx context.Context, campaignID string, recipientUserID string, status invite.Status, pageSize int, pageToken string) (InvitePage, error)
 	ListPendingInvites(ctx context.Context, campaignID string, pageSize int, pageToken string) (InvitePage, error)
@@ -161,6 +165,8 @@ type CharacterRecord struct {
 
 // CharacterReader provides read-only access to character projections.
 type CharacterReader interface {
+	// GetCharacter retrieves a character by campaign and character ID.
+	// Returns ErrNotFound if the character does not exist.
 	GetCharacter(ctx context.Context, campaignID, characterID string) (CharacterRecord, error)
 	// CountCharacters returns the number of characters for a campaign.
 	CountCharacters(ctx context.Context, campaignID string) (int, error)

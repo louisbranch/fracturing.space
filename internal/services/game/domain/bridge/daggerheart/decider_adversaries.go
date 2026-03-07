@@ -20,7 +20,6 @@ func decideAdversaryConditionChange(snapshotState SnapshotState, hasSnapshot boo
 					}
 				}
 				if isAdversaryConditionChangeNoMutation(s, *p) {
-					// FIXME(telemetry): metric for idempotent adversary condition changes.
 					return &command.Rejection{
 						Code:    rejectionCodeAdversaryConditionNoMutation,
 						Message: "adversary condition change is unchanged",
@@ -38,7 +37,6 @@ func decideAdversaryCreate(snapshotState SnapshotState, hasSnapshot bool, cmd co
 		func(p *AdversaryCreatePayload) string { return strings.TrimSpace(p.AdversaryID) },
 		func(s SnapshotState, hasState bool, p *AdversaryCreatePayload, _ func() time.Time) *command.Rejection {
 			if hasState && isAdversaryCreateNoMutation(s, *p) {
-				// FIXME(telemetry): metric for idempotent adversary creation commands.
 				return &command.Rejection{
 					Code:    rejectionCodeAdversaryCreateNoMutation,
 					Message: "adversary create is unchanged",

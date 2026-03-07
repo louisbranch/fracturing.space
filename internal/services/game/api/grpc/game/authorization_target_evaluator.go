@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -60,7 +61,7 @@ func evaluateCanParticipantGovernanceTarget(
 	if targetParticipantID != "" && targetAccess == participant.CampaignAccessUnspecified && stores.Participant != nil {
 		targetRecord, err := stores.Participant.GetParticipant(ctx, campaignID, targetParticipantID)
 		if err != nil {
-			if err != storage.ErrNotFound {
+			if !errors.Is(err, storage.ErrNotFound) {
 				return domainauthz.PolicyDecision{}, nil, false, status.Errorf(codes.Internal, "load target participant: %v", err)
 			}
 		} else {

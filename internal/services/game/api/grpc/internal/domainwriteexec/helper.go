@@ -2,6 +2,7 @@ package domainwriteexec
 
 import (
 	"context"
+	"log"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -17,7 +18,8 @@ type Deps interface {
 }
 
 // ExecuteAndApply normalizes transport write options and executes one command
-// using runtime-controlled inline apply behavior.
+// using runtime-controlled inline apply behavior. If no OnRejection callback
+// is set, a default structured-logging callback is wired automatically.
 func ExecuteAndApply(
 	ctx context.Context,
 	deps Deps,
@@ -27,6 +29,7 @@ func ExecuteAndApply(
 	normalizeConfig grpcerror.NormalizeDomainWriteOptionsConfig,
 ) (engine.Result, error) {
 	grpcerror.NormalizeDomainWriteOptions(&options, normalizeConfig)
+	setDefaultOnRejection(&options)
 	runtime := deps.DomainWriteRuntime()
 	if runtime == nil {
 		runtime = domainwrite.NewRuntime()
@@ -44,9 +47,22 @@ func ExecuteWithoutInlineApply(
 	normalizeConfig grpcerror.NormalizeDomainWriteOptionsConfig,
 ) (engine.Result, error) {
 	grpcerror.NormalizeDomainWriteOptions(&options, normalizeConfig)
+	setDefaultOnRejection(&options)
 	runtime := deps.DomainWriteRuntime()
 	if runtime == nil {
 		runtime = domainwrite.NewRuntime()
 	}
 	return runtime.ExecuteWithoutInlineApply(ctx, deps.DomainExecutor(), cmd, options)
+}
+
+// setDefaultOnRejection wires a structured-logging callback when no
+// OnRejection is configured, making idempotent domain rejections observable.
+func setDefaultOnRejection(options *domainwrite.Options) {
+	if options.OnRejection != nil {
+		return
+	}
+	options.OnRejection = func(info domainwrite.OnRejectionInfo) {
+		log.Printf("domain rejection campaign_id=%s command_type=%s rejection_code=%s",
+			info.CampaignID, info.CommandType, info.Code)
+	}
 }

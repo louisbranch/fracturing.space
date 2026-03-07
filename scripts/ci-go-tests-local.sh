@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
+#
+# Local parity script for .github/workflows/go-tests.yml (test job).
+# Keep steps in sync; intentional divergences:
+#   - coverage-badge job is CI-only (runs on main push, not locally)
+#   - coverage regression checks use local git fetch instead of CI artifact download
 
 run_step() {
   echo "==> $*"
@@ -15,6 +20,7 @@ run_step make topology-check
 run_step make negative-test-assertion-check
 run_step make web-architecture-check
 run_step make game-architecture-check
+run_step make admin-architecture-check
 run_step make cover
 run_step make cover-critical-domain
 

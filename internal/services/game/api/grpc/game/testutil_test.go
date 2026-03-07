@@ -14,7 +14,7 @@ import (
 //	ts := newTestStores()                              // campaign + participant + event
 //	ts := newTestStores().withCharacter()               // + character + daggerheart
 //	ts := newTestStores().withDomain(domain)            // + domain engine + write runtime
-//	svc := NewCampaignService(ts.build())
+//	svc := NewCampaignService(ts.build(), nil, nil)
 type testStoresBuilder struct {
 	Campaign    *fakeCampaignStore
 	Participant *fakeParticipantStore

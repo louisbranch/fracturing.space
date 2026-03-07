@@ -82,6 +82,21 @@ not in this policy page.
 5. Ensure adapters read authoritative fields only.
 6. Keep compatibility decoders for legacy historical replay when needed.
 
+## Replay-safety rules for new fields
+
+Adding a field to an existing payload must not break replay of older events.
+
+1. **New optional fields must use `omitempty`**. Without it, serialized events
+   contain explicit zero/null values that create ambiguity during replay.
+2. **Pointer fields (`*int`, `*string`, etc.) must always include `omitempty`**.
+   The `TestPayloadPointerFieldsRequireOmitempty` architecture test enforces
+   this at CI time.
+3. **Never remove or rename a field** in a payload struct. Old events in the
+   journal still carry the old shape.
+4. **Never add a required (non-pointer, non-omitempty) field** to an existing
+   payload. Old events will unmarshal with Go zero values, causing silent
+   state divergence.
+
 ## Adoption checklist
 
 - class selected and documented

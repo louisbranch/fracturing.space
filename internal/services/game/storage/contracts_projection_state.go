@@ -85,13 +85,14 @@ type ProjectionWatermarkStore interface {
 }
 
 // ProjectionStore groups read-model-oriented stores consumed by APIs and queries.
+// System-specific stores (e.g. DaggerheartStore) are accessed through the
+// manifest.ProjectionStores registry, not embedded in core composites.
 type ProjectionStore interface {
 	CampaignStore
 	ParticipantStore
 	ClaimIndexStore
 	InviteStore
 	CharacterStore
-	DaggerheartStore
 	SessionStore
 	SnapshotStore
 	CampaignForkStore
@@ -100,14 +101,14 @@ type ProjectionStore interface {
 }
 
 // Store is a composite interface for all persistence concerns used across event
-// sourcing, projection application, and queries.
+// sourcing, projection application, and queries. System-specific stores are
+// accessed via type assertion on the concrete implementation.
 type Store interface {
 	CampaignStore
 	ParticipantStore
 	ClaimIndexStore
 	CharacterStore
 	InviteStore
-	DaggerheartStore
 	SessionStore
 	EventStore
 	AuditEventStore

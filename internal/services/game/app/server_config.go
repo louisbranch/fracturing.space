@@ -72,5 +72,5 @@ func resolveProjectionApplyOutboxModes(srvEnv serverEnv) (bool, bool, string, er
 	if srvEnv.ProjectionApplyOutboxShadowWorkerEnabled {
 		return false, true, projectionApplyModeShadowOnly, nil
 	}
-	return false, false, projectionApplyModeInlineApplyOnly, nil
+	return false, false, "", errors.New("projection apply outbox enabled but no worker configured; enable either worker or shadow worker")
 }

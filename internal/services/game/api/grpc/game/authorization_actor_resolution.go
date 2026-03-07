@@ -2,6 +2,7 @@ package game
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -45,7 +46,7 @@ func resolvePolicyActor(ctx context.Context, participants storage.ParticipantSto
 	if actorID != "" {
 		actor, err := participants.GetParticipant(ctx, campaignID, actorID)
 		if err != nil {
-			if err == storage.ErrNotFound {
+			if errors.Is(err, storage.ErrNotFound) {
 				return storage.ParticipantRecord{}, authzReasonDenyActorNotFound, status.Error(codes.PermissionDenied, "participant lacks permission")
 			}
 			return storage.ParticipantRecord{}, authzReasonErrorActorLoad, status.Errorf(codes.Internal, "load participant: %v", err)
@@ -123,7 +124,7 @@ func resolveCharacterMutationOwnerParticipantID(
 	}
 	characterRecord, err := stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		if err == storage.ErrNotFound {
+		if errors.Is(err, storage.ErrNotFound) {
 			return "", nil
 		}
 		return "", status.Errorf(codes.Internal, "load character owner: %v", err)

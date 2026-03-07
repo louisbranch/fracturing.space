@@ -20,7 +20,9 @@ type ProjectionApplyOutboxShadowProcessor interface {
 }
 
 // ProjectionApplyTxStore is the transaction-scoped projection contract needed
-// by exactly-once projection apply callbacks.
+// by exactly-once projection apply callbacks. Core projection stores only —
+// system-specific stores are accessed via type assertion on the concrete
+// implementation (e.g. DaggerheartStore) during adapter rebinding.
 type ProjectionApplyTxStore interface {
 	CampaignStore
 	CharacterStore
@@ -35,16 +37,12 @@ type ProjectionApplyTxStore interface {
 	SceneCharacterStore
 	SceneGateStore
 	SceneSpotlightStore
-	DaggerheartStore
 	ProjectionWatermarkStore
 }
 
 // ProjectionApplyExactlyOnceStore applies one event to projections exactly once
 // per campaign/sequence checkpoint.
 type ProjectionApplyExactlyOnceStore interface {
-	// DaggerheartStore is required so callers can bind system adapters before
-	// running the exactly-once callback.
-	DaggerheartStore
 	ApplyProjectionEventExactlyOnce(
 		ctx context.Context,
 		evt event.Event,

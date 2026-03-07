@@ -3,6 +3,7 @@ package interceptors
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"strings"
 
@@ -116,6 +117,53 @@ func requiredCampaignIDField(fullMethod string) string {
 		return "source_campaign_id"
 	}
 	return "campaign_id"
+}
+
+// ValidateSessionLockPolicyCoverage checks that transport-layer blocking and
+// domain-layer policy agree. Every command type mapped from an RPC must be
+// classified as "blocked" by the domain policy. Every blocked command namespace
+// known to the domain must have at least one transport entry.
+//
+// Call this at startup to catch drift between transport interceptor and domain
+// policy when new commands or namespaces are added.
+func ValidateSessionLockPolicyCoverage(blockedNamespaces []string) error {
+	// Verify every mapped command type is actually "blocked" per domain policy.
+	for method, cmdType := range blockedMethodCommandTypes {
+		policy, classified := engine.ActiveSessionPolicyForCommandType(cmdType)
+		if !classified {
+			return fmt.Errorf("session lock interceptor maps %s to unclassified command %s", method, cmdType)
+		}
+		if policy != engine.ActiveSessionCommandPolicyBlocked {
+			return fmt.Errorf("session lock interceptor maps %s to command %s which domain policy classifies as %q, not blocked", method, cmdType, policy)
+		}
+	}
+
+	// Verify every blocked namespace has at least one transport entry.
+	transportNamespaces := make(map[string]bool)
+	for _, cmdType := range blockedMethodCommandTypes {
+		transportNamespaces[commandNamespaceFromType(cmdType)] = true
+	}
+	for _, ns := range blockedNamespaces {
+		if !transportNamespaces[ns] {
+			return fmt.Errorf("domain policy blocks namespace %q but no RPC method maps to it in session lock interceptor", ns)
+		}
+	}
+	return nil
+}
+
+// BlockedCommandNamespaces returns the namespaces the domain policy classifies
+// as blocked during active sessions. Used by startup validation to ensure
+// transport coverage.
+func BlockedCommandNamespaces() []string {
+	return []string{"campaign", "participant", "invite", "character"}
+}
+
+func commandNamespaceFromType(cmdType command.Type) string {
+	s := string(cmdType)
+	if idx := strings.Index(s, "."); idx > 0 {
+		return s[:idx]
+	}
+	return s
 }
 
 // logCampaignWriteBlocked emits a structured log for blocked campaign writes.

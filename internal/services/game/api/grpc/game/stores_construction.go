@@ -6,11 +6,6 @@ import "github.com/louisbranch/fracturing.space/internal/services/game/storage"
 // bundle plus runtime dependencies. This reduces startup constructor coupling
 // to individual store interfaces while preserving explicit overrides.
 func NewStoresFromProjection(config StoresFromProjectionConfig) Stores {
-	systemStores := config.SystemStores
-	if systemStores.Daggerheart == nil && config.ProjectionStore != nil {
-		systemStores.Daggerheart = config.ProjectionStore
-	}
-
 	return Stores{
 		Campaign:           config.ProjectionStore,
 		Participant:        config.ProjectionStore,
@@ -25,7 +20,7 @@ func NewStoresFromProjection(config StoresFromProjectionConfig) Stores {
 		SceneGate:          config.ProjectionStore,
 		SceneSpotlight:     config.ProjectionStore,
 		CampaignFork:       config.ProjectionStore,
-		SystemStores:       systemStores,
+		SystemStores:       config.SystemStores,
 		Event:              config.EventStore,
 		Watermarks:         config.ProjectionStore,
 		Audit:              inferAuditStore(config),

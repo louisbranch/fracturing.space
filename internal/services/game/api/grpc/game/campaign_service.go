@@ -24,25 +24,14 @@ type CampaignService struct {
 	aiClient    aiv1.AgentServiceClient
 }
 
-// NewCampaignService creates a CampaignService with default dependencies.
-func NewCampaignService(stores Stores) *CampaignService {
+// NewCampaignService creates a CampaignService. The authClient and aiClient
+// are optional — pass nil when the dependency is not needed (e.g. in tests).
+func NewCampaignService(stores Stores, authClient authv1.AuthServiceClient, aiClient aiv1.AgentServiceClient) *CampaignService {
 	return &CampaignService{
 		stores:      stores,
 		clock:       time.Now,
 		idGenerator: id.NewID,
+		authClient:  authClient,
+		aiClient:    aiClient,
 	}
-}
-
-// NewCampaignServiceWithAuth creates a CampaignService with an auth client.
-func NewCampaignServiceWithAuth(stores Stores, authClient authv1.AuthServiceClient) *CampaignService {
-	service := NewCampaignService(stores)
-	service.authClient = authClient
-	return service
-}
-
-// NewCampaignServiceWithAuthAndAI creates a CampaignService with auth and AI clients.
-func NewCampaignServiceWithAuthAndAI(stores Stores, authClient authv1.AuthServiceClient, aiClient aiv1.AgentServiceClient) *CampaignService {
-	service := NewCampaignServiceWithAuth(stores, authClient)
-	service.aiClient = aiClient
-	return service
 }

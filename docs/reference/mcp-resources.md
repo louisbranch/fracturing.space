@@ -2,6 +2,7 @@
 title: "MCP resources"
 parent: "Reference"
 nav_order: 3
+last_reviewed: "2026-03-07"
 ---
 
 # MCP resources

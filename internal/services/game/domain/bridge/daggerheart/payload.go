@@ -2,7 +2,7 @@ package daggerheart
 
 // GMFearSetPayload captures the payload for sys.daggerheart.gm_fear.set commands.
 type GMFearSetPayload struct {
-	After  *int   `json:"after"`
+	After  *int   `json:"after,omitempty"`
 	Reason string `json:"reason,omitempty"`
 }
 

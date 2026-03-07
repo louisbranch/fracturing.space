@@ -2,6 +2,7 @@
 title: "MCP"
 parent: "Reference"
 nav_order: 1
+last_reviewed: "2026-03-07"
 ---
 
 # MCP overview

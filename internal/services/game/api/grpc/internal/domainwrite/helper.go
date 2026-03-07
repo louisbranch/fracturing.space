@@ -21,6 +21,15 @@ type EventApplier interface {
 	Apply(context.Context, event.Event) error
 }
 
+// OnRejectionInfo carries context about a domain rejection, intended for
+// observability callbacks (logging, metrics) at the transport layer.
+type OnRejectionInfo struct {
+	CampaignID  string
+	CommandType command.Type
+	Code        string
+	Message     string
+}
+
 // Options controls command execution and emitted-event application behavior.
 type Options struct {
 	RequireEvents      bool
@@ -30,6 +39,11 @@ type Options struct {
 	ExecuteErr         func(error) error
 	ApplyErr           func(error) error
 	RejectErr          func(string) error
+
+	// OnRejection is called when a command is rejected, before converting
+	// the rejection into an error. Transport layers can supply this to log
+	// or emit metrics for idempotent rejections without polluting domain code.
+	OnRejection func(OnRejectionInfo)
 
 	// ExecuteErrMessage and ApplyErrMessage are used to construct default
 	// ExecuteErr / ApplyErr handlers when those callbacks are nil.
@@ -177,7 +191,16 @@ func ExecuteAndApply(
 		return engine.Result{}, options.ExecuteErr(err)
 	}
 	if len(result.Decision.Rejections) > 0 {
-		return engine.Result{}, options.RejectErr(result.Decision.Rejections[0].Message)
+		rejection := result.Decision.Rejections[0]
+		if options.OnRejection != nil {
+			options.OnRejection(OnRejectionInfo{
+				CampaignID:  cmd.CampaignID,
+				CommandType: cmd.Type,
+				Code:        rejection.Code,
+				Message:     rejection.Message,
+			})
+		}
+		return engine.Result{}, options.RejectErr(rejection.Message)
 	}
 	if options.RequireEvents && len(result.Decision.Events) == 0 {
 		return engine.Result{}, errors.New(options.MissingEventMsg)

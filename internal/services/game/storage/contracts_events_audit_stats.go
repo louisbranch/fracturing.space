@@ -13,8 +13,10 @@ type EventStore interface {
 	// AppendEvent atomically appends an event and returns it with sequence and hash set.
 	AppendEvent(ctx context.Context, evt event.Event) (event.Event, error)
 	// GetEventByHash retrieves an event by its content hash.
+	// Returns ErrNotFound if no event matches the hash.
 	GetEventByHash(ctx context.Context, hash string) (event.Event, error)
 	// GetEventBySeq retrieves a specific event by sequence number.
+	// Returns ErrNotFound if no event exists at the given sequence.
 	GetEventBySeq(ctx context.Context, campaignID string, seq uint64) (event.Event, error)
 	// ListEvents returns events ordered by sequence ascending.
 	ListEvents(ctx context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error)

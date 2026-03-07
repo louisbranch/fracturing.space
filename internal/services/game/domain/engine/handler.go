@@ -115,62 +115,36 @@ type Handler struct {
 	Now                  func() time.Time
 }
 
-// HandlerConfig holds the dependencies for constructing a Handler.
-type HandlerConfig struct {
-	Commands             *command.Registry
-	Events               *event.Registry
-	Journal              EventJournal
-	Checkpoints          replay.CheckpointStore
-	Snapshots            StateSnapshotStore
-	Gate                 DecisionGate
-	GateStateLoader      GateStateLoader
-	SceneGateStateLoader SceneGateStateLoader
-	StateLoader          StateLoader
-	Decider              Decider
-	Folder               Folder
-	Now                  func() time.Time
-}
+// HandlerConfig is an alias for Handler to support legacy call sites.
+// Prefer passing Handler directly to NewHandler.
+type HandlerConfig = Handler
 
 // NewHandler validates required dependencies and returns a configured Handler.
 // Use this constructor in production wiring to catch missing dependencies at
 // startup rather than at first request. The Handler struct remains exported
 // for test flexibility where only a subset of fields is needed.
-func NewHandler(cfg HandlerConfig) (Handler, error) {
-	if cfg.Commands == nil {
+func NewHandler(h Handler) (Handler, error) {
+	if h.Commands == nil {
 		return Handler{}, ErrCommandRegistryRequired
 	}
-	if cfg.Events == nil {
+	if h.Events == nil {
 		return Handler{}, ErrEventRegistryRequired
 	}
-	if cfg.Journal == nil {
+	if h.Journal == nil {
 		return Handler{}, ErrJournalRequired
 	}
-	if cfg.Decider == nil {
+	if h.Decider == nil {
 		return Handler{}, ErrDeciderRequired
 	}
-	if requiresGateScope(cfg.Commands, command.GateScopeSession) && cfg.GateStateLoader == nil {
+	if requiresGateScope(h.Commands, command.GateScopeSession) && h.GateStateLoader == nil {
 		return Handler{}, ErrGateStateLoaderRequired
 	}
-	if requiresGateScope(cfg.Commands, command.GateScopeScene) && cfg.SceneGateStateLoader == nil {
+	if requiresGateScope(h.Commands, command.GateScopeScene) && h.SceneGateStateLoader == nil {
 		return Handler{}, ErrSceneGateStateLoaderRequired
 	}
-	gate := cfg.Gate
 	// Bind gate registry from Commands to avoid drift and fail-open checks.
-	gate.Registry = cfg.Commands
-	return Handler{
-		Commands:             cfg.Commands,
-		Events:               cfg.Events,
-		Journal:              cfg.Journal,
-		Checkpoints:          cfg.Checkpoints,
-		Snapshots:            cfg.Snapshots,
-		Gate:                 gate,
-		GateStateLoader:      cfg.GateStateLoader,
-		SceneGateStateLoader: cfg.SceneGateStateLoader,
-		StateLoader:          cfg.StateLoader,
-		Decider:              cfg.Decider,
-		Folder:               cfg.Folder,
-		Now:                  cfg.Now,
-	}, nil
+	h.Gate.Registry = h.Commands
+	return h, nil
 }
 
 // Result captures execution outcomes.
@@ -291,42 +265,45 @@ func (h Handler) validateCommand(cmd command.Command) (command.Command, error) {
 }
 
 func (h Handler) evaluateSessionGate(ctx context.Context, cmd command.Command) (command.Decision, bool, error) {
-	def, ok := h.Commands.Definition(cmd.Type)
-	if !ok || def.Gate.Scope != command.GateScopeSession {
-		return command.Decision{}, false, nil
-	}
-
-	// Truly optional; only required for gate-scoped commands.
-	if h.GateStateLoader == nil {
-		return command.Decision{}, false, ErrGateStateLoaderRequired
-	}
-	state, err := h.GateStateLoader.LoadSession(ctx, cmd.CampaignID, cmd.SessionID)
-	if err != nil {
-		return command.Decision{}, false, err
-	}
-	decision := h.boundGate().Check(state, cmd)
-	if len(decision.Rejections) > 0 {
-		return decision, true, nil
-	}
-	return command.Decision{}, false, nil
+	return h.evaluateGate(ctx, cmd, command.GateScopeSession, func() (command.Decision, error) {
+		if h.GateStateLoader == nil {
+			return command.Decision{}, ErrGateStateLoaderRequired
+		}
+		state, err := h.GateStateLoader.LoadSession(ctx, cmd.CampaignID, cmd.SessionID)
+		if err != nil {
+			return command.Decision{}, err
+		}
+		return h.boundGate().Check(state, cmd), nil
+	})
 }
 
 func (h Handler) evaluateSceneGate(ctx context.Context, cmd command.Command) (command.Decision, bool, error) {
+	return h.evaluateGate(ctx, cmd, command.GateScopeScene, func() (command.Decision, error) {
+		if cmd.SceneID == "" {
+			return command.Decision{}, ErrSceneIDRequired
+		}
+		if h.SceneGateStateLoader == nil {
+			return command.Decision{}, ErrSceneGateStateLoaderRequired
+		}
+		state, err := h.SceneGateStateLoader.LoadScene(ctx, cmd.CampaignID, cmd.SceneID)
+		if err != nil {
+			return command.Decision{}, err
+		}
+		return h.boundGate().CheckScene(state, cmd), nil
+	})
+}
+
+// evaluateGate is a shared gate evaluation flow: check scope applicability,
+// delegate to loader+checker, and short-circuit on rejections.
+func (h Handler) evaluateGate(_ context.Context, cmd command.Command, scope command.GateScope, check func() (command.Decision, error)) (command.Decision, bool, error) {
 	def, ok := h.Commands.Definition(cmd.Type)
-	if !ok || def.Gate.Scope != command.GateScopeScene {
+	if !ok || def.Gate.Scope != scope {
 		return command.Decision{}, false, nil
 	}
-	if cmd.SceneID == "" {
-		return command.Decision{}, false, ErrSceneIDRequired
-	}
-	if h.SceneGateStateLoader == nil {
-		return command.Decision{}, false, ErrSceneGateStateLoaderRequired
-	}
-	state, err := h.SceneGateStateLoader.LoadScene(ctx, cmd.CampaignID, cmd.SceneID)
+	decision, err := check()
 	if err != nil {
 		return command.Decision{}, false, err
 	}
-	decision := h.boundGate().CheckScene(state, cmd)
 	if len(decision.Rejections) > 0 {
 		return decision, true, nil
 	}
@@ -351,9 +328,7 @@ func (h Handler) decide(state any, cmd command.Command) (command.Decision, error
 	now := h.nowFunc()
 	decision := h.Decider.Decide(state, cmd, now)
 	if err := decision.Validate(); err != nil {
-		// FIXME(telemetry): emit metric for command decider no-op outcomes (no events, no rejections)
-		// once domain/write model counters are wired.
-		return command.Decision{}, ErrCommandMustMutate
+		return command.Decision{}, fmt.Errorf("%w: %w", ErrCommandMustMutate, err)
 	}
 	return decision, nil
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -12,12 +13,12 @@ import (
 // StatisticsService implements the game.v1.StatisticsService gRPC API.
 type StatisticsService struct {
 	gamev1.UnimplementedStatisticsServiceServer
-	stores Stores
+	statistics storage.StatisticsStore
 }
 
-// NewStatisticsService creates a StatisticsService with default dependencies.
-func NewStatisticsService(stores Stores) *StatisticsService {
-	return &StatisticsService{stores: stores}
+// NewStatisticsService creates a StatisticsService with the provided statistics store.
+func NewStatisticsService(statistics storage.StatisticsStore) *StatisticsService {
+	return &StatisticsService{statistics: statistics}
 }
 
 // GetGameStatistics returns aggregate game statistics.
@@ -31,7 +32,7 @@ func (s *StatisticsService) GetGameStatistics(ctx context.Context, in *gamev1.Ge
 		since = &value
 	}
 
-	stats, err := s.stores.Statistics.GetGameStatistics(ctx, since)
+	stats, err := s.statistics.GetGameStatistics(ctx, since)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "get game statistics: %v", err)
 	}

@@ -3,6 +3,7 @@ package interceptors
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -443,6 +444,23 @@ func TestCampaignIDFromRequest(t *testing.T) {
 				t.Errorf("campaignIDFromRequest() = %q, want %q", got, tt.wantID)
 			}
 		})
+	}
+}
+
+func TestValidateSessionLockPolicyCoverage_PassesWithCurrentConfig(t *testing.T) {
+	if err := ValidateSessionLockPolicyCoverage(BlockedCommandNamespaces()); err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidateSessionLockPolicyCoverage_DetectsUncoveredNamespace(t *testing.T) {
+	namespaces := append(BlockedCommandNamespaces(), "uncovered")
+	err := ValidateSessionLockPolicyCoverage(namespaces)
+	if err == nil {
+		t.Fatal("expected error for uncovered namespace")
+	}
+	if !strings.Contains(err.Error(), "uncovered") {
+		t.Fatalf("error should mention uncovered namespace, got: %s", err.Error())
 	}
 }
 

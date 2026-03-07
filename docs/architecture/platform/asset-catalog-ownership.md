@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 8
 status: canonical
 owner: engineering
-last_reviewed: "2026-02-26"
+last_reviewed: "2026-03-07"
 ---
 
 # Asset Catalog Ownership and Runtime Strategy
