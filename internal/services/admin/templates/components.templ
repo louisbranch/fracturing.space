@@ -18,6 +18,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Dashboard" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.dashboard")}</a>
 				</li>
 				<li>
@@ -28,6 +32,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Systems" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.systems")}</a>
 				</li>
 				<li>
@@ -38,6 +46,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Catalog" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.catalog")}</a>
 				</li>
 				<li>
@@ -48,6 +60,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Icons" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.icons")}</a>
 				</li>
 				<li>
@@ -58,6 +74,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Scenarios" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.scenarios")}</a>
 				</li>
 				<li>
@@ -68,6 +88,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Users" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.users")}</a>
 				</li>
 				<li>
@@ -78,6 +102,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Campaigns" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.campaigns")}</a>
 				</li>
 				<li>
@@ -88,6 +116,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Status" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.status")}</a>
 				</li>
 			</ul>
@@ -124,6 +156,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Dashboard" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.dashboard")}</a>
 				</li>
 					<li>
@@ -134,6 +170,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Systems" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.systems")}</a>
 				</li>
 					<li>
@@ -144,6 +184,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Catalog" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.catalog")}</a>
 				</li>
 					<li>
@@ -154,6 +198,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Icons" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.icons")}</a>
 				</li>
 					<li>
@@ -164,6 +212,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Scenarios" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.scenarios")}</a>
 				</li>
 					<li>
@@ -174,6 +226,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Users" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.users")}</a>
 				</li>
 					<li>
@@ -184,6 +240,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Campaigns" {
+							class="active"
+							aria-current="page"
+						}
 
 						>{T(loc, "nav.campaigns")}</a>
 					</li>
@@ -195,6 +255,10 @@ templ TopNav(activePage string, page PageContext, loc Localizer) {
 						hx-swap="innerHTML"
 						hx-push-url="true"
 						data-nav-item="true"
+						if activePage == "Status" {
+							class="active"
+							aria-current="page"
+						}
 					>{T(loc, "nav.status")}</a>
 					</li>
 					<li>

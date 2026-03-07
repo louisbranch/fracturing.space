@@ -298,6 +298,7 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 					link.classList.remove("active");
 					link.classList.remove("menu-active");
 					link.classList.remove("btn-active");
+					link.removeAttribute("aria-current");
 					if (!href) {
 						return;
 					}
@@ -315,7 +316,11 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 					if (link.classList.contains("btn")) {
 						link.classList.toggle("btn-active", shouldBeActive);
 					} else {
+						link.classList.toggle("active", shouldBeActive);
 						link.classList.toggle("menu-active", shouldBeActive);
+					}
+					if (shouldBeActive) {
+						link.setAttribute("aria-current", "page");
 					}
 				});
 			}

@@ -232,6 +232,31 @@ func TestAppChromeLayoutDashboardNavTargetsDashboardRoot(t *testing.T) {
 	}
 }
 
+func TestAppChromeLayoutSyncScriptTogglesActiveClassAndAriaCurrent(t *testing.T) {
+	var b strings.Builder
+	err := AppChromeLayout(AppChromeLayoutOptions{
+		Title:   "Campaigns",
+		Lang:    "en-US",
+		AppName: branding.AppName,
+		Loc:     breadcrumbLocalizer{},
+	}).Render(context.Background(), &b)
+	if err != nil {
+		t.Fatalf("AppChromeLayout() = %v", err)
+	}
+
+	got := b.String()
+	for _, marker := range []string{
+		`link.removeAttribute("aria-current");`,
+		`link.classList.toggle("active", shouldBeActive);`,
+		`link.classList.toggle("menu-active", shouldBeActive);`,
+		`link.setAttribute("aria-current", "page");`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("expected app chrome sync script marker %q, got %q", marker, got)
+		}
+	}
+}
+
 func TestChromeMainClassFromStyleDefaultDoesNotCenter(t *testing.T) {
 	got := chromeMainClassFromStyle("", "")
 	if strings.Contains(got, "mx-auto") {
