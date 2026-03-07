@@ -14,6 +14,7 @@ func registerRoutes(mux *http.ServeMux, h handlers) {
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettings, h.redirectSettingsRoot)
 	mux.HandleFunc(http.MethodGet+" "+routepath.SettingsPrefix+"{$}", h.redirectSettingsRoot)
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsProfileRequired, h.handleProfileRequiredRedirect)
 
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsProfile, h.handleProfileGet)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsProfile, h.handleProfilePost)

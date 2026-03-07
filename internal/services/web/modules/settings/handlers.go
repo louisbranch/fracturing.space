@@ -49,7 +49,16 @@ func (h handlers) handleProfileGet(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, err)
 		return
 	}
-	h.renderProfilePage(w, r, http.StatusOK, profile, "", settingsProfileNoticeCode(r))
+	h.renderProfilePage(w, r, http.StatusOK, profile, "")
+}
+
+// handleProfileRequiredRedirect writes a toast flash notice and redirects to profile settings.
+func (h handlers) handleProfileRequiredRedirect(w http.ResponseWriter, r *http.Request) {
+	h.writeFlashNotice(w, r, flashnotice.Notice{
+		Kind: flashnotice.KindInfo,
+		Key:  "web.settings.user_profile.notice_public_profile_required",
+	})
+	httpx.WriteRedirect(w, r, routepath.AppSettingsProfile)
 }
 
 // handleProfilePost handles this route in the module transport layer.
@@ -75,7 +84,7 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 	if err := h.service.SaveProfile(ctx, userID, profile); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
 			loc, _ := h.PageLocalizer(w, r)
-			h.renderProfilePage(w, r, http.StatusBadRequest, profile, webi18n.LocalizeError(loc, err), "")
+			h.renderProfilePage(w, r, http.StatusBadRequest, profile, webi18n.LocalizeError(loc, err))
 			return
 		}
 		h.WriteError(w, r, err)
@@ -172,7 +181,7 @@ func (h handlers) handleAIKeyRevokeRoute(w http.ResponseWriter, r *http.Request)
 }
 
 // renderProfilePage centralizes this web behavior in one helper seam.
-func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, statusCode int, profile SettingsProfile, errorMessage string, noticeCode string) {
+func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, statusCode int, profile SettingsProfile, errorMessage string) {
 	loc, _ := h.PageLocalizer(w, r)
 	layout := webtemplates.AppMainLayoutOptions{SideMenu: settingsSideMenu(routepath.AppSettingsProfile, loc)}
 	h.WritePage(
@@ -188,7 +197,6 @@ func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, stat
 			AvatarAssetID: profile.AvatarAssetID,
 			Pronouns:      profile.Pronouns,
 			Bio:           profile.Bio,
-			NoticeMessage: settingsProfileNoticeMessage(noticeCode, loc),
 			ErrorMessage:  errorMessage,
 		}, loc),
 	)
@@ -244,22 +252,4 @@ func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx c
 			ErrorMessage: errorMessage,
 		}, rows, loc),
 	)
-}
-
-// settingsProfileNoticeCode centralizes this web behavior in one helper seam.
-func settingsProfileNoticeCode(r *http.Request) string {
-	if r == nil || r.URL == nil {
-		return ""
-	}
-	return strings.TrimSpace(r.URL.Query().Get(routepath.SettingsNoticeQueryKey))
-}
-
-// settingsProfileNoticeMessage centralizes this web behavior in one helper seam.
-func settingsProfileNoticeMessage(code string, loc webtemplates.Localizer) string {
-	switch strings.TrimSpace(code) {
-	case routepath.SettingsNoticePublicProfileRequired:
-		return webtemplates.T(loc, "web.settings.user_profile.notice_public_profile_required")
-	default:
-		return ""
-	}
 }

@@ -38,12 +38,6 @@ func TestTopLevelRouteConstants(t *testing.T) {
 	if SettingsPrefix != "/app/settings/" {
 		t.Fatalf("SettingsPrefix = %q", SettingsPrefix)
 	}
-	if SettingsNoticeQueryKey != "notice" {
-		t.Fatalf("SettingsNoticeQueryKey = %q", SettingsNoticeQueryKey)
-	}
-	if SettingsNoticePublicProfileRequired != "public-profile-required" {
-		t.Fatalf("SettingsNoticePublicProfileRequired = %q", SettingsNoticePublicProfileRequired)
-	}
 }
 
 func TestCampaignRouteBuilders(t *testing.T) {
@@ -176,14 +170,11 @@ func TestNotificationAndSettingsRouteBuilders(t *testing.T) {
 	if AppSettingsProfile != "/app/settings/profile" {
 		t.Fatalf("AppSettingsProfile = %q", AppSettingsProfile)
 	}
+	if AppSettingsProfileRequired != "/app/settings/profile/required" {
+		t.Fatalf("AppSettingsProfileRequired = %q", AppSettingsProfileRequired)
+	}
 	if AppSettingsLocale != "/app/settings/locale" {
 		t.Fatalf("AppSettingsLocale = %q", AppSettingsLocale)
-	}
-	if got := AppSettingsProfileWithNotice(SettingsNoticePublicProfileRequired); got != "/app/settings/profile?notice=public-profile-required" {
-		t.Fatalf("AppSettingsProfileWithNotice() = %q", got)
-	}
-	if got := AppSettingsProfileWithNotice("   "); got != "/app/settings/profile" {
-		t.Fatalf("AppSettingsProfileWithNotice() empty = %q", got)
 	}
 	if got := AppSettingsAIKeyRevoke("cred-1"); got != "/app/settings/ai-keys/cred-1/revoke" {
 		t.Fatalf("AppSettingsAIKeyRevoke() = %q", got)
@@ -228,9 +219,6 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	}
 	if got := UserProfile("name/with/slash"); got != "/u/name%2Fwith%2Fslash" {
 		t.Fatalf("UserProfile() escaped = %q", got)
-	}
-	if got := AppSettingsProfileWithNotice("profile/needed"); got != "/app/settings/profile?notice=profile%2Fneeded" {
-		t.Fatalf("AppSettingsProfileWithNotice() escaped = %q", got)
 	}
 }
 

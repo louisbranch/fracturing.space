@@ -6,6 +6,7 @@ import (
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -55,6 +56,14 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	items, err := h.service.ListCampaigns(ctx)
 	if err != nil {
 		h.WriteError(w, r, err)
+		return
+	}
+	if len(items) == 0 {
+		flash.Write(w, r, flash.Notice{
+			Kind: flash.KindInfo,
+			Key:  "game.campaigns.empty",
+		})
+		httpx.WriteRedirect(w, r, routepath.AppCampaignsNew)
 		return
 	}
 	h.WritePage(w, r, webtemplates.T(loc, "game.campaigns.title"), http.StatusOK, campaignsListHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.CampaignListFragment(mapCampaignListItems(items, h.now(), loc), loc))

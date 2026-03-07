@@ -64,7 +64,7 @@ func TestMountServesSettingsProfileGet(t *testing.T) {
 	}
 }
 
-func TestMountSettingsProfileGetRendersNoticeForMissingPublicProfile(t *testing.T) {
+func TestMountSettingsProfileRequiredRedirectWritesToastFlash(t *testing.T) {
 	t.Parallel()
 
 	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
@@ -72,38 +72,31 @@ func TestMountSettingsProfileGetRendersNoticeForMissingPublicProfile(t *testing.
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfileWithNotice(routepath.SettingsNoticePublicProfileRequired), nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfileRequired, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	body := rr.Body.String()
-	if !strings.Contains(body, `alert alert-info`) {
-		t.Fatalf("body missing info alert for notice: %q", body)
+	if got := rr.Header().Get("Location"); got != routepath.AppSettingsProfile {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsProfile)
 	}
-	if !strings.Contains(body, `Choose a username to publish your public profile page.`) {
-		t.Fatalf("body missing profile notice copy: %q", body)
+	cookie := responseCookieByName(rr, flashnotice.CookieName)
+	if cookie == nil {
+		t.Fatalf("expected %q cookie", flashnotice.CookieName)
 	}
-}
-
-func TestMountSettingsProfileGetIgnoresUnknownNoticeCode(t *testing.T) {
-	t.Parallel()
-
-	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
-	mount, err := m.Mount()
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
+	flashReq := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfile, nil)
+	flashReq.AddCookie(cookie)
+	flashRR := httptest.NewRecorder()
+	notice, ok := flashnotice.ReadAndClear(flashRR, flashReq)
+	if !ok {
+		t.Fatalf("ReadAndClear() ok = false, want true")
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfileWithNotice("unknown-notice"), nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	if notice.Key != "web.settings.user_profile.notice_public_profile_required" {
+		t.Fatalf("notice.Key = %q", notice.Key)
 	}
-	body := rr.Body.String()
-	if strings.Contains(body, `alert alert-info`) {
-		t.Fatalf("body unexpectedly rendered info alert for unknown notice: %q", body)
+	if notice.Kind != flashnotice.KindInfo {
+		t.Fatalf("notice.Kind = %q, want %q", notice.Kind, flashnotice.KindInfo)
 	}
 }
 
@@ -236,6 +229,29 @@ func TestMountSettingsRootHTMXUsesHXRedirect(t *testing.T) {
 	}
 	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppSettingsProfile {
 		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppSettingsProfile)
+	}
+}
+
+func TestMountSettingsProfileRequiredHTMXUsesHXRedirectAndFlash(t *testing.T) {
+	t.Parallel()
+
+	m := New(WithGateway(newPopulatedFakeGateway()), WithBase(settingsTestBase()))
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfileRequired, nil)
+	req.Header.Set("HX-Request", "true")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppSettingsProfile {
+		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppSettingsProfile)
+	}
+	if !responseHasCookieName(rr, flashnotice.CookieName) {
+		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
 	}
 }
 
@@ -926,13 +942,17 @@ func settingsTestBase() modulehandler.Base {
 }
 
 func responseHasCookieName(rr *httptest.ResponseRecorder, name string) bool {
+	return responseCookieByName(rr, name) != nil
+}
+
+func responseCookieByName(rr *httptest.ResponseRecorder, name string) *http.Cookie {
 	if rr == nil {
-		return false
+		return nil
 	}
 	for _, cookie := range rr.Result().Cookies() {
 		if cookie != nil && cookie.Name == name {
-			return true
+			return cookie
 		}
 	}
-	return false
+	return nil
 }
