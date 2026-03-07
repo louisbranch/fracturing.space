@@ -103,6 +103,137 @@ func TestMountCampaignSessionsRouteRendersSessionCards(t *testing.T) {
 	}
 }
 
+func TestMountCampaignWorkspaceMenuRendersSessionsSectionAcrossPages(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(fakeGateway{
+		items: []CampaignSummary{{
+			ID:               "c1",
+			Name:             "The Guildhouse",
+			ParticipantCount: "2",
+			CharacterCount:   "2",
+		}},
+		sessions: []CampaignSession{
+			{
+				ID:        "s1",
+				Name:      "First Light",
+				Status:    "Ended",
+				StartedAt: "2026-02-01 20:00 UTC",
+				EndedAt:   "2026-02-01 22:00 UTC",
+			},
+			{
+				ID:        "s2",
+				Name:      "Second Light",
+				Status:    "Active",
+				StartedAt: "2026-02-02 20:00 UTC",
+			},
+		},
+	}, modulehandler.NewTestBase(), "", nil)
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	paths := []string{
+		routepath.AppCampaign("c1"),
+		routepath.AppCampaignParticipants("c1"),
+		routepath.AppCampaignCharacters("c1"),
+		routepath.AppCampaignSessions("c1"),
+		routepath.AppCampaignSession("c1", "s2"),
+		routepath.AppCampaignInvites("c1"),
+	}
+	for _, path := range paths {
+		req := httptest.NewRequest(http.MethodGet, path, nil)
+		rr := httptest.NewRecorder()
+		mount.Handler.ServeHTTP(rr, req)
+		if rr.Code != http.StatusOK {
+			t.Fatalf("path %q status = %d, want %d", path, rr.Code, http.StatusOK)
+		}
+		body := rr.Body.String()
+		for _, marker := range []string{
+			`href="/app/campaigns/c1/sessions"`,
+			`class="badge badge-sm badge-soft badge-primary">2</div>`,
+			`data-app-side-menu-subitem="/app/campaigns/c1/sessions/s1"`,
+			`data-app-side-menu-subitem="/app/campaigns/c1/sessions/s2"`,
+		} {
+			if !strings.Contains(body, marker) {
+				t.Fatalf("path %q body missing sessions menu marker %q: %q", path, marker, body)
+			}
+		}
+	}
+}
+
+func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		sessions: []CampaignSession{
+			{
+				ID:        "s3",
+				Name:      "Third Light",
+				Status:    "Ended",
+				StartedAt: "2026-02-03 20:00 UTC",
+				EndedAt:   "2026-02-03 22:00 UTC",
+			},
+			{
+				ID:        "s1",
+				Name:      "",
+				Status:    "Active",
+				StartedAt: "2026-02-01 20:00 UTC",
+			},
+			{
+				ID:        "s2",
+				Name:      "Second Light",
+				Status:    "Ended",
+				StartedAt: "2026-02-02 20:00 UTC",
+				EndedAt:   "2026-02-02 22:00 UTC",
+			},
+		},
+	}, modulehandler.NewTestBase(), "", nil)
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipants("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+
+	s1Idx := strings.Index(body, `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s1"`)
+	s2Idx := strings.Index(body, `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s2"`)
+	s3Idx := strings.Index(body, `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s3"`)
+	if s1Idx == -1 || s2Idx == -1 || s3Idx == -1 {
+		t.Fatalf("expected all session subitems in side menu: %q", body)
+	}
+	if !(s1Idx < s2Idx && s2Idx < s3Idx) {
+		t.Fatalf("expected session subitems oldest-to-newest order; indexes = (%d, %d, %d)", s1Idx, s2Idx, s3Idx)
+	}
+
+	activeRowMarker := `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s1" data-app-side-menu-subitem-active-session="true"`
+	activeRowIdx := strings.Index(body, activeRowMarker)
+	if activeRowIdx == -1 {
+		t.Fatalf("expected active session row marker %q in output: %q", activeRowMarker, body)
+	}
+	activeRowBody := body[activeRowIdx:]
+	if !strings.Contains(activeRowBody, `class="block rounded-md border px-3 py-2 leading-tight transition-colors border-success bg-base-200"`) {
+		t.Fatalf("expected full active-session row highlight class in output: %q", activeRowBody)
+	}
+	for _, marker := range []string{
+		`data-app-side-menu-subitem-start="Start: 2026-02-01 20:00 UTC"`,
+		`data-app-side-menu-subitem-end="End: In progress"`,
+		`>Unnamed session</span>`,
+	} {
+		if !strings.Contains(activeRowBody, marker) {
+			t.Fatalf("expected active session detail marker %q in output: %q", marker, activeRowBody)
+		}
+	}
+}
+
 func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
 	t.Parallel()
 

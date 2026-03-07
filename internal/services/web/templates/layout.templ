@@ -124,6 +124,15 @@ type AppSideMenuItem struct {
 	MatchExact  bool
 	IconID      commonv1.IconId
 	Badge       string
+	SubItems    []AppSideMenuSubItem
+}
+
+type AppSideMenuSubItem struct {
+	Label         string
+	URL           string
+	StartDetail   string
+	EndDetail     string
+	ActiveSession bool
 }
 
 type AppSideMenu struct {
@@ -259,6 +268,69 @@ func appSideMenuItemBadge(item AppSideMenuItem) string {
 	return strings.TrimSpace(item.Badge)
 }
 
+func appSideMenuItemSubItems(item AppSideMenuItem) []AppSideMenuSubItem {
+	if len(item.SubItems) == 0 {
+		return nil
+	}
+	result := make([]AppSideMenuSubItem, 0, len(item.SubItems))
+	for _, subItem := range item.SubItems {
+		if appSideMenuSubItemLabel(subItem) == "" || appSideMenuSubItemURL(subItem) == "" {
+			continue
+		}
+		result = append(result, subItem)
+	}
+	return result
+}
+
+func appSideMenuSubItemLabel(item AppSideMenuSubItem) string {
+	return strings.TrimSpace(item.Label)
+}
+
+func appSideMenuSubItemURL(item AppSideMenuSubItem) string {
+	return strings.TrimSpace(item.URL)
+}
+
+func appSideMenuSubItemStartDetail(item AppSideMenuSubItem) string {
+	return strings.TrimSpace(item.StartDetail)
+}
+
+func appSideMenuSubItemEndDetail(item AppSideMenuSubItem) string {
+	return strings.TrimSpace(item.EndDetail)
+}
+
+func appSideMenuSubItemActiveSession(item AppSideMenuSubItem) bool {
+	return item.ActiveSession
+}
+
+func appSideMenuSubItemIsCurrent(menu *AppSideMenu, item AppSideMenuSubItem) bool {
+	if menu == nil {
+		return false
+	}
+	currentPath := strings.TrimSpace(menu.CurrentPath)
+	target := appSideMenuSubItemURL(item)
+	return currentPath != "" && target != "" && currentPath == target
+}
+
+func appSideMenuSubItemClass(menu *AppSideMenu, item AppSideMenuSubItem) string {
+	base := "block rounded-md border px-3 py-2 leading-tight transition-colors"
+	if appSideMenuSubItemActiveSession(item) {
+		base += " border-success bg-base-200"
+	} else {
+		base += " border-base-300 bg-base-100"
+	}
+	if appSideMenuSubItemIsCurrent(menu, item) {
+		base += " menu-active"
+	}
+	return base
+}
+
+func appSideMenuSubItemEndClass(item AppSideMenuSubItem) string {
+	if appSideMenuSubItemActiveSession(item) {
+		return "block text-xs font-semibold text-success"
+	}
+	return "block text-xs opacity-70"
+}
+
 func appMainHeaderTitle(header *AppMainHeader) string {
 	if header == nil {
 		return ""
@@ -363,7 +435,7 @@ templ AppSideMenuComponent(menu *AppSideMenu) {
 		<ul class="menu bg-base-200 rounded-box w-full">
 			for _, item := range menu.Items {
 				if appSideMenuItemLabel(item) != "" && appSideMenuItemURL(item) != "" {
-					<li>
+					<li data-app-side-menu-item={ appSideMenuItemURL(item) }>
 						<a
 							class={ appSideMenuLinkClass(menu, item) }
 							href={ appSideMenuItemURL(item) }
@@ -380,6 +452,30 @@ templ AppSideMenuComponent(menu *AppSideMenu) {
 								<div class="badge badge-sm badge-soft badge-primary">{ appSideMenuItemBadge(item) }</div>
 							}
 						</a>
+						if subItems := appSideMenuItemSubItems(item); len(subItems) > 0 {
+							<ul class="mt-1 space-y-1 ps-4" data-app-side-menu-subitems="true">
+								for _, subItem := range subItems {
+									<li data-app-side-menu-subitem={ appSideMenuSubItemURL(subItem) } data-app-side-menu-subitem-active-session={ appSideMenuSubItemActiveSession(subItem) }>
+										<a
+											class={ appSideMenuSubItemClass(menu, subItem) }
+											href={ appSideMenuSubItemURL(subItem) }
+											hx-get={ appSideMenuSubItemURL(subItem) }
+											hx-target="#main"
+											hx-swap="innerHTML"
+											hx-push-url="true"
+										>
+											<span class="block truncate text-sm font-medium">{ appSideMenuSubItemLabel(subItem) }</span>
+											if appSideMenuSubItemStartDetail(subItem) != "" {
+												<span class="block text-xs opacity-70" data-app-side-menu-subitem-start={ appSideMenuSubItemStartDetail(subItem) }>{ appSideMenuSubItemStartDetail(subItem) }</span>
+											}
+											if appSideMenuSubItemEndDetail(subItem) != "" {
+												<span class={ appSideMenuSubItemEndClass(subItem) } data-app-side-menu-subitem-end={ appSideMenuSubItemEndDetail(subItem) }>{ appSideMenuSubItemEndDetail(subItem) }</span>
+											}
+										</a>
+									</li>
+								}
+							</ul>
+						}
 					</li>
 				}
 			}

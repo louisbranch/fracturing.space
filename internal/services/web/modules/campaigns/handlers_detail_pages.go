@@ -142,11 +142,7 @@ func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaig
 			return []sharedtemplates.BreadcrumbItem{{Label: webtemplates.T(loc, "game.sessions.title")}}
 		},
 		loadData: func(ctx context.Context, campaignID string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error {
-			items, err := h.service.CampaignSessions(ctx, campaignID)
-			if err != nil {
-				return err
-			}
-			view.Sessions = mapSessionsView(items)
+			view.Sessions = mapSessionsView(page.sessions)
 			readiness, err := h.service.CampaignSessionReadiness(ctx, campaignID, page.locale)
 			if err != nil {
 				return err
@@ -167,13 +163,9 @@ func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 				{Label: sessionID},
 			}
 		},
-		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
-			items, err := h.service.CampaignSessions(ctx, campaignID)
-			if err != nil {
-				return err
-			}
+		loadData: func(_ context.Context, _ string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error {
 			view.SessionID = sessionID
-			view.Sessions = mapSessionsView(items)
+			view.Sessions = mapSessionsView(page.sessions)
 			return nil
 		},
 	})

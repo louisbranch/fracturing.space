@@ -1,6 +1,8 @@
 package campaigns
 
 import (
+	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -10,11 +12,12 @@ import (
 )
 
 // campaignWorkspaceMenu builds the side navigation menu for a campaign workspace page.
-func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
+func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, sessions []CampaignSession, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
 	campaignID := strings.TrimSpace(workspace.ID)
 	if campaignID == "" {
 		return nil
 	}
+	sessionSubItems := campaignSessionMenuSubItems(campaignID, sessions, loc)
 	participantCount := strings.TrimSpace(workspace.ParticipantCount)
 	if participantCount == "" {
 		participantCount = "0"
@@ -24,6 +27,7 @@ func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, loc 
 		characterCount = "0"
 	}
 	overviewURL := routepath.AppCampaign(campaignID)
+	sessionsURL := routepath.AppCampaignSessions(campaignID)
 	participantsURL := routepath.AppCampaignParticipants(campaignID)
 	charactersURL := routepath.AppCampaignCharacters(campaignID)
 	return &webtemplates.AppSideMenu{
@@ -35,6 +39,14 @@ func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, loc 
 				MatchPrefix: overviewURL,
 				MatchExact:  true,
 				IconID:      commonv1.IconId_ICON_ID_CAMPAIGN,
+			},
+			{
+				Label:       webtemplates.T(loc, "game.sessions.title"),
+				URL:         sessionsURL,
+				MatchPrefix: sessionsURL,
+				Badge:       strconv.Itoa(campaignSessionMenuCount(sessions)),
+				IconID:      commonv1.IconId_ICON_ID_SESSION,
+				SubItems:    sessionSubItems,
 			},
 			{
 				Label:       webtemplates.T(loc, "game.participants.title"),
@@ -52,6 +64,111 @@ func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, loc 
 			},
 		},
 	}
+}
+
+const campaignSessionTimestampLayout = "2006-01-02 15:04 UTC"
+const campaignSessionMenuRecentLimit = 10
+
+// campaignSessionMenuSubItems builds campaign session subitems for workspace navigation.
+func campaignSessionMenuSubItems(campaignID string, sessions []CampaignSession, loc webtemplates.Localizer) []webtemplates.AppSideMenuSubItem {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" || len(sessions) == 0 {
+		return []webtemplates.AppSideMenuSubItem{}
+	}
+
+	ordered := append([]CampaignSession(nil), sessions...)
+	sort.SliceStable(ordered, func(i, j int) bool {
+		leftTime, leftOK := campaignSessionMenuStartTime(ordered[i])
+		rightTime, rightOK := campaignSessionMenuStartTime(ordered[j])
+		if leftOK != rightOK {
+			return leftOK
+		}
+		if leftOK && !leftTime.Equal(rightTime) {
+			return leftTime.Before(rightTime)
+		}
+
+		leftID := strings.TrimSpace(ordered[i].ID)
+		rightID := strings.TrimSpace(ordered[j].ID)
+		if leftID == rightID {
+			return strings.ToLower(strings.TrimSpace(ordered[i].Name)) < strings.ToLower(strings.TrimSpace(ordered[j].Name))
+		}
+		return leftID < rightID
+	})
+	if len(ordered) > campaignSessionMenuRecentLimit {
+		ordered = ordered[len(ordered)-campaignSessionMenuRecentLimit:]
+	}
+
+	startLabel := webtemplates.T(loc, "game.sessions.menu.start")
+	endLabel := webtemplates.T(loc, "game.sessions.menu.end")
+	inProgressLabel := webtemplates.T(loc, "game.sessions.menu.in_progress")
+	result := make([]webtemplates.AppSideMenuSubItem, 0, len(ordered))
+	for _, session := range ordered {
+		sessionID := strings.TrimSpace(session.ID)
+		if sessionID == "" {
+			continue
+		}
+
+		startValue := strings.TrimSpace(session.StartedAt)
+		if startValue == "" {
+			startValue = "-"
+		}
+		endValue := strings.TrimSpace(session.EndedAt)
+		if campaignSessionMenuIsActive(session) {
+			endValue = inProgressLabel
+		} else if endValue == "" {
+			endValue = "-"
+		}
+
+		result = append(result, webtemplates.AppSideMenuSubItem{
+			Label:         campaignSessionMenuItemName(session, loc),
+			URL:           routepath.AppCampaignSession(campaignID, sessionID),
+			StartDetail:   startLabel + ": " + startValue,
+			EndDetail:     endLabel + ": " + endValue,
+			ActiveSession: campaignSessionMenuIsActive(session),
+		})
+	}
+
+	return result
+}
+
+// campaignSessionMenuCount returns the total number of sessions represented in the menu badge.
+func campaignSessionMenuCount(sessions []CampaignSession) int {
+	count := 0
+	for _, session := range sessions {
+		if strings.TrimSpace(session.ID) == "" {
+			continue
+		}
+		count++
+	}
+	return count
+}
+
+// campaignSessionMenuItemName returns a session menu label with safe fallback copy.
+func campaignSessionMenuItemName(session CampaignSession, loc webtemplates.Localizer) string {
+	name := strings.TrimSpace(session.Name)
+	sessionID := strings.TrimSpace(session.ID)
+	if name != "" && (sessionID == "" || !strings.EqualFold(name, sessionID)) {
+		return name
+	}
+	return webtemplates.T(loc, "game.sessions.menu.unnamed")
+}
+
+// campaignSessionMenuStartTime parses session start timestamps used for deterministic ordering.
+func campaignSessionMenuStartTime(session CampaignSession) (time.Time, bool) {
+	startedAt := strings.TrimSpace(session.StartedAt)
+	if startedAt == "" {
+		return time.Time{}, false
+	}
+	parsed, err := time.Parse(campaignSessionTimestampLayout, startedAt)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return parsed.UTC(), true
+}
+
+// campaignSessionMenuIsActive marks session rows that should receive active-session styling.
+func campaignSessionMenuIsActive(session CampaignSession) bool {
+	return strings.EqualFold(strings.TrimSpace(session.Status), "active")
 }
 
 // campaignWorkspaceLocaleFormValue maps campaign locale labels/tags to form values.

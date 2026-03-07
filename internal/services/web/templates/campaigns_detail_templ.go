@@ -1628,7 +1628,7 @@ func CampaignDetailFragment(view CampaignDetailView, loc Localizer) templ.Compon
 				return templ_7745c5c3_Err
 			}
 			if !campaignSessionStartReady(view) {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 154, "<div class=\"alert alert-warning mb-3\" data-campaign-session-readiness-blocked=\"true\"><div class=\"space-y-2\"><p class=\"font-semibold\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 154, "<div class=\"alert alert-warning alert-soft mb-3\" data-campaign-session-readiness-blocked=\"true\"><div class=\"space-y-2\"><p class=\"font-semibold\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
