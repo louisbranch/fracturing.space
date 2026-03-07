@@ -207,6 +207,11 @@ func (f *fakeCampaignClient) GetCampaignAIBindingUsage(context.Context, *statev1
 	return &statev1.GetCampaignAIBindingUsageResponse{}, nil
 }
 
+// GetCampaignSessionReadiness is a stub so fakeCampaignClient satisfies CampaignServiceClient.
+func (f *fakeCampaignClient) GetCampaignSessionReadiness(context.Context, *statev1.GetCampaignSessionReadinessRequest, ...grpc.CallOption) (*statev1.GetCampaignSessionReadinessResponse, error) {
+	return &statev1.GetCampaignSessionReadinessResponse{}, nil
+}
+
 // CreateParticipant records the request and returns the configured response.
 func (f *fakeParticipantClient) CreateParticipant(ctx context.Context, req *statev1.CreateParticipantRequest, opts ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
 	f.lastCreateParticipantRequest = req

@@ -37,6 +37,7 @@ type CampaignDetailView struct {
 	ParticipantEditor CampaignParticipantEditorView
 	Characters    []CampaignCharacterView
 	Sessions      []CampaignSessionView
+	SessionReadiness CampaignSessionReadinessView
 	Invites       []CampaignInviteView
 	CharacterCreationEnabled bool
 	CharacterCreation       CampaignCharacterCreationView
@@ -132,6 +133,16 @@ type CampaignSessionView struct {
 	StartedAt string
 	UpdatedAt string
 	EndedAt   string
+}
+
+type CampaignSessionReadinessBlockerView struct {
+	Code    string
+	Message string
+}
+
+type CampaignSessionReadinessView struct {
+	Ready    bool
+	Blockers []CampaignSessionReadinessBlockerView
 }
 
 type CampaignInviteView struct {
@@ -397,6 +408,10 @@ func campaignInviteStatusLabel(loc Localizer, value string) string {
 
 func campaignSessionCanEnd(status string) bool {
 	return strings.EqualFold(strings.TrimSpace(status), "active")
+}
+
+func campaignSessionStartReady(view CampaignDetailView) bool {
+	return view.SessionReadiness.Ready
 }
 
 func campaignInviteCanRevoke(status string) bool {

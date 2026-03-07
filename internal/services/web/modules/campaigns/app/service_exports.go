@@ -46,6 +46,11 @@ func (s service) CampaignSessions(ctx context.Context, campaignID string) ([]Cam
 	return s.campaignSessions(ctx, campaignID)
 }
 
+// CampaignSessionReadiness centralizes this web behavior in one helper seam.
+func (s service) CampaignSessionReadiness(ctx context.Context, campaignID string, locale language.Tag) (CampaignSessionReadiness, error) {
+	return s.campaignSessionReadiness(ctx, campaignID, locale)
+}
+
 // CampaignInvites centralizes this web behavior in one helper seam.
 func (s service) CampaignInvites(ctx context.Context, campaignID string) ([]CampaignInvite, error) {
 	return s.campaignInvites(ctx, campaignID)

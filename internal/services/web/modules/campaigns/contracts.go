@@ -17,6 +17,8 @@ type (
 	CampaignParticipantEditor                  = campaignapp.CampaignParticipantEditor
 	CampaignCharacter                          = campaignapp.CampaignCharacter
 	CampaignSession                            = campaignapp.CampaignSession
+	CampaignSessionReadiness                   = campaignapp.CampaignSessionReadiness
+	CampaignSessionReadinessBlocker            = campaignapp.CampaignSessionReadinessBlocker
 	CampaignInvite                             = campaignapp.CampaignInvite
 	CampaignCharacterCreationStep              = campaignapp.CampaignCharacterCreationStep
 	CampaignCharacterCreationProgress          = campaignapp.CampaignCharacterCreationProgress

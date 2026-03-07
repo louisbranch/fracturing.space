@@ -26,14 +26,20 @@ func TestCampaignGetNotFound(t *testing.T) {
 func TestCampaignCanStartSessionComputed(t *testing.T) {
 	now := time.Date(2026, 2, 27, 11, 0, 0, 0, time.UTC)
 
-	putParticipant := func(t *testing.T, store *Store, campaignID, participantID string, role participant.Role) {
+	putParticipantWithController := func(
+		t *testing.T,
+		store *Store,
+		campaignID, participantID string,
+		role participant.Role,
+		controller participant.Controller,
+	) {
 		t.Helper()
 		record := storage.ParticipantRecord{
 			CampaignID:     campaignID,
 			ID:             participantID,
 			Name:           participantID,
 			Role:           role,
-			Controller:     participant.ControllerHuman,
+			Controller:     controller,
 			CampaignAccess: participant.CampaignAccessMember,
 			CreatedAt:      now,
 			UpdatedAt:      now,
@@ -41,6 +47,11 @@ func TestCampaignCanStartSessionComputed(t *testing.T) {
 		if err := store.PutParticipant(context.Background(), record); err != nil {
 			t.Fatalf("put participant %s: %v", participantID, err)
 		}
+	}
+
+	putParticipant := func(t *testing.T, store *Store, campaignID, participantID string, role participant.Role) {
+		t.Helper()
+		putParticipantWithController(t, store, campaignID, participantID, role, participant.ControllerHuman)
 	}
 
 	putCharacter := func(t *testing.T, store *Store, campaignID, characterID, ownerParticipantID, controllerParticipantID string) {
@@ -209,6 +220,46 @@ func TestCampaignCanStartSessionComputed(t *testing.T) {
 				record.UpdatedAt = now.Add(time.Minute)
 				if err := store.Put(context.Background(), record); err != nil {
 					t.Fatalf("put completed campaign: %v", err)
+				}
+			},
+		},
+		{
+			name: "not ready in ai mode without ai gm participant",
+			want: false,
+			setup: func(t *testing.T, store *Store, campaignID string) {
+				putParticipant(t, store, campaignID, "gm-1", participant.RoleGM)
+				putParticipant(t, store, campaignID, "player-1", participant.RolePlayer)
+				putCharacter(t, store, campaignID, "char-1", "player-1", "player-1")
+
+				record, err := store.Get(context.Background(), campaignID)
+				if err != nil {
+					t.Fatalf("get campaign for ai mode update: %v", err)
+				}
+				record.GmMode = campaign.GmModeAI
+				record.AIAgentID = "agent-1"
+				record.UpdatedAt = now.Add(time.Minute)
+				if err := store.Put(context.Background(), record); err != nil {
+					t.Fatalf("put ai mode campaign: %v", err)
+				}
+			},
+		},
+		{
+			name: "ready in ai mode with ai gm participant and ai agent binding",
+			want: true,
+			setup: func(t *testing.T, store *Store, campaignID string) {
+				putParticipantWithController(t, store, campaignID, "gm-ai-1", participant.RoleGM, participant.ControllerAI)
+				putParticipant(t, store, campaignID, "player-1", participant.RolePlayer)
+				putCharacter(t, store, campaignID, "char-1", "player-1", "player-1")
+
+				record, err := store.Get(context.Background(), campaignID)
+				if err != nil {
+					t.Fatalf("get campaign for ai mode update: %v", err)
+				}
+				record.GmMode = campaign.GmModeAI
+				record.AIAgentID = "agent-1"
+				record.UpdatedAt = now.Add(time.Minute)
+				if err := store.Put(context.Background(), record); err != nil {
+					t.Fatalf("put ai mode campaign: %v", err)
 				}
 			},
 		},

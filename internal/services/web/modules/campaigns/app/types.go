@@ -108,6 +108,19 @@ type CampaignSession struct {
 	EndedAt   string `json:"endedAt"`
 }
 
+// CampaignSessionReadinessBlocker stores one session-start readiness blocker.
+type CampaignSessionReadinessBlocker struct {
+	Code     string            `json:"code"`
+	Message  string            `json:"message"`
+	Metadata map[string]string `json:"metadata"`
+}
+
+// CampaignSessionReadiness stores campaign readiness details for session start.
+type CampaignSessionReadiness struct {
+	Ready    bool                              `json:"ready"`
+	Blockers []CampaignSessionReadinessBlocker `json:"blockers"`
+}
+
 // CampaignInvite stores invite details used by campaign invites pages.
 type CampaignInvite struct {
 	ID              string `json:"id"`

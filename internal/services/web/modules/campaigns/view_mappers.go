@@ -205,6 +205,21 @@ func mapSessionsView(items []CampaignSession) []webtemplates.CampaignSessionView
 	return result
 }
 
+// mapSessionReadinessView converts domain session readiness to template view.
+func mapSessionReadinessView(readiness CampaignSessionReadiness) webtemplates.CampaignSessionReadinessView {
+	result := webtemplates.CampaignSessionReadinessView{
+		Ready:    readiness.Ready,
+		Blockers: make([]webtemplates.CampaignSessionReadinessBlockerView, 0, len(readiness.Blockers)),
+	}
+	for _, blocker := range readiness.Blockers {
+		result.Blockers = append(result.Blockers, webtemplates.CampaignSessionReadinessBlockerView{
+			Code:    blocker.Code,
+			Message: blocker.Message,
+		})
+	}
+	return result
+}
+
 // mapInvitesView converts domain invites to template view items.
 func mapInvitesView(items []CampaignInvite) []webtemplates.CampaignInviteView {
 	result := make([]webtemplates.CampaignInviteView, 0, len(items))

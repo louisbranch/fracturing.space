@@ -4,6 +4,8 @@ import (
 	"context"
 	"sort"
 	"strings"
+
+	"golang.org/x/text/language"
 )
 
 // sortByName sorts items by a name key with ID tiebreaker.
@@ -214,6 +216,51 @@ func (s service) campaignSessions(ctx context.Context, campaignID string) ([]Cam
 		return leftUpdated > rightUpdated
 	})
 
+	return normalized, nil
+}
+
+// campaignSessionReadiness centralizes this web behavior in one helper seam.
+func (s service) campaignSessionReadiness(ctx context.Context, campaignID string, locale language.Tag) (CampaignSessionReadiness, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return CampaignSessionReadiness{
+			Ready:    true,
+			Blockers: []CampaignSessionReadinessBlocker{},
+		}, nil
+	}
+
+	readiness, err := s.readGateway.CampaignSessionReadiness(ctx, campaignID, locale)
+	if err != nil {
+		return CampaignSessionReadiness{}, err
+	}
+
+	normalized := CampaignSessionReadiness{
+		Ready:    readiness.Ready,
+		Blockers: make([]CampaignSessionReadinessBlocker, 0, len(readiness.Blockers)),
+	}
+	for _, blocker := range readiness.Blockers {
+		metadata := make(map[string]string, len(blocker.Metadata))
+		for key, value := range blocker.Metadata {
+			trimmedKey := strings.TrimSpace(key)
+			if trimmedKey == "" {
+				continue
+			}
+			metadata[trimmedKey] = strings.TrimSpace(value)
+		}
+		code := strings.TrimSpace(blocker.Code)
+		message := strings.TrimSpace(blocker.Message)
+		if message == "" {
+			message = code
+		}
+		normalized.Blockers = append(normalized.Blockers, CampaignSessionReadinessBlocker{
+			Code:     code,
+			Message:  message,
+			Metadata: metadata,
+		})
+	}
+	if normalized.Ready {
+		normalized.Blockers = []CampaignSessionReadinessBlocker{}
+	}
 	return normalized, nil
 }
 

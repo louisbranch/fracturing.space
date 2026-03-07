@@ -199,6 +199,91 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	}
 }
 
+func TestCampaignSessionReadinessMapsResponse(t *testing.T) {
+	t.Parallel()
+
+	client := &contractCampaignClient{
+		readinessResp: &statev1.GetCampaignSessionReadinessResponse{
+			Readiness: &statev1.CampaignSessionReadiness{
+				Ready: false,
+				Blockers: []*statev1.CampaignSessionReadinessBlocker{
+					{
+						Code:    "SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED",
+						Message: "Campaign readiness requires at least one AI-controlled GM participant for AI GM mode",
+						Metadata: map[string]string{
+							"campaign_id": "c1",
+						},
+					},
+				},
+			},
+		},
+	}
+	gateway := GRPCGateway{Client: client}
+
+	readiness, err := gateway.CampaignSessionReadiness(context.Background(), "c1", language.BrazilianPortuguese)
+	if err != nil {
+		t.Fatalf("CampaignSessionReadiness() error = %v", err)
+	}
+	if readiness.Ready {
+		t.Fatalf("readiness.Ready = %v, want false", readiness.Ready)
+	}
+	if len(readiness.Blockers) != 1 {
+		t.Fatalf("len(readiness.Blockers) = %d, want 1", len(readiness.Blockers))
+	}
+	if got := readiness.Blockers[0].Code; got != "SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED" {
+		t.Fatalf("blocker code = %q, want %q", got, "SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED")
+	}
+	if got := readiness.Blockers[0].Metadata["campaign_id"]; got != "c1" {
+		t.Fatalf("blocker metadata campaign_id = %q, want %q", got, "c1")
+	}
+	if client.lastReadinessReq == nil {
+		t.Fatalf("expected readiness request capture")
+	}
+	if client.lastReadinessReq.GetCampaignId() != "c1" {
+		t.Fatalf("readiness request campaign_id = %q, want %q", client.lastReadinessReq.GetCampaignId(), "c1")
+	}
+	if client.lastReadinessReq.GetLocale() != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("readiness request locale = %v, want %v", client.lastReadinessReq.GetLocale(), commonv1.Locale_LOCALE_PT_BR)
+	}
+}
+
+func TestCampaignSessionReadinessMapsErrors(t *testing.T) {
+	t.Parallel()
+
+	gateway := GRPCGateway{Client: &contractCampaignClient{readinessErr: status.Error(codes.FailedPrecondition, "blocked")}}
+	if _, err := gateway.CampaignSessionReadiness(context.Background(), "c1", language.AmericanEnglish); err == nil {
+		t.Fatalf("expected CampaignSessionReadiness() error")
+	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_load_session_readiness" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.failed_to_load_session_readiness")
+	}
+
+	gateway = GRPCGateway{Client: &contractCampaignClient{readinessResp: &statev1.GetCampaignSessionReadinessResponse{}}}
+	if _, err := gateway.CampaignSessionReadiness(context.Background(), "c1", language.AmericanEnglish); err == nil {
+		t.Fatalf("expected nil-readiness response to fail closed")
+	}
+}
+
+func TestCampaignSessionReadinessEmptyCampaignIDReturnsReady(t *testing.T) {
+	t.Parallel()
+
+	client := &contractCampaignClient{readinessErr: status.Error(codes.Internal, "should not be called")}
+	gateway := GRPCGateway{Client: client}
+
+	readiness, err := gateway.CampaignSessionReadiness(context.Background(), "   ", language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("CampaignSessionReadiness() error = %v", err)
+	}
+	if !readiness.Ready {
+		t.Fatalf("readiness.Ready = %v, want true", readiness.Ready)
+	}
+	if len(readiness.Blockers) != 0 {
+		t.Fatalf("len(readiness.Blockers) = %d, want 0", len(readiness.Blockers))
+	}
+	if client.lastReadinessReq != nil {
+		t.Fatalf("expected readiness RPC not to be called for empty campaign id")
+	}
+}
+
 func TestCampaignParticipantMapsSingleResponse(t *testing.T) {
 	t.Parallel()
 
@@ -707,10 +792,13 @@ func TestMapCampaignCharacterCreationStepToProtoWrapper(t *testing.T) {
 }
 
 type contractCampaignClient struct {
-	listResp *statev1.ListCampaignsResponse
-	listErr  error
-	getResp  *statev1.GetCampaignResponse
-	getErr   error
+	listResp         *statev1.ListCampaignsResponse
+	listErr          error
+	getResp          *statev1.GetCampaignResponse
+	getErr           error
+	readinessResp    *statev1.GetCampaignSessionReadinessResponse
+	readinessErr     error
+	lastReadinessReq *statev1.GetCampaignSessionReadinessRequest
 
 	createResp    *statev1.CreateCampaignResponse
 	createErr     error
@@ -738,6 +826,19 @@ func (c *contractCampaignClient) GetCampaign(context.Context, *statev1.GetCampai
 		return c.getResp, nil
 	}
 	return &statev1.GetCampaignResponse{}, nil
+}
+
+func (c *contractCampaignClient) GetCampaignSessionReadiness(_ context.Context, req *statev1.GetCampaignSessionReadinessRequest, _ ...grpc.CallOption) (*statev1.GetCampaignSessionReadinessResponse, error) {
+	c.lastReadinessReq = req
+	if c.readinessErr != nil {
+		return nil, c.readinessErr
+	}
+	if c.readinessResp != nil {
+		return c.readinessResp, nil
+	}
+	return &statev1.GetCampaignSessionReadinessResponse{
+		Readiness: &statev1.CampaignSessionReadiness{Ready: true},
+	}, nil
 }
 
 func (c *contractCampaignClient) CreateCampaign(_ context.Context, req *statev1.CreateCampaignRequest, _ ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {

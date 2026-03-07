@@ -141,12 +141,17 @@ func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaig
 		extra: func(loc webtemplates.Localizer) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{{Label: webtemplates.T(loc, "game.sessions.title")}}
 		},
-		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
+		loadData: func(ctx context.Context, campaignID string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error {
 			items, err := h.service.CampaignSessions(ctx, campaignID)
 			if err != nil {
 				return err
 			}
 			view.Sessions = mapSessionsView(items)
+			readiness, err := h.service.CampaignSessionReadiness(ctx, campaignID, page.locale)
+			if err != nil {
+				return err
+			}
+			view.SessionReadiness = mapSessionReadinessView(readiness)
 			return nil
 		},
 	})

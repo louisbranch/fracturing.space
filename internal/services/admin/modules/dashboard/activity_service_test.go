@@ -68,6 +68,10 @@ func (c *activityCampaignClient) GetCampaignAIBindingUsage(context.Context, *sta
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (c *activityCampaignClient) GetCampaignSessionReadiness(context.Context, *statev1.GetCampaignSessionReadinessRequest, ...grpc.CallOption) (*statev1.GetCampaignSessionReadinessResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 type activityEventClient struct {
 	responses map[string]*statev1.ListEventsResponse
 	errs      map[string]error

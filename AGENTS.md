@@ -69,6 +69,12 @@ make test
 make integration
 ```
 
+PR/PR-update prerequisite (required before opening or updating a PR):
+
+```bash
+make ci-go-tests-local
+```
+
 Command guidance for agents:
 
 - Fast feedback during implementation:

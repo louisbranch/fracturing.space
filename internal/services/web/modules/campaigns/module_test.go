@@ -648,6 +648,8 @@ type fakeGateway struct {
 	charactersErr                     error
 	sessions                          []CampaignSession
 	sessionsErr                       error
+	sessionReadiness                  CampaignSessionReadiness
+	sessionReadinessErr               error
 	invites                           []CampaignInvite
 	invitesErr                        error
 	characterCreationProgress         CampaignCharacterCreationProgress
@@ -791,6 +793,16 @@ func (f fakeGateway) CampaignSessions(context.Context, string) ([]CampaignSessio
 	return f.sessions, nil
 }
 
+func (f fakeGateway) CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error) {
+	if f.sessionReadinessErr != nil {
+		return CampaignSessionReadiness{}, f.sessionReadinessErr
+	}
+	if !f.sessionReadiness.Ready && len(f.sessionReadiness.Blockers) == 0 {
+		return CampaignSessionReadiness{Ready: true, Blockers: []CampaignSessionReadinessBlocker{}}, nil
+	}
+	return f.sessionReadiness, nil
+}
+
 func (f fakeGateway) CampaignInvites(context.Context, string) ([]CampaignInvite, error) {
 	if f.invitesErr != nil {
 		return nil, f.invitesErr
@@ -875,14 +887,16 @@ func (f fakeGateway) BatchCanCampaignAction(context.Context, string, []campaigna
 }
 
 type fakeCampaignClient struct {
-	response   *statev1.ListCampaignsResponse
-	err        error
-	getResp    *statev1.GetCampaignResponse
-	getErr     error
-	createResp *statev1.CreateCampaignResponse
-	createErr  error
-	updateResp *statev1.UpdateCampaignResponse
-	updateErr  error
+	response      *statev1.ListCampaignsResponse
+	err           error
+	getResp       *statev1.GetCampaignResponse
+	getErr        error
+	readinessResp *statev1.GetCampaignSessionReadinessResponse
+	readinessErr  error
+	createResp    *statev1.CreateCampaignResponse
+	createErr     error
+	updateResp    *statev1.UpdateCampaignResponse
+	updateErr     error
 }
 
 type capturingCampaignClient struct {
@@ -974,6 +988,12 @@ func (c *capturingCampaignClient) GetCampaign(context.Context, *statev1.GetCampa
 	return &statev1.GetCampaignResponse{}, nil
 }
 
+func (c *capturingCampaignClient) GetCampaignSessionReadiness(context.Context, *statev1.GetCampaignSessionReadinessRequest, ...grpc.CallOption) (*statev1.GetCampaignSessionReadinessResponse, error) {
+	return &statev1.GetCampaignSessionReadinessResponse{
+		Readiness: &statev1.CampaignSessionReadiness{Ready: true},
+	}, nil
+}
+
 func (c *capturingCampaignClient) CreateCampaign(_ context.Context, req *statev1.CreateCampaignRequest, _ ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
 	c.lastCreateReq = req
 	return &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{Id: "camp-pt"}}, nil
@@ -999,6 +1019,18 @@ func (f fakeCampaignClient) GetCampaign(context.Context, *statev1.GetCampaignReq
 		return f.getResp, nil
 	}
 	return &statev1.GetCampaignResponse{Campaign: &statev1.Campaign{Id: "c1", Name: "Campaign"}}, nil
+}
+
+func (f fakeCampaignClient) GetCampaignSessionReadiness(context.Context, *statev1.GetCampaignSessionReadinessRequest, ...grpc.CallOption) (*statev1.GetCampaignSessionReadinessResponse, error) {
+	if f.readinessErr != nil {
+		return nil, f.readinessErr
+	}
+	if f.readinessResp != nil {
+		return f.readinessResp, nil
+	}
+	return &statev1.GetCampaignSessionReadinessResponse{
+		Readiness: &statev1.CampaignSessionReadiness{Ready: true},
+	}, nil
 }
 
 func (f fakeCampaignClient) CreateCampaign(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {

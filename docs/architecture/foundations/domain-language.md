@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-03"
 ---
 
 # Domain Language
@@ -58,9 +58,14 @@ Examples: note additions, canonized facts, scene start/end, reveals.
 - **Session gate**: temporary checkpoint blocking action flow until resolved.
 - **Session start readiness**: invariant evaluated before `session.start` is
   accepted.
+- **Session readiness blocker**: one unmet readiness invariant surfaced with a
+  stable machine-readable code, operator-readable message, and optional
+  metadata.
 
 Readiness is true when core participant/controller invariants and
-system-specific readiness invariants are both satisfied.
+system-specific readiness invariants are both satisfied. Reports may include
+boundary blockers (campaign status, active session) in addition to core
+participant/character blockers.
 
 ## Operational read-model terms
 

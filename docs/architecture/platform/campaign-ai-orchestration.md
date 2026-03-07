@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-03"
 ---
 
 # Campaign AI Orchestration
@@ -92,6 +92,16 @@ Epoch does not rotate for unrelated campaign mutations (name/theme/cover/etc.).
 - Stale epoch/session/agent mismatch: AI rejects as stale precondition.
 - Missing binding or inactive session: game refuses grant issuance; chat keeps
   relay disabled for that room.
+
+## Session Start Readiness in AI Modes
+
+For `gm_mode` `ai` and `hybrid`, campaign session start readiness must include:
+
+- bound `ai_agent_id` on campaign metadata
+- at least one active participant seat with role `GM` and controller `AI`
+
+If either invariant is missing, campaign readiness reports include stable
+session-readiness blocker codes and session start must remain blocked.
 
 ## Extensibility
 

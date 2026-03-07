@@ -3,8 +3,8 @@
   "locales": [
     {
       "locale": "en-US",
-      "base_keys": 967,
-      "translated": 967,
+      "base_keys": 979,
+      "translated": 979,
       "missing": 0,
       "extra": 0,
       "completion": 100,
@@ -35,8 +35,8 @@
         },
         {
           "namespace": "game",
-          "base_keys": 2,
-          "translated": 2,
+          "base_keys": 12,
+          "translated": 12,
           "missing": 0,
           "extra": 0,
           "completion": 100
@@ -51,8 +51,8 @@
         },
         {
           "namespace": "web",
-          "base_keys": 527,
-          "translated": 527,
+          "base_keys": 529,
+          "translated": 529,
           "missing": 0,
           "extra": 0,
           "completion": 100
@@ -63,8 +63,8 @@
     },
     {
       "locale": "pt-BR",
-      "base_keys": 967,
-      "translated": 967,
+      "base_keys": 979,
+      "translated": 979,
       "missing": 0,
       "extra": 0,
       "completion": 100,
@@ -95,8 +95,8 @@
         },
         {
           "namespace": "game",
-          "base_keys": 2,
-          "translated": 2,
+          "base_keys": 12,
+          "translated": 12,
           "missing": 0,
           "extra": 0,
           "completion": 100
@@ -111,8 +111,8 @@
         },
         {
           "namespace": "web",
-          "base_keys": 527,
-          "translated": 527,
+          "base_keys": 529,
+          "translated": 529,
           "missing": 0,
           "extra": 0,
           "completion": 100

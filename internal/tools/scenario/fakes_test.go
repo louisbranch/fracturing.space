@@ -66,6 +66,10 @@ func (f *fakeCampaignClient) GetCampaignAIBindingUsage(context.Context, *gamev1.
 	return nil, unimplemented("GetCampaignAIBindingUsage")
 }
 
+func (f *fakeCampaignClient) GetCampaignSessionReadiness(context.Context, *gamev1.GetCampaignSessionReadinessRequest, ...grpc.CallOption) (*gamev1.GetCampaignSessionReadinessResponse, error) {
+	return nil, unimplemented("GetCampaignSessionReadiness")
+}
+
 type fakeParticipantClient struct {
 	create func(context.Context, *gamev1.CreateParticipantRequest, ...grpc.CallOption) (*gamev1.CreateParticipantResponse, error)
 }

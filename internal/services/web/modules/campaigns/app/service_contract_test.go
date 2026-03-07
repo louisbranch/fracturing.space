@@ -42,6 +42,7 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 		campaignParticipant:       CampaignParticipant{ID: "p1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},
 		campaignCharacters:        []CampaignCharacter{{ID: "char-1", Name: "Hero"}},
 		campaignSessions:          []CampaignSession{{ID: "sess-1", Name: "Session One"}},
+		campaignSessionReadiness:  CampaignSessionReadiness{Ready: true},
 		campaignInvites:           []CampaignInvite{{ID: "inv-1", ParticipantID: "p1", RecipientUserID: "user-2", Status: "Pending"}},
 		authorizationDecision:     campaignAuthorizationDecision{Evaluated: true, Allowed: true},
 		characterCreationProgress: CampaignCharacterCreationProgress{NextStep: 1},
@@ -74,6 +75,9 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	}
 	if _, err := svc.CampaignSessions(ctx, "c1"); err != nil {
 		t.Fatalf("CampaignSessions() error = %v", err)
+	}
+	if _, err := svc.CampaignSessionReadiness(ctx, "c1", language.AmericanEnglish); err != nil {
+		t.Fatalf("CampaignSessionReadiness() error = %v", err)
 	}
 	if _, err := svc.CampaignInvites(ctx, "c1"); err != nil {
 		t.Fatalf("CampaignInvites() error = %v", err)
@@ -159,6 +163,9 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	}
 	if _, err := gw.CampaignSessions(ctx, "c1"); err != nil {
 		assertUnavailable(t, err, "CampaignSessions")
+	}
+	if _, err := gw.CampaignSessionReadiness(ctx, "c1", language.AmericanEnglish); err != nil {
+		assertUnavailable(t, err, "CampaignSessionReadiness")
 	}
 	if _, err := gw.CampaignInvites(ctx, "c1"); err != nil {
 		assertUnavailable(t, err, "CampaignInvites")

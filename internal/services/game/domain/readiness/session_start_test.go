@@ -192,10 +192,11 @@ func TestEvaluateSessionStart_AIGMModeWithBoundAgentAccepted(t *testing.T) {
 			AIAgentID: "agent-1",
 		},
 		Participants: map[string]participant.State{
-			"gm-1": {
-				ParticipantID: "gm-1",
+			"gm-ai-1": {
+				ParticipantID: "gm-ai-1",
 				Joined:        true,
 				Role:          string(participant.RoleGM),
+				Controller:    string(participant.ControllerAI),
 			},
 			"player-1": {
 				ParticipantID: "player-1",
@@ -213,6 +214,41 @@ func TestEvaluateSessionStart_AIGMModeWithBoundAgentAccepted(t *testing.T) {
 	}, nil)
 	if rejection != nil {
 		t.Fatalf("rejection = %#v, want nil", rejection)
+	}
+}
+
+func TestEvaluateSessionStart_AIGMModeWithoutAIGMParticipantRejected(t *testing.T) {
+	rejection := EvaluateSessionStart(aggregate.State{
+		Campaign: campaign.State{
+			GmMode:    "ai",
+			AIAgentID: "agent-1",
+		},
+		Participants: map[string]participant.State{
+			"gm-human-1": {
+				ParticipantID: "gm-human-1",
+				Joined:        true,
+				Role:          string(participant.RoleGM),
+				Controller:    string(participant.ControllerHuman),
+			},
+			"player-1": {
+				ParticipantID: "player-1",
+				Joined:        true,
+				Role:          string(participant.RolePlayer),
+			},
+		},
+		Characters: map[string]character.State{
+			"char-1": {
+				CharacterID:   "char-1",
+				Created:       true,
+				ParticipantID: "player-1",
+			},
+		},
+	}, nil)
+	if rejection == nil {
+		t.Fatal("expected rejection")
+	}
+	if rejection.Code != RejectionCodeSessionReadinessAIGMParticipantRequired {
+		t.Fatalf("rejection code = %s, want %s", rejection.Code, RejectionCodeSessionReadinessAIGMParticipantRequired)
 	}
 }
 
