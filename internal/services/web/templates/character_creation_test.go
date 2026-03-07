@@ -154,8 +154,8 @@ func TestCreationStepDomainCardsUsesSharedSelectableCardShell(t *testing.T) {
 	}
 	for _, marker := range []string{
 		`type="checkbox"`,
-		`data-image-frame="true"`,
-		`data-image-skeleton="true"`,
+		`class="relative overflow-hidden h-full w-full"`,
+		`class="skeleton absolute inset-0 z-0 pointer-events-none"`,
 		`border-primary ring-2 ring-primary/20`,
 	} {
 		if !strings.Contains(markup, marker) {
