@@ -144,6 +144,29 @@ func (s service) createCharacter(ctx context.Context, campaignID string, input C
 	return created, nil
 }
 
+// updateCharacter applies this package workflow transition.
+func (s service) updateCharacter(ctx context.Context, campaignID string, characterID string, input UpdateCharacterInput) error {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	characterID = strings.TrimSpace(characterID)
+	if characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "character id is required")
+	}
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_name_is_required", "character name is required")
+	}
+	if err := s.requirePolicy(ctx, campaignID, policyMutateCharacter); err != nil {
+		return err
+	}
+	return s.mutationGateway.UpdateCharacter(ctx, campaignID, characterID, UpdateCharacterInput{
+		Name:     name,
+		Pronouns: strings.TrimSpace(input.Pronouns),
+	})
+}
+
 // updateParticipant applies this package workflow transition.
 func (s service) updateParticipant(ctx context.Context, campaignID string, input UpdateParticipantInput) error {
 	campaignID = strings.TrimSpace(campaignID)

@@ -213,6 +213,13 @@ func (f fakeWebCharacterClient) CreateCharacter(context.Context, *statev1.Create
 	return &statev1.CreateCharacterResponse{Character: &statev1.Character{Id: "char-created"}}, nil
 }
 
+func (f fakeWebCharacterClient) UpdateCharacter(context.Context, *statev1.UpdateCharacterRequest, ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.UpdateCharacterResponse{}, nil
+}
+
 func (f fakeWebCharacterClient) GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
 	if f.err != nil {
 		return nil, f.err

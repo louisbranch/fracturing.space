@@ -158,42 +158,75 @@ type CampaignCharacterCreationStepView struct {
 	Complete bool
 }
 
+type CampaignCreationClassFeatureView struct {
+	Name        string
+	Description string
+}
+
 type CampaignCreationClassView struct {
-	ID   string
-	Name string
+	ID              string
+	Name            string
+	ImageURL        string
+	StartingHP      int32
+	StartingEvasion int32
+	HopeFeature     CampaignCreationClassFeatureView
+	Features        []CampaignCreationClassFeatureView
+	DomainNames     []string
 }
 
 type CampaignCreationSubclassView struct {
-	ID      string
-	Name    string
-	ClassID string
+	ID             string
+	Name           string
+	ImageURL       string
+	ClassID        string
+	SpellcastTrait string
+	Foundation     []CampaignCreationClassFeatureView
 }
 
 type CampaignCreationHeritageView struct {
-	ID   string
-	Name string
+	ID       string
+	Name     string
+	ImageURL string
+	Features []CampaignCreationClassFeatureView
 }
 
 type CampaignCreationWeaponView struct {
-	ID   string
-	Name string
+	ID      string
+	Name    string
+	Trait   string
+	Range   string
+	Damage  string
+	Feature string
 }
 
 type CampaignCreationArmorView struct {
-	ID   string
-	Name string
+	ID             string
+	Name           string
+	ArmorScore     int32
+	BaseThresholds string
+	Feature        string
 }
 
 type CampaignCreationItemView struct {
-	ID   string
-	Name string
+	ID          string
+	Name        string
+	Description string
+}
+
+type CampaignCreationExperienceView struct {
+	Name     string
+	Modifier string
 }
 
 type CampaignCreationDomainCardView struct {
-	ID       string
-	Name     string
-	DomainID string
-	Level    int32
+	ID          string
+	Name        string
+	DomainID    string
+	DomainName  string
+	Level       int32
+	Type        string
+	RecallCost  int32
+	FeatureText string
 }
 
 type CampaignCharacterCreationView struct {
@@ -215,8 +248,8 @@ type CampaignCharacterCreationView struct {
 	ArmorID          string
 	PotionItemID     string
 	Background       string
-	ExperienceName   string
-	ExperienceModifier string
+	Description      string
+	Experiences      []CampaignCreationExperienceView
 	DomainCardIDs    []string
 	Connections      string
 	Steps            []CampaignCharacterCreationStepView

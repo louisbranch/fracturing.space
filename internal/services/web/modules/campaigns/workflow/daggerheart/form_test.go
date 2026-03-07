@@ -69,18 +69,8 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			},
 		},
 		{
-			name: "step 4 details",
+			name: "step 4 equipment with secondary weapon",
 			step: 4,
-			body: "",
-			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
-				if input.Details == nil {
-					t.Fatal("Details is nil")
-				}
-			},
-		},
-		{
-			name: "step 5 equipment with secondary weapon",
-			step: 5,
 			body: "weapon_primary_id=sword&weapon_secondary_id=dagger&armor_id=leather&potion_item_id=item.minor-health-potion",
 			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Equipment == nil {
@@ -95,8 +85,8 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			},
 		},
 		{
-			name: "step 5 equipment without secondary weapon",
-			step: 5,
+			name: "step 4 equipment without secondary weapon",
+			step: 4,
 			body: "weapon_primary_id=sword&armor_id=leather&potion_item_id=item.minor-health-potion",
 			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Equipment == nil {
@@ -108,53 +98,33 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			},
 		},
 		{
-			name: "step 6 background",
-			step: 6,
-			body: "background=Noble+scholar",
-			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
-				if input.Background == nil {
-					t.Fatal("Background is nil")
-				}
-				if input.Background.Background != "Noble scholar" {
-					t.Fatalf("Background = %q, want %q", input.Background.Background, "Noble scholar")
-				}
-			},
-		},
-		{
-			name: "step 7 experience with modifier",
-			step: 7,
-			body: "experience_name=Outlander&experience_modifier=2",
+			name: "step 5 two experiences hardcodes modifier to 2",
+			step: 5,
+			body: "experience_0_name=Outlander&experience_1_name=Scholar",
 			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Experiences == nil {
 					t.Fatal("Experiences is nil")
 				}
-				if len(input.Experiences.Experiences) != 1 {
-					t.Fatalf("Experiences = %d, want 1", len(input.Experiences.Experiences))
+				if len(input.Experiences.Experiences) != 2 {
+					t.Fatalf("Experiences = %d, want 2", len(input.Experiences.Experiences))
 				}
 				if input.Experiences.Experiences[0].Name != "Outlander" {
-					t.Fatalf("Name = %q, want Outlander", input.Experiences.Experiences[0].Name)
+					t.Fatalf("Name[0] = %q, want Outlander", input.Experiences.Experiences[0].Name)
 				}
 				if input.Experiences.Experiences[0].Modifier != 2 {
-					t.Fatalf("Modifier = %d, want 2", input.Experiences.Experiences[0].Modifier)
+					t.Fatalf("Modifier[0] = %d, want 2", input.Experiences.Experiences[0].Modifier)
+				}
+				if input.Experiences.Experiences[1].Name != "Scholar" {
+					t.Fatalf("Name[1] = %q, want Scholar", input.Experiences.Experiences[1].Name)
+				}
+				if input.Experiences.Experiences[1].Modifier != 2 {
+					t.Fatalf("Modifier[1] = %d, want 2", input.Experiences.Experiences[1].Modifier)
 				}
 			},
 		},
 		{
-			name: "step 7 experience without modifier",
-			step: 7,
-			body: "experience_name=Outlander",
-			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
-				if input.Experiences == nil {
-					t.Fatal("Experiences is nil")
-				}
-				if input.Experiences.Experiences[0].Modifier != 0 {
-					t.Fatalf("Modifier = %d, want 0", input.Experiences.Experiences[0].Modifier)
-				}
-			},
-		},
-		{
-			name: "step 8 domain cards deduplicates",
-			step: 8,
+			name: "step 6 domain cards deduplicates",
+			step: 6,
 			body: "domain_card_id=dc1&domain_card_id=dc2&domain_card_id=dc1",
 			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.DomainCards == nil {
@@ -162,6 +132,32 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 				}
 				if len(input.DomainCards.DomainCardIDs) != 2 {
 					t.Fatalf("DomainCardIDs = %v, want 2 (deduped)", input.DomainCards.DomainCardIDs)
+				}
+			},
+		},
+		{
+			name: "step 7 details with description",
+			step: 7,
+			body: "description=A+tall+elven+warrior",
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
+				if input.Details == nil {
+					t.Fatal("Details is nil")
+				}
+				if input.Details.Description != "A tall elven warrior" {
+					t.Fatalf("Description = %q, want %q", input.Details.Description, "A tall elven warrior")
+				}
+			},
+		},
+		{
+			name: "step 8 background",
+			step: 8,
+			body: "background=Noble+scholar",
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
+				if input.Background == nil {
+					t.Fatal("Background is nil")
+				}
+				if input.Background.Background != "Noble scholar" {
+					t.Fatalf("Background = %q, want %q", input.Background.Background, "Noble scholar")
 				}
 			},
 		},
@@ -209,20 +205,128 @@ func TestParseStepInputUsesLocalizationKeys(t *testing.T) {
 		wantKey string
 	}{
 		{
-			name:    "class and subclass required",
+			name:    "step 1 missing class",
+			step:    1,
+			body:    "subclass_id=guardian",
+			wantKey: "error.web.message.character_creation_class_and_subclass_are_required",
+		},
+		{
+			name:    "step 1 missing subclass",
 			step:    1,
 			body:    "class_id=warrior",
 			wantKey: "error.web.message.character_creation_class_and_subclass_are_required",
 		},
 		{
-			name:    "ancestry and community required",
+			name:    "step 1 both empty",
+			step:    1,
+			body:    "",
+			wantKey: "error.web.message.character_creation_class_and_subclass_are_required",
+		},
+		{
+			name:    "step 2 missing ancestry",
+			step:    2,
+			body:    "community_id=loreborne",
+			wantKey: "error.web.message.character_creation_ancestry_and_community_are_required",
+		},
+		{
+			name:    "step 2 missing community",
 			step:    2,
 			body:    "ancestry_id=elf",
 			wantKey: "error.web.message.character_creation_ancestry_and_community_are_required",
 		},
 		{
-			name:    "unknown step",
-			step:    42,
+			name:    "step 3 missing trait field",
+			step:    3,
+			body:    "agility=2&strength=1&finesse=0&instinct=1&presence=2",
+			wantKey: "error.web.message.character_creation_numeric_field_is_required",
+		},
+		{
+			name:    "step 3 non-numeric trait",
+			step:    3,
+			body:    "agility=abc&strength=1&finesse=0&instinct=1&presence=2&knowledge=0",
+			wantKey: "error.web.message.character_creation_numeric_field_must_be_valid_integer",
+		},
+		{
+			name:    "step 4 missing primary weapon",
+			step:    4,
+			body:    "armor_id=leather&potion_item_id=item.minor-health-potion",
+			wantKey: "error.web.message.character_creation_primary_weapon_armor_and_potion_are_required",
+		},
+		{
+			name:    "step 4 missing armor",
+			step:    4,
+			body:    "weapon_primary_id=sword&potion_item_id=item.minor-health-potion",
+			wantKey: "error.web.message.character_creation_primary_weapon_armor_and_potion_are_required",
+		},
+		{
+			name:    "step 4 missing potion",
+			step:    4,
+			body:    "weapon_primary_id=sword&armor_id=leather",
+			wantKey: "error.web.message.character_creation_primary_weapon_armor_and_potion_are_required",
+		},
+		{
+			name:    "step 5 only one experience",
+			step:    5,
+			body:    "experience_0_name=Outlander",
+			wantKey: "error.web.message.character_creation_two_experiences_required",
+		},
+		{
+			name:    "step 5 no experiences",
+			step:    5,
+			body:    "",
+			wantKey: "error.web.message.character_creation_two_experiences_required",
+		},
+		{
+			name:    "step 6 only one domain card",
+			step:    6,
+			body:    "domain_card_id=dc1",
+			wantKey: "error.web.message.character_creation_exactly_two_domain_cards_required",
+		},
+		{
+			name:    "step 6 three unique domain cards",
+			step:    6,
+			body:    "domain_card_id=dc1&domain_card_id=dc2&domain_card_id=dc3",
+			wantKey: "error.web.message.character_creation_exactly_two_domain_cards_required",
+		},
+		{
+			name:    "step 6 duplicates reduce below two",
+			step:    6,
+			body:    "domain_card_id=dc1&domain_card_id=dc1",
+			wantKey: "error.web.message.character_creation_exactly_two_domain_cards_required",
+		},
+		{
+			name:    "step 7 empty description",
+			step:    7,
+			body:    "description=",
+			wantKey: "error.web.message.character_creation_description_is_required",
+		},
+		{
+			name:    "step 8 empty background",
+			step:    8,
+			body:    "background=",
+			wantKey: "error.web.message.character_creation_background_is_required",
+		},
+		{
+			name:    "step 9 empty connections",
+			step:    9,
+			body:    "connections=",
+			wantKey: "error.web.message.character_creation_connections_are_required",
+		},
+		{
+			name:    "step 0 out of range",
+			step:    0,
+			body:    "",
+			wantKey: "error.web.message.character_creation_step_is_not_available",
+		},
+		{
+			name:    "step 10 out of range",
+			step:    10,
+			body:    "",
+			wantKey: "error.web.message.character_creation_step_is_not_available",
+		},
+		{
+			name:    "step -1 negative",
+			step:    -1,
 			body:    "",
 			wantKey: "error.web.message.character_creation_step_is_not_available",
 		},
@@ -282,17 +386,5 @@ func TestParseRequiredInt32UsesLocalizationKeys(t *testing.T) {
 				t.Fatalf("LocalizationKey(err) = %q, want %q", got, tt.wantKey)
 			}
 		})
-	}
-}
-
-func TestParseOptionalInt32UsesLocalizationKey(t *testing.T) {
-	t.Parallel()
-
-	_, err := parseOptionalInt32("bad")
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	if got := apperrors.LocalizationKey(err); got != "error.web.message.character_creation_modifier_must_be_valid_integer" {
-		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.character_creation_modifier_must_be_valid_integer")
 	}
 }

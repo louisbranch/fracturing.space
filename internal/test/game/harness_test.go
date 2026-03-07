@@ -225,6 +225,19 @@ func seedScenarioContent(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seed domain card: %v", err)
 	}
+	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
+		ID:          "domain_card.valor-forceful-push",
+		Name:        "Forceful Push",
+		DomainID:    "domain.valor",
+		Level:       1,
+		Type:        "ability",
+		UsageLimit:  "See text",
+		FeatureText: "Scenario seed card",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		t.Fatalf("seed domain card: %v", err)
+	}
 
 	if err := store.PutDaggerheartWeapon(ctx, storage.DaggerheartWeapon{
 		ID:         "weapon.longsword",

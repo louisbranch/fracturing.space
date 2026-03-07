@@ -381,7 +381,7 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 	}
 }
 
-func TestMountCampaignCharacterDetailRendersCreationWorkflowForm(t *testing.T) {
+func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 	t.Parallel()
 
 	m := NewStableWithGateway(fakeGateway{
@@ -415,12 +415,8 @@ func TestMountCampaignCharacterDetailRendersCreationWorkflowForm(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`data-character-creation-workflow="true"`,
-		`data-character-creation-next-step="1"`,
-		`data-character-creation-form-step="1"`,
-		`action="/app/campaigns/c1/characters/char-1/creation/step"`,
-		`<option value="warrior">Warrior</option>`,
-		`<option value="guardian">Guardian</option>`,
-		`action="/app/campaigns/c1/characters/char-1/creation/reset"`,
+		`data-character-creation-link="true"`,
+		`/app/campaigns/c1/characters/char-1/creation`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing workflow marker %q: %q", marker, body)
@@ -456,107 +452,6 @@ func TestMountCampaignCharacterDetailHidesWorkflowForNonDaggerheartCampaigns(t *
 	body := rr.Body.String()
 	if strings.Contains(body, `data-character-creation-workflow="true"`) {
 		t.Fatalf("body unexpectedly contains character creation workflow card: %q", body)
-	}
-}
-
-func TestMountCampaignCharacterDetailPrefillsEquipmentStepFromProfile(t *testing.T) {
-	t.Parallel()
-
-	m := NewStableWithGateway(fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		characters: []CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
-		}},
-		characterCreationProgress: CampaignCharacterCreationProgress{
-			Steps:    []CampaignCharacterCreationStep{{Step: 5, Key: "equipment", Complete: false}},
-			NextStep: 5,
-		},
-		characterCreationCatalog: CampaignCharacterCreationCatalog{
-			Weapons: []CatalogWeapon{
-				{ID: "weapon.longsword", Name: "Longsword", Category: "primary", Tier: 1},
-				{ID: "weapon.dagger", Name: "Dagger", Category: "secondary", Tier: 1},
-			},
-			Armor: []CatalogArmor{{ID: "armor.chain", Name: "Chain", Tier: 1}},
-			Items: []CatalogItem{{ID: "item.minor-health-potion", Name: "Minor Health Potion"}},
-		},
-		characterCreationProfile: CampaignCharacterCreationProfile{
-			PrimaryWeaponID:   "weapon.longsword",
-			SecondaryWeaponID: "weapon.dagger",
-			ArmorID:           "armor.chain",
-			PotionItemID:      "item.minor-health-potion",
-		},
-	}, modulehandler.NewTestBase(), "", defaultTestWorkflows())
-	mount, err := m.Mount()
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
-	}
-	body := rr.Body.String()
-	for _, marker := range []string{
-		`data-character-creation-form-step="5"`,
-		`<option value="weapon.longsword" selected>Longsword</option>`,
-		`<option value="weapon.dagger" selected>Dagger</option>`,
-		`<option value="armor.chain" selected>Chain</option>`,
-		`<option value="item.minor-health-potion" selected>Minor Health Potion</option>`,
-	} {
-		if !strings.Contains(body, marker) {
-			t.Fatalf("body missing workflow prefill marker %q: %q", marker, body)
-		}
-	}
-}
-
-func TestMountCampaignCharacterDetailPrefillsDomainCardStepFromProfile(t *testing.T) {
-	t.Parallel()
-
-	m := NewStableWithGateway(fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		characters: []CampaignCharacter{{
-			ID:         "char-1",
-			Name:       "Aria",
-			Kind:       "PC",
-			Controller: "Ariadne",
-		}},
-		characterCreationProgress: CampaignCharacterCreationProgress{
-			Steps:    []CampaignCharacterCreationStep{{Step: 8, Key: "domain_cards", Complete: false}},
-			NextStep: 8,
-		},
-		characterCreationCatalog: CampaignCharacterCreationCatalog{
-			DomainCards: []CatalogDomainCard{
-				{ID: "card.guard", Name: "Guard", DomainID: "valor", Level: 1},
-				{ID: "card.cleave", Name: "Cleave", DomainID: "valor", Level: 1},
-			},
-		},
-		characterCreationProfile: CampaignCharacterCreationProfile{DomainCardIDs: []string{"card.guard"}},
-	}, modulehandler.NewTestBase(), "", defaultTestWorkflows())
-	mount, err := m.Mount()
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
-	}
-
-	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
-	}
-	body := rr.Body.String()
-	for _, marker := range []string{
-		`data-character-creation-form-step="8"`,
-		`value="card.guard" class="checkbox checkbox-sm" checked`,
-		`value="card.cleave" class="checkbox checkbox-sm"`,
-	} {
-		if !strings.Contains(body, marker) {
-			t.Fatalf("body missing workflow domain-card marker %q: %q", marker, body)
-		}
 	}
 }
 

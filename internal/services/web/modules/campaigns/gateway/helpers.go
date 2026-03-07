@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -237,6 +238,39 @@ func daggerheartWeaponCategoryLabel(category daggerheartv1.DaggerheartWeaponCate
 	default:
 		return ""
 	}
+}
+
+// daggerheartDomainCardTypeLabel maps the proto domain card type to a display label.
+func daggerheartDomainCardTypeLabel(t daggerheartv1.DaggerheartDomainCardType) string {
+	switch t {
+	case daggerheartv1.DaggerheartDomainCardType_DAGGERHEART_DOMAIN_CARD_TYPE_ABILITY:
+		return "ability"
+	case daggerheartv1.DaggerheartDomainCardType_DAGGERHEART_DOMAIN_CARD_TYPE_SPELL:
+		return "spell"
+	case daggerheartv1.DaggerheartDomainCardType_DAGGERHEART_DOMAIN_CARD_TYPE_GRIMOIRE:
+		return "grimoire"
+	default:
+		return ""
+	}
+}
+
+// formatDamageDice formats a repeated DiceSpec into a readable string like "2d8".
+func formatDamageDice(dice []*daggerheartv1.DiceSpec) string {
+	if len(dice) == 0 {
+		return ""
+	}
+	parts := make([]string, 0, len(dice))
+	for _, d := range dice {
+		if d == nil || d.GetSides() == 0 {
+			continue
+		}
+		count := d.GetCount()
+		if count <= 0 {
+			count = 1
+		}
+		parts = append(parts, fmt.Sprintf("%dd%d", count, d.GetSides()))
+	}
+	return strings.Join(parts, " + ")
 }
 
 // --- Domain enum → proto mapping ---

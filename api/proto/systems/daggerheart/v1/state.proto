@@ -69,26 +69,29 @@ message DaggerheartProfile {
   // Step 3: whether traits were explicitly assigned during creation.
   google.protobuf.BoolValue traits_assigned = 21;
 
-  // Step 6: free-form background text.
+  // Step 8: free-form background text.
   string background = 22;
 
-  // Step 8: selected domain card ids.
+  // Step 6: selected domain card ids.
   repeated string domain_card_ids = 23;
 
   // Step 9: free-form character connections text.
   string connections = 24;
 
-  // Step 4: whether additional character details were explicitly recorded.
+  // Step 7: whether additional character details were explicitly recorded.
   google.protobuf.BoolValue details_recorded = 25;
 
-  // Step 5: selected starting weapon ids.
+  // Step 4: selected starting weapon ids.
   repeated string starting_weapon_ids = 26;
 
-  // Step 5: selected starting armor id.
+  // Step 4: selected starting armor id.
   string starting_armor_id = 27;
 
-  // Step 5: selected starting potion item id.
+  // Step 4: selected starting potion item id.
   string starting_potion_item_id = 28;
+
+  // Step 7: free-form character description (appearance, personality, etc.).
+  string description = 29;
 }
 
 // DaggerheartCreationStepClassSubclassInput applies creation step 1
@@ -115,11 +118,14 @@ message DaggerheartCreationStepTraitsInput {
   int32 knowledge = 6;
 }
 
-// DaggerheartCreationStepDetailsInput applies creation step 4
+// DaggerheartCreationStepDetailsInput applies creation step 7
 // (record additional character details).
-message DaggerheartCreationStepDetailsInput {}
+message DaggerheartCreationStepDetailsInput {
+  // Optional free-form character description.
+  string description = 1;
+}
 
-// DaggerheartCreationStepEquipmentInput applies creation step 5
+// DaggerheartCreationStepEquipmentInput applies creation step 4
 // (choose starting equipment).
 message DaggerheartCreationStepEquipmentInput {
   repeated string weapon_ids = 1;
@@ -127,17 +133,17 @@ message DaggerheartCreationStepEquipmentInput {
   string potion_item_id = 3;
 }
 
-// DaggerheartCreationStepBackgroundInput applies creation step 6 (background).
+// DaggerheartCreationStepBackgroundInput applies creation step 8 (background).
 message DaggerheartCreationStepBackgroundInput {
   string background = 1;
 }
 
-// DaggerheartCreationStepExperiencesInput applies creation step 7 (experiences).
+// DaggerheartCreationStepExperiencesInput applies creation step 5 (experiences).
 message DaggerheartCreationStepExperiencesInput {
   repeated DaggerheartExperience experiences = 1;
 }
 
-// DaggerheartCreationStepDomainCardsInput applies creation step 8 (domain cards).
+// DaggerheartCreationStepDomainCardsInput applies creation step 6 (domain cards).
 message DaggerheartCreationStepDomainCardsInput {
   repeated string domain_card_ids = 1;
 }

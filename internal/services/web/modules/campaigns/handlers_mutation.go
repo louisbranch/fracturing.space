@@ -87,7 +87,40 @@ func (h handlers) handleCharacterCreateRoute(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// Redirect to creation page if the campaign has a character creation workflow.
+	workspace, err := h.service.CampaignWorkspace(ctx, campaignID)
+	if err == nil && h.service.ResolveWorkflow(workspace.System) != nil {
+		httpx.WriteRedirect(w, r, routepath.AppCampaignCharacterCreation(campaignID, created.CharacterID))
+		return
+	}
 	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacter(campaignID, created.CharacterID))
+}
+
+// handleCharacterUpdateRoute handles this route in the module transport layer.
+func (h handlers) handleCharacterUpdateRoute(w http.ResponseWriter, r *http.Request) {
+	campaignID, ok := h.routeCampaignID(r)
+	if !ok {
+		h.WriteNotFound(w, r)
+		return
+	}
+	characterID, ok := h.routeCharacterID(r)
+	if !ok {
+		h.WriteNotFound(w, r)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_character_update_form", "failed to parse character update form"))
+		return
+	}
+	ctx, _ := h.RequestContextAndUserID(r)
+	if err := h.service.UpdateCharacter(ctx, campaignID, characterID, UpdateCharacterInput{
+		Name:     strings.TrimSpace(r.FormValue("name")),
+		Pronouns: strings.TrimSpace(r.FormValue("pronouns")),
+	}); err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacter(campaignID, characterID))
 }
 
 // handleInviteCreateRoute handles this route in the module transport layer.

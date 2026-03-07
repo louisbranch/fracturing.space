@@ -202,7 +202,7 @@ func TestApplyCharacterCreationStep_DomainCardsRejectsClassDomainMismatch(t *tes
 		Presence:             0,
 		Knowledge:            -1,
 		Background:           "Watch captain",
-		Experiences:          []storage.DaggerheartExperience{{Name: "Shield wall", Modifier: 2}},
+		Experiences:          []storage.DaggerheartExperience{{Name: "Shield wall", Modifier: 2}, {Name: "Patrol routes", Modifier: 2}},
 	})
 
 	_, err := svc.ApplyCharacterCreationStep(contextWithParticipantID("manager-1"), &statev1.ApplyCharacterCreationStepRequest{
@@ -211,7 +211,7 @@ func TestApplyCharacterCreationStep_DomainCardsRejectsClassDomainMismatch(t *tes
 		SystemStep: &statev1.ApplyCharacterCreationStepRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartCreationStepInput{
 				Step: &daggerheartv1.DaggerheartCreationStepInput_DomainCardsInput{
-					DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: []string{"domain-card.arcana-bolt"}},
+					DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: []string{"domain-card.arcana-bolt", "domain-card.arcana-bolt"}},
 				},
 			},
 		},
@@ -283,13 +283,14 @@ func TestApplyCharacterCreationWorkflow_Success(t *testing.T) {
 				ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{ClassId: "class.guardian", SubclassId: "subclass.stalwart"},
 				HeritageInput:      &daggerheartv1.DaggerheartCreationStepHeritageInput{AncestryId: "heritage.ancestry.clank", CommunityId: "heritage.community.farmer"},
 				TraitsInput:        &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: 2, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1},
-				DetailsInput:       &daggerheartv1.DaggerheartCreationStepDetailsInput{},
+				DetailsInput:       &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: "A stalwart guardian of the realm."},
 				EquipmentInput:     &daggerheartv1.DaggerheartCreationStepEquipmentInput{WeaponIds: []string{"weapon.longsword"}, ArmorId: "armor.gambeson-armor", PotionItemId: "item.minor-health-potion"},
 				BackgroundInput:    &daggerheartv1.DaggerheartCreationStepBackgroundInput{Background: "City watch veteran"},
 				ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{Experiences: []*daggerheartv1.DaggerheartExperience{
 					{Name: "Shield wall", Modifier: 2},
+					{Name: "Patrol routes", Modifier: 2},
 				}},
-				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: []string{"domain-card.ward"}},
+				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: []string{"domain-card.ward", "domain-card.blade-strike"}},
 				ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{Connections: "Trusted by the quartermaster"},
 			},
 		},
@@ -371,8 +372,9 @@ func newWorkflowCharacterService(t *testing.T, profile storage.DaggerheartCharac
 				"item.minor-stamina-potion": {ID: "item.minor-stamina-potion"},
 			},
 			domainCards: map[string]storage.DaggerheartDomainCard{
-				"domain-card.ward":        {ID: "domain-card.ward", DomainID: "domain.valor", Name: "Ward"},
-				"domain-card.arcana-bolt": {ID: "domain-card.arcana-bolt", DomainID: "domain.arcana", Name: "Arcana Bolt"},
+				"domain-card.ward":         {ID: "domain-card.ward", DomainID: "domain.valor", Name: "Ward", Level: 1},
+				"domain-card.arcana-bolt":  {ID: "domain-card.arcana-bolt", DomainID: "domain.arcana", Name: "Arcana Bolt", Level: 1},
+				"domain-card.blade-strike": {ID: "domain-card.blade-strike", DomainID: "domain.blade", Name: "Blade Strike", Level: 1},
 			},
 		},
 		Event:        newFakeEventStore(),

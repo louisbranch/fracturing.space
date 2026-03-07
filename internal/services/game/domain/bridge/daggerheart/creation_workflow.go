@@ -16,16 +16,16 @@ const (
 	CreationStepHeritage int32 = 2
 	// CreationStepTraits assigns the six trait modifiers.
 	CreationStepTraits int32 = 3
-	// CreationStepDetails records additional starting character details.
-	CreationStepDetails int32 = 4
 	// CreationStepEquipment records starting equipment choices.
-	CreationStepEquipment int32 = 5
-	// CreationStepBackground records free-form background.
-	CreationStepBackground int32 = 6
+	CreationStepEquipment int32 = 4
 	// CreationStepExperiences records starting experiences.
-	CreationStepExperiences int32 = 7
+	CreationStepExperiences int32 = 5
 	// CreationStepDomainCards records starting domain cards.
-	CreationStepDomainCards int32 = 8
+	CreationStepDomainCards int32 = 6
+	// CreationStepDetails records additional starting character details.
+	CreationStepDetails int32 = 7
+	// CreationStepBackground records free-form background.
+	CreationStepBackground int32 = 8
 	// CreationStepConnections records party connections.
 	CreationStepConnections int32 = 9
 
@@ -39,11 +39,11 @@ var creationStepKeys = []string{
 	"class_subclass",
 	"heritage",
 	"traits",
-	"details",
 	"equipment",
-	"background",
 	"experiences",
 	"domain_cards",
+	"details",
+	"background",
 	"connections",
 }
 
@@ -64,6 +64,7 @@ type CreationProfile struct {
 	StartingArmorID      string
 	StartingPotionItemID string
 	Background           string
+	Description          string
 	Experiences          []daggerheartprofile.Experience
 	DomainCardIDs        []string
 	Connections          string
@@ -94,22 +95,22 @@ func EvaluateCreationProgress(profile CreationProfile) CreationProgress {
 		hasClassAndSubclass(profile),
 		hasHeritage(profile),
 		hasTraitAssignment(profile),
-		hasRecordedDetails(profile),
 		hasStartingEquipment(profile),
-		strings.TrimSpace(profile.Background) != "",
 		hasExperiences(profile.Experiences),
 		hasDomainCardIDs(profile.DomainCardIDs),
+		hasRecordedDetails(profile),
+		strings.TrimSpace(profile.Background) != "",
 		strings.TrimSpace(profile.Connections) != "",
 	}
 	reasons := []string{
 		"class and subclass selection is required",
 		"ancestry and community selection are required",
 		"trait assignment must match +2,+1,+1,+0,+0,-1",
-		"additional character details must be recorded",
 		"starting equipment selection is required",
+		"exactly two experiences are required",
+		"exactly two domain cards are required",
+		"additional character details must be recorded",
 		"background is required",
-		"at least one experience is required",
-		"at least one domain card is required",
 		"connections are required",
 	}
 
@@ -249,6 +250,7 @@ func creationProfileFromPayload(payload profilePayload) CreationProfile {
 		StartingArmorID:      payload.StartingArmorID,
 		StartingPotionItemID: payload.StartingPotionItemID,
 		Background:           payload.Background,
+		Description:          payload.Description,
 		Experiences:          experiences,
 		DomainCardIDs:        append([]string(nil), payload.DomainCardIDs...),
 		Connections:          payload.Connections,
@@ -293,7 +295,7 @@ func hasStartingEquipment(profile CreationProfile) bool {
 }
 
 func hasExperiences(experiences []daggerheartprofile.Experience) bool {
-	if len(experiences) == 0 {
+	if len(experiences) != 2 {
 		return false
 	}
 	for _, experience := range experiences {
@@ -305,7 +307,7 @@ func hasExperiences(experiences []daggerheartprofile.Experience) bool {
 }
 
 func hasDomainCardIDs(domainCardIDs []string) bool {
-	if len(domainCardIDs) == 0 {
+	if len(domainCardIDs) != 2 {
 		return false
 	}
 	for _, domainCardID := range domainCardIDs {

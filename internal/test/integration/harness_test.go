@@ -763,14 +763,14 @@ func ensureDaggerheartCreationReadiness(
 				ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{ClassId: "class.guardian", SubclassId: "subclass.stalwart"},
 				HeritageInput:      &daggerheartv1.DaggerheartCreationStepHeritageInput{AncestryId: "heritage.human", CommunityId: "heritage.highborne"},
 				TraitsInput:        &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: 2, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1},
-				DetailsInput:       &daggerheartv1.DaggerheartCreationStepDetailsInput{},
+				DetailsInput:       &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: "A brave adventurer."},
 				EquipmentInput:     &daggerheartv1.DaggerheartCreationStepEquipmentInput{WeaponIds: []string{"weapon.longsword"}, ArmorId: "armor.gambeson-armor", PotionItemId: "item.minor-health-potion"},
 				BackgroundInput:    &daggerheartv1.DaggerheartCreationStepBackgroundInput{Background: "integration background"},
-				ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{Experiences: []*daggerheartv1.DaggerheartExperience{{
-					Name:     "integration experience",
-					Modifier: 1,
-				}}},
-				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: []string{"domain_card.valor-bare-bones"}},
+				ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{Experiences: []*daggerheartv1.DaggerheartExperience{
+					{Name: "integration experience", Modifier: 2},
+					{Name: "integration patrol", Modifier: 2},
+				}},
+				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{DomainCardIds: []string{"domain_card.valor-bare-bones", "domain_card.valor-shield-wall"}},
 				ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{Connections: "integration connections"},
 			},
 		},
@@ -1016,6 +1016,20 @@ func writeDaggerheartSeedData(store *storagesqlite.Store, now time.Time) error {
 		UpdatedAt:   now,
 	}); err != nil {
 		return fmt.Errorf("seed domain card: %w", err)
+	}
+
+	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
+		ID:          "domain_card.valor-shield-wall",
+		Name:        "Shield Wall",
+		DomainID:    "domain.valor",
+		Level:       1,
+		Type:        "ability",
+		UsageLimit:  "None",
+		FeatureText: "Integration seed card 2",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		return fmt.Errorf("seed domain card 2: %w", err)
 	}
 
 	if err := store.PutDaggerheartWeapon(ctx, storage.DaggerheartWeapon{

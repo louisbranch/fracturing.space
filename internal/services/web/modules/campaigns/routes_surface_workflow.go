@@ -20,6 +20,8 @@ func registerStableCampaignWorkflowRoutes(mux *http.ServeMux, h handlers) {
 		return
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignCharacterPattern, h.handleCharacterDetailRoute)
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignCharacterCreationPattern, h.handleCharacterCreationPageRoute)
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterPattern, h.handleCharacterUpdateRoute)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreatePattern, h.handleCharacterCreateRoute)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreationStepPattern, h.handleCharacterCreationStepRoute)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreationResetPattern, h.handleCharacterCreationResetRoute)

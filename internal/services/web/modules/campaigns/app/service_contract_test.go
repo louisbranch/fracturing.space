@@ -188,6 +188,7 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	if _, err := gw.CreateCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
 		assertUnavailable(t, err, "CreateCharacter")
 	}
+	assertUnavailable(t, gw.UpdateCharacter(ctx, "c1", "char-1", UpdateCharacterInput{}), "UpdateCharacter")
 	assertUnavailable(t, gw.UpdateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p1"}), "UpdateParticipant")
 	assertUnavailable(t, gw.CreateInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p1", RecipientUserID: "user-2"}), "CreateInvite")
 	assertUnavailable(t, gw.RevokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}), "RevokeInvite")

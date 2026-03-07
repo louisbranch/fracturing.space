@@ -347,6 +347,7 @@ type CharacterCreationWorkflowApplyInput struct {
 	WeaponIDs     []string                   `json:"weapon_ids" jsonschema:"starting weapon ids (one or two)"`
 	ArmorID       string                     `json:"armor_id" jsonschema:"starting armor id"`
 	PotionItemID  string                     `json:"potion_item_id" jsonschema:"starting potion item id"`
+	Description   string                     `json:"description" jsonschema:"character description text"`
 	Background    string                     `json:"background" jsonschema:"background text"`
 	Experiences   []CharacterExperienceInput `json:"experiences" jsonschema:"experiences list"`
 	DomainCardIDs []string                   `json:"domain_card_ids" jsonschema:"selected domain card ids"`

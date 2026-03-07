@@ -81,6 +81,11 @@ func (s service) CreateCharacter(ctx context.Context, campaignID string, input C
 	return s.createCharacter(ctx, campaignID, input)
 }
 
+// UpdateCharacter applies this package workflow transition.
+func (s service) UpdateCharacter(ctx context.Context, campaignID string, characterID string, input UpdateCharacterInput) error {
+	return s.updateCharacter(ctx, campaignID, characterID, input)
+}
+
 // UpdateParticipant applies this package workflow transition.
 func (s service) UpdateParticipant(ctx context.Context, campaignID string, input UpdateParticipantInput) error {
 	return s.updateParticipant(ctx, campaignID, input)

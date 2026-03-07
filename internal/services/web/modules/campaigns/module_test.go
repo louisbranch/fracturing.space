@@ -545,38 +545,36 @@ func (testCreationWorkflow) AssembleCatalog(
 
 func (testCreationWorkflow) CreationView(creation CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
 	view := webtemplates.CampaignCharacterCreationView{
-		Ready:              creation.Progress.Ready,
-		NextStep:           creation.Progress.NextStep,
-		UnmetReasons:       append([]string(nil), creation.Progress.UnmetReasons...),
-		ClassID:            creation.Profile.ClassID,
-		SubclassID:         creation.Profile.SubclassID,
-		AncestryID:         creation.Profile.AncestryID,
-		CommunityID:        creation.Profile.CommunityID,
-		Agility:            creation.Profile.Agility,
-		Strength:           creation.Profile.Strength,
-		Finesse:            creation.Profile.Finesse,
-		Instinct:           creation.Profile.Instinct,
-		Presence:           creation.Profile.Presence,
-		Knowledge:          creation.Profile.Knowledge,
-		PrimaryWeaponID:    creation.Profile.PrimaryWeaponID,
-		SecondaryWeaponID:  creation.Profile.SecondaryWeaponID,
-		ArmorID:            creation.Profile.ArmorID,
-		PotionItemID:       creation.Profile.PotionItemID,
-		Background:         creation.Profile.Background,
-		ExperienceName:     creation.Profile.ExperienceName,
-		ExperienceModifier: creation.Profile.ExperienceModifier,
-		DomainCardIDs:      append([]string(nil), creation.Profile.DomainCardIDs...),
-		Connections:        creation.Profile.Connections,
-		Steps:              make([]webtemplates.CampaignCharacterCreationStepView, 0, len(creation.Progress.Steps)),
-		Classes:            make([]webtemplates.CampaignCreationClassView, 0, len(creation.Classes)),
-		Subclasses:         make([]webtemplates.CampaignCreationSubclassView, 0, len(creation.Subclasses)),
-		Ancestries:         make([]webtemplates.CampaignCreationHeritageView, 0, len(creation.Ancestries)),
-		Communities:        make([]webtemplates.CampaignCreationHeritageView, 0, len(creation.Communities)),
-		PrimaryWeapons:     make([]webtemplates.CampaignCreationWeaponView, 0, len(creation.PrimaryWeapons)),
-		SecondaryWeapons:   make([]webtemplates.CampaignCreationWeaponView, 0, len(creation.SecondaryWeapons)),
-		Armor:              make([]webtemplates.CampaignCreationArmorView, 0, len(creation.Armor)),
-		PotionItems:        make([]webtemplates.CampaignCreationItemView, 0, len(creation.PotionItems)),
-		DomainCards:        make([]webtemplates.CampaignCreationDomainCardView, 0, len(creation.DomainCards)),
+		Ready:             creation.Progress.Ready,
+		NextStep:          creation.Progress.NextStep,
+		UnmetReasons:      append([]string(nil), creation.Progress.UnmetReasons...),
+		ClassID:           creation.Profile.ClassID,
+		SubclassID:        creation.Profile.SubclassID,
+		AncestryID:        creation.Profile.AncestryID,
+		CommunityID:       creation.Profile.CommunityID,
+		Agility:           creation.Profile.Agility,
+		Strength:          creation.Profile.Strength,
+		Finesse:           creation.Profile.Finesse,
+		Instinct:          creation.Profile.Instinct,
+		Presence:          creation.Profile.Presence,
+		Knowledge:         creation.Profile.Knowledge,
+		PrimaryWeaponID:   creation.Profile.PrimaryWeaponID,
+		SecondaryWeaponID: creation.Profile.SecondaryWeaponID,
+		ArmorID:           creation.Profile.ArmorID,
+		PotionItemID:      creation.Profile.PotionItemID,
+		Background:        creation.Profile.Background,
+		DomainCardIDs:     append([]string(nil), creation.Profile.DomainCardIDs...),
+		Connections:       creation.Profile.Connections,
+		Steps:             make([]webtemplates.CampaignCharacterCreationStepView, 0, len(creation.Progress.Steps)),
+		Classes:           make([]webtemplates.CampaignCreationClassView, 0, len(creation.Classes)),
+		Subclasses:        make([]webtemplates.CampaignCreationSubclassView, 0, len(creation.Subclasses)),
+		Ancestries:        make([]webtemplates.CampaignCreationHeritageView, 0, len(creation.Ancestries)),
+		Communities:       make([]webtemplates.CampaignCreationHeritageView, 0, len(creation.Communities)),
+		PrimaryWeapons:    make([]webtemplates.CampaignCreationWeaponView, 0, len(creation.PrimaryWeapons)),
+		SecondaryWeapons:  make([]webtemplates.CampaignCreationWeaponView, 0, len(creation.SecondaryWeapons)),
+		Armor:             make([]webtemplates.CampaignCreationArmorView, 0, len(creation.Armor)),
+		PotionItems:       make([]webtemplates.CampaignCreationItemView, 0, len(creation.PotionItems)),
+		DomainCards:       make([]webtemplates.CampaignCreationDomainCardView, 0, len(creation.DomainCards)),
 	}
 	for _, step := range creation.Progress.Steps {
 		view.Steps = append(view.Steps, webtemplates.CampaignCharacterCreationStepView{Step: step.Step, Key: step.Key, Complete: step.Complete})
@@ -857,6 +855,9 @@ func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInp
 		createdCharacterID = "char-created"
 	}
 	return CreateCharacterResult{CharacterID: createdCharacterID}, nil
+}
+func (fakeGateway) UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error {
+	return nil
 }
 func (f fakeGateway) UpdateParticipant(context.Context, string, UpdateParticipantInput) error {
 	return f.updateParticipantErr

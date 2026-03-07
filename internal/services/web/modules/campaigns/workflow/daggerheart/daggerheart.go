@@ -15,7 +15,9 @@ func IsDaggerheartSystem(system string) bool {
 }
 
 // Workflow implements campaigns.CharacterCreationWorkflow for Daggerheart.
-type Workflow struct{}
+type Workflow struct {
+	AssetBaseURL string
+}
 
 // New returns a new Daggerheart workflow implementation.
-func New() Workflow { return Workflow{} }
+func New(assetBaseURL string) Workflow { return Workflow{AssetBaseURL: assetBaseURL} }
