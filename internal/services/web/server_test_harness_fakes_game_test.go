@@ -236,10 +236,8 @@ func (f fakeWebInviteClient) RevokeInvite(_ context.Context, req *statev1.Revoke
 }
 
 type fakeWebDaggerheartContentClient struct {
-	response         *daggerheartv1.GetDaggerheartContentCatalogResponse
-	err              error
-	assetMapResponse *daggerheartv1.GetDaggerheartContentAssetMapResponse
-	assetMapErr      error
+	response *daggerheartv1.GetDaggerheartContentCatalogResponse
+	err      error
 }
 
 func (f fakeWebDaggerheartContentClient) GetContentCatalog(context.Context, *daggerheartv1.GetDaggerheartContentCatalogRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error) {
@@ -252,14 +250,19 @@ func (f fakeWebDaggerheartContentClient) GetContentCatalog(context.Context, *dag
 	return &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{}}, nil
 }
 
-func (f fakeWebDaggerheartContentClient) GetContentAssetMap(context.Context, *daggerheartv1.GetDaggerheartContentAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentAssetMapResponse, error) {
-	if f.assetMapErr != nil {
-		return nil, f.assetMapErr
+type fakeWebDaggerheartAssetClient struct {
+	response *daggerheartv1.GetDaggerheartAssetMapResponse
+	err      error
+}
+
+func (f fakeWebDaggerheartAssetClient) GetAssetMap(context.Context, *daggerheartv1.GetDaggerheartAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartAssetMapResponse, error) {
+	if f.err != nil {
+		return nil, f.err
 	}
-	if f.assetMapResponse != nil {
-		return f.assetMapResponse, nil
+	if f.response != nil {
+		return f.response, nil
 	}
-	return &daggerheartv1.GetDaggerheartContentAssetMapResponse{}, nil
+	return &daggerheartv1.GetDaggerheartAssetMapResponse{}, nil
 }
 
 type fakeWebAuthorizationClient struct{}

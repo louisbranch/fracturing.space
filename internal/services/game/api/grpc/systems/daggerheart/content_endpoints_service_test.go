@@ -43,21 +43,21 @@ func TestGetContentCatalog_Success(t *testing.T) {
 	}
 }
 
-func TestGetContentAssetMap_NoStore(t *testing.T) {
-	svc := &DaggerheartContentService{}
-	_, err := svc.GetContentAssetMap(context.Background(), &pb.GetDaggerheartContentAssetMapRequest{})
+func TestGetAssetMap_NoStore(t *testing.T) {
+	svc := &DaggerheartAssetService{}
+	_, err := svc.GetAssetMap(context.Background(), &pb.GetDaggerheartAssetMapRequest{})
 	assertStatusCode(t, err, codes.Internal)
 }
 
-func TestGetContentAssetMap_NilRequest(t *testing.T) {
-	svc := newContentTestService()
-	_, err := svc.GetContentAssetMap(context.Background(), nil)
+func TestGetAssetMap_NilRequest(t *testing.T) {
+	svc := newAssetTestService()
+	_, err := svc.GetAssetMap(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestGetContentAssetMap_Success(t *testing.T) {
-	svc := newContentTestService()
-	resp, err := svc.GetContentAssetMap(context.Background(), &pb.GetDaggerheartContentAssetMapRequest{})
+func TestGetAssetMap_Success(t *testing.T) {
+	svc := newAssetTestService()
+	resp, err := svc.GetAssetMap(context.Background(), &pb.GetDaggerheartAssetMapRequest{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -76,36 +76,36 @@ func TestGetContentAssetMap_Success(t *testing.T) {
 		t.Fatal("expected non-empty content asset refs")
 	}
 
-	classIllustration := findContentAssetRef(
+	classIllustration := findAssetRef(
 		assetMap.GetAssets(),
-		pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION,
+		pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_CLASS_ILLUSTRATION,
 		"class",
 		"class-1",
 	)
 	if classIllustration == nil {
 		t.Fatal("expected class illustration asset ref for class-1")
 	}
-	if classIllustration.GetStatus() == pb.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_UNSPECIFIED {
+	if classIllustration.GetStatus() == pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_UNSPECIFIED {
 		t.Fatal("expected class illustration asset status to be populated")
 	}
 
-	domainIcon := findContentAssetRef(
+	domainIcon := findAssetRef(
 		assetMap.GetAssets(),
-		pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ICON,
+		pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_ICON,
 		"domain",
 		"dom-1",
 	)
 	if domainIcon == nil {
 		t.Fatal("expected domain icon asset ref for dom-1")
 	}
-	if domainIcon.GetStatus() == pb.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_UNSPECIFIED {
+	if domainIcon.GetStatus() == pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_UNSPECIFIED {
 		t.Fatal("expected domain icon asset status to be populated")
 	}
 }
 
-func TestGetContentAssetMap_UsesRequestedLocale(t *testing.T) {
-	svc := newContentTestService()
-	resp, err := svc.GetContentAssetMap(context.Background(), &pb.GetDaggerheartContentAssetMapRequest{
+func TestGetAssetMap_UsesRequestedLocale(t *testing.T) {
+	svc := newAssetTestService()
+	resp, err := svc.GetAssetMap(context.Background(), &pb.GetDaggerheartAssetMapRequest{
 		Locale: commonv1.Locale_LOCALE_PT_BR,
 	})
 	if err != nil {
@@ -116,12 +116,12 @@ func TestGetContentAssetMap_UsesRequestedLocale(t *testing.T) {
 	}
 }
 
-func findContentAssetRef(
-	assets []*pb.DaggerheartContentAssetRef,
-	assetType pb.DaggerheartContentAssetType,
+func findAssetRef(
+	assets []*pb.DaggerheartAssetRef,
+	assetType pb.DaggerheartAssetType,
 	entityType string,
 	entityID string,
-) *pb.DaggerheartContentAssetRef {
+) *pb.DaggerheartAssetRef {
 	for _, asset := range assets {
 		if asset == nil {
 			continue
@@ -135,6 +135,15 @@ func findContentAssetRef(
 		return asset
 	}
 	return nil
+}
+
+func newAssetTestService() *DaggerheartAssetService {
+	contentService := newContentTestService()
+	svc, err := NewDaggerheartAssetService(contentService.stores)
+	if err != nil {
+		panic(err)
+	}
+	return svc
 }
 
 // --- GetClass / ListClasses ---

@@ -178,6 +178,7 @@ func setDependencyGame(_ *web.PrincipalDependencies, m *modules.Dependencies, co
 	m.Campaigns.ParticipantClient = statev1.NewParticipantServiceClient(conn)
 	m.Campaigns.CharacterClient = statev1.NewCharacterServiceClient(conn)
 	m.Campaigns.DaggerheartContentClient = daggerheartv1.NewDaggerheartContentServiceClient(conn)
+	m.Campaigns.DaggerheartAssetClient = daggerheartv1.NewDaggerheartAssetServiceClient(conn)
 	m.Campaigns.SessionClient = statev1.NewSessionServiceClient(conn)
 	m.Campaigns.InviteClient = statev1.NewInviteServiceClient(conn)
 	m.Campaigns.AuthorizationClient = statev1.NewAuthorizationServiceClient(conn)

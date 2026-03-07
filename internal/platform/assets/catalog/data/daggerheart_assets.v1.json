@@ -23,6 +23,16 @@
       ]
     },
     {
+      "id": "daggerheart_armor_set_v1",
+      "asset_type": "daggerheart_armor_illustration",
+      "asset_ids": [
+        "chainmail_armor",
+        "full_plate_armor",
+        "gambeson_armor",
+        "leather_armor"
+      ]
+    },
+    {
       "id": "daggerheart_class_icon_set_v1",
       "asset_type": "daggerheart_class_icon",
       "asset_ids": [
@@ -136,6 +146,14 @@
       "asset_ids": []
     },
     {
+      "id": "daggerheart_item_set_v1",
+      "asset_type": "daggerheart_item_illustration",
+      "asset_ids": [
+        "minor_health_potion",
+        "minor_stamina_potion"
+      ]
+    },
+    {
       "id": "daggerheart_subclass_set_v1",
       "asset_type": "daggerheart_subclass_illustration",
       "asset_ids": [
@@ -157,6 +175,47 @@
         "wayfinder",
         "winged_sentinel",
         "wordsmith"
+      ]
+    },
+    {
+      "id": "daggerheart_weapon_set_v1",
+      "asset_type": "daggerheart_weapon_illustration",
+      "asset_ids": [
+        "arcane_frame_wheelchair",
+        "arcane_gauntlets",
+        "battleaxe",
+        "broadsword",
+        "crossbow",
+        "cutlass",
+        "dagger",
+        "dualstaff",
+        "glowing_rings",
+        "grappler",
+        "greatstaff",
+        "greatsword",
+        "halberd",
+        "hallowed_axe",
+        "hand_crossbow",
+        "hand_runes",
+        "heavy_frame_wheelchair",
+        "light_frame_wheelchair",
+        "longbow",
+        "longsword",
+        "mace",
+        "quarterstaff",
+        "rapier",
+        "returning",
+        "round_shield",
+        "scepter",
+        "shortbow",
+        "shortstaff",
+        "shortsword",
+        "small_dagger",
+        "spear",
+        "tower_shield",
+        "wand",
+        "warhammer",
+        "whip"
       ]
     }
   ],
@@ -202,6 +261,34 @@
       "entity_id": "heritage.orc",
       "entity_type": "ancestry",
       "asset_id": "heritage_orc"
+    },
+    {
+      "asset_type": "daggerheart_armor_illustration",
+      "set_id": "daggerheart_armor_set_v1",
+      "entity_id": "armor.chainmail-armor",
+      "entity_type": "armor",
+      "asset_id": "chainmail_armor"
+    },
+    {
+      "asset_type": "daggerheart_armor_illustration",
+      "set_id": "daggerheart_armor_set_v1",
+      "entity_id": "armor.full-plate-armor",
+      "entity_type": "armor",
+      "asset_id": "full_plate_armor"
+    },
+    {
+      "asset_type": "daggerheart_armor_illustration",
+      "set_id": "daggerheart_armor_set_v1",
+      "entity_id": "armor.gambeson-armor",
+      "entity_type": "armor",
+      "asset_id": "gambeson_armor"
+    },
+    {
+      "asset_type": "daggerheart_armor_illustration",
+      "set_id": "daggerheart_armor_set_v1",
+      "entity_id": "armor.leather-armor",
+      "entity_type": "armor",
+      "asset_id": "leather_armor"
     },
     {
       "asset_type": "daggerheart_class_icon",
@@ -708,6 +795,20 @@
       "asset_id": "valor"
     },
     {
+      "asset_type": "daggerheart_item_illustration",
+      "set_id": "daggerheart_item_set_v1",
+      "entity_id": "item.minor-health-potion",
+      "entity_type": "item",
+      "asset_id": "minor_health_potion"
+    },
+    {
+      "asset_type": "daggerheart_item_illustration",
+      "set_id": "daggerheart_item_set_v1",
+      "entity_id": "item.minor-stamina-potion",
+      "entity_type": "item",
+      "asset_id": "minor_stamina_potion"
+    },
+    {
       "asset_type": "daggerheart_subclass_illustration",
       "set_id": "daggerheart_subclass_set_v1",
       "entity_id": "subclass.beastbound",
@@ -832,6 +933,251 @@
       "entity_id": "subclass.wordsmith",
       "entity_type": "subclass",
       "asset_id": "wordsmith"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.arcane-frame-wheelchair",
+      "entity_type": "weapon",
+      "asset_id": "arcane_frame_wheelchair"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.arcane-gauntlets",
+      "entity_type": "weapon",
+      "asset_id": "arcane_gauntlets"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.battleaxe",
+      "entity_type": "weapon",
+      "asset_id": "battleaxe"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.broadsword",
+      "entity_type": "weapon",
+      "asset_id": "broadsword"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.crossbow",
+      "entity_type": "weapon",
+      "asset_id": "crossbow"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.cutlass",
+      "entity_type": "weapon",
+      "asset_id": "cutlass"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.dagger",
+      "entity_type": "weapon",
+      "asset_id": "dagger"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.dualstaff",
+      "entity_type": "weapon",
+      "asset_id": "dualstaff"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.glowing-rings",
+      "entity_type": "weapon",
+      "asset_id": "glowing_rings"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.grappler",
+      "entity_type": "weapon",
+      "asset_id": "grappler"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.greatstaff",
+      "entity_type": "weapon",
+      "asset_id": "greatstaff"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.greatsword",
+      "entity_type": "weapon",
+      "asset_id": "greatsword"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.halberd",
+      "entity_type": "weapon",
+      "asset_id": "halberd"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.hallowed-axe",
+      "entity_type": "weapon",
+      "asset_id": "hallowed_axe"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.hand-crossbow",
+      "entity_type": "weapon",
+      "asset_id": "hand_crossbow"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.hand-runes",
+      "entity_type": "weapon",
+      "asset_id": "hand_runes"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.heavy-frame-wheelchair",
+      "entity_type": "weapon",
+      "asset_id": "heavy_frame_wheelchair"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.light-frame-wheelchair",
+      "entity_type": "weapon",
+      "asset_id": "light_frame_wheelchair"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.longbow",
+      "entity_type": "weapon",
+      "asset_id": "longbow"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.longsword",
+      "entity_type": "weapon",
+      "asset_id": "longsword"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.mace",
+      "entity_type": "weapon",
+      "asset_id": "mace"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.quarterstaff",
+      "entity_type": "weapon",
+      "asset_id": "quarterstaff"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.rapier",
+      "entity_type": "weapon",
+      "asset_id": "rapier"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.returning",
+      "entity_type": "weapon",
+      "asset_id": "returning"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.round-shield",
+      "entity_type": "weapon",
+      "asset_id": "round_shield"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.scepter",
+      "entity_type": "weapon",
+      "asset_id": "scepter"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.shortbow",
+      "entity_type": "weapon",
+      "asset_id": "shortbow"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.shortstaff",
+      "entity_type": "weapon",
+      "asset_id": "shortstaff"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.shortsword",
+      "entity_type": "weapon",
+      "asset_id": "shortsword"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.small-dagger",
+      "entity_type": "weapon",
+      "asset_id": "small_dagger"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.spear",
+      "entity_type": "weapon",
+      "asset_id": "spear"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.tower-shield",
+      "entity_type": "weapon",
+      "asset_id": "tower_shield"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.wand",
+      "entity_type": "weapon",
+      "asset_id": "wand"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.warhammer",
+      "entity_type": "weapon",
+      "asset_id": "warhammer"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.whip",
+      "entity_type": "weapon",
+      "asset_id": "whip"
     }
   ]
 }

@@ -45,7 +45,11 @@ type CharacterClient interface {
 // DaggerheartContentClient exposes Daggerheart content catalog operations.
 type DaggerheartContentClient interface {
 	GetContentCatalog(context.Context, *daggerheartv1.GetDaggerheartContentCatalogRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error)
-	GetContentAssetMap(context.Context, *daggerheartv1.GetDaggerheartContentAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentAssetMapResponse, error)
+}
+
+// DaggerheartAssetClient exposes Daggerheart content-asset map operations.
+type DaggerheartAssetClient interface {
+	GetAssetMap(context.Context, *daggerheartv1.GetDaggerheartAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartAssetMapResponse, error)
 }
 
 // SessionClient exposes session listing for campaign workspace pages.
@@ -74,6 +78,7 @@ type GRPCGatewayDeps struct {
 	ParticipantClient        ParticipantClient
 	CharacterClient          CharacterClient
 	DaggerheartContentClient DaggerheartContentClient
+	DaggerheartAssetClient   DaggerheartAssetClient
 	SessionClient            SessionClient
 	InviteClient             InviteClient
 	AuthorizationClient      AuthorizationClient
@@ -85,6 +90,7 @@ type GRPCGatewayDeps struct {
 // individual campaign operations fail.
 func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
 	if deps.CampaignClient == nil || deps.ParticipantClient == nil || deps.CharacterClient == nil ||
+		deps.DaggerheartContentClient == nil || deps.DaggerheartAssetClient == nil ||
 		deps.SessionClient == nil || deps.InviteClient == nil || deps.AuthorizationClient == nil {
 		return campaignapp.NewUnavailableGateway()
 	}
@@ -92,7 +98,8 @@ func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
 		Client:              deps.CampaignClient,
 		ParticipantClient:   deps.ParticipantClient,
 		CharacterClient:     deps.CharacterClient,
-		DaggerheartClient:   deps.DaggerheartContentClient,
+		DaggerheartContent:  deps.DaggerheartContentClient,
+		DaggerheartAsset:    deps.DaggerheartAssetClient,
 		SessionClient:       deps.SessionClient,
 		InviteClient:        deps.InviteClient,
 		AuthorizationClient: deps.AuthorizationClient,
@@ -105,7 +112,8 @@ type GRPCGateway struct {
 	Client              CampaignClient
 	ParticipantClient   ParticipantClient
 	CharacterClient     CharacterClient
-	DaggerheartClient   DaggerheartContentClient
+	DaggerheartContent  DaggerheartContentClient
+	DaggerheartAsset    DaggerheartAssetClient
 	SessionClient       SessionClient
 	InviteClient        InviteClient
 	AuthorizationClient AuthorizationClient

@@ -120,6 +120,7 @@ func newCampaignGateway(deps Dependencies) campaigns.CampaignGateway {
 		ParticipantClient:        deps.Campaigns.ParticipantClient,
 		CharacterClient:          deps.Campaigns.CharacterClient,
 		DaggerheartContentClient: deps.Campaigns.DaggerheartContentClient,
+		DaggerheartAssetClient:   deps.Campaigns.DaggerheartAssetClient,
 		SessionClient:            deps.Campaigns.SessionClient,
 		InviteClient:             deps.Campaigns.InviteClient,
 		AuthorizationClient:      deps.Campaigns.AuthorizationClient,

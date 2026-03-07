@@ -77,6 +77,10 @@ func buildServiceDescriptors(
 	if err != nil {
 		return nil, fmt.Errorf("create daggerheart content service: %w", err)
 	}
+	assetService, err := daggerheartservice.NewDaggerheartAssetService(daggerheartStores)
+	if err != nil {
+		return nil, fmt.Errorf("create daggerheart asset service: %w", err)
+	}
 	campaignService := gamegrpc.NewCampaignServiceWithAuthAndAI(stores, authClient, aiAgentClient)
 	participantService := gamegrpc.NewParticipantService(stores)
 	inviteService := gamegrpc.NewInviteServiceWithAuth(stores, authClient)
@@ -102,6 +106,12 @@ func buildServiceDescriptors(
 			healthService: "systems.daggerheart.v1.DaggerheartContentService",
 			register: func(server *grpc.Server) {
 				daggerheartv1.RegisterDaggerheartContentServiceServer(server, contentService)
+			},
+		},
+		{
+			healthService: "systems.daggerheart.v1.DaggerheartAssetService",
+			register: func(server *grpc.Server) {
+				daggerheartv1.RegisterDaggerheartAssetServiceServer(server, assetService)
 			},
 		},
 		{

@@ -67,6 +67,7 @@ type CampaignDependencies struct {
 	ParticipantClient        campaigns.ParticipantClient
 	CharacterClient          campaigns.CharacterClient
 	DaggerheartContentClient campaigns.DaggerheartContentClient
+	DaggerheartAssetClient   campaigns.DaggerheartAssetClient
 	SessionClient            campaigns.SessionClient
 	InviteClient             campaigns.InviteClient
 	AuthorizationClient      campaigns.AuthorizationClient

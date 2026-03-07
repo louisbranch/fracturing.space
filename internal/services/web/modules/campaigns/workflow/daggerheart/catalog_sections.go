@@ -146,14 +146,15 @@ func buildWeapons(weapons []campaignapp.CatalogWeapon) ([]campaignapp.CatalogWea
 			weaponName = weaponID
 		}
 		entry := campaignapp.CatalogWeapon{
-			ID:       weaponID,
-			Name:     weaponName,
-			Category: strings.TrimSpace(weapon.Category),
-			Tier:     weapon.Tier,
-			Trait:    strings.TrimSpace(weapon.Trait),
-			Range:    strings.TrimSpace(weapon.Range),
-			Damage:   strings.TrimSpace(weapon.Damage),
-			Feature:  strings.TrimSpace(weapon.Feature),
+			ID:           weaponID,
+			Name:         weaponName,
+			Category:     strings.TrimSpace(weapon.Category),
+			Tier:         weapon.Tier,
+			Trait:        strings.TrimSpace(weapon.Trait),
+			Range:        strings.TrimSpace(weapon.Range),
+			Damage:       strings.TrimSpace(weapon.Damage),
+			Feature:      strings.TrimSpace(weapon.Feature),
+			Illustration: weapon.Illustration,
 		}
 		switch strings.ToLower(strings.TrimSpace(weapon.Category)) {
 		case "primary":
@@ -186,6 +187,7 @@ func buildArmor(armor []campaignapp.CatalogArmor) []campaignapp.CatalogArmor {
 			ArmorScore:     item.ArmorScore,
 			BaseThresholds: strings.TrimSpace(item.BaseThresholds),
 			Feature:        strings.TrimSpace(item.Feature),
+			Illustration:   item.Illustration,
 		})
 	}
 	sortByName(result, func(a campaignapp.CatalogArmor) string { return a.Name }, func(a campaignapp.CatalogArmor) string { return a.ID })
@@ -205,9 +207,10 @@ func buildPotionItems(items []campaignapp.CatalogItem) []campaignapp.CatalogItem
 			itemName = itemID
 		}
 		result = append(result, campaignapp.CatalogItem{
-			ID:          itemID,
-			Name:        itemName,
-			Description: strings.TrimSpace(item.Description),
+			ID:           itemID,
+			Name:         itemName,
+			Description:  strings.TrimSpace(item.Description),
+			Illustration: item.Illustration,
 		})
 	}
 	sortByName(result, func(i campaignapp.CatalogItem) string { return i.Name }, func(i campaignapp.CatalogItem) string { return i.ID })

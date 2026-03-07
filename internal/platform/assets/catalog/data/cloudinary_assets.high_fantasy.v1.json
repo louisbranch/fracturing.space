@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-07T05:46:09+00:00",
+  "generated_at": "2026-03-07T16:26:09+00:00",
   "theme": "high_fantasy",
   "provider": "cloudinary",
   "batch_ids": [
@@ -9,11 +9,12 @@
     "dh_domain_card_r2",
     "dh_domain_r1",
     "dh_heritage_r1",
+    "dh_starting_items_r1",
     "dh_subclass_r3",
     "hf_v1_r1"
   ],
   "filters": {
-    "uploaded_only": false
+    "uploaded_only": true
   },
   "campaign_scene": [
     {
@@ -1621,6 +1622,16 @@
           ]
         },
         {
+          "id": "daggerheart_armor_set_v1",
+          "asset_type": "daggerheart_armor_illustration",
+          "asset_ids": [
+            "chainmail_armor",
+            "full_plate_armor",
+            "gambeson_armor",
+            "leather_armor"
+          ]
+        },
+        {
           "id": "daggerheart_class_icon_set_v1",
           "asset_type": "daggerheart_class_icon",
           "asset_ids": [
@@ -1734,6 +1745,14 @@
           "asset_ids": []
         },
         {
+          "id": "daggerheart_item_set_v1",
+          "asset_type": "daggerheart_item_illustration",
+          "asset_ids": [
+            "minor_health_potion",
+            "minor_stamina_potion"
+          ]
+        },
+        {
           "id": "daggerheart_subclass_set_v1",
           "asset_type": "daggerheart_subclass_illustration",
           "asset_ids": [
@@ -1755,6 +1774,47 @@
             "wayfinder",
             "winged_sentinel",
             "wordsmith"
+          ]
+        },
+        {
+          "id": "daggerheart_weapon_set_v1",
+          "asset_type": "daggerheart_weapon_illustration",
+          "asset_ids": [
+            "arcane_frame_wheelchair",
+            "arcane_gauntlets",
+            "battleaxe",
+            "broadsword",
+            "crossbow",
+            "cutlass",
+            "dagger",
+            "dualstaff",
+            "glowing_rings",
+            "grappler",
+            "greatstaff",
+            "greatsword",
+            "halberd",
+            "hallowed_axe",
+            "hand_crossbow",
+            "hand_runes",
+            "heavy_frame_wheelchair",
+            "light_frame_wheelchair",
+            "longbow",
+            "longsword",
+            "mace",
+            "quarterstaff",
+            "rapier",
+            "returning",
+            "round_shield",
+            "scepter",
+            "shortbow",
+            "shortstaff",
+            "shortsword",
+            "small_dagger",
+            "spear",
+            "tower_shield",
+            "wand",
+            "warhammer",
+            "whip"
           ]
         }
       ],
@@ -1800,6 +1860,34 @@
           "entity_id": "heritage.orc",
           "entity_type": "ancestry",
           "asset_id": "heritage_orc"
+        },
+        {
+          "asset_type": "daggerheart_armor_illustration",
+          "set_id": "daggerheart_armor_set_v1",
+          "entity_id": "armor.chainmail-armor",
+          "entity_type": "armor",
+          "asset_id": "chainmail_armor"
+        },
+        {
+          "asset_type": "daggerheart_armor_illustration",
+          "set_id": "daggerheart_armor_set_v1",
+          "entity_id": "armor.full-plate-armor",
+          "entity_type": "armor",
+          "asset_id": "full_plate_armor"
+        },
+        {
+          "asset_type": "daggerheart_armor_illustration",
+          "set_id": "daggerheart_armor_set_v1",
+          "entity_id": "armor.gambeson-armor",
+          "entity_type": "armor",
+          "asset_id": "gambeson_armor"
+        },
+        {
+          "asset_type": "daggerheart_armor_illustration",
+          "set_id": "daggerheart_armor_set_v1",
+          "entity_id": "armor.leather-armor",
+          "entity_type": "armor",
+          "asset_id": "leather_armor"
         },
         {
           "asset_type": "daggerheart_class_icon",
@@ -2306,6 +2394,20 @@
           "asset_id": "valor"
         },
         {
+          "asset_type": "daggerheart_item_illustration",
+          "set_id": "daggerheart_item_set_v1",
+          "entity_id": "item.minor-health-potion",
+          "entity_type": "item",
+          "asset_id": "minor_health_potion"
+        },
+        {
+          "asset_type": "daggerheart_item_illustration",
+          "set_id": "daggerheart_item_set_v1",
+          "entity_id": "item.minor-stamina-potion",
+          "entity_type": "item",
+          "asset_id": "minor_stamina_potion"
+        },
+        {
           "asset_type": "daggerheart_subclass_illustration",
           "set_id": "daggerheart_subclass_set_v1",
           "entity_id": "subclass.beastbound",
@@ -2430,6 +2532,251 @@
           "entity_id": "subclass.wordsmith",
           "entity_type": "subclass",
           "asset_id": "wordsmith"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.arcane-frame-wheelchair",
+          "entity_type": "weapon",
+          "asset_id": "arcane_frame_wheelchair"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.arcane-gauntlets",
+          "entity_type": "weapon",
+          "asset_id": "arcane_gauntlets"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.battleaxe",
+          "entity_type": "weapon",
+          "asset_id": "battleaxe"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.broadsword",
+          "entity_type": "weapon",
+          "asset_id": "broadsword"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.crossbow",
+          "entity_type": "weapon",
+          "asset_id": "crossbow"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.cutlass",
+          "entity_type": "weapon",
+          "asset_id": "cutlass"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.dagger",
+          "entity_type": "weapon",
+          "asset_id": "dagger"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.dualstaff",
+          "entity_type": "weapon",
+          "asset_id": "dualstaff"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.glowing-rings",
+          "entity_type": "weapon",
+          "asset_id": "glowing_rings"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.grappler",
+          "entity_type": "weapon",
+          "asset_id": "grappler"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.greatstaff",
+          "entity_type": "weapon",
+          "asset_id": "greatstaff"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.greatsword",
+          "entity_type": "weapon",
+          "asset_id": "greatsword"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.halberd",
+          "entity_type": "weapon",
+          "asset_id": "halberd"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.hallowed-axe",
+          "entity_type": "weapon",
+          "asset_id": "hallowed_axe"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.hand-crossbow",
+          "entity_type": "weapon",
+          "asset_id": "hand_crossbow"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.hand-runes",
+          "entity_type": "weapon",
+          "asset_id": "hand_runes"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.heavy-frame-wheelchair",
+          "entity_type": "weapon",
+          "asset_id": "heavy_frame_wheelchair"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.light-frame-wheelchair",
+          "entity_type": "weapon",
+          "asset_id": "light_frame_wheelchair"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.longbow",
+          "entity_type": "weapon",
+          "asset_id": "longbow"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.longsword",
+          "entity_type": "weapon",
+          "asset_id": "longsword"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.mace",
+          "entity_type": "weapon",
+          "asset_id": "mace"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.quarterstaff",
+          "entity_type": "weapon",
+          "asset_id": "quarterstaff"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.rapier",
+          "entity_type": "weapon",
+          "asset_id": "rapier"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.returning",
+          "entity_type": "weapon",
+          "asset_id": "returning"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.round-shield",
+          "entity_type": "weapon",
+          "asset_id": "round_shield"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.scepter",
+          "entity_type": "weapon",
+          "asset_id": "scepter"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.shortbow",
+          "entity_type": "weapon",
+          "asset_id": "shortbow"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.shortstaff",
+          "entity_type": "weapon",
+          "asset_id": "shortstaff"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.shortsword",
+          "entity_type": "weapon",
+          "asset_id": "shortsword"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.small-dagger",
+          "entity_type": "weapon",
+          "asset_id": "small_dagger"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.spear",
+          "entity_type": "weapon",
+          "asset_id": "spear"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.tower-shield",
+          "entity_type": "weapon",
+          "asset_id": "tower_shield"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.wand",
+          "entity_type": "weapon",
+          "asset_id": "wand"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.warhammer",
+          "entity_type": "weapon",
+          "asset_id": "warhammer"
+        },
+        {
+          "asset_type": "daggerheart_weapon_illustration",
+          "set_id": "daggerheart_weapon_set_v1",
+          "entity_id": "weapon.whip",
+          "entity_type": "weapon",
+          "asset_id": "whip"
         }
       ]
     }
@@ -2625,6 +2972,136 @@
         "entity_type": "ancestry",
         "entity_id": "heritage.orc",
         "source_file": "heritages.json"
+      },
+      "review_flags": []
+    }
+  ],
+  "daggerheart_armor_illustration": [
+    {
+      "request_id": "high_fantasy.daggerheart_armor_illustration.chainmail_armor",
+      "request_slug": "chainmail_armor",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_armor_illustration",
+      "set_id": "daggerheart_armor_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "chainmail_armor",
+      "output_id": "img_f0bf8fef728f",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f0bf8fef728f7d1e1415eccb876ac5981f896a434887cfdaf294610a129498ed",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_armor_illustration/v1/chainmail_armor",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900537/high_fantasy/daggerheart_armor_illustration/v1/chainmail_armor.png",
+        "version": 1772900537,
+        "uploaded_at": "2026-03-07T16:22:18+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "armor",
+        "entity_id": "armor.chainmail-armor",
+        "source_file": "armor.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_armor_illustration.full_plate_armor",
+      "request_slug": "full_plate_armor",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_armor_illustration",
+      "set_id": "daggerheart_armor_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "full_plate_armor",
+      "output_id": "img_3a8bbb1d320e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "3a8bbb1d320e2e49a88d3486f82ae662f5ca75f9fd6e2011a27bce9f2c059ea5",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_armor_illustration/v1/full_plate_armor",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900543/high_fantasy/daggerheart_armor_illustration/v1/full_plate_armor.png",
+        "version": 1772900543,
+        "uploaded_at": "2026-03-07T16:22:29+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "armor",
+        "entity_id": "armor.full-plate-armor",
+        "source_file": "armor.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_armor_illustration.gambeson_armor",
+      "request_slug": "gambeson_armor",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_armor_illustration",
+      "set_id": "daggerheart_armor_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "gambeson_armor",
+      "output_id": "img_6049315d8b8b",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6049315d8b8bbfcccf658fd936697720dd9063e915f7598a98c73569384ea371",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_armor_illustration/v1/gambeson_armor",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900551/high_fantasy/daggerheart_armor_illustration/v1/gambeson_armor.png",
+        "version": 1772900551,
+        "uploaded_at": "2026-03-07T16:22:32+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "armor",
+        "entity_id": "armor.gambeson-armor",
+        "source_file": "armor.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_armor_illustration.leather_armor",
+      "request_slug": "leather_armor",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_armor_illustration",
+      "set_id": "daggerheart_armor_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "leather_armor",
+      "output_id": "img_f776718c36b8",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f776718c36b8ab55950a95a1fae70296b2e75ba8f972dff49cd338fba0cfd850",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_armor_illustration/v1/leather_armor",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900554/high_fantasy/daggerheart_armor_illustration/v1/leather_armor.png",
+        "version": 1772900554,
+        "uploaded_at": "2026-03-07T16:22:35+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "armor",
+        "entity_id": "armor.leather-armor",
+        "source_file": "armor.json"
       },
       "review_flags": []
     }
@@ -4954,6 +5431,72 @@
     }
   ],
   "daggerheart_environment_illustration": [],
+  "daggerheart_item_illustration": [
+    {
+      "request_id": "high_fantasy.daggerheart_item_illustration.minor_health_potion",
+      "request_slug": "minor_health_potion",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_item_illustration",
+      "set_id": "daggerheart_item_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "minor_health_potion",
+      "output_id": "img_79f01dc3ff05",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "79f01dc3ff05b311244c81e4da20552a0f070bf221e07dd4ddab32cc244868d1",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_item_illustration/v1/minor_health_potion",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900556/high_fantasy/daggerheart_item_illustration/v1/minor_health_potion.png",
+        "version": 1772900556,
+        "uploaded_at": "2026-03-07T16:22:37+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "item",
+        "entity_id": "item.minor-health-potion",
+        "source_file": "items.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_item_illustration.minor_stamina_potion",
+      "request_slug": "minor_stamina_potion",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_item_illustration",
+      "set_id": "daggerheart_item_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "minor_stamina_potion",
+      "output_id": "img_6e9155caa7b5",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6e9155caa7b5ba1889663753c64d5903219eb65f4583ab67e6650293d99e08d3",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_item_illustration/v1/minor_stamina_potion",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900562/high_fantasy/daggerheart_item_illustration/v1/minor_stamina_potion.png",
+        "version": 1772900562,
+        "uploaded_at": "2026-03-07T16:22:43+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "item",
+        "entity_id": "item.minor-stamina-potion",
+        "source_file": "items.json"
+      },
+      "review_flags": []
+    }
+  ],
   "daggerheart_subclass_illustration": [
     {
       "request_id": "high_fantasy.daggerheart_subclass_illustration.beastbound",
@@ -5528,6 +6071,1128 @@
         "entity_type": "subclass",
         "entity_id": "subclass.wordsmith",
         "source_file": "subclasses.json"
+      },
+      "review_flags": []
+    }
+  ],
+  "daggerheart_weapon_illustration": [
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.arcane_frame_wheelchair",
+      "request_slug": "arcane_frame_wheelchair",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "arcane_frame_wheelchair",
+      "output_id": "img_f5906b23f092",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f5906b23f0928b8f156bca9df4cbcc9cd8c77019a0a879afeb7838ba0d161c72",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/arcane_frame_wheelchair",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900566/high_fantasy/daggerheart_weapon_illustration/v1/arcane_frame_wheelchair.png",
+        "version": 1772900566,
+        "uploaded_at": "2026-03-07T16:22:47+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.arcane-frame-wheelchair",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.arcane_gauntlets",
+      "request_slug": "arcane_gauntlets",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "arcane_gauntlets",
+      "output_id": "img_fb10d8aa3cac",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "fb10d8aa3cacc3eb9b15207c3436e0f93280ebf1054efcd94821c90539f7cae0",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/arcane_gauntlets",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900569/high_fantasy/daggerheart_weapon_illustration/v1/arcane_gauntlets.png",
+        "version": 1772900569,
+        "uploaded_at": "2026-03-07T16:22:50+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.arcane-gauntlets",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.battleaxe",
+      "request_slug": "battleaxe",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "battleaxe",
+      "output_id": "img_50efac33f47c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "50efac33f47c0fe4dd34ca87f6c322ae77e6b55b168214400bbba94c02da7907",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/battleaxe",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900571/high_fantasy/daggerheart_weapon_illustration/v1/battleaxe.png",
+        "version": 1772900571,
+        "uploaded_at": "2026-03-07T16:22:52+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.battleaxe",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.broadsword",
+      "request_slug": "broadsword",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "broadsword",
+      "output_id": "img_3c10d30163e0",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "3c10d30163e077ba5b848a982b39ed0bf178c0ffb144259ff98889343dd2001f",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/broadsword",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900574/high_fantasy/daggerheart_weapon_illustration/v1/broadsword.png",
+        "version": 1772900574,
+        "uploaded_at": "2026-03-07T16:22:54+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.broadsword",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.crossbow",
+      "request_slug": "crossbow",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "crossbow",
+      "output_id": "img_31c335154890",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "31c3351548907bd73e3f090ee9610aaa0211f4cd54c3578a9eb7da7eb737ea3a",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/crossbow",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900576/high_fantasy/daggerheart_weapon_illustration/v1/crossbow.png",
+        "version": 1772900576,
+        "uploaded_at": "2026-03-07T16:22:57+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.crossbow",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.cutlass",
+      "request_slug": "cutlass",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "cutlass",
+      "output_id": "img_1fe87f59bc23",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "1fe87f59bc23f7a66cdb05a857d83d724868c9c6c3d6068b4fe04de8fc66d3a8",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/cutlass",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900588/high_fantasy/daggerheart_weapon_illustration/v1/cutlass.png",
+        "version": 1772900588,
+        "uploaded_at": "2026-03-07T16:23:09+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.cutlass",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.dagger",
+      "request_slug": "dagger",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "dagger",
+      "output_id": "img_4b9d7395e851",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4b9d7395e851d65152b9a59d0fa3e71e452612af941b70644039275cc3490db2",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/dagger",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900603/high_fantasy/daggerheart_weapon_illustration/v1/dagger.png",
+        "version": 1772900603,
+        "uploaded_at": "2026-03-07T16:23:23+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.dagger",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.dualstaff",
+      "request_slug": "dualstaff",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "dualstaff",
+      "output_id": "img_e67b3e33dd58",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "e67b3e33dd5878d350f9e236db3f946fc010736963d99acb6d5d4e7b89b810fe",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/dualstaff",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900605/high_fantasy/daggerheart_weapon_illustration/v1/dualstaff.png",
+        "version": 1772900605,
+        "uploaded_at": "2026-03-07T16:23:26+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.dualstaff",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.glowing_rings",
+      "request_slug": "glowing_rings",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "glowing_rings",
+      "output_id": "img_dd3c0d7fa7cd",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "dd3c0d7fa7cdd467f1db9bd2d27ac2b8a0a909a7e2f70d149c1ec8814020ecc1",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/glowing_rings",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900607/high_fantasy/daggerheart_weapon_illustration/v1/glowing_rings.png",
+        "version": 1772900607,
+        "uploaded_at": "2026-03-07T16:23:28+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.glowing-rings",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.grappler",
+      "request_slug": "grappler",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "grappler",
+      "output_id": "img_403e080289d3",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "403e080289d3c8bbddbc89f1f25899fd6235b9b6a5049c1ea84aee6ac87c49ea",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/grappler",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900610/high_fantasy/daggerheart_weapon_illustration/v1/grappler.png",
+        "version": 1772900610,
+        "uploaded_at": "2026-03-07T16:23:31+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.grappler",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.greatstaff",
+      "request_slug": "greatstaff",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "greatstaff",
+      "output_id": "img_a11af969fa67",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "a11af969fa67f62a1e1de9668f9bf10a76be52eccf6d22a6ae44f73e9728b71e",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/greatstaff",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900613/high_fantasy/daggerheart_weapon_illustration/v1/greatstaff.png",
+        "version": 1772900613,
+        "uploaded_at": "2026-03-07T16:23:35+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.greatstaff",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.greatsword",
+      "request_slug": "greatsword",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "greatsword",
+      "output_id": "img_e10d29299d38",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "e10d29299d384adb6e91081b549a71c64988725d5df3a576643d887987b75d88",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/greatsword",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900618/high_fantasy/daggerheart_weapon_illustration/v1/greatsword.png",
+        "version": 1772900618,
+        "uploaded_at": "2026-03-07T16:23:39+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.greatsword",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.halberd",
+      "request_slug": "halberd",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "halberd",
+      "output_id": "img_795a1d2dee08",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "795a1d2dee087ef4cadebb4105f86e592913023fd92194df904317ad2e1ac25b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/halberd",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900622/high_fantasy/daggerheart_weapon_illustration/v1/halberd.png",
+        "version": 1772900622,
+        "uploaded_at": "2026-03-07T16:23:43+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.halberd",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.hallowed_axe",
+      "request_slug": "hallowed_axe",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "hallowed_axe",
+      "output_id": "img_e666f1029825",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "e666f1029825dca218ebf360428b2fd83e175dbdf917480e1e32c87cb2832275",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/hallowed_axe",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900625/high_fantasy/daggerheart_weapon_illustration/v1/hallowed_axe.png",
+        "version": 1772900625,
+        "uploaded_at": "2026-03-07T16:23:45+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.hallowed-axe",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.hand_crossbow",
+      "request_slug": "hand_crossbow",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "hand_crossbow",
+      "output_id": "img_8e289e0369f7",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "8e289e0369f722b51b59f97177f22791e829cdc02da88c82704b0234cf37af91",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/hand_crossbow",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900633/high_fantasy/daggerheart_weapon_illustration/v1/hand_crossbow.png",
+        "version": 1772900633,
+        "uploaded_at": "2026-03-07T16:23:56+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.hand-crossbow",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.hand_runes",
+      "request_slug": "hand_runes",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "hand_runes",
+      "output_id": "img_7c87ed3347da",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "7c87ed3347dad1a4365c438bd8003c17e7fa0750947100417844232926b50146",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/hand_runes",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900638/high_fantasy/daggerheart_weapon_illustration/v1/hand_runes.png",
+        "version": 1772900638,
+        "uploaded_at": "2026-03-07T16:23:59+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.hand-runes",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.heavy_frame_wheelchair",
+      "request_slug": "heavy_frame_wheelchair",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "heavy_frame_wheelchair",
+      "output_id": "img_ce736fa29f6f",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "ce736fa29f6fb25a4e8455e09b7acf2af7ed9a17f0dbd9161539ce435c6ff1f9",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/heavy_frame_wheelchair",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900642/high_fantasy/daggerheart_weapon_illustration/v1/heavy_frame_wheelchair.png",
+        "version": 1772900642,
+        "uploaded_at": "2026-03-07T16:24:03+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.heavy-frame-wheelchair",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.light_frame_wheelchair",
+      "request_slug": "light_frame_wheelchair",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "light_frame_wheelchair",
+      "output_id": "img_166b9dc44fd3",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "166b9dc44fd386427dc1dce0177b37807b247ebb20aa9f9e4cb78ace40df1821",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/light_frame_wheelchair",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900645/high_fantasy/daggerheart_weapon_illustration/v1/light_frame_wheelchair.png",
+        "version": 1772900645,
+        "uploaded_at": "2026-03-07T16:24:06+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.light-frame-wheelchair",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.longbow",
+      "request_slug": "longbow",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "longbow",
+      "output_id": "img_679b435b0321",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "679b435b0321c219bc6b999db83767622ba1bafd8786fb591d0f428017b2d418",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/longbow",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900647/high_fantasy/daggerheart_weapon_illustration/v1/longbow.png",
+        "version": 1772900647,
+        "uploaded_at": "2026-03-07T16:24:08+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.longbow",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.longsword",
+      "request_slug": "longsword",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "longsword",
+      "output_id": "img_cf0be0c07c89",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "cf0be0c07c8937a264bf480abdbe326dbbd350430aabc58a2953260235d2a59a",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/longsword",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900651/high_fantasy/daggerheart_weapon_illustration/v1/longsword.png",
+        "version": 1772900651,
+        "uploaded_at": "2026-03-07T16:24:12+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.longsword",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.mace",
+      "request_slug": "mace",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "mace",
+      "output_id": "img_8397754c7010",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "8397754c7010fbc6ad56dae61dc535d4e18c8f85b88c4f7be9c86fcc8dae80ad",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/mace",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900654/high_fantasy/daggerheart_weapon_illustration/v1/mace.png",
+        "version": 1772900654,
+        "uploaded_at": "2026-03-07T16:24:14+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.mace",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.quarterstaff",
+      "request_slug": "quarterstaff",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "quarterstaff",
+      "output_id": "img_957a77bc4926",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "957a77bc4926bd717ac335ecfe791c0e8692ef37c36002316d347811e8f28c7a",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/quarterstaff",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900656/high_fantasy/daggerheart_weapon_illustration/v1/quarterstaff.png",
+        "version": 1772900656,
+        "uploaded_at": "2026-03-07T16:24:17+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.quarterstaff",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.rapier",
+      "request_slug": "rapier",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "rapier",
+      "output_id": "img_53d62c32755c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "53d62c32755c1ed3a748b3513860bae6239e0f0e739a40e03bc2d58dd912b464",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/rapier",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900660/high_fantasy/daggerheart_weapon_illustration/v1/rapier.png",
+        "version": 1772900660,
+        "uploaded_at": "2026-03-07T16:24:20+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.rapier",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.returning",
+      "request_slug": "returning",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "returning",
+      "output_id": "img_c269a91e5666",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "c269a91e566671abdd108b78bb69afade58ed320924d55d45bf19b8af55fbfeb",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/returning",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900662/high_fantasy/daggerheart_weapon_illustration/v1/returning.png",
+        "version": 1772900662,
+        "uploaded_at": "2026-03-07T16:24:23+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.returning",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.round_shield",
+      "request_slug": "round_shield",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "round_shield",
+      "output_id": "img_1685c0dde193",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "1685c0dde1939ac1eab6fb78067747605ae6cebfc962c8cd8f9ddf96a5c48358",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/round_shield",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900665/high_fantasy/daggerheart_weapon_illustration/v1/round_shield.png",
+        "version": 1772900665,
+        "uploaded_at": "2026-03-07T16:24:26+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.round-shield",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.scepter",
+      "request_slug": "scepter",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "scepter",
+      "output_id": "img_af414df1ee9f",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "af414df1ee9fb6f790615579f4d99c39432616268159e7e15bb03a13c42bef65",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/scepter",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900667/high_fantasy/daggerheart_weapon_illustration/v1/scepter.png",
+        "version": 1772900667,
+        "uploaded_at": "2026-03-07T16:24:28+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.scepter",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.shortbow",
+      "request_slug": "shortbow",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "shortbow",
+      "output_id": "img_d7f5db3d8d8a",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "d7f5db3d8d8aec2095bae4788412ef2e1ba95c4c725e7d5927c695780db6e82d",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/shortbow",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900670/high_fantasy/daggerheart_weapon_illustration/v1/shortbow.png",
+        "version": 1772900670,
+        "uploaded_at": "2026-03-07T16:24:31+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.shortbow",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.shortstaff",
+      "request_slug": "shortstaff",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "shortstaff",
+      "output_id": "img_a73c95f1fe7c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "a73c95f1fe7c4ca5a5a379ac3dee5e977eb2385227f3e67706d5942a402872af",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/shortstaff",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900672/high_fantasy/daggerheart_weapon_illustration/v1/shortstaff.png",
+        "version": 1772900672,
+        "uploaded_at": "2026-03-07T16:24:34+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.shortstaff",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.shortsword",
+      "request_slug": "shortsword",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "shortsword",
+      "output_id": "img_5da5d82aad15",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "5da5d82aad158f26e06fe35f7efd754981216d7f76da9e46641109a170accf1b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/shortsword",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900677/high_fantasy/daggerheart_weapon_illustration/v1/shortsword.png",
+        "version": 1772900677,
+        "uploaded_at": "2026-03-07T16:24:38+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.shortsword",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.small_dagger",
+      "request_slug": "small_dagger",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "small_dagger",
+      "output_id": "img_21edecc368db",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "21edecc368db6880bae3cb21ae9300d79f1811d2e6019308ac6d7f1bb77a9d75",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/small_dagger",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900680/high_fantasy/daggerheart_weapon_illustration/v1/small_dagger.png",
+        "version": 1772900680,
+        "uploaded_at": "2026-03-07T16:24:41+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.small-dagger",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.spear",
+      "request_slug": "spear",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "spear",
+      "output_id": "img_52d2eff05335",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "52d2eff05335285465ad563adfeb5aa64fea85ebbf9c2e2d79647fe76a2e6c7e",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/spear",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900698/high_fantasy/daggerheart_weapon_illustration/v1/spear.png",
+        "version": 1772900698,
+        "uploaded_at": "2026-03-07T16:24:59+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.spear",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.tower_shield",
+      "request_slug": "tower_shield",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "tower_shield",
+      "output_id": "img_19acbd78800b",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "19acbd78800b1fbef614926badb7420a4f846bce522e744d1c39b51662aabc5d",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/tower_shield",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900700/high_fantasy/daggerheart_weapon_illustration/v1/tower_shield.png",
+        "version": 1772900700,
+        "uploaded_at": "2026-03-07T16:25:01+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.tower-shield",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.wand",
+      "request_slug": "wand",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "wand",
+      "output_id": "img_76523795f6c3",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "76523795f6c35218d9835203e187fd6bbc646da46483d618801843b180aaf627",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/wand",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900703/high_fantasy/daggerheart_weapon_illustration/v1/wand.png",
+        "version": 1772900703,
+        "uploaded_at": "2026-03-07T16:25:04+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.wand",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.warhammer",
+      "request_slug": "warhammer",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "warhammer",
+      "output_id": "img_09492ab90921",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "09492ab90921e969ea16f1063e2b7bb2d9e1bbd80576a3ff6271003f95ba7b8d",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/warhammer",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900705/high_fantasy/daggerheart_weapon_illustration/v1/warhammer.png",
+        "version": 1772900705,
+        "uploaded_at": "2026-03-07T16:25:06+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.warhammer",
+        "source_file": "weapons.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.whip",
+      "request_slug": "whip",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_starting_items_r1",
+      "fs_asset_id": "whip",
+      "output_id": "img_5ff7140f9477",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "5ff7140f9477dbb1a3392a8391f12a680b851d4079f34e2a5eace5568bb1bda8",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-07T16:20:21+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/whip",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772900709/high_fantasy/daggerheart_weapon_illustration/v1/whip.png",
+        "version": 1772900709,
+        "uploaded_at": "2026-03-07T16:25:11+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "weapon",
+        "entity_id": "weapon.whip",
+        "source_file": "weapons.json"
       },
       "review_flags": []
     }

@@ -242,6 +242,77 @@ func TestCreationViewResolvesSubclassImageURL(t *testing.T) {
 	}
 }
 
+func TestCreationViewUsesCatalogEquipmentIllustrationURLs(t *testing.T) {
+	t.Parallel()
+
+	creation := campaignapp.CampaignCharacterCreation{
+		PrimaryWeapons: []campaignapp.CatalogWeapon{{
+			ID:   "weapon.battleaxe",
+			Name: "Battleaxe",
+			Illustration: campaignapp.CatalogAssetReference{
+				URL: "https://cdn.example.com/weapons/battleaxe.png",
+			},
+		}},
+		Armor: []campaignapp.CatalogArmor{{
+			ID:   "armor.chainmail-armor",
+			Name: "Chainmail Armor",
+			Illustration: campaignapp.CatalogAssetReference{
+				URL: "https://cdn.example.com/armor/chainmail.png",
+			},
+		}},
+		PotionItems: []campaignapp.CatalogItem{{
+			ID:   "item.minor-health-potion",
+			Name: "Minor Health Potion",
+			Illustration: campaignapp.CatalogAssetReference{
+				URL: "https://cdn.example.com/items/minor-health-potion.png",
+			},
+		}},
+	}
+
+	view := New("").CreationView(creation)
+	if len(view.PrimaryWeapons) != 1 || view.PrimaryWeapons[0].ImageURL != "https://cdn.example.com/weapons/battleaxe.png" {
+		t.Fatalf("weapon image url = %q, want %q", view.PrimaryWeapons[0].ImageURL, "https://cdn.example.com/weapons/battleaxe.png")
+	}
+	if len(view.Armor) != 1 || view.Armor[0].ImageURL != "https://cdn.example.com/armor/chainmail.png" {
+		t.Fatalf("armor image url = %q, want %q", view.Armor[0].ImageURL, "https://cdn.example.com/armor/chainmail.png")
+	}
+	if len(view.PotionItems) != 1 || view.PotionItems[0].ImageURL != "https://cdn.example.com/items/minor-health-potion.png" {
+		t.Fatalf("item image url = %q, want %q", view.PotionItems[0].ImageURL, "https://cdn.example.com/items/minor-health-potion.png")
+	}
+}
+
+func TestCreationViewResolvesEquipmentImageURLFallback(t *testing.T) {
+	t.Parallel()
+
+	creation := campaignapp.CampaignCharacterCreation{
+		PrimaryWeapons: []campaignapp.CatalogWeapon{{ID: "weapon.battleaxe", Name: "Battleaxe"}},
+		Armor:          []campaignapp.CatalogArmor{{ID: "armor.chainmail-armor", Name: "Chainmail Armor"}},
+		PotionItems:    []campaignapp.CatalogItem{{ID: "item.minor-health-potion", Name: "Minor Health Potion"}},
+	}
+
+	viewNoURL := New("").CreationView(creation)
+	if len(viewNoURL.PrimaryWeapons) != 1 || viewNoURL.PrimaryWeapons[0].ImageURL != "" {
+		t.Fatalf("expected empty weapon image url without AssetBaseURL, got %q", viewNoURL.PrimaryWeapons[0].ImageURL)
+	}
+	if len(viewNoURL.Armor) != 1 || viewNoURL.Armor[0].ImageURL != "" {
+		t.Fatalf("expected empty armor image url without AssetBaseURL, got %q", viewNoURL.Armor[0].ImageURL)
+	}
+	if len(viewNoURL.PotionItems) != 1 || viewNoURL.PotionItems[0].ImageURL != "" {
+		t.Fatalf("expected empty item image url without AssetBaseURL, got %q", viewNoURL.PotionItems[0].ImageURL)
+	}
+
+	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
+	if len(viewWithURL.PrimaryWeapons) != 1 || viewWithURL.PrimaryWeapons[0].ImageURL == "" {
+		t.Fatalf("expected non-empty weapon image url with AssetBaseURL, got %q", viewWithURL.PrimaryWeapons[0].ImageURL)
+	}
+	if len(viewWithURL.Armor) != 1 || viewWithURL.Armor[0].ImageURL == "" {
+		t.Fatalf("expected non-empty armor image url with AssetBaseURL, got %q", viewWithURL.Armor[0].ImageURL)
+	}
+	if len(viewWithURL.PotionItems) != 1 || viewWithURL.PotionItems[0].ImageURL == "" {
+		t.Fatalf("expected non-empty item image url with AssetBaseURL, got %q", viewWithURL.PotionItems[0].ImageURL)
+	}
+}
+
 func TestCreationViewClassDomainWatermarksSkipMissingIconsAndCapAtTwo(t *testing.T) {
 	t.Parallel()
 

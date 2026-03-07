@@ -29,6 +29,12 @@ const (
 	DaggerheartAssetTypeAdversaryIllustration = "daggerheart_adversary_illustration"
 	// DaggerheartAssetTypeEnvironmentIllustration maps to environment artwork.
 	DaggerheartAssetTypeEnvironmentIllustration = "daggerheart_environment_illustration"
+	// DaggerheartAssetTypeWeaponIllustration maps to weapon artwork.
+	DaggerheartAssetTypeWeaponIllustration = "daggerheart_weapon_illustration"
+	// DaggerheartAssetTypeArmorIllustration maps to armor artwork.
+	DaggerheartAssetTypeArmorIllustration = "daggerheart_armor_illustration"
+	// DaggerheartAssetTypeItemIllustration maps to item artwork.
+	DaggerheartAssetTypeItemIllustration = "daggerheart_item_illustration"
 )
 
 const (
@@ -48,6 +54,12 @@ const (
 	DaggerheartEntityTypeAdversary = "adversary"
 	// DaggerheartEntityTypeEnvironment is an environment catalog entity.
 	DaggerheartEntityTypeEnvironment = "environment"
+	// DaggerheartEntityTypeWeapon is a weapon catalog entity.
+	DaggerheartEntityTypeWeapon = "weapon"
+	// DaggerheartEntityTypeArmor is an armor catalog entity.
+	DaggerheartEntityTypeArmor = "armor"
+	// DaggerheartEntityTypeItem is an item catalog entity.
+	DaggerheartEntityTypeItem = "item"
 )
 
 // DaggerheartAssetResolutionStatus reports how a catalog image selector was resolved.

@@ -192,6 +192,45 @@ func TestCreationStepDomainCardsDisablesUnselectedWhenLimitReached(t *testing.T)
 	}
 }
 
+func TestCreationStepEquipmentUsesSharedSelectableCardShellForPotions(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			PrimaryWeapons: []CampaignCreationWeaponView{
+				{ID: "weapon-1", Name: "Longsword"},
+			},
+			Armor: []CampaignCreationArmorView{
+				{ID: "armor-1", Name: "Chainmail"},
+			},
+			PotionItems: []CampaignCreationItemView{
+				{ID: "item-1", Name: "Minor Health Potion", ImageURL: "https://cdn.example.com/items/minor-health-potion.png"},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	err := creationStepEquipment(view, testLocalizer{}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render creationStepEquipment: %v", err)
+	}
+
+	markup := strings.SplitN(buf.String(), "<script>", 2)[0]
+	for _, marker := range []string{
+		`data-creation-option-kind="equipment-potion"`,
+		`name="potion_item_id"`,
+		`type="radio"`,
+		`data-image-frame="true"`,
+		`data-image-skeleton="true"`,
+	} {
+		if !strings.Contains(markup, marker) {
+			t.Fatalf("equipment output missing marker %q: %q", marker, markup)
+		}
+	}
+}
+
 func TestCreationIconMaskStyleEscapesSpecialURLCharacters(t *testing.T) {
 	t.Parallel()
 

@@ -140,13 +140,13 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 				Environments: []*daggerheartv1.DaggerheartEnvironment{{Id: "env.woods", Name: "Whispering Woods"}},
 			},
 		},
-		assetMapResp: &daggerheartv1.GetDaggerheartContentAssetMapResponse{
-			AssetMap: &daggerheartv1.DaggerheartContentAssetMap{
+		assetMapResp: &daggerheartv1.GetDaggerheartAssetMapResponse{
+			AssetMap: &daggerheartv1.DaggerheartAssetMap{
 				Theme: "high_fantasy",
-				Assets: []*daggerheartv1.DaggerheartContentAssetRef{
+				Assets: []*daggerheartv1.DaggerheartAssetRef{
 					{
-						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION,
-						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_CLASS_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
 						EntityType: "class",
 						EntityId:   "warrior",
 						SetId:      "daggerheart_class_set_v1",
@@ -154,8 +154,8 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 						CdnAssetId: "v1/high_fantasy/daggerheart_class_illustration/v1/class.warrior",
 					},
 					{
-						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ICON,
-						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_SET_DEFAULT,
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_CLASS_ICON,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_SET_DEFAULT,
 						EntityType: "class",
 						EntityId:   "warrior",
 						SetId:      "daggerheart_class_icon_set_v1",
@@ -163,8 +163,8 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 						CdnAssetId: "v1/high_fantasy/daggerheart_class_icon/v1/class.warrior",
 					},
 					{
-						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_SUBCLASS_ILLUSTRATION,
-						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_SUBCLASS_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
 						EntityType: "subclass",
 						EntityId:   "guardian",
 						SetId:      "daggerheart_subclass_set_v1",
@@ -172,8 +172,8 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 						CdnAssetId: "v1/high_fantasy/daggerheart_subclass_illustration/v1/subclass.guardian",
 					},
 					{
-						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ANCESTRY_ILLUSTRATION,
-						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ANCESTRY_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
 						EntityType: "ancestry",
 						EntityId:   "human",
 						SetId:      "daggerheart_ancestry_set_v1",
@@ -181,8 +181,8 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 						CdnAssetId: "v1/high_fantasy/daggerheart_ancestry_illustration/v1/ancestry.human",
 					},
 					{
-						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ILLUSTRATION,
-						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
 						EntityType: "domain",
 						EntityId:   "valor",
 						SetId:      "daggerheart_domain_set_v1",
@@ -190,8 +190,8 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 						CdnAssetId: "v1/high_fantasy/daggerheart_domain_illustration/v1/domain.valor",
 					},
 					{
-						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ICON,
-						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_ICON,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
 						EntityType: "domain",
 						EntityId:   "valor",
 						SetId:      "daggerheart_domain_icon_set_v1",
@@ -199,8 +199,8 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 						CdnAssetId: "v1/high_fantasy/daggerheart_domain_icon/v1/domain.valor",
 					},
 					{
-						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION,
-						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
 						EntityType: "domain_card",
 						EntityId:   "card.guard",
 						SetId:      "daggerheart_domain_card_set_v1",
@@ -208,8 +208,8 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 						CdnAssetId: "v1/high_fantasy/daggerheart_domain_card_illustration/v1/card.guard",
 					},
 					{
-						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ADVERSARY_ILLUSTRATION,
-						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ADVERSARY_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
 						EntityType: "adversary",
 						EntityId:   "adv.goblin",
 						SetId:      "daggerheart_adversary_set_v1",
@@ -217,21 +217,49 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 						CdnAssetId: "v1/high_fantasy/daggerheart_adversary_illustration/v1/adv.goblin",
 					},
 					{
-						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ENVIRONMENT_ILLUSTRATION,
-						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ENVIRONMENT_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
 						EntityType: "environment",
 						EntityId:   "env.woods",
 						SetId:      "daggerheart_environment_set_v1",
 						AssetId:    "env.woods",
 						CdnAssetId: "v1/high_fantasy/daggerheart_environment_illustration/v1/env.woods",
 					},
+					{
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_WEAPON_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
+						EntityType: "weapon",
+						EntityId:   "weapon.longsword",
+						SetId:      "daggerheart_weapon_set_v1",
+						AssetId:    "weapon.longsword",
+						CdnAssetId: "v1/high_fantasy/daggerheart_weapon_illustration/v1/weapon.longsword",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ARMOR_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
+						EntityType: "armor",
+						EntityId:   "armor.chain",
+						SetId:      "daggerheart_armor_set_v1",
+						AssetId:    "armor.chain",
+						CdnAssetId: "v1/high_fantasy/daggerheart_armor_illustration/v1/armor.chain",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ITEM_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED,
+						EntityType: "item",
+						EntityId:   "item.minor-health-potion",
+						SetId:      "daggerheart_item_set_v1",
+						AssetId:    "item.minor-health-potion",
+						CdnAssetId: "v1/high_fantasy/daggerheart_item_illustration/v1/item.minor-health-potion",
+					},
 				},
 			},
 		},
 	}
 	gateway := GRPCGateway{
-		DaggerheartClient: contentClient,
-		AssetBaseURL:      "https://res.cloudinary.com/fracturing-space/image/upload",
+		DaggerheartContent: contentClient,
+		DaggerheartAsset:   contentClient,
+		AssetBaseURL:       "https://res.cloudinary.com/fracturing-space/image/upload",
 	}
 
 	catalog, err := gateway.CharacterCreationCatalog(context.Background(), language.MustParse("pt-BR"))
@@ -280,8 +308,17 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 	if len(catalog.Weapons) != 1 || catalog.Weapons[0].Category != "primary" {
 		t.Fatalf("Weapons = %#v", catalog.Weapons)
 	}
+	if catalog.Weapons[0].Illustration.Status != "mapped" {
+		t.Fatalf("weapon illustration status = %q, want mapped", catalog.Weapons[0].Illustration.Status)
+	}
 	if len(catalog.Armor) != 1 || len(catalog.Items) != 1 || len(catalog.DomainCards) != 1 {
 		t.Fatalf("catalog subsets = %#v", catalog)
+	}
+	if catalog.Armor[0].Illustration.Status != "mapped" {
+		t.Fatalf("armor illustration status = %q, want mapped", catalog.Armor[0].Illustration.Status)
+	}
+	if catalog.Items[0].Illustration.Status != "mapped" {
+		t.Fatalf("item illustration status = %q, want mapped", catalog.Items[0].Illustration.Status)
 	}
 	if catalog.DomainCards[0].Illustration.Status != "mapped" {
 		t.Fatalf("domain card illustration status = %q, want mapped", catalog.DomainCards[0].Illustration.Status)
@@ -298,7 +335,7 @@ func TestCharacterCreationCatalogDefaultsLocaleToEnglishUS(t *testing.T) {
 	t.Parallel()
 
 	contentClient := &fakeDaggerheartContentClient{}
-	gateway := GRPCGateway{DaggerheartClient: contentClient}
+	gateway := GRPCGateway{DaggerheartContent: contentClient, DaggerheartAsset: contentClient}
 
 	if _, err := gateway.CharacterCreationCatalog(context.Background(), language.Und); err != nil {
 		t.Fatalf("CharacterCreationCatalog() error = %v", err)
@@ -329,8 +366,9 @@ func TestCharacterCreationCatalog_ContinuesWhenAssetMapFails(t *testing.T) {
 		assetMapErr: errors.New("asset map unavailable"),
 	}
 	gateway := GRPCGateway{
-		DaggerheartClient: contentClient,
-		AssetBaseURL:      "https://res.cloudinary.com/fracturing-space/image/upload",
+		DaggerheartContent: contentClient,
+		DaggerheartAsset:   contentClient,
+		AssetBaseURL:       "https://res.cloudinary.com/fracturing-space/image/upload",
 	}
 
 	catalog, err := gateway.CharacterCreationCatalog(context.Background(), language.AmericanEnglish)
@@ -575,9 +613,9 @@ type fakeDaggerheartContentClient struct {
 	resp            *daggerheartv1.GetDaggerheartContentCatalogResponse
 	err             error
 	lastReq         *daggerheartv1.GetDaggerheartContentCatalogRequest
-	assetMapResp    *daggerheartv1.GetDaggerheartContentAssetMapResponse
+	assetMapResp    *daggerheartv1.GetDaggerheartAssetMapResponse
 	assetMapErr     error
-	lastAssetMapReq *daggerheartv1.GetDaggerheartContentAssetMapRequest
+	lastAssetMapReq *daggerheartv1.GetDaggerheartAssetMapRequest
 }
 
 func (f *fakeDaggerheartContentClient) GetContentCatalog(_ context.Context, req *daggerheartv1.GetDaggerheartContentCatalogRequest, _ ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error) {
@@ -591,7 +629,7 @@ func (f *fakeDaggerheartContentClient) GetContentCatalog(_ context.Context, req 
 	return &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{}}, nil
 }
 
-func (f *fakeDaggerheartContentClient) GetContentAssetMap(_ context.Context, req *daggerheartv1.GetDaggerheartContentAssetMapRequest, _ ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentAssetMapResponse, error) {
+func (f *fakeDaggerheartContentClient) GetAssetMap(_ context.Context, req *daggerheartv1.GetDaggerheartAssetMapRequest, _ ...grpc.CallOption) (*daggerheartv1.GetDaggerheartAssetMapResponse, error) {
 	f.lastAssetMapReq = req
 	if f.assetMapErr != nil {
 		return nil, f.assetMapErr
@@ -599,7 +637,7 @@ func (f *fakeDaggerheartContentClient) GetContentAssetMap(_ context.Context, req
 	if f.assetMapResp != nil {
 		return f.assetMapResp, nil
 	}
-	return &daggerheartv1.GetDaggerheartContentAssetMapResponse{}, nil
+	return &daggerheartv1.GetDaggerheartAssetMapResponse{}, nil
 }
 
 type fakeCharacterWorkflowClient struct {
@@ -692,8 +730,12 @@ type moduleCharacterClientContract interface {
 }
 
 var _ moduleDaggerheartContentClientContract = (*fakeDaggerheartContentClient)(nil)
+var _ moduleDaggerheartAssetClientContract = (*fakeDaggerheartContentClient)(nil)
 
 type moduleDaggerheartContentClientContract interface {
 	GetContentCatalog(context.Context, *daggerheartv1.GetDaggerheartContentCatalogRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error)
-	GetContentAssetMap(context.Context, *daggerheartv1.GetDaggerheartContentAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentAssetMapResponse, error)
+}
+
+type moduleDaggerheartAssetClientContract interface {
+	GetAssetMap(context.Context, *daggerheartv1.GetDaggerheartAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartAssetMapResponse, error)
 }

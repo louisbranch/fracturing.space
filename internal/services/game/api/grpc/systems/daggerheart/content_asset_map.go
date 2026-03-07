@@ -20,13 +20,13 @@ const (
 	defaultDaggerheartAssetMapLocale        = commonv1.Locale_LOCALE_EN_US
 )
 
-type contentAssetDescriptor struct {
+type daggerheartAssetDescriptor struct {
 	EntityType string
 	EntityID   string
 	AssetType  string
 }
 
-func buildDaggerheartContentAssetMap(ctx context.Context, store storage.DaggerheartContentReadStore, requestedLocale commonv1.Locale) (*pb.DaggerheartContentAssetMap, error) {
+func buildDaggerheartAssetMap(ctx context.Context, store storage.DaggerheartContentReadStore, requestedLocale commonv1.Locale) (*pb.DaggerheartAssetMap, error) {
 	classes, err := store.ListDaggerheartClasses(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("list classes: %w", err)
@@ -55,10 +55,22 @@ func buildDaggerheartContentAssetMap(ctx context.Context, store storage.Daggerhe
 	if err != nil {
 		return nil, fmt.Errorf("list environments: %w", err)
 	}
+	weapons, err := store.ListDaggerheartWeapons(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list weapons: %w", err)
+	}
+	armor, err := store.ListDaggerheartArmor(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list armor: %w", err)
+	}
+	items, err := store.ListDaggerheartItems(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list items: %w", err)
+	}
 
 	resolvedLocale := resolveDaggerheartAssetMapLocale(requestedLocale)
 
-	descriptors := collectDaggerheartContentAssetDescriptors(
+	descriptors := collectDaggerheartAssetDescriptors(
 		classes,
 		subclasses,
 		heritages,
@@ -66,15 +78,18 @@ func buildDaggerheartContentAssetMap(ctx context.Context, store storage.Daggerhe
 		domainCards,
 		adversaries,
 		environments,
+		weapons,
+		armor,
+		items,
 	)
 
 	assetManifest := catalog.DaggerheartAssetsManifest()
-	assets := make([]*pb.DaggerheartContentAssetRef, 0, len(descriptors))
+	assets := make([]*pb.DaggerheartAssetRef, 0, len(descriptors))
 	for _, descriptor := range descriptors {
 		resolved := assetManifest.ResolveEntityAsset(descriptor.EntityType, descriptor.EntityID, descriptor.AssetType)
-		assets = append(assets, &pb.DaggerheartContentAssetRef{
-			Type:       contentAssetTypeToProto(descriptor.AssetType),
-			Status:     contentAssetResolutionStatusToProto(resolved.Status),
+		assets = append(assets, &pb.DaggerheartAssetRef{
+			Type:       assetTypeToProto(descriptor.AssetType),
+			Status:     assetStatusToProto(resolved.Status),
 			EntityType: descriptor.EntityType,
 			EntityId:   descriptor.EntityID,
 			SetId:      strings.TrimSpace(resolved.SetID),
@@ -83,7 +98,7 @@ func buildDaggerheartContentAssetMap(ctx context.Context, store storage.Daggerhe
 		})
 	}
 
-	return &pb.DaggerheartContentAssetMap{
+	return &pb.DaggerheartAssetMap{
 		Id:            fallbackString(strings.TrimSpace(assetManifest.ID), defaultDaggerheartAssetMapID),
 		SystemId:      fallbackString(strings.TrimSpace(assetManifest.SystemID), defaultDaggerheartAssetMapSystemID),
 		SystemVersion: fallbackString(strings.TrimSpace(assetManifest.SystemVersion), defaultDaggerheartAssetMapSystemVersion),
@@ -93,7 +108,7 @@ func buildDaggerheartContentAssetMap(ctx context.Context, store storage.Daggerhe
 	}, nil
 }
 
-func collectDaggerheartContentAssetDescriptors(
+func collectDaggerheartAssetDescriptors(
 	classes []storage.DaggerheartClass,
 	subclasses []storage.DaggerheartSubclass,
 	heritages []storage.DaggerheartHeritage,
@@ -101,8 +116,11 @@ func collectDaggerheartContentAssetDescriptors(
 	domainCards []storage.DaggerheartDomainCard,
 	adversaries []storage.DaggerheartAdversaryEntry,
 	environments []storage.DaggerheartEnvironment,
-) []contentAssetDescriptor {
-	descriptors := make([]contentAssetDescriptor, 0, len(classes)*2+len(subclasses)+len(heritages)+len(domains)*2+len(domainCards)+len(adversaries)+len(environments))
+	weapons []storage.DaggerheartWeapon,
+	armor []storage.DaggerheartArmor,
+	items []storage.DaggerheartItem,
+) []daggerheartAssetDescriptor {
+	descriptors := make([]daggerheartAssetDescriptor, 0, len(classes)*2+len(subclasses)+len(heritages)+len(domains)*2+len(domainCards)+len(adversaries)+len(environments)+len(weapons)+len(armor)+len(items))
 	seen := map[string]struct{}{}
 
 	for _, class := range classes {
@@ -110,15 +128,15 @@ func collectDaggerheartContentAssetDescriptors(
 		if entityID == "" {
 			continue
 		}
-		appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeClass, entityID, catalog.DaggerheartAssetTypeClassIllustration)
-		appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeClass, entityID, catalog.DaggerheartAssetTypeClassIcon)
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeClass, entityID, catalog.DaggerheartAssetTypeClassIllustration)
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeClass, entityID, catalog.DaggerheartAssetTypeClassIcon)
 	}
 	for _, subclass := range subclasses {
 		entityID := strings.TrimSpace(subclass.ID)
 		if entityID == "" {
 			continue
 		}
-		appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeSubclass, entityID, catalog.DaggerheartAssetTypeSubclassIllustration)
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeSubclass, entityID, catalog.DaggerheartAssetTypeSubclassIllustration)
 	}
 	for _, heritage := range heritages {
 		entityID := strings.TrimSpace(heritage.ID)
@@ -127,9 +145,9 @@ func collectDaggerheartContentAssetDescriptors(
 		}
 		switch strings.ToLower(strings.TrimSpace(heritage.Kind)) {
 		case catalog.DaggerheartEntityTypeAncestry:
-			appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeAncestry, entityID, catalog.DaggerheartAssetTypeAncestryIllustration)
+			appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeAncestry, entityID, catalog.DaggerheartAssetTypeAncestryIllustration)
 		case catalog.DaggerheartEntityTypeCommunity:
-			appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeCommunity, entityID, catalog.DaggerheartAssetTypeCommunityIllustration)
+			appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeCommunity, entityID, catalog.DaggerheartAssetTypeCommunityIllustration)
 		}
 	}
 	for _, domain := range domains {
@@ -137,29 +155,50 @@ func collectDaggerheartContentAssetDescriptors(
 		if entityID == "" {
 			continue
 		}
-		appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeDomain, entityID, catalog.DaggerheartAssetTypeDomainIllustration)
-		appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeDomain, entityID, catalog.DaggerheartAssetTypeDomainIcon)
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeDomain, entityID, catalog.DaggerheartAssetTypeDomainIllustration)
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeDomain, entityID, catalog.DaggerheartAssetTypeDomainIcon)
 	}
 	for _, domainCard := range domainCards {
 		entityID := strings.TrimSpace(domainCard.ID)
 		if entityID == "" {
 			continue
 		}
-		appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeDomainCard, entityID, catalog.DaggerheartAssetTypeDomainCardIllustration)
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeDomainCard, entityID, catalog.DaggerheartAssetTypeDomainCardIllustration)
 	}
 	for _, adversary := range adversaries {
 		entityID := strings.TrimSpace(adversary.ID)
 		if entityID == "" {
 			continue
 		}
-		appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeAdversary, entityID, catalog.DaggerheartAssetTypeAdversaryIllustration)
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeAdversary, entityID, catalog.DaggerheartAssetTypeAdversaryIllustration)
 	}
 	for _, environment := range environments {
 		entityID := strings.TrimSpace(environment.ID)
 		if entityID == "" {
 			continue
 		}
-		appendContentAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeEnvironment, entityID, catalog.DaggerheartAssetTypeEnvironmentIllustration)
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeEnvironment, entityID, catalog.DaggerheartAssetTypeEnvironmentIllustration)
+	}
+	for _, weapon := range weapons {
+		entityID := strings.TrimSpace(weapon.ID)
+		if entityID == "" {
+			continue
+		}
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeWeapon, entityID, catalog.DaggerheartAssetTypeWeaponIllustration)
+	}
+	for _, item := range armor {
+		entityID := strings.TrimSpace(item.ID)
+		if entityID == "" {
+			continue
+		}
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeArmor, entityID, catalog.DaggerheartAssetTypeArmorIllustration)
+	}
+	for _, item := range items {
+		entityID := strings.TrimSpace(item.ID)
+		if entityID == "" {
+			continue
+		}
+		appendAssetDescriptor(&descriptors, seen, catalog.DaggerheartEntityTypeItem, entityID, catalog.DaggerheartAssetTypeItemIllustration)
 	}
 
 	sort.SliceStable(descriptors, func(i, j int) bool {
@@ -176,7 +215,7 @@ func collectDaggerheartContentAssetDescriptors(
 	return descriptors
 }
 
-func appendContentAssetDescriptor(out *[]contentAssetDescriptor, seen map[string]struct{}, entityType, entityID, assetType string) {
+func appendAssetDescriptor(out *[]daggerheartAssetDescriptor, seen map[string]struct{}, entityType, entityID, assetType string) {
 	normalizedEntityType := strings.ToLower(strings.TrimSpace(entityType))
 	normalizedEntityID := strings.TrimSpace(entityID)
 	normalizedAssetType := strings.ToLower(strings.TrimSpace(assetType))
@@ -188,50 +227,56 @@ func appendContentAssetDescriptor(out *[]contentAssetDescriptor, seen map[string
 		return
 	}
 	seen[key] = struct{}{}
-	*out = append(*out, contentAssetDescriptor{
+	*out = append(*out, daggerheartAssetDescriptor{
 		EntityType: normalizedEntityType,
 		EntityID:   normalizedEntityID,
 		AssetType:  normalizedAssetType,
 	})
 }
 
-func contentAssetTypeToProto(assetType string) pb.DaggerheartContentAssetType {
+func assetTypeToProto(assetType string) pb.DaggerheartAssetType {
 	switch strings.ToLower(strings.TrimSpace(assetType)) {
 	case catalog.DaggerheartAssetTypeClassIllustration:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_CLASS_ILLUSTRATION
 	case catalog.DaggerheartAssetTypeClassIcon:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ICON
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_CLASS_ICON
 	case catalog.DaggerheartAssetTypeSubclassIllustration:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_SUBCLASS_ILLUSTRATION
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_SUBCLASS_ILLUSTRATION
 	case catalog.DaggerheartAssetTypeAncestryIllustration:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ANCESTRY_ILLUSTRATION
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ANCESTRY_ILLUSTRATION
 	case catalog.DaggerheartAssetTypeCommunityIllustration:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_COMMUNITY_ILLUSTRATION
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_COMMUNITY_ILLUSTRATION
 	case catalog.DaggerheartAssetTypeDomainIllustration:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ILLUSTRATION
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_ILLUSTRATION
 	case catalog.DaggerheartAssetTypeDomainIcon:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ICON
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_ICON
 	case catalog.DaggerheartAssetTypeDomainCardIllustration:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION
 	case catalog.DaggerheartAssetTypeAdversaryIllustration:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ADVERSARY_ILLUSTRATION
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ADVERSARY_ILLUSTRATION
 	case catalog.DaggerheartAssetTypeEnvironmentIllustration:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ENVIRONMENT_ILLUSTRATION
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ENVIRONMENT_ILLUSTRATION
+	case catalog.DaggerheartAssetTypeWeaponIllustration:
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_WEAPON_ILLUSTRATION
+	case catalog.DaggerheartAssetTypeArmorIllustration:
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ARMOR_ILLUSTRATION
+	case catalog.DaggerheartAssetTypeItemIllustration:
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ITEM_ILLUSTRATION
 	default:
-		return pb.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_UNSPECIFIED
+		return pb.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_UNSPECIFIED
 	}
 }
 
-func contentAssetResolutionStatusToProto(status catalog.DaggerheartAssetResolutionStatus) pb.DaggerheartContentAssetResolutionStatus {
+func assetStatusToProto(status catalog.DaggerheartAssetResolutionStatus) pb.DaggerheartAssetStatus {
 	switch status {
 	case catalog.DaggerheartAssetResolutionStatusMapped:
-		return pb.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED
+		return pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_MAPPED
 	case catalog.DaggerheartAssetResolutionStatusSetDefault:
-		return pb.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_SET_DEFAULT
+		return pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_SET_DEFAULT
 	case catalog.DaggerheartAssetResolutionStatusUnavailable:
-		return pb.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_UNAVAILABLE
+		return pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_UNAVAILABLE
 	default:
-		return pb.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_UNSPECIFIED
+		return pb.DaggerheartAssetStatus_DAGGERHEART_ASSET_STATUS_UNSPECIFIED
 	}
 }
 

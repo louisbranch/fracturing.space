@@ -243,7 +243,7 @@ type DiscoveryEntry struct {
 	SourceId string `protobuf:"bytes,3,opt,name=source_id,json=sourceId,proto3" json:"source_id,omitempty"`
 	// Public card title.
 	Title string `protobuf:"bytes,4,opt,name=title,proto3" json:"title,omitempty"`
-	// Public description shown in discovery/listing/detail views.
+	// Public description shown in discovery detail views.
 	Description string `protobuf:"bytes,5,opt,name=description,proto3" json:"description,omitempty"`
 	// Suggested minimum table size.
 	RecommendedParticipantsMin int32 `protobuf:"varint,6,opt,name=recommended_participants_min,json=recommendedParticipantsMin,proto3" json:"recommended_participants_min,omitempty"`

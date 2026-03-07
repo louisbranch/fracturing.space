@@ -946,30 +946,36 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 					<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.primary_weapon") }</span></label>
 					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 						for _, weapon := range view.Creation.PrimaryWeapons {
-							<label class={ "card bg-base-100 border border-base-300 shadow-sm cursor-pointer hover:shadow-md transition-shadow " + creationCardSelectedClass(weapon.ID, view.Creation.PrimaryWeaponID) } data-equip-card data-equip-card-name={ weapon.Name }>
-								<div class="card-body gap-2 p-4">
-									<div class="flex items-start gap-3">
-										<input type="radio" name="weapon_primary_id" value={ weapon.ID } class="radio radio-primary mt-1" required checked?={ campaignCreationOptionSelected(weapon.ID, view.Creation.PrimaryWeaponID) }/>
-										<div class="flex-1">
-											<h4 class="font-semibold">{ weapon.Name }</h4>
-											<div class="flex flex-wrap gap-2 mt-1 text-xs">
-												if weapon.Damage != "" {
-													<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
-												}
-												if weapon.Range != "" {
-													<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
-												}
-												if weapon.Trait != "" {
-													<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
-												}
-											</div>
-											if weapon.Feature != "" {
-												<p class="text-xs opacity-60 mt-1">{ weapon.Feature }</p>
-											}
-										</div>
+							<div data-equip-card data-equip-card-name={ weapon.Name }>
+								@creationSelectableOptionCard(
+									weapon.ID,
+									weapon.Name,
+									weapon.ImageURL,
+									"weapon_primary_id",
+									"radio",
+									campaignCreationOptionSelected(weapon.ID, view.Creation.PrimaryWeaponID),
+									true,
+									false,
+									strings.TrimSpace(weapon.ImageURL) != "",
+									"equipment-primary-weapon",
+									nil,
+								) {
+									<div class="flex flex-wrap gap-2 text-xs">
+										if weapon.Damage != "" {
+											<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
+										}
+										if weapon.Range != "" {
+											<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
+										}
+										if weapon.Trait != "" {
+											<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
+										}
 									</div>
-								</div>
-							</label>
+									if weapon.Feature != "" {
+										<p class="text-xs opacity-60 mt-1">{ weapon.Feature }</p>
+									}
+								}
+							</div>
 						}
 					</div>
 				</div>
@@ -986,41 +992,52 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 				<div class="divider">{ T(loc, "game.character_creation.field.secondary_weapon") }</div>
 				<div class="form-control">
 					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-						<label class={ "card bg-base-100 border border-base-300 shadow-sm cursor-pointer hover:shadow-md transition-shadow " + creationCardSelectedClass("", view.Creation.SecondaryWeaponID) } data-equip-card data-equip-card-name={ T(loc, "game.character_creation.value.none") }>
-							<div class="card-body gap-2 p-4">
-								<div class="flex items-start gap-3">
-									<input type="radio" name="weapon_secondary_id" value="" class="radio radio-primary mt-1" checked?={ strings.TrimSpace(view.Creation.SecondaryWeaponID) == "" }/>
-									<div class="flex-1">
-										<h4 class="font-semibold">{ T(loc, "game.character_creation.value.none") }</h4>
-									</div>
-								</div>
-							</div>
-						</label>
+						<div data-equip-card data-equip-card-name={ T(loc, "game.character_creation.value.none") }>
+							@creationSelectableOptionCard(
+								"",
+								T(loc, "game.character_creation.value.none"),
+								"",
+								"weapon_secondary_id",
+								"radio",
+								strings.TrimSpace(view.Creation.SecondaryWeaponID) == "",
+								false,
+								false,
+								false,
+								"equipment-secondary-weapon",
+								nil,
+							) {}
+						</div>
 						for _, weapon := range view.Creation.SecondaryWeapons {
-							<label class={ "card bg-base-100 border border-base-300 shadow-sm cursor-pointer hover:shadow-md transition-shadow " + creationCardSelectedClass(weapon.ID, view.Creation.SecondaryWeaponID) } data-equip-card data-equip-card-name={ weapon.Name }>
-								<div class="card-body gap-2 p-4">
-									<div class="flex items-start gap-3">
-										<input type="radio" name="weapon_secondary_id" value={ weapon.ID } class="radio radio-primary mt-1" checked?={ campaignCreationOptionSelected(weapon.ID, view.Creation.SecondaryWeaponID) }/>
-										<div class="flex-1">
-											<h4 class="font-semibold">{ weapon.Name }</h4>
-											<div class="flex flex-wrap gap-2 mt-1 text-xs">
-												if weapon.Damage != "" {
-													<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
-												}
-												if weapon.Range != "" {
-													<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
-												}
-												if weapon.Trait != "" {
-													<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
-												}
-											</div>
-											if weapon.Feature != "" {
-												<p class="text-xs opacity-60 mt-1">{ weapon.Feature }</p>
-											}
-										</div>
+							<div data-equip-card data-equip-card-name={ weapon.Name }>
+								@creationSelectableOptionCard(
+									weapon.ID,
+									weapon.Name,
+									weapon.ImageURL,
+									"weapon_secondary_id",
+									"radio",
+									campaignCreationOptionSelected(weapon.ID, view.Creation.SecondaryWeaponID),
+									false,
+									false,
+									strings.TrimSpace(weapon.ImageURL) != "",
+									"equipment-secondary-weapon",
+									nil,
+								) {
+									<div class="flex flex-wrap gap-2 text-xs">
+										if weapon.Damage != "" {
+											<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
+										}
+										if weapon.Range != "" {
+											<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
+										}
+										if weapon.Trait != "" {
+											<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
+										}
 									</div>
-								</div>
-							</label>
+									if weapon.Feature != "" {
+										<p class="text-xs opacity-60 mt-1">{ weapon.Feature }</p>
+									}
+								}
+							</div>
 						}
 					</div>
 				</div>
@@ -1038,25 +1055,31 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 				<div class="form-control">
 					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 						for _, armor := range view.Creation.Armor {
-							<label class={ "card bg-base-100 border border-base-300 shadow-sm cursor-pointer hover:shadow-md transition-shadow " + creationCardSelectedClass(armor.ID, view.Creation.ArmorID) } data-equip-card data-equip-card-name={ armor.Name }>
-								<div class="card-body gap-2 p-4">
-									<div class="flex items-start gap-3">
-										<input type="radio" name="armor_id" value={ armor.ID } class="radio radio-primary mt-1" required checked?={ campaignCreationOptionSelected(armor.ID, view.Creation.ArmorID) }/>
-										<div class="flex-1">
-											<h4 class="font-semibold">{ armor.Name }</h4>
-											<div class="flex flex-wrap gap-2 mt-1 text-xs">
-												<span class="badge badge-outline badge-sm">{ creationFormatArmorScore(armor.ArmorScore) }</span>
-												if armor.BaseThresholds != "" {
-													<span class="badge badge-outline badge-sm">{ armor.BaseThresholds }</span>
-												}
-											</div>
-											if armor.Feature != "" {
-												<p class="text-xs opacity-60 mt-1">{ armor.Feature }</p>
-											}
-										</div>
+							<div data-equip-card data-equip-card-name={ armor.Name }>
+								@creationSelectableOptionCard(
+									armor.ID,
+									armor.Name,
+									armor.ImageURL,
+									"armor_id",
+									"radio",
+									campaignCreationOptionSelected(armor.ID, view.Creation.ArmorID),
+									true,
+									false,
+									strings.TrimSpace(armor.ImageURL) != "",
+									"equipment-armor",
+									nil,
+								) {
+									<div class="flex flex-wrap gap-2 text-xs">
+										<span class="badge badge-outline badge-sm">{ creationFormatArmorScore(armor.ArmorScore) }</span>
+										if armor.BaseThresholds != "" {
+											<span class="badge badge-outline badge-sm">{ armor.BaseThresholds }</span>
+										}
 									</div>
-								</div>
-							</label>
+									if armor.Feature != "" {
+										<p class="text-xs opacity-60 mt-1">{ armor.Feature }</p>
+									}
+								}
+							</div>
 						}
 					</div>
 				</div>
@@ -1074,19 +1097,25 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 				<div class="form-control">
 					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 						for _, item := range view.Creation.PotionItems {
-							<label class={ "card bg-base-100 border border-base-300 shadow-sm cursor-pointer hover:shadow-md transition-shadow " + creationCardSelectedClass(item.ID, view.Creation.PotionItemID) } data-equip-card data-equip-card-name={ item.Name }>
-								<div class="card-body gap-2 p-4">
-									<div class="flex items-start gap-3">
-										<input type="radio" name="potion_item_id" value={ item.ID } class="radio radio-primary mt-1" required checked?={ campaignCreationOptionSelected(item.ID, view.Creation.PotionItemID) }/>
-										<div class="flex-1">
-											<h4 class="font-semibold">{ item.Name }</h4>
-											if item.Description != "" {
-												<p class="text-xs opacity-70 mt-1">{ item.Description }</p>
-											}
-										</div>
-									</div>
-								</div>
-							</label>
+							<div data-equip-card data-equip-card-name={ item.Name }>
+								@creationSelectableOptionCard(
+									item.ID,
+									item.Name,
+									item.ImageURL,
+									"potion_item_id",
+									"radio",
+									campaignCreationOptionSelected(item.ID, view.Creation.PotionItemID),
+									true,
+									false,
+									strings.TrimSpace(item.ImageURL) != "",
+									"equipment-potion",
+									nil,
+								) {
+									if item.Description != "" {
+										<p class="text-xs opacity-70">{ item.Description }</p>
+									}
+								}
+							</div>
 						}
 					</div>
 				</div>
