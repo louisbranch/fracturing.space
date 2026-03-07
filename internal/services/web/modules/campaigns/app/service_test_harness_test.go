@@ -42,6 +42,8 @@ type campaignGatewayStub struct {
 	campaignCharactersErr             error
 	campaignSessions                  []CampaignSession
 	campaignSessionsErr               error
+	campaignSessionReadiness          CampaignSessionReadiness
+	campaignSessionReadinessErr       error
 	campaignInvites                   []CampaignInvite
 	campaignInvitesErr                error
 	createCampaignResult              CreateCampaignResult
@@ -142,6 +144,16 @@ func (f *campaignGatewayStub) CampaignSessions(context.Context, string) ([]Campa
 		return nil, f.campaignSessionsErr
 	}
 	return f.campaignSessions, nil
+}
+
+func (f *campaignGatewayStub) CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error) {
+	if f.campaignSessionReadinessErr != nil {
+		return CampaignSessionReadiness{}, f.campaignSessionReadinessErr
+	}
+	if !f.campaignSessionReadiness.Ready && len(f.campaignSessionReadiness.Blockers) == 0 {
+		return CampaignSessionReadiness{Ready: true, Blockers: []CampaignSessionReadinessBlocker{}}, nil
+	}
+	return f.campaignSessionReadiness, nil
 }
 
 func (f *campaignGatewayStub) CampaignInvites(context.Context, string) ([]CampaignInvite, error) {

@@ -44,11 +44,15 @@ Use this skill when the user asks to:
    - Use relevant skills if changes touch those domains (`schema`, `error-handling`, `go-style`, `mcp`, `web-server`).
 
 6. **Verify**
-   - Run `make test` and `make integration` after code changes (per repo policy).
+   - Run `make ci-go-tests-local` before pushing PR updates.
+   - Treat `make ci-go-tests-local` as the gating local parity check for the CI `Go Tests` workflow.
+   - Run `make test` and `make integration` after code changes (per repo policy), or rely on `make ci-go-tests-local` when it already includes these checks.
    - Note failures and propose fixes before proceeding.
 
 7. **Update PR and enable auto-merge**
-   - Post a short summary comment (what changed, tests run).
+   - Do not post PR comments or review replies by default.
+   - Post a PR/review comment only when explicitly requested by the user, or when a reviewer explicitly asked for a follow-up response.
+   - Keep any required comment concise (max 3 bullets). Never paste line-by-line command output, full test logs, or long mechanical package lists.
    - Enable auto-merge squash when checks pass.
 
 ## GitHub CLI Commands
@@ -77,5 +81,5 @@ After changes, report:
 
 - Files updated.
 - Tests run and results.
-- PR update comment contents.
+- Whether any PR/review comment was posted (and why). Include comment text only when explicitly requested.
 - Auto-merge status (enabled or blocked by checks).

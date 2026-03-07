@@ -16,6 +16,7 @@ type campaignReadGateway interface {
 	CampaignParticipant(context.Context, string, string) (CampaignParticipant, error)
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
+	CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
 	CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error)
 	CharacterCreationCatalog(context.Context, language.Tag) (CampaignCharacterCreationCatalog, error)
@@ -52,6 +53,7 @@ type Service interface {
 	CampaignParticipantEditor(context.Context, string, string) (CampaignParticipantEditor, error)
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
+	CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
 	RequireManageCampaign(context.Context, string) error
 	UpdateCampaign(context.Context, string, UpdateCampaignInput) error

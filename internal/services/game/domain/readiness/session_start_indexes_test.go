@@ -22,6 +22,12 @@ func TestActiveParticipantsByID_IsDeterministicAndFiltersInactive(t *testing.T) 
 				Joined:        true,
 				Role:          string(participant.RoleGM),
 			},
+			"gm-ai": {
+				ParticipantID: "gm-ai",
+				Joined:        true,
+				Role:          string(participant.RoleGM),
+				Controller:    string(participant.ControllerAI),
+			},
 			"player-a": {
 				ParticipantID: "player-a",
 				Joined:        true,
@@ -41,11 +47,14 @@ func TestActiveParticipantsByID_IsDeterministicAndFiltersInactive(t *testing.T) 
 		},
 	})
 
-	if len(indexed.byID) != 4 {
-		t.Fatalf("active participants byID len = %d, want 4", len(indexed.byID))
+	if len(indexed.byID) != 5 {
+		t.Fatalf("active participants byID len = %d, want 5", len(indexed.byID))
 	}
-	if strings.Join(indexed.gmIDs, ",") != "gm-a" {
-		t.Fatalf("gm ids = %v, want [gm-a]", indexed.gmIDs)
+	if strings.Join(indexed.gmIDs, ",") != "gm-a,gm-ai" {
+		t.Fatalf("gm ids = %v, want [gm-a gm-ai]", indexed.gmIDs)
+	}
+	if strings.Join(indexed.aiGMIDs, ",") != "gm-ai" {
+		t.Fatalf("ai gm ids = %v, want [gm-ai]", indexed.aiGMIDs)
 	}
 	if strings.Join(indexed.playerIDs, ",") != "player-a,player-z" {
 		t.Fatalf("player ids = %v, want [player-a player-z]", indexed.playerIDs)

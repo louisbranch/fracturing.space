@@ -9,6 +9,7 @@ import (
 	"time"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"golang.org/x/text/language"
 )
 
 func TestListCampaignsSortsNewestFirst(t *testing.T) {
@@ -515,5 +516,105 @@ func TestCampaignCharactersReturnsGatewayError(t *testing.T) {
 	}
 	if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
 		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+}
+
+func TestCampaignSessionReadinessNormalizesBlockers(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		campaignSessionReadiness: CampaignSessionReadiness{
+			Ready: false,
+			Blockers: []CampaignSessionReadinessBlocker{
+				{
+					Code:    " SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED ",
+					Message: " ",
+					Metadata: map[string]string{
+						" participant_id ": " player-1 ",
+						"":                 "ignored",
+					},
+				},
+			},
+		},
+	})
+
+	readiness, err := svc.campaignSessionReadiness(context.Background(), "c-1", language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("campaignSessionReadiness() error = %v", err)
+	}
+	if readiness.Ready {
+		t.Fatalf("readiness.Ready = %v, want false", readiness.Ready)
+	}
+	if len(readiness.Blockers) != 1 {
+		t.Fatalf("len(readiness.Blockers) = %d, want 1", len(readiness.Blockers))
+	}
+	if got := readiness.Blockers[0].Code; got != "SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED" {
+		t.Fatalf("blocker code = %q, want canonical code", got)
+	}
+	if got := readiness.Blockers[0].Message; got != "SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED" {
+		t.Fatalf("blocker message fallback = %q, want code fallback", got)
+	}
+	if got := readiness.Blockers[0].Metadata["participant_id"]; got != "player-1" {
+		t.Fatalf("blocker metadata participant_id = %q, want %q", got, "player-1")
+	}
+	if _, ok := readiness.Blockers[0].Metadata[""]; ok {
+		t.Fatalf("expected empty metadata key to be filtered")
+	}
+}
+
+func TestCampaignSessionReadinessClearsBlockersWhenReady(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		campaignSessionReadiness: CampaignSessionReadiness{
+			Ready: true,
+			Blockers: []CampaignSessionReadinessBlocker{
+				{Code: "SESSION_READINESS_PLAYER_REQUIRED", Message: "stale"},
+			},
+		},
+	})
+
+	readiness, err := svc.campaignSessionReadiness(context.Background(), "c-1", language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("campaignSessionReadiness() error = %v", err)
+	}
+	if !readiness.Ready {
+		t.Fatalf("readiness.Ready = %v, want true", readiness.Ready)
+	}
+	if len(readiness.Blockers) != 0 {
+		t.Fatalf("len(readiness.Blockers) = %d, want 0 when ready", len(readiness.Blockers))
+	}
+}
+
+func TestCampaignSessionReadinessReturnsGatewayError(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		campaignSessionReadinessErr: apperrors.E(apperrors.KindUnavailable, "readiness unavailable"),
+	})
+	_, err := svc.campaignSessionReadiness(context.Background(), "c-1", language.AmericanEnglish)
+	if err == nil {
+		t.Fatalf("expected campaignSessionReadiness() error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+}
+
+func TestCampaignSessionReadinessEmptyCampaignIDReturnsReady(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		campaignSessionReadinessErr: apperrors.E(apperrors.KindUnavailable, "readiness unavailable"),
+	})
+	readiness, err := svc.campaignSessionReadiness(context.Background(), "   ", language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("campaignSessionReadiness() error = %v", err)
+	}
+	if !readiness.Ready {
+		t.Fatalf("readiness.Ready = %v, want true", readiness.Ready)
+	}
+	if len(readiness.Blockers) != 0 {
+		t.Fatalf("len(readiness.Blockers) = %d, want 0", len(readiness.Blockers))
 	}
 }

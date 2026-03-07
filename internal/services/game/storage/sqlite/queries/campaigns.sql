@@ -7,6 +7,14 @@ SELECT
 		WHEN c.status NOT IN ('DRAFT', 'ACTIVE') THEN 0
 		WHEN c.gm_mode IN ('AI', 'HYBRID')
 				AND TRIM(COALESCE(c.ai_agent_id, '')) = '' THEN 0
+		WHEN c.gm_mode IN ('AI', 'HYBRID')
+				AND NOT EXISTS (
+					SELECT 1
+					FROM participants p
+					WHERE p.campaign_id = c.id
+						AND p.role = 'GM'
+						AND p.controller = 'AI'
+				) THEN 0
 		WHEN EXISTS (
 			SELECT 1
 			FROM sessions s
@@ -107,6 +115,14 @@ SELECT
 		WHEN c.status NOT IN ('DRAFT', 'ACTIVE') THEN 0
 		WHEN c.gm_mode IN ('AI', 'HYBRID')
 				AND TRIM(COALESCE(c.ai_agent_id, '')) = '' THEN 0
+		WHEN c.gm_mode IN ('AI', 'HYBRID')
+				AND NOT EXISTS (
+					SELECT 1
+					FROM participants p
+					WHERE p.campaign_id = c.id
+						AND p.role = 'GM'
+						AND p.controller = 'AI'
+				) THEN 0
 		WHEN EXISTS (
 			SELECT 1
 			FROM sessions s
@@ -185,6 +201,14 @@ SELECT
 		WHEN c.status NOT IN ('DRAFT', 'ACTIVE') THEN 0
 		WHEN c.gm_mode IN ('AI', 'HYBRID')
 				AND TRIM(COALESCE(c.ai_agent_id, '')) = '' THEN 0
+		WHEN c.gm_mode IN ('AI', 'HYBRID')
+				AND NOT EXISTS (
+					SELECT 1
+					FROM participants p
+					WHERE p.campaign_id = c.id
+						AND p.role = 'GM'
+						AND p.controller = 'AI'
+				) THEN 0
 		WHEN EXISTS (
 			SELECT 1
 			FROM sessions s

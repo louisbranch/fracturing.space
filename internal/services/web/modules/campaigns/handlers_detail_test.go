@@ -103,6 +103,46 @@ func TestMountCampaignSessionsRouteRendersSessionCards(t *testing.T) {
 	}
 }
 
+func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
+	t.Parallel()
+
+	m := NewStableWithGateway(fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		sessionReadiness: CampaignSessionReadiness{
+			Ready: false,
+			Blockers: []CampaignSessionReadinessBlocker{
+				{
+					Code:    "SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED",
+					Message: "Campaign readiness requires at least one AI-controlled GM participant for AI GM mode",
+				},
+			},
+		},
+	}, modulehandler.NewTestBase(), "", nil)
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignSessions("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-session-readiness-blocked="true"`,
+		`data-campaign-session-readiness-blockers="true"`,
+		`data-campaign-session-readiness-blocker-code="SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED"`,
+		`Campaign readiness requires at least one AI-controlled GM participant for AI GM mode`,
+		`data-campaign-session-start-disabled="true"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing readiness marker %q: %q", marker, body)
+		}
+	}
+}
+
 func TestMountCampaignSessionDetailRouteRendersSelectedSession(t *testing.T) {
 	t.Parallel()
 

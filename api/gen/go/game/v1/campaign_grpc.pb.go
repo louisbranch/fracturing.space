@@ -20,16 +20,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	CampaignService_CreateCampaign_FullMethodName         = "/game.v1.CampaignService/CreateCampaign"
-	CampaignService_ListCampaigns_FullMethodName          = "/game.v1.CampaignService/ListCampaigns"
-	CampaignService_GetCampaign_FullMethodName            = "/game.v1.CampaignService/GetCampaign"
-	CampaignService_UpdateCampaign_FullMethodName         = "/game.v1.CampaignService/UpdateCampaign"
-	CampaignService_EndCampaign_FullMethodName            = "/game.v1.CampaignService/EndCampaign"
-	CampaignService_ArchiveCampaign_FullMethodName        = "/game.v1.CampaignService/ArchiveCampaign"
-	CampaignService_RestoreCampaign_FullMethodName        = "/game.v1.CampaignService/RestoreCampaign"
-	CampaignService_SetCampaignCover_FullMethodName       = "/game.v1.CampaignService/SetCampaignCover"
-	CampaignService_SetCampaignAIBinding_FullMethodName   = "/game.v1.CampaignService/SetCampaignAIBinding"
-	CampaignService_ClearCampaignAIBinding_FullMethodName = "/game.v1.CampaignService/ClearCampaignAIBinding"
+	CampaignService_CreateCampaign_FullMethodName              = "/game.v1.CampaignService/CreateCampaign"
+	CampaignService_ListCampaigns_FullMethodName               = "/game.v1.CampaignService/ListCampaigns"
+	CampaignService_GetCampaign_FullMethodName                 = "/game.v1.CampaignService/GetCampaign"
+	CampaignService_GetCampaignSessionReadiness_FullMethodName = "/game.v1.CampaignService/GetCampaignSessionReadiness"
+	CampaignService_UpdateCampaign_FullMethodName              = "/game.v1.CampaignService/UpdateCampaign"
+	CampaignService_EndCampaign_FullMethodName                 = "/game.v1.CampaignService/EndCampaign"
+	CampaignService_ArchiveCampaign_FullMethodName             = "/game.v1.CampaignService/ArchiveCampaign"
+	CampaignService_RestoreCampaign_FullMethodName             = "/game.v1.CampaignService/RestoreCampaign"
+	CampaignService_SetCampaignCover_FullMethodName            = "/game.v1.CampaignService/SetCampaignCover"
+	CampaignService_SetCampaignAIBinding_FullMethodName        = "/game.v1.CampaignService/SetCampaignAIBinding"
+	CampaignService_ClearCampaignAIBinding_FullMethodName      = "/game.v1.CampaignService/ClearCampaignAIBinding"
 )
 
 // CampaignServiceClient is the client API for CampaignService service.
@@ -44,6 +45,8 @@ type CampaignServiceClient interface {
 	ListCampaigns(ctx context.Context, in *ListCampaignsRequest, opts ...grpc.CallOption) (*ListCampaignsResponse, error)
 	// Get a campaign metadata record by ID.
 	GetCampaign(ctx context.Context, in *GetCampaignRequest, opts ...grpc.CallOption) (*GetCampaignResponse, error)
+	// Get detailed readiness blockers for session start.
+	GetCampaignSessionReadiness(ctx context.Context, in *GetCampaignSessionReadinessRequest, opts ...grpc.CallOption) (*GetCampaignSessionReadinessResponse, error)
 	// Update mutable campaign metadata fields.
 	UpdateCampaign(ctx context.Context, in *UpdateCampaignRequest, opts ...grpc.CallOption) (*UpdateCampaignResponse, error)
 	// End a campaign.
@@ -92,6 +95,16 @@ func (c *campaignServiceClient) GetCampaign(ctx context.Context, in *GetCampaign
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetCampaignResponse)
 	err := c.cc.Invoke(ctx, CampaignService_GetCampaign_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignServiceClient) GetCampaignSessionReadiness(ctx context.Context, in *GetCampaignSessionReadinessRequest, opts ...grpc.CallOption) (*GetCampaignSessionReadinessResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCampaignSessionReadinessResponse)
+	err := c.cc.Invoke(ctx, CampaignService_GetCampaignSessionReadiness_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +193,8 @@ type CampaignServiceServer interface {
 	ListCampaigns(context.Context, *ListCampaignsRequest) (*ListCampaignsResponse, error)
 	// Get a campaign metadata record by ID.
 	GetCampaign(context.Context, *GetCampaignRequest) (*GetCampaignResponse, error)
+	// Get detailed readiness blockers for session start.
+	GetCampaignSessionReadiness(context.Context, *GetCampaignSessionReadinessRequest) (*GetCampaignSessionReadinessResponse, error)
 	// Update mutable campaign metadata fields.
 	UpdateCampaign(context.Context, *UpdateCampaignRequest) (*UpdateCampaignResponse, error)
 	// End a campaign.
@@ -212,6 +227,9 @@ func (UnimplementedCampaignServiceServer) ListCampaigns(context.Context, *ListCa
 }
 func (UnimplementedCampaignServiceServer) GetCampaign(context.Context, *GetCampaignRequest) (*GetCampaignResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCampaign not implemented")
+}
+func (UnimplementedCampaignServiceServer) GetCampaignSessionReadiness(context.Context, *GetCampaignSessionReadinessRequest) (*GetCampaignSessionReadinessResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCampaignSessionReadiness not implemented")
 }
 func (UnimplementedCampaignServiceServer) UpdateCampaign(context.Context, *UpdateCampaignRequest) (*UpdateCampaignResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateCampaign not implemented")
@@ -305,6 +323,24 @@ func _CampaignService_GetCampaign_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CampaignServiceServer).GetCampaign(ctx, req.(*GetCampaignRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignService_GetCampaignSessionReadiness_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCampaignSessionReadinessRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignServiceServer).GetCampaignSessionReadiness(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignService_GetCampaignSessionReadiness_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignServiceServer).GetCampaignSessionReadiness(ctx, req.(*GetCampaignSessionReadinessRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -453,6 +489,10 @@ var CampaignService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetCampaign",
 			Handler:    _CampaignService_GetCampaign_Handler,
+		},
+		{
+			MethodName: "GetCampaignSessionReadiness",
+			Handler:    _CampaignService_GetCampaignSessionReadiness_Handler,
 		},
 		{
 			MethodName: "UpdateCampaign",

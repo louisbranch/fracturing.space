@@ -146,6 +146,10 @@ func (*fakeCampaignClient) GetCampaignAIBindingUsage(context.Context, *statev1.G
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (*fakeCampaignClient) GetCampaignSessionReadiness(context.Context, *statev1.GetCampaignSessionReadinessRequest, ...grpc.CallOption) (*statev1.GetCampaignSessionReadinessResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 func (f *fakeWebSessionAuthClient) GetWebSession(_ context.Context, req *authv1.GetWebSessionRequest, _ ...grpc.CallOption) (*authv1.GetWebSessionResponse, error) {
 	if f.err != nil {
 		return nil, f.err

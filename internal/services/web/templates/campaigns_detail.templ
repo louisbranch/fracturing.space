@@ -269,6 +269,18 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 		} else if view.Marker == "campaign-sessions" {
 			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-session-start-entry="true">
 				<div class="card-body">
+					if !campaignSessionStartReady(view) {
+						<div class="alert alert-warning mb-3" data-campaign-session-readiness-blocked="true">
+							<div class="space-y-2">
+								<p class="font-semibold">{ T(loc, "game.sessions.readiness_heading") }</p>
+								<ul class="list-disc list-inside text-sm space-y-1" data-campaign-session-readiness-blockers="true">
+									for _, blocker := range view.SessionReadiness.Blockers {
+										<li data-campaign-session-readiness-blocker-code={ blocker.Code }>{ blocker.Message }</li>
+									}
+								</ul>
+							</div>
+						</div>
+					}
 					<form method="post" action={ routepath.AppCampaignSessionStart(view.CampaignID) } class="flex flex-col gap-3 md:flex-row md:items-end" data-campaign-session-start-form="true">
 						<div class="form-control w-full md:flex-1">
 							<label class="label">
@@ -277,7 +289,7 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 							<input type="text" name="name" placeholder={ T(loc, "game.sessions.placeholder_name") } class="input input-bordered w-full"/>
 						</div>
 						<div class="card-actions justify-end md:justify-start">
-							<button class="btn btn-primary" type="submit">{ T(loc, "game.sessions.start") }</button>
+							<button class="btn btn-primary" type="submit" disabled?={ !campaignSessionStartReady(view) } data-campaign-session-start-disabled={ !campaignSessionStartReady(view) }>{ T(loc, "game.sessions.start") }</button>
 						</div>
 					</form>
 				</div>

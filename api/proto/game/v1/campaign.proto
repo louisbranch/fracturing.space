@@ -83,6 +83,9 @@ service CampaignService {
   // Get a campaign metadata record by ID.
   rpc GetCampaign(GetCampaignRequest) returns (GetCampaignResponse);
 
+  // Get detailed readiness blockers for session start.
+  rpc GetCampaignSessionReadiness(GetCampaignSessionReadinessRequest) returns (GetCampaignSessionReadinessResponse);
+
   // Update mutable campaign metadata fields.
   rpc UpdateCampaign(UpdateCampaignRequest) returns (UpdateCampaignResponse);
 
@@ -167,6 +170,33 @@ message GetCampaignRequest {
 
 message GetCampaignResponse {
   Campaign campaign = 1;
+}
+
+message CampaignSessionReadinessBlocker {
+  // Stable machine-readable blocker code.
+  string code = 1;
+  // Human-readable blocker message localized by requested/fallback locale.
+  string message = 2;
+  // Structured blocker attributes (for transport/UI mapping).
+  map<string, string> metadata = 3;
+}
+
+message CampaignSessionReadiness {
+  // True when blockers is empty.
+  bool ready = 1;
+  // Deterministically ordered blockers preventing session start.
+  repeated CampaignSessionReadinessBlocker blockers = 2;
+}
+
+message GetCampaignSessionReadinessRequest {
+  // The campaign ID to evaluate.
+  string campaign_id = 1;
+  // Optional locale override used for blocker message localization.
+  common.v1.Locale locale = 2;
+}
+
+message GetCampaignSessionReadinessResponse {
+  CampaignSessionReadiness readiness = 1;
 }
 
 message UpdateCampaignRequest {

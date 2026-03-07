@@ -145,12 +145,14 @@ func defaultAuthorizationClient() fakeWebAuthorizationClient {
 }
 
 type fakeCampaignClient struct {
-	response   *statev1.ListCampaignsResponse
-	err        error
-	getResp    *statev1.GetCampaignResponse
-	getErr     error
-	createResp *statev1.CreateCampaignResponse
-	createErr  error
+	response      *statev1.ListCampaignsResponse
+	err           error
+	getResp       *statev1.GetCampaignResponse
+	getErr        error
+	readinessResp *statev1.GetCampaignSessionReadinessResponse
+	readinessErr  error
+	createResp    *statev1.CreateCampaignResponse
+	createErr     error
 }
 
 type fakeWebParticipantClient struct {
@@ -483,6 +485,18 @@ func (f fakeCampaignClient) GetCampaign(context.Context, *statev1.GetCampaignReq
 		return f.getResp, nil
 	}
 	return &statev1.GetCampaignResponse{Campaign: &statev1.Campaign{Id: "c1", Name: "Campaign"}}, nil
+}
+
+func (f fakeCampaignClient) GetCampaignSessionReadiness(context.Context, *statev1.GetCampaignSessionReadinessRequest, ...grpc.CallOption) (*statev1.GetCampaignSessionReadinessResponse, error) {
+	if f.readinessErr != nil {
+		return nil, f.readinessErr
+	}
+	if f.readinessResp != nil {
+		return f.readinessResp, nil
+	}
+	return &statev1.GetCampaignSessionReadinessResponse{
+		Readiness: &statev1.CampaignSessionReadiness{Ready: true},
+	}, nil
 }
 
 func (f fakeCampaignClient) CreateCampaign(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {

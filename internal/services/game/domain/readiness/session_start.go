@@ -6,12 +6,19 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
 const (
+	// RejectionCodeSessionReadinessCampaignStatusDisallowsStart indicates campaign lifecycle state disallows session start.
+	RejectionCodeSessionReadinessCampaignStatusDisallowsStart = "SESSION_READINESS_CAMPAIGN_STATUS_DISALLOWS_START"
+	// RejectionCodeSessionReadinessActiveSessionExists indicates another session is already active.
+	RejectionCodeSessionReadinessActiveSessionExists = "SESSION_READINESS_ACTIVE_SESSION_EXISTS"
 	// RejectionCodeSessionReadinessAIAgentRequired indicates AI/HYBRID campaigns require a bound AI agent.
 	RejectionCodeSessionReadinessAIAgentRequired = "SESSION_READINESS_AI_AGENT_REQUIRED"
+	// RejectionCodeSessionReadinessAIGMParticipantRequired indicates AI/HYBRID campaigns require at least one AI-controlled GM participant.
+	RejectionCodeSessionReadinessAIGMParticipantRequired = "SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED"
 	// RejectionCodeSessionReadinessGMRequired indicates there is no active GM participant.
 	RejectionCodeSessionReadinessGMRequired = "SESSION_READINESS_GM_REQUIRED"
 	// RejectionCodeSessionReadinessPlayerRequired indicates there is no active player participant.
@@ -28,6 +35,30 @@ const (
 type Rejection struct {
 	Code    string
 	Message string
+}
+
+// Blocker describes one readiness invariant currently preventing session start.
+type Blocker struct {
+	Code     string
+	Message  string
+	Metadata map[string]string
+}
+
+// Report captures all readiness blockers for deterministic participant/operator feedback.
+type Report struct {
+	Blockers []Blocker
+}
+
+// Ready reports whether the campaign has zero readiness blockers.
+func (r Report) Ready() bool {
+	return len(r.Blockers) == 0
+}
+
+// ReportOptions controls optional boundary checks and system-specific readiness evaluation.
+type ReportOptions struct {
+	SystemReadiness        CharacterSystemReadiness
+	IncludeSessionBoundary bool
+	HasActiveSession       bool
 }
 
 // CharacterSystemReadiness checks optional system-specific readiness for a
@@ -47,25 +78,77 @@ type CharacterSystemReadiness func(systemProfile map[string]any) (ready bool, re
 //  4. every active character has a controller,
 //  5. optional system-specific readiness for every active character.
 func EvaluateSessionStart(state aggregate.State, systemReadiness CharacterSystemReadiness) *Rejection {
-	if isAIGMMode(state.Campaign.GmMode) && strings.TrimSpace(state.Campaign.AIAgentID) == "" {
-		return &Rejection{
-			Code:    RejectionCodeSessionReadinessAIAgentRequired,
-			Message: "campaign readiness requires ai agent binding for ai gm mode",
+	report := EvaluateSessionStartReport(state, ReportOptions{SystemReadiness: systemReadiness})
+	if report.Ready() {
+		return nil
+	}
+	first := report.Blockers[0]
+	return &Rejection{
+		Code:    first.Code,
+		Message: first.Message,
+	}
+}
+
+// EvaluateSessionStartReport evaluates readiness invariants and returns every
+// blocker in deterministic order so transports can render actionable checklists.
+func EvaluateSessionStartReport(state aggregate.State, options ReportOptions) Report {
+	blockers := make([]Blocker, 0, 8)
+
+	if options.IncludeSessionBoundary {
+		if !campaignStatusAllowsSessionStart(state.Campaign.Status) {
+			blockers = append(blockers, newBlocker(
+				RejectionCodeSessionReadinessCampaignStatusDisallowsStart,
+				fmt.Sprintf("campaign readiness requires campaign status draft or active before session start (status=%s)", normalizeCampaignStatus(state.Campaign.Status)),
+				map[string]string{
+					"status": string(normalizeCampaignStatus(state.Campaign.Status)),
+				},
+			))
+		}
+		if options.HasActiveSession {
+			blockers = append(blockers, newBlocker(
+				RejectionCodeSessionReadinessActiveSessionExists,
+				"campaign readiness requires no active session",
+				nil,
+			))
 		}
 	}
 
+	blockers = append(blockers, evaluateCoreSessionStartBlockers(state, options.SystemReadiness)...)
+	return Report{Blockers: blockers}
+}
+
+func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness CharacterSystemReadiness) []Blocker {
+	blockers := make([]Blocker, 0, 6)
+
+	if isAIGMMode(state.Campaign.GmMode) && strings.TrimSpace(state.Campaign.AIAgentID) == "" {
+		blockers = append(blockers, newBlocker(
+			RejectionCodeSessionReadinessAIAgentRequired,
+			"campaign readiness requires ai agent binding for ai gm mode",
+			nil,
+		))
+	}
+
 	activeParticipants := activeParticipantsByID(state)
+	if isAIGMMode(state.Campaign.GmMode) && len(activeParticipants.aiGMIDs) == 0 {
+		blockers = append(blockers, newBlocker(
+			RejectionCodeSessionReadinessAIGMParticipantRequired,
+			"campaign readiness requires at least one ai-controlled gm participant for ai gm mode",
+			nil,
+		))
+	}
 	if len(activeParticipants.gmIDs) == 0 {
-		return &Rejection{
-			Code:    RejectionCodeSessionReadinessGMRequired,
-			Message: "campaign readiness requires at least one gm participant",
-		}
+		blockers = append(blockers, newBlocker(
+			RejectionCodeSessionReadinessGMRequired,
+			"campaign readiness requires at least one gm participant",
+			nil,
+		))
 	}
 	if len(activeParticipants.playerIDs) == 0 {
-		return &Rejection{
-			Code:    RejectionCodeSessionReadinessPlayerRequired,
-			Message: "campaign readiness requires at least one player participant",
-		}
+		blockers = append(blockers, newBlocker(
+			RejectionCodeSessionReadinessPlayerRequired,
+			"campaign readiness requires at least one player participant",
+			nil,
+		))
 	}
 
 	activeCharacters := activeCharactersByID(state)
@@ -78,10 +161,13 @@ func EvaluateSessionStart(state aggregate.State, systemReadiness CharacterSystem
 		characterState := activeCharacters.byID[characterID]
 		controllerParticipantID := strings.TrimSpace(characterState.ParticipantID)
 		if controllerParticipantID == "" {
-			return &Rejection{
-				Code:    RejectionCodeSessionReadinessCharacterControllerRequired,
-				Message: fmt.Sprintf("campaign readiness requires character %s to have a controller", characterID),
-			}
+			blockers = append(blockers, newBlocker(
+				RejectionCodeSessionReadinessCharacterControllerRequired,
+				fmt.Sprintf("campaign readiness requires character %s to have a controller", characterID),
+				map[string]string{
+					"character_id": characterID,
+				},
+			))
 		}
 
 		if _, ok := playerCharacterCounts[controllerParticipantID]; ok {
@@ -95,31 +181,72 @@ func EvaluateSessionStart(state aggregate.State, systemReadiness CharacterSystem
 		if ready {
 			continue
 		}
-		message := fmt.Sprintf("campaign readiness requires character %s to satisfy system readiness", characterID)
 		reason = strings.TrimSpace(reason)
+		metadata := map[string]string{
+			"character_id": characterID,
+		}
 		if reason != "" {
-			message = message + ": " + reason
+			metadata["reason"] = reason
 		}
-		return &Rejection{
-			Code:    RejectionCodeSessionReadinessCharacterSystemRequired,
-			Message: message,
-		}
+		blockers = append(blockers, newBlocker(
+			RejectionCodeSessionReadinessCharacterSystemRequired,
+			systemReadinessMessage(characterID, reason),
+			metadata,
+		))
 	}
 
 	for _, playerID := range activeParticipants.playerIDs {
 		if playerCharacterCounts[playerID] > 0 {
 			continue
 		}
-		return &Rejection{
-			Code: RejectionCodeSessionReadinessPlayerCharacterRequired,
-			Message: fmt.Sprintf(
-				"campaign readiness requires player participant %s to control at least one character",
-				playerID,
-			),
-		}
+		blockers = append(blockers, newBlocker(
+			RejectionCodeSessionReadinessPlayerCharacterRequired,
+			fmt.Sprintf("campaign readiness requires player participant %s to control at least one character", playerID),
+			map[string]string{
+				"participant_id": playerID,
+			},
+		))
 	}
 
-	return nil
+	return blockers
+}
+
+func newBlocker(code, message string, metadata map[string]string) Blocker {
+	cloned := make(map[string]string, len(metadata))
+	for key, value := range metadata {
+		cloned[key] = value
+	}
+	return Blocker{
+		Code:     code,
+		Message:  message,
+		Metadata: cloned,
+	}
+}
+
+func campaignStatusAllowsSessionStart(status campaign.Status) bool {
+	switch normalizeCampaignStatus(status) {
+	case campaign.StatusDraft, campaign.StatusActive:
+		return true
+	default:
+		return false
+	}
+}
+
+func normalizeCampaignStatus(status campaign.Status) campaign.Status {
+	trimmed := strings.TrimSpace(string(status))
+	normalized, ok := campaign.NormalizeStatus(trimmed)
+	if ok {
+		return normalized
+	}
+	return campaign.Status(trimmed)
+}
+
+func systemReadinessMessage(characterID, reason string) string {
+	message := fmt.Sprintf("campaign readiness requires character %s to satisfy system readiness", characterID)
+	if reason == "" {
+		return message
+	}
+	return message + ": " + reason
 }
 
 func isAIGMMode(mode string) bool {
@@ -134,6 +261,7 @@ func isAIGMMode(mode string) bool {
 type participantIndex struct {
 	byID      map[string]participant.State
 	gmIDs     []string
+	aiGMIDs   []string
 	playerIDs []string
 }
 
@@ -162,6 +290,10 @@ func activeParticipantsByID(state aggregate.State) participantIndex {
 		switch role {
 		case participant.RoleGM:
 			indexed.gmIDs = append(indexed.gmIDs, participantID)
+			controller, ok := participant.NormalizeController(participantState.Controller)
+			if ok && controller == participant.ControllerAI {
+				indexed.aiGMIDs = append(indexed.aiGMIDs, participantID)
+			}
 		case participant.RolePlayer:
 			indexed.playerIDs = append(indexed.playerIDs, participantID)
 		}

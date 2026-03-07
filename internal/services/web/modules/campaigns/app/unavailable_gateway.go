@@ -50,6 +50,11 @@ func (unavailableGateway) CampaignSessions(context.Context, string) ([]CampaignS
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+// CampaignSessionReadiness centralizes this web behavior in one helper seam.
+func (unavailableGateway) CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error) {
+	return CampaignSessionReadiness{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
 // CampaignInvites centralizes this web behavior in one helper seam.
 func (unavailableGateway) CampaignInvites(context.Context, string) ([]CampaignInvite, error) {
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
