@@ -212,6 +212,16 @@ func seedScenarioContent(t *testing.T) {
 		t.Fatalf("seed community heritage: %v", err)
 	}
 
+	if err := store.PutDaggerheartDomain(ctx, storage.DaggerheartDomain{
+		ID:          "domain.valor",
+		Name:        "Valor",
+		Description: "Scenario seed domain",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		t.Fatalf("seed domain: %v", err)
+	}
+
 	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
 		ID:          "domain_card.valor-bare-bones",
 		Name:        "Bare Bones",

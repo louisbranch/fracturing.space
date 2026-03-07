@@ -32,6 +32,7 @@ watch-based runtime automatically after attach.
 - The watcher script initializes `.env` from `.env.local.example` when missing.
 - The watcher script also generates join-grant keys when they are missing.
 - After game reaches its ready log marker, the watcher launches the catalog importer asynchronously.
+- The catalog importer automatically retries transient SQLite busy/locked failures during startup.
 
 The default watcher set starts `status`, `game`, `auth`, `social`, `listing`,
 `ai`, `notifications`, `userhub`, `worker`, `mcp`, `admin`, `chat`, and `web`.

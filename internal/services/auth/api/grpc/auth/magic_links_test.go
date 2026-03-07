@@ -77,6 +77,15 @@ func TestConsumeMagicLinkExpired(t *testing.T) {
 	fixed := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
 	svc.clock = func() time.Time { return fixed }
 
+	if err := store.PutUser(context.Background(), user.User{
+		ID:        "user-1",
+		Email:     "alpha",
+		CreatedAt: fixed.Add(-2 * time.Hour),
+		UpdatedAt: fixed.Add(-2 * time.Hour),
+	}); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+
 	if err := store.PutMagicLink(context.Background(), storage.MagicLink{
 		Token:     "token-1",
 		UserID:    "user-1",

@@ -1004,6 +1004,16 @@ func writeDaggerheartSeedData(store *storagesqlite.Store, now time.Time) error {
 		return fmt.Errorf("seed community heritage: %w", err)
 	}
 
+	if err := store.PutDaggerheartDomain(ctx, storage.DaggerheartDomain{
+		ID:          "domain.valor",
+		Name:        "Valor",
+		Description: "Integration seed domain",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}); err != nil {
+		return fmt.Errorf("seed domain: %w", err)
+	}
+
 	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
 		ID:          "domain_card.valor-bare-bones",
 		Name:        "Bare Bones",

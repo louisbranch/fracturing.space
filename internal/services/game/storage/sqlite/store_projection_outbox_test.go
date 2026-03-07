@@ -2,12 +2,15 @@ package sqlite
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	sqlite "modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite/lib"
 )
 
 func TestProcessProjectionApplyOutboxShadowMarksDueRowsFailed(t *testing.T) {
@@ -763,11 +766,11 @@ func TestProcessProjectionApplyOutboxMarksDeadAfterThreshold(t *testing.T) {
 	}
 }
 
-func TestProcessProjectionApplyOutboxLoadFailureMarksRetry(t *testing.T) {
+func TestProjectionApplyOutboxInsertRequiresExistingEvent(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	now := time.Date(2026, 2, 16, 10, 0, 0, 0, time.UTC)
-	if _, err := store.sqlDB.ExecContext(
+	_, err := store.sqlDB.ExecContext(
 		context.Background(),
 		`INSERT INTO projection_apply_outbox (
 			campaign_id, seq, event_type, status, attempt_count, next_attempt_at, updated_at
@@ -777,46 +780,17 @@ func TestProcessProjectionApplyOutboxLoadFailureMarksRetry(t *testing.T) {
 		"campaign.created",
 		now.Add(-time.Minute).UnixMilli(),
 		now.UnixMilli(),
-	); err != nil {
-		t.Fatalf("insert outbox row: %v", err)
+	)
+	if err == nil {
+		t.Fatal("expected foreign key error for outbox row without event")
 	}
 
-	processed, err := store.ProcessProjectionApplyOutbox(
-		context.Background(),
-		now,
-		10,
-		func(context.Context, event.Event) error { return nil },
-	)
-	if err != nil {
-		t.Fatalf("process projection apply outbox: %v", err)
+	var sqliteErr *sqlite.Error
+	if !errors.As(err, &sqliteErr) {
+		t.Fatalf("expected sqlite error, got %T: %v", err, err)
 	}
-	if processed != 1 {
-		t.Fatalf("expected one processed row, got %d", processed)
-	}
-
-	var (
-		status    string
-		attempts  int
-		lastError string
-	)
-	if err := store.sqlDB.QueryRowContext(
-		context.Background(),
-		`SELECT status, attempt_count, last_error
-		 FROM projection_apply_outbox
-		 WHERE campaign_id = ? AND seq = ?`,
-		"camp-outbox-missing-event",
-		999,
-	).Scan(&status, &attempts, &lastError); err != nil {
-		t.Fatalf("query outbox row: %v", err)
-	}
-	if status != "failed" {
-		t.Fatalf("expected failed status for missing event, got %q", status)
-	}
-	if attempts != 1 {
-		t.Fatalf("expected attempt count 1, got %d", attempts)
-	}
-	if !strings.Contains(lastError, "load event") {
-		t.Fatalf("expected load event error marker, got %q", lastError)
+	if sqliteErr.Code() != sqlite3.SQLITE_CONSTRAINT_FOREIGNKEY {
+		t.Fatalf("expected SQLITE_CONSTRAINT_FOREIGNKEY, got code=%d err=%v", sqliteErr.Code(), err)
 	}
 }
 
