@@ -163,6 +163,12 @@ type CampaignCreationClassFeatureView struct {
 	Description string
 }
 
+type CampaignCreationDomainWatermarkView struct {
+	ID      string
+	Name    string
+	IconURL string
+}
+
 type CampaignCreationClassView struct {
 	ID              string
 	Name            string
@@ -172,6 +178,7 @@ type CampaignCreationClassView struct {
 	HopeFeature     CampaignCreationClassFeatureView
 	Features        []CampaignCreationClassFeatureView
 	DomainNames     []string
+	DomainWatermarks []CampaignCreationDomainWatermarkView
 }
 
 type CampaignCreationSubclassView struct {

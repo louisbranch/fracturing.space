@@ -250,6 +250,45 @@ func TestAssembleCatalogFiltersAndSortsDomainCardsByLevel(t *testing.T) {
 	}
 }
 
+func TestAssembleCatalogPreservesDomainAssetMetadata(t *testing.T) {
+	t.Parallel()
+
+	creation := Workflow{}.AssembleCatalog(
+		campaignapp.CampaignCharacterCreationProgress{},
+		campaignapp.CampaignCharacterCreationCatalog{
+			Domains: []campaignapp.CatalogDomain{
+				{
+					ID:   "domain.sage",
+					Name: "Sage",
+					Illustration: campaignapp.CatalogAssetReference{
+						URL:     "https://cdn.example.com/domain/sage-illustration.png",
+						Status:  "mapped",
+						SetID:   "daggerheart_domain_set_v1",
+						AssetID: "sage",
+					},
+					Icon: campaignapp.CatalogAssetReference{
+						URL:     "https://cdn.example.com/domain/sage-icon.png",
+						Status:  "mapped",
+						SetID:   "daggerheart_domain_icon_set_v1",
+						AssetID: "sage",
+					},
+				},
+			},
+		},
+		campaignapp.CampaignCharacterCreationProfile{},
+	)
+
+	if len(creation.Domains) != 1 {
+		t.Fatalf("domains = %d, want 1", len(creation.Domains))
+	}
+	if creation.Domains[0].Icon.URL != "https://cdn.example.com/domain/sage-icon.png" {
+		t.Fatalf("domain icon url = %q, want %q", creation.Domains[0].Icon.URL, "https://cdn.example.com/domain/sage-icon.png")
+	}
+	if creation.Domains[0].Illustration.URL != "https://cdn.example.com/domain/sage-illustration.png" {
+		t.Fatalf("domain illustration url = %q, want %q", creation.Domains[0].Illustration.URL, "https://cdn.example.com/domain/sage-illustration.png")
+	}
+}
+
 func TestAssembleCatalogTrimsProfileFields(t *testing.T) {
 	t.Parallel()
 

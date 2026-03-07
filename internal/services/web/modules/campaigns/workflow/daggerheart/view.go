@@ -2,6 +2,7 @@ package daggerheart
 
 import (
 	"log/slog"
+	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/imagecdn"
@@ -11,10 +12,25 @@ import (
 
 // CreationView maps the domain creation model to the template view type.
 func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
-	// Build domain name lookup for resolving class domain names.
-	domainNameByID := make(map[string]string, len(creation.Domains))
+	// Build domain lookup for resolving class domain labels and icon watermarks.
+	type domainView struct {
+		Name    string
+		IconURL string
+	}
+	domainByID := make(map[string]domainView, len(creation.Domains))
 	for _, domain := range creation.Domains {
-		domainNameByID[domain.ID] = domain.Name
+		domainID := strings.TrimSpace(domain.ID)
+		if domainID == "" {
+			continue
+		}
+		domainName := strings.TrimSpace(domain.Name)
+		if domainName == "" {
+			domainName = domainID
+		}
+		domainByID[domainID] = domainView{
+			Name:    domainName,
+			IconURL: strings.TrimSpace(domain.Icon.URL),
+		}
 	}
 
 	experiences := make([]webtemplates.CampaignCreationExperienceView, 0, len(creation.Profile.Experiences))
@@ -72,9 +88,23 @@ func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) w
 	}
 	for _, class := range creation.Classes {
 		domainNames := make([]string, 0, len(class.DomainIDs))
+		domainWatermarks := make([]webtemplates.CampaignCreationDomainWatermarkView, 0, 2)
 		for _, domainID := range class.DomainIDs {
-			if name, ok := domainNameByID[domainID]; ok {
-				domainNames = append(domainNames, name)
+			trimmedDomainID := strings.TrimSpace(domainID)
+			if trimmedDomainID == "" {
+				continue
+			}
+			domain, ok := domainByID[trimmedDomainID]
+			if !ok {
+				continue
+			}
+			domainNames = append(domainNames, domain.Name)
+			if domain.IconURL != "" && len(domainWatermarks) < 2 {
+				domainWatermarks = append(domainWatermarks, webtemplates.CampaignCreationDomainWatermarkView{
+					ID:      trimmedDomainID,
+					Name:    domain.Name,
+					IconURL: domain.IconURL,
+				})
 			}
 		}
 		imageURL := resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeClass, class.ID, catalog.DaggerheartAssetTypeClassIllustration)
@@ -90,14 +120,15 @@ func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) w
 			})
 		}
 		view.Classes = append(view.Classes, webtemplates.CampaignCreationClassView{
-			ID:              class.ID,
-			Name:            class.Name,
-			ImageURL:        imageURL,
-			StartingHP:      class.StartingHP,
-			StartingEvasion: class.StartingEvasion,
-			HopeFeature:     hopeFeature,
-			Features:        features,
-			DomainNames:     domainNames,
+			ID:               class.ID,
+			Name:             class.Name,
+			ImageURL:         imageURL,
+			StartingHP:       class.StartingHP,
+			StartingEvasion:  class.StartingEvasion,
+			HopeFeature:      hopeFeature,
+			Features:         features,
+			DomainNames:      domainNames,
+			DomainWatermarks: domainWatermarks,
 		})
 	}
 	for _, subclass := range creation.Subclasses {
