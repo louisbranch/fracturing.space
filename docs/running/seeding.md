@@ -23,7 +23,7 @@ make up
 
 # If you run make seed from the host side (outside the devcontainer terminal),
 # ensure 8090 and 8091 are forwarded in `.devcontainer/devcontainer.json`
-# for social and listing.
+# for social and discovery.
 
 # Terminal 2: Run seeding commands
 make seed
@@ -35,7 +35,7 @@ Using direct Go commands:
 # Terminal 1: Start the required services
 go run ./cmd/game
 go run ./cmd/auth
-go run ./cmd/listing
+go run ./cmd/discovery
 go run ./cmd/social
 
 # Terminal 2: Run seeding commands
@@ -45,10 +45,10 @@ make seed
 Using Compose:
 
 ```bash
-COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
+COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml"
 
 # Terminal 1: Start the required services
-$COMPOSE up -d game auth listing social
+$COMPOSE up -d game auth discovery social
 
 # Terminal 2: Run seeding commands
 $COMPOSE --profile tools run --rm seed
@@ -65,7 +65,7 @@ make catalog-importer
 Compose:
 
 ```bash
-COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
+COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml"
 $COMPOSE --profile tools run --rm catalog-importer
 ```
 
@@ -90,7 +90,7 @@ make seed-fresh  # Reset DB + reseed local-dev dataset
 Compose:
 
 ```bash
-COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
+COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml"
 $COMPOSE --profile tools run --rm seed
 ```
 
@@ -103,7 +103,7 @@ $COMPOSE --profile tools run --rm seed
 | `-grpc-addr` | game server address | `game:8082` |
 | `-auth-addr` | auth server address (uses `FRACTURING_SPACE_AUTH_ADDR` when set) | `auth:8083` |
 | `-social-addr` | social server address | `social:8090` |
-| `-listing-addr` | listing server address | `listing:8091` |
+| `-discovery-addr` | discovery server address | `discovery:8091` |
 | `-v` | Verbose output | false |
 
 For any non-local environments, avoid running `seed` against production services. The command is intentionally restricted to the local-dev manifest in this workflow.
@@ -121,6 +121,6 @@ The declarative seeder supports:
 | Characters + controls | `game.v1.CharacterService` |
 | Sessions | `game.v1.SessionService` |
 | Forks | `game.v1.ForkService` |
-| Listings | `listing.v1.CampaignListingService` |
+| Discovery entries | `discovery.v1.DiscoveryService` |
 
 Account profiles are intentionally excluded from seed manifests and are not written during declarative seeding.

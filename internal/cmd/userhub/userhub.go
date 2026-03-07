@@ -7,7 +7,7 @@ import (
 	"time"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	userhubserver "github.com/louisbranch/fracturing.space/internal/services/userhub/app"
 )
 
@@ -28,10 +28,10 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
-	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
-	cfg.SocialAddr = discovery.OrDefaultGRPCAddr(cfg.SocialAddr, discovery.ServiceSocial)
-	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
-	cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
+	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
+	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
+	cfg.NotificationsAddr = serviceaddr.OrDefaultGRPCAddr(cfg.NotificationsAddr, serviceaddr.ServiceNotifications)
+	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The userhub gRPC server port")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "The game gRPC server address")

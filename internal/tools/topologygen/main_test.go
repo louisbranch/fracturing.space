@@ -41,12 +41,12 @@ func TestParseCatalogAndRenderOutputs(t *testing.T) {
 		}
 	}
 
-	composeFragment, err := renderComposeDiscovery(catalog)
+	composeFragment, err := renderComposeServiceAddr(catalog)
 	if err != nil {
-		t.Fatalf("render compose discovery: %v", err)
+		t.Fatalf("render compose service-address: %v", err)
 	}
 	for _, want := range []string{
-		"x-fracturing-space-discovery:",
+		"x-fracturing-space-serviceaddr:",
 		"game_grpc_addr: game:8082",
 		"auth_grpc_addr: auth:8083",
 		"auth_http_addr: auth:8084",
@@ -56,9 +56,9 @@ func TestParseCatalogAndRenderOutputs(t *testing.T) {
 		}
 	}
 
-	composeFragment2, err := renderComposeDiscovery(catalog)
+	composeFragment2, err := renderComposeServiceAddr(catalog)
 	if err != nil {
-		t.Fatalf("render compose discovery second pass: %v", err)
+		t.Fatalf("render compose service-address second pass: %v", err)
 	}
 	if composeFragment != composeFragment2 {
 		t.Fatal("expected compose output to be deterministic")
@@ -141,10 +141,10 @@ func TestValidateCatalogRejectsServiceNameNormalizationCollision(t *testing.T) {
 	}
 }
 
-func TestBootstrapUsesGeneratedComposeDiscoveryFile(t *testing.T) {
+func TestBootstrapUsesGeneratedComposeServiceAddrFile(t *testing.T) {
 	data := mustReadRepoFile(t, "scripts", "bootstrap.sh")
-	if !strings.Contains(data, "topology/generated/docker-compose.discovery.generated.yml") {
-		t.Fatal("expected bootstrap.sh to include topology/generated/docker-compose.discovery.generated.yml in compose invocation")
+	if !strings.Contains(data, "topology/generated/docker-compose.serviceaddr.generated.yml") {
+		t.Fatal("expected bootstrap.sh to include topology/generated/docker-compose.serviceaddr.generated.yml in compose invocation")
 	}
 }
 

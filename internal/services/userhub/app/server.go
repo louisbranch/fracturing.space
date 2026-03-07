@@ -14,8 +14,8 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	userhubservice "github.com/louisbranch/fracturing.space/internal/services/userhub/api/grpc/userhub"
 	"github.com/louisbranch/fracturing.space/internal/services/userhub/domain"
@@ -118,7 +118,7 @@ func Run(ctx context.Context, cfg RuntimeConfig) error {
 	// Status reporter.
 	statusAddr := cfg.StatusAddr
 	if statusAddr == "" {
-		statusAddr = discovery.DefaultGRPCAddr(discovery.ServiceStatus)
+		statusAddr = serviceaddr.DefaultGRPCAddr(serviceaddr.ServiceStatus)
 	}
 	statusConn := platformgrpc.DialLenient(ctx, statusAddr, logf)
 	defer closeConn(statusConn, "status")

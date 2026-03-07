@@ -34,7 +34,7 @@ watch-based runtime automatically after attach.
 - After game reaches its ready log marker, the watcher launches the catalog importer asynchronously.
 - The catalog importer automatically retries transient SQLite busy/locked failures during startup.
 
-The default watcher set starts `status`, `game`, `auth`, `social`, `listing`,
+The default watcher set starts `status`, `game`, `auth`, `social`, `discovery`,
 `ai`, `notifications`, `userhub`, `worker`, `mcp`, `admin`, `chat`, and `web`.
 Game reports catalog-backed capabilities as degraded until import completes, then
 re-evaluates and promotes them to operational automatically.

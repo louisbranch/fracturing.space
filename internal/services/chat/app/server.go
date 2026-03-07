@@ -15,8 +15,8 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	gogrpc "google.golang.org/grpc"
@@ -453,8 +453,8 @@ func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
 		logf,
 		append(
 			platformgrpc.DefaultClientDialOptions(),
-			gogrpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(discovery.ServiceChat)),
-			gogrpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(discovery.ServiceChat)),
+			gogrpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceChat)),
+			gogrpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceChat)),
 		)...,
 	)
 	if err != nil {

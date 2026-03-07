@@ -16,14 +16,14 @@ For the one-line command, see [quickstart](quickstart.md).
 Compose commands should include both the base file and generated topology discovery file:
 
 ```sh
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml up -d
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml up -d
 ```
 
 Compose + Caddy topology is catalog-driven:
 
 - Source of truth: `topology/services.json`
 - Generated Caddy routes: `Caddyfile.routes.generated`
-- Generated Compose discovery artifact: `topology/generated/docker-compose.discovery.generated.yml`
+- Generated Compose discovery artifact: `topology/generated/docker-compose.serviceaddr.generated.yml`
 
 After topology edits, regenerate and validate:
 
@@ -63,12 +63,12 @@ For production, see [production](production.md).
 Compose exposes CLI tools under the `tools` profile:
 
 ```sh
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm hmac-key
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm join-grant-key
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm seed
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/systems/daggerheart/basic_flow.lua
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm maintenance -- -campaign-id <id> -validate
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm catalog-importer
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm hmac-key
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm join-grant-key
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm seed
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm scenario -- -scenario internal/test/game/scenarios/systems/daggerheart/basic_flow.lua
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm maintenance -- -campaign-id <id> -validate
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm catalog-importer
 ```
 
 The `seed` tool in this repository is intentionally scoped to the local-dev manifest for local workflows. For any production-like environment, use a separate migration/administrative flow instead of `seed`.
@@ -78,5 +78,5 @@ The `seed` tool in this repository is intentionally scoped to the local-dev mani
 Compose uses named volumes for SQLite data stores. To remove them:
 
 ```sh
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml down -v
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml down -v
 ```

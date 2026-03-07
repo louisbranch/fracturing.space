@@ -8,8 +8,8 @@ import (
 
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	server "github.com/louisbranch/fracturing.space/internal/services/auth/app"
 )
@@ -27,7 +27,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
-	cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
+	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The auth gRPC server port")
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "The auth HTTP server address")

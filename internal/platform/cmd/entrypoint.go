@@ -20,7 +20,7 @@ const (
 	ServiceAdmin         = "admin"
 	ServiceAI            = "ai"
 	ServiceSocial        = "social"
-	ServiceListing       = "listing"
+	ServiceDiscovery     = "discovery"
 	ServiceAuth          = "auth"
 	ServiceChat          = "chat"
 	ServiceGame          = "game"

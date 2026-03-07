@@ -30,7 +30,7 @@ const (
 	CharacterKindNPC         CharacterKind = "npc"
 )
 
-// CampaignSummary is a transport-safe summary for campaign listings.
+// CampaignSummary is a transport-safe summary for discovery entrys.
 type CampaignSummary struct {
 	ID                string `json:"id"`
 	Name              string `json:"name"`

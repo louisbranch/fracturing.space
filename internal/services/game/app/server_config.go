@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 )
 
 type serverEnv struct {
@@ -33,13 +33,13 @@ const (
 func loadServerEnv() serverEnv {
 	var cfg serverEnv
 	_ = config.ParseEnv(&cfg)
-	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
-	cfg.SocialAddr = discovery.OrDefaultGRPCAddr(cfg.SocialAddr, discovery.ServiceSocial)
-	cfg.AIAddr = discovery.OrDefaultGRPCAddr(cfg.AIAddr, discovery.ServiceAI)
+	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
+	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
+	cfg.AIAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AIAddr, serviceaddr.ServiceAI)
 	// Status address is not defaulted — the status service is optional/advisory.
 	// When unset, the reporter starts with a nil client and accumulates locally.
 	if cfg.StatusAddr != "" {
-		cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
+		cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 	}
 	if cfg.EventsDBPath == "" {
 		cfg.EventsDBPath = filepath.Join("data", "game-events.db")

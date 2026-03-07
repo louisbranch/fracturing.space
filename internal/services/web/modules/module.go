@@ -66,7 +66,7 @@ type Dependencies struct {
 	NotificationClient notifications.NotificationClient
 
 	// Discovery module client.
-	ListingClient discovery.ListingClient
+	DiscoveryClient discovery.DiscoveryClient
 
 	// Status service client for system-wide health queries.
 	StatusClient statusv1.StatusServiceClient

@@ -15,8 +15,8 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
@@ -45,7 +45,7 @@ type serverEnv struct {
 func loadServerEnv() serverEnv {
 	var cfg serverEnv
 	_ = config.ParseEnv(&cfg)
-	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
+	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
 	if cfg.DBPath == "" {
 		cfg.DBPath = filepath.Join("data", "ai.db")
 	}
@@ -351,8 +351,8 @@ func dialGameGRPC(ctx context.Context, gameAddr string) (*grpc.ClientConn, gamev
 		logf,
 		append(
 			platformgrpc.DefaultClientDialOptions(),
-			grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(discovery.ServiceAI)),
-			grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(discovery.ServiceAI)),
+			grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceAI)),
+			grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceAI)),
 		)...,
 	)
 	if err != nil {

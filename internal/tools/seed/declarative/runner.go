@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
@@ -65,9 +65,9 @@ type forkClient interface {
 	ForkCampaign(ctx context.Context, in *gamev1.ForkCampaignRequest, opts ...grpc.CallOption) (*gamev1.ForkCampaignResponse, error)
 }
 
-type listingClient interface {
-	CreateCampaignListing(ctx context.Context, in *listingv1.CreateCampaignListingRequest, opts ...grpc.CallOption) (*listingv1.CreateCampaignListingResponse, error)
-	GetCampaignListing(ctx context.Context, in *listingv1.GetCampaignListingRequest, opts ...grpc.CallOption) (*listingv1.GetCampaignListingResponse, error)
+type discoveryClient interface {
+	CreateDiscoveryEntry(ctx context.Context, in *discoveryv1.CreateDiscoveryEntryRequest, opts ...grpc.CallOption) (*discoveryv1.CreateDiscoveryEntryResponse, error)
+	GetDiscoveryEntry(ctx context.Context, in *discoveryv1.GetDiscoveryEntryRequest, opts ...grpc.CallOption) (*discoveryv1.GetDiscoveryEntryResponse, error)
 }
 
 type runnerDeps struct {
@@ -78,7 +78,7 @@ type runnerDeps struct {
 	characters   characterClient
 	sessions     sessionClient
 	forks        forkClient
-	listings     listingClient
+	discovery    discoveryClient
 }
 
 // Config holds declarative runner settings.
@@ -159,8 +159,8 @@ func (r *Runner) RunManifest(ctx context.Context, manifest Manifest) error {
 		combinedCampaignIDs[key] = campaignID
 	}
 	_ = participantIDs
-	r.logf("seed manifest %q: applying listings", manifest.Name)
-	if err := r.applyListings(ctx, manifest, combinedCampaignIDs); err != nil {
+	r.logf("seed manifest %q: applying discovery entries", manifest.Name)
+	if err := r.applyDiscoveryEntries(ctx, manifest, combinedCampaignIDs); err != nil {
 		return err
 	}
 	r.logf("seed manifest %q: saving state", manifest.Name)
@@ -178,8 +178,8 @@ func (r *Runner) requireDeps() error {
 	if r.deps.campaigns == nil {
 		return fmt.Errorf("campaign client is required")
 	}
-	if r.deps.listings == nil {
-		return fmt.Errorf("listing client is required")
+	if r.deps.discovery == nil {
+		return fmt.Errorf("discovery client is required")
 	}
 	return nil
 }
@@ -844,44 +844,48 @@ func (r *Runner) findCampaignIDByNameContains(ctx context.Context, marker string
 	return "", nil
 }
 
-func (r *Runner) applyListings(ctx context.Context, manifest Manifest, campaignIDs map[string]string) error {
-	for _, listing := range manifest.Listings {
-		campaignID := strings.TrimSpace(campaignIDs[listing.CampaignKey])
+func (r *Runner) applyDiscoveryEntries(ctx context.Context, manifest Manifest, campaignIDs map[string]string) error {
+	for _, discoveryEntry := range manifest.DiscoveryEntries {
+		campaignID := strings.TrimSpace(campaignIDs[discoveryEntry.CampaignKey])
 		if campaignID == "" {
-			return fmt.Errorf("listing campaign key %q is unresolved", listing.CampaignKey)
+			return fmt.Errorf("discovery entry campaign key %q is unresolved", discoveryEntry.CampaignKey)
 		}
 
-		existing, err := r.deps.listings.GetCampaignListing(ctx, &listingv1.GetCampaignListingRequest{
-			CampaignId: campaignID,
+		existing, err := r.deps.discovery.GetDiscoveryEntry(ctx, &discoveryv1.GetDiscoveryEntryRequest{
+			EntryId: campaignID,
 		})
 		if err != nil {
 			if status.Code(err) != codes.NotFound {
-				return fmt.Errorf("get campaign listing for %s: %w", listing.CampaignKey, err)
+				return fmt.Errorf("get discovery entry for %s: %w", discoveryEntry.CampaignKey, err)
 			}
 			existing = nil
 		}
-		if existing != nil && existing.GetListing() != nil && strings.TrimSpace(existing.GetListing().GetCampaignId()) != "" {
+		if existing != nil && existing.GetEntry() != nil && strings.TrimSpace(existing.GetEntry().GetEntryId()) != "" {
 			continue
 		}
 
-		_, err = r.deps.listings.CreateCampaignListing(ctx, &listingv1.CreateCampaignListingRequest{
-			CampaignId:                 campaignID,
-			Title:                      listing.Title,
-			Description:                listing.Description,
-			RecommendedParticipantsMin: listing.RecommendedParticipantsMin,
-			RecommendedParticipantsMax: listing.RecommendedParticipantsMax,
-			DifficultyTier:             parseDifficultyTier(listing.DifficultyTier),
-			ExpectedDurationLabel:      listing.ExpectedDurationLabel,
-			System:                     parseGameSystem(defaultSystemLabel(listing.System)),
-			GmMode:                     parseListingGmMode(listing.GmMode),
-			Intent:                     parseListingIntent(listing.Intent),
-			Level:                      listing.Level,
-			CharacterCount:             listing.CharacterCount,
-			Storyline:                  listing.Storyline,
-			Tags:                       listing.Tags,
+		_, err = r.deps.discovery.CreateDiscoveryEntry(ctx, &discoveryv1.CreateDiscoveryEntryRequest{
+			Entry: &discoveryv1.DiscoveryEntry{
+				EntryId:                    campaignID,
+				Kind:                       discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
+				SourceId:                   campaignID,
+				Title:                      discoveryEntry.Title,
+				Description:                discoveryEntry.Description,
+				RecommendedParticipantsMin: discoveryEntry.RecommendedParticipantsMin,
+				RecommendedParticipantsMax: discoveryEntry.RecommendedParticipantsMax,
+				DifficultyTier:             parseDifficultyTier(discoveryEntry.DifficultyTier),
+				ExpectedDurationLabel:      discoveryEntry.ExpectedDurationLabel,
+				System:                     parseGameSystem(defaultSystemLabel(discoveryEntry.System)),
+				GmMode:                     parseDiscoveryGmMode(discoveryEntry.GmMode),
+				Intent:                     parseDiscoveryIntent(discoveryEntry.Intent),
+				Level:                      discoveryEntry.Level,
+				CharacterCount:             discoveryEntry.CharacterCount,
+				Storyline:                  discoveryEntry.Storyline,
+				Tags:                       discoveryEntry.Tags,
+			},
 		})
 		if err != nil {
-			return fmt.Errorf("create campaign listing for %s: %w", listing.CampaignKey, err)
+			return fmt.Errorf("create discovery entry for %s: %w", discoveryEntry.CampaignKey, err)
 		}
 	}
 	return nil

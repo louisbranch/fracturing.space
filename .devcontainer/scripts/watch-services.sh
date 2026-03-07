@@ -182,7 +182,7 @@ start_service status
 start_service game FRACTURING_SPACE_GAME_ADDR=
 start_service auth
 start_service social
-start_service listing
+start_service discovery
 start_service ai
 start_service notifications
 wait_for_service_log_marker "status" "status server listening at"
@@ -190,7 +190,7 @@ wait_for_service_log_marker "game" "game server listening at"
 run_catalog_importer_async
 wait_for_service_log_marker "auth" "auth server listening at"
 wait_for_service_log_marker "social" "social server listening at"
-wait_for_service_log_marker "listing" "listing server listening at"
+wait_for_service_log_marker "discovery" "discovery server listening at"
 wait_for_service_log_marker "ai" "ai server listening at"
 wait_for_service_log_marker "notifications" "notifications server listening at"
 start_service userhub

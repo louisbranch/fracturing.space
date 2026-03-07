@@ -22,8 +22,8 @@ variable "SOCIAL_IMAGE" {
   default = "ghcr.io/fracturing-space/social:dev"
 }
 
-variable "LISTING_IMAGE" {
-  default = "ghcr.io/fracturing-space/listing:dev"
+variable "DISCOVERY_IMAGE" {
+  default = "ghcr.io/fracturing-space/discovery:dev"
 }
 
 variable "WEB_IMAGE" {
@@ -39,7 +39,7 @@ variable "WORKER_IMAGE" {
 }
 
 group "default" {
-  targets = ["game", "mcp", "admin", "auth", "social", "listing", "web", "notifications", "worker"]
+  targets = ["game", "mcp", "admin", "auth", "social", "discovery", "web", "notifications", "worker"]
 }
 
 target "base" {
@@ -80,10 +80,10 @@ target "social" {
   tags     = ["${SOCIAL_IMAGE}"]
 }
 
-target "listing" {
+target "discovery" {
   inherits = ["base"]
-  target   = "listing"
-  tags     = ["${LISTING_IMAGE}"]
+  target   = "discovery"
+  tags     = ["${DISCOVERY_IMAGE}"]
 }
 
 target "web" {

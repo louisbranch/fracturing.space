@@ -120,8 +120,8 @@ func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 		if cfg.SocialAddr != "127.0.0.1:8090" {
 			t.Fatalf("expected normalized social addr, got %q", cfg.SocialAddr)
 		}
-		if cfg.ListingAddr != "127.0.0.1:8091" {
-			t.Fatalf("expected normalized listing addr, got %q", cfg.ListingAddr)
+		if cfg.DiscoveryAddr != "127.0.0.1:8091" {
+			t.Fatalf("expected normalized discovery addr, got %q", cfg.DiscoveryAddr)
 		}
 		if cfg.SocialAddr == "" {
 			t.Fatal("social addr should be set")
@@ -140,7 +140,7 @@ func TestRun_ManifestModeUsesDeclarativeRunner(t *testing.T) {
 		ManifestPath:  "internal/tools/seed/manifests/local-dev.json",
 		SeedStatePath: filepath.Join(".tmp", "seed-state", "local-dev.state.json"),
 		SocialAddr:    "social:8090",
-		ListingAddr:   "listing:8091",
+		DiscoveryAddr: "discovery:8091",
 		SeedConfig: seedtool.Config{
 			GRPCAddr: "game:8082",
 			AuthAddr: "auth:8083",

@@ -224,7 +224,7 @@ func CampaignRestoreHandler(client statev1.CampaignServiceClient, getContext fun
 	}
 }
 
-// CampaignListResourceHandler returns a readable campaign listing resource.
+// CampaignListResourceHandler returns a readable discovery entry resource.
 // The resource intentionally returns one consolidated page while we migrate MCP clients
 // to explicit paging controls; callers should not assume cursor-based pagination exists yet.
 func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.ResourceHandler {

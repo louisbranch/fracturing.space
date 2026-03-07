@@ -32,7 +32,7 @@ auth/social domain services.
 - **MCP** (`internal/services/mcp/`): JSON-RPC tool/resource bridge.
 - **Auth** (`internal/services/auth/`): identity/authentication and OAuth primitives.
 - **Social** (`internal/services/social/`): discovery/profile metadata and contacts.
-- **Listing** (`internal/services/listing/`): public listing metadata.
+- **Discovery** (`internal/services/discovery/`): public discovery entry metadata.
 - **AI** (`internal/services/ai/`): AI credential/agent orchestration.
 - **Userhub** (`internal/services/userhub/`): experience read-model aggregation.
 

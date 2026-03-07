@@ -8,8 +8,8 @@ import (
 
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	mcpapp "github.com/louisbranch/fracturing.space/internal/services/mcp/app"
 )
@@ -28,8 +28,8 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
-	cfg.Addr = discovery.OrDefaultGRPCAddr(cfg.Addr, discovery.ServiceGame)
-	cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
+	cfg.Addr = serviceaddr.OrDefaultGRPCAddr(cfg.Addr, serviceaddr.ServiceGame)
+	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
 	fs.StringVar(&cfg.Addr, "addr", cfg.Addr, "game server address")
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP server address (for HTTP transport)")

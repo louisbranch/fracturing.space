@@ -176,14 +176,14 @@
       "copy_participants": true
     }
   ],
-  "listings": [
+  "discovery_entries": [
     {
       "campaign_key": "crimson_vale",
       "title": "The Crimson Vale",
       "description": "A public starter campaign focused on mystery and escalating supernatural threats.",
       "recommended_participants_min": 3,
       "recommended_participants_max": 5,
-      "difficulty_tier": "CAMPAIGN_DIFFICULTY_TIER_BEGINNER",
+      "difficulty_tier": "DISCOVERY_DIFFICULTY_TIER_BEGINNER",
       "expected_duration_label": "2-4 sessions",
       "system": "GAME_SYSTEM_DAGGERHEART"
     }

@@ -96,19 +96,19 @@ services:
       - internal
     restart: unless-stopped
 
-  listing:
+  discovery:
     build:
       context: .
-      target: listing
+      target: discovery
       args:
         GO_VERSION: ${GO_VERSION:-1.26.0}
-    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/listing:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/discovery:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
       init-data:
         condition: service_completed_successfully
     environment:
-      FRACTURING_SPACE_LISTING_PORT: 8091
-      FRACTURING_SPACE_LISTING_DB_PATH: /data/listing.db
+      FRACTURING_SPACE_DISCOVERY_PORT: 8091
+      FRACTURING_SPACE_DISCOVERY_DB_PATH: /data/discovery.db
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
     ports:
       - "${FRACTURING_SPACE_BIND_ADDR:-127.0.0.1}:8091:8091"
@@ -390,7 +390,7 @@ services:
     depends_on:
       - game
       - auth
-      - listing
+      - discovery
       - social
     entrypoint: ["go", "run", "./cmd/seed", "-manifest=internal/tools/seed/manifests/local-dev.json", "-v"]
     networks:

@@ -42,7 +42,7 @@ func main() {
 	flag.StringVar(&rootFlag, "root", "", "repo root (defaults to locating go.mod)")
 	flag.StringVar(&catalogPath, "catalog", "topology/services.json", "service catalog path")
 	flag.StringVar(&outCaddyPath, "out-caddy", "Caddyfile.routes.generated", "generated caddy routes output path")
-	flag.StringVar(&outComposePath, "out-compose", "topology/generated/docker-compose.discovery.generated.yml", "generated compose discovery output path")
+	flag.StringVar(&outComposePath, "out-compose", "topology/generated/docker-compose.serviceaddr.generated.yml", "generated compose service-address output path")
 	flag.BoolVar(&check, "check", false, "check generated outputs for drift without writing")
 	flag.Parse()
 
@@ -67,7 +67,7 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	composeContent, err := renderComposeDiscovery(parsed)
+	composeContent, err := renderComposeServiceAddr(parsed)
 	if err != nil {
 		fatal(err)
 	}
@@ -248,7 +248,7 @@ func normalizeServiceName(name string) string {
 	return normalized
 }
 
-func renderComposeDiscovery(parsed catalog) (string, error) {
+func renderComposeServiceAddr(parsed catalog) (string, error) {
 	type entry struct {
 		key   string
 		value string
@@ -280,7 +280,7 @@ func renderComposeDiscovery(parsed catalog) (string, error) {
 	var out strings.Builder
 	out.WriteString(generatedHeader)
 	out.WriteString("\n")
-	out.WriteString("x-fracturing-space-discovery:\n")
+	out.WriteString("x-fracturing-space-serviceaddr:\n")
 	for _, entry := range entries {
 		out.WriteString("  ")
 		out.WriteString(entry.key)

@@ -11,8 +11,8 @@ import (
 
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin"
@@ -39,9 +39,9 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if cfg.GRPCDialTimeout <= 0 {
 		cfg.GRPCDialTimeout = timeouts.GRPCDial
 	}
-	cfg.GRPCAddr = discovery.OrDefaultGRPCAddr(cfg.GRPCAddr, discovery.ServiceGame)
-	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
-	cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
+	cfg.GRPCAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GRPCAddr, serviceaddr.ServiceGame)
+	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
+	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
 	fs.StringVar(&cfg.GRPCAddr, "grpc-addr", cfg.GRPCAddr, "game server address")
