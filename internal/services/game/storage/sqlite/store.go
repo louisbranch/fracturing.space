@@ -4,10 +4,10 @@ import (
 	"database/sql"
 	"fmt"
 	"io/fs"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
@@ -122,16 +122,9 @@ func openStore(path string, migrationFS fs.FS, migrationRoot string, keyring *in
 		return nil, fmt.Errorf("storage path is required")
 	}
 
-	cleanPath := filepath.Clean(path)
-	dsn := cleanPath + "?_journal_mode=WAL&_foreign_keys=ON&_busy_timeout=5000&_synchronous=NORMAL"
-	sqlDB, err := sql.Open("sqlite", dsn)
+	sqlDB, err := sqliteconn.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open sqlite db: %w", err)
-	}
-
-	if err := sqlDB.Ping(); err != nil {
-		_ = sqlDB.Close()
-		return nil, fmt.Errorf("ping sqlite db: %w", err)
+		return nil, err
 	}
 
 	store := &Store{

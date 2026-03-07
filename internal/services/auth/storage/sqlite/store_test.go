@@ -610,6 +610,15 @@ func TestMagicLinkRoundTrip(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
 
+	if err := store.PutUser(context.Background(), user.User{
+		ID:        "user-1",
+		Email:     "alpha@example.com",
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+
 	link := storage.MagicLink{
 		Token:     "token-1",
 		UserID:    "user-1",

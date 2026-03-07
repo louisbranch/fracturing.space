@@ -6,10 +6,10 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage/sqlite/migrations"
@@ -36,15 +36,9 @@ func Open(path string) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
 		return nil, fmt.Errorf("storage path is required")
 	}
-	cleanPath := filepath.Clean(path)
-	dsn := cleanPath + "?_journal_mode=WAL&_foreign_keys=ON&_busy_timeout=5000&_synchronous=NORMAL"
-	sqlDB, err := sql.Open("sqlite", dsn)
+	sqlDB, err := sqliteconn.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open sqlite db: %w", err)
-	}
-	if err := sqlDB.Ping(); err != nil {
-		_ = sqlDB.Close()
-		return nil, fmt.Errorf("ping sqlite db: %w", err)
+		return nil, err
 	}
 	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, ""); err != nil {
 		_ = sqlDB.Close()

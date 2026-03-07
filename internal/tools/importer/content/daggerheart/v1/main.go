@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 )
@@ -22,7 +23,13 @@ const (
 	defaultBaseLocale = "en-US"
 	defaultSystemID   = "daggerheart"
 	defaultSystemVer  = "v1"
+
+	defaultOpenRetryMaxAttempts = 5
+	defaultOpenRetryBaseDelay   = 250 * time.Millisecond
+	defaultOpenRetryMaxDelay    = 2 * time.Second
 )
+
+var openContentStore = storagesqlite.OpenContent
 
 // Config holds configuration for the catalog importer.
 type Config struct {
@@ -90,7 +97,7 @@ func Run(ctx context.Context, cfg Config, out io.Writer) error {
 
 	var store storage.DaggerheartContentStore
 	if !cfg.DryRun {
-		contentStore, err := storagesqlite.OpenContent(cfg.DBPath)
+		contentStore, err := openContentStoreWithRetry(ctx, cfg.DBPath, out)
 		if err != nil {
 			return fmt.Errorf("open content store: %w", err)
 		}
@@ -134,6 +141,57 @@ func Run(ctx context.Context, cfg Config, out io.Writer) error {
 	}
 	_, err = fmt.Fprintf(out, "imported %d locale(s) into %s\n", len(locales), cfg.DBPath)
 	return err
+}
+
+func openContentStoreWithRetry(ctx context.Context, dbPath string, out io.Writer) (*storagesqlite.Store, error) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if out == nil {
+		out = io.Discard
+	}
+
+	delay := defaultOpenRetryBaseDelay
+	for attempt := 1; attempt <= defaultOpenRetryMaxAttempts; attempt++ {
+		store, err := openContentStore(dbPath)
+		if err == nil {
+			return store, nil
+		}
+		if !sqliteconn.IsBusyOrLockedError(err) || attempt == defaultOpenRetryMaxAttempts {
+			return nil, err
+		}
+		if _, writeErr := fmt.Fprintf(
+			out,
+			"content store busy/locked; retrying open (%d/%d)\n",
+			attempt+1,
+			defaultOpenRetryMaxAttempts,
+		); writeErr != nil {
+			return nil, writeErr
+		}
+		if err := sleepContext(ctx, delay); err != nil {
+			return nil, err
+		}
+		delay *= 2
+		if delay > defaultOpenRetryMaxDelay {
+			delay = defaultOpenRetryMaxDelay
+		}
+	}
+
+	return nil, fmt.Errorf("open content store retry budget exhausted")
+}
+
+func sleepContext(ctx context.Context, delay time.Duration) error {
+	if delay <= 0 {
+		return nil
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
 
 func listLocaleDirs(root string) ([]string, error) {

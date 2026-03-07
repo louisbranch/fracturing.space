@@ -5,14 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	"github.com/louisbranch/fracturing.space/internal/services/notifications/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/notifications/storage/sqlite/migrations"
-	_ "modernc.org/sqlite"
 )
 
 // Store provides SQLite-backed persistence for notifications state.
@@ -34,18 +33,8 @@ func Open(path string) (*Store, error) {
 		return nil, fmt.Errorf("storage path is required")
 	}
 
-	cleanPath := filepath.Clean(path)
-	dsn := cleanPath + "?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_pragma=foreign_keys(ON)"
-	sqlDB, err := sql.Open("sqlite", dsn)
+	sqlDB, err := sqliteconn.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open sqlite db: %w", err)
-	}
-	if err := sqlDB.Ping(); err != nil {
-		_ = sqlDB.Close()
-		return nil, fmt.Errorf("ping sqlite db: %w", err)
-	}
-	if err := ensureForeignKeysEnabled(sqlDB); err != nil {
-		_ = sqlDB.Close()
 		return nil, err
 	}
 
@@ -67,20 +56,6 @@ func (s *Store) Close() error {
 
 func (s *Store) runMigrations() error {
 	return sqlitemigrate.ApplyMigrations(s.sqlDB, migrations.FS, "")
-}
-
-func ensureForeignKeysEnabled(db *sql.DB) error {
-	if db == nil {
-		return fmt.Errorf("sqlite db is required")
-	}
-	var enabled int
-	if err := db.QueryRow("PRAGMA foreign_keys").Scan(&enabled); err != nil {
-		return fmt.Errorf("check sqlite foreign key pragma: %w", err)
-	}
-	if enabled != 1 {
-		return fmt.Errorf("sqlite foreign keys are disabled")
-	}
-	return nil
 }
 
 // PutNotification persists one notification inbox row.

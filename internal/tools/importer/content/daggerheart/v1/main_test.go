@@ -3,6 +3,8 @@ package catalogimporter
 import (
 	"bytes"
 	"context"
+	"database/sql"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -180,4 +182,117 @@ func TestRunSkipIfReadyImportsWhenCatalogNotReady(t *testing.T) {
 	if !readiness.Ready {
 		t.Fatalf("readiness.Ready = false, missing %v", readiness.MissingSections)
 	}
+}
+
+func TestOpenContentStoreWithRetryRetriesBusyAndSucceeds(t *testing.T) {
+	originalOpen := openContentStore
+	t.Cleanup(func() {
+		openContentStore = originalOpen
+	})
+
+	busyErr := generateBusySQLiteError(t)
+	successPath := filepath.Join(t.TempDir(), "content.db")
+
+	var attempts int
+	openContentStore = func(string) (*storagesqlite.Store, error) {
+		attempts++
+		if attempts < 3 {
+			return nil, busyErr
+		}
+		return storagesqlite.OpenContent(successPath)
+	}
+
+	store, err := openContentStoreWithRetry(context.Background(), successPath, io.Discard)
+	if err != nil {
+		t.Fatalf("openContentStoreWithRetry() error = %v", err)
+	}
+	defer func() {
+		if closeErr := store.Close(); closeErr != nil {
+			t.Fatalf("Close() error = %v", closeErr)
+		}
+	}()
+	if attempts != 3 {
+		t.Fatalf("attempts = %d, want 3", attempts)
+	}
+}
+
+func TestOpenContentStoreWithRetryDoesNotRetryNonBusy(t *testing.T) {
+	originalOpen := openContentStore
+	t.Cleanup(func() {
+		openContentStore = originalOpen
+	})
+
+	var attempts int
+	openContentStore = func(string) (*storagesqlite.Store, error) {
+		attempts++
+		return nil, errors.New("boom")
+	}
+
+	_, err := openContentStoreWithRetry(context.Background(), filepath.Join(t.TempDir(), "content.db"), io.Discard)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if attempts != 1 {
+		t.Fatalf("attempts = %d, want 1", attempts)
+	}
+}
+
+func TestOpenContentStoreWithRetryRespectsContextCancellation(t *testing.T) {
+	originalOpen := openContentStore
+	t.Cleanup(func() {
+		openContentStore = originalOpen
+	})
+
+	busyErr := generateBusySQLiteError(t)
+	openContentStore = func(string) (*storagesqlite.Store, error) {
+		return nil, busyErr
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := openContentStoreWithRetry(ctx, filepath.Join(t.TempDir(), "content.db"), io.Discard)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("expected context canceled error, got %v", err)
+	}
+}
+
+func generateBusySQLiteError(t *testing.T) error {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "busy.db")
+	dsn := path + "?_pragma=busy_timeout(0)"
+
+	db1, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		t.Fatalf("open db1: %v", err)
+	}
+	defer db1.Close()
+
+	db2, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		t.Fatalf("open db2: %v", err)
+	}
+	defer db2.Close()
+
+	if _, err := db1.Exec("CREATE TABLE locks (id INTEGER PRIMARY KEY)"); err != nil {
+		t.Fatalf("create table: %v", err)
+	}
+
+	tx, err := db1.Begin()
+	if err != nil {
+		t.Fatalf("begin tx: %v", err)
+	}
+	defer tx.Rollback()
+
+	if _, err := tx.Exec("INSERT INTO locks (id) VALUES (1)"); err != nil {
+		t.Fatalf("insert in tx: %v", err)
+	}
+
+	_, busyErr := db2.Exec("INSERT INTO locks (id) VALUES (2)")
+	if busyErr == nil {
+		t.Fatal("expected busy/locked error")
+	}
+
+	return busyErr
 }
