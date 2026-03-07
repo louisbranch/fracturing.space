@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/Shopify/go-lua"
 )
@@ -14,6 +15,7 @@ const (
 	scenarioTypeName    = "scenario"
 	gmActionTypeName    = "gm_action"
 	participantTypeName = "participant"
+	systemTypeName      = "system_handle"
 )
 
 // Scenario describes a Lua-scripted scenario and its steps.
@@ -24,8 +26,9 @@ type Scenario struct {
 
 // Step represents a single scenario action and arguments.
 type Step struct {
-	Kind string
-	Args map[string]any
+	System string
+	Kind   string
+	Args   map[string]any
 }
 
 type gmAction struct {
@@ -36,6 +39,11 @@ type gmAction struct {
 type participantHandle struct {
 	scenario *Scenario
 	name     string
+}
+
+type systemHandle struct {
+	scenario *Scenario
+	system   string
 }
 
 // LoadScenarioFromFile loads a scenario from a Lua script file.
@@ -109,7 +117,7 @@ func validateScenarioComments(path string) error {
 func validateScenarioBlock(path string, lines []string, start int, end int) error {
 	firstLineIndex := -1
 	firstLineContent := ""
-	hasSceneCall := false
+	hasStepCall := false
 	for i := start; i < end; i++ {
 		trimmed := strings.TrimSpace(lines[i])
 		if trimmed == "" {
@@ -119,20 +127,45 @@ func validateScenarioBlock(path string, lines []string, start int, end int) erro
 			firstLineIndex = i
 			firstLineContent = trimmed
 		}
-		if strings.HasPrefix(trimmed, "scene:") {
-			hasSceneCall = true
+		if isScenarioStepCallLine(trimmed) {
+			hasStepCall = true
 		}
 	}
-	if hasSceneCall && firstLineIndex != -1 && !strings.HasPrefix(firstLineContent, "--") {
+	if hasStepCall && firstLineIndex != -1 && !strings.HasPrefix(firstLineContent, "--") {
 		return fmt.Errorf("scenario block missing comment at %s:%d", path, firstLineIndex+1)
 	}
 	return nil
+}
+
+func isScenarioStepCallLine(line string) bool {
+	colon := strings.Index(line, ":")
+	if colon <= 0 {
+		return false
+	}
+	receiver := strings.TrimSpace(line[:colon])
+	if receiver == "" {
+		return false
+	}
+	return isLuaIdentifier(receiver)
+}
+
+func isLuaIdentifier(value string) bool {
+	for i, r := range value {
+		switch {
+		case i == 0 && ((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || r == '_'):
+		case i > 0 && ((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_'):
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 func registerLuaTypes(state *lua.State) {
 	registerScenarioType(state)
 	registerGMActionType(state)
 	registerParticipantType(state)
+	registerSystemType(state)
 	registerScenarioConstructor(state)
 	registerModifierHelpers(state)
 }
@@ -140,7 +173,7 @@ func registerLuaTypes(state *lua.State) {
 func registerScenarioType(state *lua.State) {
 	lua.NewMetaTable(state, scenarioTypeName)
 	state.NewTable()
-	lua.SetFunctions(state, scenarioMethods, 0)
+	lua.SetFunctions(state, scenarioTypeMethods(), 0)
 	state.SetField(-2, "__index")
 	state.Pop(1)
 }
@@ -157,6 +190,14 @@ func registerParticipantType(state *lua.State) {
 	lua.NewMetaTable(state, participantTypeName)
 	state.NewTable()
 	lua.SetFunctions(state, participantMethods, 0)
+	state.SetField(-2, "__index")
+	state.Pop(1)
+}
+
+func registerSystemType(state *lua.State) {
+	lua.NewMetaTable(state, systemTypeName)
+	state.NewTable()
+	lua.SetFunctions(state, registeredScenarioSystemMethods(), 0)
 	state.SetField(-2, "__index")
 	state.Pop(1)
 }
@@ -210,6 +251,7 @@ func scenarioNew(state *lua.State) int {
 }
 
 var scenarioMethods = []lua.RegistryFunction{
+	{Name: "system", Function: scenarioSystem},
 	{Name: "campaign", Function: scenarioCampaign},
 	{Name: "participant", Function: scenarioParticipant},
 	{Name: "start_session", Function: scenarioStartSession},
@@ -217,40 +259,62 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "pc", Function: scenarioPC},
 	{Name: "npc", Function: scenarioNPC},
 	{Name: "prefab", Function: scenarioPrefab},
-	{Name: "adversary", Function: scenarioAdversary},
-	{Name: "gm_fear", Function: scenarioGMFear},
-	{Name: "reaction", Function: scenarioReaction},
-	{Name: "group_reaction", Function: scenarioGroupReaction},
-	{Name: "attack", Function: scenarioAttack},
-	{Name: "multi_attack", Function: scenarioMultiAttack},
-	{Name: "combined_damage", Function: scenarioCombinedDamage},
-	{Name: "adversary_attack", Function: scenarioAdversaryAttack},
-	{Name: "adversary_reaction", Function: scenarioAdversaryReaction},
-	{Name: "adversary_update", Function: scenarioAdversaryUpdate},
-	{Name: "apply_condition", Function: scenarioApplyCondition},
-	{Name: "gm_spend_fear", Function: scenarioGMSpendFear},
 	{Name: "set_spotlight", Function: scenarioSetSpotlight},
 	{Name: "clear_spotlight", Function: scenarioClearSpotlight},
-	{Name: "group_action", Function: scenarioGroupAction},
-	{Name: "tag_team", Function: scenarioTagTeam},
-	{Name: "temporary_armor", Function: scenarioTemporaryArmor},
-	{Name: "rest", Function: scenarioRest},
-	{Name: "downtime_move", Function: scenarioDowntimeMove},
-	{Name: "death_move", Function: scenarioDeathMove},
-	{Name: "blaze_of_glory", Function: scenarioBlazeOfGlory},
-	{Name: "swap_loadout", Function: scenarioSwapLoadout},
-	{Name: "countdown_create", Function: scenarioCountdownCreate},
-	{Name: "countdown_update", Function: scenarioCountdownUpdate},
-	{Name: "countdown_delete", Function: scenarioCountdownDelete},
-	{Name: "action_roll", Function: scenarioActionRoll},
-	{Name: "reaction_roll", Function: scenarioReactionRoll},
-	{Name: "damage_roll", Function: scenarioDamageRoll},
-	{Name: "adversary_attack_roll", Function: scenarioAdversaryAttackRoll},
-	{Name: "apply_roll_outcome", Function: scenarioApplyRollOutcome},
-	{Name: "apply_attack_outcome", Function: scenarioApplyAttackOutcome},
-	{Name: "apply_adversary_attack_outcome", Function: scenarioApplyAdversaryAttackOutcome},
-	{Name: "apply_reaction_outcome", Function: scenarioApplyReactionOutcome},
-	{Name: "mitigate_damage", Function: scenarioMitigateDamage},
+}
+
+var (
+	scenarioTypeMethodsOnce sync.Once
+	scenarioTypeMethodList  []lua.RegistryFunction
+)
+
+func scenarioTypeMethods() []lua.RegistryFunction {
+	scenarioTypeMethodsOnce.Do(func() {
+		scenarioTypeMethodList = make([]lua.RegistryFunction, 0, len(scenarioMethods)+len(registeredScenarioSystemMethods()))
+		scenarioTypeMethodList = append(scenarioTypeMethodList, scenarioMethods...)
+
+		seen := make(map[string]struct{}, len(scenarioTypeMethodList))
+		for _, method := range scenarioTypeMethodList {
+			seen[method.Name] = struct{}{}
+		}
+
+		for _, method := range registeredScenarioSystemMethods() {
+			if _, exists := seen[method.Name]; exists {
+				continue
+			}
+			name := method.Name
+			scenarioTypeMethodList = append(scenarioTypeMethodList, lua.RegistryFunction{
+				Name:     name,
+				Function: legacyScenarioSystemMethod(name),
+			})
+			seen[name] = struct{}{}
+		}
+	})
+	return scenarioTypeMethodList
+}
+
+func legacyScenarioSystemMethod(method string) lua.Function {
+	return func(state *lua.State) int {
+		lua.Errorf(state, "scene:%s requires a system handle, use scene:system(\"<SYSTEM_ID>\"):%s(...)", method, method)
+		return 0
+	}
+}
+
+func scenarioSystem(state *lua.State) int {
+	scenario := checkScenario(state)
+	system := strings.TrimSpace(lua.CheckString(state, 2))
+	if system == "" {
+		lua.Errorf(state, "system id is required")
+		return 0
+	}
+	registeredSystemID, _, err := registeredScenarioSystemIDForValue(system)
+	if err != nil {
+		lua.Errorf(state, err.Error())
+		return 0
+	}
+	state.PushUserData(&systemHandle{scenario: scenario, system: registeredSystemID})
+	lua.SetMetaTableNamed(state, systemTypeName)
+	return 1
 }
 
 func scenarioCampaign(state *lua.State) int {
@@ -321,21 +385,27 @@ func scenarioPrefab(state *lua.State) int {
 }
 
 func scenarioAdversary(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "adversary")
+	if handle == nil {
+		return 0
+	}
 	name := lua.CheckString(state, 2)
 	opts := optionalTable(state, 3)
 	data := map[string]any{"name": name}
 	for key, value := range opts {
 		data[key] = value
 	}
-	appendStep(scenario, "adversary", data)
+	appendStepWithSystem(handle.scenario, handle.system, "adversary", data)
 	return 0
 }
 
 func scenarioGMFear(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "gm_fear")
+	if handle == nil {
+		return 0
+	}
 	value := int(lua.CheckNumber(state, 2))
-	appendStep(scenario, "gm_fear", map[string]any{"value": value})
+	appendStepWithSystem(handle.scenario, handle.system, "gm_fear", map[string]any{"value": value})
 	return 0
 }
 
@@ -354,242 +424,332 @@ func scenarioClearSpotlight(state *lua.State) int {
 }
 
 func scenarioReaction(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "reaction")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "reaction", data)
+	appendStepWithSystem(handle.scenario, handle.system, "reaction", data)
 	return 0
 }
 
 func scenarioGroupReaction(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "group_reaction")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "group_reaction", data)
+	appendStepWithSystem(handle.scenario, handle.system, "group_reaction", data)
 	return 0
 }
 
 func scenarioAttack(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "attack")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "attack", data)
+	appendStepWithSystem(handle.scenario, handle.system, "attack", data)
 	return 0
 }
 
 func scenarioMultiAttack(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "multi_attack")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "multi_attack", data)
+	appendStepWithSystem(handle.scenario, handle.system, "multi_attack", data)
 	return 0
 }
 
 func scenarioCombinedDamage(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "combined_damage")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "combined_damage", data)
+	appendStepWithSystem(handle.scenario, handle.system, "combined_damage", data)
 	return 0
 }
 
 func scenarioAdversaryAttack(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "adversary_attack")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "adversary_attack", data)
+	appendStepWithSystem(handle.scenario, handle.system, "adversary_attack", data)
 	return 0
 }
 
 func scenarioAdversaryReaction(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "adversary_reaction")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "adversary_reaction", data)
+	appendStepWithSystem(handle.scenario, handle.system, "adversary_reaction", data)
 	return 0
 }
 
 func scenarioAdversaryUpdate(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "adversary_update")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "adversary_update", data)
+	appendStepWithSystem(handle.scenario, handle.system, "adversary_update", data)
 	return 0
 }
 
 func scenarioApplyCondition(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "apply_condition")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "apply_condition", data)
+	appendStepWithSystem(handle.scenario, handle.system, "apply_condition", data)
 	return 0
 }
 
 func scenarioGroupAction(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "group_action")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "group_action", data)
+	appendStepWithSystem(handle.scenario, handle.system, "group_action", data)
 	return 0
 }
 
 func scenarioTagTeam(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "tag_team")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "tag_team", data)
+	appendStepWithSystem(handle.scenario, handle.system, "tag_team", data)
 	return 0
 }
 
 func scenarioTemporaryArmor(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "temporary_armor")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "temporary_armor", data)
+	appendStepWithSystem(handle.scenario, handle.system, "temporary_armor", data)
 	return 0
 }
 
 func scenarioRest(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "rest")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "rest", data)
+	appendStepWithSystem(handle.scenario, handle.system, "rest", data)
 	return 0
 }
 
 func scenarioDowntimeMove(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "downtime_move")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "downtime_move", data)
+	appendStepWithSystem(handle.scenario, handle.system, "downtime_move", data)
 	return 0
 }
 
 func scenarioDeathMove(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "death_move")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "death_move", data)
+	appendStepWithSystem(handle.scenario, handle.system, "death_move", data)
 	return 0
 }
 
 func scenarioBlazeOfGlory(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "blaze_of_glory")
+	if handle == nil {
+		return 0
+	}
 	name := lua.CheckString(state, 2)
-	appendStep(scenario, "blaze_of_glory", map[string]any{"target": name})
+	appendStepWithSystem(handle.scenario, handle.system, "blaze_of_glory", map[string]any{"target": name})
 	return 0
 }
 
 func scenarioGMSpendFear(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "gm_spend_fear")
+	if handle == nil {
+		return 0
+	}
 	amount := int(lua.CheckNumber(state, 2))
-	stepIndex := appendStep(scenario, "gm_spend_fear", map[string]any{"amount": amount})
-	state.PushUserData(&gmAction{scenario: scenario, stepIndex: stepIndex})
+	stepIndex := appendStepWithSystem(handle.scenario, handle.system, "gm_spend_fear", map[string]any{"amount": amount})
+	state.PushUserData(&gmAction{scenario: handle.scenario, stepIndex: stepIndex})
 	lua.SetMetaTableNamed(state, gmActionTypeName)
 	return 1
 }
 
 func scenarioSwapLoadout(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "swap_loadout")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "swap_loadout", data)
+	appendStepWithSystem(handle.scenario, handle.system, "swap_loadout", data)
 	return 0
 }
 
 func scenarioCountdownCreate(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "countdown_create")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "countdown_create", data)
+	appendStepWithSystem(handle.scenario, handle.system, "countdown_create", data)
 	return 0
 }
 
 func scenarioCountdownUpdate(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "countdown_update")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "countdown_update", data)
+	appendStepWithSystem(handle.scenario, handle.system, "countdown_update", data)
 	return 0
 }
 
 func scenarioCountdownDelete(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "countdown_delete")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "countdown_delete", data)
+	appendStepWithSystem(handle.scenario, handle.system, "countdown_delete", data)
 	return 0
 }
 
 func scenarioActionRoll(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "action_roll")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "action_roll", data)
+	appendStepWithSystem(handle.scenario, handle.system, "action_roll", data)
 	return 0
 }
 
 func scenarioReactionRoll(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "reaction_roll")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "reaction_roll", data)
+	appendStepWithSystem(handle.scenario, handle.system, "reaction_roll", data)
 	return 0
 }
 
 func scenarioDamageRoll(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "damage_roll")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "damage_roll", data)
+	appendStepWithSystem(handle.scenario, handle.system, "damage_roll", data)
 	return 0
 }
 
 func scenarioAdversaryAttackRoll(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "adversary_attack_roll")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "adversary_attack_roll", data)
+	appendStepWithSystem(handle.scenario, handle.system, "adversary_attack_roll", data)
 	return 0
 }
 
 func scenarioApplyRollOutcome(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "apply_roll_outcome")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "apply_roll_outcome", data)
+	appendStepWithSystem(handle.scenario, handle.system, "apply_roll_outcome", data)
 	return 0
 }
 
 func scenarioApplyAttackOutcome(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "apply_attack_outcome")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "apply_attack_outcome", data)
+	appendStepWithSystem(handle.scenario, handle.system, "apply_attack_outcome", data)
 	return 0
 }
 
 func scenarioApplyAdversaryAttackOutcome(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "apply_adversary_attack_outcome")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "apply_adversary_attack_outcome", data)
+	appendStepWithSystem(handle.scenario, handle.system, "apply_adversary_attack_outcome", data)
 	return 0
 }
 
 func scenarioApplyReactionOutcome(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "apply_reaction_outcome")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "apply_reaction_outcome", data)
+	appendStepWithSystem(handle.scenario, handle.system, "apply_reaction_outcome", data)
 	return 0
 }
 
 func scenarioMitigateDamage(state *lua.State) int {
-	scenario := checkScenario(state)
+	handle := checkSystemHandle(state, "mitigate_damage")
+	if handle == nil {
+		return 0
+	}
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
-	appendStep(scenario, "mitigate_damage", data)
+	appendStepWithSystem(handle.scenario, handle.system, "mitigate_damage", data)
 	return 0
 }
 
@@ -655,14 +815,34 @@ func checkScenario(state *lua.State) *Scenario {
 	return nil
 }
 
+func checkSystemHandle(state *lua.State, method string) *systemHandle {
+	if state.TypeOf(1) == lua.TypeUserData {
+		if scenario, ok := state.ToUserData(1).(*Scenario); ok && scenario != nil {
+			lua.Errorf(state, "scene:%s requires a system handle, use scene:system(\"<SYSTEM_ID>\"):%s(...)", method, method)
+			return nil
+		}
+	}
+	ud := lua.CheckUserData(state, 1, systemTypeName)
+	handle, ok := ud.(*systemHandle)
+	if !ok || handle == nil || handle.scenario == nil || strings.TrimSpace(handle.system) == "" {
+		lua.Errorf(state, "invalid system handle")
+		return nil
+	}
+	return handle
+}
+
 func appendStep(scenario *Scenario, kind string, data map[string]any) int {
+	return appendStepWithSystem(scenario, "", kind, data)
+}
+
+func appendStepWithSystem(scenario *Scenario, system string, kind string, data map[string]any) int {
 	if scenario == nil {
 		return -1
 	}
 	if data == nil {
 		data = map[string]any{}
 	}
-	scenario.Steps = append(scenario.Steps, Step{Kind: kind, Args: data})
+	scenario.Steps = append(scenario.Steps, Step{System: strings.ToUpper(strings.TrimSpace(system)), Kind: kind, Args: data})
 	return len(scenario.Steps) - 1
 }
 

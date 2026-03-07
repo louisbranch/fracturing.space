@@ -13,7 +13,32 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+var coreStepKinds = map[string]struct{}{
+	"campaign":        {},
+	"participant":     {},
+	"start_session":   {},
+	"end_session":     {},
+	"character":       {},
+	"prefab":          {},
+	"set_spotlight":   {},
+	"clear_spotlight": {},
+}
+
 func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) error {
+	ctx = withParticipantID(ctx, state.ownerParticipantID)
+	if _, ok := coreStepKinds[step.Kind]; ok {
+		if strings.TrimSpace(step.System) != "" {
+			return r.failf("core step %q must not declare a system scope", step.Kind)
+		}
+		return r.runCoreStep(ctx, state, step)
+	}
+	if !isKnownScenarioSystemStepKind(step.Kind) {
+		return r.failf("unknown step kind %q", step.Kind)
+	}
+	return r.runSystemStep(ctx, state, step)
+}
+
+func (r *Runner) runCoreStep(ctx context.Context, state *scenarioState, step Step) error {
 	switch step.Kind {
 	case "campaign":
 		return r.runCampaignStep(ctx, state, step)
@@ -27,6 +52,44 @@ func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) e
 		return r.runCharacterStep(ctx, state, step)
 	case "prefab":
 		return r.runPrefabStep(ctx, state, step)
+	case "set_spotlight":
+		return r.runSetSpotlightStep(ctx, state, step)
+	case "clear_spotlight":
+		return r.runClearSpotlightStep(ctx, state, step)
+	default:
+		return r.failf("unknown core step kind %q", step.Kind)
+	}
+}
+
+func (r *Runner) runSystemStep(ctx context.Context, state *scenarioState, step Step) error {
+	systemID, err := r.resolveStepSystem(state, step)
+	if err != nil {
+		return err
+	}
+	step.System = systemID
+	registration, ok := scenarioSystemForID(systemID)
+	if !ok {
+		return unsupportedScenarioSystemError(systemID)
+	}
+	if _, ok := registration.stepKinds[step.Kind]; !ok {
+		if !isKnownScenarioSystemStepKind(step.Kind) {
+			return r.failf("unknown step kind %q", step.Kind)
+		}
+		return r.failf(
+			"step kind %q is not supported for system %q (supported systems: %s)",
+			step.Kind,
+			systemID,
+			strings.Join(registeredSystemsForStepKind(step.Kind), ", "),
+		)
+	}
+	if registration.runStep == nil {
+		return r.failf("scenario system %q has no step runner", systemID)
+	}
+	return registration.runStep(r, ctx, state, step)
+}
+
+func (r *Runner) runDaggerheartStep(ctx context.Context, state *scenarioState, step Step) error {
+	switch step.Kind {
 	case "adversary":
 		return r.runAdversaryStep(ctx, state, step)
 	case "gm_fear":
@@ -37,10 +100,6 @@ func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) e
 		return r.runGroupReactionStep(ctx, state, step)
 	case "gm_spend_fear":
 		return r.runGMSpendFearStep(ctx, state, step)
-	case "set_spotlight":
-		return r.runSetSpotlightStep(ctx, state, step)
-	case "clear_spotlight":
-		return r.runClearSpotlightStep(ctx, state, step)
 	case "apply_condition":
 		return r.runApplyConditionStep(ctx, state, step)
 	case "group_action":
@@ -96,8 +155,34 @@ func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) e
 	case "mitigate_damage":
 		return r.runMitigateDamageStep(ctx, state, step)
 	default:
-		return r.failf("unknown step kind %q", step.Kind)
+		return r.failf("unknown Daggerheart step kind %q", step.Kind)
 	}
+}
+
+func (r *Runner) resolveStepSystem(state *scenarioState, step Step) (string, error) {
+	systemID := strings.ToUpper(strings.TrimSpace(step.System))
+	if systemID == "" {
+		if state.campaignSystem == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+			return "", r.failf("system step %q requires explicit system scope", step.Kind)
+		}
+		var err error
+		systemID, err = registeredScenarioSystemIDForGameSystem(state.campaignSystem)
+		if err != nil {
+			return "", err
+		}
+	}
+	registeredSystemID, parsed, err := registeredScenarioSystemIDForValue(systemID)
+	if err != nil {
+		return "", err
+	}
+	if state.campaignSystem != commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED && state.campaignSystem != parsed {
+		return "", r.failf(
+			"step system %q does not match campaign system %q",
+			registeredSystemID,
+			strings.TrimPrefix(state.campaignSystem.String(), "GAME_SYSTEM_"),
+		)
+	}
+	return registeredSystemID, nil
 }
 
 func (r *Runner) runParticipantStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -152,13 +237,19 @@ func (r *Runner) runCampaignStep(ctx context.Context, state *scenarioState, step
 	if name == "" {
 		return r.failf("campaign name is required")
 	}
-	system := optionalString(step.Args, "system", "DAGGERHEART")
+	system := strings.TrimSpace(requiredString(step.Args, "system"))
+	if system == "" {
+		return r.failf("campaign system is required")
+	}
 	gmMode := optionalString(step.Args, "gm_mode", "HUMAN")
 	intent := optionalString(step.Args, "intent", "SANDBOX")
 	accessPolicy := optionalString(step.Args, "access_policy", "PRIVATE")
 
 	systemValue, err := parseGameSystem(system)
 	if err != nil {
+		return err
+	}
+	if _, err := registeredScenarioSystemIDForGameSystem(systemValue); err != nil {
 		return err
 	}
 	gmModeValue, err := parseGmMode(gmMode)
@@ -200,6 +291,10 @@ func (r *Runner) runCampaignStep(ctx context.Context, state *scenarioState, step
 	if response.GetOwnerParticipant() == nil {
 		return r.failf("expected owner participant")
 	}
+	state.campaignSystem = response.GetCampaign().GetSystem()
+	if state.campaignSystem == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+		state.campaignSystem = systemValue
+	}
 	state.ownerParticipantID = response.GetOwnerParticipant().GetId()
 	r.logf("campaign created: id=%s owner_participant=%s", state.campaignID, state.ownerParticipantID)
 	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeCampaignCreated)
@@ -208,6 +303,9 @@ func (r *Runner) runCampaignStep(ctx context.Context, state *scenarioState, step
 func (r *Runner) runStartSessionStep(ctx context.Context, state *scenarioState, step Step) error {
 	if state.campaignID == "" {
 		return r.failf("campaign is required before session")
+	}
+	if err := r.ensureSessionStartReadiness(ctx, state); err != nil {
+		return err
 	}
 	name := optionalString(step.Args, "name", "Scenario Session")
 	request := &gamev1.StartSessionRequest{CampaignId: state.campaignID, Name: name}
@@ -285,6 +383,9 @@ func (r *Runner) runCharacterStep(ctx context.Context, state *scenarioState, ste
 	characterID := response.GetCharacter().GetId()
 	state.actors[name] = characterID
 	r.logf("character created: name=%s id=%s kind=%s", name, characterID, parsedKind.String())
+	if err := r.ensureScenarioCharacterReadiness(ctx, state, characterID); err != nil {
+		return err
+	}
 
 	if err := r.applyDefaultDaggerheartProfile(ctx, state, characterID, step.Args); err != nil {
 		return err
@@ -1843,7 +1944,7 @@ func (r *Runner) runAdversaryAttackStep(ctx context.Context, state *scenarioStat
 	if err != nil {
 		return fmt.Errorf("adversary attack flow: %w", err)
 	}
-	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied); err != nil {
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeRollResolved); err != nil {
 		return err
 	}
 	if response.GetDamageApplied() != nil {
@@ -2445,7 +2546,7 @@ func (r *Runner) runApplyRollOutcomeStep(ctx context.Context, state *scenarioSta
 		"on_failure_fear": {},
 		"on_critical":     {},
 		"on_crit":         {},
-	})
+	}, step.System)
 	if err != nil {
 		return err
 	}
@@ -2457,9 +2558,17 @@ func (r *Runner) runApplyRollOutcomeStep(ctx context.Context, state *scenarioSta
 	if err != nil {
 		return err
 	}
-	_, err = r.env.daggerheartClient.ApplyRollOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), request)
+	response, err := r.env.daggerheartClient.ApplyRollOutcome(withCampaignID(withSessionID(ctx, state.sessionID), state.campaignID), request)
 	if err != nil {
 		return fmt.Errorf("apply_roll_outcome: %w", err)
+	}
+	if response == nil {
+		return r.failf("apply_roll_outcome: expected response")
+	}
+	if response.GetRequiresComplication() {
+		if err := r.resolveOpenSessionGate(ctx, state, before); err != nil {
+			return err
+		}
 	}
 	if len(branches) > 0 {
 		ensureRollOutcomeState(state)
@@ -2507,7 +2616,7 @@ func (r *Runner) runApplyAttackOutcomeStep(ctx context.Context, state *scenarioS
 	if err != nil {
 		return fmt.Errorf("apply_attack_outcome: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied)
+	return r.requireNoSessionEventsAfterSeq(ctx, state, before)
 }
 
 func (r *Runner) runApplyAdversaryAttackOutcomeStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2543,7 +2652,7 @@ func (r *Runner) runApplyAdversaryAttackOutcomeStep(ctx context.Context, state *
 	if err != nil {
 		return fmt.Errorf("apply_adversary_attack_outcome: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied)
+	return r.requireNoSessionEventsAfterSeq(ctx, state, before)
 }
 
 func (r *Runner) runApplyReactionOutcomeStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -2568,7 +2677,7 @@ func (r *Runner) runApplyReactionOutcomeStep(ctx context.Context, state *scenari
 		"on_failure_fear": {},
 		"on_critical":     {},
 		"on_crit":         {},
-	})
+	}, step.System)
 	if err != nil {
 		return err
 	}
@@ -2593,8 +2702,9 @@ func (r *Runner) runApplyReactionOutcomeStep(ctx context.Context, state *scenari
 		}); err != nil {
 			return err
 		}
+		return nil
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, event.TypeOutcomeApplied)
+	return r.requireNoSessionEventsAfterSeq(ctx, state, before)
 }
 
 func (r *Runner) runMitigateDamageStep(ctx context.Context, state *scenarioState, step Step) error {

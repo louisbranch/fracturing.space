@@ -16,7 +16,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/coreevent"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -42,6 +44,9 @@ func (r *Runner) ensureSession(ctx context.Context, state *scenarioState) error 
 	if state.sessionID != "" {
 		return nil
 	}
+	if err := r.ensureSessionStartReadiness(ctx, state); err != nil {
+		return err
+	}
 	response, err := r.env.sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: state.campaignID,
 		Name:       "Scenario Session",
@@ -56,11 +61,293 @@ func (r *Runner) ensureSession(ctx context.Context, state *scenarioState) error 
 	return nil
 }
 
+func (r *Runner) ensureSessionStartReadiness(ctx context.Context, state *scenarioState) error {
+	if err := r.ensureCampaign(state); err != nil {
+		return err
+	}
+	if state.ownerParticipantID == "" || r.env.participantClient == nil || r.env.characterClient == nil {
+		// Unit tests may construct partial state/env and call helpers directly.
+		return nil
+	}
+	registration, hasSystem, err := scenarioSystemForState(state)
+	if err != nil {
+		return err
+	}
+
+	participantCtx := withParticipantID(ctx, state.ownerParticipantID)
+	participantsResp, err := r.env.participantClient.ListParticipants(participantCtx, &gamev1.ListParticipantsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   200,
+	})
+	if err != nil {
+		if status.Code(err) == codes.Unimplemented {
+			return nil
+		}
+		return fmt.Errorf("list participants: %w", err)
+	}
+
+	playerParticipantIDs := make([]string, 0, len(participantsResp.GetParticipants()))
+	for _, participant := range participantsResp.GetParticipants() {
+		if participant.GetRole() != gamev1.ParticipantRole_PLAYER {
+			continue
+		}
+		id := strings.TrimSpace(participant.GetId())
+		if id != "" {
+			playerParticipantIDs = append(playerParticipantIDs, id)
+		}
+	}
+	if len(playerParticipantIDs) == 0 {
+		response, createErr := r.env.participantClient.CreateParticipant(participantCtx, &gamev1.CreateParticipantRequest{
+			CampaignId: state.campaignID,
+			Name:       "Scenario Player",
+			Role:       gamev1.ParticipantRole_PLAYER,
+			Controller: gamev1.Controller_CONTROLLER_HUMAN,
+		})
+		if createErr != nil {
+			return fmt.Errorf("create readiness participant: %w", createErr)
+		}
+		if response.GetParticipant() == nil {
+			return r.failf("create readiness participant returned empty participant")
+		}
+		playerParticipantID := strings.TrimSpace(response.GetParticipant().GetId())
+		if playerParticipantID == "" {
+			return r.failf("create readiness participant returned empty id")
+		}
+		playerParticipantIDs = append(playerParticipantIDs, playerParticipantID)
+	}
+
+	playerCharacterCounts := make(map[string]int, len(playerParticipantIDs))
+	for _, participantID := range playerParticipantIDs {
+		playerCharacterCounts[participantID] = 0
+	}
+
+	pageToken := ""
+	characterCount := 0
+	for {
+		charactersResp, listErr := r.env.characterClient.ListCharacters(participantCtx, &gamev1.ListCharactersRequest{
+			CampaignId: state.campaignID,
+			PageSize:   200,
+			PageToken:  pageToken,
+		})
+		if listErr != nil {
+			if status.Code(listErr) == codes.Unimplemented {
+				return nil
+			}
+			return fmt.Errorf("list characters: %w", listErr)
+		}
+		for _, character := range charactersResp.GetCharacters() {
+			characterID := strings.TrimSpace(character.GetId())
+			if characterID == "" {
+				continue
+			}
+			characterCount++
+			characterParticipantID := strings.TrimSpace(character.GetParticipantId().GetValue())
+			if characterParticipantID == "" {
+				targetParticipantID := firstPlayerWithoutCharacter(playerParticipantIDs, playerCharacterCounts)
+				if targetParticipantID == "" {
+					targetParticipantID = playerParticipantIDs[0]
+				}
+				_, setErr := r.env.characterClient.SetDefaultControl(participantCtx, &gamev1.SetDefaultControlRequest{
+					CampaignId:    state.campaignID,
+					CharacterId:   characterID,
+					ParticipantId: wrapperspb.String(targetParticipantID),
+				})
+				if setErr != nil {
+					return fmt.Errorf("set readiness character control for %s: %w", characterID, setErr)
+				}
+				characterParticipantID = targetParticipantID
+			}
+			if _, ok := playerCharacterCounts[characterParticipantID]; ok {
+				playerCharacterCounts[characterParticipantID]++
+			}
+			if hasSystem && registration.characterNeedsReadiness != nil {
+				needsReadiness, readinessErr := registration.characterNeedsReadiness(r, participantCtx, state, characterID)
+				if readinessErr != nil {
+					return readinessErr
+				}
+				if needsReadiness && registration.ensureCharacterReadiness != nil {
+					if readinessErr := registration.ensureCharacterReadiness(r, participantCtx, state, characterID); readinessErr != nil {
+						return readinessErr
+					}
+				}
+			}
+		}
+		next := strings.TrimSpace(charactersResp.GetNextPageToken())
+		if next == "" {
+			break
+		}
+		pageToken = next
+	}
+
+	missingPlayerIDs := make([]string, 0, len(playerParticipantIDs))
+	for _, participantID := range playerParticipantIDs {
+		if playerCharacterCounts[participantID] == 0 {
+			missingPlayerIDs = append(missingPlayerIDs, participantID)
+		}
+	}
+	if characterCount == 0 || len(missingPlayerIDs) > 0 {
+		if len(missingPlayerIDs) == 0 {
+			missingPlayerIDs = append(missingPlayerIDs, playerParticipantIDs[0])
+		}
+		for index, participantID := range missingPlayerIDs {
+			characterName := "Scenario Readiness Character"
+			if len(missingPlayerIDs) > 1 {
+				characterName = fmt.Sprintf("Scenario Readiness Character %d", index+1)
+			}
+			createResp, createErr := r.env.characterClient.CreateCharacter(participantCtx, &gamev1.CreateCharacterRequest{
+				CampaignId: state.campaignID,
+				Name:       characterName,
+				Kind:       gamev1.CharacterKind_PC,
+			})
+			if createErr != nil {
+				return fmt.Errorf("create readiness character: %w", createErr)
+			}
+			if createResp.GetCharacter() == nil {
+				return r.failf("create readiness character returned empty character")
+			}
+			characterID := strings.TrimSpace(createResp.GetCharacter().GetId())
+			if characterID == "" {
+				return r.failf("create readiness character returned empty id")
+			}
+			_, setErr := r.env.characterClient.SetDefaultControl(participantCtx, &gamev1.SetDefaultControlRequest{
+				CampaignId:    state.campaignID,
+				CharacterId:   characterID,
+				ParticipantId: wrapperspb.String(participantID),
+			})
+			if setErr != nil {
+				return fmt.Errorf("set readiness character control for %s: %w", characterID, setErr)
+			}
+			if hasSystem && registration.ensureCharacterReadiness != nil {
+				if readinessErr := registration.ensureCharacterReadiness(r, participantCtx, state, characterID); readinessErr != nil {
+					return readinessErr
+				}
+			}
+		}
+	}
+	return nil
+}
+
+func firstPlayerWithoutCharacter(playerParticipantIDs []string, playerCharacterCounts map[string]int) string {
+	for _, participantID := range playerParticipantIDs {
+		if playerCharacterCounts[participantID] == 0 {
+			return participantID
+		}
+	}
+	return ""
+}
+
+func (r *Runner) ensureScenarioCharacterReadiness(
+	ctx context.Context,
+	state *scenarioState,
+	characterID string,
+) error {
+	registration, hasSystem, err := scenarioSystemForState(state)
+	if err != nil {
+		return err
+	}
+	if !hasSystem || registration.ensureCharacterReadiness == nil {
+		return nil
+	}
+	return registration.ensureCharacterReadiness(r, ctx, state, characterID)
+}
+
+func (r *Runner) ensureDaggerheartCharacterReadiness(
+	ctx context.Context,
+	state *scenarioState,
+	characterID string,
+) error {
+	_, err := r.env.characterClient.ApplyCharacterCreationWorkflow(ctx, &gamev1.ApplyCharacterCreationWorkflowRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: characterID,
+		SystemWorkflow: &gamev1.ApplyCharacterCreationWorkflowRequest_Daggerheart{
+			Daggerheart: &daggerheartv1.DaggerheartCreationWorkflowInput{
+				ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
+					ClassId:    "class.guardian",
+					SubclassId: "subclass.stalwart",
+				},
+				HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
+					AncestryId:  "heritage.human",
+					CommunityId: "heritage.highborne",
+				},
+				TraitsInput: &daggerheartv1.DaggerheartCreationStepTraitsInput{
+					Agility:   2,
+					Strength:  1,
+					Finesse:   1,
+					Instinct:  0,
+					Presence:  0,
+					Knowledge: -1,
+				},
+				DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{},
+				EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{
+					WeaponIds:    []string{"weapon.longsword"},
+					ArmorId:      "armor.readiness-light",
+					PotionItemId: "item.minor-health-potion",
+				},
+				BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{
+					Background: "scenario background",
+				},
+				ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{
+					Experiences: []*daggerheartv1.DaggerheartExperience{{
+						Name:     "scenario experience",
+						Modifier: 1,
+					}},
+				},
+				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{
+					DomainCardIds: []string{"domain_card.valor-bare-bones"},
+				},
+				ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{
+					Connections: "scenario connections",
+				},
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("apply readiness workflow for %s: %w", characterID, err)
+	}
+	return nil
+}
+
+func (r *Runner) scenarioCharacterNeedsReadiness(
+	ctx context.Context,
+	state *scenarioState,
+	characterID string,
+) (bool, error) {
+	registration, hasSystem, err := scenarioSystemForState(state)
+	if err != nil {
+		return false, err
+	}
+	if !hasSystem || registration.characterNeedsReadiness == nil {
+		return false, nil
+	}
+	return registration.characterNeedsReadiness(r, ctx, state, characterID)
+}
+
+func (r *Runner) daggerheartCharacterNeedsReadiness(
+	ctx context.Context,
+	state *scenarioState,
+	characterID string,
+) (bool, error) {
+	sheet, err := r.env.characterClient.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("get character sheet for readiness check: %w", err)
+	}
+	profile := sheet.GetProfile().GetDaggerheart()
+	if profile == nil {
+		return true, nil
+	}
+	return strings.TrimSpace(profile.GetClassId()) == "" ||
+		strings.TrimSpace(profile.GetSubclassId()) == "", nil
+}
+
 func (r *Runner) latestSeq(ctx context.Context, state *scenarioState) (uint64, error) {
 	if state.campaignID == "" {
 		return 0, nil
 	}
-	response, err := r.env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+	eventCtx := withParticipantID(ctx, state.ownerParticipantID)
+	response, err := r.env.eventClient.ListEvents(eventCtx, &gamev1.ListEventsRequest{
 		CampaignId: state.campaignID,
 		PageSize:   1,
 		OrderBy:    "seq desc",
@@ -75,12 +362,13 @@ func (r *Runner) latestSeq(ctx context.Context, state *scenarioState) (uint64, e
 }
 
 func (r *Runner) requireEventTypesAfterSeq(ctx context.Context, state *scenarioState, before uint64, types ...event.Type) error {
+	eventCtx := withParticipantID(ctx, state.ownerParticipantID)
 	for _, eventType := range types {
 		filter := fmt.Sprintf("type = \"%s\"", eventType)
 		if state.sessionID != "" && isSessionEvent(string(eventType)) {
 			filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
 		}
-		response, err := r.env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+		response, err := r.env.eventClient.ListEvents(eventCtx, &gamev1.ListEventsRequest{
 			CampaignId: state.campaignID,
 			PageSize:   1,
 			OrderBy:    "seq desc",
@@ -144,12 +432,39 @@ func (r *Runner) requireAnyEventTypesAfterSeq(ctx context.Context, state *scenar
 	return r.assertf("expected event after seq %d: %s", before, strings.Join(labels, ", "))
 }
 
+func (r *Runner) requireNoSessionEventsAfterSeq(ctx context.Context, state *scenarioState, before uint64) error {
+	if state.sessionID == "" {
+		return r.failf("session is required")
+	}
+	eventCtx := withParticipantID(ctx, state.ownerParticipantID)
+	response, err := r.env.eventClient.ListEvents(eventCtx, &gamev1.ListEventsRequest{
+		CampaignId: state.campaignID,
+		PageSize:   20,
+		OrderBy:    "seq desc",
+		Filter:     fmt.Sprintf("session_id = \"%s\"", state.sessionID),
+	})
+	if err != nil {
+		return fmt.Errorf("list session events: %w", err)
+	}
+	for _, evt := range response.GetEvents() {
+		if evt.GetSeq() <= before {
+			break
+		}
+		if strings.TrimSpace(evt.GetType()) == "" {
+			continue
+		}
+		return r.assertf("expected no session events after seq %d, got %s@%d", before, evt.GetType(), evt.GetSeq())
+	}
+	return nil
+}
+
 func (r *Runner) resolveOpenSessionGate(ctx context.Context, state *scenarioState, before uint64) error {
 	filter := fmt.Sprintf("type = \"%s\"", event.TypeSessionGateOpened)
 	if state.sessionID != "" {
 		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
 	}
-	response, err := r.env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+	eventCtx := withParticipantID(ctx, state.ownerParticipantID)
+	response, err := r.env.eventClient.ListEvents(eventCtx, &gamev1.ListEventsRequest{
 		CampaignId: state.campaignID,
 		PageSize:   20,
 		OrderBy:    "seq desc",
@@ -161,6 +476,9 @@ func (r *Runner) resolveOpenSessionGate(ctx context.Context, state *scenarioStat
 	gateID := ""
 	for _, evt := range response.GetEvents() {
 		if evt.GetSeq() <= before {
+			continue
+		}
+		if len(strings.TrimSpace(string(evt.GetPayloadJson()))) == 0 {
 			continue
 		}
 		var payload event.SessionGateOpenedPayload
@@ -176,7 +494,7 @@ func (r *Runner) resolveOpenSessionGate(ctx context.Context, state *scenarioStat
 	if gateID == "" {
 		return r.failf("session gate opened event not found")
 	}
-	_, err = r.env.sessionClient.ResolveSessionGate(ctx, &gamev1.ResolveSessionGateRequest{
+	_, err = r.env.sessionClient.ResolveSessionGate(eventCtx, &gamev1.ResolveSessionGateRequest{
 		CampaignId: state.campaignID,
 		SessionId:  state.sessionID,
 		GateId:     gateID,
@@ -193,7 +511,8 @@ func (r *Runner) hasEventTypeAfterSeq(ctx context.Context, state *scenarioState,
 	if state.sessionID != "" && isSessionEvent(string(eventType)) {
 		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
 	}
-	response, err := r.env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+	eventCtx := withParticipantID(ctx, state.ownerParticipantID)
+	response, err := r.env.eventClient.ListEvents(eventCtx, &gamev1.ListEventsRequest{
 		CampaignId: state.campaignID,
 		PageSize:   1,
 		OrderBy:    "seq desc",
@@ -567,7 +886,7 @@ func actionRollResultFromResponse(response *daggerheartv1.SessionActionRollRespo
 	}
 }
 
-func parseOutcomeBranchSteps(value any) ([]Step, error) {
+func parseOutcomeBranchSteps(value any, defaultSystem string) ([]Step, error) {
 	if value == nil {
 		return nil, nil
 	}
@@ -590,19 +909,28 @@ func parseOutcomeBranchSteps(value any) ([]Step, error) {
 		if kind == "" {
 			return nil, fmt.Errorf("outcome branch step requires kind")
 		}
+		system := strings.ToUpper(strings.TrimSpace(optionalString(item, "system", "")))
+		if _, isCoreStep := coreStepKinds[kind]; isCoreStep {
+			if system != "" {
+				return nil, fmt.Errorf("core step %q must not declare a system scope", kind)
+			}
+			system = ""
+		} else if system == "" {
+			system = strings.ToUpper(strings.TrimSpace(defaultSystem))
+		}
 		args := map[string]any{}
 		for key, value := range item {
-			if key == "kind" {
+			if key == "kind" || key == "system" {
 				continue
 			}
 			args[key] = value
 		}
-		steps = append(steps, Step{Kind: kind, Args: args})
+		steps = append(steps, Step{System: system, Kind: kind, Args: args})
 	}
 	return steps, nil
 }
 
-func resolveOutcomeBranches(args map[string]any, allowed map[string]struct{}) (map[string][]Step, error) {
+func resolveOutcomeBranches(args map[string]any, allowed map[string]struct{}, defaultSystem string) (map[string][]Step, error) {
 	if _, hasCritical := args["on_critical"]; hasCritical {
 		if _, hasCrit := args["on_crit"]; hasCrit {
 			return nil, fmt.Errorf("on_critical and on_crit are aliases")
@@ -619,7 +947,7 @@ func resolveOutcomeBranches(args map[string]any, allowed map[string]struct{}) (m
 		if value == nil {
 			continue
 		}
-		steps, err := parseOutcomeBranchSteps(value)
+		steps, err := parseOutcomeBranchSteps(value, defaultSystem)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", key, err)
 		}
@@ -981,12 +1309,22 @@ func parseConditions(values []string) ([]daggerheartv1.DaggerheartCondition, err
 }
 
 func parseGameSystem(value string) (commonv1.GameSystem, error) {
-	switch strings.ToUpper(strings.TrimSpace(value)) {
-	case "DAGGERHEART":
-		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, nil
-	default:
+	normalized := strings.ToUpper(strings.TrimSpace(value))
+	if normalized == "" {
 		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("unsupported system %q", value)
 	}
+	if !strings.HasPrefix(normalized, "GAME_SYSTEM_") {
+		normalized = "GAME_SYSTEM_" + normalized
+	}
+	number, ok := commonv1.GameSystem_value[normalized]
+	if !ok {
+		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("unsupported system %q", strings.TrimPrefix(normalized, "GAME_SYSTEM_"))
+	}
+	parsed := commonv1.GameSystem(number)
+	if parsed == commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED {
+		return commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED, fmt.Errorf("unsupported system %q", strings.TrimPrefix(normalized, "GAME_SYSTEM_"))
+	}
+	return parsed, nil
 }
 
 func parseGmMode(value string) (gamev1.GmMode, error) {
@@ -1474,7 +1812,8 @@ func (r *Runner) assertDamageFlags(
 	if state.sessionID != "" {
 		filter = filter + fmt.Sprintf(" AND session_id = \"%s\"", state.sessionID)
 	}
-	response, err := r.env.eventClient.ListEvents(ctx, &gamev1.ListEventsRequest{
+	eventCtx := withParticipantID(ctx, state.ownerParticipantID)
+	response, err := r.env.eventClient.ListEvents(eventCtx, &gamev1.ListEventsRequest{
 		CampaignId: state.campaignID,
 		PageSize:   20,
 		OrderBy:    "seq desc",

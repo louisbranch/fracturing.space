@@ -1,0 +1,19 @@
+# Core smoke scenarios that protect durable gameplay contracts.
+systems/daggerheart/basic_flow.lua
+systems/daggerheart/action_roll_outcomes.lua
+systems/daggerheart/reaction_flow.lua
+systems/daggerheart/condition_lifecycle.lua
+systems/daggerheart/countdown_lifecycle.lua
+systems/daggerheart/group_action.lua
+systems/daggerheart/tag_team.lua
+systems/daggerheart/rest_and_downtime.lua
+systems/daggerheart/temporary_armor_bonus.lua
+systems/daggerheart/death_move.lua
+systems/daggerheart/blaze_of_glory.lua
+systems/daggerheart/multi_target_attack.lua
+systems/daggerheart/gm_move_examples.lua
+systems/daggerheart/progress_countdown_climb.lua
+systems/daggerheart/loadout_swap.lua
+systems/daggerheart/fear_floor.lua
+systems/daggerheart/critical_damage.lua
+systems/daggerheart/full_example_spotlight_sequence.lua

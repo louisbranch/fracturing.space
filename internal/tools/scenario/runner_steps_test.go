@@ -473,6 +473,20 @@ func TestRunCampaignStepMissingName(t *testing.T) {
 	}
 }
 
+func TestRunCampaignStepMissingSystem(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
+	runner := quietRunner(env)
+	state := &scenarioState{}
+	err := runner.runCampaignStep(context.Background(), state, Step{
+		Kind: "campaign",
+		Args: map[string]any{"name": "Test"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "campaign system is required") {
+		t.Fatalf("expected campaign system required error, got %v", err)
+	}
+}
+
 // --- participant step ---
 
 func TestRunParticipantStepMissingCampaign(t *testing.T) {
@@ -1331,7 +1345,8 @@ func TestRunStepAdversaryReactionStepAppliesDamageAndCooldown(t *testing.T) {
 	state.actors["Frodo"] = "char-frodo"
 	state.adversaries["Saruman"] = "adv-saruman"
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "adversary_reaction",
+		System: "DAGGERHEART",
+		Kind:   "adversary_reaction",
 		Args: map[string]any{
 			"actor":         "Saruman",
 			"target":        "Frodo",
@@ -1392,7 +1407,8 @@ func TestRunStepAdversaryUpdateAppliesEvasionDelta(t *testing.T) {
 	state.adversaries["Mirkwood Warden"] = "adv-warden"
 
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "adversary_update",
+		System: "DAGGERHEART",
+		Kind:   "adversary_update",
 		Args: map[string]any{
 			"target":        "Mirkwood Warden",
 			"evasion_delta": 1,
@@ -1446,7 +1462,8 @@ func TestRunStepAdversaryUpdateAppliesStressDelta(t *testing.T) {
 	state.adversaries["Mirkwood Warden"] = "adv-warden"
 
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "adversary_update",
+		System: "DAGGERHEART",
+		Kind:   "adversary_update",
 		Args: map[string]any{
 			"target":       "Mirkwood Warden",
 			"stress_delta": 1,
@@ -1526,7 +1543,8 @@ func TestRunStepGroupReactionAppliesFailureConditionsOnly(t *testing.T) {
 	state.actors["Sam"] = "char-sam"
 
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "group_reaction",
+		System: "DAGGERHEART",
+		Kind:   "group_reaction",
 		Args: map[string]any{
 			"targets":    []any{"Frodo", "Sam"},
 			"trait":      "agility",
@@ -1596,7 +1614,8 @@ func TestRunStepGroupReactionAppliesHalfDamageOnSuccess(t *testing.T) {
 	state.actors["Sam"] = "char-sam"
 
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "group_reaction",
+		System: "DAGGERHEART",
+		Kind:   "group_reaction",
 		Args: map[string]any{
 			"targets":                []any{"Frodo", "Sam"},
 			"trait":                  "agility",
@@ -2415,7 +2434,8 @@ func TestRunStepTemporaryArmor(t *testing.T) {
 	state.actors["Gandalf"] = "char-gandalf"
 
 	err := runner.runStep(context.Background(), state, Step{
-		Kind: "temporary_armor",
+		System: "DAGGERHEART",
+		Kind:   "temporary_armor",
 		Args: map[string]any{
 			"target":    "Gandalf",
 			"source":    "ritual",
@@ -2629,6 +2649,21 @@ func TestRunScenarioStepError(t *testing.T) {
 	}
 }
 
+func TestRunScenarioSystemStepRequiresScopeWithoutCampaign(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
+	runner := quietRunner(env)
+	err := runner.RunScenario(context.Background(), &Scenario{
+		Name: "test",
+		Steps: []Step{
+			{Kind: "attack", Args: map[string]any{"actor": "Frodo", "target": "Nazgul"}},
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "requires explicit system scope") {
+		t.Fatalf("expected explicit system scope error, got %v", err)
+	}
+}
+
 func TestRunScenarioCampaignAndSession(t *testing.T) {
 	fixture := testEnv()
 	env := fixture.env
@@ -2684,7 +2719,9 @@ func TestParseFunctions(t *testing.T) {
 		fn   func() error
 	}{
 		{"parseGameSystem valid", func() error { _, err := parseGameSystem("DAGGERHEART"); return err }},
+		{"parseGameSystem prefixed valid", func() error { _, err := parseGameSystem("GAME_SYSTEM_DAGGERHEART"); return err }},
 		{"parseGameSystem invalid", func() error { _, err := parseGameSystem("BOGUS"); return err }},
+		{"parseGameSystem unspecified invalid", func() error { _, err := parseGameSystem("GAME_SYSTEM_UNSPECIFIED"); return err }},
 		{"parseGmMode valid", func() error { _, err := parseGmMode("HUMAN"); return err }},
 		{"parseGmMode invalid", func() error { _, err := parseGmMode("BOGUS"); return err }},
 		{"parseCampaignIntent valid", func() error { _, err := parseCampaignIntent("SANDBOX"); return err }},

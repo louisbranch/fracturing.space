@@ -196,10 +196,11 @@ return scene
 func TestScenarioAdversaryReactionCreatesStep(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
 local scene = Scenario.new("adversary_reaction")
+local dh = scene:system("DAGGERHEART")
 scene:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Trigger a reactive adversary effect and cooldown toggle.
-scene:adversary_reaction({actor = "Saruman", target = "Frodo", damage = 7, damage_type = "magic", cooldown_note = "warding_sphere:cooldown"})
+dh:adversary_reaction({actor = "Saruman", target = "Frodo", damage = 7, damage_type = "magic", cooldown_note = "warding_sphere:cooldown"})
 
 return scene
 `)
@@ -216,6 +217,9 @@ return scene
 	if step.Kind != "adversary_reaction" {
 		t.Fatalf("step kind = %q, want %q", step.Kind, "adversary_reaction")
 	}
+	if step.System != "DAGGERHEART" {
+		t.Fatalf("step system = %q, want DAGGERHEART", step.System)
+	}
 	if step.Args["actor"] != "Saruman" {
 		t.Fatalf("actor = %v, want Saruman", step.Args["actor"])
 	}
@@ -227,10 +231,11 @@ return scene
 func TestScenarioGroupReactionCreatesStep(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
 local scene = Scenario.new("group_reaction")
+local dh = scene:system("DAGGERHEART")
 scene:campaign({name = "Test", system = "DAGGERHEART"})
 
 -- Roll reactions for multiple targets and apply failure-only effects.
-scene:group_reaction({targets = {"Frodo", "Sam"}, trait = "agility", difficulty = 15, failure_conditions = {"VULNERABLE"}, source = "snowblind_trap"})
+dh:group_reaction({targets = {"Frodo", "Sam"}, trait = "agility", difficulty = 15, failure_conditions = {"VULNERABLE"}, source = "snowblind_trap"})
 
 return scene
 `)
@@ -246,6 +251,51 @@ return scene
 	step := scenario.Steps[1]
 	if step.Kind != "group_reaction" {
 		t.Fatalf("step kind = %q, want %q", step.Kind, "group_reaction")
+	}
+	if step.System != "DAGGERHEART" {
+		t.Fatalf("step system = %q, want DAGGERHEART", step.System)
+	}
+}
+
+func TestScenarioSystemScopedMethodsAreNotAvailableOnScene(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scene = Scenario.new("legacy_scene_method")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Legacy style is intentionally removed.
+scene:attack({actor = "Frodo", target = "Nazgul"})
+
+return scene
+`)
+
+	_, err := LoadScenarioFromFile(path)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "requires a system handle") {
+		t.Fatalf("error = %q, want migration guidance", err.Error())
+	}
+	if !strings.Contains(err.Error(), "<SYSTEM_ID>") {
+		t.Fatalf("error = %q, want generic system placeholder", err.Error())
+	}
+}
+
+func TestScenarioSystemRequiresRegisteredSystem(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scene = Scenario.new("unknown_system")
+local dh = scene:system("UNKNOWN")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+dh:gm_fear(1)
+
+return scene
+`)
+
+	_, err := LoadScenarioFromFile(path)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "unsupported system") && !strings.Contains(err.Error(), "unsupported scenario system") {
+		t.Fatalf("error = %q, want unsupported system", err.Error())
 	}
 }
 
@@ -279,6 +329,56 @@ return scene
 	}
 	if scenario.Name != "commented" {
 		t.Fatalf("scenario name = %q, want %q", scenario.Name, "commented")
+	}
+}
+
+func TestValidateScenarioCommentsRequiresCommentForSystemHandleBlock(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scene = Scenario.new("system-no-comment")
+local dh = scene:system("DAGGERHEART")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+dh:gm_fear(1)
+
+return scene
+`)
+
+	_, err := LoadScenarioFromFile(path)
+	if err == nil {
+		t.Fatal("expected validation error for missing system block comment")
+	}
+	if !strings.Contains(err.Error(), "scenario block missing comment") {
+		t.Fatalf("error = %q, want contains %q", err.Error(), "scenario block missing comment")
+	}
+}
+
+func TestValidateScenarioCommentsAllowsCommentedSystemHandleBlock(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scene = Scenario.new("system-commented")
+local dh = scene:system("DAGGERHEART")
+scene:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Increase GM fear to force follow-up branch behavior.
+dh:gm_fear(1)
+
+return scene
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if scenario.Name != "system-commented" {
+		t.Fatalf("scenario name = %q, want %q", scenario.Name, "system-commented")
+	}
+	if len(scenario.Steps) != 2 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 2)
+	}
+	if scenario.Steps[1].Kind != "gm_fear" {
+		t.Fatalf("step kind = %q, want gm_fear", scenario.Steps[1].Kind)
+	}
+	if scenario.Steps[1].System != "DAGGERHEART" {
+		t.Fatalf("step system = %q, want DAGGERHEART", scenario.Steps[1].System)
 	}
 }
 

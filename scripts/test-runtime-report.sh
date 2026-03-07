@@ -5,7 +5,7 @@ MODE="${1:-smoke}"
 OUT_DIR="${OUT_DIR:-.tmp/test-runtime}"
 INTEGRATION_SMOKE_FULL_PATTERN='^(TestMCPStdioEndToEnd|TestMCPHTTPBlackbox)$'
 INTEGRATION_SMOKE_PR_PATTERN='^(TestMCPStdioEndToEnd|TestMCPHTTPBlackboxSmoke)$'
-SCENARIO_SMOKE_MANIFEST="${SCENARIO_SMOKE_MANIFEST:-internal/test/game/scenarios/smoke.txt}"
+SCENARIO_SMOKE_MANIFEST="${SCENARIO_SMOKE_MANIFEST:-internal/test/game/scenarios/manifests/smoke.txt}"
 RUNTIME_BUDGET_FILE="${RUNTIME_BUDGET_FILE:-.github/test-runtime-budgets.json}"
 RUNTIME_BUDGET_ENFORCE="${RUNTIME_BUDGET_ENFORCE:-false}"
 
