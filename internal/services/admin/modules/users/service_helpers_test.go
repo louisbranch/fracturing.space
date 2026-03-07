@@ -86,7 +86,7 @@ func TestUserHelpersBuildersAndFormatters(t *testing.T) {
 
 func TestUserServiceUnavailableClients(t *testing.T) {
 	var conn testUnavailableConn
-	svc := &service{
+	svc := &handlers{
 		base:         modulehandler.NewBase(),
 		authClient:   authv1.NewAuthServiceClient(conn),
 		inviteClient: statev1.NewInviteServiceClient(conn),
@@ -138,11 +138,12 @@ func TestUserServiceUnavailableClients(t *testing.T) {
 		t.Fatalf("HandleUserInvites(nil clients) status = %d", rec.Code)
 	}
 
-	rows, message := svc.listPendingInvitesForUser(httptest.NewRequest(http.MethodGet, "/", nil).Context(), "", loc)
+	stubReq := httptest.NewRequest(http.MethodGet, "/", nil)
+	rows, message := svc.listPendingInvitesForUser(stubReq, stubReq.Context(), "", loc)
 	if rows != nil || message == "" {
 		t.Fatalf("listPendingInvitesForUser(empty id) = (%#v,%q)", rows, message)
 	}
-	rows, message = svc.listPendingInvitesForUser(httptest.NewRequest(http.MethodGet, "/", nil).Context(), "user-1", loc)
+	rows, message = svc.listPendingInvitesForUser(stubReq, stubReq.Context(), "user-1", loc)
 	if rows != nil || message == "" {
 		t.Fatalf("listPendingInvitesForUser(nil client) = (%#v,%q)", rows, message)
 	}

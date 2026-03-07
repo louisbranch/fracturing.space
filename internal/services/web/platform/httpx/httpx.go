@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/htmx"
 	sharedhttpx "github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
-const htmxHeader = "HX-Request"
 const htmxRedirectHeader = "HX-Redirect"
 
 // MethodNotAllowed writes a 405 response with an Allow header.
@@ -79,12 +79,9 @@ func RequestContext(r *http.Request) context.Context {
 	return r.Context()
 }
 
-// IsHTMXRequest reports whether the current request came from HTMX.
+// IsHTMXRequest delegates to the shared htmx package.
 func IsHTMXRequest(r *http.Request) bool {
-	if r == nil {
-		return false
-	}
-	return r.Header.Get(htmxHeader) == "true"
+	return htmx.IsHTMXRequest(r)
 }
 
 // WriteHTML writes an HTML payload with the provided status code.

@@ -26,8 +26,8 @@ const (
 	inviteListPageSize = 50
 )
 
-// service implements the campaigns module route service contract.
-type service struct {
+// handlers implements the campaigns module Handlers contract.
+type handlers struct {
 	base              modulehandler.Base
 	campaignClient    statev1.CampaignServiceClient
 	characterClient   statev1.CharacterServiceClient
@@ -38,10 +38,10 @@ type service struct {
 	authClient        authv1.AuthServiceClient
 }
 
-var _ Service = (*service)(nil)
+var _ Handlers = (*handlers)(nil)
 
-// NewService builds a campaigns module-local service implementation.
-func NewService(
+// NewHandlers builds a campaigns module handler implementation.
+func NewHandlers(
 	base modulehandler.Base,
 	campaignClient statev1.CampaignServiceClient,
 	characterClient statev1.CharacterServiceClient,
@@ -50,8 +50,8 @@ func NewService(
 	sessionClient statev1.SessionServiceClient,
 	eventClient statev1.EventServiceClient,
 	authClient authv1.AuthServiceClient,
-) Service {
-	return &service{
+) Handlers {
+	return &handlers{
 		base:              base,
 		campaignClient:    campaignClient,
 		characterClient:   characterClient,
@@ -64,7 +64,7 @@ func NewService(
 }
 
 // HandleCampaignsPage renders the campaigns page.
-func (s *service) HandleCampaignsPage(w http.ResponseWriter, r *http.Request) {
+func (s *handlers) HandleCampaignsPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := s.base.Localizer(w, r)
 	pageCtx := s.base.PageContext(lang, loc, r)
 	s.base.RenderPage(
@@ -77,7 +77,7 @@ func (s *service) HandleCampaignsPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleCampaignsTable renders the campaigns table fragment.
-func (s *service) HandleCampaignsTable(w http.ResponseWriter, r *http.Request) {
+func (s *handlers) HandleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 	loc, _ := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -101,7 +101,7 @@ func (s *service) HandleCampaignsTable(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleCampaignDetail renders a campaign detail page.
-func (s *service) HandleCampaignDetail(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleCampaignDetail(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, lang := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -125,7 +125,7 @@ func (s *service) HandleCampaignDetail(w http.ResponseWriter, r *http.Request, c
 }
 
 // HandleCharactersList renders the character list page.
-func (s *service) HandleCharactersList(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleCharactersList(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, lang := s.base.Localizer(w, r)
 	campaignName := s.getCampaignName(r, campaignID, loc)
 	pageCtx := s.base.PageContext(lang, loc, r)
@@ -139,7 +139,7 @@ func (s *service) HandleCharactersList(w http.ResponseWriter, r *http.Request, c
 }
 
 // HandleCharactersTable renders the character rows fragment.
-func (s *service) HandleCharactersTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleCharactersTable(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, _ := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -179,16 +179,16 @@ func (s *service) HandleCharactersTable(w http.ResponseWriter, r *http.Request, 
 }
 
 // HandleCharacterSheet renders a character details page with the info tab active.
-func (s *service) HandleCharacterSheet(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
+func (s *handlers) HandleCharacterSheet(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
 	s.renderCharacterSheet(w, r, campaignID, characterID, "info")
 }
 
 // HandleCharacterActivity renders a character details page with the activity tab active.
-func (s *service) HandleCharacterActivity(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
+func (s *handlers) HandleCharacterActivity(w http.ResponseWriter, r *http.Request, campaignID string, characterID string) {
 	s.renderCharacterSheet(w, r, campaignID, characterID, "activity")
 }
 
-func (s *service) renderCharacterSheet(w http.ResponseWriter, r *http.Request, campaignID string, characterID string, activePage string) {
+func (s *handlers) renderCharacterSheet(w http.ResponseWriter, r *http.Request, campaignID string, characterID string, activePage string) {
 	loc, lang := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -265,7 +265,7 @@ func (s *service) renderCharacterSheet(w http.ResponseWriter, r *http.Request, c
 }
 
 // HandleParticipantsList renders the participants list page.
-func (s *service) HandleParticipantsList(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleParticipantsList(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, lang := s.base.Localizer(w, r)
 	campaignName := s.getCampaignName(r, campaignID, loc)
 	pageCtx := s.base.PageContext(lang, loc, r)
@@ -279,7 +279,7 @@ func (s *service) HandleParticipantsList(w http.ResponseWriter, r *http.Request,
 }
 
 // HandleParticipantsTable renders the participant rows fragment.
-func (s *service) HandleParticipantsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleParticipantsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, _ := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -305,7 +305,7 @@ func (s *service) HandleParticipantsTable(w http.ResponseWriter, r *http.Request
 }
 
 // HandleInvitesList renders the invites list page.
-func (s *service) HandleInvitesList(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleInvitesList(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, lang := s.base.Localizer(w, r)
 	campaignName := s.getCampaignName(r, campaignID, loc)
 	pageCtx := s.base.PageContext(lang, loc, r)
@@ -319,7 +319,7 @@ func (s *service) HandleInvitesList(w http.ResponseWriter, r *http.Request, camp
 }
 
 // HandleInvitesTable renders the invite rows fragment.
-func (s *service) HandleInvitesTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleInvitesTable(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, _ := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -383,7 +383,7 @@ func (s *service) HandleInvitesTable(w http.ResponseWriter, r *http.Request, cam
 }
 
 // HandleSessionsList renders the sessions list page.
-func (s *service) HandleSessionsList(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleSessionsList(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, lang := s.base.Localizer(w, r)
 	campaignName := s.getCampaignName(r, campaignID, loc)
 	pageCtx := s.base.PageContext(lang, loc, r)
@@ -397,7 +397,7 @@ func (s *service) HandleSessionsList(w http.ResponseWriter, r *http.Request, cam
 }
 
 // HandleSessionsTable renders the session rows fragment.
-func (s *service) HandleSessionsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleSessionsTable(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, _ := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -424,7 +424,7 @@ func (s *service) HandleSessionsTable(w http.ResponseWriter, r *http.Request, ca
 }
 
 // HandleSessionDetail renders a session detail page.
-func (s *service) HandleSessionDetail(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
+func (s *handlers) HandleSessionDetail(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
 	loc, lang := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -470,7 +470,7 @@ func (s *service) HandleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 }
 
 // HandleSessionEvents renders session events fragment content.
-func (s *service) HandleSessionEvents(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
+func (s *handlers) HandleSessionEvents(w http.ResponseWriter, r *http.Request, campaignID string, sessionID string) {
 	loc, _ := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -510,7 +510,7 @@ func (s *service) HandleSessionEvents(w http.ResponseWriter, r *http.Request, ca
 }
 
 // HandleEventLog renders the event log page.
-func (s *service) HandleEventLog(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleEventLog(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, lang := s.base.Localizer(w, r)
 	campaignName := s.getCampaignName(r, campaignID, loc)
 	filters := eventview.ParseEventFilters(r)
@@ -557,7 +557,7 @@ func (s *service) HandleEventLog(w http.ResponseWriter, r *http.Request, campaig
 }
 
 // HandleEventLogTable renders event log table fragment rows.
-func (s *service) HandleEventLogTable(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (s *handlers) HandleEventLogTable(w http.ResponseWriter, r *http.Request, campaignID string) {
 	loc, _ := s.base.Localizer(w, r)
 
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
@@ -600,11 +600,11 @@ func (s *service) HandleEventLogTable(w http.ResponseWriter, r *http.Request, ca
 	templ.Handler(templates.EventLogTableContent(view, loc)).ServeHTTP(w, r)
 }
 
-func (s *service) renderCampaignTable(w http.ResponseWriter, r *http.Request, rows []templates.CampaignRow, message string, loc *message.Printer) {
+func (s *handlers) renderCampaignTable(w http.ResponseWriter, r *http.Request, rows []templates.CampaignRow, message string, loc *message.Printer) {
 	templ.Handler(templates.CampaignsTable(rows, message, loc)).ServeHTTP(w, r)
 }
 
-func (s *service) renderCampaignDetail(w http.ResponseWriter, r *http.Request, detail templates.CampaignDetail, message string, lang string, loc *message.Printer) {
+func (s *handlers) renderCampaignDetail(w http.ResponseWriter, r *http.Request, detail templates.CampaignDetail, message string, lang string, loc *message.Printer) {
 	pageCtx := s.base.PageContext(lang, loc, r)
 	s.base.RenderPage(
 		w,
@@ -615,23 +615,23 @@ func (s *service) renderCampaignDetail(w http.ResponseWriter, r *http.Request, d
 	)
 }
 
-func (s *service) renderCampaignSessions(w http.ResponseWriter, r *http.Request, rows []templates.CampaignSessionRow, message string, loc *message.Printer) {
+func (s *handlers) renderCampaignSessions(w http.ResponseWriter, r *http.Request, rows []templates.CampaignSessionRow, message string, loc *message.Printer) {
 	templ.Handler(templates.CampaignSessionsList(rows, message, loc)).ServeHTTP(w, r)
 }
 
-func (s *service) renderCharactersTable(w http.ResponseWriter, r *http.Request, rows []templates.CharacterRow, message string, loc *message.Printer) {
+func (s *handlers) renderCharactersTable(w http.ResponseWriter, r *http.Request, rows []templates.CharacterRow, message string, loc *message.Printer) {
 	templ.Handler(templates.CharactersTable(rows, message, loc)).ServeHTTP(w, r)
 }
 
-func (s *service) renderParticipantsTable(w http.ResponseWriter, r *http.Request, rows []templates.ParticipantRow, message string, loc *message.Printer) {
+func (s *handlers) renderParticipantsTable(w http.ResponseWriter, r *http.Request, rows []templates.ParticipantRow, message string, loc *message.Printer) {
 	templ.Handler(templates.ParticipantsTable(rows, message, loc)).ServeHTTP(w, r)
 }
 
-func (s *service) renderInvitesTable(w http.ResponseWriter, r *http.Request, rows []templates.InviteRow, message string, loc *message.Printer) {
+func (s *handlers) renderInvitesTable(w http.ResponseWriter, r *http.Request, rows []templates.InviteRow, message string, loc *message.Printer) {
 	templ.Handler(templates.InvitesTable(rows, message, loc)).ServeHTTP(w, r)
 }
 
-func (s *service) getCampaignName(r *http.Request, campaignID string, loc *message.Printer) string {
+func (s *handlers) getCampaignName(r *http.Request, campaignID string, loc *message.Printer) string {
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
 
@@ -643,7 +643,7 @@ func (s *service) getCampaignName(r *http.Request, campaignID string, loc *messa
 	return response.GetCampaign().GetName()
 }
 
-func (s *service) getSessionName(r *http.Request, campaignID string, sessionID string, loc *message.Printer) string {
+func (s *handlers) getSessionName(r *http.Request, campaignID string, sessionID string, loc *message.Printer) string {
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
 

@@ -7,11 +7,11 @@ import (
 
 // Module provides systems routes.
 type Module struct {
-	service Service
+	handlers Handlers
 }
 
 // New returns a systems module.
-func New(service Service) Module { return Module{service: service} }
+func New(handlers Handlers) Module { return Module{handlers: handlers} }
 
 // ID returns a stable module identifier.
 func (Module) ID() string { return "systems" }
@@ -20,6 +20,6 @@ func (Module) ID() string { return "systems" }
 func (m Module) Mount() (mod.Mount, error) {
 	return mod.Mount{
 		Prefix:  routepath.SystemsPrefix,
-		Handler: newRoutes(m.service),
+		Handler: newRoutes(m.handlers),
 	}, nil
 }

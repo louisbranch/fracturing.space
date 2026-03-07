@@ -32,7 +32,7 @@ func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, 
 
 func TestDashboardServiceUnavailableClients(t *testing.T) {
 	var conn testUnavailableConn
-	svc := service{
+	svc := handlers{
 		base:             modulehandler.NewBase(),
 		statisticsClient: statev1.NewStatisticsServiceClient(conn),
 		systemClient:     statev1.NewSystemServiceClient(conn),

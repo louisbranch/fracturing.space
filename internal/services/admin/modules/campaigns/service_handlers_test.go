@@ -31,7 +31,7 @@ func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, 
 
 func TestCampaignServiceHandlersWithUnavailableClients(t *testing.T) {
 	var conn testUnavailableConn
-	svcIface := NewService(
+	svcIface := NewHandlers(
 		modulehandler.NewBase(),
 		statev1.NewCampaignServiceClient(conn),
 		statev1.NewCharacterServiceClient(conn),
@@ -41,9 +41,9 @@ func TestCampaignServiceHandlersWithUnavailableClients(t *testing.T) {
 		statev1.NewEventServiceClient(conn),
 		authv1.NewAuthServiceClient(conn),
 	)
-	svc, ok := svcIface.(*service)
+	svc, ok := svcIface.(*handlers)
 	if !ok {
-		t.Fatalf("NewService() type = %T, want *service", svcIface)
+		t.Fatalf("NewHandlers() type = %T, want *handlers", svcIface)
 	}
 
 	run := func(name string, path string, fn func(http.ResponseWriter, *http.Request), wantStatus int) {
@@ -115,7 +115,7 @@ func TestCampaignServiceHandlersWithUnavailableClients(t *testing.T) {
 
 func TestCampaignServiceNameFallbacks(t *testing.T) {
 	var conn testUnavailableConn
-	svc := &service{
+	svc := &handlers{
 		base:           modulehandler.NewBase(),
 		campaignClient: statev1.NewCampaignServiceClient(conn),
 		sessionClient:  statev1.NewSessionServiceClient(conn),
@@ -281,7 +281,7 @@ func TestCampaignServiceHandlersWithFakeClients(t *testing.T) {
 		getUserResp: &authv1.GetUserResponse{User: &authv1.User{Id: "user-1", Email: "alice@example.com"}},
 	}
 
-	svcIface := NewService(
+	svcIface := NewHandlers(
 		modulehandler.NewBase(),
 		campaignClient,
 		characterClient,
@@ -291,7 +291,7 @@ func TestCampaignServiceHandlersWithFakeClients(t *testing.T) {
 		eventClient,
 		authClient,
 	)
-	svc := svcIface.(*service)
+	svc := svcIface.(*handlers)
 
 	cases := []struct {
 		name string

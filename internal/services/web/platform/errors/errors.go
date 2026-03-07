@@ -1,142 +1,63 @@
-// Package errors defines web typed application errors.
+// Package errors provides web-specific typed application errors built on top
+// of the shared httperrors package.
 package errors
 
 import (
 	stderrors "errors"
 	"net/http"
-	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/httperrors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// Kind classifies application failures for consistent HTTP mapping.
-type Kind string
-
-const (
-	KindUnknown      Kind = "unknown"
-	KindInvalidInput Kind = "invalid_input"
-	KindUnauthorized Kind = "unauthorized"
-	KindForbidden    Kind = "forbidden"
-	KindConflict     Kind = "conflict"
-	KindUnavailable  Kind = "unavailable"
-	KindNotFound     Kind = "not_found"
+// Re-export shared types so existing web callers compile without import changes.
+type (
+	Kind              = httperrors.Kind
+	Error             = httperrors.Error
+	GRPCStatusMapping = httperrors.GRPCStatusMapping
 )
 
-// GRPCStatusMapping describes how a gRPC transport failure should
-// downgrade into web error classification when a service-specific fallback exists.
-type GRPCStatusMapping struct {
-	FallbackKind    Kind
-	FallbackKey     string
-	FallbackMessage string
-}
-
-// MapGRPCTransportError converts gRPC transport errors into typed web errors with
-// a stable, policy-driven fallback.
-func MapGRPCTransportError(err error, mapping GRPCStatusMapping) error {
-	if err == nil {
-		return nil
-	}
-	var appErr Error
-	if stderrors.As(err, &appErr) {
-		return appErr
-	}
-
-	st, ok := status.FromError(err)
-	if !ok {
-		return mapWithFallback(mapping)
-	}
-	switch st.Code() {
-	case codes.InvalidArgument, codes.OutOfRange, codes.FailedPrecondition, codes.AlreadyExists:
-		return mapWithFallback(mapping)
-	case codes.Unauthenticated:
-		return E(KindUnauthorized, "authentication required")
-	case codes.PermissionDenied:
-		return E(KindForbidden, "access denied")
-	case codes.NotFound:
-		return E(KindNotFound, "resource not found")
-	case codes.Unavailable, codes.DeadlineExceeded, codes.ResourceExhausted, codes.Canceled:
-		return E(KindUnavailable, "dependency is temporarily unavailable")
-	case codes.Aborted:
-		return E(KindConflict, st.Message())
-	default:
-		return mapWithFallback(mapping)
-	}
-}
-
-// mapWithFallback maps values across transport and domain boundaries.
-func mapWithFallback(mapping GRPCStatusMapping) error {
-	if strings.TrimSpace(mapping.FallbackKey) != "" {
-		return EK(mapping.FallbackKind, mapping.FallbackKey, strings.TrimSpace(mapping.FallbackMessage))
-	}
-	return E(mapping.FallbackKind, strings.TrimSpace(mapping.FallbackMessage))
-}
-
-// Error is a typed web application failure.
-type Error struct {
-	Kind    Kind
-	Key     string
-	Message string
-}
-
-// Error renders the human-readable message.
-func (e Error) Error() string {
-	if e.Message == "" {
-		return string(e.Kind)
-	}
-	return e.Message
-}
+const (
+	KindUnknown      = httperrors.KindUnknown
+	KindInvalidInput = httperrors.KindInvalidInput
+	KindUnauthorized = httperrors.KindUnauthorized
+	KindForbidden    = httperrors.KindForbidden
+	KindConflict     = httperrors.KindConflict
+	KindUnavailable  = httperrors.KindUnavailable
+	KindNotFound     = httperrors.KindNotFound
+)
 
 // E builds a typed Error.
-func E(kind Kind, message string) error {
-	return Error{Kind: kind, Message: message}
-}
+var E = httperrors.E
 
 // EK builds a typed Error with a localization key.
-func EK(kind Kind, key string, message string) error {
-	return Error{Kind: kind, Key: strings.TrimSpace(key), Message: message}
-}
+var EK = httperrors.EK
 
 // LocalizationKey returns the structured localization key when available.
-func LocalizationKey(err error) string {
-	if err == nil {
-		return ""
-	}
-	var appErr Error
-	if !stderrors.As(err, &appErr) {
-		return ""
-	}
-	return strings.TrimSpace(appErr.Key)
-}
+var LocalizationKey = httperrors.LocalizationKey
+
+// MapGRPCTransportError converts gRPC transport errors into typed web errors.
+var MapGRPCTransportError = httperrors.MapGRPCTransportError
 
 // HTTPStatus maps an error to an HTTP status code.
+// Web uses a slightly different gRPC fallback mapping than the shared default:
+// FailedPrecondition maps to Conflict (409) rather than BadRequest (400).
 func HTTPStatus(err error) int {
 	if err == nil {
 		return http.StatusOK
 	}
-	var appErr Error
-	if !stderrors.As(err, &appErr) {
-		return grpcErrorHTTPStatus(err, http.StatusInternalServerError)
+	// Typed application errors share the same Kind→status mapping.
+	var appErr httperrors.Error
+	if stderrors.As(err, &appErr) {
+		return httperrors.HTTPStatus(err)
 	}
-	switch appErr.Kind {
-	case KindInvalidInput:
-		return http.StatusBadRequest
-	case KindConflict:
-		return http.StatusConflict
-	case KindUnauthorized:
-		return http.StatusUnauthorized
-	case KindForbidden:
-		return http.StatusForbidden
-	case KindUnavailable:
-		return http.StatusServiceUnavailable
-	case KindNotFound:
-		return http.StatusNotFound
-	default:
-		return http.StatusInternalServerError
-	}
+	// Raw gRPC errors use web-specific mapping.
+	return grpcErrorHTTPStatus(err, http.StatusInternalServerError)
 }
 
-// grpcErrorHTTPStatus centralizes this web behavior in one helper seam.
+// grpcErrorHTTPStatus applies web-specific gRPC status mapping where
+// FailedPrecondition maps to Conflict instead of BadRequest.
 func grpcErrorHTTPStatus(err error, fallback int) int {
 	st, ok := status.FromError(err)
 	if !ok {
@@ -153,7 +74,7 @@ func grpcErrorHTTPStatus(err error, fallback int) int {
 		return http.StatusNotFound
 	case codes.FailedPrecondition:
 		return http.StatusConflict
-	case codes.Unavailable:
+	case codes.Unavailable, codes.DeadlineExceeded:
 		return http.StatusServiceUnavailable
 	default:
 		return fallback

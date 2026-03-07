@@ -2,7 +2,6 @@ package users
 
 import (
 	"context"
-	"log"
 	"net/http"
 	"strings"
 
@@ -10,6 +9,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/modules/eventview"
+	adminerrors "github.com/louisbranch/fracturing.space/internal/services/admin/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/templates"
@@ -21,20 +21,20 @@ const (
 	inviteListPageSize = 50
 )
 
-// service provides module-local user handlers backed by shared module dependencies.
-type service struct {
+// handlers implements the users Handlers contract.
+type handlers struct {
 	base         modulehandler.Base
 	authClient   authv1.AuthServiceClient
 	inviteClient statev1.InviteServiceClient
 }
 
-// NewService returns the users module service implementation.
-func NewService(base modulehandler.Base, authClient authv1.AuthServiceClient, inviteClient statev1.InviteServiceClient) Service {
-	return &service{base: base, authClient: authClient, inviteClient: inviteClient}
+// NewHandlers returns the users handler implementation.
+func NewHandlers(base modulehandler.Base, authClient authv1.AuthServiceClient, inviteClient statev1.InviteServiceClient) Handlers {
+	return &handlers{base: base, authClient: authClient, inviteClient: inviteClient}
 }
 
 // HandleUsersPage renders the users page shell.
-func (s *service) HandleUsersPage(w http.ResponseWriter, r *http.Request) {
+func (s *handlers) HandleUsersPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := s.base.Localizer(w, r)
 	pageCtx := s.base.PageContext(lang, loc, r)
 	view := templates.UsersPageView{}
@@ -58,14 +58,14 @@ func (s *service) HandleUsersPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleUsersTable renders the users table via HTMX.
-func (s *service) HandleUsersTable(w http.ResponseWriter, r *http.Request) {
+func (s *handlers) HandleUsersTable(w http.ResponseWriter, r *http.Request) {
 	loc, _ := s.base.Localizer(w, r)
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
 
 	response, err := s.authClient.ListUsers(ctx, &authv1.ListUsersRequest{PageSize: 50})
 	if err != nil {
-		log.Printf("list users: %v", err)
+		adminerrors.LogError(r, "list users: %v", err)
 		s.renderUsersTable(w, r, nil, loc.Sprintf("error.users_unavailable"), loc)
 		return
 	}
@@ -81,7 +81,7 @@ func (s *service) HandleUsersTable(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleUserLookup redirects the lookup form to a concrete user detail route.
-func (s *service) HandleUserLookup(w http.ResponseWriter, r *http.Request) {
+func (s *handlers) HandleUserLookup(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -109,16 +109,16 @@ func (s *service) HandleUserLookup(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleUserDetail renders the user detail tab.
-func (s *service) HandleUserDetail(w http.ResponseWriter, r *http.Request, userID string) {
+func (s *handlers) HandleUserDetail(w http.ResponseWriter, r *http.Request, userID string) {
 	s.handleUserDetailTab(w, r, userID, "details")
 }
 
 // HandleUserInvites renders the pending invites tab for a user.
-func (s *service) HandleUserInvites(w http.ResponseWriter, r *http.Request, userID string) {
+func (s *handlers) HandleUserInvites(w http.ResponseWriter, r *http.Request, userID string) {
 	s.handleUserDetailTab(w, r, userID, "invites")
 }
 
-func (s *service) handleUserDetailTab(w http.ResponseWriter, r *http.Request, userID, tab string) {
+func (s *handlers) handleUserDetailTab(w http.ResponseWriter, r *http.Request, userID, tab string) {
 	loc, lang := s.base.Localizer(w, r)
 	pageCtx := s.base.PageContext(lang, loc, r)
 	view := templates.UserDetailPageView{}
@@ -130,17 +130,17 @@ func (s *service) handleUserDetailTab(w http.ResponseWriter, r *http.Request, us
 	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
 	defer cancel()
 
-	detail, loadMessage := s.loadUserDetail(ctx, userID, loc)
+	detail, loadMessage := s.loadUserDetail(r, ctx, userID, loc)
 	view.Detail = detail
 	if loadMessage != "" && view.Message == "" {
 		view.Message = loadMessage
 	}
 
-	s.populateUserInvites(ctx, view.Detail, loc)
+	s.populateUserInvites(r, ctx, view.Detail, loc)
 	s.renderUserDetail(w, r, view, pageCtx, loc, tab)
 }
 
-func (s *service) renderUserDetail(w http.ResponseWriter, r *http.Request, view templates.UserDetailPageView, pageCtx templates.PageContext, loc *message.Printer, activePage string) {
+func (s *handlers) renderUserDetail(w http.ResponseWriter, r *http.Request, view templates.UserDetailPageView, pageCtx templates.PageContext, loc *message.Printer, activePage string) {
 	s.base.RenderPage(
 		w,
 		r,
@@ -150,7 +150,7 @@ func (s *service) renderUserDetail(w http.ResponseWriter, r *http.Request, view 
 	)
 }
 
-func (s *service) redirectToUserDetail(w http.ResponseWriter, r *http.Request, userID string) {
+func (s *handlers) redirectToUserDetail(w http.ResponseWriter, r *http.Request, userID string) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
 		http.NotFound(w, r)
@@ -166,21 +166,21 @@ func (s *service) redirectToUserDetail(w http.ResponseWriter, r *http.Request, u
 	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
-func (s *service) loadUserDetail(ctx context.Context, userID string, loc *message.Printer) (*templates.UserDetail, string) {
+func (s *handlers) loadUserDetail(r *http.Request, ctx context.Context, userID string, loc *message.Printer) (*templates.UserDetail, string) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
 		return nil, loc.Sprintf("error.user_id_required")
 	}
 	response, err := s.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: userID})
 	if err != nil || response.GetUser() == nil {
-		log.Printf("get user: %v", err)
+		adminerrors.LogError(r, "get user: %v", err)
 		return nil, loc.Sprintf("error.user_not_found")
 	}
 	detail := buildUserDetail(response.GetUser())
 	if detail != nil {
 		emails, err := s.authClient.ListUserEmails(ctx, &authv1.ListUserEmailsRequest{UserId: userID})
 		if err != nil {
-			log.Printf("list user emails: %v", err)
+			adminerrors.LogError(r, "list user emails: %v", err)
 		} else {
 			detail.Emails = buildUserEmailRows(emails.GetEmails(), loc)
 		}
@@ -188,16 +188,16 @@ func (s *service) loadUserDetail(ctx context.Context, userID string, loc *messag
 	return detail, ""
 }
 
-func (s *service) populateUserInvites(ctx context.Context, detail *templates.UserDetail, loc *message.Printer) {
+func (s *handlers) populateUserInvites(r *http.Request, ctx context.Context, detail *templates.UserDetail, loc *message.Printer) {
 	if detail == nil {
 		return
 	}
-	rows, message := s.listPendingInvitesForUser(ctx, detail.ID, loc)
+	rows, message := s.listPendingInvitesForUser(r, ctx, detail.ID, loc)
 	detail.PendingInvites = rows
 	detail.PendingInvitesMessage = message
 }
 
-func (s *service) listPendingInvitesForUser(ctx context.Context, userID string, loc *message.Printer) ([]templates.InviteRow, string) {
+func (s *handlers) listPendingInvitesForUser(r *http.Request, ctx context.Context, userID string, loc *message.Printer) ([]templates.InviteRow, string) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
 		return nil, loc.Sprintf("users.invites.empty")
@@ -210,7 +210,7 @@ func (s *service) listPendingInvitesForUser(ctx context.Context, userID string, 
 			PageToken: pageToken,
 		})
 		if err != nil {
-			log.Printf("list pending invites for user: %v", err)
+			adminerrors.LogError(r, "list pending invites for user: %v", err)
 			return nil, loc.Sprintf("error.pending_invites_unavailable")
 		}
 
@@ -273,6 +273,6 @@ func (s *service) listPendingInvitesForUser(ctx context.Context, userID string, 
 	return rows, ""
 }
 
-func (s *service) renderUsersTable(w http.ResponseWriter, r *http.Request, rows []templates.UserRow, message string, loc *message.Printer) {
+func (s *handlers) renderUsersTable(w http.ResponseWriter, r *http.Request, rows []templates.UserRow, message string, loc *message.Printer) {
 	templ.Handler(templates.UsersTable(rows, message, loc)).ServeHTTP(w, r)
 }

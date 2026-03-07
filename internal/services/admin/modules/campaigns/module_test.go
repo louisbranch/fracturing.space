@@ -8,112 +8,112 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 )
 
-type fakeService struct {
+type fakeHandlers struct {
 	lastCall      string
 	lastCampaign  string
 	lastCharacter string
 	lastSession   string
 }
 
-func (f *fakeService) HandleCampaignsPage(w http.ResponseWriter, _ *http.Request) {
+func (f *fakeHandlers) HandleCampaignsPage(w http.ResponseWriter, _ *http.Request) {
 	f.lastCall = "campaigns_page"
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleCampaignsTable(w http.ResponseWriter, _ *http.Request) {
+func (f *fakeHandlers) HandleCampaignsTable(w http.ResponseWriter, _ *http.Request) {
 	f.lastCall = "campaigns_table"
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleCampaignDetail(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleCampaignDetail(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "campaign_detail"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleCharactersList(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleCharactersList(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "characters_list"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleCharactersTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleCharactersTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "characters_table"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleCharacterSheet(w http.ResponseWriter, _ *http.Request, campaignID string, characterID string) {
+func (f *fakeHandlers) HandleCharacterSheet(w http.ResponseWriter, _ *http.Request, campaignID string, characterID string) {
 	f.lastCall = "character_sheet"
 	f.lastCampaign = campaignID
 	f.lastCharacter = characterID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleCharacterActivity(w http.ResponseWriter, _ *http.Request, campaignID string, characterID string) {
+func (f *fakeHandlers) HandleCharacterActivity(w http.ResponseWriter, _ *http.Request, campaignID string, characterID string) {
 	f.lastCall = "character_activity"
 	f.lastCampaign = campaignID
 	f.lastCharacter = characterID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleParticipantsList(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleParticipantsList(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "participants_list"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleParticipantsTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleParticipantsTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "participants_table"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleInvitesList(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleInvitesList(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "invites_list"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleInvitesTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleInvitesTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "invites_table"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleSessionsList(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleSessionsList(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "sessions_list"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleSessionsTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleSessionsTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "sessions_table"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleSessionDetail(w http.ResponseWriter, _ *http.Request, campaignID string, sessionID string) {
+func (f *fakeHandlers) HandleSessionDetail(w http.ResponseWriter, _ *http.Request, campaignID string, sessionID string) {
 	f.lastCall = "session_detail"
 	f.lastCampaign = campaignID
 	f.lastSession = sessionID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleSessionEvents(w http.ResponseWriter, _ *http.Request, campaignID string, sessionID string) {
+func (f *fakeHandlers) HandleSessionEvents(w http.ResponseWriter, _ *http.Request, campaignID string, sessionID string) {
 	f.lastCall = "session_events"
 	f.lastCampaign = campaignID
 	f.lastSession = sessionID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleEventLog(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleEventLog(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "event_log"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleEventLogTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
+func (f *fakeHandlers) HandleEventLogTable(w http.ResponseWriter, _ *http.Request, campaignID string) {
 	f.lastCall = "event_log_table"
 	f.lastCampaign = campaignID
 	w.WriteHeader(http.StatusNoContent)
@@ -122,7 +122,7 @@ func (f *fakeService) HandleEventLogTable(w http.ResponseWriter, _ *http.Request
 func TestMount(t *testing.T) {
 	t.Parallel()
 
-	svc := &fakeService{}
+	svc := &fakeHandlers{}
 	m, err := New(svc).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

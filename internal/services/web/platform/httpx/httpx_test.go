@@ -59,6 +59,25 @@ func TestRequireMethodRejectsUnexpectedMethod(t *testing.T) {
 	}
 }
 
+func TestMethodNotAllowedNilWriterSafety(t *testing.T) {
+	t.Parallel()
+
+	h := MethodNotAllowed(http.MethodPost)
+	h.ServeHTTP(nil, nil)
+}
+
+func TestRequireMethodFallsBackOnNilHandler(t *testing.T) {
+	t.Parallel()
+
+	h := RequireMethod(http.MethodGet)(nil)
+	rr := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
+}
+
 func TestMethodNotAllowedWritesAllowHeaderAndStatus(t *testing.T) {
 	t.Parallel()
 

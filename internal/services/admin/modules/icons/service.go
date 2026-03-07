@@ -10,18 +10,18 @@ import (
 	"golang.org/x/text/message"
 )
 
-// service implements icons module handlers using shared module dependencies.
-type service struct {
+// handlers implements the icons Handlers contract.
+type handlers struct {
 	base modulehandler.Base
 }
 
-// NewService builds the icons module service implementation.
-func NewService(base modulehandler.Base) Service {
-	return service{base: base}
+// NewHandlers builds the icons handler implementation.
+func NewHandlers(base modulehandler.Base) Handlers {
+	return handlers{base: base}
 }
 
 // HandleIconsPage renders the icons page fragment or full layout.
-func (s service) HandleIconsPage(w http.ResponseWriter, r *http.Request) {
+func (s handlers) HandleIconsPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := s.base.Localizer(w, r)
 	pageCtx := s.base.PageContext(lang, loc, r)
 	s.base.RenderPage(
@@ -34,7 +34,7 @@ func (s service) HandleIconsPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleIconsTable renders the icon catalog table via HTMX.
-func (s service) HandleIconsTable(w http.ResponseWriter, r *http.Request) {
+func (s handlers) HandleIconsTable(w http.ResponseWriter, r *http.Request) {
 	loc, _ := s.base.Localizer(w, r)
 	definitions := platformicons.Catalog()
 	if len(definitions) == 0 {
@@ -47,7 +47,7 @@ func (s service) HandleIconsTable(w http.ResponseWriter, r *http.Request) {
 }
 
 // renderIconsTable renders an icon catalog table with optional rows and message.
-func (s service) renderIconsTable(w http.ResponseWriter, r *http.Request, rows []templates.IconRow, message string, loc *message.Printer) {
+func (s handlers) renderIconsTable(w http.ResponseWriter, r *http.Request, rows []templates.IconRow, message string, loc *message.Printer) {
 	templ.Handler(templates.IconsTable(rows, message, loc)).ServeHTTP(w, r)
 }
 

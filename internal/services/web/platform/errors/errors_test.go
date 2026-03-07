@@ -74,6 +74,7 @@ func TestHTTPStatusMapsGRPCErrors(t *testing.T) {
 		{name: "not found", err: status.Error(codes.NotFound, "missing"), want: http.StatusNotFound},
 		{name: "failed precondition", err: status.Error(codes.FailedPrecondition, "conflict"), want: http.StatusConflict},
 		{name: "unavailable", err: status.Error(codes.Unavailable, "unavailable"), want: http.StatusServiceUnavailable},
+		{name: "deadline exceeded", err: status.Error(codes.DeadlineExceeded, "timeout"), want: http.StatusServiceUnavailable},
 		{name: "internal falls back", err: status.Error(codes.Internal, "internal"), want: http.StatusInternalServerError},
 	}
 

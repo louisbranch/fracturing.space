@@ -2,8 +2,8 @@ package catalog
 
 import "net/http"
 
-// Service defines catalog handlers consumed by this module's routes.
-type Service interface {
+// Handlers defines catalog handler methods consumed by this module's routes.
+type Handlers interface {
 	HandleCatalogPage(w http.ResponseWriter, r *http.Request)
 	HandleCatalogSection(w http.ResponseWriter, r *http.Request, sectionID string)
 	HandleCatalogSectionTable(w http.ResponseWriter, r *http.Request, sectionID string)

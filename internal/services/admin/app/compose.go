@@ -7,6 +7,7 @@ import (
 
 	mod "github.com/louisbranch/fracturing.space/internal/services/admin/module"
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/modulecompose"
 )
 
 // ComposeInput carries module groups and shared composition contracts.
@@ -34,7 +35,7 @@ func Compose(input ComposeInput) (http.Handler, error) {
 		if mount.Handler == nil {
 			return nil, fmt.Errorf("mount module %q: handler is required", feature.ID())
 		}
-		if err := validatePrefix(prefix); err != nil {
+		if err := modulecompose.ValidatePrefix(prefix); err != nil {
 			return nil, fmt.Errorf("mount module %q has invalid prefix %q: %w", feature.ID(), prefix, err)
 		}
 		if !isProtectedPrefix(prefix) {
@@ -48,19 +49,6 @@ func Compose(input ComposeInput) (http.Handler, error) {
 	}
 
 	return root, nil
-}
-
-func validatePrefix(prefix string) error {
-	if !strings.HasPrefix(prefix, "/") {
-		return fmt.Errorf("prefix must begin with /")
-	}
-	if strings.TrimSpace(prefix) != prefix {
-		return fmt.Errorf("prefix must not include surrounding whitespace")
-	}
-	if !strings.HasSuffix(prefix, "/") {
-		return fmt.Errorf("prefix must end with /")
-	}
-	return nil
 }
 
 func isProtectedPrefix(prefix string) bool {

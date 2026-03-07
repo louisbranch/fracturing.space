@@ -29,10 +29,10 @@ func (testUnavailableConn) NewStream(context.Context, *grpc.StreamDesc, string, 
 
 func TestScenarioServiceHandlersWithUnavailableClients(t *testing.T) {
 	var conn testUnavailableConn
-	svcIface := NewService(modulehandler.NewBase(), "localhost:8080", statev1.NewEventServiceClient(conn), statev1.NewCampaignServiceClient(conn))
-	svc, ok := svcIface.(*service)
+	svcIface := NewHandlers(modulehandler.NewBase(), "localhost:8080", statev1.NewEventServiceClient(conn), statev1.NewCampaignServiceClient(conn))
+	svc, ok := svcIface.(*handlers)
 	if !ok {
-		t.Fatalf("NewService() type = %T, want *service", svcIface)
+		t.Fatalf("NewHandlers() type = %T, want *handlers", svcIface)
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/app/scenarios", nil)
@@ -83,7 +83,7 @@ func TestScenarioServiceHandlersWithUnavailableClients(t *testing.T) {
 
 func TestScenarioServiceRunScriptMkdirError(t *testing.T) {
 	var conn testUnavailableConn
-	svc := &service{
+	svc := &handlers{
 		base:           modulehandler.NewBase(),
 		eventClient:    statev1.NewEventServiceClient(conn),
 		campaignClient: statev1.NewCampaignServiceClient(conn),
@@ -110,7 +110,7 @@ func TestScenarioServiceRunScriptMkdirError(t *testing.T) {
 
 func TestScenarioServiceGetCampaignNameFallback(t *testing.T) {
 	var conn testUnavailableConn
-	svc := &service{
+	svc := &handlers{
 		base:           modulehandler.NewBase(),
 		campaignClient: statev1.NewCampaignServiceClient(conn),
 	}

@@ -16,19 +16,19 @@ import (
 // statusCallTimeout caps the gRPC call time for status queries.
 const statusCallTimeout = 5 * time.Second
 
-// service implements status module handlers.
-type service struct {
+// handlers implements the status Handlers contract.
+type handlers struct {
 	base         modulehandler.Base
 	statusClient statusv1.StatusServiceClient
 }
 
-// NewService builds the status module service implementation.
-func NewService(base modulehandler.Base, client statusv1.StatusServiceClient) Service {
-	return service{base: base, statusClient: client}
+// NewHandlers builds the status handler implementation.
+func NewHandlers(base modulehandler.Base, client statusv1.StatusServiceClient) Handlers {
+	return handlers{base: base, statusClient: client}
 }
 
 // HandleStatusPage renders the status page fragment or full layout.
-func (s service) HandleStatusPage(w http.ResponseWriter, r *http.Request) {
+func (s handlers) HandleStatusPage(w http.ResponseWriter, r *http.Request) {
 	loc, lang := s.base.Localizer(w, r)
 	pageCtx := s.base.PageContext(lang, loc, r)
 	s.base.RenderPage(
@@ -41,7 +41,7 @@ func (s service) HandleStatusPage(w http.ResponseWriter, r *http.Request) {
 }
 
 // HandleStatusTable renders the status table via HTMX.
-func (s service) HandleStatusTable(w http.ResponseWriter, r *http.Request) {
+func (s handlers) HandleStatusTable(w http.ResponseWriter, r *http.Request) {
 	loc, _ := s.base.Localizer(w, r)
 	ctx, cancel := context.WithTimeout(r.Context(), statusCallTimeout)
 	defer cancel()
@@ -59,6 +59,6 @@ func (s service) HandleStatusTable(w http.ResponseWriter, r *http.Request) {
 }
 
 // renderStatusTable renders the status table fragment.
-func (s service) renderStatusTable(w http.ResponseWriter, r *http.Request, groups []templates.StatusServiceGroup, msg string, loc *message.Printer) {
+func (s handlers) renderStatusTable(w http.ResponseWriter, r *http.Request, groups []templates.StatusServiceGroup, msg string, loc *message.Printer) {
 	templ.Handler(templates.StatusTable(groups, msg, loc)).ServeHTTP(w, r)
 }

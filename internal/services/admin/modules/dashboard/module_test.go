@@ -8,12 +8,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 )
 
-type fakeService struct {
+type fakeHandlers struct {
 	lastCall string
 	lastPath string
 }
 
-func (f *fakeService) HandleDashboard(w http.ResponseWriter, r *http.Request) {
+func (f *fakeHandlers) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	f.lastCall = "dashboard"
 	if r != nil && r.URL != nil {
 		f.lastPath = r.URL.Path
@@ -21,7 +21,7 @@ func (f *fakeService) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleDashboardContent(w http.ResponseWriter, _ *http.Request) {
+func (f *fakeHandlers) HandleDashboardContent(w http.ResponseWriter, _ *http.Request) {
 	f.lastCall = "dashboard_content"
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -29,7 +29,7 @@ func (f *fakeService) HandleDashboardContent(w http.ResponseWriter, _ *http.Requ
 func TestMount(t *testing.T) {
 	t.Parallel()
 
-	svc := &fakeService{}
+	svc := &fakeHandlers{}
 	m, err := New(svc).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

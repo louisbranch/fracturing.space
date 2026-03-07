@@ -8,33 +8,33 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/admin/routepath"
 )
 
-type fakeService struct {
+type fakeHandlers struct {
 	lastCall string
 	lastUser string
 }
 
-func (f *fakeService) HandleUsersPage(w http.ResponseWriter, _ *http.Request) {
+func (f *fakeHandlers) HandleUsersPage(w http.ResponseWriter, _ *http.Request) {
 	f.lastCall = "users_page"
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleUsersTable(w http.ResponseWriter, _ *http.Request) {
+func (f *fakeHandlers) HandleUsersTable(w http.ResponseWriter, _ *http.Request) {
 	f.lastCall = "users_table"
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleUserLookup(w http.ResponseWriter, _ *http.Request) {
+func (f *fakeHandlers) HandleUserLookup(w http.ResponseWriter, _ *http.Request) {
 	f.lastCall = "users_lookup"
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleUserDetail(w http.ResponseWriter, _ *http.Request, userID string) {
+func (f *fakeHandlers) HandleUserDetail(w http.ResponseWriter, _ *http.Request, userID string) {
 	f.lastCall = "users_detail"
 	f.lastUser = userID
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (f *fakeService) HandleUserInvites(w http.ResponseWriter, _ *http.Request, userID string) {
+func (f *fakeHandlers) HandleUserInvites(w http.ResponseWriter, _ *http.Request, userID string) {
 	f.lastCall = "users_invites"
 	f.lastUser = userID
 	w.WriteHeader(http.StatusNoContent)
@@ -43,7 +43,7 @@ func (f *fakeService) HandleUserInvites(w http.ResponseWriter, _ *http.Request, 
 func TestMount(t *testing.T) {
 	t.Parallel()
 
-	svc := &fakeService{}
+	svc := &fakeHandlers{}
 	m, err := New(svc).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
