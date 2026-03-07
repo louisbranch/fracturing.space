@@ -62,6 +62,7 @@ func TestEvaluateSessionStartReport_CollectsCharacterAndPlayerBlockers(t *testin
 				"player-2": {
 					ParticipantID: "player-2",
 					Joined:        true,
+					Name:          "Player Two",
 					Role:          string(participant.RolePlayer),
 				},
 			},
@@ -106,6 +107,15 @@ func TestEvaluateSessionStartReport_CollectsCharacterAndPlayerBlockers(t *testin
 	}
 	if report.Blockers[3].Metadata["participant_id"] != "player-2" {
 		t.Fatalf("player blocker participant_id = %q, want %q", report.Blockers[3].Metadata["participant_id"], "player-2")
+	}
+	if report.Blockers[3].Metadata["participant_name"] != "Player Two" {
+		t.Fatalf("player blocker participant_name = %q, want %q", report.Blockers[3].Metadata["participant_name"], "Player Two")
+	}
+	if !strings.Contains(report.Blockers[3].Message, "Player Two") {
+		t.Fatalf("player blocker message = %q, want participant name", report.Blockers[3].Message)
+	}
+	if strings.Contains(report.Blockers[3].Message, "player-2") {
+		t.Fatalf("player blocker message = %q, did not expect participant id when name is present", report.Blockers[3].Message)
 	}
 }
 
