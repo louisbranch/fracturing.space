@@ -6,6 +6,7 @@ import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
 	publicauthgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway"
@@ -63,6 +64,9 @@ type Dependencies struct {
 
 	// Notification module client.
 	NotificationClient notifications.NotificationClient
+
+	// Discovery module client.
+	ListingClient discovery.ListingClient
 
 	// Status service client for system-wide health queries.
 	StatusClient statusv1.StatusServiceClient

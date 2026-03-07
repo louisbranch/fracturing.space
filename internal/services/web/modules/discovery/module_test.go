@@ -67,3 +67,21 @@ func TestMountRejectsDiscoveryNonGet(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
 	}
 }
+
+func TestNewWithGatewayIsHealthy(t *testing.T) {
+	t.Parallel()
+
+	m := NewWithGateway(stubGateway{})
+	if !m.Healthy() {
+		t.Fatal("Healthy() = false, want true")
+	}
+}
+
+func TestNewWithoutGatewayIsNotHealthy(t *testing.T) {
+	t.Parallel()
+
+	m := New()
+	if m.Healthy() {
+		t.Fatal("Healthy() = true, want false with nil gateway")
+	}
+}

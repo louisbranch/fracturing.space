@@ -249,7 +249,7 @@ func TestMountCampaignStartNewGetRendersChoiceCards(t *testing.T) {
 		`data-campaign-start-option="browse"`,
 		`data-campaign-start-divider="or"`,
 		`class="divider lg:divider-horizontal`,
-		`disabled aria-disabled="true"`,
+		`href="/discover/"`,
 		`data-campaign-start-option="scratch"`,
 		`href="/app/campaigns/create"`,
 	} {

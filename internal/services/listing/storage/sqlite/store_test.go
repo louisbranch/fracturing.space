@@ -32,6 +32,12 @@ func TestCreateGetCampaignListingRoundTrip(t *testing.T) {
 		RecommendedParticipantsMax: 5,
 		DifficultyTier:             listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER,
 		ExpectedDurationLabel:      "2-3 sessions",
+		GmMode:                     listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_AI,
+		Intent:                     listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_STARTER,
+		Level:                      1,
+		CharacterCount:             1,
+		Storyline:                  "# Test Storyline\n\nA full markdown document.",
+		Tags:                       []string{"solo", "mystery", "beginner"},
 		CreatedAt:                  now,
 		UpdatedAt:                  now,
 	}
@@ -51,6 +57,73 @@ func TestCreateGetCampaignListingRoundTrip(t *testing.T) {
 	}
 	if got.Description != input.Description {
 		t.Fatalf("description = %q, want %q", got.Description, input.Description)
+	}
+	if got.GmMode != input.GmMode {
+		t.Fatalf("gm_mode = %v, want %v", got.GmMode, input.GmMode)
+	}
+	if got.Intent != input.Intent {
+		t.Fatalf("intent = %v, want %v", got.Intent, input.Intent)
+	}
+	if got.Level != input.Level {
+		t.Fatalf("level = %d, want %d", got.Level, input.Level)
+	}
+	if got.CharacterCount != input.CharacterCount {
+		t.Fatalf("character_count = %d, want %d", got.CharacterCount, input.CharacterCount)
+	}
+	if got.Storyline != input.Storyline {
+		t.Fatalf("storyline = %q, want %q", got.Storyline, input.Storyline)
+	}
+	if len(got.Tags) != len(input.Tags) {
+		t.Fatalf("tags len = %d, want %d", len(got.Tags), len(input.Tags))
+	}
+	for i, tag := range got.Tags {
+		if tag != input.Tags[i] {
+			t.Fatalf("tags[%d] = %q, want %q", i, tag, input.Tags[i])
+		}
+	}
+}
+
+func TestCreateGetCampaignListingRoundTrip_ZeroValueNewFields(t *testing.T) {
+	t.Parallel()
+
+	store := openTempStore(t)
+	now := time.Date(2026, time.February, 22, 16, 41, 0, 0, time.UTC)
+	input := storage.CampaignListing{
+		CampaignID:                 "camp-compat",
+		Title:                      "Backwards Compat",
+		Description:                "Listing without new fields",
+		RecommendedParticipantsMin: 2,
+		RecommendedParticipantsMax: 4,
+		DifficultyTier:             listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER,
+		ExpectedDurationLabel:      "1 session",
+		CreatedAt:                  now,
+		UpdatedAt:                  now,
+	}
+	if err := store.CreateCampaignListing(context.Background(), input); err != nil {
+		t.Fatalf("create: %v", err)
+	}
+
+	got, err := store.GetCampaignListing(context.Background(), "camp-compat")
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.GmMode != 0 {
+		t.Fatalf("gm_mode = %v, want unspecified", got.GmMode)
+	}
+	if got.Intent != 0 {
+		t.Fatalf("intent = %v, want unspecified", got.Intent)
+	}
+	if got.Level != 0 {
+		t.Fatalf("level = %d, want 0", got.Level)
+	}
+	if got.CharacterCount != 0 {
+		t.Fatalf("character_count = %d, want 0", got.CharacterCount)
+	}
+	if got.Storyline != "" {
+		t.Fatalf("storyline = %q, want empty", got.Storyline)
+	}
+	if len(got.Tags) != 0 {
+		t.Fatalf("tags = %v, want nil/empty", got.Tags)
 	}
 }
 

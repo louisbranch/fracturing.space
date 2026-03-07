@@ -4,6 +4,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -105,9 +106,15 @@ func (s *Store) CreateCampaignListing(ctx context.Context, listing storage.Campa
 		   difficulty_tier,
 		   expected_duration_label,
 		   system,
+		   gm_mode,
+		   intent,
+		   level,
+		   character_count,
+		   storyline,
+		   tags,
 		   created_at,
 		   updated_at
-		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		campaignID,
 		title,
 		description,
@@ -116,6 +123,12 @@ func (s *Store) CreateCampaignListing(ctx context.Context, listing storage.Campa
 		int32(listing.DifficultyTier),
 		expectedDuration,
 		int32(listing.System),
+		int32(listing.GmMode),
+		int32(listing.Intent),
+		listing.Level,
+		listing.CharacterCount,
+		listing.Storyline,
+		tagsToJSON(listing.Tags),
 		toMillis(createdAt),
 		toMillis(updatedAt),
 	)
@@ -146,6 +159,7 @@ func (s *Store) GetCampaignListing(ctx context.Context, campaignID string) (stor
 		`SELECT campaign_id, title, description,
 		        recommended_participants_min, recommended_participants_max,
 		        difficulty_tier, expected_duration_label, system,
+		        gm_mode, intent, level, character_count, storyline, tags,
 		        created_at, updated_at
 		   FROM campaign_listings
 		  WHERE campaign_id = ?`,
@@ -155,6 +169,9 @@ func (s *Store) GetCampaignListing(ctx context.Context, campaignID string) (stor
 	var listing storage.CampaignListing
 	var difficultyTier int32
 	var system int32
+	var gmMode int32
+	var intent int32
+	var tagsJSON string
 	var createdAt int64
 	var updatedAt int64
 	err := row.Scan(
@@ -166,6 +183,12 @@ func (s *Store) GetCampaignListing(ctx context.Context, campaignID string) (stor
 		&difficultyTier,
 		&listing.ExpectedDurationLabel,
 		&system,
+		&gmMode,
+		&intent,
+		&listing.Level,
+		&listing.CharacterCount,
+		&listing.Storyline,
+		&tagsJSON,
 		&createdAt,
 		&updatedAt,
 	)
@@ -178,6 +201,9 @@ func (s *Store) GetCampaignListing(ctx context.Context, campaignID string) (stor
 
 	listing.DifficultyTier = listingv1.CampaignDifficultyTier(difficultyTier)
 	listing.System = commonv1.GameSystem(system)
+	listing.GmMode = listingv1.CampaignListingGmMode(gmMode)
+	listing.Intent = listingv1.CampaignListingIntent(intent)
+	listing.Tags = tagsFromJSON(tagsJSON)
 	listing.CreatedAt = fromMillis(createdAt)
 	listing.UpdatedAt = fromMillis(updatedAt)
 	return listing, nil
@@ -204,13 +230,15 @@ func (s *Store) ListCampaignListings(ctx context.Context, pageSize int, pageToke
 		rows *sql.Rows
 		err  error
 	)
+	const selectCols = `campaign_id, title, description,
+			        recommended_participants_min, recommended_participants_max,
+			        difficulty_tier, expected_duration_label, system,
+			        gm_mode, intent, level, character_count, storyline, tags,
+			        created_at, updated_at`
 	if pageToken == "" {
 		rows, err = s.sqlDB.QueryContext(
 			ctx,
-			`SELECT campaign_id, title, description,
-			        recommended_participants_min, recommended_participants_max,
-			        difficulty_tier, expected_duration_label, system,
-			        created_at, updated_at
+			`SELECT `+selectCols+`
 			   FROM campaign_listings
 			  ORDER BY campaign_id ASC
 			  LIMIT ?`,
@@ -219,10 +247,7 @@ func (s *Store) ListCampaignListings(ctx context.Context, pageSize int, pageToke
 	} else {
 		rows, err = s.sqlDB.QueryContext(
 			ctx,
-			`SELECT campaign_id, title, description,
-			        recommended_participants_min, recommended_participants_max,
-			        difficulty_tier, expected_duration_label, system,
-			        created_at, updated_at
+			`SELECT `+selectCols+`
 			   FROM campaign_listings
 			  WHERE campaign_id > ?
 			  ORDER BY campaign_id ASC
@@ -240,6 +265,9 @@ func (s *Store) ListCampaignListings(ctx context.Context, pageSize int, pageToke
 		var listing storage.CampaignListing
 		var difficultyTier int32
 		var system int32
+		var gmMode int32
+		var intent int32
+		var tagsJSON string
 		var createdAt int64
 		var updatedAt int64
 		if err := rows.Scan(
@@ -251,6 +279,12 @@ func (s *Store) ListCampaignListings(ctx context.Context, pageSize int, pageToke
 			&difficultyTier,
 			&listing.ExpectedDurationLabel,
 			&system,
+			&gmMode,
+			&intent,
+			&listing.Level,
+			&listing.CharacterCount,
+			&listing.Storyline,
+			&tagsJSON,
 			&createdAt,
 			&updatedAt,
 		); err != nil {
@@ -258,6 +292,9 @@ func (s *Store) ListCampaignListings(ctx context.Context, pageSize int, pageToke
 		}
 		listing.DifficultyTier = listingv1.CampaignDifficultyTier(difficultyTier)
 		listing.System = commonv1.GameSystem(system)
+		listing.GmMode = listingv1.CampaignListingGmMode(gmMode)
+		listing.Intent = listingv1.CampaignListingIntent(intent)
+		listing.Tags = tagsFromJSON(tagsJSON)
 		listing.CreatedAt = fromMillis(createdAt)
 		listing.UpdatedAt = fromMillis(updatedAt)
 		page.Listings = append(page.Listings, listing)
@@ -271,6 +308,29 @@ func (s *Store) ListCampaignListings(ctx context.Context, pageSize int, pageToke
 	}
 
 	return page, nil
+}
+
+func tagsToJSON(tags []string) string {
+	if len(tags) == 0 {
+		return "[]"
+	}
+	b, err := json.Marshal(tags)
+	if err != nil {
+		return "[]"
+	}
+	return string(b)
+}
+
+func tagsFromJSON(value string) []string {
+	value = strings.TrimSpace(value)
+	if value == "" || value == "[]" {
+		return nil
+	}
+	var tags []string
+	if err := json.Unmarshal([]byte(value), &tags); err != nil {
+		return nil
+	}
+	return tags
 }
 
 func isCampaignListingUniqueViolation(err error) bool {

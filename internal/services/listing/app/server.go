@@ -14,6 +14,8 @@ import (
 	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	listingservice "github.com/louisbranch/fracturing.space/internal/services/listing/api/grpc/listing"
+	"github.com/louisbranch/fracturing.space/internal/services/listing/catalog"
+	"github.com/louisbranch/fracturing.space/internal/services/listing/storage"
 	listingsqlite "github.com/louisbranch/fracturing.space/internal/services/listing/storage/sqlite"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
@@ -59,6 +61,11 @@ func NewWithAddr(addr string) (*Server, error) {
 	if err != nil {
 		_ = listener.Close()
 		return nil, err
+	}
+	if err := bootstrapBuiltinCatalog(store); err != nil {
+		_ = listener.Close()
+		_ = store.Close()
+		return nil, fmt.Errorf("bootstrap builtin catalog: %w", err)
 	}
 
 	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
@@ -161,4 +168,25 @@ func openListingStore(path string) (*listingsqlite.Store, error) {
 		return nil, fmt.Errorf("open listing sqlite store: %w", err)
 	}
 	return store, nil
+}
+
+// bootstrapBuiltinCatalog inserts embedded starter listings into the store
+// if they do not already exist. Already-existing entries are silently skipped
+// (idempotent).
+func bootstrapBuiltinCatalog(store *listingsqlite.Store) error {
+	listings, err := catalog.BuiltinListings()
+	if err != nil {
+		return fmt.Errorf("load builtin listings: %w", err)
+	}
+	ctx := context.Background()
+	for _, l := range listings {
+		if err := store.CreateCampaignListing(ctx, l); err != nil {
+			if errors.Is(err, storage.ErrAlreadyExists) {
+				continue
+			}
+			return fmt.Errorf("create builtin listing %q: %w", l.CampaignID, err)
+		}
+		log.Printf("bootstrapped builtin listing: %s", l.CampaignID)
+	}
+	return nil
 }

@@ -125,6 +125,34 @@ func parseDifficultyTier(value string) listingv1.CampaignDifficultyTier {
 	return listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER
 }
 
+func parseListingGmMode(value string) listingv1.CampaignListingGmMode {
+	candidate := normalizeEnumLabel(value)
+	if candidate == "" {
+		return listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_UNSPECIFIED
+	}
+	if !strings.HasPrefix(candidate, "CAMPAIGN_LISTING_GM_MODE_") {
+		candidate = "CAMPAIGN_LISTING_GM_MODE_" + candidate
+	}
+	if enumValue, ok := listingv1.CampaignListingGmMode_value[candidate]; ok {
+		return listingv1.CampaignListingGmMode(enumValue)
+	}
+	return listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_UNSPECIFIED
+}
+
+func parseListingIntent(value string) listingv1.CampaignListingIntent {
+	candidate := normalizeEnumLabel(value)
+	if candidate == "" {
+		return listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_UNSPECIFIED
+	}
+	if !strings.HasPrefix(candidate, "CAMPAIGN_LISTING_INTENT_") {
+		candidate = "CAMPAIGN_LISTING_INTENT_" + candidate
+	}
+	if enumValue, ok := listingv1.CampaignListingIntent_value[candidate]; ok {
+		return listingv1.CampaignListingIntent(enumValue)
+	}
+	return listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_UNSPECIFIED
+}
+
 func normalizeEnumLabel(value string) string {
 	candidate := strings.TrimSpace(value)
 	if candidate == "" {

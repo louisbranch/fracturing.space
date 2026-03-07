@@ -84,7 +84,8 @@ func TestServer_CreateGetAndListCampaignListingsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list campaign listings: %v", err)
 	}
-	if len(listResp.GetListings()) != 1 {
-		t.Fatalf("listings len = %d, want 1", len(listResp.GetListings()))
+	// 3 builtin catalog entries + 1 manually created
+	if len(listResp.GetListings()) != 4 {
+		t.Fatalf("listings len = %d, want 4 (3 builtin + 1 created)", len(listResp.GetListings()))
 	}
 }

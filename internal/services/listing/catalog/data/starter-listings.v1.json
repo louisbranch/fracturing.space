@@ -1,0 +1,50 @@
+[
+  {
+    "campaign_id": "starter:lantern-in-the-dark",
+    "title": "The Lantern in the Dark",
+    "description": "A coastal mystery for a solo Guardian — investigate a darkened lighthouse, uncover a smuggling ring, and save your home village.",
+    "recommended_participants_min": 1,
+    "recommended_participants_max": 1,
+    "difficulty_tier": "CAMPAIGN_DIFFICULTY_TIER_BEGINNER",
+    "expected_duration_label": "1 session",
+    "system": "GAME_SYSTEM_DAGGERHEART",
+    "gm_mode": "CAMPAIGN_LISTING_GM_MODE_AI",
+    "intent": "CAMPAIGN_LISTING_INTENT_STARTER",
+    "level": 1,
+    "character_count": 1,
+    "storyline_file": "lantern-in-the-dark.md",
+    "tags": ["solo", "mystery", "guardian", "beginner"]
+  },
+  {
+    "campaign_id": "starter:whispers-of-the-thornwood",
+    "title": "Whispers of the Thornwood",
+    "description": "A nature survival adventure for a solo Ranger — track a spreading corruption through an ancient forest and restore its heart.",
+    "recommended_participants_min": 1,
+    "recommended_participants_max": 1,
+    "difficulty_tier": "CAMPAIGN_DIFFICULTY_TIER_BEGINNER",
+    "expected_duration_label": "1 session",
+    "system": "GAME_SYSTEM_DAGGERHEART",
+    "gm_mode": "CAMPAIGN_LISTING_GM_MODE_AI",
+    "intent": "CAMPAIGN_LISTING_INTENT_STARTER",
+    "level": 1,
+    "character_count": 1,
+    "storyline_file": "whispers-of-the-thornwood.md",
+    "tags": ["solo", "nature", "ranger", "beginner"]
+  },
+  {
+    "campaign_id": "starter:merchants-gambit",
+    "title": "The Merchant's Gambit",
+    "description": "A social intrigue adventure for a solo Bard — expose a con artist's scheme at a bustling trade fair before the auction begins.",
+    "recommended_participants_min": 1,
+    "recommended_participants_max": 1,
+    "difficulty_tier": "CAMPAIGN_DIFFICULTY_TIER_BEGINNER",
+    "expected_duration_label": "1 session",
+    "system": "GAME_SYSTEM_DAGGERHEART",
+    "gm_mode": "CAMPAIGN_LISTING_GM_MODE_AI",
+    "intent": "CAMPAIGN_LISTING_INTENT_STARTER",
+    "level": 1,
+    "character_count": 1,
+    "storyline_file": "merchants-gambit.md",
+    "tags": ["solo", "intrigue", "bard", "beginner"]
+  }
+]
