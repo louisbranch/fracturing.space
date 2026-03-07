@@ -4,7 +4,7 @@ COVER_EXCLUDE_REGEX := (api/gen/|_templ[.]go|internal/services/admin/templates/|
 COVERAGE_FLOORS_FILE ?= docs/reference/coverage-floors.json
 CRITICAL_DOMAIN_COVERPKG := ./internal/services/game/domain/action,./internal/services/game/domain/aggregate,./internal/services/game/domain/authz,./internal/services/game/domain/bridge,./internal/services/game/domain/bridge/daggerheart,./internal/services/game/domain/bridge/daggerheart/domain,./internal/services/game/domain/bridge/daggerheart/profile,./internal/services/game/domain/bridge/daggerheart/internal/mechanics,./internal/services/game/domain/bridge/daggerheart/internal/reducer,./internal/services/game/domain/bridge/manifest,./internal/services/game/domain/campaign,./internal/services/game/domain/character,./internal/services/game/domain/checkpoint,./internal/services/game/domain/command,./internal/services/game/domain/engine,./internal/services/game/domain/event,./internal/services/game/domain/fork,./internal/services/game/domain/invite,./internal/services/game/domain/journal,./internal/services/game/domain/module,./internal/services/game/domain/participant,./internal/services/game/domain/readiness,./internal/services/game/domain/replay,./internal/services/game/domain/session,./internal/services/shared/joingrant
 CRITICAL_DOMAIN_TEST_PKGS := ./internal/services/game/domain/... ./internal/services/shared/joingrant
-SCENARIO_SMOKE_MANIFEST := internal/test/game/scenarios/smoke.txt
+SCENARIO_SMOKE_MANIFEST := internal/test/game/scenarios/manifests/smoke.txt
 INTEGRATION_SMOKE_FULL_PATTERN := ^(TestMCPStdioEndToEnd|TestMCPHTTPBlackbox)$$
 INTEGRATION_SMOKE_PR_PATTERN := ^(TestMCPStdioEndToEnd|TestMCPHTTPBlackboxSmoke)$$
 

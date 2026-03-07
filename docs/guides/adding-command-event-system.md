@@ -29,6 +29,10 @@ Canonical how-to for system-extension changes.
    - `internal/services/game/domain/bridge/manifest/manifest.go`
    - `internal/services/game/domain/engine/registries.go` integration points
 3. Add module conformance/integration tests.
+4. Add scenario coverage for the new system:
+   - place scenarios under `internal/test/game/scenarios/systems/<system_id>/`
+   - add/select smoke entries in `internal/test/game/scenarios/manifests/`
+   - use `local <alias> = scene:system(\"<SYSTEM_ID>\")` for system mechanics in Lua scripts
 
 ## 4. If exposing MCP tooling
 

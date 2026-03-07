@@ -1,6 +1,7 @@
 package scenario
 
 import (
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 )
@@ -28,6 +29,7 @@ type actionRollResult struct {
 
 type scenarioState struct {
 	campaignID           string
+	campaignSystem       commonv1.GameSystem
 	ownerParticipantID   string
 	sessionID            string
 	actors               map[string]string

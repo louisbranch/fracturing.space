@@ -366,31 +366,40 @@ func TestMatchesOutcomeHint_Pure(t *testing.T) {
 
 func TestParseOutcomeBranchSteps(t *testing.T) {
 	t.Run("single_map", func(t *testing.T) {
-		steps, err := parseOutcomeBranchSteps(map[string]any{"kind": "clear_spotlight"})
+		steps, err := parseOutcomeBranchSteps(map[string]any{"kind": "clear_spotlight"}, "DAGGERHEART")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if len(steps) != 1 || steps[0].Kind != "clear_spotlight" {
 			t.Fatalf("steps = %v", steps)
 		}
+		if steps[0].System != "" {
+			t.Fatalf("system = %q, want empty", steps[0].System)
+		}
 	})
 	t.Run("list_of_maps", func(t *testing.T) {
 		steps, err := parseOutcomeBranchSteps([]any{
-			map[string]any{"kind": "clear_spotlight"},
-			map[string]any{"kind": "clear_spotlight", "foo": "bar"},
-		})
+			map[string]any{"kind": "attack"},
+			map[string]any{"kind": "attack", "foo": "bar", "system": "daggerheart"},
+		}, "")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(steps) != 2 || steps[0].Kind != "clear_spotlight" || steps[1].Kind != "clear_spotlight" {
+		if len(steps) != 2 || steps[0].Kind != "attack" || steps[1].Kind != "attack" {
 			t.Fatalf("steps = %v", steps)
 		}
 		if _, ok := steps[1].Args["foo"]; !ok {
 			t.Fatalf("expected args to carry non-kind fields: %#v", steps[1].Args)
 		}
+		if steps[1].System != "DAGGERHEART" {
+			t.Fatalf("system = %q, want DAGGERHEART", steps[1].System)
+		}
+		if _, ok := steps[1].Args["system"]; ok {
+			t.Fatalf("branch step args must not keep system key: %#v", steps[1].Args)
+		}
 	})
 	t.Run("invalid_step", func(t *testing.T) {
-		_, err := parseOutcomeBranchSteps([]any{"bad"})
+		_, err := parseOutcomeBranchSteps([]any{"bad"}, "")
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -405,12 +414,15 @@ func TestResolveOutcomeBranches(t *testing.T) {
 		}, map[string]struct{}{
 			"on_success": {},
 			"on_failure": {},
-		})
+		}, "DAGGERHEART")
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		if len(branches) != 2 {
 			t.Fatalf("want 2 branches, got %d", len(branches))
+		}
+		if branches["on_success"][0].System != "" {
+			t.Fatalf("branch system = %q, want empty", branches["on_success"][0].System)
 		}
 	})
 	t.Run("unknown_branch", func(t *testing.T) {
@@ -418,7 +430,7 @@ func TestResolveOutcomeBranches(t *testing.T) {
 			"on_magic": []any{map[string]any{"kind": "clear_spotlight"}},
 		}, map[string]struct{}{
 			"on_success": {},
-		})
+		}, "DAGGERHEART")
 		if err == nil {
 			t.Fatal("expected unknown branch error")
 		}
@@ -430,7 +442,7 @@ func TestResolveOutcomeBranches(t *testing.T) {
 		}, map[string]struct{}{
 			"on_critical": {},
 			"on_crit":     {},
-		})
+		}, "DAGGERHEART")
 		if err == nil {
 			t.Fatal("expected critical alias conflict error")
 		}
@@ -762,6 +774,14 @@ func TestParseGameSystem(t *testing.T) {
 	gs, err := parseGameSystem("DAGGERHEART")
 	if err != nil || gs != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
 		t.Fatalf("want DAGGERHEART, got %v, err=%v", gs, err)
+	}
+	gs, err = parseGameSystem("GAME_SYSTEM_DAGGERHEART")
+	if err != nil || gs != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+		t.Fatalf("want GAME_SYSTEM_DAGGERHEART, got %v, err=%v", gs, err)
+	}
+	_, err = parseGameSystem("GAME_SYSTEM_UNSPECIFIED")
+	if err == nil {
+		t.Fatal("expected error for unspecified")
 	}
 	_, err = parseGameSystem("unknown")
 	if err == nil {
