@@ -686,7 +686,7 @@ func campaignCreateSystemValue(form CampaignCreateFormValues) string {
 
 func campaignCreateGMModeValue(form CampaignCreateFormValues) string {
 	if form.GMMode == "" {
-		return "human"
+		return "ai"
 	}
 	return form.GMMode
 }

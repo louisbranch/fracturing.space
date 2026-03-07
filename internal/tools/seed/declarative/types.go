@@ -118,7 +118,7 @@ func defaultSystemLabel(value string) string {
 
 func defaultGmModeLabel(value string) string {
 	if value == "" {
-		return gamev1.GmMode_HUMAN.String()
+		return gamev1.GmMode_AI.String()
 	}
 	return value
 }

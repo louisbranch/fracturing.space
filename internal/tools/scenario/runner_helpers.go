@@ -1333,6 +1333,8 @@ func parseGmMode(value string) (gamev1.GmMode, error) {
 		return gamev1.GmMode_HUMAN, nil
 	case "AI":
 		return gamev1.GmMode_AI, nil
+	case "HYBRID":
+		return gamev1.GmMode_HYBRID, nil
 	default:
 		return gamev1.GmMode_GM_MODE_UNSPECIFIED, fmt.Errorf("unsupported gm_mode %q", value)
 	}

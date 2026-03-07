@@ -798,6 +798,10 @@ func TestParseGmMode(t *testing.T) {
 	if err != nil || gm != gamev1.GmMode_AI {
 		t.Fatal("expected AI")
 	}
+	gm, err = parseGmMode("HYBRID")
+	if err != nil || gm != gamev1.GmMode_HYBRID {
+		t.Fatal("expected HYBRID")
+	}
 	_, err = parseGmMode("bad")
 	if err == nil {
 		t.Fatal("expected error")

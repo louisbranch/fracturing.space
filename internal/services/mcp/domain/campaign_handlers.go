@@ -33,11 +33,15 @@ func CampaignCreateHandler(client statev1.CampaignServiceClient, notify Resource
 		}
 
 		var header metadata.MD
+		gmMode, err := gmModeFromString(input.GmMode)
+		if err != nil {
+			return nil, CampaignCreateResult{}, err
+		}
 
 		response, err := client.CreateCampaign(callCtx, &statev1.CreateCampaignRequest{
 			Name:         input.Name,
 			System:       gameSystemFromString(input.System),
-			GmMode:       gmModeFromString(input.GmMode),
+			GmMode:       gmMode,
 			Intent:       campaignIntentFromString(input.Intent),
 			AccessPolicy: campaignAccessPolicyFromString(input.AccessPolicy),
 			ThemePrompt:  input.ThemePrompt,
@@ -320,18 +324,21 @@ func gameSystemFromString(value string) commonv1.GameSystem {
 	}
 }
 
-// gmModeFromString parses MCP input into gm mode, accepting loose variants and
-// normalizing case/spacing so user-facing callers stay ergonomic.
-func gmModeFromString(value string) statev1.GmMode {
-	switch strings.ToUpper(strings.TrimSpace(value)) {
+// gmModeFromString parses MCP input into gm mode. Empty values default to AI.
+func gmModeFromString(value string) (statev1.GmMode, error) {
+	trimmed := strings.TrimSpace(value)
+	if trimmed == "" {
+		return statev1.GmMode_AI, nil
+	}
+	switch strings.ToUpper(trimmed) {
 	case "HUMAN":
-		return statev1.GmMode_HUMAN
+		return statev1.GmMode_HUMAN, nil
 	case "AI":
-		return statev1.GmMode_AI
+		return statev1.GmMode_AI, nil
 	case "HYBRID":
-		return statev1.GmMode_HYBRID
+		return statev1.GmMode_HYBRID, nil
 	default:
-		return statev1.GmMode_GM_MODE_UNSPECIFIED
+		return statev1.GmMode_GM_MODE_UNSPECIFIED, fmt.Errorf("gm_mode %q is invalid", value)
 	}
 }
 

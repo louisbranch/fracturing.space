@@ -158,19 +158,10 @@ func TestNormalizeCreateInput(t *testing.T) {
 		t.Fatalf("expected ErrInvalidGameSystem, got %v", err)
 	}
 
-	_, err = NormalizeCreateInput(CreateInput{
-		Name:   "Sunfall",
-		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: GmModeUnspecified,
-	})
-	if !errors.Is(err, ErrInvalidGmMode) {
-		t.Fatalf("expected ErrInvalidGmMode, got %v", err)
-	}
-
 	normalized, err := NormalizeCreateInput(CreateInput{
 		Name:   "  Sunfall  ",
 		System: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
-		GmMode: GmModeHuman,
+		GmMode: GmModeUnspecified,
 	})
 	if err != nil {
 		t.Fatalf("NormalizeCreateInput: %v", err)
@@ -180,6 +171,9 @@ func TestNormalizeCreateInput(t *testing.T) {
 	}
 	if normalized.Locale != commonv1.Locale_LOCALE_EN_US {
 		t.Fatalf("Locale = %s, want %s", normalized.Locale, commonv1.Locale_LOCALE_EN_US)
+	}
+	if normalized.GmMode != GmModeAI {
+		t.Fatalf("GmMode = %q, want %q", normalized.GmMode, GmModeAI)
 	}
 	if normalized.Intent != IntentStandard {
 		t.Fatalf("Intent = %q, want %q", normalized.Intent, IntentStandard)

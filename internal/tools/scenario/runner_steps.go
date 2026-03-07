@@ -289,7 +289,7 @@ func (r *Runner) runCampaignStep(ctx context.Context, state *scenarioState, step
 	if system == "" {
 		return r.failf("campaign system is required")
 	}
-	gmMode := optionalString(step.Args, "gm_mode", "HUMAN")
+	gmMode := optionalString(step.Args, "gm_mode", "AI")
 	intent := optionalString(step.Args, "intent", "SANDBOX")
 	accessPolicy := optionalString(step.Args, "access_policy", "PRIVATE")
 

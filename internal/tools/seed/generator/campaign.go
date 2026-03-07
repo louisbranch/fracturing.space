@@ -12,15 +12,15 @@ import (
 
 // gmModes is the list of valid GM modes to vary across.
 var gmModes = []statev1.GmMode{
-	statev1.GmMode_HUMAN,
 	statev1.GmMode_AI,
+	statev1.GmMode_HUMAN,
 	statev1.GmMode_HYBRID,
 }
 
 // pickGmMode selects a GM mode based on configuration.
 func (g *Generator) pickGmMode(vary bool, index int) statev1.GmMode {
 	if !vary {
-		return statev1.GmMode_HUMAN
+		return statev1.GmMode_AI
 	}
 	return gmModes[index%len(gmModes)]
 }

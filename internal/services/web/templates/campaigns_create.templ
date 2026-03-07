@@ -59,15 +59,15 @@ templ CampaignCreateFragment(form CampaignCreateFormValues, loc Localizer) {
 						<span class="label-text">{ T(loc, "game.create.field_gm_mode") }</span>
 					</label>
 					<select name="gm_mode" required class="select select-bordered w-full">
-						if campaignCreateGMModeValue(form) == "human" {
-							<option value="human" selected>{ T(loc, "game.create.field_gm_mode_human") }</option>
-						} else {
-							<option value="human">{ T(loc, "game.create.field_gm_mode_human") }</option>
-						}
 						if campaignCreateGMModeValue(form) == "ai" {
 							<option value="ai" selected>{ T(loc, "game.create.field_gm_mode_ai") }</option>
 						} else {
 							<option value="ai">{ T(loc, "game.create.field_gm_mode_ai") }</option>
+						}
+						if campaignCreateGMModeValue(form) == "human" {
+							<option value="human" selected>{ T(loc, "game.create.field_gm_mode_human") }</option>
+						} else {
+							<option value="human">{ T(loc, "game.create.field_gm_mode_human") }</option>
 						}
 						if campaignCreateGMModeValue(form) == "hybrid" {
 							<option value="hybrid" selected>{ T(loc, "game.create.field_gm_mode_hybrid") }</option>

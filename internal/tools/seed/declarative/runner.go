@@ -391,11 +391,15 @@ func (r *Runner) resolveCampaignID(ctx context.Context, manifest Manifest, campa
 	if ownerUserID == "" {
 		return "", fmt.Errorf("campaign %q owner user %q is unresolved", campaign.Key, campaign.OwnerUserKey)
 	}
+	gmMode, err := parseGmMode(defaultGmModeLabel(campaign.GmMode))
+	if err != nil {
+		return "", fmt.Errorf("campaign %q: %w", campaign.Key, err)
+	}
 
 	resp, err := r.deps.campaigns.CreateCampaign(gameWriteContext(ctx, ownerUserID), &gamev1.CreateCampaignRequest{
 		Name:         campaign.Name,
 		System:       parseGameSystem(defaultSystemLabel(campaign.System)),
-		GmMode:       parseGmMode(defaultGmModeLabel(campaign.GmMode)),
+		GmMode:       gmMode,
 		Intent:       parseCampaignIntent(defaultCampaignIntentLabel(campaign.Intent)),
 		AccessPolicy: parseAccessPolicy(defaultAccessPolicyLabel(campaign.AccessPolicy)),
 		ThemePrompt:  appendSeedMarker(campaign.ThemePrompt, marker),

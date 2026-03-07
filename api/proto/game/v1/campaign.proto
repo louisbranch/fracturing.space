@@ -55,8 +55,8 @@ enum CampaignStatus {
 
 enum GmMode {
   GM_MODE_UNSPECIFIED = 0;
-  HUMAN = 1;
-  AI = 2;
+  AI = 1;
+  HUMAN = 2;
   HYBRID = 3;
 }
 

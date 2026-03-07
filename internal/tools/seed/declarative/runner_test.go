@@ -211,6 +211,51 @@ func TestValidateManifest_RejectsMissingReferences(t *testing.T) {
 	}
 }
 
+func TestRunManifest_RejectsUnsupportedGmMode(t *testing.T) {
+	t.Parallel()
+
+	manifest := Manifest{
+		Name: "invalid-gm-mode",
+		Users: []ManifestUser{
+			{
+				Key:   "alice",
+				Email: "alice@example.com",
+				PublicProfile: ManifestPublicProfile{
+					Username: "alice",
+					Name:     "Alice",
+				},
+			},
+		},
+		Campaigns: []ManifestCampaign{
+			{
+				Key:          "campaign-1",
+				OwnerUserKey: "alice",
+				Name:         "Broken Campaign",
+				GmMode:       "BOGUS",
+			},
+		},
+	}
+
+	deps := newFakeDeps()
+	runner := newRunnerWithClients(Config{ManifestPath: "ignored"}, runnerDeps{
+		auth:      deps.auth,
+		social:    deps.social,
+		campaigns: deps.game,
+		listings:  deps.listing,
+	})
+
+	err := runner.RunManifest(context.Background(), manifest)
+	if err == nil {
+		t.Fatal("expected run failure for unsupported gm_mode")
+	}
+	if !strings.Contains(err.Error(), "unsupported gm_mode") {
+		t.Fatalf("error %q does not mention unsupported gm_mode", err)
+	}
+	if deps.game.createCampaignCalls != 0 {
+		t.Fatalf("create campaign calls = %d, want 0", deps.game.createCampaignCalls)
+	}
+}
+
 type fakeDeps struct {
 	auth    *fakeAuthClient
 	social  *fakeSocialClient

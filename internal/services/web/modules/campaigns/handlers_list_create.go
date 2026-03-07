@@ -103,7 +103,7 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 
 	gmModeValue := strings.TrimSpace(r.FormValue("gm_mode"))
 	if gmModeValue == "" {
-		gmModeValue = "human"
+		gmModeValue = "ai"
 	}
 	gmMode, ok := parseAppGmMode(gmModeValue)
 	if !ok {
