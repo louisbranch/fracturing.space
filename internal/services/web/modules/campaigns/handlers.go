@@ -1,7 +1,6 @@
 package campaigns
 
 import (
-	"strings"
 	"time"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -13,7 +12,7 @@ type handlers struct {
 	modulehandler.Base
 	service          campaignapp.Service
 	chatFallbackPort string
-	workflows        map[string]CharacterCreationWorkflow
+	workflows        map[GameSystem]CharacterCreationWorkflow
 	nowFunc          func() time.Time
 }
 
@@ -22,12 +21,12 @@ func newHandlers(
 	s campaignapp.Service,
 	base modulehandler.Base,
 	chatFallbackPort string,
-	workflows ...map[string]CharacterCreationWorkflow,
+	workflows ...map[GameSystem]CharacterCreationWorkflow,
 ) handlers {
 	if s == nil {
 		s = campaignapp.NewService(nil)
 	}
-	var workflowMap map[string]CharacterCreationWorkflow
+	var workflowMap map[GameSystem]CharacterCreationWorkflow
 	if len(workflows) > 0 {
 		workflowMap = workflows[0]
 	}
@@ -53,5 +52,9 @@ func (h handlers) resolveWorkflow(system string) CharacterCreationWorkflow {
 	if h.workflows == nil {
 		return nil
 	}
-	return h.workflows[strings.ToLower(strings.TrimSpace(system))]
+	resolvedSystem, ok := parseAppGameSystem(system)
+	if !ok {
+		return nil
+	}
+	return h.workflows[resolvedSystem]
 }

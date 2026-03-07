@@ -165,9 +165,7 @@ Public/auth route ownership is split into explicit surface modules under:
   - mount only production-ready handlers by default,
   - keep incomplete handlers unregistered until contracts are stable and
     fail-closed checks are in place.
-5. Ensure new module dependencies are wired through `modules.BuildInput` and
-   represented in `BuildOutput.Health` when the module implements
-   `module.HealthReporter`.
+5. Ensure new module dependencies are wired through `modules.BuildInput`.
 6. If an area is partially ready, keep one module owner and split route
    registration by explicit surfaces instead of exposing unstable handlers by
    default.
@@ -178,6 +176,7 @@ Public/auth route ownership is split into explicit surface modules under:
 Run at minimum:
 
 - `go test ./internal/services/web/...`
+- `make web-architecture-check`
 - `make test`
 - `make integration`
 - `make cover`

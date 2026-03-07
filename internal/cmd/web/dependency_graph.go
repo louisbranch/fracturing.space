@@ -32,24 +32,16 @@ const (
 	dependencyNameNotifications = "notifications"
 )
 
-var dependencyOrder = []string{
-	dependencyNameAuth,
-	dependencyNameSocial,
-	dependencyNameGame,
-	dependencyNameAI,
-	dependencyNameDiscovery,
-	dependencyNameUserHub,
-	dependencyNameNotifications,
-}
-
 // grpcDialer abstracts dependency dialing for startup tests.
 type grpcDialer func(context.Context, string, time.Duration) (*grpc.ClientConn, error)
 
 // dependencyRequirement describes one startup dependency dial and field wiring step.
 type dependencyRequirement struct {
-	name     string
-	address  string
-	setInput func(*web.PrincipalDependencies, *modules.Dependencies, *grpc.ClientConn)
+	name       string
+	address    string
+	required   bool
+	capability string
+	setInput   func(*web.PrincipalDependencies, *modules.Dependencies, *grpc.ClientConn)
 }
 
 // dependencyDialState classifies dependency dial outcomes at startup.
@@ -73,8 +65,10 @@ type dependencyStatus struct {
 func dependencyRequirements(cfg Config) []dependencyRequirement {
 	return []dependencyRequirement{
 		{
-			name:    dependencyNameAuth,
-			address: cfg.AuthAddr,
+			name:       dependencyNameAuth,
+			address:    cfg.AuthAddr,
+			required:   true,
+			capability: "web.auth.integration",
 			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 				authClient := authv1.NewAuthServiceClient(conn)
 				accountClient := authv1.NewAccountServiceClient(conn)
@@ -85,8 +79,10 @@ func dependencyRequirements(cfg Config) []dependencyRequirement {
 			},
 		},
 		{
-			name:    dependencyNameSocial,
-			address: cfg.SocialAddr,
+			name:       dependencyNameSocial,
+			address:    cfg.SocialAddr,
+			required:   true,
+			capability: "web.social.integration",
 			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 				socialClient := socialv1.NewSocialServiceClient(conn)
 				p.SocialClient = socialClient
@@ -95,8 +91,10 @@ func dependencyRequirements(cfg Config) []dependencyRequirement {
 			},
 		},
 		{
-			name:    dependencyNameGame,
-			address: cfg.GameAddr,
+			name:       dependencyNameGame,
+			address:    cfg.GameAddr,
+			required:   true,
+			capability: "web.game.integration",
 			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 				m.CampaignClient = statev1.NewCampaignServiceClient(conn)
 				m.ParticipantClient = statev1.NewParticipantServiceClient(conn)
@@ -108,29 +106,37 @@ func dependencyRequirements(cfg Config) []dependencyRequirement {
 			},
 		},
 		{
-			name:    dependencyNameAI,
-			address: cfg.AIAddr,
+			name:       dependencyNameAI,
+			address:    cfg.AIAddr,
+			required:   false,
+			capability: "web.ai.integration",
 			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 				m.CredentialClient = aiv1.NewCredentialServiceClient(conn)
 			},
 		},
 		{
-			name:    dependencyNameDiscovery,
-			address: cfg.DiscoveryAddr,
+			name:       dependencyNameDiscovery,
+			address:    cfg.DiscoveryAddr,
+			required:   false,
+			capability: "web.discovery.integration",
 			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 				m.DiscoveryClient = discoveryv1.NewDiscoveryServiceClient(conn)
 			},
 		},
 		{
-			name:    dependencyNameUserHub,
-			address: cfg.UserHubAddr,
+			name:       dependencyNameUserHub,
+			address:    cfg.UserHubAddr,
+			required:   false,
+			capability: "web.userhub.integration",
 			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 				m.UserHubClient = userhubv1.NewUserHubServiceClient(conn)
 			},
 		},
 		{
-			name:    dependencyNameNotifications,
-			address: cfg.NotificationsAddr,
+			name:       dependencyNameNotifications,
+			address:    cfg.NotificationsAddr,
+			required:   false,
+			capability: "web.notifications.integration",
 			setInput: func(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 				notificationClient := notificationsv1.NewNotificationServiceClient(conn)
 				p.NotificationClient = notificationClient
@@ -144,32 +150,43 @@ func dependencyRequirements(cfg Config) []dependencyRequirement {
 // into principal and module dependency bundles.
 func bootstrapDependencies(
 	ctx context.Context,
-	cfg Config,
+	requirements []dependencyRequirement,
+	assetBaseURL string,
+	dialTimeout time.Duration,
 	dialer grpcDialer,
 ) (web.DependencyBundle, []*grpc.ClientConn, map[string]dependencyStatus, error) {
-	var principal web.PrincipalDependencies
-	principal.AssetBaseURL = cfg.AssetBaseURL
-	var modDeps modules.Dependencies
-	modDeps.AssetBaseURL = cfg.AssetBaseURL
+	if dialer == nil {
+		dialer = dialDependency
+	}
+
+	principal := web.PrincipalDependencies{AssetBaseURL: assetBaseURL}
+	modDeps := modules.Dependencies{AssetBaseURL: assetBaseURL}
 	conns := []*grpc.ClientConn{}
 	statuses := map[string]dependencyStatus{}
+	requiredMissing := make([]string, 0)
 
-	for _, dep := range dependencyRequirements(cfg) {
+	for _, dep := range requirements {
 		status := dependencyStatus{
 			Name:    dep.name,
 			Address: dep.address,
 			State:   dependencyDialStateConnected,
 		}
-		conn, err := dialer(ctx, dep.address, cfg.GRPCDialTimeout)
+		conn, err := dialer(ctx, dep.address, dialTimeout)
 		if err != nil {
 			status.State = dependencyDialStateDialFailed
 			status.Detail = err.Error()
 			statuses[dep.name] = status
+			if dep.required {
+				requiredMissing = append(requiredMissing, dep.name)
+			}
 			continue
 		}
 		if conn == nil {
 			status.State = dependencyDialStateUnavailable
 			statuses[dep.name] = status
+			if dep.required {
+				requiredMissing = append(requiredMissing, dep.name)
+			}
 			continue
 		}
 		dep.setInput(&principal, &modDeps, conn)
@@ -178,17 +195,20 @@ func bootstrapDependencies(
 	}
 
 	bundle := web.DependencyBundle{Principal: principal, Modules: modDeps}
+	if len(requiredMissing) > 0 {
+		return bundle, conns, statuses, fmt.Errorf("required dependencies unavailable: %s", strings.Join(requiredMissing, ", "))
+	}
 	return bundle, conns, statuses, nil
 }
 
 // dependencyStatusWarnings maps startup diagnostics into stable warning strings.
-func dependencyStatusWarnings(statuses map[string]dependencyStatus) []string {
+func dependencyStatusWarnings(requirements []dependencyRequirement, statuses map[string]dependencyStatus) []string {
 	if len(statuses) == 0 {
 		return nil
 	}
 	warnings := make([]string, 0, len(statuses))
-	for _, name := range dependencyOrder {
-		status, ok := statuses[name]
+	for _, dep := range requirements {
+		status, ok := statuses[dep.name]
 		if !ok {
 			continue
 		}
@@ -244,8 +264,8 @@ func closeDependencyConnections(conns []*grpc.ClientConn) {
 func dialDependency(
 	ctx context.Context,
 	address string,
-	_ time.Duration,
+	dialTimeout time.Duration,
 ) (*grpc.ClientConn, error) {
-	conn := platformgrpc.DialLenient(ctx, address, log.Printf)
+	conn := platformgrpc.DialLenientWithTimeout(ctx, address, dialTimeout, log.Printf)
 	return conn, nil
 }

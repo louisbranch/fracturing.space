@@ -18,6 +18,9 @@ func (s service) campaignCharacterCreation(ctx context.Context, campaignID strin
 	if characterID == "" {
 		return CampaignCharacterCreation{}, apperrors.E(apperrors.KindInvalidInput, "character id is required")
 	}
+	if workflow == nil {
+		return CampaignCharacterCreation{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_step_is_not_available", "character creation step is not available")
+	}
 
 	progress, err := s.readGateway.CharacterCreationProgress(ctx, campaignID, characterID)
 	if err != nil {

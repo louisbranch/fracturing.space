@@ -2,8 +2,10 @@ package app
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"golang.org/x/text/language"
 )
 
@@ -49,6 +51,22 @@ func TestCampaignCharacterCreationForwardsCatalogLocale(t *testing.T) {
 	}
 	if gateway.characterCreationCatalogLocale != ptBR {
 		t.Fatalf("catalog locale = %v, want %v", gateway.characterCreationCatalogLocale, ptBR)
+	}
+}
+
+func TestCampaignCharacterCreationRejectsNilWorkflow(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{})
+	_, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", language.AmericanEnglish, nil)
+	if err == nil {
+		t.Fatalf("campaignCharacterCreation() error = nil, want invalid input")
+	}
+	if apperrors.HTTPStatus(err) != http.StatusBadRequest {
+		t.Fatalf("campaignCharacterCreation() status = %d, want %d", apperrors.HTTPStatus(err), http.StatusBadRequest)
+	}
+	if apperrors.LocalizationKey(err) != "error.web.message.character_creation_step_is_not_available" {
+		t.Fatalf("campaignCharacterCreation() localization key = %q", apperrors.LocalizationKey(err))
 	}
 }
 

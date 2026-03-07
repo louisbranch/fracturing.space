@@ -1,7 +1,6 @@
 package modules
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
 
@@ -16,11 +15,10 @@ type BuildInput struct {
 	ProtectedOptions ProtectedModuleOptions
 }
 
-// BuildOutput contains the composed module sets and derived health metadata.
+// BuildOutput contains the composed module sets.
 type BuildOutput struct {
 	Public    []Module
 	Protected []Module
-	Health    []dashboard.ServiceHealthEntry
 }
 
 // NewRegistry returns the default web module registry.
@@ -31,7 +29,7 @@ func NewRegistry() Registry {
 // Build composes module sets for the requested stability mode.
 func (Registry) Build(input BuildInput) BuildOutput {
 	publicModules := defaultPublicModules(input.Dependencies, input.Resolvers, input.PublicOptions)
-	protectedModules, health := buildProtectedModules(
+	protectedModules := buildProtectedModules(
 		input.Dependencies,
 		input.Resolvers,
 		input.ProtectedOptions,
@@ -40,7 +38,6 @@ func (Registry) Build(input BuildInput) BuildOutput {
 	return BuildOutput{
 		Public:    publicModules,
 		Protected: protectedModules,
-		Health:    health,
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -129,6 +130,54 @@ func TestParseConfigOverrideNotificationsAddr(t *testing.T) {
 	}
 }
 
+func testDependencyConfig() Config {
+	return Config{
+		AuthAddr:          "auth:8083",
+		SocialAddr:        "social:8090",
+		GameAddr:          "game:8082",
+		AIAddr:            "ai:8087",
+		DiscoveryAddr:     "discovery:8091",
+		UserHubAddr:       "userhub:8092",
+		NotificationsAddr: "notifications:8088",
+	}
+}
+
+func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
+	t.Parallel()
+
+	requirements := dependencyRequirements(testDependencyConfig())
+	requiredNames := make([]string, 0, len(requirements))
+	for _, dep := range requirements {
+		if dep.required {
+			requiredNames = append(requiredNames, dep.name)
+		}
+	}
+	slices.Sort(requiredNames)
+	want := []string{dependencyNameAuth, dependencyNameGame, dependencyNameSocial}
+	if !slices.Equal(requiredNames, want) {
+		t.Fatalf("required dependencies = %v, want %v", requiredNames, want)
+	}
+}
+
+func TestDependencyRequirementsCapabilitiesAreUnique(t *testing.T) {
+	t.Parallel()
+
+	requirements := dependencyRequirements(testDependencyConfig())
+	seen := map[string]struct{}{}
+	for _, dep := range requirements {
+		if strings.TrimSpace(dep.capability) == "" {
+			t.Fatalf("dependency %q has empty capability", dep.name)
+		}
+		if _, ok := seen[dep.capability]; ok {
+			t.Fatalf("duplicate capability %q", dep.capability)
+		}
+		seen[dep.capability] = struct{}{}
+	}
+	if len(seen) != len(requirements) {
+		t.Fatalf("unique capabilities = %d, want %d", len(seen), len(requirements))
+	}
+}
+
 func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 	t.Parallel()
 
@@ -137,16 +186,11 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 		calls = append(calls, address)
 		return &grpc.ClientConn{}, nil
 	}
-	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), Config{
-		AuthAddr:          "auth:8083",
-		SocialAddr:        "social:8090",
-		GameAddr:          "game:8082",
-		AIAddr:            "ai:8087",
-		DiscoveryAddr:     "discovery:8091",
-		UserHubAddr:       "userhub:8092",
-		NotificationsAddr: "notifications:8088",
-		AssetBaseURL:      "https://cdn.example.com/assets",
-	}, dialer)
+	cfg := testDependencyConfig()
+	cfg.AssetBaseURL = "https://cdn.example.com/assets"
+	requirements := dependencyRequirements(cfg)
+
+	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, cfg.GRPCDialTimeout, dialer)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
@@ -164,7 +208,7 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 			t.Fatalf("status[%s].State = %q, want %q", name, status.State, dependencyDialStateConnected)
 		}
 	}
-	if warnings := dependencyStatusWarnings(statuses); len(warnings) != 0 {
+	if warnings := dependencyStatusWarnings(requirements, statuses); len(warnings) != 0 {
 		t.Fatalf("warnings = %v, want none", warnings)
 	}
 	if bundle.Principal.SessionClient == nil {
@@ -210,15 +254,9 @@ func TestBootstrapDependenciesOptionalFailuresProduceWarnings(t *testing.T) {
 		}
 		return &grpc.ClientConn{}, nil
 	}
-	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), Config{
-		AuthAddr:          "auth:8083",
-		SocialAddr:        "social:8090",
-		GameAddr:          "game:8082",
-		AIAddr:            "ai:8087",
-		DiscoveryAddr:     "discovery:8091",
-		UserHubAddr:       "userhub:8092",
-		NotificationsAddr: "notifications:8088",
-	}, dialer)
+	cfg := testDependencyConfig()
+	requirements := dependencyRequirements(cfg)
+	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, cfg.GRPCDialTimeout, dialer)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
@@ -231,7 +269,7 @@ func TestBootstrapDependenciesOptionalFailuresProduceWarnings(t *testing.T) {
 	if got := statuses["ai"].State; got != dependencyDialStateDialFailed {
 		t.Fatalf("status[ai].State = %q, want %q", got, dependencyDialStateDialFailed)
 	}
-	warnings := dependencyStatusWarnings(statuses)
+	warnings := dependencyStatusWarnings(requirements, statuses)
 	if len(warnings) != 1 {
 		t.Fatalf("warnings = %v, want one warning", warnings)
 	}
@@ -258,15 +296,9 @@ func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
 		}
 		return &grpc.ClientConn{}, nil
 	}
-	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), Config{
-		AuthAddr:          "auth:8083",
-		SocialAddr:        "social:8090",
-		GameAddr:          "game:8082",
-		AIAddr:            "ai:8087",
-		DiscoveryAddr:     "discovery:8091",
-		UserHubAddr:       "userhub:8092",
-		NotificationsAddr: "notifications:8088",
-	}, dialer)
+	cfg := testDependencyConfig()
+	requirements := dependencyRequirements(cfg)
+	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, cfg.GRPCDialTimeout, dialer)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
@@ -282,7 +314,7 @@ func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
 	if got := statuses["userhub"].State; got != dependencyDialStateDialFailed {
 		t.Fatalf("status[userhub].State = %q, want %q", got, dependencyDialStateDialFailed)
 	}
-	warnings := dependencyStatusWarnings(statuses)
+	warnings := dependencyStatusWarnings(requirements, statuses)
 	if len(warnings) != 2 {
 		t.Fatalf("warnings = %v, want two warnings", warnings)
 	}
@@ -309,7 +341,7 @@ func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
 	}
 }
 
-func TestBootstrapDependenciesNilConnectionProducesWarning(t *testing.T) {
+func TestBootstrapDependenciesRequiredNilConnectionReturnsError(t *testing.T) {
 	t.Parallel()
 
 	calls := []string{}
@@ -320,17 +352,14 @@ func TestBootstrapDependenciesNilConnectionProducesWarning(t *testing.T) {
 		}
 		return &grpc.ClientConn{}, nil
 	}
-	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), Config{
-		AuthAddr:          "auth:8083",
-		SocialAddr:        "social:8090",
-		GameAddr:          "game:8082",
-		AIAddr:            "ai:8087",
-		DiscoveryAddr:     "discovery:8091",
-		UserHubAddr:       "userhub:8092",
-		NotificationsAddr: "notifications:8088",
-	}, dialer)
-	if err != nil {
-		t.Fatalf("bootstrapDependencies() error = %v", err)
+	cfg := testDependencyConfig()
+	requirements := dependencyRequirements(cfg)
+	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, cfg.GRPCDialTimeout, dialer)
+	if err == nil {
+		t.Fatalf("bootstrapDependencies() error = nil, want required dependency error")
+	}
+	if !strings.Contains(err.Error(), "social") {
+		t.Fatalf("bootstrapDependencies() error = %q, want social dependency detail", err.Error())
 	}
 	if len(calls) != 7 {
 		t.Fatalf("dial calls = %d, want %d", len(calls), 7)
@@ -341,7 +370,7 @@ func TestBootstrapDependenciesNilConnectionProducesWarning(t *testing.T) {
 	if got := statuses["social"].State; got != dependencyDialStateUnavailable {
 		t.Fatalf("status[social].State = %q, want %q", got, dependencyDialStateUnavailable)
 	}
-	warnings := dependencyStatusWarnings(statuses)
+	warnings := dependencyStatusWarnings(requirements, statuses)
 	if len(warnings) != 1 {
 		t.Fatalf("warnings = %v, want one warning", warnings)
 	}

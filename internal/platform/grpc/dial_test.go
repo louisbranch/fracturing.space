@@ -136,6 +136,30 @@ func TestDialLenientReturnsConnOnSuccess(t *testing.T) {
 	}
 }
 
+func TestDialLenientWithTimeoutReturnsConnOnSuccess(t *testing.T) {
+	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
+	defer stop()
+
+	conn := DialLenientWithTimeout(context.Background(), addr, 250*time.Millisecond, nil)
+	if conn == nil {
+		t.Fatal("expected connection from lenient dial with timeout")
+	}
+	if err := conn.Close(); err != nil {
+		t.Fatalf("close conn: %v", err)
+	}
+}
+
+func TestDialLenientWithTimeoutUsesDefaultForNonPositiveTimeout(t *testing.T) {
+	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
+	defer stop()
+
+	conn := DialLenientWithTimeout(context.Background(), addr, 0, nil)
+	if conn == nil {
+		t.Fatal("expected connection from lenient dial with default timeout")
+	}
+	_ = conn.Close()
+}
+
 func TestDialLenientReturnsNilOnBadAddress(t *testing.T) {
 	conn := DialLenient(context.Background(), "127.0.0.1:1", nil)
 	// DialLenient uses non-blocking dial, so it may still return a conn

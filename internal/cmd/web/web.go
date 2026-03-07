@@ -74,19 +74,27 @@ func Run(ctx context.Context, cfg Config) error {
 		return err
 	}
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceWeb, func(context.Context) error {
-		dependencies, dependencyConns, statuses, err := bootstrapDependencies(ctx, cfg, dialDependency)
-		if err != nil {
-			return fmt.Errorf("init web dependency graph: %w", err)
-		}
-		defer closeDependencyConnections(dependencyConns)
+		requirements := dependencyRequirements(cfg)
+		dependencies, dependencyConns, statuses, bootstrapErr := bootstrapDependencies(
+			ctx,
+			requirements,
+			cfg.AssetBaseURL,
+			cfg.GRPCDialTimeout,
+			dialDependency,
+		)
 		for _, statusLine := range formatDependencyStatusLines(statuses) {
 			log.Printf("web startup: %s", statusLine)
 		}
-		for _, warning := range dependencyStatusWarnings(statuses) {
+		for _, warning := range dependencyStatusWarnings(requirements, statuses) {
 			log.Printf("web startup: %s", warning)
 		}
+		if bootstrapErr != nil {
+			closeDependencyConnections(dependencyConns)
+			return fmt.Errorf("init web dependency graph: %w", bootstrapErr)
+		}
+		defer closeDependencyConnections(dependencyConns)
 
-		statusClient, stopStatusReporter := startStatusReporter(ctx, cfg.StatusAddr, statuses)
+		statusClient, stopStatusReporter := startStatusReporter(ctx, cfg.StatusAddr, cfg.GRPCDialTimeout, requirements, statuses)
 		defer stopStatusReporter()
 
 		// Share the status client with modules for dashboard health queries.
