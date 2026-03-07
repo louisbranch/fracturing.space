@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 6
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-07"
 ---
 
 # Admin Architecture
@@ -56,6 +56,16 @@ Composition owns module set selection and prefix ownership validation.
 - Admin authentication middleware applies only to `/app/*`.
 - Static assets (`/static/*`) and non-app paths bypass auth middleware and fall
   through to normal routing behavior.
+
+## Startup dependency visibility
+
+- Admin startup logs deterministic dependency status lines for game, auth, and
+  status integrations.
+- Capability registration is fail-closed:
+  - `admin.game.integration` and `admin.auth.integration` are reported as
+    `unavailable` when the initial dependency connection is not established.
+- Runtime reconnect loops may recover integrations later; startup capability
+  state reflects observed connectivity at initialization time.
 
 ## Verification contract
 

@@ -59,6 +59,47 @@ func TestPasskeyLoginFinishCreatesWebSession(t *testing.T) {
 	}
 }
 
+func TestPasskeyLoginFinishNormalizesDelegatedValues(t *testing.T) {
+	t.Parallel()
+
+	stub := &authGatewayStub{finishPasskeyLoginResult: " user-9 ", createWebSessionResult: " ws-9 "}
+	svc := NewService(stub)
+	finished, err := svc.PasskeyLoginFinish(context.Background(), " session-9 ", json.RawMessage(`{"id":"cred-9"}`))
+	if err != nil {
+		t.Fatalf("PasskeyLoginFinish() error = %v", err)
+	}
+	if stub.lastFinishPasskeyLoginSessionID != "session-9" {
+		t.Fatalf("finish login session id = %q, want %q", stub.lastFinishPasskeyLoginSessionID, "session-9")
+	}
+	if stub.lastCreateWebSessionUserID != "user-9" {
+		t.Fatalf("create session user id = %q, want %q", stub.lastCreateWebSessionUserID, "user-9")
+	}
+	if finished.UserID != "user-9" {
+		t.Fatalf("UserID = %q, want %q", finished.UserID, "user-9")
+	}
+	if finished.SessionID != "ws-9" {
+		t.Fatalf("SessionID = %q, want %q", finished.SessionID, "ws-9")
+	}
+}
+
+func TestPasskeyLoginFinishRejectsBlankGatewayValues(t *testing.T) {
+	t.Parallel()
+
+	svcBlankUser := NewService(&authGatewayStub{finishPasskeyLoginResult: "   ", createWebSessionResult: "ws-1"})
+	if _, err := svcBlankUser.PasskeyLoginFinish(context.Background(), "session-1", json.RawMessage(`{"id":"cred-1"}`)); err == nil {
+		t.Fatalf("expected blank gateway user id error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+
+	svcBlankSession := NewService(&authGatewayStub{finishPasskeyLoginResult: "user-1", createWebSessionResult: "   "})
+	if _, err := svcBlankSession.PasskeyLoginFinish(context.Background(), "session-1", json.RawMessage(`{"id":"cred-1"}`)); err == nil {
+		t.Fatalf("expected blank gateway session id error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+}
+
 func TestPasskeyRegisterStartValidatesEmailAndGatewayErrors(t *testing.T) {
 	t.Parallel()
 
@@ -78,6 +119,72 @@ func TestPasskeyRegisterStartValidatesEmailAndGatewayErrors(t *testing.T) {
 	}
 }
 
+func TestPasskeyRegisterStartNormalizesDelegatedValues(t *testing.T) {
+	t.Parallel()
+
+	stub := &authGatewayStub{createUserResult: " user-5 "}
+	svc := NewService(stub)
+	result, err := svc.PasskeyRegisterStart(context.Background(), " user@example.com ")
+	if err != nil {
+		t.Fatalf("PasskeyRegisterStart() error = %v", err)
+	}
+	if stub.lastCreateUserEmail != "user@example.com" {
+		t.Fatalf("create user email = %q, want %q", stub.lastCreateUserEmail, "user@example.com")
+	}
+	if stub.lastBeginPasskeyRegistrationUserID != "user-5" {
+		t.Fatalf("begin registration user id = %q, want %q", stub.lastBeginPasskeyRegistrationUserID, "user-5")
+	}
+	if result.UserID != "user-5" {
+		t.Fatalf("UserID = %q, want %q", result.UserID, "user-5")
+	}
+}
+
+func TestPasskeyRegisterStartRejectsBlankGatewayValues(t *testing.T) {
+	t.Parallel()
+
+	svcBlankUser := NewService(&authGatewayStub{createUserResult: "   "})
+	if _, err := svcBlankUser.PasskeyRegisterStart(context.Background(), "user@example.com"); err == nil {
+		t.Fatalf("expected blank gateway user id error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+
+	svcBlankSession := NewService(&authGatewayStub{createUserResult: "user-1", beginPasskeyRegistrationSessionID: "   "})
+	if _, err := svcBlankSession.PasskeyRegisterStart(context.Background(), "user@example.com"); err == nil {
+		t.Fatalf("expected blank gateway challenge session id error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+}
+
+func TestPasskeyRegisterFinishNormalizesDelegatedValues(t *testing.T) {
+	t.Parallel()
+
+	stub := &authGatewayStub{finishPasskeyRegistrationResult: " user-8 "}
+	svc := NewService(stub)
+	result, err := svc.PasskeyRegisterFinish(context.Background(), " session-8 ", json.RawMessage(`{"id":"cred-8"}`))
+	if err != nil {
+		t.Fatalf("PasskeyRegisterFinish() error = %v", err)
+	}
+	if stub.lastFinishPasskeyRegistrationSessionID != "session-8" {
+		t.Fatalf("finish registration session id = %q, want %q", stub.lastFinishPasskeyRegistrationSessionID, "session-8")
+	}
+	if result.UserID != "user-8" {
+		t.Fatalf("UserID = %q, want %q", result.UserID, "user-8")
+	}
+}
+
+func TestPasskeyRegisterFinishRejectsBlankGatewayUserID(t *testing.T) {
+	t.Parallel()
+
+	svc := NewService(&authGatewayStub{finishPasskeyRegistrationResult: "   "})
+	if _, err := svc.PasskeyRegisterFinish(context.Background(), "session-8", json.RawMessage(`{"id":"cred-8"}`)); err == nil {
+		t.Fatalf("expected blank gateway user id error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+}
+
 func TestRevokeWebSessionHandlesEmptyAndGatewayError(t *testing.T) {
 	t.Parallel()
 
@@ -91,37 +198,74 @@ func TestRevokeWebSessionHandlesEmptyAndGatewayError(t *testing.T) {
 	}
 
 	svc = NewService(&authGatewayStub{revokeWebSessionErr: errors.New("boom")})
-	err := svc.RevokeWebSession(context.Background(), "session-1")
+	err := svc.RevokeWebSession(context.Background(), " session-1 ")
 	if err == nil {
 		t.Fatalf("expected revoke failure")
 	}
 }
 
-type authGatewayStub struct {
-	createUserErr               error
-	beginPasskeyRegistrationErr error
-	finishPasskeyLoginResult    string
-	createWebSessionResult      string
-	createWebSessionErr         error
-	revokeWebSessionErr         error
-	revokeCalled                bool
+func TestHasValidWebSessionNormalizesSessionID(t *testing.T) {
+	t.Parallel()
+
+	stub := &authGatewayStub{hasValidSessionResult: true}
+	svc := NewService(stub)
+	if !svc.HasValidWebSession(context.Background(), " ws-1 ") {
+		t.Fatalf("HasValidWebSession() = false, want true")
+	}
+	if stub.lastHasValidSessionID != "ws-1" {
+		t.Fatalf("has valid session id = %q, want %q", stub.lastHasValidSessionID, "ws-1")
+	}
 }
 
-func (f *authGatewayStub) CreateUser(context.Context, string) (string, error) {
+type authGatewayStub struct {
+	createUserErr                          error
+	beginPasskeyRegistrationErr            error
+	beginPasskeyRegistrationSessionID      string
+	finishPasskeyRegistrationResult        string
+	finishPasskeyLoginResult               string
+	createUserResult                       string
+	createWebSessionResult                 string
+	createWebSessionErr                    error
+	hasValidSessionResult                  bool
+	revokeWebSessionErr                    error
+	revokeCalled                           bool
+	lastCreateUserEmail                    string
+	lastBeginPasskeyRegistrationUserID     string
+	lastFinishPasskeyLoginSessionID        string
+	lastFinishPasskeyRegistrationSessionID string
+	lastCreateWebSessionUserID             string
+	lastHasValidSessionID                  string
+	lastRevokeSessionID                    string
+}
+
+func (f *authGatewayStub) CreateUser(_ context.Context, email string) (string, error) {
+	f.lastCreateUserEmail = email
 	if f.createUserErr != nil {
 		return "", f.createUserErr
+	}
+	if f.createUserResult != "" {
+		return f.createUserResult, nil
 	}
 	return "user-1", nil
 }
 
-func (f *authGatewayStub) BeginPasskeyRegistration(context.Context, string) (PasskeyChallenge, error) {
+func (f *authGatewayStub) BeginPasskeyRegistration(_ context.Context, userID string) (PasskeyChallenge, error) {
+	f.lastBeginPasskeyRegistrationUserID = userID
 	if f.beginPasskeyRegistrationErr != nil {
 		return PasskeyChallenge{}, f.beginPasskeyRegistrationErr
 	}
-	return PasskeyChallenge{SessionID: "register-session", PublicKey: json.RawMessage(`{"publicKey":{}}`)}, nil
+	sessionID := f.beginPasskeyRegistrationSessionID
+	if sessionID == "" {
+		sessionID = "register-session"
+	}
+	return PasskeyChallenge{SessionID: sessionID, PublicKey: json.RawMessage(`{"publicKey":{}}`)}, nil
 }
 
-func (f *authGatewayStub) FinishPasskeyRegistration(context.Context, string, json.RawMessage) (string, error) {
+func (f *authGatewayStub) FinishPasskeyRegistration(_ context.Context, sessionID string, _ json.RawMessage) (string, error) {
+	f.lastFinishPasskeyRegistrationSessionID = sessionID
+	if f.finishPasskeyRegistrationResult != "" {
+		return f.finishPasskeyRegistrationResult, nil
+	}
 	return "user-1", nil
 }
 
@@ -129,14 +273,16 @@ func (f *authGatewayStub) BeginPasskeyLogin(context.Context) (PasskeyChallenge, 
 	return PasskeyChallenge{SessionID: "login-session", PublicKey: json.RawMessage(`{"publicKey":{}}`)}, nil
 }
 
-func (f *authGatewayStub) FinishPasskeyLogin(context.Context, string, json.RawMessage) (string, error) {
+func (f *authGatewayStub) FinishPasskeyLogin(_ context.Context, sessionID string, _ json.RawMessage) (string, error) {
+	f.lastFinishPasskeyLoginSessionID = sessionID
 	if f.finishPasskeyLoginResult != "" {
 		return f.finishPasskeyLoginResult, nil
 	}
 	return "user-1", nil
 }
 
-func (f *authGatewayStub) CreateWebSession(context.Context, string) (string, error) {
+func (f *authGatewayStub) CreateWebSession(_ context.Context, userID string) (string, error) {
+	f.lastCreateWebSessionUserID = userID
 	if f.createWebSessionErr != nil {
 		return "", f.createWebSessionErr
 	}
@@ -146,11 +292,13 @@ func (f *authGatewayStub) CreateWebSession(context.Context, string) (string, err
 	return "ws-1", nil
 }
 
-func (f *authGatewayStub) HasValidWebSession(context.Context, string) bool {
-	return false
+func (f *authGatewayStub) HasValidWebSession(_ context.Context, sessionID string) bool {
+	f.lastHasValidSessionID = sessionID
+	return f.hasValidSessionResult
 }
 
-func (f *authGatewayStub) RevokeWebSession(context.Context, string) error {
+func (f *authGatewayStub) RevokeWebSession(_ context.Context, sessionID string) error {
 	f.revokeCalled = true
+	f.lastRevokeSessionID = sessionID
 	return f.revokeWebSessionErr
 }

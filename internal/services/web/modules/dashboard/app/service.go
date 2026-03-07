@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 	"golang.org/x/text/language"
 )
 
@@ -28,7 +29,7 @@ func NewService(gateway Gateway, logger *log.Logger, health HealthProvider) Serv
 
 // LoadDashboard loads the package state needed for this request path.
 func (s service) LoadDashboard(ctx context.Context, userID string, locale language.Tag) (DashboardView, error) {
-	userID = strings.TrimSpace(userID)
+	userID = userid.Normalize(userID)
 	if userID == "" {
 		return DashboardView{}, nil
 	}

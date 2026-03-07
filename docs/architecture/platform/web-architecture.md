@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 5
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-07"
 ---
 
 # Web Architecture
@@ -58,6 +58,16 @@ Required properties:
   mutation gateway calls.
 - Batch authorization should be used for per-row action visibility.
 - Transport layers must not approximate permissions from UI fallback logic.
+
+## Principal identity seam
+
+- User-id normalization is centralized in `internal/services/web/platform/userid`
+  and reused by principal/session/viewer and dashboard/webctx seams.
+- Require-vs-optional semantics are explicit:
+  - `userid.Require` for authenticated required user-id boundaries,
+  - `userid.Normalize` for optional request-scoped propagation boundaries.
+- Viewer resolver construction is nil-safe for user-id resolver wiring to keep
+  package test harnesses deterministic and panic-free.
 
 ## Degraded operation model
 

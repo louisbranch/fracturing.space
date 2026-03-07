@@ -8,6 +8,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/authctx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 	"google.golang.org/grpc"
 )
 
@@ -39,7 +40,7 @@ func (r sessionResolver) resolveSessionUserID(ctx context.Context, sessionID str
 	if err != nil || resp == nil || resp.GetSession() == nil {
 		return "", false
 	}
-	userID := strings.TrimSpace(resp.GetSession().GetUserId())
+	userID := userid.Normalize(resp.GetSession().GetUserId())
 	if userID == "" {
 		return "", false
 	}
@@ -75,7 +76,7 @@ func (r sessionResolver) resolveRequestUserID(request *http.Request) string {
 
 // resolveRequestSignedIn resolves request-scoped values needed by this package.
 func (r sessionResolver) resolveRequestSignedIn(request *http.Request) bool {
-	return strings.TrimSpace(r.resolveRequestUserID(request)) != ""
+	return userid.Normalize(r.resolveRequestUserID(request)) != ""
 }
 
 // authRequired centralizes this web behavior in one helper seam.

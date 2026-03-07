@@ -4,7 +4,7 @@ parent: "Guides"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-07"
 ---
 
 # Web Module Playbook
@@ -119,6 +119,9 @@ inside the same area boundary:
 
 - Resolve principal/session once per request and reuse that resolved state
   throughout handler flow.
+- Use `internal/services/web/platform/userid.Require` at required-auth app
+  boundaries and `internal/services/web/platform/userid.Normalize` for optional
+  propagation seams.
 - Use `internal/services/web/platform/webctx.WithResolvedUserID` for
   downstream service calls that require user identity metadata.
 - Do not pass raw request context to mutation service calls when resolved user

@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -41,6 +42,9 @@ func newViewerResolver(
 	assetBaseURL string,
 	resolveUserID func(*http.Request) string,
 ) viewerResolver {
+	if resolveUserID == nil {
+		resolveUserID = func(*http.Request) string { return "" }
+	}
 	return viewerResolver{
 		socialClient:       socialClient,
 		notificationClient: notificationClient,
@@ -51,7 +55,10 @@ func newViewerResolver(
 
 // resolveViewerUncached resolves request-scoped values needed by this package.
 func (r viewerResolver) resolveViewerUncached(request *http.Request) module.Viewer {
-	userID := r.resolveUserID(request)
+	if request == nil {
+		return module.Viewer{}
+	}
+	userID := userid.Normalize(r.resolveUserID(request))
 	if userID == "" {
 		return module.Viewer{}
 	}
@@ -103,7 +110,7 @@ func (r viewerResolver) resolveHasUnreadNotifications(ctx context.Context, userI
 	if r.notificationClient == nil {
 		return false
 	}
-	userID = strings.TrimSpace(userID)
+	userID = userid.Normalize(userID)
 	if userID == "" {
 		return false
 	}

@@ -7,6 +7,7 @@ import (
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,6 +22,38 @@ func TestViewerResolverAnonymousReturnsZeroViewer(t *testing.T) {
 
 	if v.DisplayName != "" {
 		t.Fatalf("DisplayName = %q, want empty", v.DisplayName)
+	}
+}
+
+func TestViewerResolverNilResolverReturnsZeroViewer(t *testing.T) {
+	t.Parallel()
+
+	r := newViewerResolver(nil, nil, "", nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	v := r.resolveViewer(req)
+	if v != (module.Viewer{}) {
+		t.Fatalf("resolveViewer() = %+v, want zero viewer", v)
+	}
+}
+
+func TestViewerResolverWhitespaceUserIDReturnsZeroViewer(t *testing.T) {
+	t.Parallel()
+
+	r := newViewerResolver(nil, nil, "", func(*http.Request) string { return "   " })
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	v := r.resolveViewer(req)
+	if v != (module.Viewer{}) {
+		t.Fatalf("resolveViewer() = %+v, want zero viewer", v)
+	}
+}
+
+func TestViewerResolverNilRequestReturnsZeroViewer(t *testing.T) {
+	t.Parallel()
+
+	r := newViewerResolver(nil, nil, "", func(*http.Request) string { return "user-1" })
+	v := r.resolveViewer(nil)
+	if v != (module.Viewer{}) {
+		t.Fatalf("resolveViewer(nil) = %+v, want zero viewer", v)
 	}
 }
 

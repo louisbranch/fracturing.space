@@ -4,10 +4,10 @@ package webctx
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 )
 
 // WithResolvedUserID returns request context enriched with resolved user metadata.
@@ -19,7 +19,7 @@ func WithResolvedUserID(r *http.Request, resolve module.ResolveUserID) context.C
 	if resolve == nil {
 		return ctx
 	}
-	userID := strings.TrimSpace(resolve(r))
+	userID := userid.Normalize(resolve(r))
 	if userID == "" {
 		return ctx
 	}
