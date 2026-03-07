@@ -295,11 +295,12 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 			_ = statusConn.Close()
 		}
 	}()
+	catalogState := evaluateCatalogCapabilityState(context.Background(), bundle.content)
 	statusReporter := initStatusReporter(
 		statusClient,
 		socialClients.socialClient != nil,
 		aiClients.agentClient != nil,
-		hasCatalogContent(bundle.content),
+		catalogState,
 	)
 
 	server = &Server{
@@ -315,6 +316,7 @@ func (b *serverBootstrap) NewWithAddr(addr string) (server *Server, err error) {
 		projectionApplyOutboxApply:               b.config.buildProjectionApplyOutboxApply(bundle.projections, projectionRegistries),
 		projectionApplyOutboxShadowWorkerEnabled: enableShadowWorker,
 		statusReporter:                           statusReporter,
+		catalogReadyAtStartup:                    catalogState.Ready,
 	}
 
 	listener = nil

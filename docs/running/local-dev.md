@@ -31,9 +31,12 @@ watch-based runtime automatically after attach.
 - `postStartCommand` launches `.devcontainer/scripts/watch-services.sh`.
 - The watcher script initializes `.env` from `.env.local.example` when missing.
 - The watcher script also generates join-grant keys when they are missing.
+- After game reaches its ready log marker, the watcher launches the catalog importer asynchronously.
 
-The default watcher set starts `game`, `auth`, `social`, `ai`,
-`notifications`, `worker`, `mcp`, `admin`, `chat`, and `web`.
+The default watcher set starts `status`, `game`, `auth`, `social`, `listing`,
+`ai`, `notifications`, `userhub`, `worker`, `mcp`, `admin`, `chat`, and `web`.
+Game reports catalog-backed capabilities as degraded until import completes, then
+re-evaluates and promotes them to operational automatically.
 
 No manual multi-process `go run` orchestration or repeated `docker compose up` is needed for day-to-day edits.
 Each restart still compiles, but only through Go build cache and only when files change.
@@ -69,6 +72,7 @@ Watcher logs:
 - `.tmp/dev/notifications.log`
 - `.tmp/dev/worker.log`
 - `.tmp/dev/web.log`
+- `.tmp/dev/catalog-importer.log`
 - `.tmp/dev/watch-services.log`
 
 Stop runtime:

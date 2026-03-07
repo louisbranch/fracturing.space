@@ -26,10 +26,11 @@ const (
 
 // Config holds configuration for the catalog importer.
 type Config struct {
-	Dir        string
-	DBPath     string
-	BaseLocale string
-	DryRun     bool
+	Dir         string
+	DBPath      string
+	BaseLocale  string
+	DryRun      bool
+	SkipIfReady bool
 }
 
 // ParseConfig parses CLI flags into a Config.
@@ -43,6 +44,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.DBPath, "db-path", cfg.DBPath, "content database path")
 	fs.StringVar(&cfg.BaseLocale, "base-locale", cfg.BaseLocale, "base locale used for catalog data")
 	fs.BoolVar(&cfg.DryRun, "dry-run", false, "validate without writing to the database")
+	fs.BoolVar(&cfg.SkipIfReady, "skip-if-ready", false, "skip import when required catalog sections are already populated")
 	if err := fs.Parse(args); err != nil {
 		return Config{}, err
 	}
@@ -94,6 +96,17 @@ func Run(ctx context.Context, cfg Config, out io.Writer) error {
 		}
 		defer contentStore.Close()
 		store = contentStore
+
+		if cfg.SkipIfReady {
+			readiness, err := storage.EvaluateDaggerheartCatalogReadiness(ctx, contentStore)
+			if err != nil {
+				return fmt.Errorf("check catalog readiness: %w", err)
+			}
+			if readiness.Ready {
+				_, err = fmt.Fprintf(out, "catalog already ready in %s; skipping import\n", cfg.DBPath)
+				return err
+			}
+		}
 	}
 
 	for _, locale := range locales {
