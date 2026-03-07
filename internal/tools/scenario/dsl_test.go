@@ -283,7 +283,7 @@ return scn
 	}
 }
 
-func TestScenarioSystemScopedMethodsAreNotAvailableOnScene(t *testing.T) {
+func TestScenarioSystemScopedMethodsAreNotAvailableOnScenarioRoot(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
 local scn = Scenario.new("legacy_scene_method")
 scn:campaign({name = "Test", system = "DAGGERHEART"})
@@ -325,7 +325,7 @@ return scn
 	}
 }
 
-func TestValidateScenarioCommentsRequiresCommentForSceneBlock(t *testing.T) {
+func TestValidateScenarioCommentsRequiresCommentForScenarioBlock(t *testing.T) {
 	path := writeScenarioFixture(t, `local scn = Scenario.new("no-comment")
 scn:campaign({name = "Test", system = "DAGGERHEART"})
 
@@ -341,7 +341,7 @@ return scn
 	}
 }
 
-func TestValidateScenarioCommentsAllowsCommentedSceneBlock(t *testing.T) {
+func TestValidateScenarioCommentsAllowsCommentedScenarioBlock(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
 local scn = Scenario.new("commented")
 scn:campaign({name = "Test", system = "DAGGERHEART"})
