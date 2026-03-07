@@ -30,6 +30,23 @@ func (a contentApplication) runGetContentCatalog(ctx context.Context, in *pb.Get
 	return &pb.GetDaggerheartContentCatalogResponse{Catalog: catalog.proto()}, nil
 }
 
+// GetContentAssetMap returns resolved content-image selectors for Daggerheart entities.
+func (a contentApplication) runGetContentAssetMap(ctx context.Context, in *pb.GetDaggerheartContentAssetMapRequest) (*pb.GetDaggerheartContentAssetMapResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "content asset map request is required")
+	}
+	store, err := a.service.contentStore()
+	if err != nil {
+		return nil, err
+	}
+
+	assetMap, err := buildDaggerheartContentAssetMap(ctx, store, in.GetLocale())
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "content asset map pipeline: %v", err)
+	}
+	return &pb.GetDaggerheartContentAssetMapResponse{AssetMap: assetMap}, nil
+}
+
 // GetClass returns a single Daggerheart class.
 func (a contentApplication) runGetClass(ctx context.Context, in *pb.GetDaggerheartClassRequest) (*pb.GetDaggerheartClassResponse, error) {
 	if in == nil {

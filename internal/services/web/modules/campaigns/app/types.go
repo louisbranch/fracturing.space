@@ -144,25 +144,45 @@ type CampaignCharacterCreationProgress struct {
 	UnmetReasons []string                        `json:"unmetReasons"`
 }
 
+// CatalogAssetReference stores one resolved image reference for content entities.
+type CatalogAssetReference struct {
+	URL     string `json:"url"`
+	Status  string `json:"status"`
+	SetID   string `json:"setId"`
+	AssetID string `json:"assetId"`
+}
+
 // CatalogClass stores class catalog data used by workflow forms.
 type CatalogClass struct {
-	ID        string   `json:"id"`
-	Name      string   `json:"name"`
-	DomainIDs []string `json:"domainIds"`
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	DomainIDs    []string              `json:"domainIds"`
+	Illustration CatalogAssetReference `json:"illustration"`
+	Icon         CatalogAssetReference `json:"icon"`
 }
 
 // CatalogSubclass stores subclass catalog data used by workflow forms.
 type CatalogSubclass struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	ClassID string `json:"classId"`
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	ClassID      string                `json:"classId"`
+	Illustration CatalogAssetReference `json:"illustration"`
 }
 
 // CatalogHeritage stores ancestry/community catalog data.
 type CatalogHeritage struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Kind string `json:"kind"`
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	Kind         string                `json:"kind"`
+	Illustration CatalogAssetReference `json:"illustration"`
+}
+
+// CatalogDomain stores domain catalog data used by class/domain selection flows.
+type CatalogDomain struct {
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	Illustration CatalogAssetReference `json:"illustration"`
+	Icon         CatalogAssetReference `json:"icon"`
 }
 
 // CatalogWeapon stores weapon catalog data used by equipment forms.
@@ -188,21 +208,40 @@ type CatalogItem struct {
 
 // CatalogDomainCard stores domain card catalog data used by forms.
 type CatalogDomainCard struct {
-	ID       string `json:"id"`
-	Name     string `json:"name"`
-	DomainID string `json:"domainId"`
-	Level    int32  `json:"level"`
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	DomainID     string                `json:"domainId"`
+	Level        int32                 `json:"level"`
+	Illustration CatalogAssetReference `json:"illustration"`
+}
+
+// CatalogAdversary stores adversary catalog data with image metadata.
+type CatalogAdversary struct {
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	Illustration CatalogAssetReference `json:"illustration"`
+}
+
+// CatalogEnvironment stores environment catalog data with image metadata.
+type CatalogEnvironment struct {
+	ID           string                `json:"id"`
+	Name         string                `json:"name"`
+	Illustration CatalogAssetReference `json:"illustration"`
 }
 
 // CampaignCharacterCreationCatalog stores Daggerheart catalog subsets used by workflow forms.
 type CampaignCharacterCreationCatalog struct {
-	Classes     []CatalogClass      `json:"classes"`
-	Subclasses  []CatalogSubclass   `json:"subclasses"`
-	Heritages   []CatalogHeritage   `json:"heritages"`
-	Weapons     []CatalogWeapon     `json:"weapons"`
-	Armor       []CatalogArmor      `json:"armor"`
-	Items       []CatalogItem       `json:"items"`
-	DomainCards []CatalogDomainCard `json:"domainCards"`
+	AssetTheme   string               `json:"assetTheme"`
+	Classes      []CatalogClass       `json:"classes"`
+	Subclasses   []CatalogSubclass    `json:"subclasses"`
+	Heritages    []CatalogHeritage    `json:"heritages"`
+	Domains      []CatalogDomain      `json:"domains"`
+	Weapons      []CatalogWeapon      `json:"weapons"`
+	Armor        []CatalogArmor       `json:"armor"`
+	Items        []CatalogItem        `json:"items"`
+	DomainCards  []CatalogDomainCard  `json:"domainCards"`
+	Adversaries  []CatalogAdversary   `json:"adversaries"`
+	Environments []CatalogEnvironment `json:"environments"`
 }
 
 // CampaignCharacterCreationProfile stores selected workflow fields used for filtering options.

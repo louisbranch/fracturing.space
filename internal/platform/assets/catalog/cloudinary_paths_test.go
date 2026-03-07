@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"encoding/json"
 	"regexp"
 	"testing"
 )
@@ -35,5 +36,49 @@ func TestCloudinaryPublicID_RejectsMissingSelectors(t *testing.T) {
 	}
 	if _, ok := CloudinaryPublicID(CampaignCoverSetV1, ""); ok {
 		t.Fatal("expected missing asset id to fail")
+	}
+}
+
+func TestDecodeCloudinaryAssetPaths_ParsesAnyAssetArrayKey(t *testing.T) {
+	raw := []byte(`{
+		"schema_version": 1,
+		"daggerheart_class_icon": [
+			{
+				"set_id": "daggerheart_class_icon_set_v1",
+				"fs_asset_id": "class.guardian",
+				"cloudinary": {
+					"public_id": "high_fantasy/daggerheart_class_icon/v1/class.guardian",
+					"version": 1234
+				}
+			}
+		],
+		"batch_ids": ["hf_v1_r1"]
+	}`)
+
+	decoded := decodeCloudinaryAssetPaths(raw)
+	key := cloudinaryAssetPathLookupKey("daggerheart_class_icon_set_v1", "class.guardian")
+	if got := decoded[key]; got != "v1234/high_fantasy/daggerheart_class_icon/v1/class.guardian" {
+		t.Fatalf("decoded cloudinary path = %q, want %q", got, "v1234/high_fantasy/daggerheart_class_icon/v1/class.guardian")
+	}
+}
+
+func TestLooksLikeJSONArrayOfObjects(t *testing.T) {
+	tests := []struct {
+		name string
+		raw  string
+		want bool
+	}{
+		{name: "object array", raw: `[{"x":1}]`, want: true},
+		{name: "empty array", raw: `[]`, want: true},
+		{name: "string array", raw: `["a","b"]`, want: false},
+		{name: "object", raw: `{"x":1}`, want: false},
+		{name: "number", raw: `1`, want: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := looksLikeJSONArrayOfObjects(json.RawMessage(tc.raw)); got != tc.want {
+				t.Fatalf("looksLikeJSONArrayOfObjects(%s) = %t, want %t", tc.raw, got, tc.want)
+			}
+		})
 	}
 }

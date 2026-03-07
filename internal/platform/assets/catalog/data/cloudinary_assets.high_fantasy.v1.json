@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-05T01:30:20+00:00",
+  "generated_at": "2026-03-05T15:34:19+00:00",
   "theme": "high_fantasy",
   "provider": "cloudinary",
   "batch_ids": [
@@ -1589,6 +1589,76 @@
           ]
         }
       ]
+    },
+    "daggerheart_v1": {
+      "id": "daggerheart-assets-v1",
+      "system_id": "daggerheart",
+      "system_version": "v1",
+      "locale": "en-US",
+      "theme": "high_fantasy",
+      "sets": [
+        {
+          "id": "daggerheart_adversary_set_v1",
+          "asset_type": "daggerheart_adversary_illustration",
+          "asset_ids": []
+        },
+        {
+          "id": "daggerheart_ancestry_set_v1",
+          "asset_type": "daggerheart_ancestry_illustration",
+          "asset_ids": []
+        },
+        {
+          "id": "daggerheart_class_icon_set_v1",
+          "asset_type": "daggerheart_class_icon",
+          "asset_ids": []
+        },
+        {
+          "id": "daggerheart_class_set_v1",
+          "asset_type": "daggerheart_class_illustration",
+          "asset_ids": []
+        },
+        {
+          "id": "daggerheart_community_set_v1",
+          "asset_type": "daggerheart_community_illustration",
+          "asset_ids": []
+        },
+        {
+          "id": "daggerheart_domain_card_set_v1",
+          "asset_type": "daggerheart_domain_card_illustration",
+          "asset_ids": []
+        },
+        {
+          "id": "daggerheart_domain_icon_set_v1",
+          "asset_type": "daggerheart_domain_icon",
+          "asset_ids": []
+        },
+        {
+          "id": "daggerheart_domain_set_v1",
+          "asset_type": "daggerheart_domain_illustration",
+          "asset_ids": []
+        },
+        {
+          "id": "daggerheart_environment_set_v1",
+          "asset_type": "daggerheart_environment_illustration",
+          "asset_ids": []
+        },
+        {
+          "id": "daggerheart_subclass_set_v1",
+          "asset_type": "daggerheart_subclass_illustration",
+          "asset_ids": []
+        }
+      ],
+      "entity_asset_map": []
     }
-  }
+  },
+  "daggerheart_adversary_illustration": [],
+  "daggerheart_ancestry_illustration": [],
+  "daggerheart_class_icon": [],
+  "daggerheart_class_illustration": [],
+  "daggerheart_community_illustration": [],
+  "daggerheart_domain_card_illustration": [],
+  "daggerheart_domain_icon": [],
+  "daggerheart_domain_illustration": [],
+  "daggerheart_environment_illustration": [],
+  "daggerheart_subclass_illustration": []
 }

@@ -125,16 +125,114 @@ func TestCharacterCreationProgressMapsResponse(t *testing.T) {
 func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 	t.Parallel()
 
-	contentClient := &fakeDaggerheartContentClient{resp: &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{
-		Classes:     []*daggerheartv1.DaggerheartClass{{Id: "warrior", Name: "Warrior", DomainIds: []string{"valor", "blade"}}},
-		Subclasses:  []*daggerheartv1.DaggerheartSubclass{{Id: "guardian", Name: "Guardian", ClassId: "warrior"}},
-		Heritages:   []*daggerheartv1.DaggerheartHeritage{{Id: "human", Name: "Human", Kind: daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY}},
-		Weapons:     []*daggerheartv1.DaggerheartWeapon{{Id: "weapon.longsword", Name: "Longsword", Category: daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_PRIMARY, Tier: 1}},
-		Armor:       []*daggerheartv1.DaggerheartArmor{{Id: "armor.chain", Name: "Chain", Tier: 1}},
-		Items:       []*daggerheartv1.DaggerheartItem{{Id: "item.minor-health-potion", Name: "Minor Health Potion"}},
-		DomainCards: []*daggerheartv1.DaggerheartDomainCard{{Id: "card.guard", Name: "Guard", DomainId: "valor", Level: 1}},
-	}}}
-	gateway := GRPCGateway{DaggerheartClient: contentClient}
+	contentClient := &fakeDaggerheartContentClient{
+		resp: &daggerheartv1.GetDaggerheartContentCatalogResponse{
+			Catalog: &daggerheartv1.DaggerheartContentCatalog{
+				Classes:      []*daggerheartv1.DaggerheartClass{{Id: "warrior", Name: "Warrior", DomainIds: []string{"valor", "blade"}}},
+				Subclasses:   []*daggerheartv1.DaggerheartSubclass{{Id: "guardian", Name: "Guardian", ClassId: "warrior"}},
+				Heritages:    []*daggerheartv1.DaggerheartHeritage{{Id: "human", Name: "Human", Kind: daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY}},
+				Domains:      []*daggerheartv1.DaggerheartDomain{{Id: "valor", Name: "Valor"}},
+				Weapons:      []*daggerheartv1.DaggerheartWeapon{{Id: "weapon.longsword", Name: "Longsword", Category: daggerheartv1.DaggerheartWeaponCategory_DAGGERHEART_WEAPON_CATEGORY_PRIMARY, Tier: 1}},
+				Armor:        []*daggerheartv1.DaggerheartArmor{{Id: "armor.chain", Name: "Chain", Tier: 1}},
+				Items:        []*daggerheartv1.DaggerheartItem{{Id: "item.minor-health-potion", Name: "Minor Health Potion"}},
+				DomainCards:  []*daggerheartv1.DaggerheartDomainCard{{Id: "card.guard", Name: "Guard", DomainId: "valor", Level: 1}},
+				Adversaries:  []*daggerheartv1.DaggerheartAdversaryEntry{{Id: "adv.goblin", Name: "Goblin"}},
+				Environments: []*daggerheartv1.DaggerheartEnvironment{{Id: "env.woods", Name: "Whispering Woods"}},
+			},
+		},
+		assetMapResp: &daggerheartv1.GetDaggerheartContentAssetMapResponse{
+			AssetMap: &daggerheartv1.DaggerheartContentAssetMap{
+				Theme: "high_fantasy",
+				Assets: []*daggerheartv1.DaggerheartContentAssetRef{
+					{
+						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						EntityType: "class",
+						EntityId:   "warrior",
+						SetId:      "daggerheart_class_set_v1",
+						AssetId:    "class.warrior",
+						CdnAssetId: "v1/high_fantasy/daggerheart_class_illustration/v1/class.warrior",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_CLASS_ICON,
+						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_SET_DEFAULT,
+						EntityType: "class",
+						EntityId:   "warrior",
+						SetId:      "daggerheart_class_icon_set_v1",
+						AssetId:    "class.warrior",
+						CdnAssetId: "v1/high_fantasy/daggerheart_class_icon/v1/class.warrior",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_SUBCLASS_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						EntityType: "subclass",
+						EntityId:   "guardian",
+						SetId:      "daggerheart_subclass_set_v1",
+						AssetId:    "subclass.guardian",
+						CdnAssetId: "v1/high_fantasy/daggerheart_subclass_illustration/v1/subclass.guardian",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ANCESTRY_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						EntityType: "ancestry",
+						EntityId:   "human",
+						SetId:      "daggerheart_ancestry_set_v1",
+						AssetId:    "ancestry.human",
+						CdnAssetId: "v1/high_fantasy/daggerheart_ancestry_illustration/v1/ancestry.human",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						EntityType: "domain",
+						EntityId:   "valor",
+						SetId:      "daggerheart_domain_set_v1",
+						AssetId:    "domain.valor",
+						CdnAssetId: "v1/high_fantasy/daggerheart_domain_illustration/v1/domain.valor",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_ICON,
+						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						EntityType: "domain",
+						EntityId:   "valor",
+						SetId:      "daggerheart_domain_icon_set_v1",
+						AssetId:    "domain.valor",
+						CdnAssetId: "v1/high_fantasy/daggerheart_domain_icon/v1/domain.valor",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						EntityType: "domain_card",
+						EntityId:   "card.guard",
+						SetId:      "daggerheart_domain_card_set_v1",
+						AssetId:    "card.guard",
+						CdnAssetId: "v1/high_fantasy/daggerheart_domain_card_illustration/v1/card.guard",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ADVERSARY_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						EntityType: "adversary",
+						EntityId:   "adv.goblin",
+						SetId:      "daggerheart_adversary_set_v1",
+						AssetId:    "adv.goblin",
+						CdnAssetId: "v1/high_fantasy/daggerheart_adversary_illustration/v1/adv.goblin",
+					},
+					{
+						Type:       daggerheartv1.DaggerheartContentAssetType_DAGGERHEART_CONTENT_ASSET_TYPE_ENVIRONMENT_ILLUSTRATION,
+						Status:     daggerheartv1.DaggerheartContentAssetResolutionStatus_DAGGERHEART_CONTENT_ASSET_RESOLUTION_STATUS_MAPPED,
+						EntityType: "environment",
+						EntityId:   "env.woods",
+						SetId:      "daggerheart_environment_set_v1",
+						AssetId:    "env.woods",
+						CdnAssetId: "v1/high_fantasy/daggerheart_environment_illustration/v1/env.woods",
+					},
+				},
+			},
+		},
+	}
+	gateway := GRPCGateway{
+		DaggerheartClient: contentClient,
+		AssetBaseURL:      "https://res.cloudinary.com/fracturing-space/image/upload",
+	}
 
 	catalog, err := gateway.CharacterCreationCatalog(context.Background(), language.MustParse("pt-BR"))
 	if err != nil {
@@ -146,20 +244,53 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 	if contentClient.lastReq.GetLocale() != commonv1.Locale_LOCALE_PT_BR {
 		t.Fatalf("requested locale = %v, want %v", contentClient.lastReq.GetLocale(), commonv1.Locale_LOCALE_PT_BR)
 	}
+	if contentClient.lastAssetMapReq == nil {
+		t.Fatalf("expected content asset map request")
+	}
+	if contentClient.lastAssetMapReq.GetLocale() != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("asset-map locale = %v, want %v", contentClient.lastAssetMapReq.GetLocale(), commonv1.Locale_LOCALE_PT_BR)
+	}
+	if catalog.AssetTheme != "high_fantasy" {
+		t.Fatalf("asset theme = %q, want %q", catalog.AssetTheme, "high_fantasy")
+	}
 	if len(catalog.Classes) != 1 || catalog.Classes[0].ID != "warrior" {
 		t.Fatalf("Classes = %#v", catalog.Classes)
+	}
+	if catalog.Classes[0].Illustration.Status != "mapped" {
+		t.Fatalf("class illustration status = %q, want mapped", catalog.Classes[0].Illustration.Status)
+	}
+	if catalog.Classes[0].Icon.Status != "set_default" {
+		t.Fatalf("class icon status = %q, want set_default", catalog.Classes[0].Icon.Status)
 	}
 	if len(catalog.Subclasses) != 1 || catalog.Subclasses[0].ClassID != "warrior" {
 		t.Fatalf("Subclasses = %#v", catalog.Subclasses)
 	}
+	if catalog.Subclasses[0].Illustration.Status != "mapped" {
+		t.Fatalf("subclass illustration status = %q, want mapped", catalog.Subclasses[0].Illustration.Status)
+	}
 	if len(catalog.Heritages) != 1 || catalog.Heritages[0].Kind != "ancestry" {
 		t.Fatalf("Heritages = %#v", catalog.Heritages)
+	}
+	if catalog.Heritages[0].Illustration.Status != "mapped" {
+		t.Fatalf("heritage illustration status = %q, want mapped", catalog.Heritages[0].Illustration.Status)
+	}
+	if len(catalog.Domains) != 1 || catalog.Domains[0].Icon.Status != "mapped" {
+		t.Fatalf("Domains = %#v", catalog.Domains)
 	}
 	if len(catalog.Weapons) != 1 || catalog.Weapons[0].Category != "primary" {
 		t.Fatalf("Weapons = %#v", catalog.Weapons)
 	}
 	if len(catalog.Armor) != 1 || len(catalog.Items) != 1 || len(catalog.DomainCards) != 1 {
 		t.Fatalf("catalog subsets = %#v", catalog)
+	}
+	if catalog.DomainCards[0].Illustration.Status != "mapped" {
+		t.Fatalf("domain card illustration status = %q, want mapped", catalog.DomainCards[0].Illustration.Status)
+	}
+	if len(catalog.Adversaries) != 1 || catalog.Adversaries[0].Illustration.Status != "mapped" {
+		t.Fatalf("Adversaries = %#v", catalog.Adversaries)
+	}
+	if len(catalog.Environments) != 1 || catalog.Environments[0].Illustration.Status != "mapped" {
+		t.Fatalf("Environments = %#v", catalog.Environments)
 	}
 }
 
@@ -177,6 +308,40 @@ func TestCharacterCreationCatalogDefaultsLocaleToEnglishUS(t *testing.T) {
 	}
 	if contentClient.lastReq.GetLocale() != commonv1.Locale_LOCALE_EN_US {
 		t.Fatalf("requested locale = %v, want %v", contentClient.lastReq.GetLocale(), commonv1.Locale_LOCALE_EN_US)
+	}
+	if contentClient.lastAssetMapReq == nil {
+		t.Fatalf("expected content asset map request")
+	}
+	if contentClient.lastAssetMapReq.GetLocale() != commonv1.Locale_LOCALE_EN_US {
+		t.Fatalf("asset-map locale = %v, want %v", contentClient.lastAssetMapReq.GetLocale(), commonv1.Locale_LOCALE_EN_US)
+	}
+}
+
+func TestCharacterCreationCatalog_ContinuesWhenAssetMapFails(t *testing.T) {
+	t.Parallel()
+
+	contentClient := &fakeDaggerheartContentClient{
+		resp: &daggerheartv1.GetDaggerheartContentCatalogResponse{
+			Catalog: &daggerheartv1.DaggerheartContentCatalog{
+				Classes: []*daggerheartv1.DaggerheartClass{{Id: "warrior", Name: "Warrior"}},
+			},
+		},
+		assetMapErr: errors.New("asset map unavailable"),
+	}
+	gateway := GRPCGateway{
+		DaggerheartClient: contentClient,
+		AssetBaseURL:      "https://res.cloudinary.com/fracturing-space/image/upload",
+	}
+
+	catalog, err := gateway.CharacterCreationCatalog(context.Background(), language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("CharacterCreationCatalog() error = %v", err)
+	}
+	if len(catalog.Classes) != 1 {
+		t.Fatalf("classes = %#v", catalog.Classes)
+	}
+	if catalog.Classes[0].Illustration.Status != "unavailable" {
+		t.Fatalf("class illustration status = %q, want unavailable", catalog.Classes[0].Illustration.Status)
 	}
 }
 
@@ -404,9 +569,12 @@ func (f fakeAuthorizationClient) BatchCan(context.Context, *statev1.BatchCanRequ
 }
 
 type fakeDaggerheartContentClient struct {
-	resp    *daggerheartv1.GetDaggerheartContentCatalogResponse
-	err     error
-	lastReq *daggerheartv1.GetDaggerheartContentCatalogRequest
+	resp            *daggerheartv1.GetDaggerheartContentCatalogResponse
+	err             error
+	lastReq         *daggerheartv1.GetDaggerheartContentCatalogRequest
+	assetMapResp    *daggerheartv1.GetDaggerheartContentAssetMapResponse
+	assetMapErr     error
+	lastAssetMapReq *daggerheartv1.GetDaggerheartContentAssetMapRequest
 }
 
 func (f *fakeDaggerheartContentClient) GetContentCatalog(_ context.Context, req *daggerheartv1.GetDaggerheartContentCatalogRequest, _ ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error) {
@@ -418,6 +586,17 @@ func (f *fakeDaggerheartContentClient) GetContentCatalog(_ context.Context, req 
 		return f.resp, nil
 	}
 	return &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{}}, nil
+}
+
+func (f *fakeDaggerheartContentClient) GetContentAssetMap(_ context.Context, req *daggerheartv1.GetDaggerheartContentAssetMapRequest, _ ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentAssetMapResponse, error) {
+	f.lastAssetMapReq = req
+	if f.assetMapErr != nil {
+		return nil, f.assetMapErr
+	}
+	if f.assetMapResp != nil {
+		return f.assetMapResp, nil
+	}
+	return &daggerheartv1.GetDaggerheartContentAssetMapResponse{}, nil
 }
 
 type fakeCharacterWorkflowClient struct {
@@ -508,4 +687,5 @@ var _ moduleDaggerheartContentClientContract = (*fakeDaggerheartContentClient)(n
 
 type moduleDaggerheartContentClientContract interface {
 	GetContentCatalog(context.Context, *daggerheartv1.GetDaggerheartContentCatalogRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error)
+	GetContentAssetMap(context.Context, *daggerheartv1.GetDaggerheartContentAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentAssetMapResponse, error)
 }

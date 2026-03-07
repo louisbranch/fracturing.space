@@ -1,6 +1,8 @@
 coverage.*
 coverage-*
 data/
+!internal/platform/assets/catalog/data/
+!internal/platform/assets/catalog/data/daggerheart_assets.v1.json
 .env
 .env.local
 .tmp/

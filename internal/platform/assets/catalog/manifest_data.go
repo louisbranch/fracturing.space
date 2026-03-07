@@ -57,7 +57,10 @@ type avatarPortraitJSON struct {
 
 // ValidateEmbeddedCatalogManifests returns any manifest parsing error from the embedded bundle.
 func ValidateEmbeddedCatalogManifests() error {
-	_, _, _, err := EmbeddedCatalogManifests()
+	if _, _, _, err := EmbeddedCatalogManifests(); err != nil {
+		return err
+	}
+	_, err := EmbeddedDaggerheartAssetManifest()
 	return err
 }
 

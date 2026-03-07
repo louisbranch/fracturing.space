@@ -318,8 +318,10 @@ func (f fakeWebInviteClient) RevokeInvite(_ context.Context, req *statev1.Revoke
 }
 
 type fakeWebDaggerheartContentClient struct {
-	response *daggerheartv1.GetDaggerheartContentCatalogResponse
-	err      error
+	response         *daggerheartv1.GetDaggerheartContentCatalogResponse
+	err              error
+	assetMapResponse *daggerheartv1.GetDaggerheartContentAssetMapResponse
+	assetMapErr      error
 }
 
 func (f fakeWebDaggerheartContentClient) GetContentCatalog(context.Context, *daggerheartv1.GetDaggerheartContentCatalogRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error) {
@@ -330,6 +332,16 @@ func (f fakeWebDaggerheartContentClient) GetContentCatalog(context.Context, *dag
 		return f.response, nil
 	}
 	return &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{}}, nil
+}
+
+func (f fakeWebDaggerheartContentClient) GetContentAssetMap(context.Context, *daggerheartv1.GetDaggerheartContentAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentAssetMapResponse, error) {
+	if f.assetMapErr != nil {
+		return nil, f.assetMapErr
+	}
+	if f.assetMapResponse != nil {
+		return f.assetMapResponse, nil
+	}
+	return &daggerheartv1.GetDaggerheartContentAssetMapResponse{}, nil
 }
 
 type fakeWebAuthorizationClient struct{}

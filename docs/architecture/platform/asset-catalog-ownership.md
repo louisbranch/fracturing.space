@@ -43,6 +43,22 @@ A shared asset-catalog package will be used by both game and auth services. It m
 
 The shared package does not own domain records or persistence.
 
+## System Content Asset Mapping
+
+For game-system content (for example Daggerheart class/domain/adversary imagery), the
+shared catalog package also owns:
+
+1. A system-scoped manifest (`daggerheart_assets.v1.json`) with:
+   - system metadata (`system_id`, `system_version`, `locale`, `theme`),
+   - set definitions by asset family,
+   - `entity_asset_map` bindings from canonical content IDs to set/asset selectors.
+2. Runtime resolution statuses for consumers:
+   - `mapped`: explicit entity mapping with a deliverable CDN asset,
+   - `set_default`: deterministic set fallback with a deliverable CDN asset,
+   - `unavailable`: no deliverable asset currently available.
+3. Additive API exposure through a separate content-asset map RPC so content contracts
+   and image contracts evolve independently.
+
 ## Data Model Contract
 
 Store both set and asset identifiers for all image-bearing entities.

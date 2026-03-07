@@ -16,11 +16,6 @@ var (
 	embeddedCloudinaryAssetPathsV map[string]string
 )
 
-type cloudinaryAssetsCatalogJSONDocument struct {
-	CampaignScene []cloudinaryAssetJSON `json:"campaign_scene"`
-	AvatarSet     []cloudinaryAssetJSON `json:"avatar_set"`
-}
-
 type cloudinaryAssetJSON struct {
 	SetID      string              `json:"set_id"`
 	FSAssetID  string              `json:"fs_asset_id"`
@@ -73,7 +68,7 @@ func embeddedCloudinaryAssetPaths() map[string]string {
 }
 
 func decodeCloudinaryAssetPaths(raw []byte) map[string]string {
-	var payload cloudinaryAssetsCatalogJSONDocument
+	var payload map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return map[string]string{}
 	}
@@ -92,11 +87,44 @@ func decodeCloudinaryAssetPaths(raw []byte) map[string]string {
 			out[cloudinaryAssetPathLookupKey(setID, assetID)] = publicID
 		}
 	}
-	appendAssets(payload.CampaignScene)
-	appendAssets(payload.AvatarSet)
+	for _, rawEntries := range payload {
+		if !looksLikeJSONArrayOfObjects(rawEntries) {
+			continue
+		}
+		var entries []cloudinaryAssetJSON
+		if err := json.Unmarshal(rawEntries, &entries); err != nil {
+			continue
+		}
+		appendAssets(entries)
+	}
 	return out
 }
 
 func cloudinaryAssetPathLookupKey(setID, assetID string) string {
 	return setID + "\x00" + assetID
+}
+
+func looksLikeJSONArrayOfObjects(raw json.RawMessage) bool {
+	idx := 0
+	for idx < len(raw) {
+		switch raw[idx] {
+		case ' ', '\t', '\r', '\n':
+			idx++
+		default:
+			if raw[idx] != '[' {
+				return false
+			}
+			idx++
+			for idx < len(raw) {
+				switch raw[idx] {
+				case ' ', '\t', '\r', '\n':
+					idx++
+				default:
+					return raw[idx] == '{' || raw[idx] == ']'
+				}
+			}
+			return false
+		}
+	}
+	return false
 }

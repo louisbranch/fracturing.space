@@ -44,6 +44,7 @@ type CharacterClient interface {
 // DaggerheartContentClient exposes Daggerheart content catalog operations.
 type DaggerheartContentClient interface {
 	GetContentCatalog(context.Context, *daggerheartv1.GetDaggerheartContentCatalogRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentCatalogResponse, error)
+	GetContentAssetMap(context.Context, *daggerheartv1.GetDaggerheartContentAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartContentAssetMapResponse, error)
 }
 
 // SessionClient exposes session listing for campaign workspace pages.

@@ -51,6 +51,10 @@ func (s *DaggerheartContentService) GetContentCatalog(ctx context.Context, in *p
 	return newContentApplication(s).runGetContentCatalog(ctx, in)
 }
 
+func (s *DaggerheartContentService) GetContentAssetMap(ctx context.Context, in *pb.GetDaggerheartContentAssetMapRequest) (*pb.GetDaggerheartContentAssetMapResponse, error) {
+	return newContentApplication(s).runGetContentAssetMap(ctx, in)
+}
+
 func (s *DaggerheartContentService) GetClass(ctx context.Context, in *pb.GetDaggerheartClassRequest) (*pb.GetDaggerheartClassResponse, error) {
 	return newContentApplication(s).runGetClass(ctx, in)
 }
