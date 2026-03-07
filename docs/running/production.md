@@ -17,8 +17,8 @@ Use Docker Compose for deployment. Configure real domains, TLS, and secrets.
 2. Replace all dev secrets. Generate fresh keys and paste the output into `.env`:
 
 ```sh
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm hmac-key
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml --profile tools run --rm join-grant-key
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm hmac-key
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml --profile tools run --rm join-grant-key
 ```
 
 3. Set these values in `.env`:
@@ -35,8 +35,8 @@ docker compose -f docker-compose.yml -f topology/generated/docker-compose.discov
 5. Pull and run:
 
 ```sh
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml pull
-docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml up -d
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml pull
+docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml up -d
 ```
 
 Minimal-intervention bootstrap: run `make bootstrap-prod` to copy the production template, generate missing keys, and start Compose. If you already have `.env`, use `make bootstrap`.

@@ -18,7 +18,7 @@ else
   compose_cmd=(
     docker compose
     -f docker-compose.yml
-    -f topology/generated/docker-compose.discovery.generated.yml
+    -f topology/generated/docker-compose.serviceaddr.generated.yml
   )
 fi
 

@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package discovery.v1;
+
+import "common/v1/game_system.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1;discoveryv1";
+
+enum DiscoveryEntryKind {
+  DISCOVERY_ENTRY_KIND_UNSPECIFIED = 0;
+  DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER = 1;
+  DISCOVERY_ENTRY_KIND_STORYLINE = 2;
+  DISCOVERY_ENTRY_KIND_CHARACTER_TEMPLATE = 3;
+}
+
+enum DiscoveryDifficultyTier {
+  DISCOVERY_DIFFICULTY_TIER_UNSPECIFIED = 0;
+  DISCOVERY_DIFFICULTY_TIER_BEGINNER = 1;
+  DISCOVERY_DIFFICULTY_TIER_INTERMEDIATE = 2;
+  DISCOVERY_DIFFICULTY_TIER_ADVANCED = 3;
+}
+
+enum DiscoveryGmMode {
+  DISCOVERY_GM_MODE_UNSPECIFIED = 0;
+  DISCOVERY_GM_MODE_HUMAN = 1;
+  DISCOVERY_GM_MODE_AI = 2;
+  DISCOVERY_GM_MODE_HYBRID = 3;
+}
+
+enum DiscoveryIntent {
+  DISCOVERY_INTENT_UNSPECIFIED = 0;
+  DISCOVERY_INTENT_STANDARD = 1;
+  DISCOVERY_INTENT_STARTER = 2;
+  DISCOVERY_INTENT_SANDBOX = 3;
+}
+
+// DiscoveryEntry stores one public discovery record for a starter artifact.
+message DiscoveryEntry {
+  // Stable discovery entry identifier.
+  string entry_id = 1;
+
+  // Discovery artifact kind.
+  DiscoveryEntryKind kind = 2;
+
+  // The source artifact identifier in the owning domain service.
+  string source_id = 3;
+
+  // Public card title.
+  string title = 4;
+
+  // Public description shown in discovery detail views.
+  string description = 5;
+
+  // Suggested minimum table size.
+  int32 recommended_participants_min = 6;
+
+  // Suggested maximum table size.
+  int32 recommended_participants_max = 7;
+
+  // Coarse complexity tier for first-pass discovery filters.
+  DiscoveryDifficultyTier difficulty_tier = 8;
+
+  // Human-readable expected duration (for example "2-3 sessions").
+  string expected_duration_label = 9;
+
+  // Source game system for quick filtering.
+  common.v1.GameSystem system = 10;
+
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+
+  // Discovery filter: AI / human / hybrid GM.
+  DiscoveryGmMode gm_mode = 13;
+
+  // Discovery filter: starter / standard / sandbox.
+  DiscoveryIntent intent = 14;
+
+  // Character starting level (1 for beginners).
+  int32 level = 15;
+
+  // Number of pre-included characters.
+  int32 character_count = 16;
+
+  // Full markdown storyline for AI GM context.
+  string storyline = 17;
+
+  // Free-form discovery tags (e.g. "solo", "mystery").
+  repeated string tags = 18;
+}
+
+message CreateDiscoveryEntryRequest {
+  DiscoveryEntry entry = 1;
+}
+
+message CreateDiscoveryEntryResponse {
+  DiscoveryEntry entry = 1;
+}
+
+message GetDiscoveryEntryRequest {
+  string entry_id = 1;
+}
+
+message GetDiscoveryEntryResponse {
+  DiscoveryEntry entry = 1;
+}
+
+message ListDiscoveryEntriesRequest {
+  // The maximum number of entries to return.
+  // If zero, the server defaults to 10. The server clamps values above 50 to 50.
+  int32 page_size = 1;
+
+  // A page token received from a prior ListDiscoveryEntriesResponse.
+  string page_token = 2;
+
+  // Optional kind filter.
+  DiscoveryEntryKind kind = 3;
+}
+
+message ListDiscoveryEntriesResponse {
+  repeated DiscoveryEntry entries = 1;
+  string next_page_token = 2;
+}
+
+service DiscoveryService {
+  rpc CreateDiscoveryEntry(CreateDiscoveryEntryRequest) returns (CreateDiscoveryEntryResponse);
+  rpc GetDiscoveryEntry(GetDiscoveryEntryRequest) returns (GetDiscoveryEntryResponse);
+  rpc ListDiscoveryEntries(ListDiscoveryEntriesRequest) returns (ListDiscoveryEntriesResponse);
+}

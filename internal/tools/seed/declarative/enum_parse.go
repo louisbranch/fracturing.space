@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -115,43 +115,43 @@ func parseSessionStatus(value string) gamev1.SessionStatus {
 	return gamev1.SessionStatus_SESSION_ACTIVE
 }
 
-func parseDifficultyTier(value string) listingv1.CampaignDifficultyTier {
+func parseDifficultyTier(value string) discoveryv1.DiscoveryDifficultyTier {
 	candidate := normalizeEnumLabel(value)
 	if candidate == "" {
-		return listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER
+		return discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER
 	}
-	if enumValue, ok := listingv1.CampaignDifficultyTier_value[candidate]; ok {
-		return listingv1.CampaignDifficultyTier(enumValue)
+	if enumValue, ok := discoveryv1.DiscoveryDifficultyTier_value[candidate]; ok {
+		return discoveryv1.DiscoveryDifficultyTier(enumValue)
 	}
-	return listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER
+	return discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER
 }
 
-func parseListingGmMode(value string) listingv1.CampaignListingGmMode {
+func parseDiscoveryGmMode(value string) discoveryv1.DiscoveryGmMode {
 	candidate := normalizeEnumLabel(value)
 	if candidate == "" {
-		return listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_UNSPECIFIED
+		return discoveryv1.DiscoveryGmMode_DISCOVERY_GM_MODE_UNSPECIFIED
 	}
-	if !strings.HasPrefix(candidate, "CAMPAIGN_LISTING_GM_MODE_") {
-		candidate = "CAMPAIGN_LISTING_GM_MODE_" + candidate
+	if !strings.HasPrefix(candidate, "DISCOVERY_GM_MODE_") {
+		candidate = "DISCOVERY_GM_MODE_" + candidate
 	}
-	if enumValue, ok := listingv1.CampaignListingGmMode_value[candidate]; ok {
-		return listingv1.CampaignListingGmMode(enumValue)
+	if enumValue, ok := discoveryv1.DiscoveryGmMode_value[candidate]; ok {
+		return discoveryv1.DiscoveryGmMode(enumValue)
 	}
-	return listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_UNSPECIFIED
+	return discoveryv1.DiscoveryGmMode_DISCOVERY_GM_MODE_UNSPECIFIED
 }
 
-func parseListingIntent(value string) listingv1.CampaignListingIntent {
+func parseDiscoveryIntent(value string) discoveryv1.DiscoveryIntent {
 	candidate := normalizeEnumLabel(value)
 	if candidate == "" {
-		return listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_UNSPECIFIED
+		return discoveryv1.DiscoveryIntent_DISCOVERY_INTENT_UNSPECIFIED
 	}
-	if !strings.HasPrefix(candidate, "CAMPAIGN_LISTING_INTENT_") {
-		candidate = "CAMPAIGN_LISTING_INTENT_" + candidate
+	if !strings.HasPrefix(candidate, "DISCOVERY_INTENT_") {
+		candidate = "DISCOVERY_INTENT_" + candidate
 	}
-	if enumValue, ok := listingv1.CampaignListingIntent_value[candidate]; ok {
-		return listingv1.CampaignListingIntent(enumValue)
+	if enumValue, ok := discoveryv1.DiscoveryIntent_value[candidate]; ok {
+		return discoveryv1.DiscoveryIntent(enumValue)
 	}
-	return listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_UNSPECIFIED
+	return discoveryv1.DiscoveryIntent_DISCOVERY_INTENT_UNSPECIFIED
 }
 
 func normalizeEnumLabel(value string) string {

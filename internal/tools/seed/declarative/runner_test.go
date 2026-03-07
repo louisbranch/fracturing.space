@@ -9,8 +9,8 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -90,30 +90,30 @@ func TestRunManifest_IdempotentSecondRun(t *testing.T) {
 		},
 		Campaigns: []ManifestCampaign{
 			{
-				Key:           "crimson_vale",
-				OwnerUserKey:  "alice",
-				Name:          "The Crimson Vale",
-				GmMode:        gamev1.GmMode_HUMAN.String(),
-				Intent:        gamev1.CampaignIntent_STARTER.String(),
-				AccessPolicy:  gamev1.CampaignAccessPolicy_PUBLIC.String(),
-				ThemePrompt:   "Seeded campaign for local development.",
-				Participants:  []ManifestParticipant{},
-				Characters:    []ManifestCharacter{},
-				Sessions:      []ManifestSession{},
-				Listing:       nil,
-				ForkFrom:      "",
-				ForkEventSeq:  0,
-				ForkSessionID: "",
+				Key:            "crimson_vale",
+				OwnerUserKey:   "alice",
+				Name:           "The Crimson Vale",
+				GmMode:         gamev1.GmMode_HUMAN.String(),
+				Intent:         gamev1.CampaignIntent_STARTER.String(),
+				AccessPolicy:   gamev1.CampaignAccessPolicy_PUBLIC.String(),
+				ThemePrompt:    "Seeded campaign for local development.",
+				Participants:   []ManifestParticipant{},
+				Characters:     []ManifestCharacter{},
+				Sessions:       []ManifestSession{},
+				DiscoveryEntry: nil,
+				ForkFrom:       "",
+				ForkEventSeq:   0,
+				ForkSessionID:  "",
 			},
 		},
-		Listings: []ManifestListing{
+		DiscoveryEntries: []ManifestDiscoveryEntry{
 			{
 				CampaignKey:                "crimson_vale",
 				Title:                      "The Crimson Vale",
-				Description:                "Starter listing for local dev.",
+				Description:                "Starter discovery entry for local dev.",
 				RecommendedParticipantsMin: 3,
 				RecommendedParticipantsMax: 5,
-				DifficultyTier:             listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER.String(),
+				DifficultyTier:             discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER.String(),
 				ExpectedDurationLabel:      "2-3 sessions",
 				System:                     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
 			},
@@ -129,7 +129,7 @@ func TestRunManifest_IdempotentSecondRun(t *testing.T) {
 		auth:      deps.auth,
 		social:    deps.social,
 		campaigns: deps.game,
-		listings:  deps.listing,
+		discovery: deps.discovery,
 	})
 
 	if err := runner.RunManifest(context.Background(), manifest); err != nil {
@@ -145,39 +145,39 @@ func TestRunManifest_IdempotentSecondRun(t *testing.T) {
 	if deps.game.createCampaignCalls != 1 {
 		t.Fatalf("create campaign calls = %d, want 1", deps.game.createCampaignCalls)
 	}
-	if deps.listing.createCalls != 1 {
-		t.Fatalf("create listing calls = %d, want 1", deps.listing.createCalls)
+	if deps.discovery.createCalls != 1 {
+		t.Fatalf("create discovery entry calls = %d, want 1", deps.discovery.createCalls)
 	}
 }
 
-func TestRunnerApplyListings_ListingNotFoundCreatesNewListing(t *testing.T) {
+func TestRunnerApplyDiscoveryEntries_EntryNotFoundCreatesNewEntry(t *testing.T) {
 	t.Parallel()
 
-	listingClient := &fakeListingClient{
-		getCampaignListing: func(_ context.Context, in *listingv1.GetCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.GetCampaignListingResponse, error) {
-			if in.GetCampaignId() == "camp-1" {
-				return nil, status.Error(codes.NotFound, "missing campaign listing")
+	discoveryClient := &fakeDiscoveryClient{
+		getDiscoveryEntry: func(_ context.Context, in *discoveryv1.GetDiscoveryEntryRequest, _ ...grpc.CallOption) (*discoveryv1.GetDiscoveryEntryResponse, error) {
+			if in.GetEntryId() == "camp-1" {
+				return nil, status.Error(codes.NotFound, "missing discovery entry")
 			}
-			return &listingv1.GetCampaignListingResponse{}, nil
+			return &discoveryv1.GetDiscoveryEntryResponse{}, nil
 		},
 	}
 
-	runner := newRunnerWithClients(Config{ManifestPath: "local"}, runnerDeps{listings: listingClient})
+	runner := newRunnerWithClients(Config{ManifestPath: "local"}, runnerDeps{discovery: discoveryClient})
 
-	err := runner.applyListings(context.Background(), Manifest{
+	err := runner.applyDiscoveryEntries(context.Background(), Manifest{
 		Name: "local",
-		Listings: []ManifestListing{{
+		DiscoveryEntries: []ManifestDiscoveryEntry{{
 			CampaignKey:    "crimson",
-			Title:          "Campaign listing",
+			Title:          "Campaign discovery entry",
 			System:         commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART.String(),
-			DifficultyTier: listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER.String(),
+			DifficultyTier: discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER.String(),
 		}},
 	}, map[string]string{"crimson": "camp-1"})
 	if err != nil {
-		t.Fatalf("apply listings: %v", err)
+		t.Fatalf("apply discovery entries: %v", err)
 	}
-	if listingClient.createCalls != 1 {
-		t.Fatalf("create listing calls = %d, want 1", listingClient.createCalls)
+	if discoveryClient.createCalls != 1 {
+		t.Fatalf("create discovery entry calls = %d, want 1", discoveryClient.createCalls)
 	}
 }
 
@@ -241,7 +241,7 @@ func TestRunManifest_RejectsUnsupportedGmMode(t *testing.T) {
 		auth:      deps.auth,
 		social:    deps.social,
 		campaigns: deps.game,
-		listings:  deps.listing,
+		discovery: deps.discovery,
 	})
 
 	err := runner.RunManifest(context.Background(), manifest)
@@ -257,18 +257,18 @@ func TestRunManifest_RejectsUnsupportedGmMode(t *testing.T) {
 }
 
 type fakeDeps struct {
-	auth    *fakeAuthClient
-	social  *fakeSocialClient
-	game    *fakeGameClient
-	listing *fakeListingClient
+	auth      *fakeAuthClient
+	social    *fakeSocialClient
+	game      *fakeGameClient
+	discovery *fakeDiscoveryClient
 }
 
 func newFakeDeps() fakeDeps {
 	return fakeDeps{
-		auth:    &fakeAuthClient{},
-		social:  &fakeSocialClient{},
-		game:    &fakeGameClient{},
-		listing: &fakeListingClient{},
+		auth:      &fakeAuthClient{},
+		social:    &fakeSocialClient{},
+		game:      &fakeGameClient{},
+		discovery: &fakeDiscoveryClient{},
 	}
 }
 
@@ -419,52 +419,64 @@ func (f *fakeGameClient) ListCampaigns(_ context.Context, _ *gamev1.ListCampaign
 	return &gamev1.ListCampaignsResponse{Campaigns: campaigns}, nil
 }
 
-type fakeListingClient struct {
-	getCampaignListing    func(context.Context, *listingv1.GetCampaignListingRequest, ...grpc.CallOption) (*listingv1.GetCampaignListingResponse, error)
-	createCalls           int
-	createCampaignListing func(context.Context, *listingv1.CreateCampaignListingRequest, ...grpc.CallOption) (*listingv1.CreateCampaignListingResponse, error)
-	listingByID           map[string]*listingv1.CampaignListing
+type fakeDiscoveryClient struct {
+	getDiscoveryEntry    func(context.Context, *discoveryv1.GetDiscoveryEntryRequest, ...grpc.CallOption) (*discoveryv1.GetDiscoveryEntryResponse, error)
+	createCalls          int
+	createDiscoveryEntry func(context.Context, *discoveryv1.CreateDiscoveryEntryRequest, ...grpc.CallOption) (*discoveryv1.CreateDiscoveryEntryResponse, error)
+	discoveryEntryByID   map[string]*discoveryv1.DiscoveryEntry
 }
 
-func (f *fakeListingClient) ensure() {
-	if f.listingByID == nil {
-		f.listingByID = map[string]*listingv1.CampaignListing{}
+func (f *fakeDiscoveryClient) ensure() {
+	if f.discoveryEntryByID == nil {
+		f.discoveryEntryByID = map[string]*discoveryv1.DiscoveryEntry{}
 	}
 }
 
-func (f *fakeListingClient) CreateCampaignListing(ctx context.Context, in *listingv1.CreateCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.CreateCampaignListingResponse, error) {
-	if f.createCampaignListing != nil {
-		return f.createCampaignListing(ctx, in)
+func (f *fakeDiscoveryClient) CreateDiscoveryEntry(ctx context.Context, in *discoveryv1.CreateDiscoveryEntryRequest, _ ...grpc.CallOption) (*discoveryv1.CreateDiscoveryEntryResponse, error) {
+	if f.createDiscoveryEntry != nil {
+		return f.createDiscoveryEntry(ctx, in)
 	}
 	f.ensure()
-	if listing, ok := f.listingByID[in.GetCampaignId()]; ok {
-		return &listingv1.CreateCampaignListingResponse{Listing: listing}, nil
+	entry := in.GetEntry()
+	if entry == nil {
+		return &discoveryv1.CreateDiscoveryEntryResponse{}, nil
+	}
+	if existing, ok := f.discoveryEntryByID[entry.GetEntryId()]; ok {
+		return &discoveryv1.CreateDiscoveryEntryResponse{Entry: existing}, nil
 	}
 	f.createCalls++
-	listing := &listingv1.CampaignListing{
-		CampaignId:                 in.GetCampaignId(),
-		Title:                      in.GetTitle(),
-		Description:                in.GetDescription(),
-		RecommendedParticipantsMin: in.GetRecommendedParticipantsMin(),
-		RecommendedParticipantsMax: in.GetRecommendedParticipantsMax(),
-		DifficultyTier:             in.GetDifficultyTier(),
-		ExpectedDurationLabel:      in.GetExpectedDurationLabel(),
-		System:                     in.GetSystem(),
+	discoveryEntry := &discoveryv1.DiscoveryEntry{
+		EntryId:                    entry.GetEntryId(),
+		Kind:                       entry.GetKind(),
+		SourceId:                   entry.GetSourceId(),
+		Title:                      entry.GetTitle(),
+		Description:                entry.GetDescription(),
+		RecommendedParticipantsMin: entry.GetRecommendedParticipantsMin(),
+		RecommendedParticipantsMax: entry.GetRecommendedParticipantsMax(),
+		DifficultyTier:             entry.GetDifficultyTier(),
+		ExpectedDurationLabel:      entry.GetExpectedDurationLabel(),
+		System:                     entry.GetSystem(),
+		GmMode:                     entry.GetGmMode(),
+		Intent:                     entry.GetIntent(),
+		Level:                      entry.GetLevel(),
+		CharacterCount:             entry.GetCharacterCount(),
+		Storyline:                  entry.GetStoryline(),
+		Tags:                       append([]string(nil), entry.GetTags()...),
 		CreatedAt:                  timestamppb.Now(),
 		UpdatedAt:                  timestamppb.Now(),
 	}
-	f.listingByID[in.GetCampaignId()] = listing
-	return &listingv1.CreateCampaignListingResponse{Listing: listing}, nil
+	f.discoveryEntryByID[entry.GetEntryId()] = discoveryEntry
+	return &discoveryv1.CreateDiscoveryEntryResponse{Entry: discoveryEntry}, nil
 }
 
-func (f *fakeListingClient) GetCampaignListing(ctx context.Context, in *listingv1.GetCampaignListingRequest, _ ...grpc.CallOption) (*listingv1.GetCampaignListingResponse, error) {
-	if f.getCampaignListing != nil {
-		return f.getCampaignListing(ctx, in)
+func (f *fakeDiscoveryClient) GetDiscoveryEntry(ctx context.Context, in *discoveryv1.GetDiscoveryEntryRequest, _ ...grpc.CallOption) (*discoveryv1.GetDiscoveryEntryResponse, error) {
+	if f.getDiscoveryEntry != nil {
+		return f.getDiscoveryEntry(ctx, in)
 	}
 	f.ensure()
-	listing, ok := f.listingByID[in.GetCampaignId()]
+	discoveryEntry, ok := f.discoveryEntryByID[in.GetEntryId()]
 	if !ok {
-		return &listingv1.GetCampaignListingResponse{}, nil
+		return &discoveryv1.GetDiscoveryEntryResponse{}, nil
 	}
-	return &listingv1.GetCampaignListingResponse{Listing: listing}, nil
+	return &discoveryv1.GetDiscoveryEntryResponse{Entry: discoveryEntry}, nil
 }

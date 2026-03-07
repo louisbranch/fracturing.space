@@ -184,7 +184,7 @@ func CharacterStatePatchTool() *mcp.Tool {
 	}
 }
 
-// CampaignListResource defines the MCP resource for campaign listings.
+// CampaignListResource defines the MCP resource for discovery entrys.
 func CampaignListResource() *mcp.Resource {
 	return &mcp.Resource{
 		Name:        "campaign_list",

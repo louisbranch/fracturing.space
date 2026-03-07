@@ -71,7 +71,7 @@ type CampaignListEntry struct {
 	ArchivedAt       string `json:"archived_at,omitempty"`
 }
 
-// CampaignListPayload represents the MCP resource payload for campaign listings.
+// CampaignListPayload represents the MCP resource payload for discovery entrys.
 type CampaignListPayload struct {
 	Campaigns []CampaignListEntry `json:"campaigns"`
 }

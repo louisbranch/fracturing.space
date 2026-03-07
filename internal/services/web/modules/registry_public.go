@@ -13,7 +13,7 @@ import (
 // defaultPublicModules returns stable public web modules.
 func defaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicModuleOptions) []Module {
 	authGateway := publicauthgateway.NewGRPCGateway(deps.AuthClient)
-	discoveryGateway := discovery.NewGRPCGateway(deps.ListingClient)
+	discoveryGateway := discovery.NewGRPCGateway(deps.DiscoveryClient)
 	return []Module{
 		shell.NewWithGatewayAndPolicy(authGateway, opts.RequestSchemePolicy),
 		passkeys.NewWithGatewayAndPolicy(authGateway, opts.RequestSchemePolicy),

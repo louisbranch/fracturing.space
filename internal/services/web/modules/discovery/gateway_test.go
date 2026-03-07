@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -15,17 +15,17 @@ import (
 // stubGateway implements Gateway for tests that only need a healthy module.
 type stubGateway struct{}
 
-func (stubGateway) ListStarterListings(context.Context) ([]StarterListing, error) {
+func (stubGateway) ListStarterEntries(context.Context) ([]StarterEntry, error) {
 	return nil, nil
 }
 
-// listingClientStub records calls and returns canned responses.
-type listingClientStub struct {
-	resp *listingv1.ListCampaignListingsResponse
+// discoveryClientStub records calls and returns canned responses.
+type discoveryClientStub struct {
+	resp *discoveryv1.ListDiscoveryEntriesResponse
 	err  error
 }
 
-func (s listingClientStub) ListCampaignListings(_ context.Context, _ *listingv1.ListCampaignListingsRequest, _ ...grpc.CallOption) (*listingv1.ListCampaignListingsResponse, error) {
+func (s discoveryClientStub) ListDiscoveryEntries(_ context.Context, _ *discoveryv1.ListDiscoveryEntriesRequest, _ ...grpc.CallOption) (*discoveryv1.ListDiscoveryEntriesResponse, error) {
 	return s.resp, s.err
 }
 
@@ -36,7 +36,7 @@ func TestNewGRPCGatewayReturnsUnavailableWhenNil(t *testing.T) {
 	if IsGatewayHealthy(gw) {
 		t.Fatal("expected unhealthy gateway for nil client")
 	}
-	_, err := gw.ListStarterListings(context.Background())
+	_, err := gw.ListStarterEntries(context.Background())
 	if err == nil {
 		t.Fatal("expected error from unavailable gateway")
 	}
@@ -48,16 +48,17 @@ func TestNewGRPCGatewayReturnsUnavailableWhenNil(t *testing.T) {
 func TestGRPCGatewayFiltersToStarterIntent(t *testing.T) {
 	t.Parallel()
 
-	client := listingClientStub{
-		resp: &listingv1.ListCampaignListingsResponse{
-			Listings: []*listingv1.CampaignListing{
+	client := discoveryClientStub{
+		resp: &discoveryv1.ListDiscoveryEntriesResponse{
+			Entries: []*discoveryv1.DiscoveryEntry{
 				{
-					CampaignId:                 "starter-1",
+					EntryId:                    "starter-1",
+					SourceId:                   "starter-1",
 					Title:                      "Starter Adventure",
 					Description:                "A beginner adventure",
-					Intent:                     listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_STARTER,
-					DifficultyTier:             listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER,
-					GmMode:                     listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_AI,
+					Intent:                     discoveryv1.DiscoveryIntent_DISCOVERY_INTENT_STARTER,
+					DifficultyTier:             discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER,
+					GmMode:                     discoveryv1.DiscoveryGmMode_DISCOVERY_GM_MODE_AI,
 					System:                     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 					ExpectedDurationLabel:      "2-3 sessions",
 					Tags:                       []string{"solo", "beginner"},
@@ -66,16 +67,16 @@ func TestGRPCGatewayFiltersToStarterIntent(t *testing.T) {
 					RecommendedParticipantsMax: 4,
 				},
 				{
-					CampaignId: "standard-1",
-					Title:      "Standard Campaign",
-					Intent:     listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_STANDARD,
+					EntryId: "standard-1",
+					Title:   "Standard Campaign",
+					Intent:  discoveryv1.DiscoveryIntent_DISCOVERY_INTENT_STANDARD,
 				},
 			},
 		},
 	}
 
 	gw := NewGRPCGateway(client)
-	results, err := gw.ListStarterListings(context.Background())
+	results, err := gw.ListStarterEntries(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -113,11 +114,11 @@ func TestGRPCGatewayFiltersToStarterIntent(t *testing.T) {
 func TestGRPCGatewayMapsUnavailableError(t *testing.T) {
 	t.Parallel()
 
-	client := listingClientStub{
+	client := discoveryClientStub{
 		err: status.Error(codes.Unavailable, "service down"),
 	}
 	gw := NewGRPCGateway(client)
-	_, err := gw.ListStarterListings(context.Background())
+	_, err := gw.ListStarterEntries(context.Background())
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -129,9 +130,9 @@ func TestGRPCGatewayMapsUnavailableError(t *testing.T) {
 func TestGRPCGatewayReturnsNilForEmptyResponse(t *testing.T) {
 	t.Parallel()
 
-	client := listingClientStub{resp: &listingv1.ListCampaignListingsResponse{}}
+	client := discoveryClientStub{resp: &discoveryv1.ListDiscoveryEntriesResponse{}}
 	gw := NewGRPCGateway(client)
-	results, err := gw.ListStarterListings(context.Background())
+	results, err := gw.ListStarterEntries(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

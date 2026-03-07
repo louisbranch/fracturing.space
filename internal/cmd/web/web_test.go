@@ -142,7 +142,7 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
 		AIAddr:            "ai:8087",
-		ListingAddr:       "listing:8091",
+		DiscoveryAddr:     "discovery:8091",
 		UserHubAddr:       "userhub:8092",
 		NotificationsAddr: "notifications:8088",
 		AssetBaseURL:      "https://cdn.example.com/assets",
@@ -188,8 +188,8 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 	if bundle.Modules.NotificationClient == nil {
 		t.Fatalf("expected notification client")
 	}
-	if bundle.Modules.ListingClient == nil {
-		t.Fatalf("expected listing client")
+	if bundle.Modules.DiscoveryClient == nil {
+		t.Fatalf("expected discovery client")
 	}
 	if bundle.Principal.AssetBaseURL != "https://cdn.example.com/assets" {
 		t.Fatalf("Principal.AssetBaseURL = %q, want %q", bundle.Principal.AssetBaseURL, "https://cdn.example.com/assets")
@@ -215,7 +215,7 @@ func TestBootstrapDependenciesOptionalFailuresProduceWarnings(t *testing.T) {
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
 		AIAddr:            "ai:8087",
-		ListingAddr:       "listing:8091",
+		DiscoveryAddr:     "discovery:8091",
 		UserHubAddr:       "userhub:8092",
 		NotificationsAddr: "notifications:8088",
 	}, dialer)
@@ -263,7 +263,7 @@ func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
 		AIAddr:            "ai:8087",
-		ListingAddr:       "listing:8091",
+		DiscoveryAddr:     "discovery:8091",
 		UserHubAddr:       "userhub:8092",
 		NotificationsAddr: "notifications:8088",
 	}, dialer)
@@ -325,7 +325,7 @@ func TestBootstrapDependenciesNilConnectionProducesWarning(t *testing.T) {
 		SocialAddr:        "social:8090",
 		GameAddr:          "game:8082",
 		AIAddr:            "ai:8087",
-		ListingAddr:       "listing:8091",
+		DiscoveryAddr:     "discovery:8091",
 		UserHubAddr:       "userhub:8092",
 		NotificationsAddr: "notifications:8088",
 	}, dialer)

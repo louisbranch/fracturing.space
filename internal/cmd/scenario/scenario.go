@@ -10,7 +10,7 @@ import (
 	"time"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	"github.com/louisbranch/fracturing.space/internal/tools/scenario"
 )
 
@@ -30,7 +30,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
-	cfg.GRPCAddr = discovery.OrDefaultGRPCAddr(cfg.GRPCAddr, discovery.ServiceGame)
+	cfg.GRPCAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GRPCAddr, serviceaddr.ServiceGame)
 
 	fs.StringVar(&cfg.GRPCAddr, "grpc-addr", cfg.GRPCAddr, "game server address")
 	fs.StringVar(&cfg.Scenario, "scenario", cfg.Scenario, "path to scenario lua file")

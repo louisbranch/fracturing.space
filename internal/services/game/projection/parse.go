@@ -29,7 +29,7 @@ func parseGameSystem(value string) (commonv1.GameSystem, error) {
 }
 
 // parseCampaignStatus enforces campaign status vocabulary before applying
-// projected state changes that power campaign listing and filtering surfaces.
+// projected state changes that power discovery entry and filtering surfaces.
 func parseCampaignStatus(value string) (campaign.Status, error) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {

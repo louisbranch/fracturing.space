@@ -34,9 +34,9 @@ FROM base AS build-social
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/social ./cmd/social
 
-FROM base AS build-listing
+FROM base AS build-discovery
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/listing ./cmd/listing
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/discovery ./cmd/discovery
 
 FROM base AS build-web
 
@@ -116,15 +116,15 @@ EXPOSE 8090
 
 ENTRYPOINT ["/app/social"]
 
-FROM gcr.io/distroless/static-debian12:nonroot AS listing
+FROM gcr.io/distroless/static-debian12:nonroot AS discovery
 
 WORKDIR /app
 
-COPY --from=build-listing /out/listing /app/listing
+COPY --from=build-discovery /out/discovery /app/discovery
 
 EXPOSE 8091
 
-ENTRYPOINT ["/app/listing"]
+ENTRYPOINT ["/app/discovery"]
 
 FROM gcr.io/distroless/static-debian12:nonroot AS web
 

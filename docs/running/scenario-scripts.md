@@ -36,7 +36,7 @@ go run ./cmd/scenario -scenario internal/test/game/scenarios/systems/daggerheart
 Using Compose:
 
 ```bash
-COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.discovery.generated.yml"
+COMPOSE="docker compose -f docker-compose.yml -f topology/generated/docker-compose.serviceaddr.generated.yml"
 
 # Terminal 1: Start the game service
 $COMPOSE up -d game

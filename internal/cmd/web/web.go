@@ -12,8 +12,8 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
@@ -21,8 +21,8 @@ import (
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	"github.com/louisbranch/fracturing.space/internal/platform/discovery"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
@@ -40,7 +40,7 @@ type Config struct {
 	SocialAddr          string        `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
 	GameAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"`
 	AIAddr              string        `env:"FRACTURING_SPACE_AI_ADDR"`
-	ListingAddr         string        `env:"FRACTURING_SPACE_LISTING_ADDR"`
+	DiscoveryAddr       string        `env:"FRACTURING_SPACE_DISCOVERY_ADDR"`
 	NotificationsAddr   string        `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`
 	UserHubAddr         string        `env:"FRACTURING_SPACE_USERHUB_ADDR"`
 	StatusAddr          string        `env:"FRACTURING_SPACE_STATUS_ADDR"`
@@ -57,14 +57,14 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if cfg.GRPCDialTimeout <= 0 {
 		cfg.GRPCDialTimeout = timeouts.GRPCDial
 	}
-	cfg.AuthAddr = discovery.OrDefaultGRPCAddr(cfg.AuthAddr, discovery.ServiceAuth)
-	cfg.SocialAddr = discovery.OrDefaultGRPCAddr(cfg.SocialAddr, discovery.ServiceSocial)
-	cfg.GameAddr = discovery.OrDefaultGRPCAddr(cfg.GameAddr, discovery.ServiceGame)
-	cfg.AIAddr = discovery.OrDefaultGRPCAddr(cfg.AIAddr, discovery.ServiceAI)
-	cfg.ListingAddr = discovery.OrDefaultGRPCAddr(cfg.ListingAddr, discovery.ServiceListing)
-	cfg.NotificationsAddr = discovery.OrDefaultGRPCAddr(cfg.NotificationsAddr, discovery.ServiceNotifications)
-	cfg.UserHubAddr = discovery.OrDefaultGRPCAddr(cfg.UserHubAddr, discovery.ServiceUserHub)
-	cfg.StatusAddr = discovery.OrDefaultGRPCAddr(cfg.StatusAddr, discovery.ServiceStatus)
+	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
+	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
+	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
+	cfg.AIAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AIAddr, serviceaddr.ServiceAI)
+	cfg.DiscoveryAddr = serviceaddr.OrDefaultGRPCAddr(cfg.DiscoveryAddr, serviceaddr.ServiceDiscovery)
+	cfg.NotificationsAddr = serviceaddr.OrDefaultGRPCAddr(cfg.NotificationsAddr, serviceaddr.ServiceNotifications)
+	cfg.UserHubAddr = serviceaddr.OrDefaultGRPCAddr(cfg.UserHubAddr, serviceaddr.ServiceUserHub)
+	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
 	fs.StringVar(&cfg.ChatHTTPAddr, "chat-http-addr", cfg.ChatHTTPAddr, "Chat HTTP listen address")
@@ -72,7 +72,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "Social service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
 	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "AI service gRPC address")
-	fs.StringVar(&cfg.ListingAddr, "listing-addr", cfg.ListingAddr, "Listing service gRPC address")
+	fs.StringVar(&cfg.DiscoveryAddr, "discovery-addr", cfg.DiscoveryAddr, "Discovery service gRPC address")
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "Notifications service gRPC address")
 	fs.StringVar(&cfg.UserHubAddr, "userhub-addr", cfg.UserHubAddr, "Userhub service gRPC address")
 	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "Asset base URL for image delivery")
@@ -168,10 +168,10 @@ func bootstrapDependencies(
 			},
 		},
 		{
-			name:    "listing",
-			address: cfg.ListingAddr,
+			name:    "discovery",
+			address: cfg.DiscoveryAddr,
 			setInput: func(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-				m.ListingClient = listingv1.NewCampaignListingServiceClient(conn)
+				m.DiscoveryClient = discoveryv1.NewDiscoveryServiceClient(conn)
 			},
 		},
 		{
@@ -224,7 +224,7 @@ func dependencyStatusWarnings(statuses map[string]dependencyStatus) []string {
 	if len(statuses) == 0 {
 		return nil
 	}
-	order := []string{"auth", "social", "game", "ai", "listing", "userhub", "notifications"}
+	order := []string{"auth", "social", "game", "ai", "discovery", "userhub", "notifications"}
 	warnings := make([]string, 0, len(statuses))
 	for _, name := range order {
 		status, ok := statuses[name]
@@ -298,7 +298,7 @@ func Run(ctx context.Context, cfg Config) error {
 			statusClient = statusv1.NewStatusServiceClient(statusConn)
 		}
 		reporter := platformstatus.NewReporter("web", statusClient)
-		for _, dep := range []string{"auth", "social", "game", "ai", "listing", "userhub", "notifications"} {
+		for _, dep := range []string{"auth", "social", "game", "ai", "discovery", "userhub", "notifications"} {
 			capName := "web." + dep + ".integration"
 			if s, ok := statuses[dep]; ok && s.State == dependencyDialStateConnected {
 				reporter.Register(capName, platformstatus.Operational)

@@ -13,7 +13,7 @@ type Module struct {
 	gateway Gateway
 }
 
-// New returns a discovery module with no listing backend (fail-closed).
+// New returns a discovery module with no discovery backend (fail-closed).
 func New() Module { return Module{} }
 
 // NewWithGateway returns a discovery module backed by the given gateway.

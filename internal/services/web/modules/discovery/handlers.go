@@ -24,14 +24,14 @@ func newHandlers(base publichandler.Base, gw Gateway) handlers {
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
 
-	var listings []webtemplates.StarterListingView
+	var entries []webtemplates.StarterEntryView
 	if h.gateway != nil {
-		results, err := h.gateway.ListStarterListings(r.Context())
+		results, err := h.gateway.ListStarterEntries(r.Context())
 		if err != nil {
-			log.Printf("discovery: list starter listings: %v", err)
+			log.Printf("discovery: list starter entries: %v", err)
 			// Render empty list on error — soft degradation.
 		} else {
-			listings = mapListingsToView(results)
+			entries = mapEntriesToView(results)
 		}
 	}
 
@@ -42,28 +42,28 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 		webtemplates.T(loc, "layout.meta_description"),
 		lang,
 		http.StatusOK,
-		webtemplates.DiscoveryFragment(listings, loc),
+		webtemplates.DiscoveryFragment(entries, loc),
 	)
 }
 
-// mapListingsToView converts gateway domain types to template view types.
-func mapListingsToView(listings []StarterListing) []webtemplates.StarterListingView {
-	if len(listings) == 0 {
+// mapEntriesToView converts gateway domain types to template view types.
+func mapEntriesToView(entries []StarterEntry) []webtemplates.StarterEntryView {
+	if len(entries) == 0 {
 		return nil
 	}
-	views := make([]webtemplates.StarterListingView, len(listings))
-	for i, l := range listings {
-		views[i] = webtemplates.StarterListingView{
-			CampaignID:  l.CampaignID,
-			Title:       l.Title,
-			Description: l.Description,
-			Tags:        l.Tags,
-			Difficulty:  l.Difficulty,
-			Duration:    l.Duration,
-			GmMode:      l.GmMode,
-			System:      l.System,
-			Level:       l.Level,
-			Players:     l.Players,
+	views := make([]webtemplates.StarterEntryView, len(entries))
+	for i, entry := range entries {
+		views[i] = webtemplates.StarterEntryView{
+			CampaignID:  entry.CampaignID,
+			Title:       entry.Title,
+			Description: entry.Description,
+			Tags:        entry.Tags,
+			Difficulty:  entry.Difficulty,
+			Duration:    entry.Duration,
+			GmMode:      entry.GmMode,
+			System:      entry.System,
+			Level:       entry.Level,
+			Players:     entry.Players,
 		}
 	}
 	return views

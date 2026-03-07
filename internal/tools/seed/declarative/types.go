@@ -7,11 +7,11 @@ import (
 
 // Manifest defines a declarative seed graph.
 type Manifest struct {
-	Name      string             `json:"name"`
-	Users     []ManifestUser     `json:"users"`
-	Campaigns []ManifestCampaign `json:"campaigns"`
-	Forks     []ManifestFork     `json:"forks"`
-	Listings  []ManifestListing  `json:"listings"`
+	Name             string                   `json:"name"`
+	Users            []ManifestUser           `json:"users"`
+	Campaigns        []ManifestCampaign       `json:"campaigns"`
+	Forks            []ManifestFork           `json:"forks"`
+	DiscoveryEntries []ManifestDiscoveryEntry `json:"discovery_entries"`
 }
 
 // ManifestUser defines one auth identity and optional social profile.
@@ -49,10 +49,10 @@ type ManifestCampaign struct {
 
 	// Deprecated inline fork fields retained only for backwards compatibility;
 	// use Manifest.Forks for new declarations.
-	ForkFrom      string           `json:"fork_from,omitempty"`
-	ForkEventSeq  uint64           `json:"fork_event_seq,omitempty"`
-	ForkSessionID string           `json:"fork_session_id,omitempty"`
-	Listing       *ManifestListing `json:"listing,omitempty"`
+	ForkFrom       string                  `json:"fork_from,omitempty"`
+	ForkEventSeq   uint64                  `json:"fork_event_seq,omitempty"`
+	ForkSessionID  string                  `json:"fork_session_id,omitempty"`
+	DiscoveryEntry *ManifestDiscoveryEntry `json:"discovery_entry,omitempty"`
 }
 
 // ManifestParticipant defines one participant seat declaration.
@@ -91,8 +91,8 @@ type ManifestFork struct {
 	SessionID         string `json:"session_id,omitempty"`
 }
 
-// ManifestListing defines one listing declaration.
-type ManifestListing struct {
+// ManifestDiscoveryEntry defines one discovery-entry declaration.
+type ManifestDiscoveryEntry struct {
 	CampaignKey                string   `json:"campaign_key"`
 	Title                      string   `json:"title"`
 	Description                string   `json:"description"`

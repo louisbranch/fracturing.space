@@ -1,7 +1,7 @@
 package templates
 
-// StarterListingView holds template data for a single starter listing card.
-type StarterListingView struct {
+// StarterEntryView holds template data for a single starter discovery-entry card.
+type StarterEntryView struct {
 	CampaignID  string
 	Title       string
 	Description string
@@ -14,17 +14,17 @@ type StarterListingView struct {
 	Players     string
 }
 
-templ DiscoveryFragment(listings []StarterListingView, loc Localizer) {
+templ DiscoveryFragment(entries []StarterEntryView, loc Localizer) {
 	<div id="discover-root">
 		<section class="container py-8">
 			<h1 class="text-2xl font-bold">{ T(loc, "web.discovery.title") }</h1>
 			<p class="mt-1 opacity-70">{ T(loc, "web.discovery.subtitle") }</p>
 			<div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-				if len(listings) == 0 {
+				if len(entries) == 0 {
 					<p class="col-span-full opacity-60">{ T(loc, "web.discovery.empty") }</p>
 				}
-				for _, item := range listings {
-					<article class="card bg-base-100 border border-base-300 shadow-sm" data-listing-id={ item.CampaignID }>
+				for _, item := range entries {
+					<article class="card bg-base-100 border border-base-300 shadow-sm" data-entry-id={ item.CampaignID }>
 						<div class="card-body gap-2">
 							<h2 class="card-title text-lg">{ item.Title }</h2>
 							if item.Description != "" {

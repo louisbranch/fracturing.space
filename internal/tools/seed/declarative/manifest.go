@@ -177,28 +177,28 @@ func ValidateManifest(manifest Manifest) error {
 		}
 	}
 
-	for i, listing := range manifest.Listings {
-		campaignKey := strings.TrimSpace(listing.CampaignKey)
+	for i, discoveryEntry := range manifest.DiscoveryEntries {
+		campaignKey := strings.TrimSpace(discoveryEntry.CampaignKey)
 		if campaignKey == "" {
-			return fmt.Errorf("listings[%d].campaign_key is required", i)
+			return fmt.Errorf("discovery_entries[%d].campaign_key is required", i)
 		}
 		if _, exists := campaignKeys[campaignKey]; !exists {
-			return fmt.Errorf("listings[%d].campaign_key %q is not declared in campaigns", i, campaignKey)
+			return fmt.Errorf("discovery_entries[%d].campaign_key %q is not declared in campaigns", i, campaignKey)
 		}
-		if strings.TrimSpace(listing.Title) == "" {
-			return fmt.Errorf("listings[%d].title is required", i)
+		if strings.TrimSpace(discoveryEntry.Title) == "" {
+			return fmt.Errorf("discovery_entries[%d].title is required", i)
 		}
-		if strings.TrimSpace(listing.Description) == "" {
-			return fmt.Errorf("listings[%d].description is required", i)
+		if strings.TrimSpace(discoveryEntry.Description) == "" {
+			return fmt.Errorf("discovery_entries[%d].description is required", i)
 		}
-		if strings.TrimSpace(listing.ExpectedDurationLabel) == "" {
-			return fmt.Errorf("listings[%d].expected_duration_label is required", i)
+		if strings.TrimSpace(discoveryEntry.ExpectedDurationLabel) == "" {
+			return fmt.Errorf("discovery_entries[%d].expected_duration_label is required", i)
 		}
-		if listing.RecommendedParticipantsMin <= 0 {
-			return fmt.Errorf("listings[%d].recommended_participants_min must be > 0", i)
+		if discoveryEntry.RecommendedParticipantsMin <= 0 {
+			return fmt.Errorf("discovery_entries[%d].recommended_participants_min must be > 0", i)
 		}
-		if listing.RecommendedParticipantsMax < listing.RecommendedParticipantsMin {
-			return fmt.Errorf("listings[%d].recommended_participants_max must be >= min", i)
+		if discoveryEntry.RecommendedParticipantsMax < discoveryEntry.RecommendedParticipantsMin {
+			return fmt.Errorf("discovery_entries[%d].recommended_participants_max must be >= min", i)
 		}
 	}
 

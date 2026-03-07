@@ -10,8 +10,8 @@ import (
 	templruntime "github.com/a-h/templ/runtime"
 )
 
-// StarterListingView holds template data for a single starter listing card.
-type StarterListingView struct {
+// StarterEntryView holds template data for a single starter discovery-entry card.
+type StarterEntryView struct {
 	CampaignID  string
 	Title       string
 	Description string
@@ -24,7 +24,7 @@ type StarterListingView struct {
 	Players     string
 }
 
-func DiscoveryFragment(listings []StarterListingView, loc Localizer) templ.Component {
+func DiscoveryFragment(entries []StarterEntryView, loc Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -75,7 +75,7 @@ func DiscoveryFragment(listings []StarterListingView, loc Localizer) templ.Compo
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if len(listings) == 0 {
+		if len(entries) == 0 {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<p class=\"col-span-full opacity-60\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -94,15 +94,15 @@ func DiscoveryFragment(listings []StarterListingView, loc Localizer) templ.Compo
 				return templ_7745c5c3_Err
 			}
 		}
-		for _, item := range listings {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<article class=\"card bg-base-100 border border-base-300 shadow-sm\" data-listing-id=\"")
+		for _, item := range entries {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<article class=\"card bg-base-100 border border-base-300 shadow-sm\" data-entry-id=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(item.CampaignID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/discovery.templ`, Line: 27, Col: 105}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/discovery.templ`, Line: 27, Col: 103}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {

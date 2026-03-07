@@ -15,7 +15,7 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-// CampaignClient exposes campaign listing, lookup, and creation from the game service.
+// CampaignClient exposes discovery entry, lookup, and creation from the game service.
 type CampaignClient interface {
 	ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error)
 	GetCampaign(context.Context, *statev1.GetCampaignRequest, ...grpc.CallOption) (*statev1.GetCampaignResponse, error)

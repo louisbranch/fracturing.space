@@ -6,18 +6,18 @@ import (
 	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	listingv1 "github.com/louisbranch/fracturing.space/api/gen/go/listing/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 )
 
-// ListingClient exposes listing operations needed by the discovery module.
-type ListingClient interface {
-	ListCampaignListings(ctx context.Context, in *listingv1.ListCampaignListingsRequest, opts ...grpc.CallOption) (*listingv1.ListCampaignListingsResponse, error)
+// DiscoveryClient exposes discovery operations needed by the discovery module.
+type DiscoveryClient interface {
+	ListDiscoveryEntries(ctx context.Context, in *discoveryv1.ListDiscoveryEntriesRequest, opts ...grpc.CallOption) (*discoveryv1.ListDiscoveryEntriesResponse, error)
 }
 
-// StarterListing is a presentation-ready listing card for the discovery page.
-type StarterListing struct {
+// StarterEntry is a presentation-ready discovery-entry card for the discovery page.
+type StarterEntry struct {
 	CampaignID  string
 	Title       string
 	Description string
@@ -30,19 +30,19 @@ type StarterListing struct {
 	Players     string
 }
 
-// Gateway abstracts listing data access for the discovery module.
+// Gateway abstracts discovery-entry data access for the discovery module.
 type Gateway interface {
-	ListStarterListings(ctx context.Context) ([]StarterListing, error)
+	ListStarterEntries(ctx context.Context) ([]StarterEntry, error)
 }
 
-// GRPCGateway implements Gateway backed by the listing gRPC service.
+// GRPCGateway implements Gateway backed by the discovery gRPC service.
 type GRPCGateway struct {
-	client ListingClient
+	client DiscoveryClient
 }
 
-// NewGRPCGateway returns a Gateway backed by the given listing client.
+// NewGRPCGateway returns a Gateway backed by the given discovery client.
 // Returns an unavailable gateway when client is nil (fail-closed).
-func NewGRPCGateway(client ListingClient) Gateway {
+func NewGRPCGateway(client DiscoveryClient) Gateway {
 	if client == nil {
 		return unavailableGateway{}
 	}
@@ -58,43 +58,48 @@ func IsGatewayHealthy(gw Gateway) bool {
 	return !unavailable
 }
 
-// unavailableGateway is a fail-closed Gateway returned when the listing client is nil.
+// unavailableGateway is a fail-closed Gateway returned when the discovery client is nil.
 type unavailableGateway struct{}
 
-// ListStarterListings always returns an unavailable error.
-func (unavailableGateway) ListStarterListings(context.Context) ([]StarterListing, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "listing service client is not configured")
+// ListStarterEntries always returns an unavailable error.
+func (unavailableGateway) ListStarterEntries(context.Context) ([]StarterEntry, error) {
+	return nil, apperrors.E(apperrors.KindUnavailable, "discovery service client is not configured")
 }
 
-// ListStarterListings fetches campaign listings and filters to starter intent.
-func (g GRPCGateway) ListStarterListings(ctx context.Context) ([]StarterListing, error) {
-	resp, err := g.client.ListCampaignListings(ctx, &listingv1.ListCampaignListingsRequest{
+// ListStarterEntries fetches discovery entries and filters to starter intent.
+func (g GRPCGateway) ListStarterEntries(ctx context.Context) ([]StarterEntry, error) {
+	resp, err := g.client.ListDiscoveryEntries(ctx, &discoveryv1.ListDiscoveryEntriesRequest{
 		PageSize: 50,
+		Kind:     discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
 	})
 	if err != nil {
 		return nil, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnavailable,
-			FallbackMessage: "listing service is unavailable",
+			FallbackMessage: "discovery service is unavailable",
 		})
 	}
 	if resp == nil {
 		return nil, nil
 	}
 
-	var results []StarterListing
-	for _, listing := range resp.GetListings() {
-		if listing.GetIntent() != listingv1.CampaignListingIntent_CAMPAIGN_LISTING_INTENT_STARTER {
+	var results []StarterEntry
+	for _, entry := range resp.GetEntries() {
+		if entry.GetIntent() != discoveryv1.DiscoveryIntent_DISCOVERY_INTENT_STARTER {
 			continue
 		}
-		results = append(results, mapProtoToStarterListing(listing))
+		results = append(results, mapProtoToStarterEntry(entry))
 	}
 	return results, nil
 }
 
-// mapProtoToStarterListing converts a proto CampaignListing to a presentation-ready StarterListing.
-func mapProtoToStarterListing(l *listingv1.CampaignListing) StarterListing {
-	return StarterListing{
-		CampaignID:  strings.TrimSpace(l.GetCampaignId()),
+// mapProtoToStarterEntry converts a proto DiscoveryEntry to a presentation-ready StarterEntry.
+func mapProtoToStarterEntry(l *discoveryv1.DiscoveryEntry) StarterEntry {
+	campaignID := strings.TrimSpace(l.GetSourceId())
+	if campaignID == "" {
+		campaignID = strings.TrimSpace(l.GetEntryId())
+	}
+	return StarterEntry{
+		CampaignID:  campaignID,
 		Title:       strings.TrimSpace(l.GetTitle()),
 		Description: strings.TrimSpace(l.GetDescription()),
 		Tags:        l.GetTags(),
@@ -108,13 +113,13 @@ func mapProtoToStarterListing(l *listingv1.CampaignListing) StarterListing {
 }
 
 // difficultyLabel maps a proto difficulty tier to a display string.
-func difficultyLabel(tier listingv1.CampaignDifficultyTier) string {
+func difficultyLabel(tier discoveryv1.DiscoveryDifficultyTier) string {
 	switch tier {
-	case listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_BEGINNER:
+	case discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER:
 		return "Beginner"
-	case listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_INTERMEDIATE:
+	case discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_INTERMEDIATE:
 		return "Intermediate"
-	case listingv1.CampaignDifficultyTier_CAMPAIGN_DIFFICULTY_TIER_ADVANCED:
+	case discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_ADVANCED:
 		return "Advanced"
 	default:
 		return ""
@@ -122,13 +127,13 @@ func difficultyLabel(tier listingv1.CampaignDifficultyTier) string {
 }
 
 // gmModeLabel maps a proto GM mode to a display string.
-func gmModeLabel(mode listingv1.CampaignListingGmMode) string {
+func gmModeLabel(mode discoveryv1.DiscoveryGmMode) string {
 	switch mode {
-	case listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_HUMAN:
+	case discoveryv1.DiscoveryGmMode_DISCOVERY_GM_MODE_HUMAN:
 		return "Human"
-	case listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_AI:
+	case discoveryv1.DiscoveryGmMode_DISCOVERY_GM_MODE_AI:
 		return "AI"
-	case listingv1.CampaignListingGmMode_CAMPAIGN_LISTING_GM_MODE_HYBRID:
+	case discoveryv1.DiscoveryGmMode_DISCOVERY_GM_MODE_HYBRID:
 		return "Hybrid"
 	default:
 		return ""
