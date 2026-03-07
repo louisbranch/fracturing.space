@@ -41,78 +41,131 @@ templ ScenarioScriptPanel(view ScenarioPageView, loc Localizer) {
 						<p class="text-xs opacity-60 mt-2">{T(loc, "scenarios.script.hint")}</p>
 					</div>
 					<button class="btn btn-soft" type="submit">{T(loc, "scenarios.script.submit")}</button>
-					</form>
+				</form>
 			</div>
 			<div>
 				<h4>{T(loc, "scenarios.cheatsheet.heading")}</h4>
 				<div class="tabs tabs-lift">
 					<label class="tab">
 						<input type="radio" name="cheatsheet-tabs" checked />
-					@sharedtemplates.LucideIcon("book-open", "size-4 me-2")
-						{T(loc, "scenarios.cheatsheet.basics")}
+						@sharedtemplates.LucideIcon("book-open", "size-4 me-2")
+						{T(loc, "scenarios.cheatsheet.setup")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
-						<p class="text-xs opacity-70 mb-3">Quick start for building a scenario with a campaign and participants.</p>
-						<div class="space-y-2 font-mono">
-							<div><code>local scn = Scenario.new("My Scenario")</code></div>
-							<div><code>local dh = scn:system("DAGGERHEART")</code></div>
-							<div><code>scn:campaign(&#123;name = "Test", system = "DAGGERHEART"&#125;)</code></div>
-							<div><code>scn:participant(&#123;name = "Ada", role = "GM", controller = "AI"&#125;)</code></div>
-							<div><code>scn:participant(&#123;name = "John"&#125;):character(&#123;name = "Frodo"&#125;)</code></div>
-							<div><code>return scn</code></div>
-						</div>
+						<p class="text-xs opacity-70 mb-3">Bootstrapping a scenario, campaign, and cast.</p>
+						<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-secondary">local</span> <span class="text-info">scn</span> = <span class="text-primary">Scenario</span>.<span class="text-primary">new</span>(<span class="text-success">"Market Run"</span>)<br/>
+<span class="text-secondary">local</span> <span class="text-info">dh</span> = <span class="text-info">scn</span>:<span class="text-primary">system</span>(<span class="text-success">"DAGGERHEART"</span>)<br/>
+<br/>
+<span class="text-info">scn</span>:<span class="text-primary">campaign</span>&#123;name = <span class="text-success">"Market Run"</span>, system = <span class="text-success">"DAGGERHEART"</span>, gm_mode = <span class="text-success">"HUMAN"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">participant</span>&#123;name = <span class="text-success">"John"</span>&#125;:<span class="text-primary">character</span>&#123;name = <span class="text-success">"Frodo"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">pc</span>(<span class="text-success">"Sam"</span>)<br/>
+<span class="text-secondary">return</span> <span class="text-info">scn</span></code></pre>
+						<details class="mt-3">
+							<summary class="cursor-pointer list-none mb-2">
+								<span class="inline-flex items-center gap-2 rounded-md bg-base-100 px-2 py-1 text-xs opacity-80">
+									@sharedtemplates.LucideIcon("list", "size-3.5")
+									<span>More setup commands</span>
+									@sharedtemplates.LucideIcon("chevron-down", "size-3.5")
+								</span>
+							</summary>
+							<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">scn</span>:<span class="text-primary">npc</span>(<span class="text-success">"Bandit Scout"</span>)<br/>
+<span class="text-info">scn</span>:<span class="text-primary">prefab</span>(<span class="text-success">"frodo"</span>)<br/>
+<span class="text-info">scn</span>:<span class="text-primary">participant</span>&#123;name = <span class="text-success">"Mina"</span>, role = <span class="text-success">"PLAYER"</span>, controller = <span class="text-success">"HUMAN"</span>&#125;</code></pre>
+						</details>
 					</div>
 					<label class="tab">
 						<input type="radio" name="cheatsheet-tabs" />
-					@sharedtemplates.LucideIcon("users", "size-4 me-2")
-						{T(loc, "scenarios.cheatsheet.characters")}
+						@sharedtemplates.LucideIcon("calendar-days", "size-4 me-2")
+						{T(loc, "scenarios.cheatsheet.gameplay")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
-						<p class="text-xs opacity-70 mb-3">Create PCs and NPCs and reference them later in the script.</p>
-						<div class="space-y-2 font-mono">
-							<div><code>scn:participant(&#123;name = "John"&#125;):character(&#123;name = "Frodo"&#125;)</code></div>
-							<div><code>scn:participant(&#123;name = "Ada", role = "GM", controller = "AI"&#125;):character(&#123;name = "Sam", kind = "NPC", control = "gm"&#125;)</code></div>
-							<div><code>scn:pc("Frodo")</code></div>
-							<div><code>scn:npc("Sam")</code></div>
-						</div>
+						<p class="text-xs opacity-70 mb-3">Session, scene, and spotlight flow for moment-to-moment play.</p>
+						<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">scn</span>:<span class="text-primary">start_session</span>(<span class="text-success">"Act 1"</span>)<br/>
+<span class="text-info">scn</span>:<span class="text-primary">create_scene</span>&#123;name = <span class="text-success">"Town Gate"</span>, characters = &#123;<span class="text-success">"Frodo"</span>, <span class="text-success">"Sam"</span>&#125;&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">scene_set_spotlight</span>&#123;scene = <span class="text-success">"Town Gate"</span>, type = <span class="text-success">"character"</span>, target = <span class="text-success">"Frodo"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">scene_gate_open</span>&#123;scene = <span class="text-success">"Town Gate"</span>, gate_type = <span class="text-success">"decision"</span>, gate_id = <span class="text-success">"gate-1"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">scene_gate_resolve</span>&#123;scene = <span class="text-success">"Town Gate"</span>, gate_id = <span class="text-success">"gate-1"</span>, decision = <span class="text-success">"allow"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">scene_transition</span>&#123;scene = <span class="text-success">"Town Gate"</span>, name = <span class="text-success">"Market Square"</span>, description = <span class="text-success">"Crowded and loud"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">end_scene</span>&#123;name = <span class="text-success">"Market Square"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">end_session</span>()</code></pre>
+						<details class="mt-3">
+							<summary class="cursor-pointer list-none mb-2">
+								<span class="inline-flex items-center gap-2 rounded-md bg-base-100 px-2 py-1 text-xs opacity-80">
+									@sharedtemplates.LucideIcon("list", "size-3.5")
+									<span>More gameplay commands</span>
+									@sharedtemplates.LucideIcon("chevron-down", "size-3.5")
+								</span>
+							</summary>
+							<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">scn</span>:<span class="text-primary">scene_transfer_character</span>&#123;from_scene = <span class="text-success">"Mines"</span>, to_scene = <span class="text-success">"Forest"</span>, character = <span class="text-success">"Sam"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">scene_add_character</span>&#123;scene = <span class="text-success">"Market Square"</span>, character = <span class="text-success">"Aragorn"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">scene_remove_character</span>&#123;scene = <span class="text-success">"Market Square"</span>, character = <span class="text-success">"Sam"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">scene_gate_abandon</span>&#123;scene = <span class="text-success">"Town Gate"</span>, gate_id = <span class="text-success">"gate-1"</span>, reason = <span class="text-success">"retreat"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">update_scene</span>&#123;scene = <span class="text-success">"Town Gate"</span>, description = <span class="text-success">"Reinforcements arrive"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">set_spotlight</span>&#123;target = <span class="text-success">"Frodo"</span>&#125;<br/>
+<span class="text-info">scn</span>:<span class="text-primary">clear_spotlight</span>()</code></pre>
+						</details>
 					</div>
 					<label class="tab">
 						<input type="radio" name="cheatsheet-tabs" />
-					@sharedtemplates.LucideIcon("calendar-days", "size-4 me-2")
-						{T(loc, "scenarios.cheatsheet.sessions")}
+						@sharedtemplates.LucideIcon("swords", "size-4 me-2")
+						{T(loc, "scenarios.cheatsheet.encounters")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
-						<p class="text-xs opacity-70 mb-3">Control the active session lifecycle for the scenario.</p>
-						<div class="space-y-2 font-mono">
-							<div><code>scn:start_session("Session 1")</code></div>
-							<div><code>scn:end_session()</code></div>
-						</div>
+						<p class="text-xs opacity-70 mb-3">Adversaries, fear economy, and combat resolution.</p>
+						<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">dh</span>:<span class="text-primary">adversary</span>(<span class="text-success">"Nazgul"</span>)<br/>
+<span class="text-info">dh</span>:<span class="text-primary">gm_fear</span>(2)<br/>
+<span class="text-info">dh</span>:<span class="text-primary">gm_spend_fear</span>(1):<span class="text-primary">spotlight</span>(<span class="text-success">"Nazgul"</span>)<br/>
+<br/>
+<span class="text-info">dh</span>:<span class="text-primary">attack</span>&#123;actor = <span class="text-success">"Frodo"</span>, target = <span class="text-success">"Nazgul"</span>, trait = <span class="text-success">"strength"</span>, difficulty = 13, outcome = <span class="text-success">"hope"</span>, damage_type = <span class="text-success">"physical"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">adversary_attack</span>&#123;actor = <span class="text-success">"Nazgul"</span>, target = <span class="text-success">"Frodo"</span>, difficulty = 0, damage_type = <span class="text-success">"physical"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">reaction_roll</span>&#123;actor = <span class="text-success">"Frodo"</span>, trait = <span class="text-success">"agility"</span>, difficulty = 14, outcome = <span class="text-success">"hope"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">apply_reaction_outcome</span>&#123;&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">apply_condition</span>&#123;target = <span class="text-success">"Nazgul"</span>, add = &#123;<span class="text-success">"VULNERABLE"</span>&#125;&#125;</code></pre>
+						<details class="mt-3">
+							<summary class="cursor-pointer list-none mb-2">
+								<span class="inline-flex items-center gap-2 rounded-md bg-base-100 px-2 py-1 text-xs opacity-80">
+									@sharedtemplates.LucideIcon("list", "size-3.5")
+									<span>More encounter commands</span>
+									@sharedtemplates.LucideIcon("chevron-down", "size-3.5")
+								</span>
+							</summary>
+							<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">dh</span>:<span class="text-primary">adversary_update</span>&#123;target = <span class="text-success">"Nazgul"</span>, stress_delta = 1, notes = <span class="text-success">"rallies_to_pressure"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">combined_damage</span>&#123;target = <span class="text-success">"Nazgul"</span>, damage_type = <span class="text-success">"physical"</span>, sources = &#123;&#123;character = <span class="text-success">"Frodo"</span>, amount = 6&#125;, &#123;character = <span class="text-success">"Sam"</span>, amount = 5&#125;&#125;&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">temporary_armor</span>&#123;target = <span class="text-success">"Frodo"</span>, source = <span class="text-success">"warding"</span>, duration = <span class="text-success">"short_rest"</span>, amount = 1&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">multi_attack</span>&#123;actor = <span class="text-success">"Nazgul"</span>, targets = &#123;<span class="text-success">"Frodo"</span>, <span class="text-success">"Sam"</span>&#125;, difficulty = 13, outcome = <span class="text-success">"fear"</span>, damage_type = <span class="text-success">"physical"</span>&#125;</code></pre>
+						</details>
 					</div>
 					<label class="tab">
 						<input type="radio" name="cheatsheet-tabs" />
-					@sharedtemplates.LucideIcon("sparkles", "size-4 me-2")
-						{T(loc, "scenarios.cheatsheet.spotlight")}
+						@sharedtemplates.LucideIcon("dices", "size-4 me-2")
+						{T(loc, "scenarios.cheatsheet.non_combat")}
 					</label>
 					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
-						<p class="text-xs opacity-70 mb-3">Focus the spotlight on a character or clear it.</p>
-						<div class="space-y-2 font-mono">
-							<div><code>scn:set_spotlight(&#123;target = "Frodo"&#125;)</code></div>
-							<div><code>scn:clear_spotlight()</code></div>
-						</div>
-					</div>
-					<label class="tab">
-						<input type="radio" name="cheatsheet-tabs" />
-					@sharedtemplates.LucideIcon("dices", "size-4 me-2")
-						{T(loc, "scenarios.cheatsheet.actions")}
-					</label>
-					<div class="tab-content bg-base-200 border-base-300 p-4 text-sm overflow-y-auto max-h-100">
-						<p class="text-xs opacity-70 mb-3">Trigger action, reaction, and damage rolls.</p>
-						<div class="space-y-2 font-mono">
-							<div><code>local dh = scn:system("DAGGERHEART")</code></div>
-							<div><code>dh:action_roll(&#123;actor = "Frodo", modifier = Modifiers.mod("bonus", 1)&#125;)</code></div>
-							<div><code>dh:reaction_roll(&#123;actor = "Frodo"&#125;)</code></div>
-							<div><code>dh:damage_roll(&#123;actor = "Frodo"&#125;)</code></div>
-						</div>
+						<p class="text-xs opacity-70 mb-3">Actions, clocks, and recovery outside direct combat.</p>
+						<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">dh</span>:<span class="text-primary">countdown_create</span>&#123;name = <span class="text-success">"Escape Route"</span>, kind = <span class="text-success">"progress"</span>, current = 0, max = 4, direction = <span class="text-success">"increase"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">action_roll</span>&#123;actor = <span class="text-success">"Frodo"</span>, trait = <span class="text-success">"finesse"</span>, difficulty = 14, outcome = <span class="text-success">"hope"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">apply_roll_outcome</span>&#123;<br/>
+on_success = &#123;&#123;kind = <span class="text-success">"countdown_update"</span>, name = <span class="text-success">"Escape Route"</span>, delta = 1, reason = <span class="text-success">"gain_ground"</span>&#125;&#125;,<br/>
+&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">group_action</span>&#123;<br/>
+leader = <span class="text-success">"Frodo"</span>, leader_trait = <span class="text-success">"instinct"</span>, difficulty = 12,<br/>
+supporters = &#123;&#123;name = <span class="text-success">"Sam"</span>, trait = <span class="text-success">"agility"</span>&#125;&#125;<br/>
+&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">rest</span>&#123;type = <span class="text-success">"short"</span>, party_size = 2&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">downtime_move</span>&#123;target = <span class="text-success">"Frodo"</span>, move = <span class="text-success">"prepare"</span>&#125;</code></pre>
+						<details class="mt-3">
+							<summary class="cursor-pointer list-none mb-2">
+								<span class="inline-flex items-center gap-2 rounded-md bg-base-100 px-2 py-1 text-xs opacity-80">
+									@sharedtemplates.LucideIcon("list", "size-3.5")
+									<span>More non-combat commands</span>
+									@sharedtemplates.LucideIcon("chevron-down", "size-3.5")
+								</span>
+							</summary>
+							<pre class="bg-base-100 border border-base-300 rounded-lg p-3 text-xs leading-6 overflow-x-auto"><code class="block whitespace-pre"><span class="text-info">dh</span>:<span class="text-primary">countdown_update</span>&#123;name = <span class="text-success">"Escape Route"</span>, delta = 1, reason = <span class="text-success">"good_lead"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">countdown_delete</span>&#123;name = <span class="text-success">"Escape Route"</span>, reason = <span class="text-success">"resolved"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">reaction</span>&#123;actor = <span class="text-success">"Frodo"</span>, trait = <span class="text-success">"agility"</span>, difficulty = 12, outcome = <span class="text-success">"hope"</span>&#125;<br/>
+<span class="text-info">dh</span>:<span class="text-primary">group_reaction</span>&#123;targets = &#123;<span class="text-success">"Frodo"</span>, <span class="text-success">"Sam"</span>&#125;, trait = <span class="text-success">"agility"</span>, difficulty = 14, damage = 8, source = <span class="text-success">"hail_of_arrows"</span>&#125;</code></pre>
+						</details>
 					</div>
 				</div>
 			</div>

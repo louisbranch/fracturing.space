@@ -82,6 +82,11 @@ dh:gm_fear(1)
 return scn
 ```
 
+Campaign defaults:
+
+- `gm_mode` defaults to `HUMAN` when omitted in `scn:campaign({...})`.
+- `AI`/`HYBRID` campaign modes require a real campaign AI binding before `start_session`.
+
 Use prefab shortcuts for known presets:
 
 ```lua

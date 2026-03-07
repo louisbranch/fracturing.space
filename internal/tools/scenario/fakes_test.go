@@ -103,6 +103,7 @@ type fakeCharacterClient struct {
 	patchProfile      func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error)
 	patchState        func(context.Context, *gamev1.PatchCharacterStateRequest, ...grpc.CallOption) (*gamev1.PatchCharacterStateResponse, error)
 	getSheet          func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error)
+	applyWorkflow     func(context.Context, *gamev1.ApplyCharacterCreationWorkflowRequest, ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error)
 }
 
 func (f *fakeCharacterClient) CreateCharacter(ctx context.Context, in *gamev1.CreateCharacterRequest, opts ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error) {
@@ -160,7 +161,10 @@ func (f *fakeCharacterClient) ApplyCharacterCreationStep(context.Context, *gamev
 	return nil, unimplemented("ApplyCharacterCreationStep")
 }
 
-func (f *fakeCharacterClient) ApplyCharacterCreationWorkflow(context.Context, *gamev1.ApplyCharacterCreationWorkflowRequest, ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error) {
+func (f *fakeCharacterClient) ApplyCharacterCreationWorkflow(ctx context.Context, in *gamev1.ApplyCharacterCreationWorkflowRequest, opts ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error) {
+	if f.applyWorkflow != nil {
+		return f.applyWorkflow(ctx, in, opts...)
+	}
 	return nil, unimplemented("ApplyCharacterCreationWorkflow")
 }
 

@@ -22,6 +22,18 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+const (
+	scenarioReadinessClassID       = "class.guardian"
+	scenarioReadinessSubclassID    = "subclass.stalwart"
+	scenarioReadinessAncestryID    = "heritage.human"
+	scenarioReadinessCommunityID   = "heritage.highborne"
+	scenarioReadinessWeaponID      = "weapon.longsword"
+	scenarioReadinessArmorID       = "armor.gambeson-armor"
+	scenarioReadinessPotionItemID  = "item.minor-health-potion"
+	scenarioReadinessDomainCardID1 = "domain_card.valor-bare-bones"
+	scenarioReadinessDomainCardID2 = "domain_card.valor-forceful-push"
+)
+
 func (r *Runner) failf(format string, args ...any) error {
 	return r.assertions.Failf(format, args...)
 }
@@ -262,12 +274,12 @@ func (r *Runner) ensureDaggerheartCharacterReadiness(
 		SystemWorkflow: &gamev1.ApplyCharacterCreationWorkflowRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartCreationWorkflowInput{
 				ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
-					ClassId:    "class.guardian",
-					SubclassId: "subclass.stalwart",
+					ClassId:    scenarioReadinessClassID,
+					SubclassId: scenarioReadinessSubclassID,
 				},
 				HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
-					AncestryId:  "heritage.human",
-					CommunityId: "heritage.highborne",
+					AncestryId:  scenarioReadinessAncestryID,
+					CommunityId: scenarioReadinessCommunityID,
 				},
 				TraitsInput: &daggerheartv1.DaggerheartCreationStepTraitsInput{
 					Agility:   2,
@@ -279,9 +291,9 @@ func (r *Runner) ensureDaggerheartCharacterReadiness(
 				},
 				DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: "A brave adventurer."},
 				EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{
-					WeaponIds:    []string{"weapon.longsword"},
-					ArmorId:      "armor.readiness-light",
-					PotionItemId: "item.minor-health-potion",
+					WeaponIds:    []string{scenarioReadinessWeaponID},
+					ArmorId:      scenarioReadinessArmorID,
+					PotionItemId: scenarioReadinessPotionItemID,
 				},
 				BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{
 					Background: "scenario background",
@@ -293,7 +305,7 @@ func (r *Runner) ensureDaggerheartCharacterReadiness(
 					},
 				},
 				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{
-					DomainCardIds: []string{"domain_card.valor-bare-bones", "domain_card.valor-forceful-push"},
+					DomainCardIds: []string{scenarioReadinessDomainCardID1, scenarioReadinessDomainCardID2},
 				},
 				ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{
 					Connections: "scenario connections",
