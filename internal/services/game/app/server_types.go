@@ -6,9 +6,7 @@ import (
 	"net"
 	"time"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -22,30 +20,15 @@ type Server struct {
 	grpcServer                               *grpc.Server
 	health                                   *health.Server
 	stores                                   *storageBundle
-	authConn                                 *grpc.ClientConn
-	socialConn                               *grpc.ClientConn
-	aiConn                                   *grpc.ClientConn
-	statusConn                               *grpc.ClientConn
+	authMc                                   *platformgrpc.ManagedConn
+	socialMc                                 *platformgrpc.ManagedConn
+	aiMc                                     *platformgrpc.ManagedConn
+	statusMc                                 *platformgrpc.ManagedConn
 	projectionApplyOutboxWorkerEnabled       bool
 	projectionApplyOutboxApply               func(context.Context, event.Event) error
 	projectionApplyOutboxShadowWorkerEnabled bool
 	statusReporter                           *platformstatus.Reporter
 	catalogReadyAtStartup                    bool
-}
-
-type authGRPCClients struct {
-	conn       *grpc.ClientConn
-	authClient authv1.AuthServiceClient
-}
-
-type socialGRPCClients struct {
-	conn         *grpc.ClientConn
-	socialClient socialv1.SocialServiceClient
-}
-
-type aiGRPCClients struct {
-	conn        *grpc.ClientConn
-	agentClient aiv1.AgentServiceClient
 }
 
 // projectionApplyOutboxShadowProcessor and projectionApplyOutboxProcessor use

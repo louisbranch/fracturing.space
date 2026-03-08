@@ -152,6 +152,61 @@ func TestReporter_convenience_methods(t *testing.T) {
 	}
 }
 
+func TestReporter_SetClient_pushes_accumulated(t *testing.T) {
+	r := NewReporter("game", nil, WithPushInterval(time.Hour))
+	r.Register("game.service", Operational)
+	r.SetDegraded("game.service", "slow")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	stop := r.Start(ctx)
+
+	// No client yet — nothing pushed.
+	time.Sleep(20 * time.Millisecond)
+	client := &fakeClient{}
+	if client.reportCount() != 0 {
+		t.Fatal("expected 0 reports before SetClient")
+	}
+
+	// Bind client — triggers immediate push of accumulated state.
+	r.SetClient(client)
+	time.Sleep(50 * time.Millisecond)
+
+	if client.reportCount() < 1 {
+		t.Fatal("expected at least 1 report after SetClient")
+	}
+	last := client.lastReport()
+	if last.Report.Service != "game" {
+		t.Fatalf("service = %q, want game", last.Report.Service)
+	}
+
+	cancel()
+	stop()
+}
+
+func TestReporter_SetClient_concurrent_safe(t *testing.T) {
+	r := NewReporter("test", nil, WithPushInterval(time.Millisecond))
+	r.Register("cap.a", Operational)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	stop := r.Start(ctx)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			r.SetClient(&fakeClient{})
+			r.Set("cap.a", Degraded, "concurrent")
+			r.SetClient(nil)
+		}()
+	}
+	wg.Wait()
+
+	cancel()
+	stop()
+	// No race detector failures = pass.
+}
+
 func TestReporter_periodic_push(t *testing.T) {
 	client := &fakeClient{}
 	r := NewReporter("game", client, WithPushInterval(10*time.Millisecond))

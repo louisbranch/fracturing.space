@@ -16,7 +16,6 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
-	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
 	aisqlite "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite"
@@ -27,7 +26,10 @@ import (
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-var listenTCP = net.Listen
+var (
+	newManagedConn = platformgrpc.NewManagedConn
+	listenTCP      = net.Listen
+)
 
 // Server hosts the AI service and coordinates gRPC + health serving.
 //
@@ -38,7 +40,7 @@ type Server struct {
 	grpcServer *grpc.Server
 	health     *health.Server
 	store      *aisqlite.Store
-	gameConn   *grpc.ClientConn
+	gameMc     *platformgrpc.ManagedConn
 	closeOnce  sync.Once
 }
 
@@ -109,11 +111,25 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	service := aiservice.NewService(store, store, sealer)
 
-	gameConn, gameClient, gameErr := dialGameGRPC(ctx, cfg.GameAddr)
-	if gameErr != nil {
-		log.Printf("ai: game client unavailable; agent usage guard disabled: %v", gameErr)
-	} else {
-		service.SetGameCampaignAIClient(gameClient)
+	var gameMc *platformgrpc.ManagedConn
+	if gameAddr := strings.TrimSpace(cfg.GameAddr); gameAddr != "" {
+		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+			Name: "game",
+			Addr: gameAddr,
+			Mode: platformgrpc.ModeOptional,
+			Logf: log.Printf,
+			DialOpts: append(
+				platformgrpc.LenientDialOptions(),
+				grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceAI)),
+				grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceAI)),
+			),
+		})
+		if err != nil {
+			log.Printf("ai: game managed conn unavailable; agent usage guard disabled: %v", err)
+		} else {
+			gameMc = mc
+			service.SetGameCampaignAIClient(gamev1.NewCampaignAIServiceClient(mc.Conn()))
+		}
 	}
 
 	service.SetSessionGrantConfig(cfg.SessionGrantConfig)
@@ -145,7 +161,7 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		grpcServer: grpcServer,
 		health:     healthServer,
 		store:      store,
-		gameConn:   gameConn,
+		gameMc:     gameMc,
 	}, nil
 }
 
@@ -232,11 +248,7 @@ func (s *Server) Close() {
 				log.Printf("close ai store: %v", err)
 			}
 		}
-		if s.gameConn != nil {
-			if err := s.gameConn.Close(); err != nil {
-				log.Printf("close ai game conn: %v", err)
-			}
-		}
+		closeManagedConn(s.gameMc, "game")
 	})
 }
 
@@ -267,31 +279,11 @@ func decodeBase64Key(value string) ([]byte, error) {
 	return nil, rawErr
 }
 
-func dialGameGRPC(ctx context.Context, gameAddr string) (*grpc.ClientConn, gamev1.CampaignAIServiceClient, error) {
-	gameAddr = strings.TrimSpace(gameAddr)
-	if gameAddr == "" {
-		return nil, nil, errors.New("game address is required")
+func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
+	if mc == nil {
+		return
 	}
-	if ctx == nil {
-		return nil, nil, errors.New("context is required")
+	if err := mc.Close(); err != nil {
+		log.Printf("close ai %s managed conn: %v", name, err)
 	}
-	logf := func(format string, args ...any) {
-		log.Printf("ai game %s", fmt.Sprintf(format, args...))
-	}
-	conn, err := platformgrpc.DialWithHealth(
-		ctx,
-		nil,
-		gameAddr,
-		timeouts.GRPCDial,
-		logf,
-		append(
-			platformgrpc.DefaultClientDialOptions(),
-			grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceAI)),
-			grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceAI)),
-		)...,
-	)
-	if err != nil {
-		return nil, nil, err
-	}
-	return conn, gamev1.NewCampaignAIServiceClient(conn), nil
 }

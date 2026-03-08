@@ -13,7 +13,6 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
@@ -173,18 +172,6 @@ func TestServerContextAccessors(t *testing.T) {
 	server.setContext(expected)
 	if got := server.getContext(); got != expected {
 		t.Fatalf("expected context %+v, got %+v", expected, got)
-	}
-}
-
-func TestServerWaitForHealthRequiresConn(t *testing.T) {
-	var nilServer *Server
-	if err := nilServer.waitForHealth(context.Background()); err == nil {
-		t.Fatal("expected error")
-	}
-
-	server := &Server{}
-	if err := server.waitForHealth(context.Background()); err == nil {
-		t.Fatal("expected error")
 	}
 }
 
@@ -2742,122 +2729,5 @@ func TestContextResourceHandlerUsesDefaultURI(t *testing.T) {
 	}
 	if result.Contents[0].URI != "context://current" {
 		t.Fatalf("expected URI context://current, got %q", result.Contents[0].URI)
-	}
-}
-
-func TestWaitForHealthSuccess(t *testing.T) {
-	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
-	defer stop()
-
-	conn, err := newGRPCConn(addr)
-	if err != nil {
-		t.Fatalf("dial health server: %v", err)
-	}
-	defer conn.Close()
-
-	server := &Server{conn: conn}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	if err := server.waitForHealth(ctx); err != nil {
-		t.Fatalf("wait for health: %v", err)
-	}
-}
-
-func TestWaitForHealthRetriesUntilServing(t *testing.T) {
-	addr, setStatus, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
-	defer stop()
-
-	conn, err := newGRPCConn(addr)
-	if err != nil {
-		t.Fatalf("dial health server: %v", err)
-	}
-	defer conn.Close()
-
-	server := &Server{conn: conn}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	setStatusTimer := time.NewTimer(200 * time.Millisecond)
-	defer setStatusTimer.Stop()
-	go func() {
-		<-setStatusTimer.C
-		setStatus(grpc_health_v1.HealthCheckResponse_SERVING)
-	}()
-
-	if err := server.waitForHealth(ctx); err != nil {
-		t.Fatalf("wait for health: %v", err)
-	}
-}
-
-func TestWaitForHealthTimeout(t *testing.T) {
-	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
-	defer stop()
-
-	conn, err := newGRPCConn(addr)
-	if err != nil {
-		t.Fatalf("dial health server: %v", err)
-	}
-	defer conn.Close()
-
-	server := &Server{conn: conn}
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
-	defer cancel()
-	if err := server.waitForHealth(ctx); err == nil {
-		t.Fatal("expected timeout error")
-	}
-}
-
-func TestWaitForHealthMissingConn(t *testing.T) {
-	server := &Server{}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	if err := server.waitForHealth(ctx); err == nil {
-		t.Fatal("expected error for missing connection")
-	}
-}
-
-func TestDialGameGRPCConnectError(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-	defer cancel()
-
-	_, err := dialGameGRPC(ctx, "127.0.0.1:1")
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "connect to game server") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestDialGameGRPCUsesDefaultTimeout(t *testing.T) {
-	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
-	defer stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), timeouts.GRPCDial+time.Second)
-	defer cancel()
-
-	start := time.Now()
-	_, err := dialGameGRPC(ctx, addr)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if elapsed := time.Since(start); elapsed > timeouts.GRPCDial+700*time.Millisecond {
-		t.Fatalf("expected default dial timeout to cap health wait, took %v", elapsed)
-	}
-}
-
-func TestDialGameGRPCHealthError(t *testing.T) {
-	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
-	defer stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-
-	_, err := dialGameGRPC(ctx, addr)
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "wait for gRPC health") {
-		t.Fatalf("unexpected error: %v", err)
 	}
 }

@@ -28,18 +28,6 @@ func TestNewServerWithContextRequiresContext(t *testing.T) {
 	}
 }
 
-func TestDialGameGRPCNilContextReturnsError(t *testing.T) {
-	_, err := dialGameGRPC(nil, Config{
-		GameAddr: "127.0.0.1:1",
-	})
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if !strings.Contains(err.Error(), "context is required") {
-		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
 func TestNewHandlerUpEndpoint(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/up", nil)

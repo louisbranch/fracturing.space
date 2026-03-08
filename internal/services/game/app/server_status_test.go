@@ -150,15 +150,12 @@ func TestRunCatalogAvailabilityMonitorPromotesCapabilitiesWhenReady(t *testing.T
 		},
 	}
 
-	reporter := initStatusReporter(
-		nil,
-		true,
-		true,
-		catalogCapabilityState{
-			Ready:  false,
-			Detail: "missing daggerheart catalog sections: classes",
-		},
-	)
+	reporter := platformstatus.NewReporter("game", nil)
+	reporter.Register(capabilityGameCampaignService, platformstatus.Operational)
+	applyCatalogCapabilityState(reporter, catalogCapabilityState{
+		Ready:  false,
+		Detail: "missing daggerheart catalog sections: classes",
+	})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

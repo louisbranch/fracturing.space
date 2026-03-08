@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
@@ -186,24 +187,17 @@ func (s *Server) closeResources() {
 		return
 	}
 	s.stores.Close()
-	if s.authConn != nil {
-		if err := s.authConn.Close(); err != nil {
-			log.Printf("close auth conn: %v", err)
-		}
+	closeManagedConn(s.statusMc, "status")
+	closeManagedConn(s.aiMc, "ai")
+	closeManagedConn(s.socialMc, "social")
+	closeManagedConn(s.authMc, "auth")
+}
+
+func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
+	if mc == nil {
+		return
 	}
-	if s.socialConn != nil {
-		if err := s.socialConn.Close(); err != nil {
-			log.Printf("close social conn: %v", err)
-		}
-	}
-	if s.aiConn != nil {
-		if err := s.aiConn.Close(); err != nil {
-			log.Printf("close ai conn: %v", err)
-		}
-	}
-	if s.statusConn != nil {
-		if err := s.statusConn.Close(); err != nil {
-			log.Printf("close status conn: %v", err)
-		}
+	if err := mc.Close(); err != nil {
+		log.Printf("close %s managed conn: %v", name, err)
 	}
 }

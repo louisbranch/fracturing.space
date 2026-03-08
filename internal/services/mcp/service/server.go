@@ -12,6 +12,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/conformance"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -35,14 +36,8 @@ const (
 var serverName = branding.AppName + " MCP"
 
 var (
-	dialGameLazyConn       = newGRPCConn
+	newManagedConn         = platformgrpc.NewManagedConn
 	buildMCPServerFromConn = newServer
-	closeGRPCConn          = func(conn *grpc.ClientConn) error {
-		if conn == nil {
-			return nil
-		}
-		return conn.Close()
-	}
 )
 
 // TransportKind identifies the MCP transport implementation.
@@ -82,8 +77,7 @@ type RequestRateLimiter interface {
 // Server hosts the MCP server.
 type Server struct {
 	mcpServer *mcp.Server
-	conn      *grpc.ClientConn
-	connMu    sync.RWMutex
+	gameMc    *platformgrpc.ManagedConn
 	ctx       domain.Context
 	ctxMu     sync.RWMutex
 }
@@ -91,12 +85,7 @@ type Server struct {
 // New creates a configured MCP server that connects to state and game system
 // gRPC services and hydrates tool/resource handlers from those APIs.
 func New(grpcAddr string) (*Server, error) {
-	addr := grpcAddress(grpcAddr)
-	conn, err := dialGameLazyConn(addr)
-	if err != nil {
-		return nil, fmt.Errorf("connect to game server at %s: %w", addr, err)
-	}
-	return buildServerFromConn(conn)
+	return buildServerWithManagedConn(context.Background(), grpcAddr, platformgrpc.ModeOptional)
 }
 
 // newServer creates MCP tool/resource handler bindings once and keeps shared
@@ -117,7 +106,7 @@ func newServer(conn *grpc.ClientConn) (*Server, error) {
 	forkClient := statev1.NewForkServiceClient(conn)
 	eventClient := statev1.NewEventServiceClient(conn)
 
-	server := &Server{mcpServer: mcpServer, conn: conn}
+	server := &Server{mcpServer: mcpServer}
 	resourceNotifier := func(ctx context.Context, uri string) {
 		if strings.TrimSpace(uri) == "" {
 			return
@@ -154,13 +143,13 @@ func newServer(conn *grpc.ClientConn) (*Server, error) {
 	return server, nil
 }
 
-func buildServerFromConn(conn *grpc.ClientConn) (*Server, error) {
-	server, err := buildMCPServerFromConn(conn)
-	if err != nil {
-		_ = closeGRPCConn(conn)
-		return nil, err
+func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
+	if mc == nil {
+		return
 	}
-	return server, nil
+	if err := mc.Close(); err != nil {
+		log.Printf("close mcp %s managed conn: %v", name, err)
+	}
 }
 
 // runtime and transport handlers moved to server_runtime.go.

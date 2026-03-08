@@ -16,7 +16,6 @@ import (
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
-	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	workerdomain "github.com/louisbranch/fracturing.space/internal/services/worker/domain"
 	workerstorage "github.com/louisbranch/fracturing.space/internal/services/worker/storage"
 	workersqlite "github.com/louisbranch/fracturing.space/internal/services/worker/storage/sqlite"
@@ -39,7 +38,6 @@ type RuntimeConfig struct {
 	MaxAttempts       int
 	RetryBackoff      time.Duration
 	RetryMaxDelay     time.Duration
-	GRPCDialTimeout   time.Duration
 }
 
 const (
@@ -48,7 +46,7 @@ const (
 )
 
 var (
-	dialWithHealth  = platformgrpc.DialWithHealth
+	newManagedConn  = platformgrpc.NewManagedConn
 	openSQLiteStore = workersqlite.Open
 	listenTCP       = net.Listen
 )
@@ -65,10 +63,10 @@ type Runtime struct {
 
 	loop workerLoop
 
-	store             *workersqlite.Store
-	authConn          *grpc.ClientConn
-	notificationsConn *grpc.ClientConn
-	socialConn        *grpc.ClientConn
+	store           *workersqlite.Store
+	authMc          *platformgrpc.ManagedConn
+	notificationsMc *platformgrpc.ManagedConn
+	socialMc        *platformgrpc.ManagedConn
 
 	closeOnce sync.Once
 }
@@ -106,57 +104,55 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		return nil, fmt.Errorf("open worker sqlite store: %w", err)
 	}
 
-	authConn, err := dialWithHealth(
-		ctx,
-		nil,
-		normalized.AuthAddr,
-		normalized.GRPCDialTimeout,
-		log.Printf,
-		platformgrpc.DefaultClientDialOptions()...,
-	)
+	logf := func(format string, args ...any) {
+		log.Printf(format, args...)
+	}
+
+	authMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "auth",
+		Addr: normalized.AuthAddr,
+		Mode: platformgrpc.ModeRequired,
+		Logf: logf,
+	})
 	if err != nil {
 		if closeErr := workerStore.Close(); closeErr != nil {
 			log.Printf("close worker sqlite store: %v", closeErr)
 		}
-		return nil, fmt.Errorf("dial auth service: %w", err)
+		return nil, fmt.Errorf("worker: managed conn auth: %w", err)
 	}
 
-	notificationsConn, err := dialWithHealth(
-		ctx,
-		nil,
-		normalized.NotificationsAddr,
-		normalized.GRPCDialTimeout,
-		log.Printf,
-		platformgrpc.DefaultClientDialOptions()...,
-	)
+	notificationsMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "notifications",
+		Addr: normalized.NotificationsAddr,
+		Mode: platformgrpc.ModeRequired,
+		Logf: logf,
+	})
 	if err != nil {
-		closeWorkerConn(authConn, "auth")
+		closeManagedConn(authMc, "auth")
 		if closeErr := workerStore.Close(); closeErr != nil {
 			log.Printf("close worker sqlite store: %v", closeErr)
 		}
-		return nil, fmt.Errorf("dial notifications service: %w", err)
+		return nil, fmt.Errorf("worker: managed conn notifications: %w", err)
 	}
 
-	socialConn, err := dialWithHealth(
-		ctx,
-		nil,
-		normalized.SocialAddr,
-		normalized.GRPCDialTimeout,
-		log.Printf,
-		platformgrpc.DefaultClientDialOptions()...,
-	)
+	socialMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "social",
+		Addr: normalized.SocialAddr,
+		Mode: platformgrpc.ModeRequired,
+		Logf: logf,
+	})
 	if err != nil {
-		closeWorkerConn(notificationsConn, "notifications")
-		closeWorkerConn(authConn, "auth")
+		closeManagedConn(notificationsMc, "notifications")
+		closeManagedConn(authMc, "auth")
 		if closeErr := workerStore.Close(); closeErr != nil {
 			log.Printf("close worker sqlite store: %v", closeErr)
 		}
-		return nil, fmt.Errorf("dial social service: %w", err)
+		return nil, fmt.Errorf("worker: managed conn social: %w", err)
 	}
 
-	authClient := authv1.NewAuthServiceClient(authConn)
-	notificationsClient := notificationsv1.NewNotificationServiceClient(notificationsConn)
-	socialClient := socialv1.NewSocialServiceClient(socialConn)
+	authClient := authv1.NewAuthServiceClient(authMc.Conn())
+	notificationsClient := notificationsv1.NewNotificationServiceClient(notificationsMc.Conn())
+	socialClient := socialv1.NewSocialServiceClient(socialMc.Conn())
 	profileHandler := workerdomain.NewSignupSocialProfileHandler(socialClient)
 	welcomeHandler := workerdomain.NewOnboardingWelcomeHandler(notificationsClient, nil)
 	handler := fanoutEventHandlers(profileHandler, welcomeHandler)
@@ -182,9 +178,9 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 
 	listener, err := listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
 	if err != nil {
-		closeWorkerConn(socialConn, "social")
-		closeWorkerConn(notificationsConn, "notifications")
-		closeWorkerConn(authConn, "auth")
+		closeManagedConn(socialMc, "social")
+		closeManagedConn(notificationsMc, "notifications")
+		closeManagedConn(authMc, "auth")
 		if closeErr := workerStore.Close(); closeErr != nil {
 			log.Printf("close worker sqlite store: %v", closeErr)
 		}
@@ -198,14 +194,14 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	healthServer.SetServingStatus("worker.runtime", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &Runtime{
-		listener:          listener,
-		grpcServer:        grpcServer,
-		health:            healthServer,
-		loop:              workerLoop,
-		store:             workerStore,
-		authConn:          authConn,
-		notificationsConn: notificationsConn,
-		socialConn:        socialConn,
+		listener:        listener,
+		grpcServer:      grpcServer,
+		health:          healthServer,
+		loop:            workerLoop,
+		store:           workerStore,
+		authMc:          authMc,
+		notificationsMc: notificationsMc,
+		socialMc:        socialMc,
 	}, nil
 }
 
@@ -294,9 +290,9 @@ func (r *Runtime) Close() {
 				log.Printf("close worker listener: %v", err)
 			}
 		}
-		closeWorkerConn(r.socialConn, "social")
-		closeWorkerConn(r.notificationsConn, "notifications")
-		closeWorkerConn(r.authConn, "auth")
+		closeManagedConn(r.socialMc, "social")
+		closeManagedConn(r.notificationsMc, "notifications")
+		closeManagedConn(r.authMc, "auth")
 		if r.store != nil {
 			if err := r.store.Close(); err != nil {
 				log.Printf("close worker sqlite store: %v", err)
@@ -324,9 +320,6 @@ func normalizeRuntimeConfig(cfg RuntimeConfig) (RuntimeConfig, error) {
 	cfg.DBPath = strings.TrimSpace(cfg.DBPath)
 	if cfg.DBPath == "" {
 		cfg.DBPath = defaultWorkerDB
-	}
-	if cfg.GRPCDialTimeout <= 0 {
-		cfg.GRPCDialTimeout = timeouts.GRPCDial
 	}
 	return cfg, nil
 }
@@ -357,12 +350,12 @@ func normalizeWorkerLoopErr(err error) error {
 	return fmt.Errorf("run worker loop: %w", err)
 }
 
-func closeWorkerConn(conn *grpc.ClientConn, name string) {
-	if conn == nil {
+func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
+	if mc == nil {
 		return
 	}
-	if err := conn.Close(); err != nil {
-		log.Printf("close %s connection: %v", name, err)
+	if err := mc.Close(); err != nil {
+		log.Printf("close worker %s managed conn: %v", name, err)
 	}
 }
 

@@ -46,8 +46,8 @@ func TestNormalizeServerBootstrapConfigDefaults(t *testing.T) {
 	if cfg.validateSystemRegistration == nil {
 		t.Fatal("expected default validateSystemRegistration")
 	}
-	if cfg.dialAuthGRPC == nil {
-		t.Fatal("expected default dialAuthGRPC")
+	if cfg.newManagedConn == nil {
+		t.Fatal("expected default newManagedConn")
 	}
 	if cfg.newGRPCServer == nil {
 		t.Fatal("expected default newGRPCServer")
@@ -63,9 +63,6 @@ func TestNormalizeServerBootstrapConfigDefaults(t *testing.T) {
 	}
 	if cfg.buildProjectionApplyOutboxApply == nil {
 		t.Fatal("expected default buildProjectionApplyOutboxApply")
-	}
-	if cfg.buildStatusRuntime == nil {
-		t.Fatal("expected default buildStatusRuntime")
 	}
 }
 

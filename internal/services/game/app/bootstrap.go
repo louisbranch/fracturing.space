@@ -8,6 +8,12 @@ import (
 	"strings"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/interceptors"
@@ -48,15 +54,12 @@ type serverBootstrapConfig struct {
 	configureDomain                 func(serverEnv, *gamegrpc.Stores, engine.Registries) error
 	buildSystemRegistry             func() (*bridge.MetadataRegistry, error)
 	validateSystemRegistration      func([]module.Module, *bridge.MetadataRegistry, *bridge.AdapterRegistry) error
-	dialAuthGRPC                    func(context.Context, string) (authGRPCClients, error)
-	dialSocialGRPC                  func(context.Context, string) (socialGRPCClients, error)
-	dialAIGRPC                      func(context.Context, string) (aiGRPCClients, error)
+	newManagedConn                  func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error)
 	newGRPCServer                   func(*storageBundle, serverEnv) *grpc.Server
 	newHealthServer                 func() *health.Server
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
 	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
 	buildProjectionApplyOutboxApply func(projectionApplyStore, *event.Registry) func(context.Context, event.Event) error
-	buildStatusRuntime              func(context.Context, string, *storageBundle, bool, bool) statusRuntimeState
 }
 
 // storageBundleOpener creates startup storage bundles for the server.
@@ -104,14 +107,8 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	if cfg.validateSystemRegistration == nil {
 		cfg.validateSystemRegistration = validateSystemRegistrationParity
 	}
-	if cfg.dialAuthGRPC == nil {
-		cfg.dialAuthGRPC = dialAuthGRPC
-	}
-	if cfg.dialSocialGRPC == nil {
-		cfg.dialSocialGRPC = dialSocialGRPC
-	}
-	if cfg.dialAIGRPC == nil {
-		cfg.dialAIGRPC = dialAIGRPC
+	if cfg.newManagedConn == nil {
+		cfg.newManagedConn = platformgrpc.NewManagedConn
 	}
 	if cfg.newGRPCServer == nil {
 		cfg.newGRPCServer = func(bundle *storageBundle, srvEnv serverEnv) *grpc.Server {
@@ -149,9 +146,6 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	if cfg.buildProjectionApplyOutboxApply == nil {
 		cfg.buildProjectionApplyOutboxApply = buildProjectionApplyOutboxApply
 	}
-	if cfg.buildStatusRuntime == nil {
-		cfg.buildStatusRuntime = buildStatusRuntime
-	}
 	return cfg
 }
 
@@ -174,7 +168,6 @@ type projectionRuntimeState struct {
 }
 
 type statusRuntimeState struct {
-	conn                  *grpc.ClientConn
 	reporter              *platformstatus.Reporter
 	catalogReadyAtStartup bool
 }
@@ -210,28 +203,92 @@ func (b *serverBootstrap) configureStoresAndApplier(
 	}, nil
 }
 
-func (b *serverBootstrap) dialDependencyClients(
+// dependencyConns holds all outbound ManagedConns created during bootstrap.
+type dependencyConns struct {
+	auth   *platformgrpc.ManagedConn
+	social *platformgrpc.ManagedConn
+	ai     *platformgrpc.ManagedConn
+	status *platformgrpc.ManagedConn
+}
+
+func (b *serverBootstrap) dialDependencies(
 	ctx context.Context,
 	srvEnv serverEnv,
-) (authGRPCClients, socialGRPCClients, aiGRPCClients, error) {
-	authClients, err := b.config.dialAuthGRPC(ctx, srvEnv.AuthAddr)
+	reporter *platformstatus.Reporter,
+) (dependencyConns, error) {
+	logf := func(format string, args ...any) {
+		log.Printf(format, args...)
+	}
+	newConn := b.config.newManagedConn
+
+	authMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "auth",
+		Addr: srvEnv.AuthAddr,
+		Mode: platformgrpc.ModeRequired,
+		Logf: logf,
+	})
 	if err != nil {
-		return authGRPCClients{}, socialGRPCClients{}, aiGRPCClients{}, err
+		return dependencyConns{}, fmt.Errorf("auth: %w", err)
 	}
 
-	socialClients, socialErr := b.config.dialSocialGRPC(ctx, srvEnv.SocialAddr)
-	if socialErr != nil {
-		log.Printf("social client unavailable; participant pronouns fallback disabled: %v", socialErr)
-		socialClients = socialGRPCClients{}
+	socialMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
+		Name:             "social",
+		Addr:             srvEnv.SocialAddr,
+		Mode:             platformgrpc.ModeOptional,
+		Logf:             logf,
+		StatusReporter:   reporter,
+		StatusCapability: "game.social.integration",
+	})
+	if err != nil {
+		authMc.Close()
+		return dependencyConns{}, fmt.Errorf("social: %w", err)
 	}
 
-	aiClients, aiErr := b.config.dialAIGRPC(ctx, srvEnv.AIAddr)
-	if aiErr != nil {
-		log.Printf("ai client unavailable; campaign ai binding operations will be unavailable: %v", aiErr)
-		aiClients = aiGRPCClients{}
+	aiMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
+		Name:             "ai",
+		Addr:             srvEnv.AIAddr,
+		Mode:             platformgrpc.ModeOptional,
+		Logf:             logf,
+		StatusReporter:   reporter,
+		StatusCapability: "game.ai.integration",
+	})
+	if err != nil {
+		authMc.Close()
+		socialMc.Close()
+		return dependencyConns{}, fmt.Errorf("ai: %w", err)
 	}
 
-	return authClients, socialClients, aiClients, nil
+	// Status service — optional, late-binds reporter when ready.
+	statusAddr := srvEnv.StatusAddr
+	if strings.TrimSpace(statusAddr) == "" {
+		statusAddr = serviceaddr.DefaultGRPCAddr(serviceaddr.ServiceStatus)
+	}
+	statusMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "status",
+		Addr: statusAddr,
+		Mode: platformgrpc.ModeOptional,
+		Logf: logf,
+	})
+	if err != nil {
+		authMc.Close()
+		socialMc.Close()
+		aiMc.Close()
+		return dependencyConns{}, fmt.Errorf("status: %w", err)
+	}
+
+	// Late-bind the reporter's client when the status service becomes reachable.
+	go func() {
+		if statusMc.WaitReady(ctx) == nil {
+			reporter.SetClient(statusv1.NewStatusServiceClient(statusMc.Conn()))
+		}
+	}()
+
+	return dependencyConns{
+		auth:   authMc,
+		social: socialMc,
+		ai:     aiMc,
+		status: statusMc,
+	}, nil
 }
 
 func (b *serverBootstrap) configureProjectionRuntime(
@@ -265,21 +322,6 @@ func (b *serverBootstrap) configureProjectionRuntime(
 	}, nil
 }
 
-func buildStatusRuntime(
-	ctx context.Context,
-	statusAddr string,
-	bundle *storageBundle,
-	socialAvailable, aiAvailable bool,
-) statusRuntimeState {
-	statusConn, statusClient := dialStatusLenient(ctx, statusAddr)
-	catalogState := evaluateCatalogCapabilityState(ctx, nilCatalogReadinessStore(bundle))
-	return statusRuntimeState{
-		conn:                  statusConn,
-		reporter:              initStatusReporter(statusClient, socialAvailable, aiAvailable, catalogState),
-		catalogReadyAtStartup: catalogState.Ready,
-	}
-}
-
 func nilCatalogReadinessStore(bundle *storageBundle) storage.DaggerheartCatalogReadinessStore {
 	if bundle == nil {
 		return nil
@@ -287,17 +329,7 @@ func nilCatalogReadinessStore(bundle *storageBundle) storage.DaggerheartCatalogR
 	return bundle.content
 }
 
-func (b *serverBootstrap) configureStatusRuntime(
-	ctx context.Context,
-	statusAddr string,
-	bundle *storageBundle,
-	socialAvailable, aiAvailable bool,
-) statusRuntimeState {
-	return b.config.buildStatusRuntime(ctx, statusAddr, bundle, socialAvailable, aiAvailable)
-}
-
 // NewWithAddr builds a game server using named startup phases.
-// It preserves the previous startup behavior while improving testability through dependency seams.
 func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server *Server, err error) {
 	startupCtx := startupContext(ctx)
 	srvEnv := b.config.loadEnv()
@@ -348,29 +380,26 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 	}
 	repairProjectionGaps(startupCtx, bundle, storeState.applier)
 
-	authClients, socialClients, aiClients, err := b.dialDependencyClients(startupCtx, srvEnv)
+	// Status reporter — starts with nil client; bound later when statusMc is ready.
+	reporter := platformstatus.NewReporter("game", nil)
+	reporter.Register(capabilityGameCampaignService, platformstatus.Operational)
+
+	catalogState := evaluateCatalogCapabilityState(startupCtx, nilCatalogReadinessStore(bundle))
+	applyCatalogCapabilityState(reporter, catalogState)
+
+	deps, err := b.dialDependencies(startupCtx, srvEnv, reporter)
 	if err != nil {
-		return nil, wrapStartupError(startupPhaseDependencies, "dial auth gRPC", err)
+		return nil, wrapStartupError(startupPhaseDependencies, "dial dependencies", err)
 	}
-	if authClients.conn != nil {
-		authConn := authClients.conn
-		rollback.add(func() {
-			_ = authConn.Close()
-		})
-	}
-	if socialClients.conn != nil {
-		socialConn := socialClients.conn
-		rollback.add(func() {
-			_ = socialConn.Close()
-		})
-	}
-	if aiClients.conn != nil {
-		aiConn := aiClients.conn
-		rollback.add(func() {
-			_ = aiConn.Close()
-		})
-	}
-	stores.Social = socialClients.socialClient
+	rollback.add(func() {
+		closeManagedConn(deps.status, "status")
+		closeManagedConn(deps.ai, "ai")
+		closeManagedConn(deps.social, "social")
+		closeManagedConn(deps.auth, "auth")
+	})
+
+	// Build gRPC clients from managed connections — conn is always non-nil.
+	stores.Social = socialv1.NewSocialServiceClient(deps.social.Conn())
 
 	grpcServer := b.config.newGRPCServer(bundle, srvEnv)
 	healthServer := b.config.newHealthServer()
@@ -383,8 +412,8 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		healthServer,
 		stores,
 		bundle,
-		authClients.authClient,
-		aiClients.agentClient,
+		authv1.NewAuthServiceClient(deps.auth.Conn()),
+		aiv1.NewAgentServiceClient(deps.ai.Conn()),
 		systemRegistry,
 		sessionGrantConfig,
 	); err != nil {
@@ -402,34 +431,20 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		return nil, wrapStartupError(startupPhaseRuntime, "configure projection runtime", err)
 	}
 
-	statusRuntime := b.configureStatusRuntime(
-		startupCtx,
-		srvEnv.StatusAddr,
-		bundle,
-		socialClients.socialClient != nil,
-		aiClients.agentClient != nil,
-	)
-	if statusRuntime.conn != nil {
-		statusConn := statusRuntime.conn
-		rollback.add(func() {
-			_ = statusConn.Close()
-		})
-	}
-
 	server = &Server{
 		listener:                                 listener,
 		grpcServer:                               grpcServer,
 		health:                                   healthServer,
 		stores:                                   bundle,
-		authConn:                                 authClients.conn,
-		socialConn:                               socialClients.conn,
-		aiConn:                                   aiClients.conn,
-		statusConn:                               statusRuntime.conn,
+		authMc:                                   deps.auth,
+		socialMc:                                 deps.social,
+		aiMc:                                     deps.ai,
+		statusMc:                                 deps.status,
 		projectionApplyOutboxWorkerEnabled:       projectionRuntime.enableApplyWorker,
 		projectionApplyOutboxApply:               projectionRuntime.applyOutbox,
 		projectionApplyOutboxShadowWorkerEnabled: projectionRuntime.enableShadowWorker,
-		statusReporter:                           statusRuntime.reporter,
-		catalogReadyAtStartup:                    statusRuntime.catalogReadyAtStartup,
+		statusReporter:                           reporter,
+		catalogReadyAtStartup:                    catalogState.Ready,
 	}
 	rollback.release()
 	return server, nil

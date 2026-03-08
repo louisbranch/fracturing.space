@@ -4,9 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sort"
 	"strings"
-	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -17,6 +15,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	grpc "google.golang.org/grpc"
@@ -32,36 +31,19 @@ const (
 	dependencyNameNotifications = "notifications"
 )
 
-// grpcDialer abstracts dependency dialing for startup tests.
-type grpcDialer func(context.Context, string, time.Duration) (*grpc.ClientConn, error)
+// newManagedConn wraps platformgrpc.NewManagedConn for testability.
+var newManagedConn = platformgrpc.NewManagedConn
 
 // dependencyInputSetter maps one connected dependency into principal/module bundles.
 type dependencyInputSetter func(*web.PrincipalDependencies, *modules.Dependencies, *grpc.ClientConn)
 
-// dependencyRequirement describes one startup dependency dial and field wiring step.
+// dependencyRequirement describes one startup dependency and its wiring step.
 type dependencyRequirement struct {
 	name       string
 	address    string
-	required   bool
+	mode       platformgrpc.ManagedConnMode
 	capability string
 	setInput   dependencyInputSetter
-}
-
-// dependencyDialState classifies dependency dial outcomes at startup.
-type dependencyDialState string
-
-const (
-	dependencyDialStateConnected   dependencyDialState = "connected"
-	dependencyDialStateDialFailed  dependencyDialState = "dial_failed"
-	dependencyDialStateUnavailable dependencyDialState = "unavailable"
-)
-
-// dependencyStatus captures one dependency dial result for startup diagnostics.
-type dependencyStatus struct {
-	Name    string
-	Address string
-	State   dependencyDialState
-	Detail  string
 }
 
 // dependencyRequirements returns startup requirements in stable dependency order.
@@ -82,7 +64,7 @@ func dependencyRequirementAuth(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameAuth,
 		address:    address,
-		required:   true,
+		mode:       platformgrpc.ModeRequired,
 		capability: "web.auth.integration",
 		setInput:   setDependencyAuth,
 	}
@@ -93,7 +75,7 @@ func dependencyRequirementSocial(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameSocial,
 		address:    address,
-		required:   true,
+		mode:       platformgrpc.ModeRequired,
 		capability: "web.social.integration",
 		setInput:   setDependencySocial,
 	}
@@ -104,7 +86,7 @@ func dependencyRequirementGame(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameGame,
 		address:    address,
-		required:   true,
+		mode:       platformgrpc.ModeRequired,
 		capability: "web.game.integration",
 		setInput:   setDependencyGame,
 	}
@@ -115,7 +97,7 @@ func dependencyRequirementAI(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameAI,
 		address:    address,
-		required:   false,
+		mode:       platformgrpc.ModeOptional,
 		capability: "web.ai.integration",
 		setInput:   setDependencyAI,
 	}
@@ -126,7 +108,7 @@ func dependencyRequirementDiscovery(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameDiscovery,
 		address:    address,
-		required:   false,
+		mode:       platformgrpc.ModeOptional,
 		capability: "web.discovery.integration",
 		setInput:   setDependencyDiscovery,
 	}
@@ -137,7 +119,7 @@ func dependencyRequirementUserHub(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameUserHub,
 		address:    address,
-		required:   false,
+		mode:       platformgrpc.ModeOptional,
 		capability: "web.userhub.integration",
 		setInput:   setDependencyUserHub,
 	}
@@ -148,7 +130,7 @@ func dependencyRequirementNotifications(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameNotifications,
 		address:    address,
-		required:   false,
+		mode:       platformgrpc.ModeOptional,
 		capability: "web.notifications.integration",
 		setInput:   setDependencyNotifications,
 	}
@@ -210,126 +192,59 @@ func setDependencyNotifications(p *web.PrincipalDependencies, m *modules.Depende
 	m.Notifications.NotificationClient = notificationClient
 }
 
-// bootstrapDependencies dials service dependencies and maps connected clients
-// into principal and module dependency bundles.
+// bootstrapDependencies creates ManagedConns for each requirement and wires
+// gRPC clients into the dependency bundle. Required deps block until healthy;
+// optional deps return immediately.
 func bootstrapDependencies(
 	ctx context.Context,
 	requirements []dependencyRequirement,
 	assetBaseURL string,
-	dialTimeout time.Duration,
-	dialer grpcDialer,
-) (web.DependencyBundle, []*grpc.ClientConn, map[string]dependencyStatus, error) {
-	if dialer == nil {
-		dialer = dialDependency
-	}
-
+	reporter *platformstatus.Reporter,
+) (web.DependencyBundle, []*platformgrpc.ManagedConn, error) {
 	principal := web.PrincipalDependencies{AssetBaseURL: assetBaseURL}
 	modDeps := modules.Dependencies{AssetBaseURL: assetBaseURL}
-	conns := []*grpc.ClientConn{}
-	statuses := map[string]dependencyStatus{}
-	requiredMissing := make([]string, 0)
+	var conns []*platformgrpc.ManagedConn
+
+	logf := func(format string, args ...any) {
+		log.Printf(format, args...)
+	}
 
 	for _, dep := range requirements {
-		status := dependencyStatus{
-			Name:    dep.name,
-			Address: dep.address,
-			State:   dependencyDialStateConnected,
+		if strings.TrimSpace(dep.address) == "" {
+			continue
 		}
-		conn, err := dialer(ctx, dep.address, dialTimeout)
+		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+			Name:             dep.name,
+			Addr:             dep.address,
+			Mode:             dep.mode,
+			Logf:             logf,
+			StatusReporter:   reporter,
+			StatusCapability: dep.capability,
+		})
 		if err != nil {
-			status.State = dependencyDialStateDialFailed
-			status.Detail = err.Error()
-			statuses[dep.name] = status
-			if dep.required {
-				requiredMissing = append(requiredMissing, dep.name)
-			}
-			continue
+			closeManagedConns(conns)
+			return web.DependencyBundle{}, nil, fmt.Errorf("dependency %s: %w", dep.name, err)
 		}
-		if conn == nil {
-			status.State = dependencyDialStateUnavailable
-			statuses[dep.name] = status
-			if dep.required {
-				requiredMissing = append(requiredMissing, dep.name)
-			}
-			continue
-		}
-		dep.setInput(&principal, &modDeps, conn)
-		conns = append(conns, conn)
-		statuses[dep.name] = status
+		conns = append(conns, mc)
+		dep.setInput(&principal, &modDeps, mc.Conn())
 	}
 
-	bundle := web.DependencyBundle{Principal: principal, Modules: modDeps}
-	if len(requiredMissing) > 0 {
-		return bundle, conns, statuses, fmt.Errorf("required dependencies unavailable: %s", strings.Join(requiredMissing, ", "))
-	}
-	return bundle, conns, statuses, nil
+	return web.DependencyBundle{Principal: principal, Modules: modDeps}, conns, nil
 }
 
-// dependencyStatusWarnings maps startup diagnostics into stable warning strings.
-func dependencyStatusWarnings(requirements []dependencyRequirement, statuses map[string]dependencyStatus) []string {
-	if len(statuses) == 0 {
-		return nil
-	}
-	warnings := make([]string, 0, len(statuses))
-	for _, dep := range requirements {
-		status, ok := statuses[dep.name]
-		if !ok {
-			continue
-		}
-		switch status.State {
-		case dependencyDialStateDialFailed:
-			if strings.TrimSpace(status.Detail) != "" {
-				warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable: %s", status.Name, status.Address, status.Detail))
-				continue
-			}
-			warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable", status.Name, status.Address))
-		case dependencyDialStateUnavailable:
-			warnings = append(warnings, fmt.Sprintf("%s dependency at %s unavailable", status.Name, status.Address))
-		}
-	}
-	return warnings
-}
-
-// formatDependencyStatusLines renders stable startup diagnostics for each dependency.
-func formatDependencyStatusLines(statuses map[string]dependencyStatus) []string {
-	if len(statuses) == 0 {
-		return nil
-	}
-	names := make([]string, 0, len(statuses))
-	for name := range statuses {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-
-	lines := make([]string, 0, len(names))
-	for _, name := range names {
-		status := statuses[name]
-		line := fmt.Sprintf("dependency=%s state=%s address=%s", status.Name, status.State, status.Address)
-		if strings.TrimSpace(status.Detail) != "" {
-			line += fmt.Sprintf(" detail=%s", strings.TrimSpace(status.Detail))
-		}
-		lines = append(lines, line)
-	}
-	return lines
-}
-
-// closeDependencyConnections closes all successfully dialed dependency connections.
-func closeDependencyConnections(conns []*grpc.ClientConn) {
-	for _, conn := range conns {
-		if conn == nil {
-			continue
-		}
-		_ = conn.Close()
+// closeManagedConns closes all ManagedConn instances.
+func closeManagedConns(conns []*platformgrpc.ManagedConn) {
+	for _, mc := range conns {
+		closeManagedConn(mc, "dependency")
 	}
 }
 
-// dialDependency dials one dependency endpoint leniently.
-// Returns nil connection on failure instead of an error.
-func dialDependency(
-	ctx context.Context,
-	address string,
-	dialTimeout time.Duration,
-) (*grpc.ClientConn, error) {
-	conn := platformgrpc.DialLenientWithTimeout(ctx, address, dialTimeout, log.Printf)
-	return conn, nil
+// closeManagedConn nil-safely closes a ManagedConn with error logging.
+func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
+	if mc == nil {
+		return
+	}
+	if err := mc.Close(); err != nil {
+		log.Printf("close web %s managed conn: %v", name, err)
+	}
 }
