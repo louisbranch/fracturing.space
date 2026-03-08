@@ -5,6 +5,8 @@ import (
 	"context"
 	"strings"
 	"testing"
+
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 )
 
 func TestAppSideMenuItemSubItemsFiltersInvalidSubItems(t *testing.T) {
@@ -83,5 +85,61 @@ func TestAppToastComponentIncludesTopOffsetClass(t *testing.T) {
 		if !strings.Contains(got, marker) {
 			t.Fatalf("AppToastComponent output missing marker %q: %q", marker, got)
 		}
+	}
+}
+
+func TestAppMainContentWithLayoutAddsCoverHeaderClassForBackgroundImages(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	err := AppMainContentWithLayout(&AppMainHeader{
+		Title: "The Guildhouse",
+		Breadcrumbs: []sharedtemplates.BreadcrumbItem{
+			{Label: "Campaigns", URL: "/app/campaigns"},
+			{Label: "The Guildhouse"},
+		},
+	}, AppMainLayoutOptions{
+		MainBackgroundImageURL: "/static/campaign-covers/guildhouse.png",
+	}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render AppMainContentWithLayout: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`campaign-cover-header`,
+		`<h1 class="mb-0">The Guildhouse</h1>`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("AppMainContentWithLayout output missing marker %q: %q", marker, got)
+		}
+	}
+}
+
+func TestAppMainContentWithLayoutLeavesHeaderClassOffWithoutBackgroundImages(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	err := AppMainContentWithLayout(&AppMainHeader{
+		Title: "The Guildhouse",
+		Breadcrumbs: []sharedtemplates.BreadcrumbItem{
+			{Label: "Campaigns", URL: "/app/campaigns"},
+			{Label: "The Guildhouse"},
+		},
+	}, AppMainLayoutOptions{}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render AppMainContentWithLayout: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`campaign-cover-header`,
+	} {
+		if strings.Contains(got, marker) {
+			t.Fatalf("AppMainContentWithLayout output unexpectedly contains marker %q: %q", marker, got)
+		}
+	}
+	if !strings.Contains(got, `class="mb-0"`) {
+		t.Fatalf("AppMainContentWithLayout output missing default h1 class: %q", got)
 	}
 }

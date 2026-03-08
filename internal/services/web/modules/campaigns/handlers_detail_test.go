@@ -423,7 +423,7 @@ func TestMountCampaignCharacterDetailBreadcrumbUsesCharacterName(t *testing.T) {
 	for _, marker := range []string{
 		`class="breadcrumbs text-sm"`,
 		`href="/app/campaigns/c1/characters"`,
-		`<li>Aria</li>`,
+		`>Aria</li>`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing breadcrumb marker %q: %q", marker, body)
@@ -1124,6 +1124,14 @@ func TestMountCampaignRoutesRenderWorkspaceOverviewMenu(t *testing.T) {
 					t.Fatalf("path %q body missing campaign menu marker %q: %q", path, marker, body)
 				}
 			}
+			charactersIdx := strings.Index(body, `href="/app/campaigns/c1/characters"`)
+			sessionsIdx := strings.Index(body, `href="/app/campaigns/c1/sessions"`)
+			if charactersIdx == -1 || sessionsIdx == -1 {
+				t.Fatalf("path %q missing characters or sessions menu items: %q", path, body)
+			}
+			if charactersIdx > sessionsIdx {
+				t.Fatalf("path %q expected characters menu item before sessions menu item: %q", path, body)
+			}
 		})
 	}
 }
@@ -1155,6 +1163,9 @@ func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 	if !strings.Contains(body, `data-app-route-area="campaign-workspace"`) {
 		t.Fatalf("non-htmx body = %q, want campaign workspace route metadata", body)
 	}
+	if !strings.Contains(body, `campaign-cover-header`) {
+		t.Fatalf("non-htmx body = %q, want cover header class", body)
+	}
 	if strings.Contains(body, `linear-gradient(to bottom`) {
 		t.Fatalf("non-htmx body unexpectedly contains overlay gradient: %q", body)
 	}
@@ -1172,6 +1183,9 @@ func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 	}
 	if !strings.Contains(body, `data-app-route-area="campaign-workspace"`) {
 		t.Fatalf("htmx body = %q, want campaign workspace route metadata", body)
+	}
+	if !strings.Contains(body, `campaign-cover-header`) {
+		t.Fatalf("htmx body = %q, want cover header class", body)
 	}
 	if strings.Contains(body, `linear-gradient(to bottom`) {
 		t.Fatalf("htmx body unexpectedly contains overlay gradient: %q", body)
@@ -1215,9 +1229,9 @@ func TestMountCampaignSessionDetailRendersBreadcrumbs(t *testing.T) {
 	for _, marker := range []string{
 		`class="breadcrumbs text-sm"`,
 		`href="/app/campaigns"`,
-		`<a href="/app/campaigns/c1">The Guildhouse</a>`,
+		`href="/app/campaigns/c1">The Guildhouse</a>`,
 		`href="/app/campaigns/c1/sessions"`,
-		`<li>s1</li>`,
+		`>s1</li>`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing breadcrumb marker %q: %q", marker, body)

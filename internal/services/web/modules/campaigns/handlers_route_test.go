@@ -105,7 +105,7 @@ func TestHandleOverviewRendersWorkspace(t *testing.T) {
 	if !strings.Contains(body, markerOverview) {
 		t.Fatalf("body missing overview marker %q", markerOverview)
 	}
-	if !strings.Contains(body, `<h1 class="mb-0">Remote</h1>`) {
+	if !strings.Contains(body, `>Remote</h1>`) {
 		t.Fatalf("body missing campaign h1")
 	}
 	if !strings.Contains(body, "<title>Remote") {
@@ -131,7 +131,7 @@ func TestHandleOverviewUsesCampaignIDForTitleWhenNameMissing(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, `<h1 class="mb-0">c-2</h1>`) {
+	if !strings.Contains(body, `>c-2</h1>`) {
 		t.Fatalf("body missing campaign id h1")
 	}
 	if !strings.Contains(body, "<title>c-2") {
