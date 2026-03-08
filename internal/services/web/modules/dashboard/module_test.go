@@ -54,6 +54,9 @@ func TestMountServesDashboardGet(t *testing.T) {
 	if !strings.Contains(body, "dashboard-root") {
 		t.Fatalf("body = %q, want dashboard marker", body)
 	}
+	if !strings.Contains(body, `id="dashboard-root" hx-history="false"`) {
+		t.Fatalf("body = %q, want dashboard history opt-out", body)
+	}
 	// Invariant: default dashboard should not render profile-pending block when userhub state is absent.
 	if strings.Contains(body, `data-dashboard-block="profile-pending"`) {
 		t.Fatalf("body = %q, want no pending-profile block", body)
@@ -98,6 +101,9 @@ func TestMountDashboardHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	body := rr.Body.String()
 	if !strings.Contains(body, "dashboard-root") {
 		t.Fatalf("body = %q, want dashboard marker", body)
+	}
+	if !strings.Contains(body, `id="dashboard-root" hx-history="false"`) {
+		t.Fatalf("body = %q, want dashboard history opt-out", body)
 	}
 	if strings.Contains(strings.ToLower(body), "<!doctype html") || strings.Contains(strings.ToLower(body), "<html") {
 		t.Fatalf("expected htmx fragment without document wrapper")

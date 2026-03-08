@@ -15,10 +15,13 @@ func (h handlers) handleSessionStart(w http.ResponseWriter, r *http.Request, cam
 	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_session_start_form", "failed to parse session start form") {
 		return
 	}
-	ctx, _ := h.RequestContextAndUserID(r)
+	ctx, userID := h.RequestContextAndUserID(r)
 	if err := h.service.StartSession(ctx, campaignID, parseStartSessionInput(r.Form)); err != nil {
 		h.WriteError(w, r, err)
 		return
+	}
+	if h.sync != nil {
+		h.sync.SessionStarted(ctx, userID, campaignID)
 	}
 	httpx.WriteRedirect(w, r, routepath.AppCampaignSessions(campaignID))
 }
@@ -28,10 +31,13 @@ func (h handlers) handleSessionEnd(w http.ResponseWriter, r *http.Request, campa
 	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_session_end_form", "failed to parse session end form") {
 		return
 	}
-	ctx, _ := h.RequestContextAndUserID(r)
+	ctx, userID := h.RequestContextAndUserID(r)
 	if err := h.service.EndSession(ctx, campaignID, parseEndSessionInput(r.Form)); err != nil {
 		h.WriteError(w, r, err)
 		return
+	}
+	if h.sync != nil {
+		h.sync.SessionEnded(ctx, userID, campaignID)
 	}
 	httpx.WriteRedirect(w, r, routepath.AppCampaignSessions(campaignID))
 }

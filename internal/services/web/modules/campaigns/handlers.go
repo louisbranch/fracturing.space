@@ -1,11 +1,19 @@
 package campaigns
 
 import (
+	"context"
 	"time"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
+
+// DashboardSync exposes dashboard refresh hooks needed by campaign mutations.
+type DashboardSync interface {
+	CampaignCreated(context.Context, string, string)
+	SessionStarted(context.Context, string, string)
+	SessionEnded(context.Context, string, string)
+}
 
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
@@ -14,6 +22,7 @@ type handlers struct {
 	chatFallbackPort string
 	workflows        map[GameSystem]CharacterCreationWorkflow
 	nowFunc          func() time.Time
+	sync             DashboardSync
 }
 
 // newHandlers builds package wiring for this web seam.
@@ -21,6 +30,7 @@ func newHandlers(
 	s campaignapp.Service,
 	base modulehandler.Base,
 	chatFallbackPort string,
+	sync DashboardSync,
 	workflows ...map[GameSystem]CharacterCreationWorkflow,
 ) handlers {
 	if s == nil {
@@ -36,6 +46,7 @@ func newHandlers(
 		chatFallbackPort: chatFallbackPort,
 		workflows:        workflowMap,
 		nowFunc:          time.Now,
+		sync:             sync,
 	}
 }
 

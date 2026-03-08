@@ -20,6 +20,7 @@ func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 			newService(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "Campaign"}}}),
 			modulehandler.NewTestBase(),
 			"",
+			nil,
 		),
 	)
 }
@@ -60,6 +61,7 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 			}),
 			modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil),
 			"",
+			nil,
 		),
 	)
 
@@ -138,6 +140,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 			}),
 			modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil),
 			"",
+			nil,
 		),
 	)
 

@@ -15,6 +15,7 @@ type Module struct {
 	base             modulehandler.Base
 	chatFallbackPort string
 	workflows        map[GameSystem]CharacterCreationWorkflow
+	sync             DashboardSync
 }
 
 // Config defines constructor dependencies for a campaigns module.
@@ -23,6 +24,7 @@ type Config struct {
 	Base             modulehandler.Base
 	ChatFallbackPort string
 	Workflows        map[GameSystem]CharacterCreationWorkflow
+	DashboardSync    DashboardSync
 }
 
 // New returns a campaigns module with explicit dependencies.
@@ -32,6 +34,7 @@ func New(config Config) Module {
 		base:             config.Base,
 		chatFallbackPort: config.ChatFallbackPort,
 		workflows:        config.Workflows,
+		sync:             config.DashboardSync,
 	}
 }
 
@@ -47,7 +50,7 @@ func (m Module) Healthy() bool {
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	svc := newServiceWithWorkflows(m.gateway, m.workflows)
-	h := newHandlers(svc, m.base, m.chatFallbackPort, m.workflows)
+	h := newHandlers(svc, m.base, m.chatFallbackPort, m.sync, m.workflows)
 	registerStableRoutes(mux, h)
 	return module.Mount{Prefix: routepath.CampaignsPrefix, Handler: mux}, nil
 }

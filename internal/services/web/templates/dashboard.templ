@@ -44,7 +44,7 @@ func dashboardAllServicesOperational(view DashboardPageView) bool {
 }
 
 templ DashboardFragment(view DashboardPageView, loc Localizer) {
-	<section id="dashboard-root" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+	<section id="dashboard-root" hx-history="false" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 		if dashboardProfilePendingVisible(view) {
 			<section id="dashboard-profile-pending" data-dashboard-block="profile-pending" class="card bg-base-200 border border-base-300 shadow-sm lg:col-span-1">
 				<div class="card-body gap-4">

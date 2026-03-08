@@ -58,6 +58,9 @@ type Server struct {
 	notificationsConn *grpc.ClientConn
 	statusConn        *grpc.ClientConn
 
+	stopCampaignProjectionSync context.CancelFunc
+	campaignProjectionDone     chan struct{}
+
 	closeOnce sync.Once
 }
 
@@ -97,11 +100,13 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 
 	// Build gateways — handle nil connections by passing nil clients.
 	var gameGateway domain.GameGateway
+	var eventClient gamev1.EventServiceClient
 	if gameConn != nil {
 		gameGateway = newGRPCGameGateway(
 			gamev1.NewCampaignServiceClient(gameConn),
 			gamev1.NewInviteServiceClient(gameConn),
 		)
+		eventClient = gamev1.NewEventServiceClient(gameConn)
 	}
 
 	var socialGateway domain.SocialGateway
@@ -114,11 +119,38 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		notificationsGateway = newGRPCNotificationsGateway(notificationsv1.NewNotificationServiceClient(notificationsConn))
 	}
 
-	domainService := domain.NewService(gameGateway, socialGateway, notificationsGateway, domain.Config{
+	var retainCampaignDependency func(string)
+	var releaseCampaignDependency func(string)
+	var stopCampaignProjectionSync context.CancelFunc
+	var campaignProjectionDone chan struct{}
+	var domainService *domain.Service
+	if eventClient != nil {
+		retainCampaignDependency, releaseCampaignDependency, stopCampaignProjectionSync, campaignProjectionDone = startCampaignProjectionSubscriptionManager(
+			ctx,
+			eventClient,
+			func(campaignID string) {
+				if domainService == nil {
+					return
+				}
+				if _, err := domainService.InvalidateDashboards(context.Background(), domain.InvalidateDashboardsInput{
+					CampaignIDs: []string{campaignID},
+					Reason:      "game.projection_applied",
+				}); err != nil {
+					log.Printf("userhub: invalidate dashboards for campaign %s: %v", campaignID, err)
+				}
+			},
+		)
+	}
+	domainService = domain.NewService(gameGateway, socialGateway, notificationsGateway, domain.Config{
 		CacheFreshTTL: normalized.CacheFreshTTL,
 		CacheStaleTTL: normalized.CacheStaleTTL,
+		CampaignDependencyObserver: campaignDependencyObserver{
+			retain:  retainCampaignDependency,
+			release: releaseCampaignDependency,
+		},
 	})
 	apiService := userhubservice.NewService(domainService)
+	controlService := userhubservice.NewControlService(domainService)
 
 	listener, err := listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
 	if err != nil {
@@ -131,9 +163,11 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
 	healthServer := health.NewServer()
 	userhubv1.RegisterUserHubServiceServer(grpcServer, apiService)
+	userhubv1.RegisterUserHubControlServiceServer(grpcServer, controlService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("userhub.v1.UserHubService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("userhub.v1.UserHubControlService", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	statusAddr := normalized.StatusAddr
 	if strings.TrimSpace(statusAddr) == "" {
@@ -152,14 +186,16 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	reporter.Register("userhub.notifications.integration", capStatus(notificationsConn != nil))
 
 	return &Server{
-		listener:          listener,
-		grpcServer:        grpcServer,
-		health:            healthServer,
-		reporter:          reporter,
-		gameConn:          gameConn,
-		socialConn:        socialConn,
-		notificationsConn: notificationsConn,
-		statusConn:        statusConn,
+		listener:                   listener,
+		grpcServer:                 grpcServer,
+		health:                     healthServer,
+		reporter:                   reporter,
+		gameConn:                   gameConn,
+		socialConn:                 socialConn,
+		notificationsConn:          notificationsConn,
+		statusConn:                 statusConn,
+		stopCampaignProjectionSync: stopCampaignProjectionSync,
+		campaignProjectionDone:     campaignProjectionDone,
 	}, nil
 }
 
@@ -229,6 +265,12 @@ func (s *Server) Close() {
 		}
 		if s.grpcServer != nil {
 			s.grpcServer.Stop()
+		}
+		if s.stopCampaignProjectionSync != nil {
+			s.stopCampaignProjectionSync()
+		}
+		if s.campaignProjectionDone != nil {
+			<-s.campaignProjectionDone
 		}
 		if s.listener != nil {
 			if err := s.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {

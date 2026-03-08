@@ -182,6 +182,7 @@ func setDependencyGame(_ *web.PrincipalDependencies, m *modules.Dependencies, co
 	m.Campaigns.SessionClient = statev1.NewSessionServiceClient(conn)
 	m.Campaigns.InviteClient = statev1.NewInviteServiceClient(conn)
 	m.Campaigns.AuthorizationClient = statev1.NewAuthorizationServiceClient(conn)
+	m.DashboardSync.GameEventClient = statev1.NewEventServiceClient(conn)
 }
 
 // setDependencyAI wires AI clients into module bundles.
@@ -198,6 +199,7 @@ func setDependencyDiscovery(_ *web.PrincipalDependencies, m *modules.Dependencie
 // setDependencyUserHub wires userhub clients into module bundles.
 func setDependencyUserHub(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	m.Dashboard.UserHubClient = userhubv1.NewUserHubServiceClient(conn)
+	m.DashboardSync.UserHubControlClient = userhubv1.NewUserHubControlServiceClient(conn)
 }
 
 // setDependencyNotifications wires notifications clients into principal and module bundles.

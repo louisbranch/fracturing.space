@@ -103,12 +103,15 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 		h.WriteError(w, r, err)
 		return
 	}
-	ctx, _ := h.RequestContextAndUserID(r)
+	ctx, userID := h.RequestContextAndUserID(r)
 	input.Locale = h.RequestLocaleTag(r)
 	created, err := h.service.CreateCampaign(ctx, input)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
+	}
+	if h.sync != nil {
+		h.sync.CampaignCreated(ctx, userID, created.CampaignID)
 	}
 
 	httpx.WriteRedirect(w, r, routepath.AppCampaign(created.CampaignID))

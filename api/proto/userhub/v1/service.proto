@@ -13,6 +13,12 @@ service UserHubService {
   rpc GetDashboard(GetDashboardRequest) returns (GetDashboardResponse);
 }
 
+// UserHubControlService exposes trusted internal cache-control operations.
+service UserHubControlService {
+  // InvalidateDashboards removes cached dashboard entries for users and/or campaigns.
+  rpc InvalidateDashboards(InvalidateDashboardsRequest) returns (InvalidateDashboardsResponse);
+}
+
 message GetDashboardRequest {
   // Preferred caller locale for response shaping and cache keying.
   common.v1.Locale locale = 1;
@@ -33,6 +39,22 @@ message GetDashboardResponse {
   NotificationSummary notifications = 4;
   CampaignSummary campaigns = 5;
   repeated DashboardAction next_actions = 6;
+}
+
+message InvalidateDashboardsRequest {
+  // User-scoped dashboard caches to invalidate across locales.
+  repeated string user_ids = 1;
+
+  // Campaign-scoped dashboard caches to invalidate for all dependent users.
+  repeated string campaign_ids = 2;
+
+  // Optional operator/debug reason for observability.
+  string reason = 3;
+}
+
+message InvalidateDashboardsResponse {
+  // Number of cache entries removed.
+  int32 invalidated_entries = 1;
 }
 
 message DashboardMetadata {

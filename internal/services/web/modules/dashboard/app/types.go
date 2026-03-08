@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"time"
 
 	"golang.org/x/text/language"
 )
@@ -32,7 +33,22 @@ type DashboardSnapshot struct {
 	HasDraftOrActiveCampaign bool
 	CampaignsHasMore         bool
 	DegradedDependencies     []string
+	Freshness                DashboardFreshness
+	CacheHit                 bool
+	GeneratedAt              time.Time
 }
+
+// DashboardFreshness preserves userhub freshness metadata for observability.
+type DashboardFreshness int
+
+const (
+	// DashboardFreshnessUnspecified indicates no freshness metadata was provided.
+	DashboardFreshnessUnspecified DashboardFreshness = iota
+	// DashboardFreshnessFresh indicates live or fresh-cache data.
+	DashboardFreshnessFresh
+	// DashboardFreshnessStale indicates stale-cache fallback data.
+	DashboardFreshnessStale
+)
 
 // Gateway loads dashboard snapshot data for one user.
 type Gateway interface {

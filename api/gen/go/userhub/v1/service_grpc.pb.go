@@ -126,3 +126,111 @@ var UserHubService_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "userhub/v1/service.proto",
 }
+
+const (
+	UserHubControlService_InvalidateDashboards_FullMethodName = "/userhub.v1.UserHubControlService/InvalidateDashboards"
+)
+
+// UserHubControlServiceClient is the client API for UserHubControlService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// UserHubControlService exposes trusted internal cache-control operations.
+type UserHubControlServiceClient interface {
+	// InvalidateDashboards removes cached dashboard entries for users and/or campaigns.
+	InvalidateDashboards(ctx context.Context, in *InvalidateDashboardsRequest, opts ...grpc.CallOption) (*InvalidateDashboardsResponse, error)
+}
+
+type userHubControlServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewUserHubControlServiceClient(cc grpc.ClientConnInterface) UserHubControlServiceClient {
+	return &userHubControlServiceClient{cc}
+}
+
+func (c *userHubControlServiceClient) InvalidateDashboards(ctx context.Context, in *InvalidateDashboardsRequest, opts ...grpc.CallOption) (*InvalidateDashboardsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(InvalidateDashboardsResponse)
+	err := c.cc.Invoke(ctx, UserHubControlService_InvalidateDashboards_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// UserHubControlServiceServer is the server API for UserHubControlService service.
+// All implementations must embed UnimplementedUserHubControlServiceServer
+// for forward compatibility.
+//
+// UserHubControlService exposes trusted internal cache-control operations.
+type UserHubControlServiceServer interface {
+	// InvalidateDashboards removes cached dashboard entries for users and/or campaigns.
+	InvalidateDashboards(context.Context, *InvalidateDashboardsRequest) (*InvalidateDashboardsResponse, error)
+	mustEmbedUnimplementedUserHubControlServiceServer()
+}
+
+// UnimplementedUserHubControlServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedUserHubControlServiceServer struct{}
+
+func (UnimplementedUserHubControlServiceServer) InvalidateDashboards(context.Context, *InvalidateDashboardsRequest) (*InvalidateDashboardsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InvalidateDashboards not implemented")
+}
+func (UnimplementedUserHubControlServiceServer) mustEmbedUnimplementedUserHubControlServiceServer() {}
+func (UnimplementedUserHubControlServiceServer) testEmbeddedByValue()                               {}
+
+// UnsafeUserHubControlServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to UserHubControlServiceServer will
+// result in compilation errors.
+type UnsafeUserHubControlServiceServer interface {
+	mustEmbedUnimplementedUserHubControlServiceServer()
+}
+
+func RegisterUserHubControlServiceServer(s grpc.ServiceRegistrar, srv UserHubControlServiceServer) {
+	// If the following call pancis, it indicates UnimplementedUserHubControlServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&UserHubControlService_ServiceDesc, srv)
+}
+
+func _UserHubControlService_InvalidateDashboards_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InvalidateDashboardsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UserHubControlServiceServer).InvalidateDashboards(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UserHubControlService_InvalidateDashboards_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UserHubControlServiceServer).InvalidateDashboards(ctx, req.(*InvalidateDashboardsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// UserHubControlService_ServiceDesc is the grpc.ServiceDesc for UserHubControlService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var UserHubControlService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "userhub.v1.UserHubControlService",
+	HandlerType: (*UserHubControlServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "InvalidateDashboards",
+			Handler:    _UserHubControlService_InvalidateDashboards_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "userhub/v1/service.proto",
+}
