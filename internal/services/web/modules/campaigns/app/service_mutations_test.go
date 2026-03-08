@@ -19,6 +19,9 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 		run  func() error
 	}{
 		{name: "update campaign", run: func() error { return svc.updateCampaign(ctx, "c1", UpdateCampaignInput{}) }},
+		{name: "update campaign ai binding", run: func() error {
+			return svc.updateCampaignAIBinding(ctx, "c1", UpdateCampaignAIBindingInput{ParticipantID: "p-1", AIAgentID: "agent-1"})
+		}},
 		{name: "start session", run: func() error { return svc.startSession(ctx, "c1", StartSessionInput{Name: "Session One"}) }},
 		{name: "end session", run: func() error { return svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}) }},
 		{name: "create character", run: func() error {
@@ -52,7 +55,12 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
+			ActorCampaignAccess: "Owner",
+		},
 	}
 	svc := newService(gateway)
 	ctx := contextWithResolvedUserID("user-1")
@@ -63,6 +71,9 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	updatedName := "Campaign One"
 	if err := svc.updateCampaign(ctx, "c1", UpdateCampaignInput{Name: &updatedName}); err != nil {
 		t.Fatalf("UpdateCampaign() error = %v", err)
+	}
+	if err := svc.updateCampaignAIBinding(ctx, "c1", UpdateCampaignAIBindingInput{ParticipantID: "p-1", AIAgentID: "agent-1"}); err != nil {
+		t.Fatalf("UpdateCampaignAIBinding() error = %v", err)
 	}
 	if err := svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}); err != nil {
 		t.Fatalf("EndSession() error = %v", err)
@@ -86,7 +97,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 		t.Fatalf("RevokeInvite() error = %v", err)
 	}
 
-	want := []string{"start", "update-campaign", "end", "create-character", "update-participant", "create-invite", "revoke-invite"}
+	want := []string{"start", "update-campaign", "update-campaign-ai-binding", "end", "create-character", "update-participant", "create-invite", "revoke-invite"}
 	if len(gateway.calls) != len(want) {
 		t.Fatalf("len(calls) = %d, want %d (%v)", len(gateway.calls), len(want), gateway.calls)
 	}
@@ -410,6 +421,121 @@ func TestUpdateParticipantValidatesRoleAndAccess(t *testing.T) {
 	}
 	if err := svc.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player One", Role: "player", CampaignAccess: "invalid"}); err == nil {
 		t.Fatalf("expected access validation error")
+	}
+}
+
+func TestUpdateParticipantRejectsAIInvariantTampering(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-ai",
+			Name:           "Caretaker",
+			Role:           "GM",
+			CampaignAccess: "Member",
+			Controller:     "AI",
+			Pronouns:       "it/its",
+		},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
+	}
+	svc := newService(gateway)
+
+	err := svc.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{
+		ParticipantID:  "p-ai",
+		Name:           "Caretaker",
+		Role:           "player",
+		Pronouns:       "it/its",
+		CampaignAccess: "member",
+	})
+	if err == nil {
+		t.Fatalf("expected conflict error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusConflict {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusConflict)
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.participant_ai_role_and_access_are_fixed" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.participant_ai_role_and_access_are_fixed")
+	}
+	if len(gateway.calls) != 0 {
+		t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+	}
+}
+
+func TestUpdateCampaignAIBindingRequiresOwnerAccess(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision: AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ActorCampaignAccess: "Manager",
+		},
+	}
+	svc := newService(gateway)
+
+	err := svc.updateCampaignAIBinding(contextWithResolvedUserID("user-1"), "c1", UpdateCampaignAIBindingInput{
+		ParticipantID: "p-ai",
+		AIAgentID:     "agent-1",
+	})
+	if err == nil {
+		t.Fatalf("expected forbidden error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
+	}
+	if len(gateway.calls) != 0 {
+		t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+	}
+}
+
+func TestUpdateCampaignAIBindingDelegatesForOwner(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision: AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ActorCampaignAccess: "Owner",
+		},
+	}
+	svc := newService(gateway)
+
+	input := UpdateCampaignAIBindingInput{ParticipantID: "p-ai", AIAgentID: "agent-1"}
+	if err := svc.updateCampaignAIBinding(contextWithResolvedUserID("user-1"), "c1", input); err != nil {
+		t.Fatalf("updateCampaignAIBinding() error = %v", err)
+	}
+	if len(gateway.calls) != 1 || gateway.calls[0] != "update-campaign-ai-binding" {
+		t.Fatalf("mutation gateway calls = %v, want [update-campaign-ai-binding]", gateway.calls)
+	}
+	if gateway.lastUpdateCampaignAIBindingInput != input {
+		t.Fatalf("lastUpdateCampaignAIBindingInput = %#v, want %#v", gateway.lastUpdateCampaignAIBindingInput, input)
+	}
+}
+
+func TestUpdateCampaignAIBindingFallsBackToParticipantAccessWhenAuthzOmitsActorAccess(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipants: []CampaignParticipant{{
+			ID:             "p-owner",
+			UserID:         "user-1",
+			CampaignAccess: "Owner",
+		}},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated: true,
+			Allowed:   true,
+		},
+	}
+	svc := newService(gateway)
+
+	if err := svc.updateCampaignAIBinding(contextWithResolvedUserID("user-1"), "c1", UpdateCampaignAIBindingInput{
+		ParticipantID: "p-ai",
+		AIAgentID:     "agent-1",
+	}); err != nil {
+		t.Fatalf("updateCampaignAIBinding() error = %v", err)
+	}
+	if len(gateway.calls) != 1 || gateway.calls[0] != "update-campaign-ai-binding" {
+		t.Fatalf("mutation gateway calls = %v, want [update-campaign-ai-binding]", gateway.calls)
 	}
 }
 

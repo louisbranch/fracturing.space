@@ -65,6 +65,12 @@ type UpdateParticipantInput struct {
 	CampaignAccess string
 }
 
+// UpdateCampaignAIBindingInput stores AI-binding form values.
+type UpdateCampaignAIBindingInput struct {
+	ParticipantID string
+	AIAgentID     string
+}
+
 // CreateCharacterResult stores create-character response values.
 type CreateCharacterResult struct {
 	CharacterID string

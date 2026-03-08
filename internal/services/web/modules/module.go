@@ -64,6 +64,7 @@ type Dependencies struct {
 // CampaignDependencies contains campaign feature clients.
 type CampaignDependencies struct {
 	CampaignClient           campaigns.CampaignClient
+	AgentClient              campaigns.AgentClient
 	ParticipantClient        campaigns.ParticipantClient
 	CharacterClient          campaigns.CharacterClient
 	DaggerheartContentClient campaigns.DaggerheartContentClient

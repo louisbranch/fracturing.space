@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -22,6 +23,13 @@ type CampaignClient interface {
 	GetCampaignSessionReadiness(context.Context, *statev1.GetCampaignSessionReadinessRequest, ...grpc.CallOption) (*statev1.GetCampaignSessionReadinessResponse, error)
 	CreateCampaign(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error)
 	UpdateCampaign(context.Context, *statev1.UpdateCampaignRequest, ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error)
+	SetCampaignAIBinding(context.Context, *statev1.SetCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error)
+	ClearCampaignAIBinding(context.Context, *statev1.ClearCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error)
+}
+
+// AgentClient exposes AI agent listing used for owner-only campaign binding UX.
+type AgentClient interface {
+	ListAgents(context.Context, *aiv1.ListAgentsRequest, ...grpc.CallOption) (*aiv1.ListAgentsResponse, error)
 }
 
 // ParticipantClient exposes participant listing for campaign workspace pages.
@@ -75,6 +83,7 @@ type AuthorizationClient interface {
 // GRPCGatewayDeps carries the explicit client dependencies for the campaigns gRPC gateway.
 type GRPCGatewayDeps struct {
 	CampaignClient           CampaignClient
+	AgentClient              AgentClient
 	ParticipantClient        ParticipantClient
 	CharacterClient          CharacterClient
 	DaggerheartContentClient DaggerheartContentClient
@@ -96,6 +105,7 @@ func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
 	}
 	return GRPCGateway{
 		Client:              deps.CampaignClient,
+		AgentClient:         deps.AgentClient,
 		ParticipantClient:   deps.ParticipantClient,
 		CharacterClient:     deps.CharacterClient,
 		DaggerheartContent:  deps.DaggerheartContentClient,
@@ -110,6 +120,7 @@ func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
 // GRPCGateway defines an internal contract used at this web package boundary.
 type GRPCGateway struct {
 	Client              CampaignClient
+	AgentClient         AgentClient
 	ParticipantClient   ParticipantClient
 	CharacterClient     CharacterClient
 	DaggerheartContent  DaggerheartContentClient
@@ -186,6 +197,7 @@ func (g GRPCGateway) CampaignWorkspace(ctx context.Context, campaignID string) (
 		Theme:            strings.TrimSpace(campaign.GetThemePrompt()),
 		System:           campaignSystemLabel(campaign.GetSystem()),
 		GMMode:           campaignGMModeLabel(campaign.GetGmMode()),
+		AIAgentID:        strings.TrimSpace(campaign.GetAiAgentId()),
 		Status:           campaignStatusLabel(campaign.GetStatus()),
 		Locale:           campaignLocaleLabel(campaign.GetLocale()),
 		Intent:           campaignIntentLabel(campaign.GetIntent()),

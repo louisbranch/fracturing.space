@@ -19,6 +19,7 @@ type CampaignWorkspace struct {
 	Theme            string `json:"theme"`
 	System           string `json:"system"`
 	GMMode           string `json:"gmMode"`
+	AIAgentID        string `json:"aiAgentId"`
 	Status           string `json:"status"`
 	Locale           string `json:"locale"`
 	Intent           string `json:"intent"`
@@ -51,8 +52,26 @@ type CampaignParticipantAccessOption struct {
 // CampaignParticipantEditor stores participant edit page data.
 type CampaignParticipantEditor struct {
 	Participant    CampaignParticipant               `json:"participant"`
+	RoleReadOnly   bool                              `json:"roleReadOnly"`
 	AccessOptions  []CampaignParticipantAccessOption `json:"accessOptions"`
 	AccessReadOnly bool                              `json:"accessReadOnly"`
+}
+
+// CampaignAIAgentOption stores one AI binding option state.
+type CampaignAIAgentOption struct {
+	ID       string `json:"id"`
+	Name     string `json:"name"`
+	Enabled  bool   `json:"enabled"`
+	Selected bool   `json:"selected"`
+}
+
+// CampaignAIBindingEditor stores AI-binding form state for the participant edit page.
+type CampaignAIBindingEditor struct {
+	Visible     bool                    `json:"visible"`
+	Enabled     bool                    `json:"enabled"`
+	Unavailable bool                    `json:"unavailable"`
+	CurrentID   string                  `json:"currentId"`
+	Options     []CampaignAIAgentOption `json:"options"`
 }
 
 // CampaignCharacter stores character details used by campaign characters pages.

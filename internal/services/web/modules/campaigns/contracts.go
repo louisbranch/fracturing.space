@@ -15,6 +15,8 @@ type (
 	CampaignParticipant                        = campaignapp.CampaignParticipant
 	CampaignParticipantAccessOption            = campaignapp.CampaignParticipantAccessOption
 	CampaignParticipantEditor                  = campaignapp.CampaignParticipantEditor
+	CampaignAIAgentOption                      = campaignapp.CampaignAIAgentOption
+	CampaignAIBindingEditor                    = campaignapp.CampaignAIBindingEditor
 	CampaignCharacter                          = campaignapp.CampaignCharacter
 	CampaignSession                            = campaignapp.CampaignSession
 	CampaignSessionReadiness                   = campaignapp.CampaignSessionReadiness
@@ -54,6 +56,7 @@ type (
 	UpdateCharacterInput                       = campaignapp.UpdateCharacterInput
 	CreateCharacterResult                      = campaignapp.CreateCharacterResult
 	UpdateParticipantInput                     = campaignapp.UpdateParticipantInput
+	UpdateCampaignAIBindingInput               = campaignapp.UpdateCampaignAIBindingInput
 	CampaignGateway                            = campaignapp.CampaignGateway
 )
 

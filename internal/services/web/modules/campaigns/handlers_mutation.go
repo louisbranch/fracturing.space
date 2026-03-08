@@ -115,6 +115,20 @@ func (h handlers) handleParticipantUpdate(w http.ResponseWriter, r *http.Request
 	httpx.WriteRedirect(w, r, routepath.AppCampaignParticipants(campaignID))
 }
 
+// handleCampaignAIBinding handles this route in the module transport layer.
+func (h handlers) handleCampaignAIBinding(w http.ResponseWriter, r *http.Request, campaignID string) {
+	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_campaign_ai_binding_form", "failed to parse campaign AI binding form") {
+		return
+	}
+	input := parseUpdateCampaignAIBindingInput(r.Form)
+	ctx, _ := h.RequestContextAndUserID(r)
+	if err := h.service.UpdateCampaignAIBinding(ctx, campaignID, input); err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+	httpx.WriteRedirect(w, r, routepath.AppCampaignParticipantEdit(campaignID, input.ParticipantID))
+}
+
 // handleCampaignUpdate handles this route in the module transport layer.
 func (h handlers) handleCampaignUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_campaign_update_form", "failed to parse campaign update form") {

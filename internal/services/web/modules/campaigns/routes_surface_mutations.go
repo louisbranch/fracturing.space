@@ -26,6 +26,7 @@ func registerStableCampaignMutationRoutes(mux *http.ServeMux, h handlers) {
 
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignGamePattern, h.withCampaignID(h.handleGame))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignEditPattern, h.withCampaignID(h.handleCampaignUpdate))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignAIBindingPattern, h.withCampaignID(h.handleCampaignAIBinding))
 
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignInvitesPattern, h.withCampaignID(h.handleInvites))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteCreatePattern, h.withCampaignID(h.handleInviteCreate))

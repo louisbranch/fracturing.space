@@ -771,6 +771,57 @@ func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
 	}
 }
 
+func TestMountCampaignParticipantEditRendersAIBindingColumnForOwner(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items:              []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceAIAgentID: "agent-current",
+		participant: CampaignParticipant{
+			ID:             "p-ai",
+			Name:           "Caretaker",
+			Role:           "GM",
+			CampaignAccess: "Member",
+			Controller:     "AI",
+			Pronouns:       "it/its",
+		},
+		campaignAIAgents: []CampaignAIAgentOption{{ID: "agent-current", Name: "Current", Enabled: true}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
+			ActorCampaignAccess: "Owner",
+		},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantEdit("c1", "p-ai"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-participant-edit-layout="ai"`,
+		`data-campaign-participant-role-readonly="true"`,
+		`data-campaign-participant-access-readonly="true"`,
+		`type="hidden" name="role" value="gm"`,
+		`type="hidden" name="campaign_access" value="member"`,
+		`data-campaign-ai-binding-form="true"`,
+		`action="/app/campaigns/c1/ai-binding"`,
+		`name="ai_agent_id"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing AI participant edit marker %q: %q", marker, body)
+		}
+	}
+}
+
 func TestMountCampaignParticipantsFailsWhenGatewayReturnsError(t *testing.T) {
 	t.Parallel()
 

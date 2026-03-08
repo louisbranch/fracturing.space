@@ -5,9 +5,13 @@ import "strings"
 const (
 	participantRoleGMValue     = "gm"
 	participantRolePlayerValue = "player"
+	participantAccessMember    = "member"
+	participantAccessManager   = "manager"
+	participantAccessOwner     = "owner"
+	participantControllerAI    = "ai"
 )
 
-var participantAccessValues = []string{"member", "manager", "owner"}
+var participantAccessValues = []string{participantAccessMember, participantAccessManager, participantAccessOwner}
 
 // participantRoleCanonical maps transport/view role labels to canonical values.
 func participantRoleCanonical(value string) (string, bool) {
@@ -25,11 +29,25 @@ func participantRoleCanonical(value string) (string, bool) {
 func participantAccessCanonical(value string) string {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "member", "campaign_access_member":
-		return "member"
+		return participantAccessMember
 	case "manager", "campaign_access_manager":
-		return "manager"
+		return participantAccessManager
 	case "owner", "campaign_access_owner":
-		return "owner"
+		return participantAccessOwner
+	default:
+		return ""
+	}
+}
+
+// participantControllerCanonical maps transport/view controller labels to canonical values.
+func participantControllerCanonical(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "ai", "controller_ai":
+		return participantControllerAI
+	case "human", "controller_human":
+		return "human"
+	case "unassigned", "controller_unassigned":
+		return "unassigned"
 	default:
 		return ""
 	}

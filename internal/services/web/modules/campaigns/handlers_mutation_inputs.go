@@ -65,6 +65,14 @@ func parseUpdateParticipantInput(participantID string, form url.Values) UpdatePa
 	}
 }
 
+// parseUpdateCampaignAIBindingInput maps form values into AI-binding input.
+func parseUpdateCampaignAIBindingInput(form url.Values) UpdateCampaignAIBindingInput {
+	return UpdateCampaignAIBindingInput{
+		ParticipantID: strings.TrimSpace(form.Get("participant_id")),
+		AIAgentID:     strings.TrimSpace(form.Get("ai_agent_id")),
+	}
+}
+
 // parseUpdateCampaignInput maps form values into campaign-update patch input.
 func parseUpdateCampaignInput(form url.Values) UpdateCampaignInput {
 	name := strings.TrimSpace(form.Get("name"))

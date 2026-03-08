@@ -4,10 +4,11 @@ import "context"
 
 // AuthorizationDecision captures one authorization check result.
 type AuthorizationDecision struct {
-	CheckID    string
-	Evaluated  bool
-	Allowed    bool
-	ReasonCode string
+	CheckID             string
+	Evaluated           bool
+	Allowed             bool
+	ReasonCode          string
+	ActorCampaignAccess string
 }
 
 // ParticipantGovernanceOperation scopes participant authz intent for policy evaluation.
