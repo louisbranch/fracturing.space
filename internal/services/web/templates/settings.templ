@@ -36,6 +36,37 @@ type SettingsAIKeyRow struct {
 	CanRevoke bool
 }
 
+type SettingsAICredentialOption struct {
+	ID       string
+	Label    string
+	Provider string
+}
+
+type SettingsAIModelOption struct {
+	ID      string
+	OwnedBy string
+}
+
+type SettingsAIAgentRow struct {
+	ID           string
+	Name         string
+	Provider     string
+	Model        string
+	Status       string
+	CreatedAt    string
+	Instructions string
+}
+
+type SettingsAIAgentsForm struct {
+	Name              string
+	CredentialID      string
+	Model             string
+	Instructions      string
+	ErrorMessage      string
+	CredentialOptions []SettingsAICredentialOption
+	ModelOptions      []SettingsAIModelOption
+}
+
 func settingsLocaleValue(form SettingsLocaleForm) string {
 	selected := strings.TrimSpace(form.SelectedLocale)
 	if selected == "" {
@@ -50,6 +81,14 @@ func settingsAIKeyProviderLabel(form SettingsAIKeysForm) string {
 		return "OpenAI"
 	}
 	return provider
+}
+
+func settingsAIAgentsCredentialSelected(form SettingsAIAgentsForm, credentialID string) bool {
+	return strings.TrimSpace(form.CredentialID) == strings.TrimSpace(credentialID)
+}
+
+func settingsAIAgentsModelSelected(form SettingsAIAgentsForm, modelID string) bool {
+	return strings.TrimSpace(form.Model) == strings.TrimSpace(modelID)
 }
 
 templ SettingsProfileFragment(form SettingsProfileForm, loc Localizer) {
@@ -198,6 +237,119 @@ templ SettingsAIKeysFragment(form SettingsAIKeysForm, keys []SettingsAIKeyRow, l
 												<span class="opacity-60">-</span>
 											}
 										</td>
+									</tr>
+								}
+							</tbody>
+						</table>
+					</div>
+				}
+			</div>
+		</div>
+	</section>
+}
+
+templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAgentRow, loc Localizer) {
+	<section id="settings-ai-agents" class="space-y-6">
+		<div class="card bg-base-200">
+			<div class="card-body">
+				<h2 class="card-title">{ T(loc, "web.settings.ai_agents.title") }</h2>
+				<p class="text-sm opacity-80">{ T(loc, "web.settings.ai_agents.description") }</p>
+				if form.ErrorMessage != "" {
+					<div class="alert alert-error">{ form.ErrorMessage }</div>
+				}
+				if len(form.CredentialOptions) == 0 {
+					<div class="alert">
+						<span>{ T(loc, "web.settings.ai_agents.empty_credentials") }</span>
+					</div>
+				} else {
+					<form method="get" action={ routepath.AppSettingsAIAgents } class="grid gap-4 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_credential") }</span>
+							</label>
+							<select class="select select-bordered w-full" name="credential_id" required>
+								<option value="">{ T(loc, "web.settings.ai_agents.option_select_credential") }</option>
+								for _, option := range form.CredentialOptions {
+									if settingsAIAgentsCredentialSelected(form, option.ID) {
+										<option value={ option.ID } selected>{ option.Label } ({ option.Provider })</option>
+									} else {
+										<option value={ option.ID }>{ option.Label } ({ option.Provider })</option>
+									}
+								}
+							</select>
+						</div>
+						<div class="form-control">
+							<button class="btn btn-outline" type="submit">{ T(loc, "web.settings.ai_agents.submit_load_models") }</button>
+						</div>
+					</form>
+					<form method="post" action={ routepath.AppSettingsAIAgents } class="space-y-4">
+						<input type="hidden" name="credential_id" value={ form.CredentialID }/>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_name") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="name" value={ form.Name } required/>
+						</div>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_model") }</span>
+							</label>
+							<select class="select select-bordered w-full" name="model" required>
+								<option value="">{ T(loc, "web.settings.ai_agents.option_select_model") }</option>
+								for _, option := range form.ModelOptions {
+									if settingsAIAgentsModelSelected(form, option.ID) {
+										<option value={ option.ID } selected>{ option.ID }</option>
+									} else {
+										<option value={ option.ID }>{ option.ID }</option>
+									}
+								}
+							</select>
+							if len(form.ModelOptions) == 0 {
+								<label class="label">
+									<span class="label-text-alt">{ T(loc, "web.settings.ai_agents.helper_load_models") }</span>
+								</label>
+							}
+						</div>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_instructions") }</span>
+							</label>
+							<textarea class="textarea textarea-bordered min-h-32 w-full" name="instructions">{ form.Instructions }</textarea>
+						</div>
+						<div class="card-actions justify-end">
+							<button class="btn btn-primary" type="submit">{ T(loc, "web.settings.ai_agents.submit_create") }</button>
+						</div>
+					</form>
+				}
+			</div>
+		</div>
+		<div class="card bg-base-200">
+			<div class="card-body">
+				<h3 class="card-title">{ T(loc, "web.settings.ai_agents.list_title") }</h3>
+				if len(agents) == 0 {
+					<div class="text-sm opacity-80">{ T(loc, "web.settings.ai_agents.empty") }</div>
+				} else {
+					<div class="overflow-x-auto">
+						<table class="table table-zebra">
+							<thead>
+								<tr>
+									<th>{ T(loc, "web.settings.ai_agents.table.name") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.provider") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.model") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.status") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.created") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.instructions") }</th>
+								</tr>
+							</thead>
+							<tbody>
+								for _, agent := range agents {
+									<tr>
+										<td>{ agent.Name }</td>
+										<td>{ agent.Provider }</td>
+										<td>{ agent.Model }</td>
+										<td>{ agent.Status }</td>
+										<td>{ agent.CreatedAt }</td>
+										<td>{ agent.Instructions }</td>
 									</tr>
 								}
 							</tbody>

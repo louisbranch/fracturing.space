@@ -9,6 +9,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -37,6 +38,7 @@ func (s *Service) CreateAgent(ctx context.Context, in *aiv1.CreateAgentRequest) 
 		OwnerUserID:     userID,
 		Name:            in.GetName(),
 		Handle:          in.GetHandle(),
+		Instructions:    in.GetInstructions(),
 		Provider:        provider,
 		Model:           in.GetModel(),
 		CredentialID:    in.GetCredentialId(),
@@ -46,6 +48,9 @@ func (s *Service) CreateAgent(ctx context.Context, in *aiv1.CreateAgentRequest) 
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	if err := s.validateAgentAuthReferenceForProvider(ctx, userID, string(provider), createInput.CredentialID, createInput.ProviderGrantID); err != nil {
+		return nil, err
+	}
+	if err := s.validateProviderModelAvailable(ctx, userID, string(provider), createInput.CredentialID, createInput.ProviderGrantID, createInput.Model); err != nil {
 		return nil, err
 	}
 
@@ -59,6 +64,7 @@ func (s *Service) CreateAgent(ctx context.Context, in *aiv1.CreateAgentRequest) 
 		OwnerUserID:     created.OwnerUserID,
 		Name:            created.Name,
 		Handle:          created.Handle,
+		Instructions:    created.Instructions,
 		Provider:        string(created.Provider),
 		Model:           created.Model,
 		CredentialID:    created.CredentialID,
@@ -99,6 +105,62 @@ func (s *Service) ListAgents(ctx context.Context, in *aiv1.ListAgentsRequest) (*
 	}
 	for _, rec := range page.Agents {
 		resp.Agents = append(resp.Agents, agentToProto(rec))
+	}
+	return resp, nil
+}
+
+// ListProviderModels returns provider-backed model options for one owned auth reference.
+func (s *Service) ListProviderModels(ctx context.Context, in *aiv1.ListProviderModelsRequest) (*aiv1.ListProviderModelsResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "list provider models request is required")
+	}
+
+	userID := userIDFromContext(ctx)
+	if userID == "" {
+		return nil, status.Error(codes.PermissionDenied, "missing user identity")
+	}
+
+	provider, err := agentProviderFromProto(in.GetProvider())
+	if err != nil {
+		return nil, err
+	}
+	token, err := s.resolveAuthReferenceToken(
+		ctx,
+		userID,
+		string(provider),
+		strings.TrimSpace(in.GetCredentialId()),
+		strings.TrimSpace(in.GetProviderGrantId()),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	modelProvider := providergrant.Provider(strings.ToLower(strings.TrimSpace(string(provider))))
+	adapter, ok := s.providerModelAdapters[modelProvider]
+	if !ok || adapter == nil {
+		return nil, status.Error(codes.FailedPrecondition, "provider model adapter is unavailable")
+	}
+	models, err := adapter.ListModels(ctx, ProviderListModelsInput{CredentialSecret: token})
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "list provider models: %v", err)
+	}
+	sort.Slice(models, func(i int, j int) bool {
+		if models[i].Created != models[j].Created {
+			return models[i].Created > models[j].Created
+		}
+		return strings.Compare(strings.TrimSpace(models[i].ID), strings.TrimSpace(models[j].ID)) > 0
+	})
+
+	resp := &aiv1.ListProviderModelsResponse{Models: make([]*aiv1.ProviderModel, 0, len(models))}
+	for _, model := range models {
+		modelID := strings.TrimSpace(model.ID)
+		if modelID == "" {
+			continue
+		}
+		resp.Models = append(resp.Models, &aiv1.ProviderModel{
+			Id:      modelID,
+			OwnedBy: strings.TrimSpace(model.OwnedBy),
+		})
 	}
 	return resp, nil
 }
@@ -254,6 +316,7 @@ func (s *Service) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentRequest) 
 	}
 
 	name := firstNonEmpty(strings.TrimSpace(in.GetName()), existing.Name)
+	instructions := firstNonEmpty(strings.TrimSpace(in.GetInstructions()), existing.Instructions)
 	model := firstNonEmpty(strings.TrimSpace(in.GetModel()), existing.Model)
 	credentialID := strings.TrimSpace(existing.CredentialID)
 	providerGrantID := strings.TrimSpace(existing.ProviderGrantID)
@@ -267,6 +330,7 @@ func (s *Service) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentRequest) 
 		ID:              existing.ID,
 		OwnerUserID:     existing.OwnerUserID,
 		Name:            name,
+		Instructions:    instructions,
 		Model:           model,
 		CredentialID:    credentialID,
 		ProviderGrantID: providerGrantID,
@@ -277,9 +341,17 @@ func (s *Service) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentRequest) 
 	if err := s.validateAgentAuthReferenceForProvider(ctx, userID, existing.Provider, normalized.CredentialID, normalized.ProviderGrantID); err != nil {
 		return nil, err
 	}
+	if normalized.Model != existing.Model ||
+		normalized.CredentialID != existing.CredentialID ||
+		normalized.ProviderGrantID != existing.ProviderGrantID {
+		if err := s.validateProviderModelAvailable(ctx, userID, existing.Provider, normalized.CredentialID, normalized.ProviderGrantID, normalized.Model); err != nil {
+			return nil, err
+		}
+	}
 
 	record := existing
 	record.Name = normalized.Name
+	record.Instructions = normalized.Instructions
 	record.Model = normalized.Model
 	record.CredentialID = normalized.CredentialID
 	record.ProviderGrantID = normalized.ProviderGrantID
@@ -500,6 +572,79 @@ func (s *Service) validateAgentAuthReferenceForProvider(ctx context.Context, own
 	}
 	return nil
 }
+
+func (s *Service) validateProviderModelAvailable(ctx context.Context, ownerUserID string, provider string, credentialID string, providerGrantID string, model string) error {
+	model = strings.TrimSpace(model)
+	if model == "" {
+		return status.Error(codes.InvalidArgument, "model is required")
+	}
+
+	token, err := s.resolveAuthReferenceToken(ctx, ownerUserID, provider, credentialID, providerGrantID)
+	if err != nil {
+		return err
+	}
+	modelProvider := providergrant.Provider(strings.ToLower(strings.TrimSpace(provider)))
+	adapter, ok := s.providerModelAdapters[modelProvider]
+	if !ok || adapter == nil {
+		return status.Error(codes.FailedPrecondition, "provider model adapter is unavailable")
+	}
+	models, err := adapter.ListModels(ctx, ProviderListModelsInput{CredentialSecret: token})
+	if err != nil {
+		return status.Errorf(codes.Internal, "list provider models: %v", err)
+	}
+	for _, candidate := range models {
+		if strings.TrimSpace(candidate.ID) == model {
+			return nil
+		}
+	}
+	return status.Error(codes.FailedPrecondition, "model is unavailable for the selected auth reference")
+}
+
+func (s *Service) resolveAuthReferenceToken(ctx context.Context, ownerUserID string, provider string, credentialID string, providerGrantID string) (string, error) {
+	credentialID = strings.TrimSpace(credentialID)
+	providerGrantID = strings.TrimSpace(providerGrantID)
+	hasCredential := credentialID != ""
+	hasProviderGrant := providerGrantID != ""
+	if hasCredential == hasProviderGrant {
+		return "", status.Error(codes.FailedPrecondition, "agent auth reference is invalid")
+	}
+
+	if hasCredential {
+		if s.credentialStore == nil {
+			return "", status.Error(codes.Internal, "credential store is not configured")
+		}
+		credentialRecord, err := s.credentialStore.GetCredential(ctx, credentialID)
+		if err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				return "", status.Error(codes.FailedPrecondition, "credential is unavailable")
+			}
+			return "", status.Errorf(codes.Internal, "get credential: %v", err)
+		}
+		if !isCredentialActiveForUser(credentialRecord, ownerUserID, provider) {
+			return "", status.Error(codes.FailedPrecondition, "credential must be active and owned by caller")
+		}
+		credentialSecret, err := s.sealer.Open(credentialRecord.SecretCiphertext)
+		if err != nil {
+			return "", status.Errorf(codes.Internal, "open credential secret: %v", err)
+		}
+		return credentialSecret, nil
+	}
+
+	grantRecord, err := s.resolveProviderGrantForInvocation(ctx, ownerUserID, providerGrantID, provider)
+	if err != nil {
+		return "", err
+	}
+	tokenPlaintext, err := s.sealer.Open(grantRecord.TokenCiphertext)
+	if err != nil {
+		return "", status.Errorf(codes.Internal, "open provider token: %v", err)
+	}
+	accessToken, err := accessTokenFromTokenPayload(tokenPlaintext)
+	if err != nil {
+		return "", status.Errorf(codes.FailedPrecondition, "provider token payload is invalid: %v", err)
+	}
+	return accessToken, nil
+}
+
 func isCredentialActiveForUser(record storage.CredentialRecord, ownerUserID string, provider string) bool {
 	if strings.TrimSpace(record.OwnerUserID) != strings.TrimSpace(ownerUserID) {
 		return false

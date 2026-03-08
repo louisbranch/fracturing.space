@@ -200,6 +200,7 @@ var CredentialService_ServiceDesc = grpc.ServiceDesc{
 const (
 	AgentService_CreateAgent_FullMethodName                  = "/ai.v1.AgentService/CreateAgent"
 	AgentService_ListAgents_FullMethodName                   = "/ai.v1.AgentService/ListAgents"
+	AgentService_ListProviderModels_FullMethodName           = "/ai.v1.AgentService/ListProviderModels"
 	AgentService_ListAccessibleAgents_FullMethodName         = "/ai.v1.AgentService/ListAccessibleAgents"
 	AgentService_GetAccessibleAgent_FullMethodName           = "/ai.v1.AgentService/GetAccessibleAgent"
 	AgentService_ValidateCampaignAgentBinding_FullMethodName = "/ai.v1.AgentService/ValidateCampaignAgentBinding"
@@ -213,6 +214,7 @@ const (
 type AgentServiceClient interface {
 	CreateAgent(ctx context.Context, in *CreateAgentRequest, opts ...grpc.CallOption) (*CreateAgentResponse, error)
 	ListAgents(ctx context.Context, in *ListAgentsRequest, opts ...grpc.CallOption) (*ListAgentsResponse, error)
+	ListProviderModels(ctx context.Context, in *ListProviderModelsRequest, opts ...grpc.CallOption) (*ListProviderModelsResponse, error)
 	ListAccessibleAgents(ctx context.Context, in *ListAccessibleAgentsRequest, opts ...grpc.CallOption) (*ListAccessibleAgentsResponse, error)
 	GetAccessibleAgent(ctx context.Context, in *GetAccessibleAgentRequest, opts ...grpc.CallOption) (*GetAccessibleAgentResponse, error)
 	ValidateCampaignAgentBinding(ctx context.Context, in *ValidateCampaignAgentBindingRequest, opts ...grpc.CallOption) (*ValidateCampaignAgentBindingResponse, error)
@@ -242,6 +244,16 @@ func (c *agentServiceClient) ListAgents(ctx context.Context, in *ListAgentsReque
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListAgentsResponse)
 	err := c.cc.Invoke(ctx, AgentService_ListAgents_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *agentServiceClient) ListProviderModels(ctx context.Context, in *ListProviderModelsRequest, opts ...grpc.CallOption) (*ListProviderModelsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListProviderModelsResponse)
+	err := c.cc.Invoke(ctx, AgentService_ListProviderModels_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -304,6 +316,7 @@ func (c *agentServiceClient) DeleteAgent(ctx context.Context, in *DeleteAgentReq
 type AgentServiceServer interface {
 	CreateAgent(context.Context, *CreateAgentRequest) (*CreateAgentResponse, error)
 	ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error)
+	ListProviderModels(context.Context, *ListProviderModelsRequest) (*ListProviderModelsResponse, error)
 	ListAccessibleAgents(context.Context, *ListAccessibleAgentsRequest) (*ListAccessibleAgentsResponse, error)
 	GetAccessibleAgent(context.Context, *GetAccessibleAgentRequest) (*GetAccessibleAgentResponse, error)
 	ValidateCampaignAgentBinding(context.Context, *ValidateCampaignAgentBindingRequest) (*ValidateCampaignAgentBindingResponse, error)
@@ -324,6 +337,9 @@ func (UnimplementedAgentServiceServer) CreateAgent(context.Context, *CreateAgent
 }
 func (UnimplementedAgentServiceServer) ListAgents(context.Context, *ListAgentsRequest) (*ListAgentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAgents not implemented")
+}
+func (UnimplementedAgentServiceServer) ListProviderModels(context.Context, *ListProviderModelsRequest) (*ListProviderModelsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListProviderModels not implemented")
 }
 func (UnimplementedAgentServiceServer) ListAccessibleAgents(context.Context, *ListAccessibleAgentsRequest) (*ListAccessibleAgentsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAccessibleAgents not implemented")
@@ -393,6 +409,24 @@ func _AgentService_ListAgents_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AgentServiceServer).ListAgents(ctx, req.(*ListAgentsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AgentService_ListProviderModels_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListProviderModelsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AgentServiceServer).ListProviderModels(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AgentService_ListProviderModels_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AgentServiceServer).ListProviderModels(ctx, req.(*ListProviderModelsRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -501,6 +535,10 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAgents",
 			Handler:    _AgentService_ListAgents_Handler,
+		},
+		{
+			MethodName: "ListProviderModels",
+			Handler:    _AgentService_ListProviderModels_Handler,
 		},
 		{
 			MethodName: "ListAccessibleAgents",

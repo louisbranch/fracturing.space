@@ -94,6 +94,7 @@ type SettingsDependencies struct {
 	SocialClient     settings.SocialClient
 	AccountClient    settings.AccountClient
 	CredentialClient settings.CredentialClient
+	AgentClient      settings.AgentClient
 }
 
 // DashboardSyncDependencies contains shared mutation-sync clients.

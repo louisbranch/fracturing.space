@@ -35,6 +35,38 @@ type SettingsAIKey struct {
 	CanRevoke bool
 }
 
+// SettingsAICredentialOption stores an active credential option for agent creation.
+type SettingsAICredentialOption struct {
+	ID       string
+	Label    string
+	Provider string
+}
+
+// SettingsAIModelOption stores one provider-backed model option for agent creation.
+type SettingsAIModelOption struct {
+	ID      string
+	OwnedBy string
+}
+
+// SettingsAIAgent stores an agent row displayed in the AI agents page.
+type SettingsAIAgent struct {
+	ID           string
+	Name         string
+	Provider     string
+	Model        string
+	Status       string
+	CreatedAt    string
+	Instructions string
+}
+
+// CreateAIAgentInput stores validated agent creation input.
+type CreateAIAgentInput struct {
+	Name         string
+	CredentialID string
+	Model        string
+	Instructions string
+}
+
 // settingsLocale defines an internal contract used at this web package boundary.
 type settingsLocale string
 
@@ -58,7 +90,11 @@ type Gateway interface {
 	LoadLocale(context.Context, string) (string, error)
 	SaveLocale(context.Context, string, string) error
 	ListAIKeys(context.Context, string) ([]SettingsAIKey, error)
+	ListAIAgentCredentials(context.Context, string) ([]SettingsAICredentialOption, error)
+	ListAIAgents(context.Context, string) ([]SettingsAIAgent, error)
+	ListAIProviderModels(context.Context, string, string) ([]SettingsAIModelOption, error)
 	CreateAIKey(context.Context, string, string, string) error
+	CreateAIAgent(context.Context, string, CreateAIAgentInput) error
 	RevokeAIKey(context.Context, string, string) error
 }
 
@@ -69,7 +105,11 @@ type Service interface {
 	LoadLocale(context.Context, string) (string, error)
 	SaveLocale(context.Context, string, string) error
 	ListAIKeys(context.Context, string) ([]SettingsAIKey, error)
+	ListAIAgentCredentials(context.Context, string) ([]SettingsAICredentialOption, error)
+	ListAIAgents(context.Context, string) ([]SettingsAIAgent, error)
+	ListAIProviderModels(context.Context, string, string) ([]SettingsAIModelOption, error)
 	CreateAIKey(context.Context, string, string, string) error
+	CreateAIAgent(context.Context, string, CreateAIAgentInput) error
 	RevokeAIKey(context.Context, string, string) error
 }
 

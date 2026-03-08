@@ -10,6 +10,9 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	anyllm "github.com/mozilla-ai/any-llm-go"
+	anyllmopenai "github.com/mozilla-ai/any-llm-go/providers/openai"
 )
 
 type defaultOpenAIOAuthAdapter struct{}
@@ -28,8 +31,10 @@ type openAIOAuthAdapter struct {
 	cfg OpenAIOAuthConfig
 }
 
-// OpenAIInvokeConfig configures OpenAI responses endpoint and HTTP behavior.
+// OpenAIInvokeConfig configures OpenAI provider behavior.
 type OpenAIInvokeConfig struct {
+	// ResponsesURL is kept for compatibility with existing configuration and is
+	// used to derive the OpenAI base URL for inference and model-listing calls.
 	ResponsesURL string
 	HTTPClient   *http.Client
 }
@@ -155,9 +160,6 @@ func (a *openAIInvokeAdapter) Invoke(ctx context.Context, input ProviderInvokeIn
 	credentialSecret := strings.TrimSpace(input.CredentialSecret)
 	model := strings.TrimSpace(input.Model)
 	prompt := strings.TrimSpace(input.Input)
-	if responsesURL == "" {
-		return ProviderInvokeResult{}, fmt.Errorf("responses url is required")
-	}
 	if credentialSecret == "" {
 		return ProviderInvokeResult{}, fmt.Errorf("credential secret is required")
 	}
@@ -167,11 +169,44 @@ func (a *openAIInvokeAdapter) Invoke(ctx context.Context, input ProviderInvokeIn
 	if prompt == "" {
 		return ProviderInvokeResult{}, fmt.Errorf("input is required")
 	}
-
-	requestBody, err := json.Marshal(map[string]any{
-		"model": model,
-		"input": prompt,
+	if responsesURL != "" {
+		return a.invokeResponsesAPI(ctx, responsesURL, input)
+	}
+	provider, err := a.provider(credentialSecret)
+	if err != nil {
+		return ProviderInvokeResult{}, err
+	}
+	messages := make([]anyllm.Message, 0, 2)
+	if instructions := strings.TrimSpace(input.Instructions); instructions != "" {
+		messages = append(messages, anyllm.Message{Role: anyllm.RoleSystem, Content: instructions})
+	}
+	messages = append(messages, anyllm.Message{Role: anyllm.RoleUser, Content: prompt})
+	resp, err := provider.Completion(ctx, anyllm.CompletionParams{
+		Model:    model,
+		Messages: messages,
 	})
+	if err != nil {
+		return ProviderInvokeResult{}, fmt.Errorf("invoke provider: %w", err)
+	}
+	if resp == nil || len(resp.Choices) == 0 {
+		return ProviderInvokeResult{}, fmt.Errorf("invoke response missing choices")
+	}
+	outputText := strings.TrimSpace(resp.Choices[0].Message.ContentString())
+	if outputText == "" {
+		return ProviderInvokeResult{}, fmt.Errorf("invoke response missing output text")
+	}
+	return ProviderInvokeResult{OutputText: outputText}, nil
+}
+
+func (a *openAIInvokeAdapter) invokeResponsesAPI(ctx context.Context, responsesURL string, input ProviderInvokeInput) (ProviderInvokeResult, error) {
+	requestPayload := map[string]any{
+		"model": input.Model,
+		"input": input.Input,
+	}
+	if instructions := strings.TrimSpace(input.Instructions); instructions != "" {
+		requestPayload["instructions"] = instructions
+	}
+	requestBody, err := json.Marshal(requestPayload)
 	if err != nil {
 		return ProviderInvokeResult{}, fmt.Errorf("marshal invoke request: %w", err)
 	}
@@ -180,9 +215,7 @@ func (a *openAIInvokeAdapter) Invoke(ctx context.Context, input ProviderInvokeIn
 		return ProviderInvokeResult{}, fmt.Errorf("build invoke request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	// Credential material is sent only as an Authorization header and is never
-	// echoed in errors or response payloads.
-	req.Header.Set("Authorization", "Bearer "+credentialSecret)
+	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(input.CredentialSecret))
 
 	res, err := a.cfg.HTTPClient.Do(req)
 	if err != nil {
@@ -201,7 +234,6 @@ func (a *openAIInvokeAdapter) Invoke(ctx context.Context, input ProviderInvokeIn
 		OutputText string `json:"output_text"`
 		Output     []struct {
 			Content []struct {
-				Type string `json:"type"`
 				Text string `json:"text"`
 			} `json:"content"`
 		} `json:"output"`
@@ -227,6 +259,60 @@ func (a *openAIInvokeAdapter) Invoke(ctx context.Context, input ProviderInvokeIn
 		return ProviderInvokeResult{}, fmt.Errorf("invoke response missing output text")
 	}
 	return ProviderInvokeResult{OutputText: outputText}, nil
+}
+
+func (a *openAIInvokeAdapter) ListModels(ctx context.Context, input ProviderListModelsInput) ([]ProviderModel, error) {
+	credentialSecret := strings.TrimSpace(input.CredentialSecret)
+	if credentialSecret == "" {
+		return nil, fmt.Errorf("credential secret is required")
+	}
+	provider, err := a.provider(credentialSecret)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := provider.ListModels(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("list models: %w", err)
+	}
+	models := make([]ProviderModel, 0, len(resp.Data))
+	for _, model := range resp.Data {
+		modelID := strings.TrimSpace(model.ID)
+		if modelID == "" {
+			continue
+		}
+		models = append(models, ProviderModel{
+			ID:      modelID,
+			OwnedBy: strings.TrimSpace(model.OwnedBy),
+			Created: model.Created,
+		})
+	}
+	return models, nil
+}
+
+func (a *openAIInvokeAdapter) provider(credentialSecret string) (*anyllmopenai.Provider, error) {
+	opts := []anyllm.Option{
+		anyllm.WithAPIKey(credentialSecret),
+		anyllm.WithHTTPClient(a.cfg.HTTPClient),
+	}
+	baseURL := strings.TrimSpace(openAIBaseURLFromResponsesURL(a.cfg.ResponsesURL))
+	if baseURL != "" {
+		opts = append(opts, anyllm.WithBaseURL(baseURL))
+	}
+	provider, err := anyllmopenai.New(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("build openai provider: %w", err)
+	}
+	return provider, nil
+}
+
+func openAIBaseURLFromResponsesURL(responsesURL string) string {
+	responsesURL = strings.TrimSpace(responsesURL)
+	if responsesURL == "" {
+		return "https://api.openai.com/v1"
+	}
+	trimmed := strings.TrimSuffix(responsesURL, "/")
+	trimmed = strings.TrimSuffix(trimmed, "/responses")
+	return strings.TrimSpace(trimmed)
 }
 
 func (a *openAIOAuthAdapter) tokenRequest(ctx context.Context, form url.Values) (ProviderTokenExchangeResult, error) {

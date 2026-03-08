@@ -68,6 +68,7 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 	result, err := adapter.Invoke(ctx, ProviderInvokeInput{
 		Model:            agentRecord.Model,
 		Input:            input,
+		Instructions:     strings.TrimSpace(agentRecord.Instructions),
 		CredentialSecret: invokeToken,
 	})
 	if err != nil {
@@ -213,6 +214,7 @@ func (s *Service) SubmitCampaignTurn(ctx context.Context, in *aiv1.SubmitCampaig
 	result, err := adapter.Invoke(ctx, ProviderInvokeInput{
 		Model:            agentRecord.Model,
 		Input:            body,
+		Instructions:     strings.TrimSpace(agentRecord.Instructions),
 		CredentialSecret: invokeToken,
 	})
 	if err != nil {
@@ -336,47 +338,11 @@ func campaignTurnEventKindToProto(value string) aiv1.CampaignTurnEventKind {
 }
 
 func (s *Service) resolveAgentInvokeToken(ctx context.Context, ownerUserID string, agentRecord storage.AgentRecord) (string, error) {
-	credentialID := strings.TrimSpace(agentRecord.CredentialID)
-	providerGrantID := strings.TrimSpace(agentRecord.ProviderGrantID)
-	hasCredential := credentialID != ""
-	hasProviderGrant := providerGrantID != ""
-	if hasCredential == hasProviderGrant {
-		return "", status.Error(codes.FailedPrecondition, "agent auth reference is invalid")
-	}
-
-	if hasCredential {
-		if s.credentialStore == nil {
-			return "", status.Error(codes.Internal, "credential store is not configured")
-		}
-		credentialRecord, err := s.credentialStore.GetCredential(ctx, credentialID)
-		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				return "", status.Error(codes.FailedPrecondition, "credential is unavailable")
-			}
-			return "", status.Errorf(codes.Internal, "get credential: %v", err)
-		}
-		if !isCredentialActiveForUser(credentialRecord, ownerUserID, agentRecord.Provider) {
-			return "", status.Error(codes.FailedPrecondition, "credential must be active and owned by caller")
-		}
-		// Secrets are decrypted only for in-memory request dispatch and never returned.
-		credentialSecret, err := s.sealer.Open(credentialRecord.SecretCiphertext)
-		if err != nil {
-			return "", status.Errorf(codes.Internal, "open credential secret: %v", err)
-		}
-		return credentialSecret, nil
-	}
-
-	grantRecord, err := s.resolveProviderGrantForInvocation(ctx, ownerUserID, providerGrantID, agentRecord.Provider)
-	if err != nil {
-		return "", err
-	}
-	tokenPlaintext, err := s.sealer.Open(grantRecord.TokenCiphertext)
-	if err != nil {
-		return "", status.Errorf(codes.Internal, "open provider token: %v", err)
-	}
-	accessToken, err := accessTokenFromTokenPayload(tokenPlaintext)
-	if err != nil {
-		return "", status.Errorf(codes.FailedPrecondition, "provider token payload is invalid: %v", err)
-	}
-	return accessToken, nil
+	return s.resolveAuthReferenceToken(
+		ctx,
+		ownerUserID,
+		agentRecord.Provider,
+		agentRecord.CredentialID,
+		agentRecord.ProviderGrantID,
+	)
 }

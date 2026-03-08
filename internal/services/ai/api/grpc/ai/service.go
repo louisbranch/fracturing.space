@@ -73,10 +73,16 @@ type ProviderInvocationAdapter interface {
 	Invoke(ctx context.Context, input ProviderInvokeInput) (ProviderInvokeResult, error)
 }
 
+// ProviderModelAdapter handles provider-backed model discovery.
+type ProviderModelAdapter interface {
+	ListModels(ctx context.Context, input ProviderListModelsInput) ([]ProviderModel, error)
+}
+
 // ProviderInvokeInput contains provider invocation input fields.
 type ProviderInvokeInput struct {
-	Model string
-	Input string
+	Model        string
+	Input        string
+	Instructions string
 	// CredentialSecret is decrypted only at call-time and must never be logged.
 	CredentialSecret string
 }
@@ -84,6 +90,19 @@ type ProviderInvokeInput struct {
 // ProviderInvokeResult contains invocation output.
 type ProviderInvokeResult struct {
 	OutputText string
+}
+
+// ProviderListModelsInput contains provider model-listing input fields.
+type ProviderListModelsInput struct {
+	// CredentialSecret is decrypted only at call-time and must never be logged.
+	CredentialSecret string
+}
+
+// ProviderModel contains one provider model option.
+type ProviderModel struct {
+	ID      string
+	OwnedBy string
+	Created int64
 }
 
 // Service implements ai.v1 credential and agent services.
@@ -107,6 +126,7 @@ type Service struct {
 	gameCampaignAIClient       gamev1.CampaignAIServiceClient
 	providerOAuthAdapters      map[providergrant.Provider]ProviderOAuthAdapter
 	providerInvocationAdapters map[providergrant.Provider]ProviderInvocationAdapter
+	providerModelAdapters      map[providergrant.Provider]ProviderModelAdapter
 	sealer                     SecretSealer
 	sessionGrantConfig         aisessiongrant.Config
 
@@ -168,6 +188,11 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 			campaignTurnStore = store
 		}
 	}
+	defaultOpenAIAdapter := NewOpenAIInvokeAdapter(OpenAIInvokeConfig{})
+	providerModelAdapters := map[providergrant.Provider]ProviderModelAdapter{}
+	if modelAdapter, ok := defaultOpenAIAdapter.(ProviderModelAdapter); ok {
+		providerModelAdapters[providergrant.ProviderOpenAI] = modelAdapter
+	}
 	return &Service{
 		credentialStore:     credentialStore,
 		agentStore:          agentStore,
@@ -180,11 +205,12 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 			providergrant.ProviderOpenAI: &defaultOpenAIOAuthAdapter{},
 		},
 		providerInvocationAdapters: map[providergrant.Provider]ProviderInvocationAdapter{
-			providergrant.ProviderOpenAI: NewOpenAIInvokeAdapter(OpenAIInvokeConfig{}),
+			providergrant.ProviderOpenAI: defaultOpenAIAdapter,
 		},
-		sealer:      sealer,
-		clock:       time.Now,
-		idGenerator: id.NewID,
+		providerModelAdapters: providerModelAdapters,
+		sealer:                sealer,
+		clock:                 time.Now,
+		idGenerator:           id.NewID,
 		codeVerifierGenerator: func() (string, error) {
 			return generatePKCECodeVerifier()
 		},
@@ -228,4 +254,21 @@ func (s *Service) SetOpenAIInvocationAdapter(adapter ProviderInvocationAdapter) 
 		s.providerInvocationAdapters = make(map[providergrant.Provider]ProviderInvocationAdapter)
 	}
 	s.providerInvocationAdapters[providergrant.ProviderOpenAI] = adapter
+	if modelAdapter, ok := adapter.(ProviderModelAdapter); ok {
+		if s.providerModelAdapters == nil {
+			s.providerModelAdapters = make(map[providergrant.Provider]ProviderModelAdapter)
+		}
+		s.providerModelAdapters[providergrant.ProviderOpenAI] = modelAdapter
+	}
+}
+
+// SetOpenAIModelAdapter overrides the OpenAI model-listing adapter.
+func (s *Service) SetOpenAIModelAdapter(adapter ProviderModelAdapter) {
+	if s == nil || adapter == nil {
+		return
+	}
+	if s.providerModelAdapters == nil {
+		s.providerModelAdapters = make(map[providergrant.Provider]ProviderModelAdapter)
+	}
+	s.providerModelAdapters[providergrant.ProviderOpenAI] = adapter
 }

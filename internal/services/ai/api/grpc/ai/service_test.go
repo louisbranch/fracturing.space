@@ -69,9 +69,12 @@ func (f *fakeProviderOAuthAdapter) RevokeToken(_ context.Context, input Provider
 }
 
 type fakeProviderInvocationAdapter struct {
-	invokeErr    error
-	invokeResult ProviderInvokeResult
-	lastInput    ProviderInvokeInput
+	invokeErr           error
+	invokeResult        ProviderInvokeResult
+	lastInput           ProviderInvokeInput
+	listModelsErr       error
+	listModelsResult    []ProviderModel
+	lastListModelsInput ProviderListModelsInput
 }
 
 func (f *fakeProviderInvocationAdapter) Invoke(_ context.Context, input ProviderInvokeInput) (ProviderInvokeResult, error) {
@@ -80,6 +83,26 @@ func (f *fakeProviderInvocationAdapter) Invoke(_ context.Context, input Provider
 		return ProviderInvokeResult{}, f.invokeErr
 	}
 	return f.invokeResult, nil
+}
+
+func (f *fakeProviderInvocationAdapter) ListModels(_ context.Context, input ProviderListModelsInput) ([]ProviderModel, error) {
+	f.lastListModelsInput = input
+	if f.listModelsErr != nil {
+		return nil, f.listModelsErr
+	}
+	if f.listModelsResult == nil {
+		return []ProviderModel{
+			{ID: "gpt-4o-mini", OwnedBy: "openai"},
+			{ID: "gpt-4o", OwnedBy: "openai"},
+		}, nil
+	}
+	return f.listModelsResult, nil
+}
+
+func newTestService(store *fakeStore) *Service {
+	svc := NewService(store, store, &fakeSealer{})
+	svc.SetOpenAIInvocationAdapter(&fakeProviderInvocationAdapter{})
+	return svc
 }
 
 func TestCreateCredentialRequiresUserID(t *testing.T) {
@@ -157,7 +180,7 @@ func TestCreateAgentRequiresActiveOwnedCredential(t *testing.T) {
 	store := newFakeStore()
 	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "revoked", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newTestService(store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
 		Name:         "Narrator",
@@ -172,7 +195,7 @@ func TestCreateAgentSuccess(t *testing.T) {
 	store := newFakeStore()
 	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newTestService(store)
 	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 22, 57, 0, 0, time.UTC) }
 	svc.idGenerator = func() (string, error) { return "agent-1", nil }
 
@@ -182,12 +205,59 @@ func TestCreateAgentSuccess(t *testing.T) {
 		Provider:     aiv1.Provider_PROVIDER_OPENAI,
 		Model:        "gpt-4o-mini",
 		CredentialId: "cred-1",
+		Instructions: "Keep the scene moving.",
 	})
 	if err != nil {
 		t.Fatalf("create agent: %v", err)
 	}
 	if resp.GetAgent().GetId() != "agent-1" {
 		t.Fatalf("agent id = %q, want %q", resp.GetAgent().GetId(), "agent-1")
+	}
+	if got := resp.GetAgent().GetInstructions(); got != "Keep the scene moving." {
+		t.Fatalf("instructions = %q, want %q", got, "Keep the scene moving.")
+	}
+}
+
+func TestListProviderModelsReturnsNewestFirst(t *testing.T) {
+	store := newFakeStore()
+	store.Credentials["cred-1"] = storage.CredentialRecord{
+		ID:               "cred-1",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		Label:            "Main",
+		SecretCiphertext: "enc:sk-1",
+		Status:           "active",
+		CreatedAt:        time.Now(),
+		UpdatedAt:        time.Now(),
+	}
+
+	adapter := &fakeProviderInvocationAdapter{
+		listModelsResult: []ProviderModel{
+			{ID: "alpha", OwnedBy: "openai", Created: 100},
+			{ID: "zeta", OwnedBy: "openai", Created: 200},
+			{ID: "beta", OwnedBy: "openai", Created: 200},
+			{ID: "", OwnedBy: "openai", Created: 300},
+		},
+	}
+	svc := NewService(store, store, &fakeSealer{})
+	svc.SetOpenAIInvocationAdapter(adapter)
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
+	resp, err := svc.ListProviderModels(ctx, &aiv1.ListProviderModelsRequest{
+		Provider:     aiv1.Provider_PROVIDER_OPENAI,
+		CredentialId: "cred-1",
+	})
+	if err != nil {
+		t.Fatalf("list provider models: %v", err)
+	}
+	if got := adapter.lastListModelsInput.CredentialSecret; got != "sk-1" {
+		t.Fatalf("credential secret = %q, want %q", got, "sk-1")
+	}
+	if len(resp.GetModels()) != 3 {
+		t.Fatalf("models len = %d, want 3", len(resp.GetModels()))
+	}
+	if resp.GetModels()[0].GetId() != "zeta" || resp.GetModels()[1].GetId() != "beta" || resp.GetModels()[2].GetId() != "alpha" {
+		t.Fatalf("model order = %#v, want zeta, beta, alpha", resp.GetModels())
 	}
 }
 
@@ -204,7 +274,7 @@ func TestCreateAgentWithProviderGrantSuccess(t *testing.T) {
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newTestService(store)
 	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 22, 57, 0, 0, time.UTC) }
 	svc.idGenerator = func() (string, error) { return "agent-1", nil }
 
@@ -244,7 +314,7 @@ func TestCreateAgentRejectsMultipleAuthReferences(t *testing.T) {
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newTestService(store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
 		Name:            "Narrator",
@@ -694,13 +764,14 @@ func TestUpdateAgentSwitchesCredentialToProviderGrant(t *testing.T) {
 		UpdatedAt:       now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newTestService(store)
 	svc.clock = func() time.Time { return now }
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.UpdateAgent(ctx, &aiv1.UpdateAgentRequest{
 		AgentId:         "agent-1",
 		ProviderGrantId: "grant-1",
 		Model:           "gpt-4o",
+		Instructions:    "Answer as the GM.",
 	})
 	if err != nil {
 		t.Fatalf("update agent: %v", err)
@@ -714,6 +785,61 @@ func TestUpdateAgentSwitchesCredentialToProviderGrant(t *testing.T) {
 	}
 	if got := resp.GetAgent().GetModel(); got != "gpt-4o" {
 		t.Fatalf("model = %q, want %q", got, "gpt-4o")
+	}
+	if got := resp.GetAgent().GetInstructions(); got != "Answer as the GM." {
+		t.Fatalf("instructions = %q, want %q", got, "Answer as the GM.")
+	}
+}
+
+func TestUpdateAgentMetadataEditDoesNotRequireLiveModelListing(t *testing.T) {
+	store := newFakeStore()
+	now := time.Date(2026, 2, 15, 22, 57, 0, 0, time.UTC)
+	store.Credentials["cred-1"] = storage.CredentialRecord{
+		ID:               "cred-1",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		Label:            "Primary",
+		SecretCiphertext: "enc:sk-1",
+		Status:           "active",
+		CreatedAt:        now.Add(-2 * time.Hour),
+		UpdatedAt:        now.Add(-2 * time.Hour),
+	}
+	store.Agents["agent-1"] = storage.AgentRecord{
+		ID:           "agent-1",
+		OwnerUserID:  "user-1",
+		Name:         "Narrator",
+		Instructions: "Old instructions.",
+		Handle:       "narrator",
+		Provider:     "openai",
+		Model:        "gpt-4o-mini",
+		CredentialID: "cred-1",
+		Status:       "active",
+		CreatedAt:    now.Add(-time.Hour),
+		UpdatedAt:    now.Add(-time.Hour),
+	}
+
+	adapter := &fakeProviderInvocationAdapter{listModelsErr: errors.New("provider unavailable")}
+	svc := NewService(store, store, &fakeSealer{})
+	svc.SetOpenAIInvocationAdapter(adapter)
+	svc.clock = func() time.Time { return now }
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
+	resp, err := svc.UpdateAgent(ctx, &aiv1.UpdateAgentRequest{
+		AgentId:      "agent-1",
+		Name:         "Lead Narrator",
+		Instructions: "Keep the session moving.",
+	})
+	if err != nil {
+		t.Fatalf("update agent: %v", err)
+	}
+	if got := resp.GetAgent().GetName(); got != "Lead Narrator" {
+		t.Fatalf("name = %q, want %q", got, "Lead Narrator")
+	}
+	if got := resp.GetAgent().GetInstructions(); got != "Keep the session moving." {
+		t.Fatalf("instructions = %q, want %q", got, "Keep the session moving.")
+	}
+	if got := adapter.lastListModelsInput.CredentialSecret; got != "" {
+		t.Fatalf("model listing should not run for metadata-only edit, got credential secret %q", got)
 	}
 }
 

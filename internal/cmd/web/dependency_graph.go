@@ -188,6 +188,7 @@ func setDependencyGame(_ *web.PrincipalDependencies, m *modules.Dependencies, co
 // setDependencyAI wires AI clients into module bundles.
 func setDependencyAI(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	m.Settings.CredentialClient = aiv1.NewCredentialServiceClient(conn)
+	m.Settings.AgentClient = aiv1.NewAgentServiceClient(conn)
 	m.Campaigns.AgentClient = aiv1.NewAgentServiceClient(conn)
 }
 

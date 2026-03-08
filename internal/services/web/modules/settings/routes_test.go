@@ -35,6 +35,7 @@ func TestRegisterRoutesSettingsPathAndMethodContracts(t *testing.T) {
 		{name: "profile required redirect", method: http.MethodGet, path: routepath.AppSettingsProfileRequired, wantStatus: http.StatusFound},
 		{name: "profile get", method: http.MethodGet, path: routepath.AppSettingsProfile, wantStatus: http.StatusOK},
 		{name: "profile head", method: http.MethodHead, path: routepath.AppSettingsProfile, wantStatus: http.StatusOK},
+		{name: "ai agents get", method: http.MethodGet, path: routepath.AppSettingsAIAgents, wantStatus: http.StatusOK},
 		{name: "profile delete rejected", method: http.MethodDelete, path: routepath.AppSettingsProfile, wantStatus: http.StatusMethodNotAllowed},
 		{name: "ai key revoke get rejected", method: http.MethodGet, path: routepath.AppSettingsAIKeyRevoke("cred-1"), wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodPost},
 		{name: "unknown subpath", method: http.MethodGet, path: routepath.SettingsPrefix + "unknown", wantStatus: http.StatusNotFound},
@@ -128,6 +129,22 @@ func (staticGateway) ListAIKeys(context.Context, string) ([]SettingsAIKey, error
 }
 
 func (staticGateway) CreateAIKey(context.Context, string, string, string) error {
+	return nil
+}
+
+func (staticGateway) ListAIAgentCredentials(context.Context, string) ([]SettingsAICredentialOption, error) {
+	return []SettingsAICredentialOption{{ID: "cred-1", Label: "Primary", Provider: "OpenAI"}}, nil
+}
+
+func (staticGateway) ListAIAgents(context.Context, string) ([]SettingsAIAgent, error) {
+	return []SettingsAIAgent{{ID: "agent-1", Name: "Narrator", Provider: "OpenAI", Model: "gpt-4o-mini", Status: "Active", CreatedAt: "2026-01-01 00:00 UTC"}}, nil
+}
+
+func (staticGateway) ListAIProviderModels(context.Context, string, string) ([]SettingsAIModelOption, error) {
+	return []SettingsAIModelOption{{ID: "gpt-4o-mini", OwnedBy: "openai"}}, nil
+}
+
+func (staticGateway) CreateAIAgent(context.Context, string, CreateAIAgentInput) error {
 	return nil
 }
 

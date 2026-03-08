@@ -167,6 +167,63 @@ func (h handlers) handleAIKeyRevoke(w http.ResponseWriter, r *http.Request, cred
 	httpx.WriteRedirect(w, r, routepath.AppSettingsAIKeys)
 }
 
+// handleAIAgentsGet handles this route in the module transport layer.
+func (h handlers) handleAIAgentsGet(w http.ResponseWriter, r *http.Request) {
+	ctx, userID := h.RequestContextAndUserID(r)
+	form := webtemplates.SettingsAIAgentsForm{
+		CredentialID: parseAIAgentCredentialSelectionInput(r.URL.Query()),
+	}
+	if form.CredentialID != "" {
+		models, err := h.service.ListAIProviderModels(ctx, userID, form.CredentialID)
+		if err != nil {
+			statusCode := apperrors.HTTPStatus(err)
+			if statusCode == http.StatusBadRequest || statusCode == http.StatusPreconditionFailed {
+				loc, _ := h.PageLocalizer(w, r)
+				h.renderAIAgentsPage(w, r, ctx, userID, statusCode, form, webi18n.LocalizeError(loc, err))
+				return
+			}
+			h.WriteError(w, r, err)
+			return
+		}
+		form.ModelOptions = mapAIModelTemplateOptions(models)
+	}
+	h.renderAIAgentsPage(w, r, ctx, userID, http.StatusOK, form, "")
+}
+
+// handleAIAgentsCreate handles this route in the module transport layer.
+func (h handlers) handleAIAgentsCreate(w http.ResponseWriter, r *http.Request) {
+	ctx, userID := h.RequestContextAndUserID(r)
+	if err := r.ParseForm(); err != nil {
+		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_ai_agent_form", "failed to parse ai agent form"))
+		return
+	}
+	input := parseAIAgentCreateInput(r.PostForm)
+	if err := h.service.CreateAIAgent(ctx, userID, input); err != nil {
+		statusCode := apperrors.HTTPStatus(err)
+		if statusCode == http.StatusBadRequest || statusCode == http.StatusPreconditionFailed {
+			loc, _ := h.PageLocalizer(w, r)
+			form := webtemplates.SettingsAIAgentsForm{
+				Name:         input.Name,
+				CredentialID: input.CredentialID,
+				Model:        input.Model,
+				Instructions: input.Instructions,
+			}
+			if form.CredentialID != "" {
+				models, modelErr := h.service.ListAIProviderModels(ctx, userID, form.CredentialID)
+				if modelErr == nil {
+					form.ModelOptions = mapAIModelTemplateOptions(models)
+				}
+			}
+			h.renderAIAgentsPage(w, r, ctx, userID, statusCode, form, webi18n.LocalizeError(loc, err))
+			return
+		}
+		h.WriteError(w, r, err)
+		return
+	}
+	h.writeFlashNotice(w, r, flashnotice.NoticeSuccess("web.settings.ai_agents.notice_created"))
+	httpx.WriteRedirect(w, r, routepath.AppSettingsAIAgents)
+}
+
 // writeFlashNotice centralizes this web behavior in one helper seam.
 func (h handlers) writeFlashNotice(w http.ResponseWriter, r *http.Request, notice flashnotice.Notice) {
 	flashnotice.WriteWithPolicy(w, r, notice, h.flashMeta)
@@ -256,6 +313,40 @@ func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx c
 	)
 }
 
+// renderAIAgentsPage centralizes this web behavior in one helper seam.
+func (h handlers) renderAIAgentsPage(
+	w http.ResponseWriter,
+	r *http.Request,
+	ctx context.Context,
+	userID string,
+	statusCode int,
+	form webtemplates.SettingsAIAgentsForm,
+	errorMessage string,
+) {
+	loc, _ := h.PageLocalizer(w, r)
+	credentialOptions, err := h.loadAIAgentCredentialOptions(ctx, userID)
+	if err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+	agentRows, err := h.loadAIAgentRows(ctx, userID)
+	if err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+	form.ErrorMessage = errorMessage
+	form.CredentialOptions = credentialOptions
+	h.writeSettingsPage(
+		w,
+		r,
+		loc,
+		statusCode,
+		routepath.AppSettingsAIAgents,
+		webtemplates.T(loc, "web.settings.page_ai_agents_title"),
+		webtemplates.SettingsAIAgentsFragment(form, agentRows, loc),
+	)
+}
+
 // writeSettingsPage centralizes common settings page shell rendering.
 func (h handlers) writeSettingsPage(
 	w http.ResponseWriter,
@@ -277,4 +368,22 @@ func (h handlers) loadAIKeyRows(ctx context.Context, userID string) ([]webtempla
 		return nil, err
 	}
 	return mapAIKeyTemplateRows(keys), nil
+}
+
+// loadAIAgentCredentialOptions resolves active credential options for template rendering.
+func (h handlers) loadAIAgentCredentialOptions(ctx context.Context, userID string) ([]webtemplates.SettingsAICredentialOption, error) {
+	options, err := h.service.ListAIAgentCredentials(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return mapAIAgentCredentialTemplateOptions(options), nil
+}
+
+// loadAIAgentRows resolves settings AI agent rows for template rendering.
+func (h handlers) loadAIAgentRows(ctx context.Context, userID string) ([]webtemplates.SettingsAIAgentRow, error) {
+	agents, err := h.service.ListAIAgents(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return mapAIAgentTemplateRows(agents), nil
 }
