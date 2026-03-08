@@ -17,8 +17,6 @@ import (
 const (
 	aiAuthRotateReasonCampaignAIBound   = "campaign_ai_bound"
 	aiAuthRotateReasonCampaignAIUnbound = "campaign_ai_unbound"
-	aiAuthRotateReasonSessionStarted    = "session_started"
-	aiAuthRotateReasonSessionEnded      = "session_ended"
 )
 
 func rotateCampaignAIAuthEpoch(
