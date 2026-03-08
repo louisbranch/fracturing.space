@@ -85,3 +85,15 @@ h4 {
     display: none;
   }
 }
+
+/* Campaign cover header contrast */
+
+.campaign-cover-header .breadcrumbs,
+.campaign-cover-header .breadcrumbs a,
+.campaign-cover-header .breadcrumbs li {
+  text-shadow: 0 1px 1px rgb(0, 0, 0);
+}
+
+.campaign-cover-header h1 {
+  text-shadow: 0 1px 3px rgb(0, 0, 0);
+}

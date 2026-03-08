@@ -383,6 +383,17 @@ func truncateBreadcrumbLabel(label string) string {
 	return string(runes[:breadcrumbLabelMaxChars-3]) + "..."
 }
 
+func appMainHeaderUsesBackgroundContrast(layout AppMainLayoutOptions) bool {
+	return appMainLayoutMainBackgroundImageURL(layout) != ""
+}
+
+func appMainHeaderClass(layout AppMainLayoutOptions) string {
+	if appMainHeaderUsesBackgroundContrast(layout) {
+		return "campaign-cover-header"
+	}
+	return ""
+}
+
 func appToastMessage(toast *AppToast) string {
 	if toast == nil {
 		return ""
@@ -488,14 +499,16 @@ templ AppMainContent(header *AppMainHeader) {
 }
 
 templ AppMainContentWithLayout(header *AppMainHeader, layout AppMainLayoutOptions) {
-	if len(appMainHeaderBreadcrumbs(header)) > 0 {
-		@sharedtemplates.Breadcrumbs(appMainHeaderBreadcrumbs(header), false)
-	}
-	if appMainHeaderHasContent(header) {
-		<div class="mb-5 flex items-center justify-between gap-3">
-			if appMainHeaderTitle(header) != "" {
-				<h1 class="mb-0">{ appMainHeaderTitle(header) }</h1>
-			}
+	if appMainHeaderHasContent(header) || len(appMainHeaderBreadcrumbs(header)) > 0 {
+		<div class={ "mb-5 flex items-center justify-between gap-3 " + appMainHeaderClass(layout) }>
+			<div>
+				if len(appMainHeaderBreadcrumbs(header)) > 0 {
+					@sharedtemplates.Breadcrumbs(appMainHeaderBreadcrumbs(header), false)
+				}
+				if appMainHeaderTitle(header) != "" {
+					<h1 class="mb-0">{ appMainHeaderTitle(header) }</h1>
+				}
+			</div>
 			if action := appMainHeaderAction(header); action != nil {
 				<div class="shrink-0">
 					<a class="btn btn-primary btn-sm" href={ action.URL }>{ action.Label }</a>

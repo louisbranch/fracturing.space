@@ -41,14 +41,6 @@ func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, sess
 				IconID:      commonv1.IconId_ICON_ID_CAMPAIGN,
 			},
 			{
-				Label:       webtemplates.T(loc, "game.sessions.title"),
-				URL:         sessionsURL,
-				MatchPrefix: sessionsURL,
-				Badge:       strconv.Itoa(campaignSessionMenuCount(sessions)),
-				IconID:      commonv1.IconId_ICON_ID_SESSION,
-				SubItems:    sessionSubItems,
-			},
-			{
 				Label:       webtemplates.T(loc, "game.participants.title"),
 				URL:         participantsURL,
 				MatchPrefix: participantsURL,
@@ -61,6 +53,14 @@ func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, sess
 				MatchPrefix: charactersURL,
 				Badge:       characterCount,
 				IconID:      commonv1.IconId_ICON_ID_CHARACTER,
+			},
+			{
+				Label:       webtemplates.T(loc, "game.sessions.title"),
+				URL:         sessionsURL,
+				MatchPrefix: sessionsURL,
+				Badge:       strconv.Itoa(campaignSessionMenuCount(sessions)),
+				IconID:      commonv1.IconId_ICON_ID_SESSION,
+				SubItems:    sessionSubItems,
 			},
 		},
 	}

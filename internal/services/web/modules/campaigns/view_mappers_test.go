@@ -106,26 +106,32 @@ func TestCampaignWorkspaceMenuIncludesSessionSubItemsOldestToNewest(t *testing.T
 	if len(menu.Items) != 4 {
 		t.Fatalf("len(menu.Items) = %d, want 4", len(menu.Items))
 	}
-	if menu.Items[1].Label != "Sessions" {
-		t.Fatalf("menu.Items[1].Label = %q, want %q", menu.Items[1].Label, "Sessions")
+	if menu.Items[1].Label != "Participants" {
+		t.Fatalf("menu.Items[1].Label = %q, want %q", menu.Items[1].Label, "Participants")
 	}
-	if menu.Items[1].URL != routepath.AppCampaignSessions("c1") {
-		t.Fatalf("menu.Items[1].URL = %q, want %q", menu.Items[1].URL, routepath.AppCampaignSessions("c1"))
+	if menu.Items[2].Label != "Characters" {
+		t.Fatalf("menu.Items[2].Label = %q, want %q", menu.Items[2].Label, "Characters")
 	}
-	if menu.Items[1].Badge != "3" {
-		t.Fatalf("menu.Items[1].Badge = %q, want %q", menu.Items[1].Badge, "3")
+	if menu.Items[3].Label != "Sessions" {
+		t.Fatalf("menu.Items[3].Label = %q, want %q", menu.Items[3].Label, "Sessions")
 	}
-	if menu.Items[1].IconID != commonv1.IconId_ICON_ID_SESSION {
-		t.Fatalf("menu.Items[1].IconID = %v, want %v", menu.Items[1].IconID, commonv1.IconId_ICON_ID_SESSION)
+	if menu.Items[3].URL != routepath.AppCampaignSessions("c1") {
+		t.Fatalf("menu.Items[3].URL = %q, want %q", menu.Items[3].URL, routepath.AppCampaignSessions("c1"))
 	}
-	if len(menu.Items[1].SubItems) != 3 {
-		t.Fatalf("len(menu.Items[1].SubItems) = %d, want 3", len(menu.Items[1].SubItems))
+	if menu.Items[3].Badge != "3" {
+		t.Fatalf("menu.Items[3].Badge = %q, want %q", menu.Items[3].Badge, "3")
+	}
+	if menu.Items[3].IconID != commonv1.IconId_ICON_ID_SESSION {
+		t.Fatalf("menu.Items[3].IconID = %v, want %v", menu.Items[3].IconID, commonv1.IconId_ICON_ID_SESSION)
+	}
+	if len(menu.Items[3].SubItems) != 3 {
+		t.Fatalf("len(menu.Items[3].SubItems) = %d, want 3", len(menu.Items[3].SubItems))
 	}
 
 	gotOrder := []string{
-		menu.Items[1].SubItems[0].URL,
-		menu.Items[1].SubItems[1].URL,
-		menu.Items[1].SubItems[2].URL,
+		menu.Items[3].SubItems[0].URL,
+		menu.Items[3].SubItems[1].URL,
+		menu.Items[3].SubItems[2].URL,
 	}
 	wantOrder := []string{
 		routepath.AppCampaignSession("c1", "s1"),
@@ -138,7 +144,7 @@ func TestCampaignWorkspaceMenuIncludesSessionSubItemsOldestToNewest(t *testing.T
 		}
 	}
 
-	first := menu.Items[1].SubItems[0]
+	first := menu.Items[3].SubItems[0]
 	if first.Label != "Unnamed session" {
 		t.Fatalf("first session label = %q, want %q", first.Label, "Unnamed session")
 	}
@@ -178,7 +184,7 @@ func TestCampaignWorkspaceMenuLimitsSessionSubItemsToMostRecentTen(t *testing.T)
 		t.Fatalf("campaignWorkspaceMenu(...) = nil, want non-nil")
 	}
 
-	sessionItem := menu.Items[1]
+	sessionItem := menu.Items[3]
 	if sessionItem.Badge != "12" {
 		t.Fatalf("session badge = %q, want %q", sessionItem.Badge, "12")
 	}
