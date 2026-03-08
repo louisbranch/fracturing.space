@@ -87,6 +87,11 @@ type CampaignCharacter struct {
 	EditReasonCode string   `json:"editReasonCode"`
 }
 
+// CampaignCharacterEditor stores character edit page data.
+type CampaignCharacterEditor struct {
+	Character CampaignCharacter `json:"character"`
+}
+
 // CampaignSession stores session details used by campaign sessions pages.
 type CampaignSession struct {
 	ID        string `json:"id"`

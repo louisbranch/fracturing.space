@@ -7,6 +7,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -325,6 +326,17 @@ func mapCharactersView(items []CampaignCharacter) []webtemplates.CampaignCharact
 		})
 	}
 	return result
+}
+
+// mapCharacterEditorView converts domain character editor state to template view state.
+func mapCharacterEditorView(editor campaignapp.CampaignCharacterEditor) webtemplates.CampaignCharacterEditorView {
+	return webtemplates.CampaignCharacterEditorView{
+		ID:         editor.Character.ID,
+		Name:       editor.Character.Name,
+		Pronouns:   editor.Character.Pronouns,
+		Kind:       editor.Character.Kind,
+		Controller: editor.Character.Controller,
+	}
 }
 
 // mapSessionsView converts domain sessions to template view items.

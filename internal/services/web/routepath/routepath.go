@@ -42,6 +42,7 @@ const (
 	AppCampaignParticipantEditPattern        = CampaignsPrefix + "{campaignID}/participants/{participantID}/edit"
 	AppCampaignCharactersPattern             = CampaignsPrefix + "{campaignID}/characters"
 	AppCampaignCharacterPattern              = CampaignsPrefix + "{campaignID}/characters/{characterID}"
+	AppCampaignCharacterEditPattern          = CampaignsPrefix + "{campaignID}/characters/{characterID}/edit"
 	AppCampaignCharacterCreatePattern        = CampaignsPrefix + "{campaignID}/characters/create"
 	AppCampaignCharacterCreationPattern      = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation"
 	AppCampaignCharacterCreationStepPattern  = CampaignsPrefix + "{campaignID}/characters/{characterID}/creation/step"
@@ -124,6 +125,11 @@ func AppCampaignGame(campaignID string) string {
 // AppCampaignCharacter returns the campaign character-detail route.
 func AppCampaignCharacter(campaignID string, characterID string) string {
 	return AppCampaignCharacters(campaignID) + "/" + escapeSegment(characterID)
+}
+
+// AppCampaignCharacterEdit returns the campaign character-edit route.
+func AppCampaignCharacterEdit(campaignID string, characterID string) string {
+	return AppCampaignCharacter(campaignID, characterID) + "/edit"
 }
 
 // AppCampaignCharacterCreation returns the character creation page route.

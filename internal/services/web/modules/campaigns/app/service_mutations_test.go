@@ -353,6 +353,67 @@ func TestCreateCharacterAllowsMemberCampaignAccess(t *testing.T) {
 	}
 }
 
+func TestCreateCharacterRejectsActiveSession(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		campaignSessions:      []CampaignSession{{ID: "sess-1", Status: "Active"}},
+	}
+	svc := newService(gateway)
+
+	_, err := svc.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
+	if err == nil {
+		t.Fatal("expected conflict error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusConflict {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusConflict)
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.active_session_blocks_character_mutation" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.active_session_blocks_character_mutation")
+	}
+	if len(gateway.calls) != 0 {
+		t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+	}
+}
+
+func TestUpdateCharacterUsesTargetScopedAuthorizationAndRejectsActiveSession(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		campaignSessions:      []CampaignSession{{ID: "sess-1", Status: "Active"}},
+	}
+	svc := newService(gateway)
+
+	err := svc.updateCharacter(contextWithResolvedUserID("user-1"), "c1", "char-1", UpdateCharacterInput{Name: "Hero Prime", Pronouns: "they/them"})
+	if err == nil {
+		t.Fatal("expected conflict error")
+	}
+	if got := apperrors.HTTPStatus(err); got != http.StatusConflict {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusConflict)
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.active_session_blocks_character_mutation" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.active_session_blocks_character_mutation")
+	}
+	if len(gateway.authorizationRequests) != 1 {
+		t.Fatalf("authorization requests = %d, want 1", len(gateway.authorizationRequests))
+	}
+	req := gateway.authorizationRequests[0]
+	if req.Action != campaignAuthzActionMutate {
+		t.Fatalf("authorization action = %v, want %v", req.Action, campaignAuthzActionMutate)
+	}
+	if req.Resource != campaignAuthzResourceCharacter {
+		t.Fatalf("authorization resource = %v, want %v", req.Resource, campaignAuthzResourceCharacter)
+	}
+	if req.Target == nil || req.Target.ResourceID != "char-1" {
+		t.Fatalf("authorization target = %#v, want character target char-1", req.Target)
+	}
+	if len(gateway.calls) != 0 {
+		t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+	}
+}
+
 func TestCreateCharacterValidatesRequiredFields(t *testing.T) {
 	t.Parallel()
 

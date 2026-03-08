@@ -39,7 +39,7 @@ func TestParseCreateCampaignInputDefaultsAndValidation(t *testing.T) {
 func TestParseCreateCharacterInputDefaultsAndValidation(t *testing.T) {
 	t.Parallel()
 
-	input, err := parseCreateCharacterInput(url.Values{"name": {"  Aria  "}})
+	input, err := parseCreateCharacterInput(url.Values{"name": {"  Aria  "}, "pronouns": {"  she/her  "}})
 	if err != nil {
 		t.Fatalf("parseCreateCharacterInput() error = %v", err)
 	}
@@ -48,6 +48,9 @@ func TestParseCreateCharacterInputDefaultsAndValidation(t *testing.T) {
 	}
 	if input.Kind != CharacterKindPC {
 		t.Fatalf("Kind = %q, want %q", input.Kind, CharacterKindPC)
+	}
+	if input.Pronouns != "she/her" {
+		t.Fatalf("Pronouns = %q, want %q", input.Pronouns, "she/her")
 	}
 
 	input, err = parseCreateCharacterInput(url.Values{"kind": {" npc "}})

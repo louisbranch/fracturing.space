@@ -18,28 +18,32 @@ type CampaignListItem struct {
 }
 
 type CampaignDetailView struct {
-	Marker        string
-	CampaignID    string
-	SessionID     string
-	ParticipantID string
-	CharacterID   string
-	Name          string
-	Theme         string
-	System        string
-	GMMode        string
-	Status        string
-	Locale        string
-	LocaleValue   string
-	Intent        string
-	AccessPolicy  string
-	CanEditCampaign bool
-	Participants  []CampaignParticipantView
-	ParticipantEditor CampaignParticipantEditorView
-	AIBindingEditor CampaignAIBindingEditorView
-	Characters    []CampaignCharacterView
-	Sessions      []CampaignSessionView
-	SessionReadiness CampaignSessionReadinessView
-	Invites       []CampaignInviteView
+	Marker                   string
+	CampaignID               string
+	SessionID                string
+	ParticipantID            string
+	CharacterID              string
+	Name                     string
+	Theme                    string
+	System                   string
+	GMMode                   string
+	Status                   string
+	Locale                   string
+	LocaleValue              string
+	Intent                   string
+	AccessPolicy             string
+	ActionsLocked            bool
+	CanEditCampaign          bool
+	CanManageParticipants    bool
+	CanCreateCharacter       bool
+	Participants             []CampaignParticipantView
+	ParticipantEditor        CampaignParticipantEditorView
+	AIBindingEditor          CampaignAIBindingEditorView
+	Characters               []CampaignCharacterView
+	CharacterEditor          CampaignCharacterEditorView
+	Sessions                 []CampaignSessionView
+	SessionReadiness         CampaignSessionReadinessView
+	Invites                  []CampaignInviteView
 	CharacterCreationEnabled bool
 	CharacterCreation       CampaignCharacterCreationView
 }
@@ -107,6 +111,14 @@ type CampaignCharacterView struct {
 	EditReasonCode string
 }
 
+type CampaignCharacterEditorView struct {
+	ID         string
+	Name       string
+	Pronouns   string
+	Kind       string
+	Controller string
+}
+
 func campaignCharacterDetailURL(view CampaignDetailView, character CampaignCharacterView) string {
 	campaignID := strings.TrimSpace(view.CampaignID)
 	characterID := strings.TrimSpace(character.ID)
@@ -123,6 +135,23 @@ func campaignParticipantEditURL(view CampaignDetailView, participant CampaignPar
 		return ""
 	}
 	return routepath.AppCampaignParticipantEdit(campaignID, participantID)
+}
+
+func campaignCharacterEditURL(view CampaignDetailView) string {
+	campaignID := strings.TrimSpace(view.CampaignID)
+	characterID := strings.TrimSpace(view.CharacterID)
+	if campaignID == "" || characterID == "" {
+		return ""
+	}
+	return routepath.AppCampaignCharacterEdit(campaignID, characterID)
+}
+
+func campaignCharacterSheetTitle(loc Localizer, view CampaignDetailView) string {
+	system := strings.TrimSpace(campaignOverviewSystem(loc, view))
+	if system == "" {
+		system = T(loc, "game.campaign.system_unspecified")
+	}
+	return system + " " + T(loc, "game.character_detail.character_sheet_suffix")
 }
 
 func campaignSupportsCharacterCreation(view CampaignDetailView) bool {
@@ -475,6 +504,10 @@ func campaignSessionStartReady(view CampaignDetailView) bool {
 	return view.SessionReadiness.Ready
 }
 
+func campaignActionsLocked(view CampaignDetailView) bool {
+	return view.ActionsLocked
+}
+
 func campaignInviteCanRevoke(status string) bool {
 	return strings.EqualFold(strings.TrimSpace(status), "pending")
 }
@@ -528,12 +561,25 @@ func campaignParticipantControllerLabel(loc Localizer, value string) string {
 	}
 }
 
-func campaignParticipantPronounPresets(editor CampaignParticipantEditorView) []string {
-	presets := []string{"she/her", "he/him", "they/them"}
+func campaignParticipantPronounPresets(loc Localizer, editor CampaignParticipantEditorView) []string {
+	presets := []string{
+		T(loc, "game.participants.value_she_her"),
+		T(loc, "game.participants.value_he_him"),
+		T(loc, "game.participants.value_they_them"),
+	}
 	if campaignParticipantControllerCanonical(editor.Controller) == "ai" {
-		return append(presets, "it/its")
+		return append(presets, T(loc, "game.participants.value_it_its"))
 	}
 	return presets
+}
+
+func campaignCharacterPronounPresets(loc Localizer) []string {
+	return []string{
+		T(loc, "game.participants.value_they_them"),
+		T(loc, "game.participants.value_he_him"),
+		T(loc, "game.participants.value_she_her"),
+		T(loc, "game.participants.value_it_its"),
+	}
 }
 
 func campaignParticipantControllerCanonical(value string) string {

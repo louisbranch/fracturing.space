@@ -14,6 +14,16 @@ func (s service) requireManageCampaign(ctx context.Context, campaignID string) e
 	return s.requirePolicy(ctx, campaignID, policyManageCampaign)
 }
 
+// requireManageParticipants enforces participant-manage access for owner/manager workflows.
+func (s service) requireManageParticipants(ctx context.Context, campaignID string) error {
+	return s.requirePolicy(ctx, campaignID, policyManageParticipant)
+}
+
+// requireMutateCharacters enforces baseline character-mutation access.
+func (s service) requireMutateCharacters(ctx context.Context, campaignID string) error {
+	return s.requirePolicy(ctx, campaignID, policyMutateCharacter)
+}
+
 // requirePolicy enforces a policy-table authorization check for a mutation.
 func (s service) requirePolicy(ctx context.Context, campaignID string, p mutationAuthzPolicy) error {
 	return s.requireCampaignActionAccess(ctx, campaignID, p.action, p.resource, nil, p.denyKey, p.denyMsg)

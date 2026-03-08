@@ -44,6 +44,23 @@ func TestMountCharacterCreateRedirectsForNonHTMX(t *testing.T) {
 	}
 }
 
+func TestMountCharacterCreateRedirectsToCreationFlowWhenWorkflowExists(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+	mount, _ := m.Mount()
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&pronouns=they%2Fthem&kind=pc"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacterCreation("c1", "char-created") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacterCreation("c1", "char-created"))
+	}
+}
+
 func TestMountCharacterCreateRejectsInvalidKind(t *testing.T) {
 	t.Parallel()
 
@@ -105,6 +122,12 @@ func TestStableMutationRoutesReturnParseErrorLocalizationKeys(t *testing.T) {
 			path:        routepath.AppCampaignParticipantEdit("c1", "p-manager"),
 			wantMarkerA: "error.web.message.failed_to_parse_participant_update_form",
 			wantMarkerB: "failed to parse participant update form",
+		},
+		{
+			name:        "character update parse error",
+			path:        routepath.AppCampaignCharacterEdit("c1", "char-1"),
+			wantMarkerA: "error.web.message.failed_to_parse_character_update_form",
+			wantMarkerB: "failed to parse character update form",
 		},
 	}
 
@@ -229,6 +252,12 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			path:         routepath.AppCampaignParticipantEdit("c1", "p-manager"),
 			body:         "name=Manager+One&role=player&pronouns=they%2Fthem",
 			wantLocation: routepath.AppCampaignParticipants("c1"),
+		},
+		{
+			name:         "character update",
+			path:         routepath.AppCampaignCharacterEdit("c1", "char-1"),
+			body:         "name=Hero+Updated&pronouns=they%2Fthem",
+			wantLocation: routepath.AppCampaignCharacter("c1", "char-1"),
 		},
 	}
 

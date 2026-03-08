@@ -57,6 +57,47 @@ func (s service) campaignCharacters(ctx context.Context, campaignID string) ([]C
 	return normalized, nil
 }
 
+// campaignCharacter centralizes this web behavior in one helper seam.
+func (s service) campaignCharacter(ctx context.Context, campaignID string, characterID string) (CampaignCharacter, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return CampaignCharacter{}, nil
+	}
+
+	characters, err := s.campaignCharacters(ctx, campaignID)
+	if err != nil {
+		return CampaignCharacter{}, err
+	}
+	for _, character := range characters {
+		if strings.TrimSpace(character.ID) == characterID {
+			return character, nil
+		}
+	}
+	return CampaignCharacter{}, nil
+}
+
+// campaignCharacterEditor centralizes this web behavior in one helper seam.
+func (s service) campaignCharacterEditor(ctx context.Context, campaignID string, characterID string) (CampaignCharacterEditor, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return CampaignCharacterEditor{}, nil
+	}
+
+	character, err := s.campaignCharacter(ctx, campaignID, characterID)
+	if err != nil {
+		return CampaignCharacterEditor{}, err
+	}
+	if strings.TrimSpace(character.ID) == "" {
+		return CampaignCharacterEditor{}, nil
+	}
+	if err := s.requirePolicyWithTarget(ctx, campaignID, policyMutateCharacter, characterID); err != nil {
+		return CampaignCharacterEditor{}, err
+	}
+	return CampaignCharacterEditor{Character: character}, nil
+}
+
 // hydrateCharacterEditability centralizes this web behavior in one helper seam.
 func (s service) hydrateCharacterEditability(ctx context.Context, campaignID string, characters []CampaignCharacter) {
 	if len(characters) == 0 {

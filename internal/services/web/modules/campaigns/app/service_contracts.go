@@ -55,10 +55,13 @@ type Service interface {
 	CampaignParticipantEditor(context.Context, string, string) (CampaignParticipantEditor, error)
 	CampaignAIBindingEditor(context.Context, string, string) (CampaignAIBindingEditor, error)
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
+	CampaignCharacterEditor(context.Context, string, string) (CampaignCharacterEditor, error)
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
 	CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
 	RequireManageCampaign(context.Context, string) error
+	RequireManageParticipants(context.Context, string) error
+	RequireMutateCharacters(context.Context, string) error
 	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
 	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error
 	StartSession(context.Context, string, StartSessionInput) error

@@ -28,6 +28,8 @@ func TestMountServesCampaignDetailRoutes(t *testing.T) {
 		routepath.AppCampaignParticipantEdit("c1", "p1"): "campaign-participant-edit",
 		routepath.AppCampaignCharacters("c1"):            "campaign-characters",
 		routepath.AppCampaignCharacter("c1", "pc1"):      "campaign-character-detail",
+		routepath.AppCampaignCharacterCreate("c1"):       "campaign-character-create",
+		routepath.AppCampaignCharacterEdit("c1", "pc1"):  "campaign-character-edit",
 	}
 	for path, marker := range paths {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -445,6 +447,9 @@ func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 			Kind:       "PC",
 			Controller: "Ariadne",
 		}},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "char-1", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		},
 		characterCreationProgress: CampaignCharacterCreationProgress{
 			Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 			NextStep: 1,
@@ -469,12 +474,16 @@ func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`data-character-creation-workflow="true"`,
+		`Daggerheart Character Sheet`,
 		`data-character-creation-link="true"`,
 		`/app/campaigns/c1/characters/char-1/creation`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing workflow marker %q: %q", marker, body)
 		}
+	}
+	if strings.Contains(body, `data-campaign-character-update-form="true"`) {
+		t.Fatalf("character detail should no longer render inline update form: %q", body)
 	}
 }
 
@@ -507,6 +516,167 @@ func TestMountCampaignCharacterDetailHidesWorkflowForNonDaggerheartCampaigns(t *
 	body := rr.Body.String()
 	if strings.Contains(body, `data-character-creation-workflow="true"`) {
 		t.Fatalf("body unexpectedly contains character creation workflow card: %q", body)
+	}
+}
+
+func TestMountCampaignCharacterCreatePageRendersDedicatedForm(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacterCreate("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-create-page="true"`,
+		`data-campaign-character-editor-submit="true"`,
+		`action="/app/campaigns/c1/characters/create"`,
+		`name="name"`,
+		`name="pronouns"`,
+		`list="campaign-character-pronouns-presets"`,
+		`<option value="they/them"></option>`,
+		`<option value="he/him"></option>`,
+		`<option value="she/her"></option>`,
+		`<option value="it/its"></option>`,
+		`type="hidden" name="kind" value="pc"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing character create marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignCharacterEditPageRendersDedicatedForm(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+			Pronouns:   "she/her",
+			CanEdit:    true,
+		}},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacterEdit("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-edit-page="true"`,
+		`data-campaign-character-editor-submit="true"`,
+		`action="/app/campaigns/c1/characters/char-1/edit"`,
+		`list="campaign-character-pronouns-presets"`,
+		`value="Aria"`,
+		`value="she/her"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing character edit marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignCharactersDisableMutationsDuringActiveSession(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+		}},
+		sessions: []CampaignSession{{ID: "sess-1", Name: "Live", Status: "Active"}},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacters("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `data-campaign-character-create-disabled="true"`) {
+		t.Fatalf("characters page should disable add-character during active session: %q", body)
+	}
+	if strings.Contains(body, `data-campaign-character-create-link="true"`) {
+		t.Fatalf("characters page should not render active add-character link during active session: %q", body)
+	}
+}
+
+func TestMountCampaignCharacterDetailDisablesActionsDuringActiveSession(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+			CanEdit:    true,
+		}},
+		sessions: []CampaignSession{{ID: "sess-1", Name: "Live", Status: "Active"}},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "char-1", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		},
+		characterCreationProgress: CampaignCharacterCreationProgress{
+			Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+			NextStep: 1,
+		},
+		characterCreationCatalog: CampaignCharacterCreationCatalog{
+			Classes:    []CatalogClass{{ID: "warrior", Name: "Warrior"}},
+			Subclasses: []CatalogSubclass{{ID: "guardian", Name: "Guardian", ClassID: "warrior"}},
+		},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-edit-disabled="true"`,
+		`data-character-creation-disabled="true"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing active-session disabled marker %q: %q", marker, body)
+		}
 	}
 }
 
@@ -646,6 +816,7 @@ func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`href="/app/campaigns/c1/participants"`,
+		`data-campaign-participants-header="true"`,
 		`class="grid grid-cols-1 md:grid-cols-2 gap-4"`,
 		`data-campaign-participant-card-id="p-a"`,
 		`data-campaign-participant-name="Aria"`,
@@ -910,16 +1081,14 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 	for _, marker := range []string{
 		`href="/app/campaigns/c1/characters"`,
 		`data-campaign-character-create-entry="true"`,
-		`data-campaign-character-create-form="true"`,
-		`action="/app/campaigns/c1/characters/create"`,
-		`data-campaign-character-create-name="true"`,
+		`data-campaign-character-create-link="true"`,
 		`Add Character`,
 		`class="grid grid-cols-1 md:grid-cols-2 gap-4"`,
 		`data-campaign-character-card-id="ch-a"`,
 		`data-campaign-character-name="Aria"`,
 		`href="/app/campaigns/c1/characters/ch-a"`,
 		`data-campaign-character-detail-link="true"`,
-		`data-campaign-character-creation-entry="false"`,
+		`data-campaign-character-view-link="true"`,
 		`data-campaign-character-kind="PC"`,
 		`data-campaign-character-controller="Ariadne"`,
 		`src="/static/avatars/aria.png"`,
@@ -951,7 +1120,7 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 	}
 }
 
-func TestMountCampaignCharactersEmptyStateStillShowsCreateForm(t *testing.T) {
+func TestMountCampaignCharactersEmptyStateStillShowsCreateEntry(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
@@ -969,8 +1138,8 @@ func TestMountCampaignCharactersEmptyStateStillShowsCreateForm(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`No characters yet.`,
-		`data-campaign-character-create-form="true"`,
-		`action="/app/campaigns/c1/characters/create"`,
+		`data-campaign-character-create-entry="true"`,
+		`data-campaign-character-create-link="true"`,
 		`Add Character`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -979,7 +1148,7 @@ func TestMountCampaignCharactersEmptyStateStillShowsCreateForm(t *testing.T) {
 	}
 }
 
-func TestMountCampaignCharactersShowsCreationEntryForEditableDaggerheartCharacters(t *testing.T) {
+func TestMountCampaignCharactersUsesViewCharacterCTAForEditableCharacters(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
@@ -1011,16 +1180,16 @@ func TestMountCampaignCharactersShowsCreationEntryForEditableDaggerheartCharacte
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`href="/app/campaigns/c1/characters/ch-a"`,
-		`data-campaign-character-creation-entry="true"`,
-		`Open creation workflow`,
+		`data-campaign-character-view-link="true"`,
+		`View Character`,
 	} {
 		if !strings.Contains(body, marker) {
-			t.Fatalf("body missing creation-entry marker %q: %q", marker, body)
+			t.Fatalf("body missing view-character marker %q: %q", marker, body)
 		}
 	}
 }
 
-func TestMountCampaignCharactersHidesCreationEntryForReadOnlyCharacters(t *testing.T) {
+func TestMountCampaignCharactersUsesViewCharacterCTAForReadOnlyCharacters(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
@@ -1046,20 +1215,17 @@ func TestMountCampaignCharactersHidesCreationEntryForReadOnlyCharacters(t *testi
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if strings.Contains(body, `data-campaign-character-creation-entry="true"`) {
-		t.Fatalf("body unexpectedly contains editable creation entry: %q", body)
-	}
 	for _, marker := range []string{
-		`data-campaign-character-creation-entry="false"`,
-		`View details`,
+		`data-campaign-character-view-link="true"`,
+		`View Character`,
 	} {
 		if !strings.Contains(body, marker) {
-			t.Fatalf("body missing read-only entry marker %q: %q", marker, body)
+			t.Fatalf("body missing read-only view marker %q: %q", marker, body)
 		}
 	}
 }
 
-func TestMountCampaignCharactersHidesCreationEntryForNonDaggerheartCampaigns(t *testing.T) {
+func TestMountCampaignCharactersUsesViewCharacterCTAForNonDaggerheartCampaigns(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
@@ -1086,11 +1252,8 @@ func TestMountCampaignCharactersHidesCreationEntryForNonDaggerheartCampaigns(t *
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if strings.Contains(body, `data-campaign-character-creation-entry="true"`) {
-		t.Fatalf("body unexpectedly contains non-daggerheart creation entry: %q", body)
-	}
-	if !strings.Contains(body, `data-campaign-character-creation-entry="false"`) {
-		t.Fatalf("body missing fallback detail entry for non-daggerheart campaign: %q", body)
+	if !strings.Contains(body, `data-campaign-character-view-link="true"`) {
+		t.Fatalf("body missing character view CTA for non-daggerheart campaign: %q", body)
 	}
 }
 

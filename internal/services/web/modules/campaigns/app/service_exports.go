@@ -46,6 +46,11 @@ func (s service) CampaignCharacters(ctx context.Context, campaignID string) ([]C
 	return s.campaignCharacters(ctx, campaignID)
 }
 
+// CampaignCharacterEditor centralizes this web behavior in one helper seam.
+func (s service) CampaignCharacterEditor(ctx context.Context, campaignID string, characterID string) (CampaignCharacterEditor, error) {
+	return s.campaignCharacterEditor(ctx, campaignID, characterID)
+}
+
 // CampaignSessions centralizes this web behavior in one helper seam.
 func (s service) CampaignSessions(ctx context.Context, campaignID string) ([]CampaignSession, error) {
 	return s.campaignSessions(ctx, campaignID)
@@ -64,6 +69,16 @@ func (s service) CampaignInvites(ctx context.Context, campaignID string) ([]Camp
 // RequireManageCampaign enforces owner/manager campaign access.
 func (s service) RequireManageCampaign(ctx context.Context, campaignID string) error {
 	return s.requireManageCampaign(ctx, campaignID)
+}
+
+// RequireManageParticipants enforces owner/manager participant governance access.
+func (s service) RequireManageParticipants(ctx context.Context, campaignID string) error {
+	return s.requireManageParticipants(ctx, campaignID)
+}
+
+// RequireMutateCharacters enforces character-mutation access.
+func (s service) RequireMutateCharacters(ctx context.Context, campaignID string) error {
+	return s.requireMutateCharacters(ctx, campaignID)
 }
 
 // UpdateCampaign applies this package workflow transition.

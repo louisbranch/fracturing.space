@@ -191,12 +191,23 @@ async page => {
     Referer: origin + "/app/dashboard",
   };
 
-  const firstSelectableOptionValue = async function(selectName) {
-    const value = await page.locator('select[name="' + selectName + '"] option').evaluateAll(function(options) {
-      for (const option of options) {
-        const optionValue = (option.getAttribute("value") || "").trim();
-        if (optionValue !== "" && !option.hasAttribute("disabled")) {
-          return optionValue;
+  const firstSelectableOptionValue = async function(fieldName) {
+    const value = await page.locator('[name="' + fieldName + '"]').evaluateAll(function(elements) {
+      for (const element of elements) {
+        const tagName = (element.tagName || "").toLowerCase();
+        if (tagName === "option") {
+          const optionValue = (element.getAttribute("value") || "").trim();
+          if (optionValue !== "" && !element.hasAttribute("disabled")) {
+            return optionValue;
+          }
+          continue;
+        }
+        if ((element.getAttribute("disabled") || "") !== "") {
+          continue;
+        }
+        const inputValue = (element.getAttribute("value") || "").trim();
+        if (inputValue !== "") {
+          return inputValue;
         }
       }
       return "";
@@ -206,19 +217,37 @@ async page => {
 
   const ensureCharacterCreationReady = async function(campaignID, characterID) {
     const detailPath = "/app/campaigns/" + campaignID + "/characters/" + characterID;
+    const creationPath = detailPath + "/creation";
     const maxIterations = 12;
+    let currentPath = creationPath;
     for (let iteration = 0; iteration < maxIterations; iteration++) {
-      const detailResponse = await page.goto(origin + detailPath, { waitUntil: "domcontentloaded" });
+      const detailResponse = await page.goto(origin + currentPath, { waitUntil: "domcontentloaded" });
       if (!detailResponse) {
         throw new Error("Missing response for character creation workflow detail");
       }
       if (detailResponse.status() !== 200) {
-        throw new Error("Expected character creation detail status 200, got: " + detailResponse.status());
+        throw new Error("Expected character creation route status 200, got: " + detailResponse.status());
       }
-      await page.locator("#campaign-character-detail").waitFor();
+      if (currentPath === detailPath) {
+        await page.locator("#campaign-character-detail").waitFor();
+        const workflowCount = await page.locator('[data-character-creation-workflow="true"]').count();
+        if (workflowCount === 0) {
+          return;
+        }
+        const continueLink = page.locator('[data-character-creation-link="true"]').first();
+        if ((await continueLink.count()) === 0) {
+          return;
+        }
+        currentPath = ((await continueLink.getAttribute("href")) || "").trim();
+        if (!currentPath) {
+          throw new Error("Character detail continue link was empty");
+        }
+        continue;
+      }
 
-      const workflowCount = await page.locator('[data-character-creation-workflow="true"]').count();
-      if (workflowCount === 0) {
+      await page.locator('[data-character-creation-page="true"]').waitFor();
+      const readyCount = await page.locator('[data-character-creation-ready="true"]').count();
+      if (readyCount > 0) {
         return;
       }
 
@@ -245,7 +274,7 @@ async page => {
       let form = {};
       let applyResp = null;
       if (step === 1) {
-        const classIDs = await page.locator('select[name="class_id"] option').evaluateAll(function(options) {
+        const classIDs = await page.locator('input[name="class_id"]').evaluateAll(function(options) {
           const result = [];
           for (const option of options) {
             const optionValue = (option.getAttribute("value") || "").trim();
@@ -255,7 +284,7 @@ async page => {
           }
           return result;
         });
-        const subclassIDs = await page.locator('select[name="subclass_id"] option').evaluateAll(function(options) {
+        const subclassIDs = await page.locator('input[name="subclass_id"]').evaluateAll(function(options) {
           const result = [];
           for (const option of options) {
             const optionValue = (option.getAttribute("value") || "").trim();
@@ -309,8 +338,6 @@ async page => {
           knowledge: "-1",
         };
       } else if (step === 4) {
-        form = {};
-      } else if (step === 5) {
         const primaryWeaponID = await firstSelectableOptionValue("weapon_primary_id");
         const secondaryWeaponID = await firstSelectableOptionValue("weapon_secondary_id");
         const armorID = await firstSelectableOptionValue("armor_id");
@@ -326,16 +353,33 @@ async page => {
         if (secondaryWeaponID) {
           form.weapon_secondary_id = secondaryWeaponID;
         }
+      } else if (step === 5) {
+        form = {
+          experience_0_name: "Smoke Experience One",
+          experience_1_name: "Smoke Experience Two",
+        };
       } else if (step === 6) {
-        form = { background: "Smoke background details." };
-      } else if (step === 7) {
-        form = { experience_name: "Smoke Experience", experience_modifier: "1" };
-      } else if (step === 8) {
-        const domainCardID = ((await page.locator('input[name="domain_card_id"][type="checkbox"]').first().getAttribute("value")) || "").trim();
-        if (!domainCardID) {
-          throw new Error("Character creation step 8 missing selectable domain card options");
+        const domainCardIDs = await page.locator('input[name="domain_card_id"][type="checkbox"]').evaluateAll(function(inputs) {
+          const result = [];
+          for (const input of inputs) {
+            const inputValue = (input.getAttribute("value") || "").trim();
+            if (inputValue !== "" && !input.hasAttribute("disabled")) {
+              result.push(inputValue);
+            }
+            if (result.length === 2) {
+              break;
+            }
+          }
+          return result;
+        });
+        if (domainCardIDs.length !== 2) {
+          throw new Error("Character creation step 6 missing selectable domain card options");
         }
-        form = { domain_card_id: domainCardID };
+        form = { domain_card_id: domainCardIDs };
+      } else if (step === 7) {
+        form = { description: "Smoke detail notes." };
+      } else if (step === 8) {
+        form = { background: "Smoke background details." };
       } else if (step === 9) {
         form = { connections: "Smoke connection details." };
       } else {
@@ -356,9 +400,10 @@ async page => {
         throw new Error("Expected character creation step " + step + " status 302, got: " + applyResp.status());
       }
       const applyLocation = (applyResp.headers()["location"] || "").trim();
-      if (applyLocation !== detailPath) {
-        throw new Error("Expected character creation step " + step + " redirect to " + detailPath + ", got: " + applyLocation);
+      if (applyLocation !== creationPath) {
+        throw new Error("Expected character creation step " + step + " redirect to " + creationPath + ", got: " + applyLocation);
       }
+      currentPath = creationPath;
     }
     throw new Error("Character creation workflow did not reach ready state within deterministic smoke budget");
   };
@@ -392,7 +437,8 @@ async page => {
   const campaignRouteChecks = [
     { path: "/app/campaigns/" + campaignID, selectors: ["#campaign-overview"] },
     { path: "/app/campaigns/" + campaignID + "/participants", selectors: ["#campaign-participants", '[data-campaign-participant-card-id]'] },
-    { path: "/app/campaigns/" + campaignID + "/characters", selectors: ["#campaign-characters", '[data-campaign-character-create-form="true"]'] },
+    { path: "/app/campaigns/" + campaignID + "/characters", selectors: ["#campaign-characters", '[data-campaign-character-create-entry="true"]'] },
+    { path: "/app/campaigns/" + campaignID + "/characters/create", selectors: ["#campaign-character-create", '[data-campaign-character-create-page="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/sessions", selectors: ["#campaign-sessions", '[data-campaign-session-start-form="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/invites", selectors: ["#campaign-invites", '[data-campaign-invite-create-form="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/game", selectors: ['[data-campaign-chat-page="true"]'] },
@@ -414,13 +460,23 @@ async page => {
     }
   }
 
+  const characterCreatePagePath = "/app/campaigns/" + campaignID + "/characters/create";
+  const characterCreatePageResp = await page.goto(origin + characterCreatePagePath, { waitUntil: "domcontentloaded" });
+  if (!characterCreatePageResp) {
+    throw new Error("Missing response for character create page");
+  }
+  if (characterCreatePageResp.status() !== 200) {
+    throw new Error("Expected character create page status 200, got: " + characterCreatePageResp.status());
+  }
+  await page.locator('[data-campaign-character-create-page="true"]').waitFor();
+
   const characterCreateResp = await page.request.post(origin + "/app/campaigns/" + campaignID + "/characters/create", {
     maxRedirects: 0,
     headers: {
       ...mutationHeaders,
-      Referer: origin + "/app/campaigns/" + campaignID + "/characters",
+      Referer: origin + characterCreatePagePath,
     },
-    form: { name: "Smoke Hero", kind: "pc" },
+    form: { name: "Smoke Hero", pronouns: "they/them", kind: "pc" },
   });
   if (characterCreateResp.status() !== 302) {
     throw new Error("Expected character create status 302, got: " + characterCreateResp.status());
