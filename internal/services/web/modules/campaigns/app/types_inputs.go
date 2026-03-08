@@ -52,8 +52,9 @@ type RevokeInviteInput struct {
 
 // CreateCharacterInput stores create-character form values.
 type CreateCharacterInput struct {
-	Name string
-	Kind CharacterKind
+	Name     string
+	Pronouns string
+	Kind     CharacterKind
 }
 
 // UpdateParticipantInput stores participant update form values.

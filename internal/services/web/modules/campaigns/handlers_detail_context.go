@@ -21,6 +21,8 @@ const (
 	markerParticipants    = "campaign-participants"
 	markerParticipantEdit = "campaign-participant-edit"
 	markerCharacters      = "campaign-characters"
+	markerCharacterCreate = "campaign-character-create"
+	markerCharacterEdit   = "campaign-character-edit"
 	markerCharacterDetail = "campaign-character-detail"
 	markerInvites         = "campaign-invites"
 )
@@ -103,18 +105,30 @@ func (p *campaignPageContext) layout(campaignID, currentPath string) webtemplate
 // Callers set sub-page-specific fields on the returned value before rendering.
 func (p *campaignPageContext) detailView(campaignID, marker string) webtemplates.CampaignDetailView {
 	return webtemplates.CampaignDetailView{
-		Marker:       marker,
-		CampaignID:   campaignID,
-		Name:         p.workspace.Name,
-		Theme:        p.workspace.Theme,
-		System:       p.workspace.System,
-		GMMode:       p.workspace.GMMode,
-		Status:       p.workspace.Status,
-		Locale:       p.workspace.Locale,
-		LocaleValue:  campaignWorkspaceLocaleFormValue(p.workspace.Locale),
-		Intent:       p.workspace.Intent,
-		AccessPolicy: p.workspace.AccessPolicy,
+		Marker:        marker,
+		CampaignID:    campaignID,
+		Name:          p.workspace.Name,
+		Theme:         p.workspace.Theme,
+		System:        p.workspace.System,
+		GMMode:        p.workspace.GMMode,
+		Status:        p.workspace.Status,
+		Locale:        p.workspace.Locale,
+		LocaleValue:   campaignWorkspaceLocaleFormValue(p.workspace.Locale),
+		Intent:        p.workspace.Intent,
+		AccessPolicy:  p.workspace.AccessPolicy,
+		ActionsLocked: p.outOfGameActionsLocked(),
 	}
+}
+
+// outOfGameActionsLocked reports whether session state should disable campaign
+// metadata, participant, invite, or character UI actions.
+func (p *campaignPageContext) outOfGameActionsLocked() bool {
+	for _, session := range p.sessions {
+		if campaignSessionMenuIsActive(session) {
+			return true
+		}
+	}
+	return false
 }
 
 // title centralizes this web behavior in one helper seam.

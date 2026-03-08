@@ -251,6 +251,50 @@ func creationIconMaskStyle(iconURL string) string {
 	)
 }
 
+func creationStepClassSubclassReady(view CampaignCharacterCreationView) bool {
+	return strings.TrimSpace(view.ClassID) != "" && strings.TrimSpace(view.SubclassID) != ""
+}
+
+func creationStepHeritageReady(view CampaignCharacterCreationView) bool {
+	return strings.TrimSpace(view.AncestryID) != "" && strings.TrimSpace(view.CommunityID) != ""
+}
+
+func creationStepTraitsReady(view CampaignCharacterCreationView) bool {
+	counts := map[string]int{}
+	for _, value := range []string{
+		strings.TrimSpace(view.Agility),
+		strings.TrimSpace(view.Strength),
+		strings.TrimSpace(view.Finesse),
+		strings.TrimSpace(view.Instinct),
+		strings.TrimSpace(view.Presence),
+		strings.TrimSpace(view.Knowledge),
+	} {
+		counts[value]++
+	}
+	return counts["-1"] == 1 && counts["0"] == 2 && counts["1"] == 2 && counts["2"] == 1
+}
+
+func creationStepEquipmentReady(view CampaignCharacterCreationView) bool {
+	return strings.TrimSpace(view.PrimaryWeaponID) != "" &&
+		strings.TrimSpace(view.ArmorID) != "" &&
+		strings.TrimSpace(view.PotionItemID) != ""
+}
+
+func creationStepExperiencesReady(view CampaignCharacterCreationView) bool {
+	if len(view.Experiences) < 2 {
+		return false
+	}
+	return strings.TrimSpace(view.Experiences[0].Name) != "" && strings.TrimSpace(view.Experiences[1].Name) != ""
+}
+
+func creationStepDomainCardsReady(view CampaignCharacterCreationView) bool {
+	return len(view.DomainCardIDs) == 2
+}
+
+func creationStepTextareaReady(value string) bool {
+	return strings.TrimSpace(value) != ""
+}
+
 templ creationFeatureList(features []CampaignCreationClassFeatureView) {
 	if len(features) > 0 {
 		<ul class="list-disc list-inside mt-0.5 space-y-1">
@@ -377,18 +421,6 @@ templ CharacterCreationPage(view CharacterCreationPageView, loc Localizer) {
 					</li>
 				}
 			</ul>
-			<div class="mt-4 border-t border-base-300 pt-4 space-y-2">
-				<form
-					method="post"
-					action={ routepath.AppCampaignCharacterCreationReset(view.CampaignID, view.CharacterID) }
-					data-character-creation-reset="true"
-					onsubmit="return confirm(this.dataset.confirmText);"
-					data-confirm-text={ T(loc, "game.character_creation.confirm_start_again") }
-				>
-					<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.character_creation.action_start_again") }</button>
-				</form>
-				<a class="text-sm opacity-70 underline" href={ routepath.AppCampaignCharacter(view.CampaignID, view.CharacterID) } data-character-edit-link="true">{ T(loc, "game.character_creation.action_edit_name_pronouns") }</a>
-			</div>
 		</aside>
 		<!-- Step Content -->
 		<div class="space-y-4" data-character-creation-content="true">
@@ -431,7 +463,133 @@ templ CharacterCreationPage(view CharacterCreationPageView, loc Localizer) {
 	</div>
 }
 
+templ creationResetForm(view CharacterCreationPageView, loc Localizer) {
+	<form
+		method="post"
+		action={ routepath.AppCampaignCharacterCreationReset(view.CampaignID, view.CharacterID) }
+		data-character-creation-reset="true"
+		onsubmit="return confirm(this.dataset.confirmText);"
+		data-confirm-text={ T(loc, "game.character_creation.confirm_start_again") }
+	>
+		<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.character_creation.action_start_again") }</button>
+	</form>
+}
+
+templ creationFooter(view CharacterCreationPageView, loc Localizer) {
+	<div class="grid items-center gap-3 pt-2 md:grid-cols-[1fr_auto_1fr]">
+		<div class="justify-self-start">
+			@creationResetForm(view, loc)
+		</div>
+		<div class="justify-self-center">
+			{ children... }
+		</div>
+		<div></div>
+	</div>
+}
+
+templ creationNextButton(loc Localizer, disabled bool) {
+	<button
+		class="btn btn-primary btn-wide"
+		type="submit"
+		disabled?={ disabled }
+		data-character-creation-next="true"
+	>{ T(loc, "game.character_creation.action_next") }</button>
+}
+
 // --- Summary Card (when creation is complete) ---
+
+templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer) {
+	<div class="grid gap-4 lg:grid-cols-2">
+		<div class="space-y-4">
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.class_subclass") }</span>
+				<p class="text-sm">
+					{ creationNameByID(creation.Classes, creation.ClassID, func(c CampaignCreationClassView) string { return c.ID }, func(c CampaignCreationClassView) string { return c.Name }) }
+					if creationNameByID(creation.Subclasses, creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) != "" {
+						<span class="opacity-70">
+							{ " / " + creationNameByID(creation.Subclasses, creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) }
+						</span>
+					}
+				</p>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.heritage") }</span>
+				<p class="text-sm">
+					{ creationNameByID(creation.Ancestries, creation.AncestryID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
+					<span class="opacity-70">
+						{ ", " + creationNameByID(creation.Communities, creation.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
+					</span>
+				</p>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.traits") }</span>
+				<div class="mt-1 flex flex-wrap gap-2">
+					<span class="badge badge-outline badge-sm">AGI { creation.Agility }</span>
+					<span class="badge badge-outline badge-sm">STR { creation.Strength }</span>
+					<span class="badge badge-outline badge-sm">FIN { creation.Finesse }</span>
+					<span class="badge badge-outline badge-sm">INS { creation.Instinct }</span>
+					<span class="badge badge-outline badge-sm">PRE { creation.Presence }</span>
+					<span class="badge badge-outline badge-sm">KNO { creation.Knowledge }</span>
+				</div>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.equipment") }</span>
+				<div class="mt-1 flex flex-wrap gap-2">
+					<span class="badge badge-outline badge-sm">
+						{ creationNameByID(creation.PrimaryWeapons, creation.PrimaryWeaponID, func(w CampaignCreationWeaponView) string { return w.ID }, func(w CampaignCreationWeaponView) string { return w.Name }) }
+					</span>
+					if creation.SecondaryWeaponID != "" {
+						<span class="badge badge-outline badge-sm">
+							{ creationNameByID(creation.SecondaryWeapons, creation.SecondaryWeaponID, func(w CampaignCreationWeaponView) string { return w.ID }, func(w CampaignCreationWeaponView) string { return w.Name }) }
+						</span>
+					}
+					<span class="badge badge-outline badge-sm">
+						{ creationNameByID(creation.Armor, creation.ArmorID, func(a CampaignCreationArmorView) string { return a.ID }, func(a CampaignCreationArmorView) string { return a.Name }) }
+					</span>
+					<span class="badge badge-outline badge-sm">
+						{ creationNameByID(creation.PotionItems, creation.PotionItemID, func(i CampaignCreationItemView) string { return i.ID }, func(i CampaignCreationItemView) string { return i.Name }) }
+					</span>
+				</div>
+			</div>
+			if len(creation.Experiences) > 0 {
+				<div>
+					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.experiences") }</span>
+					<div class="mt-1 flex flex-wrap gap-2">
+						for _, exp := range creation.Experiences {
+							<span class="badge badge-outline badge-sm">{ exp.Name } { creationFormatModifier(exp.Modifier) }</span>
+						}
+					</div>
+				</div>
+			}
+			if len(creation.DomainCardIDs) > 0 {
+				<div>
+					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.domain_cards") }</span>
+					<div class="mt-1 flex flex-wrap gap-2">
+						for _, cardID := range creation.DomainCardIDs {
+							<span class="badge badge-outline badge-sm">
+								{ creationNameByID(creation.DomainCards, cardID, func(c CampaignCreationDomainCardView) string { return c.ID }, func(c CampaignCreationDomainCardView) string { return c.Name }) }
+							</span>
+						}
+					</div>
+				</div>
+			}
+		</div>
+		<div class="space-y-4">
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.details") }</span>
+				<p class="text-sm">{ creationTruncate(creation.Description, 200) }</p>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.background") }</span>
+				<p class="text-sm">{ creationTruncate(creation.Background, 200) }</p>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.connections") }</span>
+				<p class="text-sm">{ creationTruncate(creation.Connections, 200) }</p>
+			</div>
+		</div>
+	</div>
+}
 
 templ creationSummaryCard(view CharacterCreationPageView, loc Localizer) {
 	<div class="alert alert-success mb-4" data-character-creation-ready="true">
@@ -440,106 +598,9 @@ templ creationSummaryCard(view CharacterCreationPageView, loc Localizer) {
 	<div class="card bg-base-100 border border-base-300 shadow-sm" data-character-creation-summary="true">
 		<div class="card-body gap-4">
 			<h3 class="card-title text-lg">{ T(loc, "game.character_creation.summary_title") }</h3>
-			<div class="grid gap-3 md:grid-cols-2">
-				<!-- Class & Subclass -->
-				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.class_subclass") }</span>
-					<p class="text-sm">
-						{ creationNameByID(view.Creation.Classes, view.Creation.ClassID, func(c CampaignCreationClassView) string { return c.ID }, func(c CampaignCreationClassView) string { return c.Name }) }
-						if creationNameByID(view.Creation.Subclasses, view.Creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) != "" {
-							<span class="opacity-70">
-								{ " / " + creationNameByID(view.Creation.Subclasses, view.Creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) }
-							</span>
-						}
-					</p>
-				</div>
-				<!-- Heritage -->
-				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.heritage") }</span>
-					<p class="text-sm">
-						{ creationNameByID(view.Creation.Ancestries, view.Creation.AncestryID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
-						<span class="opacity-70">
-							{ ", " + creationNameByID(view.Creation.Communities, view.Creation.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
-						</span>
-					</p>
-				</div>
-				<!-- Traits -->
-				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.traits") }</span>
-					<div class="flex flex-wrap gap-2 mt-1">
-						<span class="badge badge-outline badge-sm">AGI { view.Creation.Agility }</span>
-						<span class="badge badge-outline badge-sm">STR { view.Creation.Strength }</span>
-						<span class="badge badge-outline badge-sm">FIN { view.Creation.Finesse }</span>
-						<span class="badge badge-outline badge-sm">INS { view.Creation.Instinct }</span>
-						<span class="badge badge-outline badge-sm">PRE { view.Creation.Presence }</span>
-						<span class="badge badge-outline badge-sm">KNO { view.Creation.Knowledge }</span>
-					</div>
-				</div>
-				<!-- Equipment -->
-				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.equipment") }</span>
-					<div class="flex flex-wrap gap-2 mt-1">
-						<span class="badge badge-outline badge-sm">
-							{ creationNameByID(view.Creation.PrimaryWeapons, view.Creation.PrimaryWeaponID, func(w CampaignCreationWeaponView) string { return w.ID }, func(w CampaignCreationWeaponView) string { return w.Name }) }
-						</span>
-						if view.Creation.SecondaryWeaponID != "" {
-							<span class="badge badge-outline badge-sm">
-								{ creationNameByID(view.Creation.SecondaryWeapons, view.Creation.SecondaryWeaponID, func(w CampaignCreationWeaponView) string { return w.ID }, func(w CampaignCreationWeaponView) string { return w.Name }) }
-							</span>
-						}
-						<span class="badge badge-outline badge-sm">
-							{ creationNameByID(view.Creation.Armor, view.Creation.ArmorID, func(a CampaignCreationArmorView) string { return a.ID }, func(a CampaignCreationArmorView) string { return a.Name }) }
-						</span>
-						<span class="badge badge-outline badge-sm">
-							{ creationNameByID(view.Creation.PotionItems, view.Creation.PotionItemID, func(i CampaignCreationItemView) string { return i.ID }, func(i CampaignCreationItemView) string { return i.Name }) }
-						</span>
-					</div>
-				</div>
-			</div>
-			<!-- Description -->
-			if view.Creation.Description != "" {
-				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.description") }</span>
-					<p class="text-sm">{ creationTruncate(view.Creation.Description, 200) }</p>
-				</div>
-			}
-			<!-- Background -->
-			if view.Creation.Background != "" {
-				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.background") }</span>
-					<p class="text-sm">{ creationTruncate(view.Creation.Background, 200) }</p>
-				</div>
-			}
-			<!-- Experiences -->
-			if len(view.Creation.Experiences) > 0 {
-				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.experiences") }</span>
-					<div class="flex flex-wrap gap-2 mt-1">
-						for _, exp := range view.Creation.Experiences {
-							<span class="badge badge-outline badge-sm">{ exp.Name } { creationFormatModifier(exp.Modifier) }</span>
-						}
-					</div>
-				</div>
-			}
-			<!-- Domain Cards -->
-			if len(view.Creation.DomainCardIDs) > 0 {
-				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.domain_cards") }</span>
-					<div class="flex flex-wrap gap-2 mt-1">
-						for _, cardID := range view.Creation.DomainCardIDs {
-							<span class="badge badge-outline badge-sm">
-								{ creationNameByID(view.Creation.DomainCards, cardID, func(c CampaignCreationDomainCardView) string { return c.ID }, func(c CampaignCreationDomainCardView) string { return c.Name }) }
-							</span>
-						}
-					</div>
-				</div>
-			}
-			<!-- Connections -->
-			if view.Creation.Connections != "" {
-				<div>
-					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.connections") }</span>
-					<p class="text-sm">{ creationTruncate(view.Creation.Connections, 200) }</p>
-				</div>
+			@creationSummaryBody(view.Creation, loc)
+			@creationFooter(view, loc) {
+				<a class="btn btn-primary btn-wide" href={ routepath.AppCampaignCharacters(view.CampaignID) } data-character-creation-back-to-campaign="true">{ T(loc, "game.character_creation.action_back_to_campaign") }</a>
 			}
 		</div>
 	</div>
@@ -628,9 +689,9 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 				</div>
 			</div>
 		}
-		<div class="flex justify-end">
-			<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.action_next") }</button>
-		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepClassSubclassReady(view.Creation))
+		}
 	</form>
 	<script>
 		(function() {
@@ -645,6 +706,14 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 			var subclassSummary = form.querySelector('[data-subclass-selected]');
 			var subclassNameEl = form.querySelector('[data-subclass-selected-name]');
 			var subclassChangeBtn = form.querySelector('[data-subclass-change]');
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton) return;
+				var hasClass = !!form.querySelector('input[name="class_id"]:checked');
+				var hasSubclass = !!form.querySelector('input[name="subclass_id"]:checked');
+				nextButton.disabled = !(hasClass && hasSubclass);
+			}
 
 			function collapseClass(selectedClassID) {
 				var card = form.querySelector('[data-class-card="' + selectedClassID + '"]');
@@ -666,12 +735,14 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 						g.querySelectorAll('input[name="subclass_id"]').forEach(function(r) { r.checked = false; });
 					}
 				});
+				updateNextButton();
 			}
 
 			function expandClass() {
 				classGrid.classList.remove('hidden');
 				classSummary.classList.add('hidden');
 				if (subclassSection) subclassSection.classList.add('hidden');
+				updateNextButton();
 			}
 
 			function collapseSubclass(selectedID) {
@@ -687,11 +758,13 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 				});
 				if (subclassGrid) subclassGrid.classList.add('hidden');
 				if (subclassSummary) subclassSummary.classList.remove('hidden');
+				updateNextButton();
 			}
 
 			function expandSubclass() {
 				if (subclassGrid) subclassGrid.classList.remove('hidden');
 				if (subclassSummary) subclassSummary.classList.add('hidden');
+				updateNextButton();
 			}
 
 			form.querySelectorAll('input[name="class_id"]').forEach(function(r) {
@@ -707,6 +780,7 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 			if (subclassChangeBtn) {
 				subclassChangeBtn.addEventListener('click', expandSubclass);
 			}
+			updateNextButton();
 		})();
 	</script>
 }
@@ -761,9 +835,9 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 				</div>
 			</div>
 		</div>
-		<div class="flex justify-end">
-			<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.action_next") }</button>
-		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepHeritageReady(view.Creation))
+		}
 	</form>
 	<script>
 		(function() {
@@ -778,6 +852,14 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 			var communitySummary = form.querySelector('[data-community-selected]');
 			var communityNameEl = form.querySelector('[data-community-selected-name]');
 			var communityChangeBtn = form.querySelector('[data-community-change]');
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton) return;
+				var hasAncestry = !!form.querySelector('input[name="ancestry_id"]:checked');
+				var hasCommunity = !!form.querySelector('input[name="community_id"]:checked');
+				nextButton.disabled = !(hasAncestry && hasCommunity);
+			}
 
 			function collapseAncestry(selectedID) {
 				var card = form.querySelector('[data-ancestry-card="' + selectedID + '"]');
@@ -789,12 +871,14 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 					expandCommunity();
 					communitySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 				}
+				updateNextButton();
 			}
 
 			function expandAncestry() {
 				ancestryGrid.classList.remove('hidden');
 				ancestrySummary.classList.add('hidden');
 				if (communitySection) communitySection.classList.add('hidden');
+				updateNextButton();
 			}
 
 			function collapseCommunity(selectedID) {
@@ -810,11 +894,13 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 				});
 				if (communityGrid) communityGrid.classList.add('hidden');
 				if (communitySummary) communitySummary.classList.remove('hidden');
+				updateNextButton();
 			}
 
 			function expandCommunity() {
 				if (communityGrid) communityGrid.classList.remove('hidden');
 				if (communitySummary) communitySummary.classList.add('hidden');
+				updateNextButton();
 			}
 
 			form.querySelectorAll('input[name="ancestry_id"]').forEach(function(r) {
@@ -830,6 +916,7 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 			if (communityChangeBtn) {
 				communityChangeBtn.addEventListener('click', expandCommunity);
 			}
+			updateNextButton();
 		})();
 	</script>
 }
@@ -852,9 +939,9 @@ templ creationStepTraits(view CharacterCreationPageView, loc Localizer) {
 			<span>{ T(loc, "game.character_creation.traits_distribution_error") }</span>
 		</div>
 		<p class="text-sm opacity-50" data-traits-remaining data-label={ T(loc, "game.character_creation.traits_remaining_label") }></p>
-		<div class="flex justify-end">
-			<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.action_next") }</button>
-		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepTraitsReady(view.Creation))
+		}
 	</form>
 	<script>
 		(function() {
@@ -862,6 +949,7 @@ templ creationStepTraits(view CharacterCreationPageView, loc Localizer) {
 			if (!form) return;
 			var errorEl = form.querySelector('[data-traits-error]');
 			var remainingEl = form.querySelector('[data-traits-remaining]');
+			var nextButton = form.querySelector('[data-character-creation-next]');
 			var expected = [-1, 0, 0, 1, 1, 2];
 			var traitNames = ['agility', 'strength', 'finesse', 'instinct', 'presence', 'knowledge'];
 
@@ -894,6 +982,9 @@ templ creationStepTraits(view CharacterCreationPageView, loc Localizer) {
 
 				if (valid) {
 					errorEl.classList.add('hidden');
+				}
+				if (nextButton) {
+					nextButton.disabled = !valid;
 				}
 			}
 
@@ -1121,15 +1212,24 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 				</div>
 			</div>
 		</div>
-		<div class="flex justify-end">
-			<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.action_next") }</button>
-		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepEquipmentReady(view.Creation))
+		}
 	</form>
 	<script>
 		(function() {
 			var form = document.querySelector('[data-character-creation-form-step="4"]');
 			if (!form) return;
 			var sections = form.querySelectorAll('[data-equip-section]');
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton) return;
+				var ready = !!form.querySelector('input[name="weapon_primary_id"]:checked') &&
+					!!form.querySelector('input[name="armor_id"]:checked') &&
+					!!form.querySelector('input[name="potion_item_id"]:checked');
+				nextButton.disabled = !ready;
+			}
 
 			sections.forEach(function(section) {
 				var inputName = section.dataset.equipSection;
@@ -1145,11 +1245,13 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 					if (card) nameEl.textContent = card.dataset.equipCardName;
 					grid.classList.add('hidden');
 					summary.classList.remove('hidden');
+					updateNextButton();
 				}
 
 				function expand() {
 					grid.classList.remove('hidden');
 					summary.classList.add('hidden');
+					updateNextButton();
 				}
 
 				// Collapse on selection (click fires even when re-selecting same option)
@@ -1163,6 +1265,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 				var checked = section.querySelector('input[name="' + inputName + '"]:checked');
 				if (checked && checked.value !== '') collapse();
 			});
+			updateNextButton();
 		})();
 	</script>
 }
@@ -1195,10 +1298,27 @@ templ creationStepExperiences(view CharacterCreationPageView, loc Localizer) {
 				<input type="text" name="experience_1_name" required class="input input-bordered" value={ creationExperienceValue(view.Creation.Experiences, 1, "name") }/>
 			</label>
 		</div>
-		<div class="flex justify-end">
-			<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.action_next") }</button>
-		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepExperiencesReady(view.Creation))
+		}
 	</form>
+	<script>
+		(function() {
+			var form = document.querySelector('[data-character-creation-form-step="5"]');
+			if (!form) return;
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton) return;
+				var first = form.querySelector('[name="experience_0_name"]');
+				var second = form.querySelector('[name="experience_1_name"]');
+				nextButton.disabled = !(first && second && first.value.trim() !== '' && second.value.trim() !== '');
+			}
+
+			form.addEventListener('input', updateNextButton);
+			updateNextButton();
+		})();
+	</script>
 }
 
 // --- Step 6: Domain Cards ---
@@ -1237,15 +1357,16 @@ templ creationStepDomainCards(view CharacterCreationPageView, loc Localizer) {
 				}
 			}
 		</div>
-		<div class="flex justify-end">
-			<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.action_next") }</button>
-		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepDomainCardsReady(view.Creation))
+		}
 	</form>
 	<script>
 		(function() {
 			var form = document.querySelector('[data-character-creation-form-step="6"]');
 			if (!form) return;
 			var maxCards = 2;
+			var nextButton = form.querySelector('[data-character-creation-next]');
 			function updateCheckboxes() {
 				var checked = form.querySelectorAll('input[name="domain_card_id"]:checked');
 				var options = form.querySelectorAll('[data-creation-option-kind="domain-card"]');
@@ -1260,6 +1381,9 @@ templ creationStepDomainCards(view CharacterCreationPageView, loc Localizer) {
 						option.classList.remove('opacity-60', 'cursor-not-allowed', 'pointer-events-none');
 					}
 				});
+				if (nextButton) {
+					nextButton.disabled = checked.length !== maxCards;
+				}
 			}
 			form.addEventListener('change', function(e) {
 				if (e.target.name === 'domain_card_id') updateCheckboxes();
@@ -1323,8 +1447,27 @@ templ creationStepTextarea(view CharacterCreationPageView, loc Localizer, cfg cr
 				<li>{ T(loc, cfg.GuidanceKey3) }</li>
 			</ul>
 		</div>
-		<div class="flex justify-end pt-2">
-			<button class="btn btn-primary" type="submit">{ T(loc, "game.character_creation.action_next") }</button>
-		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepTextareaReady(cfg.Value))
+		}
 	</form>
+	<script>
+		(function() {
+			var script = document.currentScript;
+			var form = script ? script.previousElementSibling : null;
+			if (!form) return;
+			var textarea = form.querySelector('textarea');
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton || !textarea) return;
+				nextButton.disabled = textarea.value.trim() === '';
+			}
+
+			if (textarea) {
+				textarea.addEventListener('input', updateNextButton);
+			}
+			updateNextButton();
+		})();
+	</script>
 }

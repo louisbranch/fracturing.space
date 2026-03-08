@@ -244,3 +244,97 @@ func TestCreationIconMaskStyleEscapesSpecialURLCharacters(t *testing.T) {
 		}
 	}
 }
+
+func TestCreationSummaryCardRendersDetailsAndBackToCampaignAction(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			Ready:           true,
+			ClassID:         "class-1",
+			SubclassID:      "subclass-1",
+			AncestryID:      "ancestry-1",
+			CommunityID:     "community-1",
+			Agility:         "2",
+			Strength:        "1",
+			Finesse:         "1",
+			Instinct:        "0",
+			Presence:        "0",
+			Knowledge:       "-1",
+			PrimaryWeaponID: "weapon-1",
+			ArmorID:         "armor-1",
+			PotionItemID:    "item-1",
+			Description:     "Scarred, observant, and always impeccably dressed.",
+			Background:      "Former court archivist turned wanderer.",
+			Connections:     "Owes the party a hard-won favor.",
+			Classes:         []CampaignCreationClassView{{ID: "class-1", Name: "Warrior"}},
+			Subclasses:      []CampaignCreationSubclassView{{ID: "subclass-1", Name: "Guardian"}},
+			Ancestries:      []CampaignCreationHeritageView{{ID: "ancestry-1", Name: "Human"}},
+			Communities:     []CampaignCreationHeritageView{{ID: "community-1", Name: "Loreborne"}},
+			PrimaryWeapons:  []CampaignCreationWeaponView{{ID: "weapon-1", Name: "Longsword"}},
+			Armor:           []CampaignCreationArmorView{{ID: "armor-1", Name: "Chainmail"}},
+			PotionItems:     []CampaignCreationItemView{{ID: "item-1", Name: "Minor Potion"}},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := creationSummaryCard(view, nil).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render creationSummaryCard: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`data-character-creation-summary="true"`,
+		`game.character_creation.step.details`,
+		`Scarred, observant, and always impeccably dressed.`,
+		`data-character-creation-back-to-campaign="true"`,
+		`href="/app/campaigns/campaign-1/characters"`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("summary output missing marker %q: %q", marker, got)
+		}
+	}
+	if strings.Contains(got, `data-character-creation-next="true"`) {
+		t.Fatalf("summary output should replace next button with back-to-campaign action: %q", got)
+	}
+	if detailsIdx, domainIdx := strings.Index(got, `game.character_creation.step.details`), strings.Index(got, `game.character_creation.step.domain_cards`); detailsIdx != -1 && domainIdx != -1 && detailsIdx < domainIdx {
+		t.Fatalf("summary output should render details after the left-column step summary blocks: %q", got)
+	}
+}
+
+func TestCreationStepClassSubclassRendersDisabledNextUntilSelectionsComplete(t *testing.T) {
+	t.Parallel()
+
+	incomplete := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			Classes:    []CampaignCreationClassView{{ID: "class-1", Name: "Warrior"}},
+			Subclasses: []CampaignCreationSubclassView{{ID: "subclass-1", Name: "Guardian", ClassID: "class-1"}},
+		},
+	}
+
+	var incompleteBuf bytes.Buffer
+	if err := creationStepClassSubclass(incomplete, nil).Render(context.Background(), &incompleteBuf); err != nil {
+		t.Fatalf("render incomplete creationStepClassSubclass: %v", err)
+	}
+	incompleteMarkup := strings.SplitN(incompleteBuf.String(), "<script>", 2)[0]
+	if !strings.Contains(incompleteMarkup, `disabled data-character-creation-next="true"`) {
+		t.Fatalf("expected next button to start disabled when class/subclass are incomplete: %q", incompleteMarkup)
+	}
+
+	complete := incomplete
+	complete.Creation.ClassID = "class-1"
+	complete.Creation.SubclassID = "subclass-1"
+
+	var completeBuf bytes.Buffer
+	if err := creationStepClassSubclass(complete, nil).Render(context.Background(), &completeBuf); err != nil {
+		t.Fatalf("render complete creationStepClassSubclass: %v", err)
+	}
+	completeMarkup := strings.SplitN(completeBuf.String(), "<script>", 2)[0]
+	if strings.Contains(completeMarkup, `disabled data-character-creation-next="true"`) {
+		t.Fatalf("expected next button to start enabled when class/subclass are complete: %q", completeMarkup)
+	}
+}

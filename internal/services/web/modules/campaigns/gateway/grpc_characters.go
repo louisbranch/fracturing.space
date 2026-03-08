@@ -177,6 +177,7 @@ func (g GRPCGateway) CreateCharacter(ctx context.Context, campaignID string, inp
 		CampaignId: campaignID,
 		Name:       name,
 		Kind:       kind,
+		Pronouns:   pronouns.ToProto(strings.TrimSpace(input.Pronouns)),
 	})
 	if err != nil {
 		return campaignapp.CreateCharacterResult{}, err

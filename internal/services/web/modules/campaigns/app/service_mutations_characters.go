@@ -7,6 +7,25 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// requireNoActiveSessionForCharacterMutation blocks character create/update
+// flows while gameplay is active.
+func (s service) requireNoActiveSessionForCharacterMutation(ctx context.Context, campaignID string) error {
+	sessions, err := s.readGateway.CampaignSessions(ctx, campaignID)
+	if err != nil {
+		return err
+	}
+	for _, session := range sessions {
+		if strings.EqualFold(strings.TrimSpace(session.Status), "active") {
+			return apperrors.EK(
+				apperrors.KindConflict,
+				"error.web.message.active_session_blocks_character_mutation",
+				"active session blocks character mutation",
+			)
+		}
+	}
+	return nil
+}
+
 // createCharacter executes package-scoped creation behavior for this flow.
 func (s service) createCharacter(ctx context.Context, campaignID string, input CreateCharacterInput) (CreateCharacterResult, error) {
 	if strings.TrimSpace(input.Name) == "" {
@@ -16,6 +35,9 @@ func (s service) createCharacter(ctx context.Context, campaignID string, input C
 		return CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_kind_value_is_invalid", "character kind value is invalid")
 	}
 	if err := s.requirePolicy(ctx, campaignID, policyMutateCharacter); err != nil {
+		return CreateCharacterResult{}, err
+	}
+	if err := s.requireNoActiveSessionForCharacterMutation(ctx, campaignID); err != nil {
 		return CreateCharacterResult{}, err
 	}
 	created, err := s.mutationGateway.CreateCharacter(ctx, campaignID, input)
@@ -42,7 +64,10 @@ func (s service) updateCharacter(ctx context.Context, campaignID string, charact
 	if name == "" {
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_name_is_required", "character name is required")
 	}
-	if err := s.requirePolicy(ctx, campaignID, policyMutateCharacter); err != nil {
+	if err := s.requirePolicyWithTarget(ctx, campaignID, policyMutateCharacter, characterID); err != nil {
+		return err
+	}
+	if err := s.requireNoActiveSessionForCharacterMutation(ctx, campaignID); err != nil {
 		return err
 	}
 	return s.mutationGateway.UpdateCharacter(ctx, campaignID, characterID, UpdateCharacterInput{

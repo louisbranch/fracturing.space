@@ -58,6 +58,9 @@ func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, cam
 			if err != nil {
 				return err
 			}
+			if err := h.service.RequireManageParticipants(ctx, campaignID); err == nil {
+				view.CanManageParticipants = true
+			}
 			view.Participants = mapParticipantsView(items)
 			return nil
 		},
@@ -103,12 +106,75 @@ func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campa
 		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{{Label: webtemplates.T(loc, "game.characters.title")}}
 		},
-		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
+		loadData: func(ctx context.Context, campaignID string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error {
 			items, err := h.service.CampaignCharacters(ctx, campaignID)
 			if err != nil {
 				return err
 			}
+			if err := h.service.RequireMutateCharacters(ctx, campaignID); err == nil {
+				view.CanCreateCharacter = true
+			}
 			view.Characters = mapCharactersView(items)
+			view.CharacterCreationEnabled = h.resolveWorkflow(page.workspace.System) != nil
+			return nil
+		},
+	})
+}
+
+// handleCharacterCreatePage handles this route in the module transport layer.
+func (h handlers) handleCharacterCreatePage(w http.ResponseWriter, r *http.Request, campaignID string) {
+	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
+		marker: markerCharacterCreate,
+		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
+			return []sharedtemplates.BreadcrumbItem{
+				{Label: webtemplates.T(loc, "game.characters.title"), URL: routepath.AppCampaignCharacters(campaignID)},
+				{Label: webtemplates.T(loc, "game.characters.submit_create")},
+			}
+		},
+		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
+			if err := h.service.RequireMutateCharacters(ctx, campaignID); err != nil {
+				return err
+			}
+			view.CanCreateCharacter = true
+			view.CharacterEditor = webtemplates.CampaignCharacterEditorView{
+				Kind:       "PC",
+				Controller: "Unassigned",
+			}
+			return nil
+		},
+	})
+}
+
+// handleCharacterEdit handles this route in the module transport layer.
+func (h handlers) handleCharacterEdit(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
+		marker: markerCharacterEdit,
+		extra: func(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
+			return []sharedtemplates.BreadcrumbItem{
+				{Label: webtemplates.T(loc, "game.characters.title"), URL: routepath.AppCampaignCharacters(campaignID)},
+				{Label: campaignCharacterEditBreadcrumbLabel(loc, view), URL: routepath.AppCampaignCharacter(campaignID, characterID)},
+				{Label: webtemplates.T(loc, "game.characters.action_edit_page")},
+			}
+		},
+		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
+			editor, err := h.service.CampaignCharacterEditor(ctx, campaignID, characterID)
+			if err != nil {
+				return err
+			}
+			view.CharacterID = characterID
+			view.CharacterEditor = mapCharacterEditorView(editor)
+			if strings.TrimSpace(view.CharacterID) == "" {
+				view.CharacterID = characterID
+			}
+			view.Characters = []webtemplates.CampaignCharacterView{{
+				ID:             editor.Character.ID,
+				Name:           editor.Character.Name,
+				Kind:           editor.Character.Kind,
+				Controller:     editor.Character.Controller,
+				Pronouns:       editor.Character.Pronouns,
+				CanEdit:        true,
+				EditReasonCode: editor.Character.EditReasonCode,
+			}}
 			return nil
 		},
 	})
@@ -217,4 +283,12 @@ func campaignCharacterBreadcrumbLabel(loc webtemplates.Localizer, view webtempla
 		break
 	}
 	return webtemplates.T(loc, "game.character_detail.title")
+}
+
+// campaignCharacterEditBreadcrumbLabel resolves the selected character label for edit breadcrumbs.
+func campaignCharacterEditBreadcrumbLabel(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) string {
+	if name := strings.TrimSpace(view.CharacterEditor.Name); name != "" {
+		return name
+	}
+	return campaignCharacterBreadcrumbLabel(loc, view)
 }

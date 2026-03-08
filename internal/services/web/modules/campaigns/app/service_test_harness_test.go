@@ -73,6 +73,10 @@ type campaignGatewayStub struct {
 	createCharacterResult             CreateCharacterResult
 	createCharacterResultSet          bool
 	createCharacterErr                error
+	updateCharacterErr                error
+	lastUpdateCharacterCampaignID     string
+	lastUpdateCharacterID             string
+	lastUpdateCharacterInput          UpdateCharacterInput
 	lastStartSessionInput             StartSessionInput
 	lastEndSessionInput               EndSessionInput
 	lastCreateInviteInput             CreateInviteInput
@@ -245,9 +249,12 @@ func (f *campaignGatewayStub) CreateCharacter(context.Context, string, CreateCha
 	return f.createCharacterResult, nil
 }
 
-func (f *campaignGatewayStub) UpdateCharacter(_ context.Context, _ string, _ string, _ UpdateCharacterInput) error {
+func (f *campaignGatewayStub) UpdateCharacter(_ context.Context, campaignID string, characterID string, input UpdateCharacterInput) error {
+	f.lastUpdateCharacterCampaignID = campaignID
+	f.lastUpdateCharacterID = characterID
+	f.lastUpdateCharacterInput = input
 	f.calls = append(f.calls, "update-character")
-	return nil
+	return f.updateCharacterErr
 }
 
 func (f *campaignGatewayStub) UpdateParticipant(_ context.Context, _ string, input UpdateParticipantInput) error {

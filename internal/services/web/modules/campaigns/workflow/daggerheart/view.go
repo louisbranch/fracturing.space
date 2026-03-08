@@ -77,6 +77,7 @@ func newCreationView(creation campaignapp.CampaignCharacterCreation) webtemplate
 		SecondaryWeaponID: creation.Profile.SecondaryWeaponID,
 		ArmorID:           creation.Profile.ArmorID,
 		PotionItemID:      creation.Profile.PotionItemID,
+		Description:       creation.Profile.Description,
 		Background:        creation.Profile.Background,
 		Experiences:       mapCreationExperiences(creation.Profile.Experiences),
 		DomainCardIDs:     append([]string(nil), creation.Profile.DomainCardIDs...),

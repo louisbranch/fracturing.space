@@ -76,6 +76,9 @@ func TestCampaignRouteBuilders(t *testing.T) {
 	if got := AppCampaignCharacter("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1" {
 		t.Fatalf("AppCampaignCharacter() = %q", got)
 	}
+	if got := AppCampaignCharacterEdit("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/edit" {
+		t.Fatalf("AppCampaignCharacterEdit() = %q", got)
+	}
 	if got := AppCampaignCharacterCreationStep("camp-1", "char-1"); got != "/app/campaigns/camp-1/characters/char-1/creation/step" {
 		t.Fatalf("AppCampaignCharacterCreationStep() = %q", got)
 	}
@@ -122,6 +125,12 @@ func TestServeMuxPatternConstants(t *testing.T) {
 	}
 	if AppCampaignCharacterPattern != "/app/campaigns/{campaignID}/characters/{characterID}" {
 		t.Fatalf("AppCampaignCharacterPattern = %q", AppCampaignCharacterPattern)
+	}
+	if AppCampaignCharacterEditPattern != "/app/campaigns/{campaignID}/characters/{characterID}/edit" {
+		t.Fatalf("AppCampaignCharacterEditPattern = %q", AppCampaignCharacterEditPattern)
+	}
+	if AppCampaignCharacterCreatePattern != "/app/campaigns/{campaignID}/characters/create" {
+		t.Fatalf("AppCampaignCharacterCreatePattern = %q", AppCampaignCharacterCreatePattern)
 	}
 	if AppCampaignCharacterCreationStepPattern != "/app/campaigns/{campaignID}/characters/{characterID}/creation/step" {
 		t.Fatalf("AppCampaignCharacterCreationStepPattern = %q", AppCampaignCharacterCreationStepPattern)
@@ -201,6 +210,12 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	}
 	if got := AppCampaignCharacter("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1" {
 		t.Fatalf("AppCampaignCharacter() escaped = %q", got)
+	}
+	if got := AppCampaignCharacterEdit("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/edit" {
+		t.Fatalf("AppCampaignCharacterEdit() escaped = %q", got)
+	}
+	if got := AppCampaignCharacterCreate("camp/1"); got != "/app/campaigns/camp%2F1/characters/create" {
+		t.Fatalf("AppCampaignCharacterCreate() escaped = %q", got)
 	}
 	if got := AppCampaignCharacterCreationStep("camp-1", "char/1"); got != "/app/campaigns/camp-1/characters/char%2F1/creation/step" {
 		t.Fatalf("AppCampaignCharacterCreationStep() escaped = %q", got)

@@ -28,8 +28,9 @@ func parseCreateCharacterInput(form url.Values) (CreateCharacterInput, error) {
 		return CreateCharacterInput{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_kind_value_is_invalid", "character kind value is invalid")
 	}
 	return CreateCharacterInput{
-		Name: strings.TrimSpace(form.Get("name")),
-		Kind: kind,
+		Name:     strings.TrimSpace(form.Get("name")),
+		Pronouns: strings.TrimSpace(form.Get("pronouns")),
+		Kind:     kind,
 	}, nil
 }
 
