@@ -320,6 +320,133 @@ func TestCampaignParticipantEditorLoadsAccessOptions(t *testing.T) {
 	}
 }
 
+func TestCampaignParticipantEditorLocksAIInvariantFields(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-ai",
+			Name:           "Caretaker",
+			Role:           "Player",
+			CampaignAccess: "Owner",
+			Controller:     "AI",
+		},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated: true,
+			Allowed:   true,
+		},
+	}
+	svc := newService(gateway)
+
+	editor, err := svc.campaignParticipantEditor(context.Background(), "c-1", "p-ai")
+	if err != nil {
+		t.Fatalf("campaignParticipantEditor() error = %v", err)
+	}
+	if !editor.RoleReadOnly {
+		t.Fatalf("editor.RoleReadOnly = %v, want true", editor.RoleReadOnly)
+	}
+	if !editor.AccessReadOnly {
+		t.Fatalf("editor.AccessReadOnly = %v, want true", editor.AccessReadOnly)
+	}
+	if got := editor.Participant.Role; got != "GM" {
+		t.Fatalf("editor.Participant.Role = %q, want %q", got, "GM")
+	}
+	if got := editor.Participant.CampaignAccess; got != "Member" {
+		t.Fatalf("editor.Participant.CampaignAccess = %q, want %q", got, "Member")
+	}
+	if len(editor.AccessOptions) != 1 || editor.AccessOptions[0].Value != "member" {
+		t.Fatalf("editor.AccessOptions = %#v, want single member option", editor.AccessOptions)
+	}
+}
+
+func TestCampaignAIBindingEditorLoadsOwnerOptionsAndPreservesCurrentBinding(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignAIAgents: []CampaignAIAgentOption{
+			{ID: "agent-active", Name: "Alpha", Enabled: true},
+			{ID: "agent-inactive", Name: "Beta", Enabled: false},
+		},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ActorCampaignAccess: "Owner",
+		},
+		campaignParticipants: []CampaignParticipant{{
+			ID:             "p-owner",
+			UserID:         "owner-user-1",
+			CampaignAccess: "Owner",
+		}},
+	}
+	svc := newService(gateway)
+
+	editor, err := svc.campaignAIBindingEditor(context.Background(), "c-1", "agent-missing")
+	if err != nil {
+		t.Fatalf("campaignAIBindingEditor() error = %v", err)
+	}
+	if !editor.Visible || !editor.Enabled {
+		t.Fatalf("editor = %#v, want visible enabled owner editor", editor)
+	}
+	if len(editor.Options) != 3 {
+		t.Fatalf("len(editor.Options) = %d, want 3", len(editor.Options))
+	}
+	last := editor.Options[len(editor.Options)-1]
+	if last.ID != "agent-missing" || last.Name != "agent-missing" || last.Enabled || !last.Selected {
+		t.Fatalf("preserved current option = %#v", last)
+	}
+}
+
+func TestCampaignAIBindingEditorFallsBackToParticipantAccessWhenAuthzOmitsActorAccess(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignAIAgents: []CampaignAIAgentOption{{ID: "agent-active", Name: "Alpha", Enabled: true}},
+		campaignParticipants: []CampaignParticipant{{
+			ID:             "p-owner",
+			UserID:         "user-1",
+			CampaignAccess: "Owner",
+		}},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated: true,
+			Allowed:   true,
+		},
+	}
+	svc := newService(gateway)
+
+	editor, err := svc.campaignAIBindingEditor(contextWithResolvedUserID("user-1"), "c-1", "")
+	if err != nil {
+		t.Fatalf("campaignAIBindingEditor() error = %v", err)
+	}
+	if !editor.Enabled {
+		t.Fatalf("editor.Enabled = %v, want true", editor.Enabled)
+	}
+}
+
+func TestCampaignAIBindingEditorMarksUnavailableWithoutFailingPage(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignAIAgentsErr: apperrors.E(apperrors.KindUnavailable, "ai unavailable"),
+		authorizationDecision: AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ActorCampaignAccess: "Owner",
+		},
+	}
+	svc := newService(gateway)
+
+	editor, err := svc.campaignAIBindingEditor(context.Background(), "c-1", "agent-current")
+	if err != nil {
+		t.Fatalf("campaignAIBindingEditor() error = %v, want nil", err)
+	}
+	if !editor.Visible || !editor.Unavailable {
+		t.Fatalf("editor = %#v, want visible unavailable editor", editor)
+	}
+	if len(editor.Options) != 1 || editor.Options[0].ID != "agent-current" || editor.Options[0].Enabled {
+		t.Fatalf("editor.Options = %#v, want disabled preserved current option", editor.Options)
+	}
+}
+
 func TestCampaignParticipantEditorDeniesWhenManageParticipantForbidden(t *testing.T) {
 	t.Parallel()
 

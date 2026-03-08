@@ -37,6 +37,7 @@ const (
 	AppCampaignSessionPattern                = CampaignsPrefix + "{campaignID}/sessions/{sessionID}"
 	AppCampaignSessionStartPattern           = CampaignsPrefix + "{campaignID}/sessions/start"
 	AppCampaignSessionEndPattern             = CampaignsPrefix + "{campaignID}/sessions/end"
+	AppCampaignAIBindingPattern              = CampaignsPrefix + "{campaignID}/ai-binding"
 	AppCampaignParticipantsPattern           = CampaignsPrefix + "{campaignID}/participants"
 	AppCampaignParticipantEditPattern        = CampaignsPrefix + "{campaignID}/participants/{participantID}/edit"
 	AppCampaignCharactersPattern             = CampaignsPrefix + "{campaignID}/characters"
@@ -88,6 +89,11 @@ func AppCampaignSessionStart(campaignID string) string {
 // AppCampaignSessionEnd returns the campaign session-end route.
 func AppCampaignSessionEnd(campaignID string) string {
 	return AppCampaignSessions(campaignID) + "/end"
+}
+
+// AppCampaignAIBinding returns the campaign AI-binding mutation route.
+func AppCampaignAIBinding(campaignID string) string {
+	return AppCampaign(campaignID) + "/ai-binding"
 }
 
 // AppCampaignSession returns the campaign session-detail route.

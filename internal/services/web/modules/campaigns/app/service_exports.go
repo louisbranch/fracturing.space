@@ -36,6 +36,11 @@ func (s service) CampaignParticipantEditor(ctx context.Context, campaignID strin
 	return s.campaignParticipantEditor(ctx, campaignID, participantID)
 }
 
+// CampaignAIBindingEditor centralizes this web behavior in one helper seam.
+func (s service) CampaignAIBindingEditor(ctx context.Context, campaignID string, currentAIAgentID string) (CampaignAIBindingEditor, error) {
+	return s.campaignAIBindingEditor(ctx, campaignID, currentAIAgentID)
+}
+
 // CampaignCharacters centralizes this web behavior in one helper seam.
 func (s service) CampaignCharacters(ctx context.Context, campaignID string) ([]CampaignCharacter, error) {
 	return s.campaignCharacters(ctx, campaignID)
@@ -64,6 +69,11 @@ func (s service) RequireManageCampaign(ctx context.Context, campaignID string) e
 // UpdateCampaign applies this package workflow transition.
 func (s service) UpdateCampaign(ctx context.Context, campaignID string, input UpdateCampaignInput) error {
 	return s.updateCampaign(ctx, campaignID, input)
+}
+
+// UpdateCampaignAIBinding applies this package workflow transition.
+func (s service) UpdateCampaignAIBinding(ctx context.Context, campaignID string, input UpdateCampaignAIBindingInput) error {
+	return s.updateCampaignAIBinding(ctx, campaignID, input)
 }
 
 // StartSession applies this package workflow transition.

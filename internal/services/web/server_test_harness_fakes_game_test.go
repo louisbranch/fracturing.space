@@ -66,6 +66,20 @@ func (f fakeCampaignClient) UpdateCampaign(context.Context, *statev1.UpdateCampa
 	return &statev1.UpdateCampaignResponse{}, nil
 }
 
+func (f fakeCampaignClient) SetCampaignAIBinding(context.Context, *statev1.SetCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.SetCampaignAIBindingResponse{}, nil
+}
+
+func (f fakeCampaignClient) ClearCampaignAIBinding(context.Context, *statev1.ClearCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.ClearCampaignAIBindingResponse{}, nil
+}
+
 type fakeWebParticipantClient struct {
 	response *statev1.ListParticipantsResponse
 	err      error

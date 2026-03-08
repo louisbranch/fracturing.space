@@ -34,6 +34,8 @@ type campaignGatewayStub struct {
 	campaignNameErr                   error
 	campaignWorkspace                 CampaignWorkspace
 	campaignWorkspaceErr              error
+	campaignAIAgents                  []CampaignAIAgentOption
+	campaignAIAgentsErr               error
 	campaignParticipants              []CampaignParticipant
 	campaignParticipantsErr           error
 	campaignParticipant               CampaignParticipant
@@ -51,6 +53,8 @@ type campaignGatewayStub struct {
 	lastCreateInput                   CreateCampaignInput
 	updateCampaignErr                 error
 	lastUpdateCampaignInput           UpdateCampaignInput
+	updateCampaignAIBindingErr        error
+	lastUpdateCampaignAIBindingInput  UpdateCampaignAIBindingInput
 	authorizationDecision             AuthorizationDecision
 	authorizationErr                  error
 	authorizationCalls                int
@@ -108,6 +112,13 @@ func (f *campaignGatewayStub) CampaignWorkspace(_ context.Context, campaignID st
 		workspace.ID = campaignID
 	}
 	return workspace, nil
+}
+
+func (f *campaignGatewayStub) CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error) {
+	if f.campaignAIAgentsErr != nil {
+		return nil, f.campaignAIAgentsErr
+	}
+	return f.campaignAIAgents, nil
 }
 
 func (f *campaignGatewayStub) CampaignParticipants(context.Context, string) ([]CampaignParticipant, error) {
@@ -203,6 +214,12 @@ func (f *campaignGatewayStub) UpdateCampaign(_ context.Context, _ string, input 
 	f.lastUpdateCampaignInput = input
 	f.calls = append(f.calls, "update-campaign")
 	return f.updateCampaignErr
+}
+
+func (f *campaignGatewayStub) UpdateCampaignAIBinding(_ context.Context, _ string, input UpdateCampaignAIBindingInput) error {
+	f.lastUpdateCampaignAIBindingInput = input
+	f.calls = append(f.calls, "update-campaign-ai-binding")
+	return f.updateCampaignAIBindingErr
 }
 
 func (f *campaignGatewayStub) StartSession(_ context.Context, _ string, input StartSessionInput) error {

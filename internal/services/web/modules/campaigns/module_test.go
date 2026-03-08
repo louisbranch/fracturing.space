@@ -673,6 +673,9 @@ type fakeGateway struct {
 	workspaceLocale                   string
 	workspaceIntent                   string
 	workspaceAccessPolicy             string
+	workspaceAIAgentID                string
+	campaignAIAgents                  []CampaignAIAgentOption
+	campaignAIAgentsErr               error
 	participants                      []CampaignParticipant
 	participantsErr                   error
 	participant                       CampaignParticipant
@@ -700,6 +703,7 @@ type fakeGateway struct {
 	createCharacterErr                error
 	createdCharacterID                string
 	updateCampaignErr                 error
+	updateCampaignAIBindingErr        error
 	updateParticipantErr              error
 	err                               error
 	createErr                         error
@@ -780,6 +784,7 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (Ca
 			Theme:            strings.TrimSpace(item.Theme),
 			System:           system,
 			GMMode:           "Human",
+			AIAgentID:        strings.TrimSpace(f.workspaceAIAgentID),
 			Status:           status,
 			Locale:           locale,
 			Intent:           intent,
@@ -790,6 +795,13 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (Ca
 		}, nil
 	}
 	return CampaignWorkspace{}, apperrors.E(apperrors.KindNotFound, "campaign not found")
+}
+
+func (f fakeGateway) CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error) {
+	if f.campaignAIAgentsErr != nil {
+		return nil, f.campaignAIAgentsErr
+	}
+	return f.campaignAIAgents, nil
 }
 
 func (f fakeGateway) CampaignParticipants(context.Context, string) ([]CampaignParticipant, error) {
@@ -879,6 +891,10 @@ func (f fakeGateway) UpdateCampaign(context.Context, string, UpdateCampaignInput
 	return f.updateCampaignErr
 }
 
+func (f fakeGateway) UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error {
+	return f.updateCampaignAIBindingErr
+}
+
 func (fakeGateway) StartSession(context.Context, string, StartSessionInput) error { return nil }
 func (fakeGateway) EndSession(context.Context, string, EndSessionInput) error     { return nil }
 func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error) {
@@ -923,21 +939,25 @@ func (f fakeGateway) BatchCanCampaignAction(context.Context, string, []campaigna
 }
 
 type fakeCampaignClient struct {
-	response      *statev1.ListCampaignsResponse
-	err           error
-	getResp       *statev1.GetCampaignResponse
-	getErr        error
-	readinessResp *statev1.GetCampaignSessionReadinessResponse
-	readinessErr  error
-	createResp    *statev1.CreateCampaignResponse
-	createErr     error
-	updateResp    *statev1.UpdateCampaignResponse
-	updateErr     error
+	response          *statev1.ListCampaignsResponse
+	err               error
+	getResp           *statev1.GetCampaignResponse
+	getErr            error
+	readinessResp     *statev1.GetCampaignSessionReadinessResponse
+	readinessErr      error
+	createResp        *statev1.CreateCampaignResponse
+	createErr         error
+	updateResp        *statev1.UpdateCampaignResponse
+	updateErr         error
+	setAIBindingErr   error
+	clearAIBindingErr error
 }
 
 type capturingCampaignClient struct {
-	lastCreateReq *statev1.CreateCampaignRequest
-	lastUpdateReq *statev1.UpdateCampaignRequest
+	lastCreateReq         *statev1.CreateCampaignRequest
+	lastUpdateReq         *statev1.UpdateCampaignRequest
+	lastSetAIBindingReq   *statev1.SetCampaignAIBindingRequest
+	lastClearAIBindingReq *statev1.ClearCampaignAIBindingRequest
 }
 
 type fakeSessionClient struct {
@@ -1040,6 +1060,16 @@ func (c *capturingCampaignClient) UpdateCampaign(_ context.Context, req *statev1
 	return &statev1.UpdateCampaignResponse{Campaign: &statev1.Campaign{Id: strings.TrimSpace(req.GetCampaignId())}}, nil
 }
 
+func (c *capturingCampaignClient) SetCampaignAIBinding(_ context.Context, req *statev1.SetCampaignAIBindingRequest, _ ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error) {
+	c.lastSetAIBindingReq = req
+	return &statev1.SetCampaignAIBindingResponse{}, nil
+}
+
+func (c *capturingCampaignClient) ClearCampaignAIBinding(_ context.Context, req *statev1.ClearCampaignAIBindingRequest, _ ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error) {
+	c.lastClearAIBindingReq = req
+	return &statev1.ClearCampaignAIBindingResponse{}, nil
+}
+
 func (f fakeCampaignClient) ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
 	if f.err != nil {
 		return nil, f.err
@@ -1087,6 +1117,20 @@ func (f fakeCampaignClient) UpdateCampaign(context.Context, *statev1.UpdateCampa
 		return f.updateResp, nil
 	}
 	return &statev1.UpdateCampaignResponse{Campaign: &statev1.Campaign{Id: "updated"}}, nil
+}
+
+func (f fakeCampaignClient) SetCampaignAIBinding(context.Context, *statev1.SetCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error) {
+	if f.setAIBindingErr != nil {
+		return nil, f.setAIBindingErr
+	}
+	return &statev1.SetCampaignAIBindingResponse{}, nil
+}
+
+func (f fakeCampaignClient) ClearCampaignAIBinding(context.Context, *statev1.ClearCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error) {
+	if f.clearAIBindingErr != nil {
+		return nil, f.clearAIBindingErr
+	}
+	return &statev1.ClearCampaignAIBindingResponse{}, nil
 }
 
 type errorReader struct {

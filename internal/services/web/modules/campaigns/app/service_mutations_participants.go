@@ -41,6 +41,9 @@ func (s service) updateParticipant(ctx context.Context, campaignID string, input
 		return err
 	}
 	request.RequestedAccess = normalizeRequestedParticipantAccess(request.RequestedAccess, current)
+	if err := enforceAIParticipantInvariant(request, current); err != nil {
+		return err
+	}
 	if !participantUpdateHasChanges(request, current) {
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.at_least_one_participant_field_is_required", "at least one participant field is required")
 	}
@@ -116,4 +119,37 @@ func participantUpdateHasChanges(request participantUpdateRequest, current Campa
 		request.Role != currentRole ||
 		request.Pronouns != strings.TrimSpace(current.Pronouns) ||
 		request.RequestedAccess != ""
+}
+
+// enforceAIParticipantInvariant rejects requests that would violate the fixed
+// AI participant seat role/access contract.
+func enforceAIParticipantInvariant(request participantUpdateRequest, current CampaignParticipant) error {
+	if participantControllerCanonical(current.Controller) != participantControllerAI {
+		return nil
+	}
+
+	effectiveRole := request.Role
+	if effectiveRole == "" {
+		effectiveRole, _ = participantRoleCanonical(current.Role)
+	}
+	if effectiveRole == "" {
+		effectiveRole = participantRoleGMValue
+	}
+
+	effectiveAccess := request.RequestedAccess
+	if effectiveAccess == "" {
+		effectiveAccess = participantAccessCanonical(current.CampaignAccess)
+	}
+	if effectiveAccess == "" {
+		effectiveAccess = participantAccessMember
+	}
+
+	if effectiveRole == participantRoleGMValue && effectiveAccess == participantAccessMember {
+		return nil
+	}
+	return apperrors.EK(
+		apperrors.KindConflict,
+		"error.web.message.participant_ai_role_and_access_are_fixed",
+		"AI participants must remain GM and Member",
+	)
 }

@@ -35,6 +35,7 @@ type CampaignDetailView struct {
 	CanEditCampaign bool
 	Participants  []CampaignParticipantView
 	ParticipantEditor CampaignParticipantEditorView
+	AIBindingEditor CampaignAIBindingEditorView
 	Characters    []CampaignCharacterView
 	Sessions      []CampaignSessionView
 	SessionReadiness CampaignSessionReadinessView
@@ -67,6 +68,21 @@ type CampaignParticipantAccessOptionView struct {
 	Allowed bool
 }
 
+type CampaignAIAgentOptionView struct {
+	ID       string
+	Name     string
+	Enabled  bool
+	Selected bool
+}
+
+type CampaignAIBindingEditorView struct {
+	Visible     bool
+	Enabled     bool
+	Unavailable bool
+	CurrentID   string
+	Options     []CampaignAIAgentOptionView
+}
+
 type CampaignParticipantEditorView struct {
 	ID             string
 	Name           string
@@ -74,6 +90,7 @@ type CampaignParticipantEditorView struct {
 	Controller     string
 	Pronouns       string
 	CampaignAccess string
+	RoleReadOnly   bool
 	AccessOptions  []CampaignParticipantAccessOptionView
 	AccessReadOnly bool
 }
@@ -513,10 +530,30 @@ func campaignParticipantControllerLabel(loc Localizer, value string) string {
 
 func campaignParticipantPronounPresets(editor CampaignParticipantEditorView) []string {
 	presets := []string{"she/her", "he/him", "they/them"}
-	if strings.EqualFold(strings.TrimSpace(editor.Controller), "ai") {
+	if campaignParticipantControllerCanonical(editor.Controller) == "ai" {
 		return append(presets, "it/its")
 	}
 	return presets
+}
+
+func campaignParticipantControllerCanonical(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "ai", "controller_ai":
+		return "ai"
+	case "human", "controller_human":
+		return "human"
+	case "unassigned", "controller_unassigned":
+		return "unassigned"
+	default:
+		return ""
+	}
+}
+
+func campaignParticipantRoleFormValue(editor CampaignParticipantEditorView) string {
+	if value := campaignParticipantRoleCanonical(editor.Role); value != "" {
+		return value
+	}
+	return "gm"
 }
 
 func campaignParticipantRoleCanonical(value string) string {
@@ -541,6 +578,24 @@ func campaignParticipantAccessCanonical(value string) string {
 	default:
 		return ""
 	}
+}
+
+func campaignParticipantAccessFormValue(editor CampaignParticipantEditorView) string {
+	if value := campaignParticipantAccessCanonical(editor.CampaignAccess); value != "" {
+		return value
+	}
+	return "member"
+}
+
+func campaignParticipantEditLayout(view CampaignDetailView) string {
+	if view.AIBindingEditor.Visible {
+		return "ai"
+	}
+	return "standard"
+}
+
+func campaignAIBindingCurrentUnbound(editor CampaignAIBindingEditorView) bool {
+	return strings.TrimSpace(editor.CurrentID) == ""
 }
 
 func campaignCharacterKindLabel(loc Localizer, value string) string {

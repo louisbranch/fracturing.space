@@ -282,8 +282,29 @@ func mapParticipantEditorView(editor CampaignParticipantEditor) webtemplates.Cam
 		Controller:     editor.Participant.Controller,
 		Pronouns:       editor.Participant.Pronouns,
 		CampaignAccess: editor.Participant.CampaignAccess,
+		RoleReadOnly:   editor.RoleReadOnly,
 		AccessOptions:  accessOptions,
 		AccessReadOnly: editor.AccessReadOnly,
+	}
+}
+
+// mapAIBindingEditorView converts domain AI-binding editor state to template view state.
+func mapAIBindingEditorView(editor CampaignAIBindingEditor) webtemplates.CampaignAIBindingEditorView {
+	options := make([]webtemplates.CampaignAIAgentOptionView, 0, len(editor.Options))
+	for _, option := range editor.Options {
+		options = append(options, webtemplates.CampaignAIAgentOptionView{
+			ID:       option.ID,
+			Name:     option.Name,
+			Enabled:  option.Enabled,
+			Selected: option.Selected,
+		})
+	}
+	return webtemplates.CampaignAIBindingEditorView{
+		Visible:     editor.Visible,
+		Enabled:     editor.Enabled,
+		Unavailable: editor.Unavailable,
+		CurrentID:   editor.CurrentID,
+		Options:     options,
 	}
 }
 

@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc/metadata"
@@ -264,6 +265,31 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 	}
 }
 
+func TestCampaignAIBindingRouteRedirectsBackToParticipantEdit(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ActorCampaignAccess: "Owner",
+		},
+	}, Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	mount, _ := m.Mount()
+
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignAIBinding("c1"), strings.NewReader("participant_id=p-ai&ai_agent_id=agent-1"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignParticipantEdit("c1", "p-ai") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignParticipantEdit("c1", "p-ai"))
+	}
+}
+
 func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
 	t.Parallel()
 
@@ -306,6 +332,37 @@ func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
 				t.Fatalf("body missing validation marker %q or %q: %q", tc.wantMarkerA, tc.wantMarkerB, body)
 			}
 		})
+	}
+}
+
+func TestParticipantUpdateRouteRejectsAIInvariantTampering(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		participant: CampaignParticipant{
+			ID:             "p-ai",
+			Name:           "Caretaker",
+			Role:           "GM",
+			CampaignAccess: "Member",
+			Controller:     "AI",
+			Pronouns:       "it/its",
+		},
+		authorizationDecision: campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true},
+	}, Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	mount, _ := m.Mount()
+
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignParticipantEdit("c1", "p-ai"), strings.NewReader("name=Caretaker&role=player&campaign_access=member&pronouns=it%2Fits"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusConflict)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, "error.web.message.participant_ai_role_and_access_are_fixed") &&
+		!strings.Contains(body, "AI participants must remain GM and Member") {
+		t.Fatalf("body missing AI invariant marker: %q", body)
 	}
 }
 

@@ -30,6 +30,11 @@ func (unavailableGateway) CampaignWorkspace(context.Context, string) (CampaignWo
 	return CampaignWorkspace{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+// CampaignAIAgents centralizes this web behavior in one helper seam.
+func (unavailableGateway) CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error) {
+	return nil, apperrors.E(apperrors.KindUnavailable, "campaign ai agents are not configured")
+}
+
 // CampaignParticipants centralizes this web behavior in one helper seam.
 func (unavailableGateway) CampaignParticipants(context.Context, string) ([]CampaignParticipant, error) {
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
@@ -82,6 +87,11 @@ func (unavailableGateway) CreateCampaign(context.Context, CreateCampaignInput) (
 
 // UpdateCampaign applies this package workflow transition.
 func (unavailableGateway) UpdateCampaign(context.Context, string, UpdateCampaignInput) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+// UpdateCampaignAIBinding applies this package workflow transition.
+func (unavailableGateway) UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 

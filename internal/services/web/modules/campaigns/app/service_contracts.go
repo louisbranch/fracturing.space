@@ -11,6 +11,7 @@ type campaignReadGateway interface {
 	ListCampaigns(context.Context) ([]CampaignSummary, error)
 	CampaignName(context.Context, string) (string, error)
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
+	CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error)
 	CampaignParticipants(context.Context, string) ([]CampaignParticipant, error)
 	CampaignParticipant(context.Context, string, string) (CampaignParticipant, error)
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
@@ -26,6 +27,7 @@ type campaignReadGateway interface {
 type campaignMutationGateway interface {
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
 	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
+	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
 	UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
@@ -51,12 +53,14 @@ type Service interface {
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
 	CampaignParticipants(context.Context, string) ([]CampaignParticipant, error)
 	CampaignParticipantEditor(context.Context, string, string) (CampaignParticipantEditor, error)
+	CampaignAIBindingEditor(context.Context, string, string) (CampaignAIBindingEditor, error)
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
 	CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
 	RequireManageCampaign(context.Context, string) error
 	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
+	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error
 	StartSession(context.Context, string, StartSessionInput) error
 	EndSession(context.Context, string, EndSessionInput) error
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)

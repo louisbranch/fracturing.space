@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -356,6 +357,56 @@ func TestUpdateParticipantMapsInputAndErrors(t *testing.T) {
 	}
 }
 
+func TestCampaignAIAgentsAndBindingMutations(t *testing.T) {
+	t.Parallel()
+
+	agentClient := &contractAgentClient{listResp: &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{
+		nil,
+		{Id: "agent-active", Name: "Alpha", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE},
+		{Id: "agent-inactive", Handle: "beta", Status: aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED},
+	}}}
+	campaignClient := &contractCampaignClient{}
+	gateway := GRPCGateway{AgentClient: agentClient, Client: campaignClient}
+
+	options, err := gateway.CampaignAIAgents(context.Background())
+	if err != nil {
+		t.Fatalf("CampaignAIAgents() error = %v", err)
+	}
+	if len(options) != 2 {
+		t.Fatalf("len(options) = %d, want 2", len(options))
+	}
+	if !options[0].Enabled || options[0].Name != "Alpha" {
+		t.Fatalf("options[0] = %#v", options[0])
+	}
+	if options[1].Enabled || options[1].Name != "beta" {
+		t.Fatalf("options[1] = %#v", options[1])
+	}
+	if agentClient.lastListReq == nil || agentClient.lastListReq.GetPageSize() != campaignAIAgentsPageSize {
+		t.Fatalf("lastListReq = %#v, want page size %d", agentClient.lastListReq, campaignAIAgentsPageSize)
+	}
+
+	if err := gateway.UpdateCampaignAIBinding(context.Background(), "c1", campaignapp.UpdateCampaignAIBindingInput{AIAgentID: "agent-active"}); err != nil {
+		t.Fatalf("UpdateCampaignAIBinding(set) error = %v", err)
+	}
+	if campaignClient.lastSetAIBindingReq == nil || campaignClient.lastSetAIBindingReq.GetAiAgentId() != "agent-active" {
+		t.Fatalf("lastSetAIBindingReq = %#v", campaignClient.lastSetAIBindingReq)
+	}
+
+	if err := gateway.UpdateCampaignAIBinding(context.Background(), "c1", campaignapp.UpdateCampaignAIBindingInput{}); err != nil {
+		t.Fatalf("UpdateCampaignAIBinding(clear) error = %v", err)
+	}
+	if campaignClient.lastClearAIBindingReq == nil || campaignClient.lastClearAIBindingReq.GetCampaignId() != "c1" {
+		t.Fatalf("lastClearAIBindingReq = %#v", campaignClient.lastClearAIBindingReq)
+	}
+
+	campaignClient.setAIBindingErr = status.Error(codes.FailedPrecondition, "blocked")
+	if err := gateway.UpdateCampaignAIBinding(context.Background(), "c1", campaignapp.UpdateCampaignAIBindingInput{AIAgentID: "agent-active"}); err == nil {
+		t.Fatalf("expected conflict transport error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusConflict {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusConflict)
+	}
+}
+
 func TestCreateCampaignMapsInputAndValidatesResponse(t *testing.T) {
 	t.Parallel()
 
@@ -558,13 +609,20 @@ func TestCanCampaignActionAndHelperMappings(t *testing.T) {
 		t.Fatalf("expected unevaluated decision with nil auth client")
 	}
 
-	gateway.AuthorizationClient = contractAuthorizationClient{canResp: &statev1.CanResponse{Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"}}
+	gateway.AuthorizationClient = contractAuthorizationClient{canResp: &statev1.CanResponse{
+		Allowed:             true,
+		ReasonCode:          "AUTHZ_ALLOW_RESOURCE_OWNER",
+		ActorCampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+	}}
 	decision, err = gateway.CanCampaignAction(context.Background(), "c1", campaignapp.AuthorizationActionMutate, campaignapp.AuthorizationResourceCharacter, &campaignapp.AuthorizationTarget{ResourceID: "char-1"})
 	if err != nil {
 		t.Fatalf("CanCampaignAction() error = %v", err)
 	}
 	if !decision.Evaluated || !decision.Allowed || decision.ReasonCode != "AUTHZ_ALLOW_RESOURCE_OWNER" {
 		t.Fatalf("decision = %#v", decision)
+	}
+	if decision.ActorCampaignAccess != "Owner" {
+		t.Fatalf("decision.ActorCampaignAccess = %q, want %q", decision.ActorCampaignAccess, "Owner")
 	}
 
 	if got := campaignSystemLabel(commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED); got != "Unspecified" {
@@ -801,12 +859,18 @@ type contractCampaignClient struct {
 	readinessErr     error
 	lastReadinessReq *statev1.GetCampaignSessionReadinessRequest
 
-	createResp    *statev1.CreateCampaignResponse
-	createErr     error
-	lastCreateReq *statev1.CreateCampaignRequest
-	updateResp    *statev1.UpdateCampaignResponse
-	updateErr     error
-	lastUpdateReq *statev1.UpdateCampaignRequest
+	createResp            *statev1.CreateCampaignResponse
+	createErr             error
+	lastCreateReq         *statev1.CreateCampaignRequest
+	updateResp            *statev1.UpdateCampaignResponse
+	updateErr             error
+	lastUpdateReq         *statev1.UpdateCampaignRequest
+	setAIBindingResp      *statev1.SetCampaignAIBindingResponse
+	setAIBindingErr       error
+	lastSetAIBindingReq   *statev1.SetCampaignAIBindingRequest
+	clearAIBindingResp    *statev1.ClearCampaignAIBindingResponse
+	clearAIBindingErr     error
+	lastClearAIBindingReq *statev1.ClearCampaignAIBindingRequest
 }
 
 func (c *contractCampaignClient) ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
@@ -864,6 +928,28 @@ func (c *contractCampaignClient) UpdateCampaign(_ context.Context, req *statev1.
 	return &statev1.UpdateCampaignResponse{Campaign: &statev1.Campaign{Id: strings.TrimSpace(req.GetCampaignId())}}, nil
 }
 
+func (c *contractCampaignClient) SetCampaignAIBinding(_ context.Context, req *statev1.SetCampaignAIBindingRequest, _ ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error) {
+	c.lastSetAIBindingReq = req
+	if c.setAIBindingErr != nil {
+		return nil, c.setAIBindingErr
+	}
+	if c.setAIBindingResp != nil {
+		return c.setAIBindingResp, nil
+	}
+	return &statev1.SetCampaignAIBindingResponse{}, nil
+}
+
+func (c *contractCampaignClient) ClearCampaignAIBinding(_ context.Context, req *statev1.ClearCampaignAIBindingRequest, _ ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error) {
+	c.lastClearAIBindingReq = req
+	if c.clearAIBindingErr != nil {
+		return nil, c.clearAIBindingErr
+	}
+	if c.clearAIBindingResp != nil {
+		return c.clearAIBindingResp, nil
+	}
+	return &statev1.ClearCampaignAIBindingResponse{}, nil
+}
+
 type contractParticipantClient struct {
 	listResp  *statev1.ListParticipantsResponse
 	listErr   error
@@ -871,6 +957,23 @@ type contractParticipantClient struct {
 	getErr    error
 	updateReq *statev1.UpdateParticipantRequest
 	updateErr error
+}
+
+type contractAgentClient struct {
+	listResp    *aiv1.ListAgentsResponse
+	listErr     error
+	lastListReq *aiv1.ListAgentsRequest
+}
+
+func (c *contractAgentClient) ListAgents(_ context.Context, req *aiv1.ListAgentsRequest, _ ...grpc.CallOption) (*aiv1.ListAgentsResponse, error) {
+	c.lastListReq = req
+	if c.listErr != nil {
+		return nil, c.listErr
+	}
+	if c.listResp != nil {
+		return c.listResp, nil
+	}
+	return &aiv1.ListAgentsResponse{}, nil
 }
 
 func (c *contractParticipantClient) ListParticipants(context.Context, *statev1.ListParticipantsRequest, ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {

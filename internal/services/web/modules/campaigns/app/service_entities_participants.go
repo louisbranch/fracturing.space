@@ -93,11 +93,19 @@ func (s service) campaignParticipantEditor(ctx context.Context, campaignID strin
 			break
 		}
 	}
-	return CampaignParticipantEditor{
+	editor := CampaignParticipantEditor{
 		Participant:    participant,
 		AccessOptions:  options,
 		AccessReadOnly: accessReadOnly,
-	}, nil
+	}
+	if participantControllerCanonical(participant.Controller) == participantControllerAI {
+		editor.Participant.Role = "GM"
+		editor.Participant.CampaignAccess = "Member"
+		editor.RoleReadOnly = true
+		editor.AccessReadOnly = true
+		editor.AccessOptions = []CampaignParticipantAccessOption{{Value: participantAccessMember, Allowed: true}}
+	}
+	return editor, nil
 }
 
 // normalizeCampaignParticipant centralizes this web behavior in one helper seam.

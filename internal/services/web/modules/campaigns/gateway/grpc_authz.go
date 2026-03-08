@@ -36,10 +36,11 @@ func (g GRPCGateway) CanCampaignAction(
 		return campaignapp.AuthorizationDecision{}, nil
 	}
 	return campaignapp.AuthorizationDecision{
-		CheckID:    "",
-		Evaluated:  true,
-		Allowed:    resp.GetAllowed(),
-		ReasonCode: strings.TrimSpace(resp.GetReasonCode()),
+		CheckID:             "",
+		Evaluated:           true,
+		Allowed:             resp.GetAllowed(),
+		ReasonCode:          strings.TrimSpace(resp.GetReasonCode()),
+		ActorCampaignAccess: participantCampaignAccessLabel(resp.GetActorCampaignAccess()),
 	}, nil
 }
 
@@ -93,10 +94,11 @@ func (g GRPCGateway) BatchCanCampaignAction(
 			checkID = strings.TrimSpace(checks[idx].CheckID)
 		}
 		decisions = append(decisions, campaignapp.AuthorizationDecision{
-			CheckID:    checkID,
-			Evaluated:  true,
-			Allowed:    result.GetAllowed(),
-			ReasonCode: strings.TrimSpace(result.GetReasonCode()),
+			CheckID:             checkID,
+			Evaluated:           true,
+			Allowed:             result.GetAllowed(),
+			ReasonCode:          strings.TrimSpace(result.GetReasonCode()),
+			ActorCampaignAccess: participantCampaignAccessLabel(result.GetActorCampaignAccess()),
 		})
 	}
 

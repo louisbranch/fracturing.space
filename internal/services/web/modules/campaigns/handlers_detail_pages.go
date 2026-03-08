@@ -74,13 +74,23 @@ func (h handlers) handleParticipantEdit(w http.ResponseWriter, r *http.Request, 
 				{Label: webtemplates.T(loc, "game.participants.action_edit")},
 			}
 		},
-		loadData: func(ctx context.Context, campaignID string, _ *campaignPageContext, view *webtemplates.CampaignDetailView) error {
+		loadData: func(ctx context.Context, campaignID string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error {
 			editor, err := h.service.CampaignParticipantEditor(ctx, campaignID, participantID)
 			if err != nil {
 				return err
 			}
-			view.ParticipantID = participantID
+			view.ParticipantID = editor.Participant.ID
 			view.ParticipantEditor = mapParticipantEditorView(editor)
+			if strings.TrimSpace(view.ParticipantID) == "" {
+				view.ParticipantID = participantID
+			}
+			if strings.EqualFold(strings.TrimSpace(editor.Participant.Controller), "AI") {
+				aiBinding, err := h.service.CampaignAIBindingEditor(ctx, campaignID, page.workspace.AIAgentID)
+				if err != nil {
+					return err
+				}
+				view.AIBindingEditor = mapAIBindingEditorView(aiBinding)
+			}
 			return nil
 		},
 	})
