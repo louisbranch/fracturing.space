@@ -102,6 +102,7 @@ func campaignReadinessAggregateState(
 		state.Characters[characterID] = character.State{
 			Created:       true,
 			CharacterID:   characterID,
+			Name:          strings.TrimSpace(characterRecord.Name),
 			ParticipantID: strings.TrimSpace(characterRecord.ParticipantID),
 			SystemProfile: map[string]any{},
 		}

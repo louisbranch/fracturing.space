@@ -75,6 +75,7 @@ func TestEvaluateSessionStartReport_CollectsCharacterAndPlayerBlockers(t *testin
 				"char-a": {
 					CharacterID: "char-a",
 					Created:     true,
+					Name:        "Aria",
 				},
 			},
 		},
@@ -104,6 +105,24 @@ func TestEvaluateSessionStartReport_CollectsCharacterAndPlayerBlockers(t *testin
 
 	if report.Blockers[0].Metadata["character_id"] != "char-a" {
 		t.Fatalf("first blocker character_id = %q, want %q", report.Blockers[0].Metadata["character_id"], "char-a")
+	}
+	if report.Blockers[0].Metadata["character_name"] != "Aria" {
+		t.Fatalf("first blocker character_name = %q, want %q", report.Blockers[0].Metadata["character_name"], "Aria")
+	}
+	if !strings.Contains(report.Blockers[0].Message, "Aria") {
+		t.Fatalf("first blocker message = %q, want character name", report.Blockers[0].Message)
+	}
+	if strings.Contains(report.Blockers[0].Message, "char-a") {
+		t.Fatalf("first blocker message = %q, did not expect character id when name is present", report.Blockers[0].Message)
+	}
+	if report.Blockers[1].Metadata["character_name"] != "Aria" {
+		t.Fatalf("system blocker character_name = %q, want %q", report.Blockers[1].Metadata["character_name"], "Aria")
+	}
+	if !strings.Contains(report.Blockers[1].Message, "Aria") {
+		t.Fatalf("system blocker message = %q, want character name", report.Blockers[1].Message)
+	}
+	if strings.Contains(report.Blockers[1].Message, "char-a") {
+		t.Fatalf("system blocker message = %q, did not expect character id when name is present", report.Blockers[1].Message)
 	}
 	if report.Blockers[3].Metadata["participant_id"] != "player-2" {
 		t.Fatalf("player blocker participant_id = %q, want %q", report.Blockers[3].Metadata["participant_id"], "player-2")

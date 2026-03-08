@@ -98,6 +98,7 @@ func TestEvaluateSessionStart_CharacterWithoutControllerRejected(t *testing.T) {
 			"char-1": {
 				CharacterID: "char-1",
 				Created:     true,
+				Name:        "Aria",
 			},
 		},
 	}, nil)
@@ -107,6 +108,12 @@ func TestEvaluateSessionStart_CharacterWithoutControllerRejected(t *testing.T) {
 	}
 	if rejection.Code != RejectionCodeSessionReadinessCharacterControllerRequired {
 		t.Fatalf("rejection code = %s, want %s", rejection.Code, RejectionCodeSessionReadinessCharacterControllerRequired)
+	}
+	if !strings.Contains(rejection.Message, "Aria") {
+		t.Fatalf("rejection message = %q, want character name", rejection.Message)
+	}
+	if strings.Contains(rejection.Message, "char-1") {
+		t.Fatalf("rejection message = %q, did not expect character id when name is present", rejection.Message)
 	}
 }
 
@@ -128,6 +135,7 @@ func TestEvaluateSessionStart_SystemReadinessRejected(t *testing.T) {
 			"char-1": {
 				CharacterID:   "char-1",
 				Created:       true,
+				Name:          "Aria",
 				ParticipantID: "player-1",
 				SystemProfile: map[string]any{
 					"daggerheart": map[string]any{"class": "warrior"},
@@ -143,6 +151,12 @@ func TestEvaluateSessionStart_SystemReadinessRejected(t *testing.T) {
 	}
 	if rejection.Code != RejectionCodeSessionReadinessCharacterSystemRequired {
 		t.Fatalf("rejection code = %s, want %s", rejection.Code, RejectionCodeSessionReadinessCharacterSystemRequired)
+	}
+	if !strings.Contains(rejection.Message, "Aria") {
+		t.Fatalf("rejection message = %q, want character name", rejection.Message)
+	}
+	if strings.Contains(rejection.Message, "char-1") {
+		t.Fatalf("rejection message = %q, did not expect character id when name is present", rejection.Message)
 	}
 }
 

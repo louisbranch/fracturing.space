@@ -180,6 +180,7 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileMapped(t *testing.T) 
 			{
 				ID:            "char-1",
 				CampaignID:    "c1",
+				Name:          "Aria",
 				ParticipantID: "player-1",
 			},
 		},
@@ -191,6 +192,9 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileMapped(t *testing.T) 
 	characterState, ok := state.Characters["char-1"]
 	if !ok {
 		t.Fatal("character state for char-1 not found")
+	}
+	if characterState.Name != "Aria" {
+		t.Fatalf("character name = %q, want %q", characterState.Name, "Aria")
 	}
 
 	systemProfile, ok := characterState.SystemProfile["daggerheart"].(map[string]any)
