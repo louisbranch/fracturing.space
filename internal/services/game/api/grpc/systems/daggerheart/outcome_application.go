@@ -9,6 +9,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -34,9 +35,9 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(grpcmeta.CampaignIDFromContext(ctx))
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(grpcmeta.CampaignIDFromContext(ctx), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 	sessionID := strings.TrimSpace(in.GetSessionId())
 	if sessionID == "" {

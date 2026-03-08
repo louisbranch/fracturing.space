@@ -1,6 +1,9 @@
 package game
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/storage"
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+)
 
 // NewStoresFromProjection constructs Stores from a projection-oriented store
 // bundle plus runtime dependencies. This reduces startup constructor coupling
@@ -28,9 +31,12 @@ func NewStoresFromProjection(config StoresFromProjectionConfig) Stores {
 		Snapshot:           config.ProjectionStore,
 		DaggerheartContent: config.ContentStore,
 		Social:             config.SocialClient,
-		Domain:             config.Domain,
-		WriteRuntime:       config.WriteRuntime,
-		Events:             config.Events,
+		Write: domainwriteexec.WritePath{
+			Executor: config.Domain,
+			Runtime:  config.WriteRuntime,
+			Audit:    inferAuditStore(config),
+		},
+		Events: config.Events,
 	}
 }
 

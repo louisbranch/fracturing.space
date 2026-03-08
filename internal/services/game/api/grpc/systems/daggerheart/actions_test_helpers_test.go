@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -162,7 +163,7 @@ func optionalInt(value int) *int {
 }
 
 func configureNoopDomain(svc *DaggerheartService) {
-	svc.stores.Domain = &fakeDomainEngine{}
+	svc.stores.Write.Executor = &fakeDomainEngine{}
 }
 
 func configureActionRollDomain(t *testing.T, svc *DaggerheartService, requestID string) {
@@ -172,7 +173,7 @@ func configureActionRollDomain(t *testing.T, svc *DaggerheartService, requestID 
 	if err != nil {
 		t.Fatalf("encode roll payload: %v", err)
 	}
-	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	svc.stores.Write.Executor = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
@@ -248,9 +249,8 @@ func newActionTestService() *DaggerheartService {
 			Event:            newFakeActionEventStore(),
 			SessionGate:      &fakeSessionGateStore{},
 			SessionSpotlight: &fakeSessionSpotlightStore{},
-			Domain:           &fakeDomainEngine{},
 			Session:          sessStore,
-			WriteRuntime:     testRuntime,
+			Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: testRuntime},
 		},
 		seedFunc: func() (int64, error) { return 42, nil },
 	}

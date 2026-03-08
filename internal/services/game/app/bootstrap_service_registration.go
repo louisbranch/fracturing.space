@@ -65,9 +65,9 @@ func buildServiceDescriptors(
 		ProjectionStore: bundle.projections,
 		EventStore:      bundle.events,
 		ContentStore:    bundle.content,
-		Domain:          stores.Domain,
+		Domain:          stores.Write.Executor,
 		Events:          stores.Events,
-		WriteRuntime:    stores.WriteRuntime,
+		WriteRuntime:    stores.Write.Runtime,
 	})
 	daggerheartService, err := daggerheartservice.NewDaggerheartService(daggerheartStores, random.NewSeed)
 	if err != nil {

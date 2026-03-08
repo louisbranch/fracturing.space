@@ -85,8 +85,8 @@ func (s Stores) contentRequirements() []dependencyRequirement {
 
 func (s Stores) runtimeRequirements() []dependencyRequirement {
 	return []dependencyRequirement{
-		{name: "Domain", configured: s.Domain != nil},
-		{name: "WriteRuntime", configured: s.WriteRuntime != nil},
+		{name: "Write.Executor", configured: s.Write.Executor != nil},
+		{name: "Write.Runtime", configured: s.Write.Runtime != nil},
 		{name: "Events", configured: s.Events != nil},
 	}
 }

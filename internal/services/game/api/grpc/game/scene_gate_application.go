@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -17,9 +18,9 @@ import (
 )
 
 func (a sceneApplication) OpenSceneGate(ctx context.Context, campaignID string, in *campaignv1.OpenSceneGateRequest) error {
-	sceneID := strings.TrimSpace(in.GetSceneId())
-	if sceneID == "" {
-		return status.Error(codes.InvalidArgument, "scene id is required")
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return err
 	}
 	gateType, err := scene.NormalizeGateType(in.GetGateType())
 	if err != nil {
@@ -57,7 +58,7 @@ func (a sceneApplication) OpenSceneGate(ctx context.Context, campaignID string, 
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -77,13 +78,13 @@ func (a sceneApplication) OpenSceneGate(ctx context.Context, campaignID string, 
 }
 
 func (a sceneApplication) ResolveSceneGate(ctx context.Context, campaignID string, in *campaignv1.ResolveSceneGateRequest) error {
-	sceneID := strings.TrimSpace(in.GetSceneId())
-	if sceneID == "" {
-		return status.Error(codes.InvalidArgument, "scene id is required")
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return err
 	}
-	gateID := strings.TrimSpace(in.GetGateId())
-	if gateID == "" {
-		return status.Error(codes.InvalidArgument, "gate id is required")
+	gateID, err := validate.RequiredID(in.GetGateId(), "gate id")
+	if err != nil {
+		return err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -108,7 +109,7 @@ func (a sceneApplication) ResolveSceneGate(ctx context.Context, campaignID strin
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -128,13 +129,13 @@ func (a sceneApplication) ResolveSceneGate(ctx context.Context, campaignID strin
 }
 
 func (a sceneApplication) AbandonSceneGate(ctx context.Context, campaignID string, in *campaignv1.AbandonSceneGateRequest) error {
-	sceneID := strings.TrimSpace(in.GetSceneId())
-	if sceneID == "" {
-		return status.Error(codes.InvalidArgument, "scene id is required")
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return err
 	}
-	gateID := strings.TrimSpace(in.GetGateId())
-	if gateID == "" {
-		return status.Error(codes.InvalidArgument, "gate id is required")
+	gateID, err := validate.RequiredID(in.GetGateId(), "gate id")
+	if err != nil {
+		return err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -159,7 +160,7 @@ func (a sceneApplication) AbandonSceneGate(ctx context.Context, campaignID strin
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

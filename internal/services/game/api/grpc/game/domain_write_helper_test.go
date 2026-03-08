@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -69,10 +70,10 @@ func TestExecuteAndApplyDomainCommand_AppliesEventsByDefault(t *testing.T) {
 			Decision: command.Decision{Events: []event.Event{testDecisionEvent()}},
 		},
 	}
-	stores := Stores{Domain: domain, WriteRuntime: runtime}
+	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
 	_, err := executeAndApplyDomainCommand(
 		context.Background(),
-		stores,
+		stores.Write,
 		projection.Applier{},
 		command.Command{CampaignID: "camp-1", Type: command.Type("campaign.create")},
 		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
@@ -90,10 +91,10 @@ func TestExecuteAndApplyDomainCommand_SkipsInlineApplyWhenDisabled(t *testing.T)
 			Decision: command.Decision{Events: []event.Event{testDecisionEvent()}},
 		},
 	}
-	stores := Stores{Domain: domain, WriteRuntime: runtime}
+	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
 	_, err := executeAndApplyDomainCommand(
 		context.Background(),
-		stores,
+		stores.Write,
 		projection.Applier{},
 		command.Command{CampaignID: "camp-1", Type: command.Type("campaign.create")},
 		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
@@ -121,10 +122,10 @@ func TestExecuteAndApplyDomainCommand_SkipsJournalOnlyInlineApply(t *testing.T) 
 			}},
 		},
 	}
-	stores := Stores{Domain: domain, WriteRuntime: runtime}
+	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
 	_, err := executeAndApplyDomainCommand(
 		context.Background(),
-		stores,
+		stores.Write,
 		projection.Applier{},
 		command.Command{CampaignID: "camp-1", Type: command.Type("story.note.add")},
 		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
@@ -139,10 +140,10 @@ func TestExecuteAndApplyDomainCommand_MapsNonRetryableExecutionError(t *testing.
 	domain := fakeDomainExecutor{
 		err: nonRetryableTestError{err: errors.New("post-persist checkpoint failed")},
 	}
-	stores := Stores{Domain: domain, WriteRuntime: runtime}
+	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
 	_, err := executeAndApplyDomainCommand(
 		context.Background(),
-		stores,
+		stores.Write,
 		projection.Applier{},
 		command.Command{CampaignID: "camp-1", Type: command.Type("campaign.create")},
 		domainwrite.Options{},

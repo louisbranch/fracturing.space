@@ -7,7 +7,6 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -40,10 +39,10 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
 		return nil, err
@@ -102,9 +101,6 @@ func (s *SnapshotService) PatchCharacterState(ctx context.Context, in *campaignv
 
 	characterID, dhState, err := newSnapshotApplication(s).PatchCharacterState(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -126,9 +122,6 @@ func (s *SnapshotService) UpdateSnapshotState(ctx context.Context, in *campaignv
 
 	dhSnapshot, err := newSnapshotApplication(s).UpdateSnapshotState(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 

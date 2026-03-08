@@ -74,7 +74,7 @@ func TestApplyRollOutcome_Success(t *testing.T) {
 		t.Fatalf("encode patch payload: %v", err)
 	}
 
-	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	svc.stores.Write.Executor = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("sys.daggerheart.character_state.patch"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
@@ -204,7 +204,7 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
@@ -321,7 +321,7 @@ func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-single-boundary")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
@@ -451,7 +451,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 			),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{

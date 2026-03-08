@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -46,7 +47,7 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 
 	err = applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Domain: domain, WriteRuntime: testRuntime},
+		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
 		"c1",
 		"s1",
 		"ch1",
@@ -108,7 +109,7 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 
 	err = applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Domain: domain, WriteRuntime: testRuntime},
+		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
 		"c1",
 		"s1",
 		"ch1",
@@ -142,7 +143,7 @@ func TestApplyStressVulnerableCondition_NoOpWhenUnchanged(t *testing.T) {
 
 	err := applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Domain: noopDomain},
+		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Write: domainwriteexec.WritePath{Executor: noopDomain}},
 		"c1",
 		"s1",
 		"ch1",
@@ -169,7 +170,7 @@ func TestApplyStressVulnerableCondition_NoOpWhenAlreadyVulnerable(t *testing.T) 
 
 	err := applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Domain: noopDomain},
+		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Write: domainwriteexec.WritePath{Executor: noopDomain}},
 		"c1",
 		"s1",
 		"ch1",

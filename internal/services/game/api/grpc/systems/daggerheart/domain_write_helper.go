@@ -18,7 +18,7 @@ func (s *DaggerheartService) executeAndApplyDomainCommand(
 ) (engine.Result, error) {
 	result, err := domainwriteexec.ExecuteAndApply(
 		ctx,
-		s.stores,
+		s.stores.Write,
 		applier,
 		cmd,
 		options,

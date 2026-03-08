@@ -127,7 +127,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores,
+		c.stores.Write,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

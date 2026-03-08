@@ -121,7 +121,7 @@ func TestCreateCountdown_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	resp, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
@@ -178,7 +178,7 @@ func TestCreateCountdown_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	resp, err := svc.CreateCountdown(context.Background(), &pb.DaggerheartCreateCountdownRequest{
 		CampaignId:  "camp-1",

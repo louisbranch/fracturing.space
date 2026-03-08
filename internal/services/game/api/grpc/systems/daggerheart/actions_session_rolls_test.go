@@ -89,7 +89,7 @@ func TestSessionActionRoll_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-success")
 	resp, err := svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  "camp-1",
@@ -129,7 +129,7 @@ func TestSessionActionRoll_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-1")
 	resp, err := svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
@@ -223,7 +223,7 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-1")
 	_, err = svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
@@ -357,7 +357,7 @@ func TestSessionActionRoll_WithModifiers(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-modifiers")
 	resp, err := svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
 		CampaignId:  "camp-1",
@@ -494,7 +494,7 @@ func TestSessionDamageRoll_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-damage-roll-success")
 	resp, err := svc.SessionDamageRoll(ctx, &pb.SessionDamageRollRequest{
 		CampaignId:  "camp-1",
@@ -558,7 +558,7 @@ func TestSessionDamageRoll_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-damage-roll-legacy")
 	_, err = svc.SessionDamageRoll(ctx, &pb.SessionDamageRollRequest{

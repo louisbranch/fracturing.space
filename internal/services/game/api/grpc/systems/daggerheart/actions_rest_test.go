@@ -110,7 +110,7 @@ func TestApplyRest_ShortRest_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId:   "camp-1",
@@ -162,7 +162,7 @@ func TestApplyRest_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-rest-1")
 	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
@@ -231,7 +231,7 @@ func TestApplyRest_LongRest_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
 		CampaignId:   "camp-1",
@@ -280,7 +280,7 @@ func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := contextWithSessionID("sess-1")
 	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
@@ -341,7 +341,7 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := contextWithSessionID("sess-1")
 	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{

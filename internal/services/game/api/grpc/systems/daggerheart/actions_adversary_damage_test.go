@@ -163,7 +163,7 @@ func TestApplyAdversaryDamage_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId:  "camp-1",
@@ -243,7 +243,7 @@ func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-adversary-damage")
 	_, err = svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
@@ -347,7 +347,7 @@ func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyAdversaryDamage(ctx, &pb.DaggerheartApplyAdversaryDamageRequest{
 		CampaignId:  "camp-1",

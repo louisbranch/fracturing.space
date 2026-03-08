@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/workflow"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
@@ -47,9 +48,9 @@ func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps workflow.C
 }
 
 func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.CreationDeps, campaignContext workflow.CampaignContext, in *campaignv1.ApplyCharacterCreationStepRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, workflow.Progress{}, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, workflow.Progress{}, err
 	}
 	stepInput := in.GetDaggerheart()
 	if stepInput == nil {
@@ -109,9 +110,9 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Cre
 }
 
 func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow.CreationDeps, campaignContext workflow.CampaignContext, in *campaignv1.ApplyCharacterCreationWorkflowRequest) (*campaignv1.CharacterProfile, workflow.Progress, error) {
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, workflow.Progress{}, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, workflow.Progress{}, err
 	}
 	workflowInput := in.GetDaggerheart()
 	if workflowInput == nil {
@@ -307,13 +308,13 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 
 	switch step := input.GetStep().(type) {
 	case *daggerheartv1.DaggerheartCreationStepInput_ClassSubclassInput:
-		classID := strings.TrimSpace(step.ClassSubclassInput.GetClassId())
-		if classID == "" {
-			return status.Error(codes.InvalidArgument, "class_id is required")
+		classID, err := validate.RequiredID(step.ClassSubclassInput.GetClassId(), "class_id")
+		if err != nil {
+			return err
 		}
-		subclassID := strings.TrimSpace(step.ClassSubclassInput.GetSubclassId())
-		if subclassID == "" {
-			return status.Error(codes.InvalidArgument, "subclass_id is required")
+		subclassID, err := validate.RequiredID(step.ClassSubclassInput.GetSubclassId(), "subclass_id")
+		if err != nil {
+			return err
 		}
 		if _, err := content.GetDaggerheartClass(ctx, classID); err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
@@ -336,13 +337,13 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 		return nil
 
 	case *daggerheartv1.DaggerheartCreationStepInput_HeritageInput:
-		ancestryID := strings.TrimSpace(step.HeritageInput.GetAncestryId())
-		if ancestryID == "" {
-			return status.Error(codes.InvalidArgument, "ancestry_id is required")
+		ancestryID, err := validate.RequiredID(step.HeritageInput.GetAncestryId(), "ancestry_id")
+		if err != nil {
+			return err
 		}
-		communityID := strings.TrimSpace(step.HeritageInput.GetCommunityId())
-		if communityID == "" {
-			return status.Error(codes.InvalidArgument, "community_id is required")
+		communityID, err := validate.RequiredID(step.HeritageInput.GetCommunityId(), "community_id")
+		if err != nil {
+			return err
 		}
 
 		ancestry, err := content.GetDaggerheartHeritage(ctx, ancestryID)
@@ -431,9 +432,9 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 		profile.HpMax = class.StartingHP
 		profile.StressMax = daggerheartprofile.PCStressMax
 		profile.Evasion = class.StartingEvasion
-		desc := strings.TrimSpace(step.DetailsInput.GetDescription())
-		if desc == "" {
-			return status.Error(codes.InvalidArgument, "description is required")
+		desc, err := validate.RequiredID(step.DetailsInput.GetDescription(), "description")
+		if err != nil {
+			return err
 		}
 		profile.DetailsRecorded = true
 		profile.Description = desc
@@ -496,9 +497,9 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 			return status.Error(codes.InvalidArgument, "single-weapon loadouts cannot use a secondary weapon")
 		}
 
-		armorID := strings.TrimSpace(step.EquipmentInput.GetArmorId())
-		if armorID == "" {
-			return status.Error(codes.InvalidArgument, "armor_id is required")
+		armorID, err := validate.RequiredID(step.EquipmentInput.GetArmorId(), "armor_id")
+		if err != nil {
+			return err
 		}
 		armor, err := content.GetDaggerheartArmor(ctx, armorID)
 		if err != nil {
@@ -544,9 +545,9 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 		return nil
 
 	case *daggerheartv1.DaggerheartCreationStepInput_BackgroundInput:
-		background := strings.TrimSpace(step.BackgroundInput.GetBackground())
-		if background == "" {
-			return status.Error(codes.InvalidArgument, "background is required")
+		background, err := validate.RequiredID(step.BackgroundInput.GetBackground(), "background")
+		if err != nil {
+			return err
 		}
 		profile.Background = background
 		return nil
@@ -558,9 +559,9 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 		}
 		experiences := make([]storage.DaggerheartExperience, 0, len(items))
 		for _, item := range items {
-			name := strings.TrimSpace(item.GetName())
-			if name == "" {
-				return status.Error(codes.InvalidArgument, "experience name is required")
+			name, err := validate.RequiredID(item.GetName(), "experience name")
+			if err != nil {
+				return err
 			}
 			experiences = append(experiences, storage.DaggerheartExperience{
 				Name:     name,
@@ -622,9 +623,9 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 		return nil
 
 	case *daggerheartv1.DaggerheartCreationStepInput_ConnectionsInput:
-		connections := strings.TrimSpace(step.ConnectionsInput.GetConnections())
-		if connections == "" {
-			return status.Error(codes.InvalidArgument, "connections are required")
+		connections, err := validate.RequiredID(step.ConnectionsInput.GetConnections(), "connections")
+		if err != nil {
+			return err
 		}
 		profile.Connections = connections
 		return nil

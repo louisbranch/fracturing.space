@@ -65,7 +65,7 @@ func TestApplyTemporaryArmor_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 
 	ctx = grpcmeta.WithRequestID(ctx, "req-temporary-armor")
 	resp, err := svc.ApplyTemporaryArmor(ctx, &pb.DaggerheartApplyTemporaryArmorRequest{

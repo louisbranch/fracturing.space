@@ -163,7 +163,7 @@ func TestApplyDamage_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:  "camp-1",
@@ -245,7 +245,7 @@ func TestApplyDamage_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-apply-damage")
 	_, err = svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
@@ -360,7 +360,7 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	_, err = svc.ApplyDamage(ctx, &pb.DaggerheartApplyDamageRequest{
 		CampaignId:  "camp-1",
@@ -439,7 +439,7 @@ func TestApplyConditions_LifeStateOnly(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-conditions-life")
 	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",
@@ -552,7 +552,7 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-apply-conditions")
 	_, err = svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
@@ -633,7 +633,7 @@ func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-apply-conditions")
 	_, err = svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{

@@ -126,7 +126,7 @@ func TestSwapLoadout_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-success")
 	resp, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId:  "camp-1",
@@ -214,7 +214,7 @@ func TestSwapLoadout_WithRecallCost(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-with-cost")
 	resp, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId:  "camp-1",
@@ -278,7 +278,7 @@ func TestSwapLoadout_UsesDomainEngineForLoadoutSwap(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-1")
 	_, err = svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
@@ -412,7 +412,7 @@ func TestSwapLoadout_UsesDomainEngineForStressSpend(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-1")
 	resp, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
@@ -516,7 +516,7 @@ func TestSwapLoadout_InRestSkipsRecallCost(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-swap-rest")
 	resp, err := svc.SwapLoadout(ctx, &pb.DaggerheartSwapLoadoutRequest{
 		CampaignId:  "camp-1",

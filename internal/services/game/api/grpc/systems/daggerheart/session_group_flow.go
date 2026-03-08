@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,22 +24,22 @@ func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	leaderID := strings.TrimSpace(in.GetLeaderCharacterId())
-	if leaderID == "" {
-		return nil, status.Error(codes.InvalidArgument, "leader character id is required")
+	leaderID, err := validate.RequiredID(in.GetLeaderCharacterId(), "leader character id")
+	if err != nil {
+		return nil, err
 	}
-	leaderTrait := strings.TrimSpace(in.GetLeaderTrait())
-	if leaderTrait == "" {
-		return nil, status.Error(codes.InvalidArgument, "leader trait is required")
+	leaderTrait, err := validate.RequiredID(in.GetLeaderTrait(), "leader trait")
+	if err != nil {
+		return nil, err
 	}
 	if in.GetDifficulty() == 0 {
 		return nil, status.Error(codes.InvalidArgument, "difficulty is required")
@@ -55,13 +56,13 @@ func (s *DaggerheartService) runSessionGroupActionFlow(ctx context.Context, in *
 		if supporter == nil {
 			return nil, status.Error(codes.InvalidArgument, "supporter is required")
 		}
-		supporterID := strings.TrimSpace(supporter.GetCharacterId())
-		if supporterID == "" {
-			return nil, status.Error(codes.InvalidArgument, "supporter character id is required")
+		supporterID, err := validate.RequiredID(supporter.GetCharacterId(), "supporter character id")
+		if err != nil {
+			return nil, err
 		}
-		supporterTrait := strings.TrimSpace(supporter.GetTrait())
-		if supporterTrait == "" {
-			return nil, status.Error(codes.InvalidArgument, "supporter trait is required")
+		supporterTrait, err := validate.RequiredID(supporter.GetTrait(), "supporter trait")
+		if err != nil {
+			return nil, err
 		}
 
 		rollResp, err := s.runSessionActionRoll(ctx, &pb.SessionActionRollRequest{
@@ -149,13 +150,13 @@ func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.S
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
 	if in.GetDifficulty() == 0 {
@@ -169,28 +170,28 @@ func (s *DaggerheartService) runSessionTagTeamFlow(ctx context.Context, in *pb.S
 	if second == nil {
 		return nil, status.Error(codes.InvalidArgument, "second participant is required")
 	}
-	firstID := strings.TrimSpace(first.GetCharacterId())
-	if firstID == "" {
-		return nil, status.Error(codes.InvalidArgument, "first character id is required")
+	firstID, err := validate.RequiredID(first.GetCharacterId(), "first character id")
+	if err != nil {
+		return nil, err
 	}
-	secondID := strings.TrimSpace(second.GetCharacterId())
-	if secondID == "" {
-		return nil, status.Error(codes.InvalidArgument, "second character id is required")
+	secondID, err := validate.RequiredID(second.GetCharacterId(), "second character id")
+	if err != nil {
+		return nil, err
 	}
 	if firstID == secondID {
 		return nil, status.Error(codes.InvalidArgument, "tag team participants must be distinct")
 	}
-	firstTrait := strings.TrimSpace(first.GetTrait())
-	if firstTrait == "" {
-		return nil, status.Error(codes.InvalidArgument, "first trait is required")
+	firstTrait, err := validate.RequiredID(first.GetTrait(), "first trait")
+	if err != nil {
+		return nil, err
 	}
-	secondTrait := strings.TrimSpace(second.GetTrait())
-	if secondTrait == "" {
-		return nil, status.Error(codes.InvalidArgument, "second trait is required")
+	secondTrait, err := validate.RequiredID(second.GetTrait(), "second trait")
+	if err != nil {
+		return nil, err
 	}
-	selectedID := strings.TrimSpace(in.GetSelectedCharacterId())
-	if selectedID == "" {
-		return nil, status.Error(codes.InvalidArgument, "selected character id is required")
+	selectedID, err := validate.RequiredID(in.GetSelectedCharacterId(), "selected character id")
+	if err != nil {
+		return nil, err
 	}
 	if selectedID != firstID && selectedID != secondID {
 		return nil, status.Error(codes.InvalidArgument, "selected character id must match a participant")

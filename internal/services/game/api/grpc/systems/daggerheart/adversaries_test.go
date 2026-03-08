@@ -8,6 +8,7 @@ import (
 	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -157,13 +158,12 @@ func newAdversaryTestService() *DaggerheartService {
 
 	return &DaggerheartService{
 		stores: Stores{
-			Campaign:     campaignStore,
-			Daggerheart:  dhStore,
-			Event:        eventStore,
-			Domain:       &dynamicDomainEngine{store: eventStore},
-			SessionGate:  &fakeSessionGateStore{},
-			Session:      sessStore,
-			WriteRuntime: testRuntime,
+			Campaign:    campaignStore,
+			Daggerheart: dhStore,
+			Event:       eventStore,
+			SessionGate: &fakeSessionGateStore{},
+			Session:     sessStore,
+			Write:       domainwriteexec.WritePath{Executor: &dynamicDomainEngine{store: eventStore}, Runtime: testRuntime},
 		},
 		seedFunc: func() (int64, error) { return 42, nil },
 	}
@@ -262,7 +262,7 @@ func TestCreateAdversary_WithSession(t *testing.T) {
 func TestCreateAdversary_UsesDomainEngine(t *testing.T) {
 	svc := newAdversaryTestService()
 	engine := &dynamicDomainEngine{store: svc.stores.Event}
-	svc.stores.Domain = engine
+	svc.stores.Write.Executor = engine
 
 	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
 		CampaignId: "camp-1",
@@ -532,7 +532,7 @@ func TestUpdateAdversary_Success(t *testing.T) {
 func TestUpdateAdversary_UsesDomainEngine(t *testing.T) {
 	svc := newAdversaryTestService()
 	engine := &dynamicDomainEngine{store: svc.stores.Event}
-	svc.stores.Domain = engine
+	svc.stores.Write.Executor = engine
 
 	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
 		CampaignId: "camp-1", Name: "Goblin",
@@ -646,7 +646,7 @@ func TestDeleteAdversary_Success(t *testing.T) {
 func TestDeleteAdversary_UsesDomainEngine(t *testing.T) {
 	svc := newAdversaryTestService()
 	engine := &dynamicDomainEngine{store: svc.stores.Event}
-	svc.stores.Domain = engine
+	svc.stores.Write.Executor = engine
 
 	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
 		CampaignId: "camp-1", Name: "Goblin",

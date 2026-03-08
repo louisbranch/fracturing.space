@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -76,8 +77,7 @@ func TestExecuteAndApplyDomainCommandRequiresEvents(t *testing.T) {
 
 	svc := &DaggerheartService{
 		stores: Stores{
-			Domain:       fakeDomainExecutor{result: engine.Result{Decision: command.Decision{}}},
-			WriteRuntime: runtime,
+			Write: domainwriteexec.WritePath{Executor: fakeDomainExecutor{result: engine.Result{Decision: command.Decision{}}}, Runtime: runtime},
 		},
 	}
 
@@ -102,12 +102,14 @@ func TestExecuteAndApplyDomainCommandSkipsApplyWhenInlineDisabled(t *testing.T) 
 	applier := &fakeEventApplier{err: errors.New("should not apply")}
 	svc := &DaggerheartService{
 		stores: Stores{
-			Domain: fakeDomainExecutor{
-				result: engine.Result{
-					Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+			Write: domainwriteexec.WritePath{
+				Executor: fakeDomainExecutor{
+					result: engine.Result{
+						Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+					},
 				},
+				Runtime: runtime,
 			},
-			WriteRuntime: runtime,
 		},
 	}
 
@@ -132,12 +134,14 @@ func TestExecuteAndApplyDomainCommandAppliesWhenInlineEnabled(t *testing.T) {
 	applier := &fakeEventApplier{}
 	svc := &DaggerheartService{
 		stores: Stores{
-			Domain: fakeDomainExecutor{
-				result: engine.Result{
-					Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+			Write: domainwriteexec.WritePath{
+				Executor: fakeDomainExecutor{
+					result: engine.Result{
+						Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+					},
 				},
+				Runtime: runtime,
 			},
-			WriteRuntime: runtime,
 		},
 	}
 
@@ -162,12 +166,14 @@ func TestExecuteAndApplyDomainCommandReturnsApplyErrorWhenInlineEnabled(t *testi
 	applier := &fakeEventApplier{err: errors.New("boom")}
 	svc := &DaggerheartService{
 		stores: Stores{
-			Domain: fakeDomainExecutor{
-				result: engine.Result{
-					Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+			Write: domainwriteexec.WritePath{
+				Executor: fakeDomainExecutor{
+					result: engine.Result{
+						Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+					},
 				},
+				Runtime: runtime,
 			},
-			WriteRuntime: runtime,
 		},
 	}
 
@@ -195,22 +201,24 @@ func TestExecuteAndApplyDomainCommandSkipsJournalOnlyInlineApply(t *testing.T) {
 	applier := &fakeEventApplier{err: errors.New("should not apply")}
 	svc := &DaggerheartService{
 		stores: Stores{
-			Domain: fakeDomainExecutor{
-				result: engine.Result{
-					Decision: command.Decision{Events: []event.Event{
-						{
-							CampaignID:  "camp-1",
-							Type:        event.Type("story.note_added"),
-							Timestamp:   time.Now().UTC(),
-							ActorType:   event.ActorTypeSystem,
-							EntityType:  "note",
-							EntityID:    "note-1",
-							PayloadJSON: []byte(`{"content":"note"}`),
-						},
-					}},
+			Write: domainwriteexec.WritePath{
+				Executor: fakeDomainExecutor{
+					result: engine.Result{
+						Decision: command.Decision{Events: []event.Event{
+							{
+								CampaignID:  "camp-1",
+								Type:        event.Type("story.note_added"),
+								Timestamp:   time.Now().UTC(),
+								ActorType:   event.ActorTypeSystem,
+								EntityType:  "note",
+								EntityID:    "note-1",
+								PayloadJSON: []byte(`{"content":"note"}`),
+							},
+						}},
+					},
 				},
+				Runtime: runtime,
 			},
-			WriteRuntime: runtime,
 		},
 	}
 
@@ -234,8 +242,10 @@ func TestExecuteAndApplyDomainCommandMapsNonRetryableExecutionError(t *testing.T
 
 	svc := &DaggerheartService{
 		stores: Stores{
-			Domain:       fakeDomainExecutor{err: nonRetryableTestError{err: errors.New("checkpoint save failed")}},
-			WriteRuntime: runtime,
+			Write: domainwriteexec.WritePath{
+				Executor: fakeDomainExecutor{err: nonRetryableTestError{err: errors.New("checkpoint save failed")}},
+				Runtime:  runtime,
+			},
 		},
 	}
 

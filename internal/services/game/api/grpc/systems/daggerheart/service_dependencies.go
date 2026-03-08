@@ -46,7 +46,7 @@ func (s *DaggerheartService) hasDependency(dependency serviceDependency) bool {
 	case dependencyEventStore:
 		return s.stores.Event != nil
 	case dependencyDomainEngine:
-		return s.stores.Domain != nil
+		return s.stores.Write.Executor != nil
 	case dependencySeedGenerator:
 		return s.seedFunc != nil
 	default:

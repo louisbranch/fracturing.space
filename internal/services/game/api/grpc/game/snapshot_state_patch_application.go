@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -25,9 +26,9 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 		return "", storage.DaggerheartCharacterState{}, err
 	}
 
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return "", storage.DaggerheartCharacterState{}, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return "", storage.DaggerheartCharacterState{}, err
 	}
 	if _, err := requireCharacterMutationPolicy(ctx, a.stores, c, characterID); err != nil {
 		return "", storage.DaggerheartCharacterState{}, err

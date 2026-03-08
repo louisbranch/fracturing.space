@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -64,13 +65,13 @@ func (s *DaggerheartService) runUpdateGold(ctx context.Context, in *pb.Daggerhea
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "update gold request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
 	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "gold update"); err != nil {
 		return nil, err
@@ -113,17 +114,17 @@ func (s *DaggerheartService) runAcquireDomainCard(ctx context.Context, in *pb.Da
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "acquire domain card request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
-	cardID := strings.TrimSpace(in.GetCardId())
-	if cardID == "" {
-		return nil, status.Error(codes.InvalidArgument, "card id is required")
+	cardID, err := validate.RequiredID(in.GetCardId(), "card id")
+	if err != nil {
+		return nil, err
 	}
 	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "domain card acquire"); err != nil {
 		return nil, err
@@ -158,17 +159,17 @@ func (s *DaggerheartService) runSwapEquipment(ctx context.Context, in *pb.Dagger
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "swap equipment request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
-	itemID := strings.TrimSpace(in.GetItemId())
-	if itemID == "" {
-		return nil, status.Error(codes.InvalidArgument, "item id is required")
+	itemID, err := validate.RequiredID(in.GetItemId(), "item id")
+	if err != nil {
+		return nil, err
 	}
 	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "equipment swap"); err != nil {
 		return nil, err
@@ -202,17 +203,17 @@ func (s *DaggerheartService) runUseConsumable(ctx context.Context, in *pb.Dagger
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "use consumable request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
-	consumableID := strings.TrimSpace(in.GetConsumableId())
-	if consumableID == "" {
-		return nil, status.Error(codes.InvalidArgument, "consumable id is required")
+	consumableID, err := validate.RequiredID(in.GetConsumableId(), "consumable id")
+	if err != nil {
+		return nil, err
 	}
 	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "consumable use"); err != nil {
 		return nil, err
@@ -244,17 +245,17 @@ func (s *DaggerheartService) runAcquireConsumable(ctx context.Context, in *pb.Da
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "acquire consumable request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
-	consumableID := strings.TrimSpace(in.GetConsumableId())
-	if consumableID == "" {
-		return nil, status.Error(codes.InvalidArgument, "consumable id is required")
+	consumableID, err := validate.RequiredID(in.GetConsumableId(), "consumable id")
+	if err != nil {
+		return nil, err
 	}
 	if err := s.validateInventoryPreconditions(ctx, campaignID, characterID, "consumable acquire"); err != nil {
 		return nil, err

@@ -69,7 +69,7 @@ func TestApplyRollOutcome_MissingRollSeq(t *testing.T) {
 func TestApplyRollOutcome_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	svc.stores.Domain = nil
+	svc.stores.Write.Executor = nil
 
 	rollEvent := newRollEvent(t, "req-roll-outcome-required").appendTo(eventStore)
 
@@ -129,7 +129,7 @@ func TestApplyRollOutcome_IdempotentWhenAlreadyAppliedEvenWithOpenGate(t *testin
 		t.Fatalf("append outcome event: %v", err)
 	}
 
-	domain := svc.stores.Domain.(*fakeDomainEngine)
+	domain := svc.stores.Write.Executor.(*fakeDomainEngine)
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-duplicate")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
@@ -225,7 +225,7 @@ func TestApplyRollOutcome_AlreadyAppliedStillEnsuresComplicationGate(t *testing.
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-gate-retry")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
@@ -345,7 +345,7 @@ func TestApplyRollOutcome_PartialRetrySkipsRepeatedGMFearSet(t *testing.T) {
 			),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-partial-retry")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
@@ -414,7 +414,7 @@ func TestApplyRollOutcome_PartialRetrySkipsRepeatedCharacterPatch(t *testing.T) 
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-patch-retry")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
@@ -496,7 +496,7 @@ func TestApplyRollOutcome_AlreadyAppliedWithOpenGateRepairsSpotlight(t *testing.
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-open-gate")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{

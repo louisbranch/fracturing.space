@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -18,7 +19,7 @@ func TestRotateCampaignAIAuthEpochValidation(t *testing.T) {
 	assertStatusCode(t, err, codes.Internal)
 
 	stores := Stores{
-		Domain: &fakeDomainEngine{result: engine.Result{Decision: command.Accept()}},
+		Write: domainwriteexec.WritePath{Executor: &fakeDomainEngine{result: engine.Result{Decision: command.Accept()}}},
 		SystemStores: systemmanifest.ProjectionStores{
 			Daggerheart: newFakeDaggerheartStore(),
 		},
@@ -34,7 +35,7 @@ func TestRotateCampaignAIAuthEpochValidation(t *testing.T) {
 func TestRotateCampaignAIAuthEpochSuccess(t *testing.T) {
 	domain := &fakeDomainEngine{result: engine.Result{Decision: command.Accept()}}
 	stores := Stores{
-		Domain: domain,
+		Write: domainwriteexec.WritePath{Executor: domain},
 		SystemStores: systemmanifest.ProjectionStores{
 			Daggerheart: newFakeDaggerheartStore(),
 		},

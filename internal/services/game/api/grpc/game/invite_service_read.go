@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
@@ -18,21 +19,21 @@ func (s *InviteService) GetInvite(ctx context.Context, in *campaignv1.GetInviteR
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get invite request is required")
 	}
-	inviteID := strings.TrimSpace(in.GetInviteId())
-	if inviteID == "" {
-		return nil, status.Error(codes.InvalidArgument, "invite id is required")
+	inviteID, err := validate.RequiredID(in.GetInviteId(), "invite id")
+	if err != nil {
+		return nil, err
 	}
 
 	inv, err := s.stores.Invite.GetInvite(ctx, inviteID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	campaignRecord, err := s.stores.Campaign.Get(ctx, inv.CampaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requirePolicy(ctx, s.stores, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
@@ -46,16 +47,16 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list invites request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requirePolicy(ctx, s.stores, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err

@@ -44,7 +44,7 @@ func rotateCampaignAIAuthEpoch(
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		stores,
+		stores.Write,
 		stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -16,9 +17,9 @@ func (s *CampaignAIService) GetCampaignAIAuthState(ctx context.Context, in *camp
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get campaign ai auth state request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 	if s.stores.Campaign == nil {
 		return nil, status.Error(codes.Internal, "campaign store is not configured")
@@ -29,7 +30,7 @@ func (s *CampaignAIService) GetCampaignAIAuthState(ctx context.Context, in *camp
 
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 
 	activeSessionID := ""

@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -29,9 +30,9 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		return storage.CharacterRecord{}, err
 	}
 
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return storage.CharacterRecord{}, err
 	}
 
 	ch, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
@@ -146,7 +147,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores,
+		c.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

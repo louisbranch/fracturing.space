@@ -63,7 +63,7 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores,
+		c.stores.Write,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -115,7 +115,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores,
+		c.stores.Write,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

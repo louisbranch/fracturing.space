@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -45,7 +46,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -78,9 +79,9 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 }
 
 func (a sessionApplication) EndSession(ctx context.Context, campaignID string, in *campaignv1.EndSessionRequest) (storage.SessionRecord, error) {
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return storage.SessionRecord{}, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return storage.SessionRecord{}, err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -108,7 +109,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

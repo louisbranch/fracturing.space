@@ -44,7 +44,7 @@ func TestApplyConditions_AddCondition_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-conditions-add")
 	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",
@@ -92,7 +92,7 @@ func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-conditions-remove")
 	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",
@@ -141,7 +141,7 @@ func TestApplyConditions_AddAndRemove(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-conditions-both")
 	resp, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",

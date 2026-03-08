@@ -36,7 +36,7 @@ func (s *AuthorizationService) Can(ctx context.Context, in *campaignv1.CanReques
 
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 
 	actor, reasonCode, err := authorizePolicyActor(ctx, s.stores, capability, campaignRecord)

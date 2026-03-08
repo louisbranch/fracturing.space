@@ -106,10 +106,10 @@ func (b *testStoresBuilder) build() Stores {
 		s.CampaignFork = b.Fork
 	}
 	if b.domain != nil {
-		s.Domain = b.domain
+		s.Write.Executor = b.domain
 	}
 	if b.writeRuntime {
-		s.WriteRuntime = testRuntime
+		s.Write.Runtime = testRuntime
 	}
 	return s
 }

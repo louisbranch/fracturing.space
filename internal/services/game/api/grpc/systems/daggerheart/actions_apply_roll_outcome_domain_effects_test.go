@@ -118,7 +118,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmConsequenceGate(t *testing.T) {
 			),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	resp, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
@@ -265,7 +265,7 @@ func TestApplyRollOutcome_CorrelationIDOnIntermediateCommands(t *testing.T) {
 			),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-corr")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
@@ -375,7 +375,7 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
@@ -540,7 +540,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := testSessionCtx("camp-1", "sess-1", "req-roll-1")
 	_, err = svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{

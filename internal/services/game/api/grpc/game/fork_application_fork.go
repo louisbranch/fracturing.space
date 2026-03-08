@@ -108,7 +108,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
@@ -145,7 +145,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
@@ -194,8 +194,8 @@ func (a forkApplication) copyForkEvents(ctx context.Context, sourceCampaignID, f
 		return time.Time{}, nil
 	}
 
-	inlineApplyEnabled := a.stores.WriteRuntime.InlineApplyEnabled()
-	shouldApply := a.stores.WriteRuntime.ShouldApply()
+	inlineApplyEnabled := a.stores.Write.Runtime.InlineApplyEnabled()
+	shouldApply := a.stores.Write.Runtime.ShouldApply()
 
 	afterSeq := uint64(0)
 	var lastEventAt time.Time

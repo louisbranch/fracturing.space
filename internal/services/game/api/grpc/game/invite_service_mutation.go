@@ -2,10 +2,9 @@ package game
 
 import (
 	"context"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,16 +14,13 @@ func (s *InviteService) CreateInvite(ctx context.Context, in *campaignv1.CreateI
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create invite request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	inv, err := newInviteApplication(s).CreateInvite(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -36,16 +32,13 @@ func (s *InviteService) ClaimInvite(ctx context.Context, in *campaignv1.ClaimInv
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "claim invite request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	inv, participantRecord, err := newInviteApplication(s).ClaimInvite(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -60,16 +53,13 @@ func (s *InviteService) RevokeInvite(ctx context.Context, in *campaignv1.RevokeI
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "revoke invite request is required")
 	}
-	inviteID := strings.TrimSpace(in.GetInviteId())
-	if inviteID == "" {
-		return nil, status.Error(codes.InvalidArgument, "invite id is required")
+	_, err := validate.RequiredID(in.GetInviteId(), "invite id")
+	if err != nil {
+		return nil, err
 	}
 
 	updated, err := newInviteApplication(s).RevokeInvite(ctx, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 

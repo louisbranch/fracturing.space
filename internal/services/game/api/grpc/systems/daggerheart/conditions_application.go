@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -25,13 +26,13 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -45,9 +46,9 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 		return nil, err
 	}
 
-	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
@@ -261,13 +262,13 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	adversaryID := strings.TrimSpace(in.GetAdversaryId())
-	if adversaryID == "" {
-		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	adversaryID, err := validate.RequiredID(in.GetAdversaryId(), "adversary id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -281,9 +282,9 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 		return nil, err
 	}
 
-	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
@@ -431,18 +432,17 @@ func (s *DaggerheartService) runApplyGmMove(ctx context.Context, in *pb.Daggerhe
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	move := strings.TrimSpace(in.GetMove())
-	if move == "" {
-		return nil, status.Error(codes.InvalidArgument, "move is required")
+	if _, err := validate.RequiredID(in.GetMove(), "move"); err != nil {
+		return nil, err
 	}
 	if in.GetFearSpent() < 0 {
 		return nil, status.Error(codes.InvalidArgument, "fear_spent must be non-negative")

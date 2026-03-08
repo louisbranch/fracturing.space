@@ -147,7 +147,7 @@ func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context,
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores,
+		c.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignContext.ID,

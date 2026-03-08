@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -31,7 +32,7 @@ func TestStoresValidate(t *testing.T) {
 			"SessionSpotlight", "Scene", "SceneCharacter", "SceneGate",
 			"SceneSpotlight", "Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
-			"Domain", "WriteRuntime", "Events",
+			"Write.Executor", "Write.Runtime", "Events",
 		} {
 			if !strings.Contains(msg, name) {
 				t.Errorf("error should mention %q, got: %s", name, msg)
@@ -94,7 +95,7 @@ func TestNewStoresFromProjection(t *testing.T) {
 	if stores.Audit == nil {
 		t.Fatal("expected audit store to be inferred from event store when compatible")
 	}
-	if stores.Domain == nil || stores.WriteRuntime == nil || stores.Events == nil {
+	if stores.Write.Executor == nil || stores.Write.Runtime == nil || stores.Events == nil {
 		t.Fatal("expected runtime dependencies to be propagated")
 	}
 }
@@ -165,8 +166,7 @@ func validStores() Stores {
 		Snapshot:           stubSnapshot{},
 		CampaignFork:       &fakeCampaignForkStore{},
 		DaggerheartContent: stubDaggerheartContent{},
-		Domain:             fakeDomainExecutor{},
-		WriteRuntime:       domainwrite.NewRuntime(),
+		Write:              domainwriteexec.WritePath{Executor: fakeDomainExecutor{}, Runtime: domainwrite.NewRuntime()},
 		Events:             event.NewRegistry(),
 	}
 }
