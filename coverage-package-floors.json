@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-07T23:39:34Z",
+  "updated_at": "2026-03-08T05:40:39Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -75,7 +75,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/engine",
-      "floor": 93.2,
+      "floor": 93.3,
       "description": "Core domain engine orchestration and routing."
     },
     {
@@ -110,7 +110,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness",
-      "floor": 98.2,
+      "floor": 98.3,
       "description": "Session-start readiness invariants from aggregate state."
     },
     {
