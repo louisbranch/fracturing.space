@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-08T06:03:08Z",
+  "updated_at": "2026-03-08T14:26:54Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -10,7 +10,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate",
-      "floor": 92,
+      "floor": 92.1,
       "description": "Aggregate fold routing and typed state reconstruction."
     },
     {
@@ -50,7 +50,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest",
-      "floor": 94.8,
+      "floor": 95.2,
       "description": "Built-in system descriptor and adapter wiring contracts."
     },
     {
