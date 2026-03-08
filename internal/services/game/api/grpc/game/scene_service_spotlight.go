@@ -2,10 +2,9 @@ package game
 
 import (
 	"context"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,16 +14,13 @@ func (s *SceneService) SetSceneSpotlight(ctx context.Context, in *campaignv1.Set
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "set scene spotlight request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
-	err := newSceneApplication(s).SetSceneSpotlight(ctx, campaignID, in)
+	err = newSceneApplication(s).SetSceneSpotlight(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -36,16 +32,13 @@ func (s *SceneService) ClearSceneSpotlight(ctx context.Context, in *campaignv1.C
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "clear scene spotlight request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
-	err := newSceneApplication(s).ClearSceneSpotlight(ctx, campaignID, in)
+	err = newSceneApplication(s).ClearSceneSpotlight(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 

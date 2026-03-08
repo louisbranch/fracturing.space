@@ -9,6 +9,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
@@ -783,9 +784,8 @@ func validDaggerheartStoresForConstructorTests() Stores {
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      &fakeDaggerheartStore{},
 		Event:            &fakeEventStore{},
-		Domain:           &fakeDomainEngine{},
 		Events:           event.NewRegistry(),
-		WriteRuntime:     testRuntime,
+		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: testRuntime},
 	}
 }
 

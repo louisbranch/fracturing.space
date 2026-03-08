@@ -1326,7 +1326,7 @@ func TestConfigureDomainEnabled_SetsDomain(t *testing.T) {
 	if err := configureDomain(serverEnv{DomainEnabled: true}, &stores, registries); err != nil {
 		t.Fatalf("configure domain: %v", err)
 	}
-	if stores.Domain == nil {
+	if stores.Write.Executor == nil {
 		t.Fatal("expected domain to be configured")
 	}
 }
@@ -1342,10 +1342,10 @@ func TestConfigureDomainDisabled_SetsDisabledDomain(t *testing.T) {
 	if err := configureDomain(serverEnv{DomainEnabled: false}, &stores, registries); err != nil {
 		t.Fatalf("configure domain: %v", err)
 	}
-	if stores.Domain == nil {
+	if stores.Write.Executor == nil {
 		t.Fatal("expected disabled domain executor to be configured")
 	}
-	_, err = stores.Domain.Execute(context.Background(), command.Command{})
+	_, err = stores.Write.Executor.Execute(context.Background(), command.Command{})
 	if !errors.Is(err, errDomainWritePathDisabled) {
 		t.Fatalf("disabled domain execute error = %v, want %v", err, errDomainWritePathDisabled)
 	}

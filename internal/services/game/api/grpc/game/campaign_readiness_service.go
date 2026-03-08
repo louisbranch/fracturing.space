@@ -2,9 +2,9 @@ package game
 
 import (
 	"context"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"google.golang.org/grpc/codes"
@@ -17,17 +17,17 @@ func (s *CampaignService) GetCampaignSessionReadiness(ctx context.Context, in *c
 		return nil, status.Error(codes.InvalidArgument, "get campaign session readiness request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	record, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requireReadPolicy(ctx, s.stores, record); err != nil {
 		return nil, err

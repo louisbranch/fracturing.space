@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -31,9 +32,9 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, err
 	}
 
-	participantID := strings.TrimSpace(in.GetParticipantId())
-	if participantID == "" {
-		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "participant id is required")
+	participantID, err := validate.RequiredID(in.GetParticipantId(), "participant id")
+	if err != nil {
+		return storage.ParticipantRecord{}, err
 	}
 
 	current, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
@@ -88,7 +89,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores,
+		c.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

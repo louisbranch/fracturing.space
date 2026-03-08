@@ -3,10 +3,10 @@ package game
 import (
 	"context"
 	"errors"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -19,16 +19,16 @@ func (s *CharacterService) ListCharacters(ctx context.Context, in *campaignv1.Li
 		return nil, status.Error(codes.InvalidArgument, "list characters request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
 		return nil, err
@@ -65,22 +65,22 @@ func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1
 		return nil, status.Error(codes.InvalidArgument, "get character sheet request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1
 
 	ch, err := s.stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 
 	dhProfile, err := s.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)

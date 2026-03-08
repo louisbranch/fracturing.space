@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -29,9 +30,9 @@ func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.Daggerhear
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -45,9 +46,9 @@ func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.Daggerhear
 		return nil, err
 	}
 
-	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
+	if err != nil {
+		return nil, err
 	}
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
@@ -175,13 +176,13 @@ func (s *DaggerheartService) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -195,9 +196,9 @@ func (s *DaggerheartService) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 		return nil, err
 	}
 
-	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
+	if err != nil {
+		return nil, err
 	}
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
 		return nil, err
@@ -310,13 +311,13 @@ func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -330,9 +331,9 @@ func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
@@ -400,13 +401,13 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -420,9 +421,9 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 		return nil, err
 	}
 
-	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {
@@ -432,8 +433,8 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	if in.Swap == nil {
 		return nil, status.Error(codes.InvalidArgument, "swap is required")
 	}
-	if strings.TrimSpace(in.Swap.CardId) == "" {
-		return nil, status.Error(codes.InvalidArgument, "card_id is required")
+	if _, err := validate.RequiredID(in.Swap.CardId, "card_id"); err != nil {
+		return nil, err
 	}
 	if in.Swap.RecallCost < 0 {
 		return nil, status.Error(codes.InvalidArgument, "recall_cost must be non-negative")
@@ -565,13 +566,13 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -585,9 +586,9 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 		return nil, err
 	}
 
-	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {

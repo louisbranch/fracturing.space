@@ -3,11 +3,11 @@ package game
 import (
 	"context"
 	"encoding/json"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -18,9 +18,9 @@ import (
 )
 
 func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.RevokeInviteRequest) (storage.InviteRecord, error) {
-	inviteID := strings.TrimSpace(in.GetInviteId())
-	if inviteID == "" {
-		return storage.InviteRecord{}, status.Error(codes.InvalidArgument, "invite id is required")
+	inviteID, err := validate.RequiredID(in.GetInviteId(), "invite id")
+	if err != nil {
+		return storage.InviteRecord{}, err
 	}
 
 	inv, err := a.stores.Invite.GetInvite(ctx, inviteID)
@@ -52,7 +52,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   inv.CampaignID,

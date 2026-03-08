@@ -126,11 +126,13 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 					interceptors.InternalServiceIdentityUnaryInterceptor(internalIdentity),
 					interceptors.AuditInterceptor(bundle.events),
 					interceptors.SessionLockInterceptor(bundle.projections),
+					interceptors.ErrorConversionUnaryInterceptor(),
 				),
 				grpc.ChainStreamInterceptor(
 					grpcmeta.StreamServerInterceptor(nil),
 					interceptors.InternalServiceIdentityStreamInterceptor(internalIdentity),
 					interceptors.StreamAuditInterceptor(bundle.events),
+					interceptors.ErrorConversionStreamInterceptor(),
 				),
 			)
 		}
@@ -243,8 +245,8 @@ func (b *serverBootstrap) configureProjectionRuntime(
 	if err != nil {
 		return projectionRuntimeState{}, err
 	}
-	if stores != nil && stores.WriteRuntime != nil {
-		stores.WriteRuntime.SetInlineApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
+	if stores != nil && stores.Write.Runtime != nil {
+		stores.Write.Runtime.SetInlineApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
 	}
 	log.Printf("projection apply mode = %s", projectionApplyMode)
 
@@ -252,8 +254,8 @@ func (b *serverBootstrap) configureProjectionRuntime(
 	if err != nil {
 		return projectionRuntimeState{}, err
 	}
-	if stores != nil && stores.WriteRuntime != nil {
-		stores.WriteRuntime.SetIntentFilter(projectionRegistries)
+	if stores != nil && stores.Write.Runtime != nil {
+		stores.Write.Runtime.SetIntentFilter(projectionRegistries)
 	}
 
 	return projectionRuntimeState{

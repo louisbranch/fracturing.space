@@ -59,7 +59,7 @@ func TestApplyGmMove_NegativeFearSpent(t *testing.T) {
 func TestApplyGmMove_Success(t *testing.T) {
 	svc := newActionTestService()
 	domain := &fakeDomainEngine{}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 	ctx := context.Background()
 	resp, err := svc.ApplyGmMove(ctx, &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Move: "change_environment",
@@ -103,7 +103,7 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	ctx := context.Background()
 	resp, err := svc.ApplyGmMove(ctx, &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", Move: "change_environment", FearSpent: 1,
@@ -152,7 +152,7 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "camp-1",

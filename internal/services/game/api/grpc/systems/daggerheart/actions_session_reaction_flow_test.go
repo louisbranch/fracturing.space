@@ -91,7 +91,7 @@ func TestSessionReactionFlow_Success(t *testing.T) {
 		t.Fatalf("encode outcome payload: %v", err)
 	}
 
-	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	svc.stores.Write.Executor = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
@@ -175,7 +175,7 @@ func TestSessionReactionFlow_ForwardsAdvantageDisadvantage(t *testing.T) {
 		t.Fatalf("encode outcome payload: %v", err)
 	}
 
-	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	svc.stores.Write.Executor = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
@@ -223,12 +223,12 @@ func TestSessionReactionFlow_ForwardsAdvantageDisadvantage(t *testing.T) {
 		t.Fatalf("SessionReactionFlow returned error: %v", err)
 	}
 
-	if len(svc.stores.Domain.(*fakeDomainEngine).commands) == 0 {
+	if len(svc.stores.Write.Executor.(*fakeDomainEngine).commands) == 0 {
 		t.Fatal("expected domain commands")
 	}
 
 	var commandPayload action.RollResolvePayload
-	rollCommandPayload := svc.stores.Domain.(*fakeDomainEngine).commands[0].PayloadJSON
+	rollCommandPayload := svc.stores.Write.Executor.(*fakeDomainEngine).commands[0].PayloadJSON
 	if err := json.Unmarshal(rollCommandPayload, &commandPayload); err != nil {
 		t.Fatalf("decode action roll command payload: %v", err)
 	}

@@ -29,7 +29,7 @@ func TestDaggerheartHandlersUseSharedDomainWriteHelper(t *testing.T) {
 			t.Fatalf("scan aliases in %s: %v", filename, err)
 		}
 		lines, err := testkit.ScanCallViolations(sourcePath, func(callPath string) bool {
-			if callPath == "s.stores.Domain.Execute" {
+			if callPath == "s.stores.Write.Executor.Execute" {
 				return true
 			}
 			for alias := range domainAliases {
@@ -89,7 +89,7 @@ func handlerDir(t *testing.T) string {
 	return filepath.Dir(thisFile)
 }
 
-// findDomainStoreAliases detects local variables assigned from s.stores.Domain
+// findDomainStoreAliases detects local variables assigned from s.stores.Write.Executor
 // so the shared-helper guard catches aliased calls too.
 func findDomainStoreAliases(path string) (map[string]struct{}, error) {
 	fset := token.NewFileSet()
@@ -129,7 +129,7 @@ func findDomainStoreAliases(path string) (map[string]struct{}, error) {
 }
 
 func isDomainStoreSelector(expr ast.Expr) bool {
-	return selectorPathLocal(expr) == "s.stores.Domain"
+	return selectorPathLocal(expr) == "s.stores.Write.Executor"
 }
 
 // selectorPathLocal resolves the dot-separated selector path. This is the

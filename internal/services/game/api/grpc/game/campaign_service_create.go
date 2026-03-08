@@ -4,7 +4,6 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,9 +16,6 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 
 	created, owner, err := newCampaignApplication(s).CreateCampaign(ctx, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 

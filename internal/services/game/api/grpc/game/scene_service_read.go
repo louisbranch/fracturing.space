@@ -2,10 +2,10 @@ package game
 
 import (
 	"context"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -23,21 +23,21 @@ func (s *SceneService) GetScene(ctx context.Context, in *campaignv1.GetSceneRequ
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get scene request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sceneID := strings.TrimSpace(in.GetSceneId())
-	if sceneID == "" {
-		return nil, status.Error(codes.InvalidArgument, "scene id is required")
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return nil, err
 	}
 
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
 		return nil, err
@@ -45,7 +45,7 @@ func (s *SceneService) GetScene(ctx context.Context, in *campaignv1.GetSceneRequ
 
 	rec, err := s.stores.Scene.GetScene(ctx, campaignID, sceneID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 
 	characters, err := s.stores.SceneCharacter.ListSceneCharacters(ctx, campaignID, sceneID)
@@ -63,21 +63,21 @@ func (s *SceneService) ListScenes(ctx context.Context, in *campaignv1.ListScenes
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list scenes request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
 		return nil, err

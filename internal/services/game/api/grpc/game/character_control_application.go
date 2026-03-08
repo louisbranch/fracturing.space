@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -22,9 +23,9 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		return "", "", err
 	}
 
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return "", "", status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return "", "", err
 	}
 	if _, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID); err != nil {
 		return "", "", err
@@ -60,7 +61,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores,
+		c.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

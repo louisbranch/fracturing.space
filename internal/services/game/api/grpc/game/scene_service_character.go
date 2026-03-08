@@ -2,10 +2,9 @@ package game
 
 import (
 	"context"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,16 +14,13 @@ func (s *SceneService) AddCharacterToScene(ctx context.Context, in *campaignv1.A
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "add character to scene request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
-	err := newSceneApplication(s).AddCharacterToScene(ctx, campaignID, in)
+	err = newSceneApplication(s).AddCharacterToScene(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -36,16 +32,13 @@ func (s *SceneService) RemoveCharacterFromScene(ctx context.Context, in *campaig
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "remove character from scene request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
-	err := newSceneApplication(s).RemoveCharacterFromScene(ctx, campaignID, in)
+	err = newSceneApplication(s).RemoveCharacterFromScene(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -57,16 +50,13 @@ func (s *SceneService) TransferCharacter(ctx context.Context, in *campaignv1.Tra
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "transfer character request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
-	err := newSceneApplication(s).TransferCharacter(ctx, campaignID, in)
+	err = newSceneApplication(s).TransferCharacter(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 

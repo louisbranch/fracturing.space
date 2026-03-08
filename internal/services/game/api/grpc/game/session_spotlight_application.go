@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -19,9 +20,9 @@ import (
 )
 
 func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID string, in *campaignv1.SetSessionSpotlightRequest) (storage.SessionSpotlight, error) {
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return storage.SessionSpotlight{}, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return storage.SessionSpotlight{}, err
 	}
 	spotlightType, err := sessionSpotlightTypeFromProto(in.GetType())
 	if err != nil {
@@ -62,7 +63,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -94,9 +95,9 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 }
 
 func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignID string, in *campaignv1.ClearSessionSpotlightRequest) (storage.SessionSpotlight, error) {
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return storage.SessionSpotlight{}, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return storage.SessionSpotlight{}, err
 	}
 	reason := strings.TrimSpace(in.GetReason())
 
@@ -125,7 +126,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

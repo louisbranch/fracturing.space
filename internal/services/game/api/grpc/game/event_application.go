@@ -51,7 +51,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		EntityID:     strings.TrimSpace(in.GetEntityId()),
 		PayloadJSON:  in.GetPayloadJson(),
 	}
-	if a.stores.Domain == nil {
+	if a.stores.Write.Executor == nil {
 		return event.Event{}, status.Error(codes.FailedPrecondition, "append event requires domain engine")
 	}
 	cmdType, ok := domainCommandTypeForEvent(input.Type)
@@ -71,7 +71,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		EntityID:     input.EntityID,
 		PayloadJSON:  input.PayloadJSON,
 	})
-	result, err := executeDomainCommandWithoutInlineApply(ctx, a.stores, cmd, domainwrite.Options{
+	result, err := executeDomainCommandWithoutInlineApply(ctx, a.stores.Write, cmd, domainwrite.Options{
 		RequireEvents:   true,
 		MissingEventMsg: "append event did not emit an event",
 		ExecuteErr: func(err error) error {

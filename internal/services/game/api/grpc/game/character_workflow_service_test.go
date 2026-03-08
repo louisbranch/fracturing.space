@@ -6,6 +6,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
@@ -377,9 +378,8 @@ func newWorkflowCharacterService(t *testing.T, profile storage.DaggerheartCharac
 				"domain-card.blade-strike": {ID: "domain-card.blade-strike", DomainID: "domain.blade", Name: "Blade Strike", Level: 1},
 			},
 		},
-		Event:        newFakeEventStore(),
-		Domain:       domain,
-		WriteRuntime: testRuntime,
+		Event: newFakeEventStore(),
+		Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	})
 }
 

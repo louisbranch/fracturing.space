@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
@@ -35,18 +36,18 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	adversaryID := strings.TrimSpace(in.GetAdversaryId())
-	if adversaryID == "" {
-		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	adversaryID, err := validate.RequiredID(in.GetAdversaryId(), "adversary id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -210,17 +211,17 @@ func (s *DaggerheartService) runSessionAdversaryActionCheck(ctx context.Context,
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
-	adversaryID := strings.TrimSpace(in.GetAdversaryId())
-	if adversaryID == "" {
-		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	adversaryID, err := validate.RequiredID(in.GetAdversaryId(), "adversary id")
+	if err != nil {
+		return nil, err
 	}
 	if in.GetDifficulty() < 0 {
 		return nil, status.Error(codes.InvalidArgument, "difficulty must be non-negative")
@@ -323,21 +324,21 @@ func (s *DaggerheartService) runSessionAdversaryAttackFlow(ctx context.Context, 
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
-	adversaryID := strings.TrimSpace(in.GetAdversaryId())
-	if adversaryID == "" {
-		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	adversaryID, err := validate.RequiredID(in.GetAdversaryId(), "adversary id")
+	if err != nil {
+		return nil, err
 	}
-	targetID := strings.TrimSpace(in.GetTargetId())
-	if targetID == "" {
-		return nil, status.Error(codes.InvalidArgument, "target id is required")
+	targetID, err := validate.RequiredID(in.GetTargetId(), "target id")
+	if err != nil {
+		return nil, err
 	}
 	if in.GetDifficulty() < 0 {
 		return nil, status.Error(codes.InvalidArgument, "difficulty must be non-negative")

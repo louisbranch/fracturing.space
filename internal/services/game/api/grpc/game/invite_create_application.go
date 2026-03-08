@@ -10,6 +10,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -21,9 +22,9 @@ import (
 )
 
 func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, in *campaignv1.CreateInviteRequest) (storage.InviteRecord, error) {
-	participantID := strings.TrimSpace(in.GetParticipantId())
-	if participantID == "" {
-		return storage.InviteRecord{}, status.Error(codes.InvalidArgument, "participant id is required")
+	participantID, err := validate.RequiredID(in.GetParticipantId(), "participant id")
+	if err != nil {
+		return storage.InviteRecord{}, err
 	}
 	recipientUserID := strings.TrimSpace(in.GetRecipientUserId())
 
@@ -80,7 +81,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

@@ -43,7 +43,7 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores,
+		c.stores.Write,
 		c.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -144,7 +144,7 @@ func clearCampaignAIBindingByCommand(
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		stores,
+		stores.Write,
 		stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

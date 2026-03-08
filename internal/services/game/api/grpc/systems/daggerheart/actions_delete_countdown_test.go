@@ -82,7 +82,7 @@ func TestDeleteCountdown_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 	resp, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
 		CampaignId: "camp-1", SessionId: "sess-1", CountdownId: "cd-delete",
 	})
@@ -133,7 +133,7 @@ func TestDeleteCountdown_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	resp, err := svc.DeleteCountdown(context.Background(), &pb.DaggerheartDeleteCountdownRequest{
 		CampaignId:  "camp-1",

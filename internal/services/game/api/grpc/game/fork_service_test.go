@@ -8,6 +8,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -190,8 +191,7 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
-			Domain:       domain,
-			WriteRuntime: testRuntime,
+			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
@@ -473,8 +473,7 @@ func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *test
 			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
-			Domain:       domain,
-			WriteRuntime: testRuntime,
+			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
@@ -754,8 +753,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
-			Domain:       domain,
-			WriteRuntime: testRuntime,
+			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
@@ -868,8 +866,7 @@ func TestForkCampaign_UsesDomainEngine(t *testing.T) {
 			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
 			Event:        eventStore,
 			CampaignFork: forkStore,
-			Domain:       domain,
-			WriteRuntime: testRuntime,
+			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
@@ -1048,8 +1045,7 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 			Event:        eventStore,
 			CampaignFork: forkStore,
 			Session:      sessionStore,
-			Domain:       domain,
-			WriteRuntime: testRuntime,
+			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),
@@ -1116,7 +1112,7 @@ func TestForkCampaign_RejectsWhenSourceCampaignHasActiveSession(t *testing.T) {
 			Session:      sessionStore,
 			Event:        eventStore,
 			CampaignFork: forkStore,
-			Domain:       &fakeDomainEngine{store: eventStore},
+			Write:        domainwriteexec.WritePath{Executor: &fakeDomainEngine{store: eventStore}},
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("fork-1"),

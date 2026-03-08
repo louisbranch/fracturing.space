@@ -47,7 +47,7 @@ func TestSessionAttackFlow_Success(t *testing.T) {
 		t.Fatalf("encode outcome payload: %v", err)
 	}
 
-	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	svc.stores.Write.Executor = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
@@ -132,7 +132,7 @@ func TestSessionAdversaryAttackFlow_Success(t *testing.T) {
 		t.Fatalf("encode roll payload: %v", err)
 	}
 
-	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	svc.stores.Write.Executor = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
@@ -201,7 +201,7 @@ func TestSessionGroupActionFlow_Success(t *testing.T) {
 	}
 
 	now := testTimestamp
-	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	svc.stores.Write.Executor = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
@@ -280,7 +280,7 @@ func TestSessionTagTeamFlow_Success(t *testing.T) {
 	}
 
 	now := testTimestamp
-	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	svc.stores.Write.Executor = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:  "camp-1",
@@ -385,7 +385,7 @@ func TestSessionGroupActionFlow_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-group-action")
 	_, err = svc.SessionGroupActionFlow(ctx, &pb.SessionGroupActionFlowRequest{
@@ -471,7 +471,7 @@ func TestSessionTagTeamFlow_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-tag-team")
 	_, err = svc.SessionTagTeamFlow(ctx, &pb.SessionTagTeamFlowRequest{

@@ -2,10 +2,10 @@ package game
 
 import (
 	"context"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -17,16 +17,16 @@ func (s *ParticipantService) ListParticipants(ctx context.Context, in *campaignv
 		return nil, status.Error(codes.InvalidArgument, "list participants request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
 		return nil, err
@@ -63,22 +63,22 @@ func (s *ParticipantService) GetParticipant(ctx context.Context, in *campaignv1.
 		return nil, status.Error(codes.InvalidArgument, "get participant request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
-	participantID := strings.TrimSpace(in.GetParticipantId())
-	if participantID == "" {
-		return nil, status.Error(codes.InvalidArgument, "participant id is required")
+	participantID, err := validate.RequiredID(in.GetParticipantId(), "participant id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
 		return nil, err
@@ -86,7 +86,7 @@ func (s *ParticipantService) GetParticipant(ctx context.Context, in *campaignv1.
 
 	p, err := s.stores.Participant.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 
 	return &campaignv1.GetParticipantResponse{

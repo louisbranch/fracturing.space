@@ -137,7 +137,7 @@ func TestApplyDowntimeMove_Success(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = serviceDomain
+	svc.stores.Write.Executor = serviceDomain
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-downtime-success")
 	resp, err := svc.ApplyDowntimeMove(ctx, &pb.DaggerheartApplyDowntimeMoveRequest{
@@ -217,7 +217,7 @@ func TestApplyDowntimeMove_UsesDomainEngine(t *testing.T) {
 			}),
 		},
 	}}
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-downtime-move")
 	_, err = svc.ApplyDowntimeMove(ctx, &pb.DaggerheartApplyDowntimeMoveRequest{

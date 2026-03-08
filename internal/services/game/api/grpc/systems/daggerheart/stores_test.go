@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -14,13 +15,12 @@ func TestStoresValidate_MissingEvents(t *testing.T) {
 	s := Stores{
 		Campaign:         &fakeCampaignStore{},
 		Character:        &fakeCharacterStore{},
-		Domain:           &fakeDomainEngine{},
 		Session:          &fakeSessionStore{},
 		SessionGate:      &fakeSessionGateStore{},
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      &fakeDaggerheartStore{},
 		Event:            &fakeEventStore{},
-		WriteRuntime:     domainwrite.NewRuntime(),
+		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
 	}
 
 	err := s.Validate()
@@ -36,13 +36,12 @@ func TestStoresApplier(t *testing.T) {
 	s := Stores{
 		Campaign:         &fakeCampaignStore{},
 		Character:        &fakeCharacterStore{},
-		Domain:           &fakeDomainEngine{},
 		Session:          &fakeSessionStore{},
 		SessionGate:      &fakeSessionGateStore{},
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      &fakeDaggerheartStore{},
 		Event:            &fakeEventStore{},
-		WriteRuntime:     domainwrite.NewRuntime(),
+		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
 		Events:           event.NewRegistry(),
 	}
 	if err := s.Validate(); err != nil {
@@ -96,7 +95,7 @@ func TestNewStoresFromProjection(t *testing.T) {
 	if stores.Campaign == nil || stores.Character == nil || stores.Daggerheart == nil {
 		t.Fatal("expected projection-backed stores to be populated")
 	}
-	if stores.Event == nil || stores.WriteRuntime == nil || stores.Events == nil {
+	if stores.Event == nil || stores.Write.Runtime == nil || stores.Events == nil {
 		t.Fatal("expected runtime stores to be propagated")
 	}
 	if stores.DaggerheartContent == nil {
@@ -112,13 +111,12 @@ func TestStoresAdapterRegistryMatchesManifest(t *testing.T) {
 	s := Stores{
 		Campaign:         &fakeCampaignStore{},
 		Character:        &fakeCharacterStore{},
-		Domain:           &fakeDomainEngine{},
 		Session:          &fakeSessionStore{},
 		SessionGate:      &fakeSessionGateStore{},
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      daggerheartStore,
 		Event:            &fakeEventStore{},
-		WriteRuntime:     domainwrite.NewRuntime(),
+		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
 		Events:           event.NewRegistry(),
 	}
 	if err := s.Validate(); err != nil {

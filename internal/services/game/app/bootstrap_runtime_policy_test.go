@@ -43,7 +43,8 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 		},
 	})
 
-	stores := gamegrpc.Stores{WriteRuntime: gamegrpc.NewWriteRuntime()}
+	var stores gamegrpc.Stores
+	stores.Write.Runtime = gamegrpc.NewWriteRuntime()
 	state, err := bootstrap.configureProjectionRuntime(serverEnv{}, &stores, nil, engine.Registries{}, nil)
 	if err != nil {
 		t.Fatalf("configure projection runtime: %v", err)
@@ -65,13 +66,13 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 		t.Fatal("expected projection registry built for runtime to flow to outbox apply builder")
 	}
 
-	if stores.WriteRuntime.InlineApplyEnabled() {
+	if stores.Write.Runtime.InlineApplyEnabled() {
 		t.Fatal("expected inline apply to be disabled in outbox-apply mode")
 	}
-	if !stores.WriteRuntime.ShouldApply()(event.Event{Type: event.Type("core.test_event")}) {
+	if !stores.Write.Runtime.ShouldApply()(event.Event{Type: event.Type("core.test_event")}) {
 		t.Fatal("expected runtime intent filter to allow registered projection event")
 	}
-	if stores.WriteRuntime.ShouldApply()(event.Event{Type: event.Type("core.unknown_event")}) {
+	if stores.Write.Runtime.ShouldApply()(event.Event{Type: event.Type("core.unknown_event")}) {
 		t.Fatal("expected runtime intent filter to fail closed for unknown event")
 	}
 
@@ -101,7 +102,8 @@ func TestConfigureProjectionRuntime_ReturnsResolveModeError(t *testing.T) {
 		},
 	})
 
-	stores := gamegrpc.Stores{WriteRuntime: gamegrpc.NewWriteRuntime()}
+	var stores gamegrpc.Stores
+	stores.Write.Runtime = gamegrpc.NewWriteRuntime()
 	_, err := bootstrap.configureProjectionRuntime(serverEnv{}, &stores, nil, engine.Registries{}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected resolve-mode error %v, got %v", wantErr, err)
@@ -130,14 +132,15 @@ func TestConfigureProjectionRuntime_ReturnsBuildProjectionRegistriesError(t *tes
 		},
 	})
 
-	stores := gamegrpc.Stores{WriteRuntime: gamegrpc.NewWriteRuntime()}
-	stores.WriteRuntime.SetInlineApplyEnabled(false)
+	var stores gamegrpc.Stores
+	stores.Write.Runtime = gamegrpc.NewWriteRuntime()
+	stores.Write.Runtime.SetInlineApplyEnabled(false)
 
 	_, err := bootstrap.configureProjectionRuntime(serverEnv{}, &stores, nil, engine.Registries{}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected registry-build error %v, got %v", wantErr, err)
 	}
-	if !stores.WriteRuntime.InlineApplyEnabled() {
+	if !stores.Write.Runtime.InlineApplyEnabled() {
 		t.Fatal("expected inline apply to be enabled in inline mode before registry-build failure")
 	}
 	if calledBuildApply {

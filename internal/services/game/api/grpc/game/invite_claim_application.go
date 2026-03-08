@@ -11,6 +11,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -25,16 +26,16 @@ import (
 )
 
 func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, in *campaignv1.ClaimInviteRequest) (storage.InviteRecord, storage.ParticipantRecord, error) {
-	inviteID := strings.TrimSpace(in.GetInviteId())
-	if inviteID == "" {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "invite id is required")
+	inviteID, err := validate.RequiredID(in.GetInviteId(), "invite id")
+	if err != nil {
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, err
 	}
-	if strings.TrimSpace(in.GetJoinGrant()) == "" {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "join grant is required")
+	if _, err := validate.RequiredID(in.GetJoinGrant(), "join grant"); err != nil {
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, err
 	}
-	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
-	if userID == "" {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "user id is required")
+	userID, err := validate.RequiredID(grpcmeta.UserIDFromContext(ctx), "user id")
+	if err != nil {
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, err
 	}
 
 	inv, err := a.stores.Invite.GetInvite(ctx, inviteID)
@@ -137,7 +138,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -174,7 +175,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

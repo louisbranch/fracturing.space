@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,26 +24,26 @@ func (s *DaggerheartService) runSessionAttackFlow(ctx context.Context, in *pb.Se
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	attackerID := strings.TrimSpace(in.GetCharacterId())
-	if attackerID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	attackerID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
-	trait := strings.TrimSpace(in.GetTrait())
-	if trait == "" {
-		return nil, status.Error(codes.InvalidArgument, "trait is required")
+	trait, err := validate.RequiredID(in.GetTrait(), "trait")
+	if err != nil {
+		return nil, err
 	}
-	targetID := strings.TrimSpace(in.GetTargetId())
-	if targetID == "" {
-		return nil, status.Error(codes.InvalidArgument, "target id is required")
+	targetID, err := validate.RequiredID(in.GetTargetId(), "target id")
+	if err != nil {
+		return nil, err
 	}
 	if in.GetDamage() == nil {
 		return nil, status.Error(codes.InvalidArgument, "damage is required")
@@ -161,22 +162,22 @@ func (s *DaggerheartService) runSessionReactionFlow(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	actorID := strings.TrimSpace(in.GetCharacterId())
-	if actorID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	actorID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
-	trait := strings.TrimSpace(in.GetTrait())
-	if trait == "" {
-		return nil, status.Error(codes.InvalidArgument, "trait is required")
+	trait, err := validate.RequiredID(in.GetTrait(), "trait")
+	if err != nil {
+		return nil, err
 	}
 
 	rollResp, err := s.runSessionActionRoll(ctx, &pb.SessionActionRollRequest{

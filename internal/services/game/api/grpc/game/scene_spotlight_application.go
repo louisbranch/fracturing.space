@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -17,9 +18,9 @@ import (
 )
 
 func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID string, in *campaignv1.SetSceneSpotlightRequest) error {
-	sceneID := strings.TrimSpace(in.GetSceneId())
-	if sceneID == "" {
-		return status.Error(codes.InvalidArgument, "scene id is required")
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return err
 	}
 	spotlightType, err := scene.NormalizeSpotlightType(in.GetType())
 	if err != nil {
@@ -48,7 +49,7 @@ func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID stri
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -68,9 +69,9 @@ func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID stri
 }
 
 func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID string, in *campaignv1.ClearSceneSpotlightRequest) error {
-	sceneID := strings.TrimSpace(in.GetSceneId())
-	if sceneID == "" {
-		return status.Error(codes.InvalidArgument, "scene id is required")
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -94,7 +95,7 @@ func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID st
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

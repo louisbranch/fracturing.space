@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -17,9 +18,9 @@ import (
 )
 
 func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in *campaignv1.CreateSceneRequest) (string, error) {
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return "", status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return "", err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -57,7 +58,7 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -81,9 +82,9 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 }
 
 func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in *campaignv1.UpdateSceneRequest) error {
-	sceneID := strings.TrimSpace(in.GetSceneId())
-	if sceneID == "" {
-		return status.Error(codes.InvalidArgument, "scene id is required")
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -108,7 +109,7 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -128,9 +129,9 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 }
 
 func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *campaignv1.EndSceneRequest) error {
-	sceneID := strings.TrimSpace(in.GetSceneId())
-	if sceneID == "" {
-		return status.Error(codes.InvalidArgument, "scene id is required")
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -154,7 +155,7 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -174,9 +175,9 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 }
 
 func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string, in *campaignv1.TransitionSceneRequest) (string, error) {
-	sourceSceneID := strings.TrimSpace(in.GetSourceSceneId())
-	if sourceSceneID == "" {
-		return "", status.Error(codes.InvalidArgument, "source scene id is required")
+	sourceSceneID, err := validate.RequiredID(in.GetSourceSceneId(), "source scene id")
+	if err != nil {
+		return "", err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -207,7 +208,7 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

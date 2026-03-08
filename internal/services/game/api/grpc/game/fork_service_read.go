@@ -2,9 +2,9 @@ package game
 
 import (
 	"context"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,9 +15,9 @@ func (s *ForkService) GetLineage(ctx context.Context, in *campaignv1.GetLineageR
 		return nil, status.Error(codes.InvalidArgument, "get lineage request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	// Verify campaign exists
@@ -65,9 +65,9 @@ func (s *ForkService) ListForks(ctx context.Context, in *campaignv1.ListForksReq
 		return nil, status.Error(codes.InvalidArgument, "list forks request is required")
 	}
 
-	sourceCampaignID := strings.TrimSpace(in.GetSourceCampaignId())
-	if sourceCampaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "source campaign id is required")
+	_, err := validate.RequiredID(in.GetSourceCampaignId(), "source campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	// Listing forks requires querying campaigns by parent_campaign_id,

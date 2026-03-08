@@ -2,10 +2,9 @@ package game
 
 import (
 	"context"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,16 +14,13 @@ func (s *SceneService) CreateScene(ctx context.Context, in *campaignv1.CreateSce
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "create scene request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	sceneID, err := newSceneApplication(s).CreateScene(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -36,16 +32,13 @@ func (s *SceneService) UpdateScene(ctx context.Context, in *campaignv1.UpdateSce
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "update scene request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
-	err := newSceneApplication(s).UpdateScene(ctx, campaignID, in)
+	err = newSceneApplication(s).UpdateScene(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -57,16 +50,13 @@ func (s *SceneService) EndScene(ctx context.Context, in *campaignv1.EndSceneRequ
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "end scene request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
-	err := newSceneApplication(s).EndScene(ctx, campaignID, in)
+	err = newSceneApplication(s).EndScene(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -78,16 +68,13 @@ func (s *SceneService) TransitionScene(ctx context.Context, in *campaignv1.Trans
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "transition scene request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	newSceneID, err := newSceneApplication(s).TransitionScene(ctx, campaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 

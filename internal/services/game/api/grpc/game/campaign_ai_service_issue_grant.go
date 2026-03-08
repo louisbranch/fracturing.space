@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -27,22 +28,22 @@ func (s *CampaignAIService) IssueCampaignAISessionGrant(ctx context.Context, in 
 		return nil, status.Error(codes.Internal, "session store is not configured")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
-	aiAgentID := strings.TrimSpace(in.GetAiAgentId())
-	if aiAgentID == "" {
-		return nil, status.Error(codes.InvalidArgument, "ai agent id is required")
+	aiAgentID, err := validate.RequiredID(in.GetAiAgentId(), "ai agent id")
+	if err != nil {
+		return nil, err
 	}
 
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if campaignRecord.GmMode != campaign.GmModeAI && campaignRecord.GmMode != campaign.GmModeHybrid {
 		return nil, status.Error(codes.FailedPrecondition, "campaign gm mode does not support ai relay")

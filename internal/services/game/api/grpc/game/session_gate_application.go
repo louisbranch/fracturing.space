@@ -9,6 +9,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -20,9 +21,9 @@ import (
 )
 
 func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID string, in *campaignv1.OpenSessionGateRequest) (storage.SessionGate, error) {
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return storage.SessionGate{}, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return storage.SessionGate{}, err
 	}
 	gateType, err := session.NormalizeGateType(in.GetGateType())
 	if err != nil {
@@ -80,7 +81,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -108,13 +109,13 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 }
 
 func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID string, in *campaignv1.ResolveSessionGateRequest) (storage.SessionGate, error) {
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return storage.SessionGate{}, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return storage.SessionGate{}, err
 	}
-	gateID := strings.TrimSpace(in.GetGateId())
-	if gateID == "" {
-		return storage.SessionGate{}, status.Error(codes.InvalidArgument, "gate id is required")
+	gateID, err := validate.RequiredID(in.GetGateId(), "gate id")
+	if err != nil {
+		return storage.SessionGate{}, err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -154,7 +155,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
@@ -182,13 +183,13 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 }
 
 func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID string, in *campaignv1.AbandonSessionGateRequest) (storage.SessionGate, error) {
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return storage.SessionGate{}, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return storage.SessionGate{}, err
 	}
-	gateID := strings.TrimSpace(in.GetGateId())
-	if gateID == "" {
-		return storage.SessionGate{}, status.Error(codes.InvalidArgument, "gate id is required")
+	gateID, err := validate.RequiredID(in.GetGateId(), "gate id")
+	if err != nil {
+		return storage.SessionGate{}, err
 	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
@@ -222,7 +223,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores,
+		a.stores.Write,
 		a.stores.Applier(),
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,

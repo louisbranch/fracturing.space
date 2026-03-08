@@ -28,7 +28,7 @@ func applyDaggerheartCharacterStatePatchCommand(
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		stores,
+		stores.Write,
 		stores.Applier(),
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
@@ -75,7 +75,7 @@ func executeDaggerheartConditionChangeCommand(
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		stores,
+		stores.Write,
 		stores.Applier(),
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -39,8 +40,8 @@ func (a contentApplication) runGetClass(ctx context.Context, in *pb.GetDaggerhea
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "class id is required")
+	if _, err := validate.RequiredID(in.GetId(), "class id"); err != nil {
+		return nil, err
 	}
 
 	class, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), classDescriptor)
@@ -81,8 +82,8 @@ func (a contentApplication) runGetSubclass(ctx context.Context, in *pb.GetDagger
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "subclass id is required")
+	if _, err := validate.RequiredID(in.GetId(), "subclass id"); err != nil {
+		return nil, err
 	}
 
 	subclass, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), subclassDescriptor)
@@ -123,8 +124,8 @@ func (a contentApplication) runGetHeritage(ctx context.Context, in *pb.GetDagger
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "heritage id is required")
+	if _, err := validate.RequiredID(in.GetId(), "heritage id"); err != nil {
+		return nil, err
 	}
 
 	heritage, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), heritageDescriptor)
@@ -165,8 +166,8 @@ func (a contentApplication) runGetExperience(ctx context.Context, in *pb.GetDagg
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "experience id is required")
+	if _, err := validate.RequiredID(in.GetId(), "experience id"); err != nil {
+		return nil, err
 	}
 
 	experience, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), experienceDescriptor)
@@ -207,8 +208,8 @@ func (a contentApplication) runGetAdversary(ctx context.Context, in *pb.GetDagge
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	if _, err := validate.RequiredID(in.GetId(), "adversary id"); err != nil {
+		return nil, err
 	}
 
 	adversary, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), adversaryDescriptor)
@@ -250,8 +251,8 @@ func (a contentApplication) runGetBeastform(ctx context.Context, in *pb.GetDagge
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "beastform id is required")
+	if _, err := validate.RequiredID(in.GetId(), "beastform id"); err != nil {
+		return nil, err
 	}
 
 	beastform, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), beastformDescriptor)
@@ -293,8 +294,8 @@ func (a contentApplication) runGetCompanionExperience(ctx context.Context, in *p
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "companion experience id is required")
+	if _, err := validate.RequiredID(in.GetId(), "companion experience id"); err != nil {
+		return nil, err
 	}
 
 	experience, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), companionExperienceDescriptor)
@@ -336,8 +337,8 @@ func (a contentApplication) runGetLootEntry(ctx context.Context, in *pb.GetDagge
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "loot entry id is required")
+	if _, err := validate.RequiredID(in.GetId(), "loot entry id"); err != nil {
+		return nil, err
 	}
 
 	entry, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), lootEntryDescriptor)
@@ -379,8 +380,8 @@ func (a contentApplication) runGetDamageType(ctx context.Context, in *pb.GetDagg
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "damage type id is required")
+	if _, err := validate.RequiredID(in.GetId(), "damage type id"); err != nil {
+		return nil, err
 	}
 
 	entry, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), damageTypeDescriptor)
@@ -422,8 +423,8 @@ func (a contentApplication) runGetDomain(ctx context.Context, in *pb.GetDaggerhe
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "domain id is required")
+	if _, err := validate.RequiredID(in.GetId(), "domain id"); err != nil {
+		return nil, err
 	}
 
 	domain, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), domainDescriptor)
@@ -465,8 +466,8 @@ func (a contentApplication) runGetDomainCard(ctx context.Context, in *pb.GetDagg
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "domain card id is required")
+	if _, err := validate.RequiredID(in.GetId(), "domain card id"); err != nil {
+		return nil, err
 	}
 
 	card, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), domainCardDescriptor)
@@ -511,8 +512,8 @@ func (a contentApplication) runGetWeapon(ctx context.Context, in *pb.GetDaggerhe
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "weapon id is required")
+	if _, err := validate.RequiredID(in.GetId(), "weapon id"); err != nil {
+		return nil, err
 	}
 
 	weapon, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), weaponDescriptor)
@@ -554,8 +555,8 @@ func (a contentApplication) runGetArmor(ctx context.Context, in *pb.GetDaggerhea
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "armor id is required")
+	if _, err := validate.RequiredID(in.GetId(), "armor id"); err != nil {
+		return nil, err
 	}
 
 	armor, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), armorDescriptor)
@@ -597,8 +598,8 @@ func (a contentApplication) runGetItem(ctx context.Context, in *pb.GetDaggerhear
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "item id is required")
+	if _, err := validate.RequiredID(in.GetId(), "item id"); err != nil {
+		return nil, err
 	}
 
 	item, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), itemDescriptor)
@@ -640,8 +641,8 @@ func (a contentApplication) runGetEnvironment(ctx context.Context, in *pb.GetDag
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(in.GetId()) == "" {
-		return nil, status.Error(codes.InvalidArgument, "environment id is required")
+	if _, err := validate.RequiredID(in.GetId(), "environment id"); err != nil {
+		return nil, err
 	}
 
 	env, err := getContentEntry(ctx, store, in.GetId(), in.GetLocale(), environmentDescriptor)

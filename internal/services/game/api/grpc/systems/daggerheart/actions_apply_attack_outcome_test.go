@@ -159,7 +159,7 @@ func TestApplyAdversaryAttackOutcome_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	rollCtx := grpcmeta.WithRequestID(context.Background(), "req-adv-atk-outcome-legacy")
 	rollResp, err := svc.SessionAdversaryAttackRoll(rollCtx, &pb.SessionAdversaryAttackRollRequest{

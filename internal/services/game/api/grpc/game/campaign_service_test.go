@@ -10,6 +10,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -1781,9 +1782,15 @@ func assertStatusCode(t *testing.T, err error, want codes.Code) {
 	if err == nil {
 		t.Fatalf("expected error with code %v", want)
 	}
+	// Simulate the ErrorConversionUnaryInterceptor: handlers may return
+	// domain errors that the interceptor would convert to gRPC status.
 	statusErr, ok := status.FromError(err)
 	if !ok {
-		t.Fatalf("expected gRPC status error, got %T", err)
+		err = grpcerror.HandleDomainError(err)
+		statusErr, ok = status.FromError(err)
+		if !ok {
+			t.Fatalf("expected gRPC status error, got %T", err)
+		}
 	}
 	if statusErr.Code() != want {
 		t.Fatalf("status code = %v, want %v (message: %s)", statusErr.Code(), want, statusErr.Message())

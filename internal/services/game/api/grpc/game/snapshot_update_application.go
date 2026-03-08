@@ -68,7 +68,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		}
 		_, err = executeAndApplyDomainCommand(
 			ctx,
-			a.stores,
+			a.stores.Write,
 			applier,
 			commandbuild.System(commandbuild.SystemInput{
 				CoreInput: commandbuild.CoreInput{

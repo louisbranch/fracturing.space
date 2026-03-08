@@ -9,6 +9,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -28,18 +29,18 @@ func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.Dagg
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	name := strings.TrimSpace(in.GetName())
-	if name == "" {
-		return nil, status.Error(codes.InvalidArgument, "name is required")
+	name, err := validate.RequiredID(in.GetName(), "name")
+	if err != nil {
+		return nil, err
 	}
 
 	kind, err := daggerheartCountdownKindFromProto(in.GetKind())
@@ -147,18 +148,18 @@ func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.Dagg
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	countdownID := strings.TrimSpace(in.GetCountdownId())
-	if countdownID == "" {
-		return nil, status.Error(codes.InvalidArgument, "countdown id is required")
+	countdownID, err := validate.RequiredID(in.GetCountdownId(), "countdown id")
+	if err != nil {
+		return nil, err
 	}
 
 	if in.Current == nil && in.GetDelta() == 0 {
@@ -253,18 +254,18 @@ func (s *DaggerheartService) runDeleteCountdown(ctx context.Context, in *pb.Dagg
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	sessionID := strings.TrimSpace(in.GetSessionId())
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	countdownID := strings.TrimSpace(in.GetCountdownId())
-	if countdownID == "" {
-		return nil, status.Error(codes.InvalidArgument, "countdown id is required")
+	countdownID, err := validate.RequiredID(in.GetCountdownId(), "countdown id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -334,13 +335,13 @@ func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	characterID := strings.TrimSpace(in.GetCharacterId())
-	if characterID == "" {
-		return nil, status.Error(codes.InvalidArgument, "character id is required")
+	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -354,9 +355,9 @@ func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.
 		return nil, err
 	}
 
-	sessionID := strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))
-	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
+	if err != nil {
+		return nil, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
 	if err := s.ensureNoOpenSessionGate(ctx, campaignID, sessionID); err != nil {

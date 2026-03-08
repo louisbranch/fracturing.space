@@ -80,7 +80,7 @@ func TestSessionAdversaryAttackRoll_Success(t *testing.T) {
 		t.Fatalf("encode adversary roll payload: %v", err)
 	}
 
-	svc.stores.Domain = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+	svc.stores.Write.Executor = &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
 		command.Type("action.roll.resolve"): {
 			Decision: command.Accept(event.Event{
 				CampaignID:    "camp-1",
@@ -161,7 +161,7 @@ func TestSessionAdversaryAttackRoll_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc.stores.Domain = domain
+	svc.stores.Write.Executor = domain
 
 	ctx := grpcmeta.WithRequestID(context.Background(), "req-adv-roll")
 	resp, err := svc.SessionAdversaryAttackRoll(ctx, &pb.SessionAdversaryAttackRollRequest{

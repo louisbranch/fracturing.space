@@ -7,6 +7,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -19,13 +20,13 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list pending invites request is required")
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, err
 	}
 	if err := requirePolicy(ctx, s.stores, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
@@ -133,7 +134,7 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 		if !ok {
 			record, err := s.stores.Campaign.Get(ctx, inv.CampaignID)
 			if err != nil {
-				return nil, handleDomainError(err)
+				return nil, err
 			}
 			campaignRecord = record
 			campaignsByID[inv.CampaignID] = campaignRecord
@@ -144,7 +145,7 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 		if !ok {
 			record, err := s.stores.Participant.GetParticipant(ctx, inv.CampaignID, inv.ParticipantID)
 			if err != nil {
-				return nil, handleDomainError(err)
+				return nil, err
 			}
 			seat = record
 			participantsByID[participantKey] = seat

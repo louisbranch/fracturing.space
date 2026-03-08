@@ -33,14 +33,14 @@ func configureDomain(srvEnv serverEnv, stores *gamegrpc.Stores, registries engin
 		return errors.New("stores are required")
 	}
 	if !srvEnv.DomainEnabled {
-		stores.Domain = disabledDomain{}
+		stores.Write.Executor = disabledDomain{}
 		return nil
 	}
 	domainEngine, err := buildDomainEngine(stores.Event, registries)
 	if err != nil {
 		return fmt.Errorf("build domain engine: %w", err)
 	}
-	stores.Domain = domainEngine
+	stores.Write.Executor = domainEngine
 	return nil
 }
 

@@ -2,10 +2,9 @@ package game
 
 import (
 	"context"
-	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -16,16 +15,13 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 		return nil, status.Error(codes.InvalidArgument, "fork campaign request is required")
 	}
 
-	sourceCampaignID := strings.TrimSpace(in.GetSourceCampaignId())
-	if sourceCampaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "source campaign id is required")
+	sourceCampaignID, err := validate.RequiredID(in.GetSourceCampaignId(), "source campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	newCampaign, lineage, forkEventSeq, err := newForkApplication(s).ForkCampaign(ctx, sourceCampaignID, in)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -31,13 +32,12 @@ type Stores struct {
 	DaggerheartContent storage.DaggerheartContentReadStore
 	Event              storage.EventStore
 	Watermarks         storage.ProjectionWatermarkStore
-	Domain             Domain
 	Events             *event.Registry
 
-	// WriteRuntime owns request-path write execution flags (inline apply,
-	// intent filtering). Injected at service construction; used by
-	// executeAndApplyDomainCommand instead of package-level global state.
-	WriteRuntime *domainwrite.Runtime
+	// Write groups the domain executor, runtime controls, and audit store
+	// used by the write path. It satisfies domainwriteexec.Deps so handlers
+	// can pass it directly to executeAndApplyDomainCommand.
+	Write domainwriteexec.WritePath
 
 	// adapters is built eagerly during Validate and cached for Applier.
 	adapters *bridge.AdapterRegistry
@@ -78,9 +78,11 @@ func NewStoresFromProjection(config StoresFromProjectionConfig) Stores {
 		DaggerheartContent: config.ContentStore,
 		Event:              config.EventStore,
 		Watermarks:         config.ProjectionStore,
-		Domain:             config.Domain,
 		Events:             config.Events,
-		WriteRuntime:       config.WriteRuntime,
+		Write: domainwriteexec.WritePath{
+			Executor: config.Domain,
+			Runtime:  config.WriteRuntime,
+		},
 	}
 }
 
@@ -147,22 +149,10 @@ func (s Stores) infrastructureRequirements() []dependencyRequirement {
 
 func (s Stores) runtimeRequirements() []dependencyRequirement {
 	return []dependencyRequirement{
-		{name: "Domain", configured: s.Domain != nil},
-		{name: "WriteRuntime", configured: s.WriteRuntime != nil},
+		{name: "Write.Executor", configured: s.Write.Executor != nil},
+		{name: "Write.Runtime", configured: s.Write.Runtime != nil},
 		{name: "Events", configured: s.Events != nil},
 	}
-}
-
-// DomainExecutor exposes the domain command executor dependency used by
-// write-path helpers.
-func (s Stores) DomainExecutor() domainwrite.Executor {
-	return s.Domain
-}
-
-// DomainWriteRuntime exposes the runtime write controls used by write-path
-// helpers.
-func (s Stores) DomainWriteRuntime() *domainwrite.Runtime {
-	return s.WriteRuntime
 }
 
 // Applier returns a projection Applier wired to the stores in this bundle.

@@ -9,6 +9,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -28,13 +29,13 @@ func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.Dagg
 	if err := s.requireDependencies(dependencyCampaignStore, dependencyDaggerheartStore, dependencyEventStore); err != nil {
 		return nil, err
 	}
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	name := strings.TrimSpace(in.GetName())
-	if name == "" {
-		return nil, status.Error(codes.InvalidArgument, "name is required")
+	name, err := validate.RequiredID(in.GetName(), "name")
+	if err != nil {
+		return nil, err
 	}
 	kind := strings.TrimSpace(in.GetKind())
 	notes := strings.TrimSpace(in.GetNotes())
@@ -146,13 +147,13 @@ func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.Dagg
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	adversaryID := strings.TrimSpace(in.GetAdversaryId())
-	if adversaryID == "" {
-		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	adversaryID, err := validate.RequiredID(in.GetAdversaryId(), "adversary id")
+	if err != nil {
+		return nil, err
 	}
 	if in.Name == nil && in.Kind == nil && in.SessionId == nil && in.Notes == nil {
 		if in.Hp == nil && in.HpMax == nil && in.Stress == nil && in.StressMax == nil && in.Evasion == nil && in.MajorThreshold == nil && in.SevereThreshold == nil && in.Armor == nil {
@@ -185,9 +186,9 @@ func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.Dagg
 
 	name := current.Name
 	if in.Name != nil {
-		name = strings.TrimSpace(in.Name.GetValue())
-		if name == "" {
-			return nil, status.Error(codes.InvalidArgument, "name is required")
+		name, err = validate.RequiredID(in.Name.GetValue(), "name")
+		if err != nil {
+			return nil, err
 		}
 	}
 	kind := current.Kind
@@ -291,13 +292,13 @@ func (s *DaggerheartService) runDeleteAdversary(ctx context.Context, in *pb.Dagg
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	adversaryID := strings.TrimSpace(in.GetAdversaryId())
-	if adversaryID == "" {
-		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	adversaryID, err := validate.RequiredID(in.GetAdversaryId(), "adversary id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -367,13 +368,13 @@ func (s *DaggerheartService) runGetAdversary(ctx context.Context, in *pb.Daggerh
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	adversaryID := strings.TrimSpace(in.GetAdversaryId())
-	if adversaryID == "" {
-		return nil, status.Error(codes.InvalidArgument, "adversary id is required")
+	adversaryID, err := validate.RequiredID(in.GetAdversaryId(), "adversary id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)
@@ -405,9 +406,9 @@ func (s *DaggerheartService) runListAdversaries(ctx context.Context, in *pb.Dagg
 		return nil, err
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := s.stores.Campaign.Get(ctx, campaignID)

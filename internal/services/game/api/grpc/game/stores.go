@@ -3,6 +3,7 @@ package game
 import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -41,14 +42,13 @@ type Stores struct {
 	DaggerheartContent storage.DaggerheartContentReadStore
 	Social             socialv1.SocialServiceClient
 
-	Domain Domain
+	// Write groups the domain executor, runtime controls, and audit store
+	// used by the write path. It satisfies domainwriteexec.Deps so handlers
+	// can pass it directly to executeAndApplyDomainCommand.
+	Write domainwriteexec.WritePath
 
-	// WriteRuntime owns request-path write execution flags (inline apply,
-	// intent filtering). Injected at service construction; used by
-	// executeAndApplyDomainCommand instead of package-level global state.
-	WriteRuntime *domainwrite.Runtime
-
-	// Events is the event registry used for intent filtering at request time.
+	// Events is the event registry used for intent filtering and applier
+	// construction at request time.
 	Events *event.Registry
 
 	// adapters is built eagerly during Validate and cached for Applier.
@@ -86,21 +86,4 @@ type StoresFromProjectionConfig struct {
 // outside the gRPC package tree.
 func NewWriteRuntime() *domainwrite.Runtime {
 	return domainwrite.NewRuntime()
-}
-
-// DomainExecutor exposes the domain command executor dependency used by
-// write-path helpers.
-func (s Stores) DomainExecutor() domainwrite.Executor {
-	return s.Domain
-}
-
-// DomainWriteRuntime exposes the runtime write controls used by write-path
-// helpers.
-func (s Stores) DomainWriteRuntime() *domainwrite.Runtime {
-	return s.WriteRuntime
-}
-
-// AuditEventStore exposes the audit store for domain rejection telemetry.
-func (s Stores) AuditEventStore() storage.AuditEventStore {
-	return s.Audit
 }

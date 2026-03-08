@@ -8,6 +8,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -354,7 +355,7 @@ func TestAppendEvent_UsesDomainEngineForActionEvents(t *testing.T) {
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: results}
-	svc := NewEventService(Stores{Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
+	svc := NewEventService(Stores{Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}})
 
 	for _, tc := range cases {
 		_, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
@@ -401,7 +402,7 @@ func TestAppendEvent_RequiresMaintenanceOrAdminScope(t *testing.T) {
 func TestAppendEvent_RejectsUnmappedTypeWithDomain(t *testing.T) {
 	eventStore := newFakeEventStore()
 	domain := &fakeDomainEngine{store: eventStore}
-	svc := NewEventService(Stores{Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
+	svc := NewEventService(Stores{Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}})
 	ctx := appendEventScopeContext(appendEventScopeMaintenance)
 
 	_, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
@@ -467,7 +468,7 @@ func TestAppendEvent_ReturnsRequestedMappedEventWhenDomainEmitsMultipleEvents(t 
 			},
 		},
 	}
-	svc := NewEventService(Stores{Event: eventStore, Domain: domain, WriteRuntime: testRuntime})
+	svc := NewEventService(Stores{Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}})
 
 	resp, err := svc.AppendEvent(ctx, &campaignv1.AppendEventRequest{
 		CampaignId:  "c1",

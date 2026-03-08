@@ -6,7 +6,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,9 +17,9 @@ func (s *CampaignService) UpdateCampaign(ctx context.Context, in *campaignv1.Upd
 		return nil, status.Error(codes.InvalidArgument, "update campaign request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	var update campaignUpdateInput
@@ -43,9 +43,6 @@ func (s *CampaignService) UpdateCampaign(ctx context.Context, in *campaignv1.Upd
 
 	updated, err := newCampaignApplication(s).UpdateCampaign(ctx, campaignID, update)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -58,16 +55,13 @@ func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCam
 		return nil, status.Error(codes.InvalidArgument, "end campaign request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	updated, err := newCampaignApplication(s).EndCampaign(ctx, campaignID)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -80,16 +74,13 @@ func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.Ar
 		return nil, status.Error(codes.InvalidArgument, "archive campaign request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	updated, err := newCampaignApplication(s).ArchiveCampaign(ctx, campaignID)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -102,16 +93,13 @@ func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.Re
 		return nil, status.Error(codes.InvalidArgument, "restore campaign request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	updated, err := newCampaignApplication(s).RestoreCampaign(ctx, campaignID)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -124,21 +112,18 @@ func (s *CampaignService) SetCampaignCover(ctx context.Context, in *campaignv1.S
 		return nil, status.Error(codes.InvalidArgument, "set campaign cover request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	coverAssetID := strings.TrimSpace(in.GetCoverAssetId())
-	if coverAssetID == "" {
-		return nil, status.Error(codes.InvalidArgument, "cover asset id is required")
+	coverAssetID, err := validate.RequiredID(in.GetCoverAssetId(), "cover asset id")
+	if err != nil {
+		return nil, err
 	}
 	coverSetID := strings.TrimSpace(in.GetCoverSetId())
 
 	updated, err := newCampaignApplication(s).SetCampaignCover(ctx, campaignID, coverAssetID, coverSetID)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 
@@ -151,20 +136,17 @@ func (s *CampaignService) SetCampaignAIBinding(ctx context.Context, in *campaign
 		return nil, status.Error(codes.InvalidArgument, "set campaign ai binding request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
-	aiAgentID := strings.TrimSpace(in.GetAiAgentId())
-	if aiAgentID == "" {
-		return nil, status.Error(codes.InvalidArgument, "ai agent id is required")
+	aiAgentID, err := validate.RequiredID(in.GetAiAgentId(), "ai agent id")
+	if err != nil {
+		return nil, err
 	}
 
 	updated, err := newCampaignApplication(s).SetCampaignAIBinding(ctx, campaignID, aiAgentID)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 	return &campaignv1.SetCampaignAIBindingResponse{Campaign: campaignToProto(updated)}, nil
@@ -176,16 +158,13 @@ func (s *CampaignService) ClearCampaignAIBinding(ctx context.Context, in *campai
 		return nil, status.Error(codes.InvalidArgument, "clear campaign ai binding request is required")
 	}
 
-	campaignID := strings.TrimSpace(in.GetCampaignId())
-	if campaignID == "" {
-		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
 	}
 
 	updated, err := newCampaignApplication(s).ClearCampaignAIBinding(ctx, campaignID)
 	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
 		return nil, err
 	}
 	return &campaignv1.ClearCampaignAIBindingResponse{Campaign: campaignToProto(updated)}, nil
