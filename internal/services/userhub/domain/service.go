@@ -5,7 +5,6 @@ import (
 	"errors"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -70,9 +69,18 @@ func (e *DependencyUnavailableError) Unwrap() error {
 
 // Config controls userhub aggregation and cache behavior.
 type Config struct {
-	CacheFreshTTL time.Duration
-	CacheStaleTTL time.Duration
-	Clock         func() time.Time
+	CacheFreshTTL              time.Duration
+	CacheStaleTTL              time.Duration
+	Clock                      func() time.Time
+	CampaignDependencyObserver CampaignDependencyObserver
+}
+
+// CampaignDependencyObserver tracks which campaign IDs currently back cached
+// dashboard entries. The app layer uses this to retain/release game update
+// subscriptions without moving cache ownership out of the domain service.
+type CampaignDependencyObserver interface {
+	RetainCampaignDependency(campaignID string)
+	ReleaseCampaignDependency(campaignID string)
 }
 
 // GetDashboardInput identifies one user dashboard summary request.
@@ -81,6 +89,18 @@ type GetDashboardInput struct {
 	Locale               string
 	CampaignPreviewLimit int
 	InvitePreviewLimit   int
+}
+
+// InvalidateDashboardsInput identifies cached dashboard entries to remove.
+type InvalidateDashboardsInput struct {
+	UserIDs     []string
+	CampaignIDs []string
+	Reason      string
+}
+
+// InvalidateDashboardsResult reports how many cached entries were removed.
+type InvalidateDashboardsResult struct {
+	InvalidatedEntries int
 }
 
 // Dashboard is the userhub at-a-glance aggregate view model.
@@ -262,7 +282,7 @@ func NewService(game GameGateway, social SocialGateway, notifications Notificati
 	if clock == nil {
 		clock = time.Now
 	}
-	cache := newDashboardCache(cfg.CacheFreshTTL, cfg.CacheStaleTTL)
+	cache := newDashboardCache(cfg.CacheFreshTTL, cfg.CacheStaleTTL, cfg.CampaignDependencyObserver)
 	return &Service{
 		game:          game,
 		social:        social,
@@ -403,6 +423,19 @@ func (s *Service) GetDashboard(ctx context.Context, input GetDashboardInput) (Da
 	return result, nil
 }
 
+// InvalidateDashboards removes cached dashboard entries for the requested
+// users and campaigns. It is intentionally fail-open for empty inputs.
+func (s *Service) InvalidateDashboards(_ context.Context, input InvalidateDashboardsInput) (InvalidateDashboardsResult, error) {
+	if s == nil {
+		return InvalidateDashboardsResult{}, ErrServiceNotConfigured
+	}
+	if s.cache == nil {
+		return InvalidateDashboardsResult{}, nil
+	}
+	invalidated := s.cache.invalidate(normalizeIDs(input.UserIDs), normalizeIDs(input.CampaignIDs))
+	return InvalidateDashboardsResult{InvalidatedEntries: invalidated}, nil
+}
+
 // buildDashboardActions computes one deterministic action list from dashboard state.
 func buildDashboardActions(dashboard Dashboard) []DashboardAction {
 	actions := make([]DashboardAction, 0, 5)
@@ -492,6 +525,29 @@ func normalizeDependencies(values []string) []string {
 	return normalized
 }
 
+func normalizeIDs(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	set := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		set[value] = struct{}{}
+	}
+	if len(set) == 0 {
+		return nil
+	}
+	normalized := make([]string, 0, len(set))
+	for value := range set {
+		normalized = append(normalized, value)
+	}
+	sort.Strings(normalized)
+	return normalized
+}
+
 // cloneDashboard protects cached state from caller mutation.
 func cloneDashboard(input Dashboard) Dashboard {
 	result := input
@@ -528,91 +584,4 @@ func (s *Service) nowUTC() time.Time {
 		return time.Now().UTC()
 	}
 	return s.clock().UTC()
-}
-
-// dashboardCacheKey identifies one cached dashboard snapshot.
-type dashboardCacheKey struct {
-	UserID string
-	Locale string
-}
-
-// dashboardCacheEntry stores one cached dashboard snapshot.
-type dashboardCacheEntry struct {
-	Dashboard Dashboard
-	CachedAt  time.Time
-}
-
-// dashboardCache provides in-memory per-user dashboard snapshots.
-type dashboardCache struct {
-	mu       sync.RWMutex
-	freshTTL time.Duration
-	staleTTL time.Duration
-	entries  map[dashboardCacheKey]dashboardCacheEntry
-}
-
-// newDashboardCache creates an in-memory cache with normalized TTLs.
-func newDashboardCache(freshTTL, staleTTL time.Duration) *dashboardCache {
-	if freshTTL <= 0 {
-		freshTTL = defaultCacheFreshTTL
-	}
-	if staleTTL <= 0 {
-		staleTTL = defaultCacheStaleTTL
-	}
-	if staleTTL < freshTTL {
-		staleTTL = freshTTL
-	}
-	return &dashboardCache{
-		freshTTL: freshTTL,
-		staleTTL: staleTTL,
-		entries:  make(map[dashboardCacheKey]dashboardCacheEntry),
-	}
-}
-
-// getFresh returns a dashboard when cache age is within fresh TTL.
-func (c *dashboardCache) getFresh(key dashboardCacheKey, now time.Time) (Dashboard, bool) {
-	if c == nil {
-		return Dashboard{}, false
-	}
-	c.mu.RLock()
-	entry, ok := c.entries[key]
-	c.mu.RUnlock()
-	if !ok {
-		return Dashboard{}, false
-	}
-	age := now.Sub(entry.CachedAt)
-	if age < 0 || age > c.freshTTL {
-		return Dashboard{}, false
-	}
-	return cloneDashboard(entry.Dashboard), true
-}
-
-// getStale returns a dashboard when cache age is within stale TTL.
-func (c *dashboardCache) getStale(key dashboardCacheKey, now time.Time) (Dashboard, bool) {
-	if c == nil {
-		return Dashboard{}, false
-	}
-	c.mu.RLock()
-	entry, ok := c.entries[key]
-	c.mu.RUnlock()
-	if !ok {
-		return Dashboard{}, false
-	}
-	age := now.Sub(entry.CachedAt)
-	if age < 0 || age > c.staleTTL {
-		return Dashboard{}, false
-	}
-	return cloneDashboard(entry.Dashboard), true
-}
-
-// set upserts one cached dashboard snapshot.
-func (c *dashboardCache) set(key dashboardCacheKey, dashboard Dashboard, now time.Time) {
-	if c == nil {
-		return
-	}
-	c.mu.Lock()
-	c.entries[key] = dashboardCacheEntry{
-		Dashboard: cloneDashboard(dashboard),
-		CachedAt:  now,
-	}
-	c.mu.Unlock()
 }

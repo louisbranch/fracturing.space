@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 	"golang.org/x/text/language"
@@ -41,6 +42,15 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 	if HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencySocialProfile) {
 		s.logger.Printf("dashboard: degraded dependency %s for user %s", DegradedDependencySocialProfile, userID)
 		return DashboardView{}, nil
+	}
+	if snapshot.Freshness != DashboardFreshnessUnspecified || snapshot.CacheHit || !snapshot.GeneratedAt.IsZero() {
+		s.logger.Printf(
+			"dashboard: userhub freshness=%d cache_hit=%t generated_at=%s user=%s",
+			snapshot.Freshness,
+			snapshot.CacheHit,
+			snapshot.GeneratedAt.UTC().Format(time.RFC3339),
+			userID,
+		)
 	}
 	showAdventureBlock := false
 	if !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameCampaigns) {

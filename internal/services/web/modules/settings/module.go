@@ -15,13 +15,15 @@ type Module struct {
 	gateway   SettingsGateway
 	base      modulehandler.Base
 	flashMeta requestmeta.SchemePolicy
+	sync      DashboardSync
 }
 
 // Config defines constructor dependencies for a settings module.
 type Config struct {
-	Gateway   SettingsGateway
-	Base      modulehandler.Base
-	FlashMeta requestmeta.SchemePolicy
+	Gateway       SettingsGateway
+	Base          modulehandler.Base
+	FlashMeta     requestmeta.SchemePolicy
+	DashboardSync DashboardSync
 }
 
 // New returns a settings module with explicit dependencies.
@@ -30,6 +32,7 @@ func New(config Config) Module {
 		gateway:   config.Gateway,
 		base:      config.Base,
 		flashMeta: config.FlashMeta,
+		sync:      config.DashboardSync,
 	}
 }
 
@@ -45,7 +48,7 @@ func (m Module) Healthy() bool {
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	svc := settingsapp.NewService(m.gateway)
-	h := newHandlers(svc, m.base, m.flashMeta)
+	h := newHandlers(svc, m.base, m.flashMeta, m.sync)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.SettingsPrefix, Handler: mux}, nil
 }

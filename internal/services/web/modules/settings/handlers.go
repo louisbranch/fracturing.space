@@ -20,16 +20,22 @@ import (
 // settingsService defines the service contract used by settings handlers.
 type settingsService = settingsapp.Service
 
+// DashboardSync exposes dashboard cache refresh hooks needed by settings mutations.
+type DashboardSync interface {
+	ProfileSaved(context.Context, string)
+}
+
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
 	service   settingsService
 	flashMeta requestmeta.SchemePolicy
+	sync      DashboardSync
 }
 
 // newHandlers builds package wiring for this web seam.
-func newHandlers(s settingsService, base modulehandler.Base, policy requestmeta.SchemePolicy) handlers {
-	return handlers{Base: base, service: s, flashMeta: policy}
+func newHandlers(s settingsService, base modulehandler.Base, policy requestmeta.SchemePolicy, sync DashboardSync) handlers {
+	return handlers{Base: base, service: s, flashMeta: policy, sync: sync}
 }
 
 // settingsMainHeader centralizes this web behavior in one helper seam.
@@ -83,6 +89,9 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 		}
 		h.WriteError(w, r, err)
 		return
+	}
+	if h.sync != nil {
+		h.sync.ProfileSaved(ctx, userID)
 	}
 	h.writeFlashNotice(w, r, flashnotice.NoticeSuccess("web.settings.user_profile.notice_saved"))
 	httpx.WriteRedirect(w, r, routepath.AppSettingsProfile)

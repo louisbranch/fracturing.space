@@ -57,6 +57,9 @@ func TestAppDashboardPageRendersPrimaryNavigation(t *testing.T) {
 			t.Fatalf("body missing dashboard marker %q", marker)
 		}
 	}
+	if !strings.Contains(body, `id="dashboard-root" hx-history="false"`) {
+		t.Fatalf("body missing dashboard history opt-out")
+	}
 	assertPrimaryNavLinks(t, body)
 }
 

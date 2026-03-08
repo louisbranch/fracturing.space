@@ -374,7 +374,7 @@ func TestCampaignBreadcrumbsFallbackToCampaignID(t *testing.T) {
 func TestWriteCampaignHTMLHandlesRenderFailure(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(newService(fakeGateway{}), modulehandler.NewTestBase(), "")
+	h := newHandlers(newService(fakeGateway{}), modulehandler.NewTestBase(), "", nil)
 	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
 	rr := httptest.NewRecorder()
 

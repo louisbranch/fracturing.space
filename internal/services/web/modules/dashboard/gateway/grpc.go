@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"strings"
+	"time"
 
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
@@ -10,6 +11,7 @@ import (
 	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"golang.org/x/text/language"
 )
@@ -61,6 +63,9 @@ func (g GRPCGateway) LoadDashboard(ctx context.Context, userID string, localeTag
 		HasDraftOrActiveCampaign: HasDraftOrActiveCampaign(resp.GetCampaigns().GetCampaigns()),
 		CampaignsHasMore:         resp.GetCampaigns().GetHasMore(),
 		DegradedDependencies:     normalizedDependencies(resp.GetMetadata().GetDegradedDependencies()),
+		Freshness:                mapFreshness(resp.GetMetadata().GetFreshness()),
+		CacheHit:                 resp.GetMetadata().GetCacheHit(),
+		GeneratedAt:              protoTime(resp.GetMetadata().GetGeneratedAt()),
 	}, nil
 }
 
@@ -96,4 +101,22 @@ func normalizedDependencies(values []string) []string {
 		return nil
 	}
 	return result
+}
+
+func mapFreshness(value userhubv1.DashboardFreshness) dashboardapp.DashboardFreshness {
+	switch value {
+	case userhubv1.DashboardFreshness_DASHBOARD_FRESHNESS_FRESH:
+		return dashboardapp.DashboardFreshnessFresh
+	case userhubv1.DashboardFreshness_DASHBOARD_FRESHNESS_STALE:
+		return dashboardapp.DashboardFreshnessStale
+	default:
+		return dashboardapp.DashboardFreshnessUnspecified
+	}
+}
+
+func protoTime(value *timestamppb.Timestamp) time.Time {
+	if value == nil {
+		return time.Time{}
+	}
+	return value.AsTime()
 }

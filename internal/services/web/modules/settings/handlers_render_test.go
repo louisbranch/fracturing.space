@@ -50,7 +50,7 @@ func TestLoadAIKeyRowsUsesServiceResult(t *testing.T) {
 			CanRevoke: true,
 		}},
 	}
-	h := newHandlers(settingsapp.NewService(gw), modulehandler.NewTestBase(), requestmeta.SchemePolicy{})
+	h := newHandlers(settingsapp.NewService(gw), modulehandler.NewTestBase(), requestmeta.SchemePolicy{}, nil)
 
 	rows, err := h.loadAIKeyRows(context.Background(), "user-1")
 	if err != nil {

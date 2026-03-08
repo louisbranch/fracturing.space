@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
 	publicauthgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 )
 
 // Mount aliases the module mount contract.
@@ -51,6 +52,9 @@ type Dependencies struct {
 	// Settings owns profile/account/credential dependencies.
 	Settings SettingsDependencies
 
+	// DashboardSync owns cross-module dashboard freshness dependencies.
+	DashboardSync DashboardSyncDependencies
+
 	// PublicAuth owns authentication/session dependencies.
 	PublicAuth PublicAuthDependencies
 
@@ -90,6 +94,12 @@ type SettingsDependencies struct {
 	SocialClient     settings.SocialClient
 	AccountClient    settings.AccountClient
 	CredentialClient settings.CredentialClient
+}
+
+// DashboardSyncDependencies contains shared mutation-sync clients.
+type DashboardSyncDependencies struct {
+	UserHubControlClient dashboardsync.UserHubControlClient
+	GameEventClient      dashboardsync.GameEventClient
 }
 
 // PublicAuthDependencies contains public-auth feature clients.

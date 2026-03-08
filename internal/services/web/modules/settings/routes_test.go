@@ -14,14 +14,14 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{}))
+	registerRoutes(nil, newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{}, nil))
 }
 
 func TestRegisterRoutesSettingsPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{}))
+	registerRoutes(mux, newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{}, nil))
 
 	tests := []struct {
 		name       string
@@ -62,7 +62,7 @@ func TestRegisterRoutesSettingsPathAndMethodContracts(t *testing.T) {
 func TestWithCredentialIDReturnsNotFoundForMissingPathValue(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{})
+	h := newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{}, nil)
 	called := false
 	handler := h.withCredentialID(func(http.ResponseWriter, *http.Request, string) {
 		called = true
@@ -83,7 +83,7 @@ func TestWithCredentialIDReturnsNotFoundForMissingPathValue(t *testing.T) {
 func TestWithCredentialIDDelegatesResolvedID(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{})
+	h := newHandlers(settingsapp.NewService(staticGateway{}), settingsTestBase(), requestmeta.SchemePolicy{}, nil)
 	called := false
 	var gotID string
 	handler := h.withCredentialID(func(_ http.ResponseWriter, _ *http.Request, credentialID string) {

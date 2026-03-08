@@ -17,6 +17,7 @@ import (
 	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
 
@@ -32,11 +33,13 @@ func buildProtectedModules(
 	opts ProtectedModuleOptions,
 ) []Module {
 	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
-	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort, defaultCampaignWorkflows(deps))
+	dashboardSync := dashboardsync.New(deps.DashboardSync.UserHubControlClient, deps.DashboardSync.GameEventClient, nil)
+	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort, dashboardSync, defaultCampaignWorkflows(deps))
 	settingsMod := settings.New(settings.Config{
-		Gateway:   settingsgateway.NewGRPCGateway(deps.Settings.SocialClient, deps.Settings.AccountClient, deps.Settings.CredentialClient),
-		Base:      base,
-		FlashMeta: opts.RequestSchemePolicy,
+		Gateway:       settingsgateway.NewGRPCGateway(deps.Settings.SocialClient, deps.Settings.AccountClient, deps.Settings.CredentialClient),
+		Base:          base,
+		FlashMeta:     opts.RequestSchemePolicy,
+		DashboardSync: dashboardSync,
 	})
 	notifMod := notifications.New(notifications.Config{
 		Gateway: notificationsgateway.NewGRPCGateway(deps.Notifications.NotificationClient),
@@ -65,6 +68,7 @@ func newCampaignModule(
 	deps Dependencies,
 	base modulehandler.Base,
 	chatFallbackPort string,
+	dashboardSync campaigns.DashboardSync,
 	workflows map[campaigns.GameSystem]campaigns.CharacterCreationWorkflow,
 ) Module {
 	return campaigns.New(campaigns.Config{
@@ -72,6 +76,7 @@ func newCampaignModule(
 		Base:             base,
 		ChatFallbackPort: chatFallbackPort,
 		Workflows:        workflows,
+		DashboardSync:    dashboardSync,
 	})
 }
 
