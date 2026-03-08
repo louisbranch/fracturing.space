@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -103,7 +104,7 @@ func requireCharacterMutationPolicy(
 		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, domainauthz.CapabilityMutateCharacters, authzDecisionDeny, authzReasonErrorOwnerResolution, actor, err, characterAttributes)
 		return storage.ParticipantRecord{}, err
 	}
-	ownershipDecision := domainauthz.CanCharacterMutation(actor.CampaignAccess, actor.ID, ownerParticipantID)
+	ownershipDecision := domainauthz.CanCharacterMutation(actor.CampaignAccess, ids.ParticipantID(actor.ID), ids.ParticipantID(ownerParticipantID))
 	if !ownershipDecision.Allowed {
 		err := status.Error(codes.PermissionDenied, "participant lacks permission")
 		emitAuthzDecisionTelemetry(ctx, stores.Audit, campaignRecord.ID, domainauthz.CapabilityMutateCharacters, authzDecisionDeny, ownershipDecision.ReasonCode, actor, err, map[string]any{

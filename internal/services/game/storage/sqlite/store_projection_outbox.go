@@ -51,6 +51,20 @@ const (
 
 // ApplyProjectionEventExactlyOnce applies one projection event inside a projection-db
 // transaction and records a per-(campaign, seq) checkpoint to dedupe retries.
+//
+// Transaction boundary semantics:
+//  1. BEGIN — a new transaction is opened per event.
+//  2. INSERT OR IGNORE into projection_apply_checkpoints — the idempotency key
+//     is (campaign_id, seq). If the row already exists (duplicate), zero rows
+//     are affected and the function returns (false, nil) without invoking apply.
+//  3. apply(ctx, evt, txStore) — the caller's projection apply function runs
+//     inside the same transaction. Any error rolls back the entire transaction,
+//     including the checkpoint reservation. This ensures the event can be retried.
+//  4. COMMIT — makes both the checkpoint and all projection writes durable atomically.
+//
+// SQLITE_BUSY errors at any stage trigger a retry with linear backoff (up to 8
+// attempts) since SQLite's single-writer model can cause contention under
+// concurrent outbox processing.
 func (s *Store) ApplyProjectionEventExactlyOnce(
 	ctx context.Context,
 	evt event.Event,
@@ -100,7 +114,7 @@ func validateProjectionApplyExactlyOnceRequest(
 	if apply == nil {
 		return fmt.Errorf("projection apply callback is required")
 	}
-	if strings.TrimSpace(evt.CampaignID) == "" {
+	if strings.TrimSpace(string(evt.CampaignID)) == "" {
 		return fmt.Errorf("campaign id is required")
 	}
 	if evt.Seq == 0 {

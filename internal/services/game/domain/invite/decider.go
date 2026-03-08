@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
@@ -65,19 +66,19 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 		EventTypeCreated,
 		"invite",
 		func(payload *CreatePayload) string {
-			return payload.InviteID
+			return payload.InviteID.String()
 		},
 		func(payload *CreatePayload, _ func() time.Time) *command.Rejection {
-			payload.InviteID = strings.TrimSpace(payload.InviteID)
+			payload.InviteID = ids.InviteID(strings.TrimSpace(payload.InviteID.String()))
 			if payload.InviteID == "" {
 				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
 			}
-			payload.ParticipantID = strings.TrimSpace(payload.ParticipantID)
+			payload.ParticipantID = ids.ParticipantID(strings.TrimSpace(payload.ParticipantID.String()))
 			if payload.ParticipantID == "" {
 				return &command.Rejection{Code: rejectionCodeInviteParticipantNeeded, Message: "participant id is required"}
 			}
-			payload.RecipientUserID = strings.TrimSpace(payload.RecipientUserID)
-			payload.CreatedByParticipantID = strings.TrimSpace(payload.CreatedByParticipantID)
+			payload.RecipientUserID = ids.UserID(strings.TrimSpace(payload.RecipientUserID.String()))
+			payload.CreatedByParticipantID = ids.ParticipantID(strings.TrimSpace(payload.CreatedByParticipantID.String()))
 			payload.Status = statusPending
 			return nil
 		},
@@ -100,18 +101,18 @@ func decideClaim(state State, cmd command.Command, now func() time.Time) command
 		EventTypeClaimed,
 		"invite",
 		func(payload *ClaimPayload) string {
-			return payload.InviteID
+			return payload.InviteID.String()
 		},
 		func(payload *ClaimPayload, _ func() time.Time) *command.Rejection {
-			payload.InviteID = strings.TrimSpace(payload.InviteID)
+			payload.InviteID = ids.InviteID(strings.TrimSpace(payload.InviteID.String()))
 			if payload.InviteID == "" {
 				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
 			}
-			payload.ParticipantID = strings.TrimSpace(payload.ParticipantID)
+			payload.ParticipantID = ids.ParticipantID(strings.TrimSpace(payload.ParticipantID.String()))
 			if payload.ParticipantID == "" {
 				return &command.Rejection{Code: rejectionCodeInviteParticipantNeeded, Message: "participant id is required"}
 			}
-			payload.UserID = strings.TrimSpace(payload.UserID)
+			payload.UserID = ids.UserID(strings.TrimSpace(payload.UserID.String()))
 			if payload.UserID == "" {
 				return &command.Rejection{Code: rejectionCodeInviteUserIDRequired, Message: "user id is required"}
 			}
@@ -137,10 +138,10 @@ func decideRevoke(state State, cmd command.Command, now func() time.Time) comman
 		EventTypeRevoked,
 		"invite",
 		func(payload *RevokePayload) string {
-			return payload.InviteID
+			return payload.InviteID.String()
 		},
 		func(payload *RevokePayload, _ func() time.Time) *command.Rejection {
-			payload.InviteID = strings.TrimSpace(payload.InviteID)
+			payload.InviteID = ids.InviteID(strings.TrimSpace(payload.InviteID.String()))
 			if payload.InviteID == "" {
 				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
 			}
@@ -159,10 +160,10 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 		EventTypeUpdated,
 		"invite",
 		func(payload *UpdatePayload) string {
-			return payload.InviteID
+			return payload.InviteID.String()
 		},
 		func(payload *UpdatePayload, _ func() time.Time) *command.Rejection {
-			payload.InviteID = strings.TrimSpace(payload.InviteID)
+			payload.InviteID = ids.InviteID(strings.TrimSpace(payload.InviteID.String()))
 			if payload.InviteID == "" {
 				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
 			}

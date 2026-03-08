@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,15 +35,15 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 		return "", status.Errorf(codes.Internal, "generate scene id: %v", err)
 	}
 
-	charIDs := make([]string, 0, len(in.GetCharacterIds()))
+	charIDs := make([]ids.CharacterID, 0, len(in.GetCharacterIds()))
 	for _, id := range in.GetCharacterIds() {
 		if trimmed := strings.TrimSpace(id); trimmed != "" {
-			charIDs = append(charIDs, trimmed)
+			charIDs = append(charIDs, ids.CharacterID(trimmed))
 		}
 	}
 
 	payload := scene.CreatePayload{
-		SceneID:      sceneID,
+		SceneID:      ids.SceneID(sceneID),
 		Name:         strings.TrimSpace(in.GetName()),
 		Description:  strings.TrimSpace(in.GetDescription()),
 		CharacterIDs: charIDs,
@@ -94,7 +95,7 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 	}
 
 	payload := scene.UpdatePayload{
-		SceneID:     sceneID,
+		SceneID:     ids.SceneID(sceneID),
 		Name:        strings.TrimSpace(in.GetName()),
 		Description: strings.TrimSpace(in.GetDescription()),
 	}
@@ -141,7 +142,7 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 	}
 
 	payload := scene.EndPayload{
-		SceneID: sceneID,
+		SceneID: ids.SceneID(sceneID),
 		Reason:  strings.TrimSpace(in.GetReason()),
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -192,10 +193,10 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 	}
 
 	payload := scene.TransitionPayload{
-		SourceSceneID: sourceSceneID,
+		SourceSceneID: ids.SceneID(sourceSceneID),
 		Name:          strings.TrimSpace(in.GetName()),
 		Description:   strings.TrimSpace(in.GetDescription()),
-		NewSceneID:    newSceneID,
+		NewSceneID:    ids.SceneID(newSceneID),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

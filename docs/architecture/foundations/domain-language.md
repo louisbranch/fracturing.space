@@ -1,7 +1,7 @@
 ---
 title: "Domain language"
 parent: "Foundations"
-nav_order: 3
+nav_order: 4
 status: canonical
 owner: engineering
 last_reviewed: "2026-03-03"

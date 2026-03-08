@@ -101,7 +101,7 @@ type trackingStateLoader struct {
 }
 
 func (t *trackingStateLoader) Load(_ context.Context, cmd command.Command) (any, error) {
-	t.campaignIDs = append(t.campaignIDs, cmd.CampaignID)
+	t.campaignIDs = append(t.campaignIDs, string(cmd.CampaignID))
 	return aggregate.State{}, nil
 }
 
@@ -117,7 +117,7 @@ func (a *systemMutationApplier) Fold(_ any, _ event.Event) (any, error) {
 }
 
 func TestNewHandler_RequiresCommands(t *testing.T) {
-	_, err := NewHandler(HandlerConfig{
+	_, err := NewHandler(Handler{
 		Events:  event.NewRegistry(),
 		Journal: &fakeJournal{},
 		Decider: fixedDecider{},
@@ -128,7 +128,7 @@ func TestNewHandler_RequiresCommands(t *testing.T) {
 }
 
 func TestNewHandler_RequiresEvents(t *testing.T) {
-	_, err := NewHandler(HandlerConfig{
+	_, err := NewHandler(Handler{
 		Commands: command.NewRegistry(),
 		Journal:  &fakeJournal{},
 		Decider:  fixedDecider{},
@@ -139,7 +139,7 @@ func TestNewHandler_RequiresEvents(t *testing.T) {
 }
 
 func TestNewHandler_RequiresJournal(t *testing.T) {
-	_, err := NewHandler(HandlerConfig{
+	_, err := NewHandler(Handler{
 		Commands: command.NewRegistry(),
 		Events:   event.NewRegistry(),
 		Decider:  fixedDecider{},
@@ -150,7 +150,7 @@ func TestNewHandler_RequiresJournal(t *testing.T) {
 }
 
 func TestNewHandler_RequiresDecider(t *testing.T) {
-	_, err := NewHandler(HandlerConfig{
+	_, err := NewHandler(Handler{
 		Commands: command.NewRegistry(),
 		Events:   event.NewRegistry(),
 		Journal:  &fakeJournal{},
@@ -161,7 +161,7 @@ func TestNewHandler_RequiresDecider(t *testing.T) {
 }
 
 func TestNewHandler_AcceptsMinimalConfig(t *testing.T) {
-	h, err := NewHandler(HandlerConfig{
+	h, err := NewHandler(Handler{
 		Commands: command.NewRegistry(),
 		Events:   event.NewRegistry(),
 		Journal:  &fakeJournal{},
@@ -184,7 +184,7 @@ func TestNewHandler_RequiresSessionGateLoaderForSessionScopedCommands(t *testing
 	}); err != nil {
 		t.Fatalf("register command: %v", err)
 	}
-	_, err := NewHandler(HandlerConfig{
+	_, err := NewHandler(Handler{
 		Commands: commands,
 		Events:   event.NewRegistry(),
 		Journal:  &fakeJournal{},
@@ -204,7 +204,7 @@ func TestNewHandler_RequiresSceneGateLoaderForSceneScopedCommands(t *testing.T) 
 	}); err != nil {
 		t.Fatalf("register command: %v", err)
 	}
-	_, err := NewHandler(HandlerConfig{
+	_, err := NewHandler(Handler{
 		Commands:        commands,
 		Events:          event.NewRegistry(),
 		Journal:         &fakeJournal{},
@@ -216,7 +216,7 @@ func TestNewHandler_RequiresSceneGateLoaderForSceneScopedCommands(t *testing.T) 
 	}
 }
 
-func TestHandle_RejectsWhenGateOpen(t *testing.T) {
+func TestExecute_RejectsWhenGateOpen(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
 		Type:  command.Type("action.test"),
@@ -242,19 +242,19 @@ func TestHandle_RejectsWhenGateOpen(t *testing.T) {
 		SessionID:  "sess-1",
 	}
 
-	decision, err := handler.Handle(context.Background(), cmd)
+	result, err := handler.Execute(context.Background(), cmd)
 	if err != nil {
-		t.Fatalf("handle: %v", err)
+		t.Fatalf("execute: %v", err)
 	}
 	if decider.called {
 		t.Fatal("expected decider not to be called")
 	}
-	if len(decision.Rejections) != 1 {
-		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	if len(result.Decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(result.Decision.Rejections))
 	}
 }
 
-func TestHandle_RequiresCommandRegistry(t *testing.T) {
+func TestExecute_RequiresCommandRegistry(t *testing.T) {
 	handler := Handler{
 		Decider: fixedDecider{
 			decision: command.Accept(event.Event{
@@ -266,7 +266,7 @@ func TestHandle_RequiresCommandRegistry(t *testing.T) {
 			}),
 		},
 	}
-	_, err := handler.Handle(context.Background(), command.Command{
+	_, err := handler.Execute(context.Background(), command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("action.test"),
 		ActorType:  command.ActorTypeSystem,
@@ -276,7 +276,7 @@ func TestHandle_RequiresCommandRegistry(t *testing.T) {
 	}
 }
 
-func TestHandle_ValidatesEventsWithRegistry(t *testing.T) {
+func TestExecute_ValidatesEventsWithRegistry(t *testing.T) {
 	cmdRegistry := command.NewRegistry()
 	if err := cmdRegistry.Register(command.Definition{
 		Type:  command.Type("action.test"),
@@ -310,13 +310,13 @@ func TestHandle_ValidatesEventsWithRegistry(t *testing.T) {
 		ActorType:  command.ActorTypeSystem,
 	}
 
-	_, err := handler.Handle(context.Background(), cmd)
+	_, err := handler.Execute(context.Background(), cmd)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 }
 
-func TestHandle_AppendsEventsWhenJournalConfigured(t *testing.T) {
+func TestExecute_AppendsEventsWhenJournalConfigured(t *testing.T) {
 	cmdRegistry := command.NewRegistry()
 	if err := cmdRegistry.Register(command.Definition{
 		Type:  command.Type("action.test"),
@@ -352,15 +352,15 @@ func TestHandle_AppendsEventsWhenJournalConfigured(t *testing.T) {
 		ActorType:  command.ActorTypeSystem,
 	}
 
-	decision, err := handler.Handle(context.Background(), cmd)
+	result, err := handler.Execute(context.Background(), cmd)
 	if err != nil {
-		t.Fatalf("handle: %v", err)
+		t.Fatalf("execute: %v", err)
 	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	if len(result.Decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(result.Decision.Events))
 	}
-	if decision.Events[0].Seq != 1 {
-		t.Fatalf("event seq = %d, want %d", decision.Events[0].Seq, 1)
+	if result.Decision.Events[0].Seq != 1 {
+		t.Fatalf("event seq = %d, want %d", result.Decision.Events[0].Seq, 1)
 	}
 	if journal.last.Seq != 1 {
 		t.Fatalf("journal seq = %d, want %d", journal.last.Seq, 1)
@@ -384,9 +384,10 @@ func TestExecute_AppliesEventsToState(t *testing.T) {
 		PayloadJSON: []byte(`{"gate_id":"gate-1","gate_type":"gm_consequence"}`),
 	})}
 	handler := Handler{
-		Commands: cmdRegistry,
-		Decider:  decider,
-		Folder:   &aggregate.Folder{},
+		Commands:    cmdRegistry,
+		Decider:     decider,
+		StateLoader: &trackingStateLoader{},
+		Folder:      &aggregate.Folder{},
 	}
 	cmd := command.Command{
 		CampaignID: "camp-1",
@@ -924,7 +925,7 @@ func TestExecute_SavesCheckpointWithValidatedCampaignID(t *testing.T) {
 	}
 }
 
-func TestHandle_BatchAppendsAllEventsAtOnce(t *testing.T) {
+func TestExecute_BatchAppendsAllEventsAtOnce(t *testing.T) {
 	cmdRegistry := command.NewRegistry()
 	if err := cmdRegistry.Register(command.Definition{
 		Type:  command.Type("action.test"),
@@ -951,16 +952,16 @@ func TestHandle_BatchAppendsAllEventsAtOnce(t *testing.T) {
 		}}},
 	}
 
-	decision, err := handler.Handle(context.Background(), command.Command{
+	result, err := handler.Execute(context.Background(), command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("action.test"),
 		ActorType:  command.ActorTypeSystem,
 	})
 	if err != nil {
-		t.Fatalf("handle: %v", err)
+		t.Fatalf("execute: %v", err)
 	}
-	if len(decision.Events) != 2 {
-		t.Fatalf("expected 2 events, got %d", len(decision.Events))
+	if len(result.Decision.Events) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(result.Decision.Events))
 	}
 	if journal.batchAppendCalls != 1 {
 		t.Fatalf("batch append calls = %d, want 1", journal.batchAppendCalls)
@@ -968,7 +969,7 @@ func TestHandle_BatchAppendsAllEventsAtOnce(t *testing.T) {
 	if journal.appendCalls != 0 {
 		t.Fatalf("individual append calls = %d, want 0", journal.appendCalls)
 	}
-	if decision.Events[0].Seq != 1 || decision.Events[1].Seq != 2 {
-		t.Fatalf("event seqs = [%d, %d], want [1, 2]", decision.Events[0].Seq, decision.Events[1].Seq)
+	if result.Decision.Events[0].Seq != 1 || result.Decision.Events[1].Seq != 2 {
+		t.Fatalf("event seqs = [%d, %d], want [1, 2]", result.Decision.Events[0].Seq, result.Decision.Events[1].Seq)
 	}
 }

@@ -109,14 +109,11 @@ func TestApplyDowntimeMove_Success(t *testing.T) {
 	result := daggerheart.ApplyDowntimeMove(state, move, daggerheart.DowntimeOptions{})
 	moveName := daggerheartDowntimeMoveToString(move)
 	payload := daggerheart.DowntimeMoveAppliedPayload{
-		CharacterID:  "char-1",
-		Move:         moveName,
-		HopeBefore:   &result.HopeBefore,
-		HopeAfter:    &result.HopeAfter,
-		StressBefore: &result.StressBefore,
-		StressAfter:  &result.StressAfter,
-		ArmorBefore:  &result.ArmorBefore,
-		ArmorAfter:   &result.ArmorAfter,
+		CharacterID: "char-1",
+		Move:        moveName,
+		Hope:        &result.HopeAfter,
+		Stress:      &result.StressAfter,
+		Armor:       &result.ArmorAfter,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -192,14 +189,11 @@ func TestApplyDowntimeMove_UsesDomainEngine(t *testing.T) {
 	result := daggerheart.ApplyDowntimeMove(state, move, daggerheart.DowntimeOptions{})
 	moveName := daggerheartDowntimeMoveToString(move)
 	payload := daggerheart.DowntimeMoveAppliedPayload{
-		CharacterID:  "char-1",
-		Move:         moveName,
-		HopeBefore:   &result.HopeBefore,
-		HopeAfter:    &result.HopeAfter,
-		StressBefore: &result.StressBefore,
-		StressAfter:  &result.StressAfter,
-		ArmorBefore:  &result.ArmorBefore,
-		ArmorAfter:   &result.ArmorAfter,
+		CharacterID: "char-1",
+		Move:        moveName,
+		Hope:        &result.HopeAfter,
+		Stress:      &result.StressAfter,
+		Armor:       &result.ArmorAfter,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

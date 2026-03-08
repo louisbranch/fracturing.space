@@ -3,6 +3,7 @@ package game
 import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -125,7 +126,7 @@ func (p daggerheartCharacterStatePatch) stateUnchanged(current storage.Daggerhea
 		lifeStateBefore == p.lifeState
 }
 
-func (p daggerheartCharacterStatePatch) payload(characterID string, current storage.DaggerheartCharacterState) daggerheart.CharacterStatePatchedPayload {
+func (p daggerheartCharacterStatePatch) payload(characterID string, current storage.DaggerheartCharacterState) daggerheart.CharacterStatePatchPayload {
 	hpBefore := current.Hp
 	hpAfter := p.hp
 	hopeBefore := current.Hope
@@ -142,8 +143,8 @@ func (p daggerheartCharacterStatePatch) payload(characterID string, current stor
 	}
 	lifeStateAfter := p.lifeState
 
-	return daggerheart.CharacterStatePatchedPayload{
-		CharacterID:     characterID,
+	return daggerheart.CharacterStatePatchPayload{
+		CharacterID:     ids.CharacterID(characterID),
 		HPBefore:        &hpBefore,
 		HPAfter:         &hpAfter,
 		HopeBefore:      &hopeBefore,

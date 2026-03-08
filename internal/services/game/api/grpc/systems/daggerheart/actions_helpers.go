@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -153,7 +154,7 @@ func (s *DaggerheartService) buildStressVulnerableConditionEffect(
 	}
 
 	payload := daggerheart.ConditionChangePayload{
-		CharacterID:      characterID,
+		CharacterID:      ids.CharacterID(characterID),
 		ConditionsBefore: normalized,
 		ConditionsAfter:  after,
 		Added:            added,
@@ -407,6 +408,18 @@ func normalizeTargets(targets []string) []string {
 		}
 		seen[trimmed] = struct{}{}
 		result = append(result, trimmed)
+	}
+	return result
+}
+
+// stringsToCharacterIDs converts a []string to []ids.CharacterID.
+func stringsToCharacterIDs(ss []string) []ids.CharacterID {
+	if len(ss) == 0 {
+		return nil
+	}
+	result := make([]ids.CharacterID, len(ss))
+	for i, s := range ss {
+		result[i] = ids.CharacterID(s)
 	}
 	return result
 }

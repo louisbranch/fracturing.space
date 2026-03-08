@@ -1,6 +1,10 @@
 package action
 
-import "encoding/json"
+import (
+	"encoding/json"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+)
 
 // RollResolvePayload captures the payload for action.roll.resolve commands and action.roll_resolved events.
 type RollResolvePayload struct {
@@ -13,10 +17,10 @@ type RollResolvePayload struct {
 
 // OutcomeAppliedChange captures a single applied change.
 type OutcomeAppliedChange struct {
-	CharacterID string `json:"character_id,omitempty"`
-	Field       string `json:"field"`
-	Before      int    `json:"before"`
-	After       int    `json:"after"`
+	CharacterID ids.CharacterID `json:"character_id,omitempty"`
+	Field       string          `json:"field"`
+	Before      int             `json:"before"`
+	After       int             `json:"after"`
 }
 
 // OutcomeAppliedEffect captures a side-effect event emitted around action.outcome_applied.
@@ -50,6 +54,6 @@ type OutcomeRejectPayload struct {
 
 // NoteAddPayload captures the payload for story.note.add commands and story.note_added events.
 type NoteAddPayload struct {
-	Content     string `json:"content"`
-	CharacterID string `json:"character_id,omitempty"`
+	Content     string          `json:"content"`
+	CharacterID ids.CharacterID `json:"character_id,omitempty"`
 }

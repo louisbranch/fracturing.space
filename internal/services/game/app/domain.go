@@ -67,10 +67,10 @@ func buildDomainEngine(eventStore storage.EventStore, registries engine.Registri
 		Checkpoints:  checkpoints,
 		Snapshots:    checkpoints,
 		Folder:       folder,
-		StateFactory: func() any { return aggregate.State{} },
+		StateFactory: func() any { return aggregate.NewState() },
 	}
 	gateStateLoader := engine.ReplayGateStateLoader{StateLoader: stateLoader}
-	return engine.NewHandler(engine.HandlerConfig{
+	return engine.NewHandler(engine.Handler{
 		Commands:             registries.Commands,
 		Events:               registries.Events,
 		Journal:              gamegrpc.NewJournalAdapter(eventStore),

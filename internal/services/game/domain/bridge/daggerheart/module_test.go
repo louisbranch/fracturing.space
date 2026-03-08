@@ -58,13 +58,13 @@ type eventValidationCase struct {
 
 func eventValidationCases() []eventValidationCase {
 	return []eventValidationCase{
-		{typ: EventTypeGMFearChanged, validPayload: `{"before":1,"after":2}`, invalidPayload: `{"before":1,"after":"nope"}`, actorType: event.ActorTypeGM, actorID: "gm-1"},
+		{typ: EventTypeGMFearChanged, validPayload: `{"after":2}`, invalidPayload: `{"after":"nope"}`, actorType: event.ActorTypeGM, actorID: "gm-1"},
 		{typ: EventTypeCharacterStatePatched, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeConditionChanged, validPayload: `{"character_id":"char-1","conditions_after":["vulnerable"]}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeLoadoutSwapped, validPayload: `{"character_id":"char-1","card_id":"card-1","from":"vault","to":"active"}`, invalidPayload: `{"character_id":1}`},
-		{typ: EventTypeRestTaken, validPayload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":2,"short_rests_before":0,"short_rests_after":1,"refresh_rest":true}`, invalidPayload: `{"rest_type":1}`},
+		{typ: EventTypeRestTaken, validPayload: `{"rest_type":"short","gm_fear_after":2,"short_rests_after":1,"refresh_rest":true}`, invalidPayload: `{"rest_type":1}`},
 		{typ: EventTypeCountdownCreated, validPayload: `{"countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","looping":true}`, invalidPayload: `{"countdown_id":1}`},
-		{typ: EventTypeCountdownUpdated, validPayload: `{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false}`, invalidPayload: `{"countdown_id":1}`},
+		{typ: EventTypeCountdownUpdated, validPayload: `{"countdown_id":"cd-1","after":3,"delta":1,"looped":false}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: EventTypeCountdownDeleted, validPayload: `{"countdown_id":"cd-1"}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: EventTypeDamageApplied, validPayload: `{"character_id":"char-1","hp_before":6,"hp_after":3}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeAdversaryDamageApplied, validPayload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":3}`, invalidPayload: `{"adversary_id":1}`},
@@ -74,12 +74,12 @@ func eventValidationCases() []eventValidationCase {
 		{typ: EventTypeAdversaryCreated, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: EventTypeAdversaryUpdated, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: EventTypeAdversaryDeleted, validPayload: `{"adversary_id":"adv-1"}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: EventTypeLevelUpApplied, validPayload: `{"character_id":"char-1","level_before":1,"level_after":2,"advancements":[{"type":"add_hp_slots"},{"type":"add_stress_slots"}]}`, invalidPayload: `{"character_id":"","level_before":1,"level_after":2,"advancements":[{"type":"add_hp_slots"}]}`},
-		{typ: EventTypeGoldUpdated, validPayload: `{"character_id":"char-1","handfuls_before":0,"handfuls_after":3,"bags_before":0,"bags_after":0,"chests_before":0,"chests_after":0}`, invalidPayload: `{"character_id":""}`},
+		{typ: EventTypeLevelUpApplied, validPayload: `{"character_id":"char-1","level_after":2,"advancements":[{"type":"add_hp_slots"},{"type":"add_stress_slots"}]}`, invalidPayload: `{"character_id":"","level_after":2,"advancements":[{"type":"add_hp_slots"}]}`},
+		{typ: EventTypeGoldUpdated, validPayload: `{"character_id":"char-1","handfuls_after":3,"bags_after":0,"chests_after":0}`, invalidPayload: `{"character_id":""}`},
 		{typ: EventTypeDomainCardAcquired, validPayload: `{"character_id":"char-1","card_id":"card-1","card_level":1,"destination":"vault"}`, invalidPayload: `{"character_id":"char-1","card_id":"card-1","destination":"backpack"}`},
 		{typ: EventTypeEquipmentSwapped, validPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"inventory","to":"active"}`, invalidPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"active","to":"active"}`},
-		{typ: EventTypeConsumableUsed, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":2,"quantity_after":1}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":0,"quantity_after":-1}`},
-		{typ: EventTypeConsumableAcquired, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":1,"quantity_after":2}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_before":5,"quantity_after":6}`},
+		{typ: EventTypeConsumableUsed, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_after":1}`, invalidPayload: `{"character_id":"char-1","consumable_id":""}`},
+		{typ: EventTypeConsumableAcquired, validPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_after":2}`, invalidPayload: `{"character_id":"char-1","consumable_id":"potion-1","quantity_after":6}`},
 	}
 }
 
@@ -298,7 +298,7 @@ func TestModuleRegisterEvents_RegistersSysPrefixedOnly(t *testing.T) {
 		EntityID:      "camp-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		PayloadJSON:   []byte(`{"before":1,"after":2}`),
+		PayloadJSON:   []byte(`{"after":2}`),
 	})
 	if err != nil {
 		t.Fatalf("canonical event rejected: %v", err)
@@ -314,7 +314,7 @@ func TestModuleRegisterEvents_RegistersSysPrefixedOnly(t *testing.T) {
 		EntityID:      "camp-1",
 		SystemID:      SystemID,
 		SystemVersion: SystemVersion,
-		PayloadJSON:   []byte(`{"before":1,"after":2}`),
+		PayloadJSON:   []byte(`{"after":2}`),
 	})
 	if !errors.Is(err, event.ErrTypeUnknown) {
 		t.Fatalf("legacy action event should be unknown, got %v", err)
@@ -600,64 +600,109 @@ func TestModuleRegisterEvents_RejectsNoOpMutatingPayloads(t *testing.T) {
 		payload string
 	}{
 		{
-			name:    "character_state_patched requires a change",
+			name:    "character_state_patched requires at least one after field",
 			typ:     EventTypeCharacterStatePatched,
-			payload: `{"character_id":"char-1","hp_before":2,"hp_after":2}`,
-		},
-		{
-			name:    "gm_fear_changed requires a change",
-			typ:     EventTypeGMFearChanged,
-			payload: `{"before":2,"after":2}`,
-		},
-		{
-			name:    "condition_changed requires a change",
-			typ:     EventTypeConditionChanged,
-			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
+			payload: `{"character_id":"char-1"}`,
 		},
 		{
 			name:    "condition_changed requires conditions_after",
 			typ:     EventTypeConditionChanged,
-			payload: `{"character_id":"char-1","conditions_before":["hidden"]}`,
-		},
-		{
-			name:    "condition_changed rejects added removed diff mismatch",
-			typ:     EventTypeConditionChanged,
-			payload: `{"character_id":"char-1","conditions_before":["hidden"],"conditions_after":["vulnerable"],"added":["restrained"],"removed":["hidden"]}`,
-		},
-		{
-			name:    "countdown_updated requires a change",
-			typ:     EventTypeCountdownUpdated,
-			payload: `{"countdown_id":"cd-1","before":3,"after":3,"delta":0,"looped":false}`,
+			payload: `{"character_id":"char-1"}`,
 		},
 		{
 			name:    "damage_applied requires hp or armor change",
 			typ:     EventTypeDamageApplied,
-			payload: `{"character_id":"char-1","hp_before":6,"hp_after":6}`,
+			payload: `{"character_id":"char-1"}`,
 		},
 		{
 			name:    "adversary_damage_applied requires hp or armor change",
 			typ:     EventTypeAdversaryDamageApplied,
-			payload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":8}`,
+			payload: `{"adversary_id":"adv-1"}`,
 		},
 		{
 			name:    "downtime_move_applied requires state change",
 			typ:     EventTypeDowntimeMoveApplied,
-			payload: `{"character_id":"char-1","move":"clear_all_stress","stress_before":2,"stress_after":2}`,
+			payload: `{"character_id":"char-1","move":"clear_all_stress"}`,
 		},
 		{
-			name:    "rest_taken requires rest change or character patches",
+			name:    "rest_taken rejects gm_fear out of range",
 			typ:     EventTypeRestTaken,
-			payload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":1,"short_rests_before":0,"short_rests_after":0,"refresh_rest":false,"refresh_long_rest":false}`,
+			payload: `{"rest_type":"short","gm_fear_after":99}`,
 		},
 		{
-			name:    "adversary_condition_changed requires a change",
+			name:    "adversary_condition_changed requires conditions_after",
 			typ:     EventTypeAdversaryConditionChanged,
-			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["hidden"]}`,
+			payload: `{"adversary_id":"adv-1"}`,
 		},
 		{
-			name:    "adversary_condition_changed rejects added removed diff mismatch",
+			name:    "gold_updated rejects handfuls out of range",
+			typ:     EventTypeGoldUpdated,
+			payload: `{"character_id":"char-1","handfuls_after":10}`,
+		},
+		{
+			name:    "gold_updated rejects bags out of range",
+			typ:     EventTypeGoldUpdated,
+			payload: `{"character_id":"char-1","bags_after":10}`,
+		},
+		{
+			name:    "gold_updated rejects chests out of range",
+			typ:     EventTypeGoldUpdated,
+			payload: `{"character_id":"char-1","chests_after":2}`,
+		},
+		{
+			name:    "level_up_applied rejects level out of range",
+			typ:     EventTypeLevelUpApplied,
+			payload: `{"character_id":"char-1","level_after":0,"advancements":[{"type":"add_hp_slots"}]}`,
+		},
+		{
+			name:    "level_up_applied rejects empty advancements",
+			typ:     EventTypeLevelUpApplied,
+			payload: `{"character_id":"char-1","level_after":2}`,
+		},
+		{
+			name:    "consumable_acquired rejects empty character_id",
+			typ:     EventTypeConsumableAcquired,
+			payload: `{"character_id":"","consumable_id":"potion-1","quantity_after":2}`,
+		},
+		{
+			name:    "consumable_acquired rejects empty consumable_id",
+			typ:     EventTypeConsumableAcquired,
+			payload: `{"character_id":"char-1","consumable_id":"","quantity_after":2}`,
+		},
+		{
+			name:    "consumable_used rejects empty character_id",
+			typ:     EventTypeConsumableUsed,
+			payload: `{"character_id":"","consumable_id":"potion-1"}`,
+		},
+		{
+			name:    "loadout_swapped rejects empty character_id",
+			typ:     EventTypeLoadoutSwapped,
+			payload: `{"character_id":"","card_id":"card-1"}`,
+		},
+		{
+			name:    "loadout_swapped rejects empty card_id",
+			typ:     EventTypeLoadoutSwapped,
+			payload: `{"character_id":"char-1","card_id":""}`,
+		},
+		{
+			name:    "condition_changed rejects empty character_id",
+			typ:     EventTypeConditionChanged,
+			payload: `{"character_id":"","conditions_after":["hidden"]}`,
+		},
+		{
+			name:    "adversary_condition_changed rejects empty adversary_id",
 			typ:     EventTypeAdversaryConditionChanged,
-			payload: `{"adversary_id":"adv-1","conditions_before":["hidden"],"conditions_after":["vulnerable"],"added":["vulnerable"],"removed":["restrained"]}`,
+			payload: `{"adversary_id":"","conditions_after":["hidden"]}`,
+		},
+		{
+			name:    "rest_taken rejects empty rest_type",
+			typ:     EventTypeRestTaken,
+			payload: `{"rest_type":"","gm_fear_after":2}`,
+		},
+		{
+			name:    "downtime_move_applied rejects empty move",
+			typ:     EventTypeDowntimeMoveApplied,
+			payload: `{"character_id":"char-1","move":"","stress_after":2}`,
 		},
 	}
 

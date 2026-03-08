@@ -1,6 +1,10 @@
 package daggerheart
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+)
 
 // StateFactory creates Daggerheart state instances.
 type StateFactory struct{}
@@ -11,14 +15,14 @@ func NewStateFactory() *StateFactory {
 }
 
 // NewCharacterState creates initial character state for the given character.
-func (f *StateFactory) NewCharacterState(campaignID, characterID, kind string) (any, error) {
+func (f *StateFactory) NewCharacterState(campaignID ids.CampaignID, characterID ids.CharacterID, kind string) (any, error) {
 	normalizedKind := strings.ToLower(strings.TrimSpace(kind))
 	if normalizedKind == "" {
 		normalizedKind = "pc"
 	}
 	state := CharacterState{
-		CampaignID:  strings.TrimSpace(campaignID),
-		CharacterID: strings.TrimSpace(characterID),
+		CampaignID:  strings.TrimSpace(string(campaignID)),
+		CharacterID: strings.TrimSpace(string(characterID)),
 		Kind:        normalizedKind,
 		HP:          HPDefault,
 		HPMax:       HPMaxDefault,
@@ -38,12 +42,12 @@ func (f *StateFactory) NewCharacterState(campaignID, characterID, kind string) (
 }
 
 // NewSnapshotState creates initial snapshot state for the given campaign.
-func (f *StateFactory) NewSnapshotState(campaignID string) (any, error) {
+func (f *StateFactory) NewSnapshotState(campaignID ids.CampaignID) (any, error) {
 	return SnapshotState{
-		CampaignID:      strings.TrimSpace(campaignID),
+		CampaignID:      ids.CampaignID(strings.TrimSpace(string(campaignID))),
 		GMFear:          GMFearDefault,
-		CharacterStates: make(map[string]CharacterState),
-		AdversaryStates: make(map[string]AdversaryState),
-		CountdownStates: make(map[string]CountdownState),
+		CharacterStates: make(map[ids.CharacterID]CharacterState),
+		AdversaryStates: make(map[ids.AdversaryID]AdversaryState),
+		CountdownStates: make(map[ids.CountdownID]CountdownState),
 	}, nil
 }

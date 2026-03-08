@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -93,7 +94,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		if err := json.Unmarshal(claimEvent.PayloadJSON, &payload); err != nil {
 			return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "decode prior claim: %v", err)
 		}
-		if payload.InviteID != inv.ID || payload.UserID != userID {
+		if payload.InviteID != ids.InviteID(inv.ID) || payload.UserID != ids.UserID(userID) {
 			return storage.InviteRecord{}, storage.ParticipantRecord{}, apperrors.New(apperrors.CodeInviteJoinGrantUsed, "join grant already used")
 		}
 		updatedInvite, err := a.stores.Invite.GetInvite(ctx, inv.ID)
@@ -125,8 +126,8 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	applier := a.stores.Applier()
 	payload := participant.BindPayload{
-		ParticipantID: seat.ID,
-		UserID:        userID,
+		ParticipantID: ids.ParticipantID(seat.ID),
+		UserID:        ids.UserID(userID),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -158,9 +159,9 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	}
 
 	claimPayload := invite.ClaimPayload{
-		InviteID:      inv.ID,
-		ParticipantID: inv.ParticipantID,
-		UserID:        userID,
+		InviteID:      ids.InviteID(inv.ID),
+		ParticipantID: ids.ParticipantID(inv.ParticipantID),
+		UserID:        ids.UserID(userID),
 		JWTID:         claims.JWTID,
 	}
 	claimJSON, err := json.Marshal(claimPayload)

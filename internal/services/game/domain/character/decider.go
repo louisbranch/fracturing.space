@@ -8,6 +8,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 const (
@@ -59,7 +60,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 			})
 		}
-		characterID := strings.TrimSpace(payload.CharacterID)
+		characterID := strings.TrimSpace(payload.CharacterID.String())
 		if characterID == "" {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterIDRequired,
@@ -161,7 +162,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now = time.Now
 		}
 
-		normalizedPayload := UpdatePayload{CharacterID: characterID, Fields: normalizedFields}
+		normalizedPayload := UpdatePayload{CharacterID: ids.CharacterID(characterID), Fields: normalizedFields}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := command.NewEvent(cmd, EventTypeUpdated, "character", characterID, payloadJSON, now().UTC())
 
@@ -181,7 +182,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 			})
 		}
-		characterID := strings.TrimSpace(payload.CharacterID)
+		characterID := strings.TrimSpace(payload.CharacterID.String())
 		if characterID == "" {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterIDRequired,
@@ -193,7 +194,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now = time.Now
 		}
 
-		normalizedPayload := DeletePayload{CharacterID: characterID, Reason: reason}
+		normalizedPayload := DeletePayload{CharacterID: ids.CharacterID(characterID), Reason: reason}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := command.NewEvent(cmd, EventTypeDeleted, "character", characterID, payloadJSON, now().UTC())
 
@@ -213,7 +214,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 			})
 		}
-		characterID := strings.TrimSpace(payload.CharacterID)
+		characterID := strings.TrimSpace(payload.CharacterID.String())
 		if characterID == "" {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCharacterIDRequired,
@@ -225,7 +226,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 
 		normalizedPayload := ProfileUpdatePayload{
-			CharacterID:   characterID,
+			CharacterID:   ids.CharacterID(characterID),
 			SystemProfile: payload.SystemProfile,
 		}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
@@ -255,7 +256,7 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
 	if characterID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeCharacterIDRequired,
@@ -278,8 +279,8 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 	}
 	notes := strings.TrimSpace(payload.Notes)
 	pronouns := strings.TrimSpace(payload.Pronouns)
-	participantID := strings.TrimSpace(payload.ParticipantID)
-	ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID)
+	participantID := strings.TrimSpace(payload.ParticipantID.String())
+	ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID.String())
 	aliases := normalizeAliases(payload.Aliases)
 	avatarSetID, avatarAssetID, err := resolveCharacterAvatarSelection(
 		characterID,
@@ -294,9 +295,9 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 	}
 
 	normalizedPayload := CreatePayload{
-		CharacterID:        characterID,
-		OwnerParticipantID: ownerParticipantID,
-		ParticipantID:      participantID,
+		CharacterID:        ids.CharacterID(characterID),
+		OwnerParticipantID: ids.ParticipantID(ownerParticipantID),
+		ParticipantID:      ids.ParticipantID(participantID),
 		Name:               name,
 		Kind:               kind,
 		Notes:              notes,
@@ -341,7 +342,7 @@ func decideCreateWithProfile(state State, cmd command.Command, now func() time.T
 	decisionTime := createDecision.Events[0].Timestamp
 	characterID := strings.TrimSpace(createDecision.Events[0].EntityID)
 	profilePayload := ProfileUpdatePayload{
-		CharacterID:   characterID,
+		CharacterID:   ids.CharacterID(characterID),
 		SystemProfile: payload.SystemProfile,
 	}
 	profilePayloadJSON, _ := json.Marshal(profilePayload)

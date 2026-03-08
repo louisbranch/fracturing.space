@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -156,11 +157,11 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	domainResult, err := s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:   campaignID,
+		CampaignID:   ids.CampaignID(campaignID),
 		Type:         commandTypeActionRollResolve,
 		ActorType:    command.ActorTypeSystem,
-		SessionID:    sessionID,
-		SceneID:      sceneID,
+		SessionID:    ids.SessionID(sessionID),
+		SceneID:      ids.SceneID(sceneID),
 		RequestID:    requestID,
 		InvocationID: invocationID,
 		EntityType:   "adversary",

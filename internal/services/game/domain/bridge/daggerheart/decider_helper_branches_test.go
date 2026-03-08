@@ -1,11 +1,15 @@
 package daggerheart
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+)
 
 func TestIsCharacterStatePatchNoMutation_Branches(t *testing.T) {
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {
 				CharacterID: "char-1",
 				HP:          0,
@@ -77,7 +81,7 @@ func TestIsCharacterStatePatchNoMutation_Branches(t *testing.T) {
 
 func TestIsConditionChangeNoMutation_NormalizationErrorBranches(t *testing.T) {
 	stateInvalidCurrent := SnapshotState{
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {CharacterID: "char-1", Conditions: []string{""}},
 		},
 	}
@@ -89,7 +93,7 @@ func TestIsConditionChangeNoMutation_NormalizationErrorBranches(t *testing.T) {
 	}
 
 	stateValid := SnapshotState{
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {CharacterID: "char-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -104,12 +108,12 @@ func TestIsConditionChangeNoMutation_NormalizationErrorBranches(t *testing.T) {
 func TestSnapshotCharacterState_DefaultsLifeStateAndCampaignID(t *testing.T) {
 	snapshot := SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {CharacterID: "char-1", HP: 5},
 		},
 	}
 
-	character, ok := snapshotCharacterState(snapshot, " char-1 ")
+	character, ok := snapshotCharacterState(snapshot, ids.CharacterID(" char-1 "))
 	if !ok {
 		t.Fatal("expected snapshotCharacterState to resolve character")
 	}
@@ -123,7 +127,7 @@ func TestSnapshotCharacterState_DefaultsLifeStateAndCampaignID(t *testing.T) {
 
 func TestIsCountdownUpdateNoMutation_LoopedBranch(t *testing.T) {
 	snapshot := SnapshotState{
-		CountdownStates: map[string]CountdownState{
+		CountdownStates: map[ids.CountdownID]CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 3, Looping: false},
 		},
 	}
@@ -137,7 +141,7 @@ func TestIsCountdownUpdateNoMutation_LoopedBranch(t *testing.T) {
 }
 
 func TestSnapshotCountdownState_BlankIDReturnsFalse(t *testing.T) {
-	if _, ok := snapshotCountdownState(SnapshotState{}, "  "); ok {
+	if _, ok := snapshotCountdownState(SnapshotState{}, ids.CountdownID("  ")); ok {
 		t.Fatal("expected blank countdown id to return false")
 	}
 }

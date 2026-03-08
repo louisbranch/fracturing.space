@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -115,7 +116,7 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 		}
 	}
 	payload := daggerheart.DamageApplyPayload{
-		CharacterID:        characterID,
+		CharacterID:        ids.CharacterID(characterID),
 		HpBefore:           &hpBefore,
 		HpAfter:            &hpAfter,
 		ArmorBefore:        &armorBefore,
@@ -133,7 +134,7 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 		MassiveDamage:      in.Damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             in.Damage.Source,
-		SourceCharacterIDs: sourceCharacterIDs,
+		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -143,11 +144,11 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartDamageApply,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",
@@ -268,7 +269,7 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 	}
 
 	payload := daggerheart.AdversaryDamageApplyPayload{
-		AdversaryID:        adversaryID,
+		AdversaryID:        ids.AdversaryID(adversaryID),
 		HpBefore:           &hpBefore,
 		HpAfter:            &hpAfter,
 		ArmorBefore:        &armorBefore,
@@ -286,7 +287,7 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 		MassiveDamage:      in.Damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             in.Damage.Source,
-		SourceCharacterIDs: sourceCharacterIDs,
+		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -296,11 +297,11 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartAdversaryDamageApply,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",

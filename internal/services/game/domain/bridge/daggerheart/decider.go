@@ -63,7 +63,7 @@ var daggerheartDecisionHandlers = map[command.Type]daggerheartDecisionHandler{
 	commandTypeConditionChange:              decideConditionChange,
 	commandTypeHopeSpend:                    decideHopeSpend,
 	commandTypeStressSpend:                  decideStressSpend,
-	commandTypeLoadoutSwap:                  wrapDaggerheartDecisionWithoutState(decideLoadoutSwap),
+	commandTypeLoadoutSwap:                  decideLoadoutSwap,
 	commandTypeRestTake:                     wrapDaggerheartDecisionWithStateNoSnapshotFlag(decideRestTake),
 	commandTypeCountdownCreate:              wrapDaggerheartDecisionWithoutState(decideCountdownCreate),
 	commandTypeCountdownUpdate:              decideCountdownUpdate,
@@ -77,12 +77,12 @@ var daggerheartDecisionHandlers = map[command.Type]daggerheartDecisionHandler{
 	commandTypeAdversaryUpdate:              wrapDaggerheartDecisionWithoutState(decideAdversaryUpdate),
 	commandTypeAdversaryDelete:              wrapDaggerheartDecisionWithoutState(decideAdversaryDelete),
 	commandTypeMultiTargetDamageApply:       decideMultiTargetDamageApply,
-	commandTypeLevelUpApply:                 wrapDaggerheartDecisionWithoutState(decideLevelUpApply),
-	commandTypeGoldUpdate:                   wrapDaggerheartDecisionWithoutState(decideGoldUpdate),
+	commandTypeLevelUpApply:                 decideLevelUpApply,
+	commandTypeGoldUpdate:                   decideGoldUpdate,
 	commandTypeDomainCardAcquire:            wrapDaggerheartDecisionWithoutState(decideDomainCardAcquire),
 	commandTypeEquipmentSwap:                wrapDaggerheartDecisionWithoutState(decideEquipmentSwap),
-	commandTypeConsumableUse:                wrapDaggerheartDecisionWithoutState(decideConsumableUse),
-	commandTypeConsumableAcquire:            wrapDaggerheartDecisionWithoutState(decideConsumableAcquire),
+	commandTypeConsumableUse:                decideConsumableUse,
+	commandTypeConsumableAcquire:            decideConsumableAcquire,
 }
 
 // DeciderHandledCommands returns the command types this decider handles.

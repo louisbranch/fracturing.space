@@ -10,6 +10,7 @@ import (
 
 	coreencoding "github.com/louisbranch/fracturing.space/internal/services/game/core/encoding"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 var (
@@ -83,12 +84,12 @@ const (
 // Commands are normalized and validated before reaching deciders so business
 // rules are applied to stable inputs instead of transport-shaped payloads.
 type Command struct {
-	CampaignID    string
+	CampaignID    ids.CampaignID
 	Type          Type
 	ActorType     ActorType
 	ActorID       string
-	SessionID     string
-	SceneID       string
+	SessionID     ids.SessionID
+	SceneID       ids.SceneID
 	RequestID     string
 	InvocationID  string
 	EntityType    string
@@ -163,7 +164,7 @@ func (r *Registry) ValidateForDecision(cmd Command) (Command, error) {
 	if r == nil {
 		return Command{}, errors.New("registry is required")
 	}
-	cmd.CampaignID = strings.TrimSpace(cmd.CampaignID)
+	cmd.CampaignID = ids.CampaignID(strings.TrimSpace(string(cmd.CampaignID)))
 	if cmd.CampaignID == "" {
 		return Command{}, ErrCampaignIDRequired
 	}

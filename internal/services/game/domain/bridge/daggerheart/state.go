@@ -1,6 +1,9 @@
 package daggerheart
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics"
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+)
 
 const (
 	// SystemID identifies the Daggerheart system for system modules.
@@ -25,12 +28,12 @@ const (
 
 // SnapshotState captures campaign-level Daggerheart state.
 type SnapshotState struct {
-	CampaignID             string
+	CampaignID             ids.CampaignID
 	GMFear                 int
 	DowntimeMovesSinceRest int
-	CharacterStates        map[string]CharacterState
-	AdversaryStates        map[string]AdversaryState
-	CountdownStates        map[string]CountdownState
+	CharacterStates        map[ids.CharacterID]CharacterState
+	AdversaryStates        map[ids.AdversaryID]AdversaryState
+	CountdownStates        map[ids.CountdownID]CountdownState
 }
 
 type TemporaryArmorBucket = mechanics.TemporaryArmorBucket
@@ -38,11 +41,11 @@ type CharacterState = mechanics.CharacterState
 
 // AdversaryState captures Daggerheart adversary state for aggregate projections.
 type AdversaryState struct {
-	CampaignID  string
-	AdversaryID string
+	CampaignID  ids.CampaignID
+	AdversaryID ids.AdversaryID
 	Name        string
 	Kind        string
-	SessionID   string
+	SessionID   ids.SessionID
 	Notes       string
 	HP          int
 	HPMax       int
@@ -61,20 +64,20 @@ type AdversaryState struct {
 // needed for states not created through the factory.
 func (s *SnapshotState) EnsureMaps() {
 	if s.CharacterStates == nil {
-		s.CharacterStates = make(map[string]CharacterState)
+		s.CharacterStates = make(map[ids.CharacterID]CharacterState)
 	}
 	if s.AdversaryStates == nil {
-		s.AdversaryStates = make(map[string]AdversaryState)
+		s.AdversaryStates = make(map[ids.AdversaryID]AdversaryState)
 	}
 	if s.CountdownStates == nil {
-		s.CountdownStates = make(map[string]CountdownState)
+		s.CountdownStates = make(map[ids.CountdownID]CountdownState)
 	}
 }
 
 // CountdownState captures Daggerheart countdown state for aggregate projections.
 type CountdownState struct {
-	CampaignID        string
-	CountdownID       string
+	CampaignID        ids.CampaignID
+	CountdownID       ids.CountdownID
 	Name              string
 	Kind              string
 	Current           int
@@ -83,5 +86,5 @@ type CountdownState struct {
 	Looping           bool
 	Variant           string
 	TriggerEventType  string
-	LinkedCountdownID string
+	LinkedCountdownID ids.CountdownID
 }

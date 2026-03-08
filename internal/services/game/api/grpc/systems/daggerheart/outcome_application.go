@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -75,7 +76,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 	if rollEvent.Type != eventTypeActionRollResolved {
 		return nil, status.Error(codes.InvalidArgument, "roll seq does not reference action.roll_resolved")
 	}
-	if rollEvent.SessionID != sessionID {
+	if rollEvent.SessionID.String() != sessionID {
 		return nil, status.Error(codes.InvalidArgument, "roll seq does not match session")
 	}
 
@@ -240,8 +241,8 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 				return nil, status.Errorf(codes.Internal, "check character state patch applied: %v", err)
 			}
 			if !characterPatchAlreadyApplied {
-				payload := daggerheart.CharacterStatePatchedPayload{
-					CharacterID:  target,
+				payload := daggerheart.CharacterStatePatchPayload{
+					CharacterID:  ids.CharacterID(target),
 					HopeBefore:   &hopeBefore,
 					HopeAfter:    &hopeAfter,
 					StressBefore: &stressBefore,
@@ -287,10 +288,10 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 		}
 
 		if hopeAfter != hopeBefore {
-			changes = append(changes, action.OutcomeAppliedChange{CharacterID: target, Field: action.OutcomeFieldHope, Before: hopeBefore, After: hopeAfter})
+			changes = append(changes, action.OutcomeAppliedChange{CharacterID: ids.CharacterID(target), Field: action.OutcomeFieldHope, Before: hopeBefore, After: hopeAfter})
 		}
 		if stressAfter != stressBefore {
-			changes = append(changes, action.OutcomeAppliedChange{CharacterID: target, Field: action.OutcomeFieldStress, Before: stressBefore, After: stressAfter})
+			changes = append(changes, action.OutcomeAppliedChange{CharacterID: ids.CharacterID(target), Field: action.OutcomeFieldStress, Before: stressBefore, After: stressAfter})
 		}
 		updatedStates = append(updatedStates, &pb.OutcomeCharacterState{
 			CharacterId: target,

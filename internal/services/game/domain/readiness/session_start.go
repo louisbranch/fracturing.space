@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	domainids "github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
@@ -271,9 +272,9 @@ func systemReadinessMessage(characterLabel, reason string) string {
 	return message + ": " + reason
 }
 
-func isAIGMMode(mode string) bool {
-	switch strings.ToLower(strings.TrimSpace(mode)) {
-	case "ai", "hybrid":
+func isAIGMMode(mode campaign.GmMode) bool {
+	switch mode {
+	case campaign.GmModeAI, campaign.GmModeHybrid:
 		return true
 	default:
 		return false
@@ -293,26 +294,26 @@ func activeParticipantsByID(state aggregate.State) participantIndex {
 		return indexed
 	}
 
-	ids := make([]string, 0, len(state.Participants))
+	pids := make([]string, 0, len(state.Participants))
 	for participantID := range state.Participants {
-		ids = append(ids, participantID)
+		pids = append(pids, string(participantID))
 	}
-	sort.Strings(ids)
+	sort.Strings(pids)
 
-	for _, participantID := range ids {
-		participantState := state.Participants[participantID]
+	for _, participantID := range pids {
+		participantState := state.Participants[domainids.ParticipantID(participantID)]
 		if !participantState.Joined || participantState.Left {
 			continue
 		}
 		indexed.byID[participantID] = participantState
-		role, ok := participant.NormalizeRole(participantState.Role)
+		role, ok := participant.NormalizeRole(string(participantState.Role))
 		if !ok {
 			continue
 		}
 		switch role {
 		case participant.RoleGM:
 			indexed.gmIDs = append(indexed.gmIDs, participantID)
-			controller, ok := participant.NormalizeController(participantState.Controller)
+			controller, ok := participant.NormalizeController(string(participantState.Controller))
 			if ok && controller == participant.ControllerAI {
 				indexed.aiGMIDs = append(indexed.aiGMIDs, participantID)
 			}
@@ -341,19 +342,19 @@ func activeCharactersByID(state aggregate.State) characterIndex {
 		return indexed
 	}
 
-	ids := make([]string, 0, len(state.Characters))
+	cids := make([]string, 0, len(state.Characters))
 	for characterID := range state.Characters {
-		ids = append(ids, characterID)
+		cids = append(cids, string(characterID))
 	}
-	sort.Strings(ids)
+	sort.Strings(cids)
 
-	for _, characterID := range ids {
-		characterState := state.Characters[characterID]
+	for _, characterID := range cids {
+		characterState := state.Characters[domainids.CharacterID(characterID)]
 		if !characterState.Created || characterState.Deleted {
 			continue
 		}
 		indexed.byID[characterID] = aggregateCharacterState{
-			ParticipantID: characterState.ParticipantID,
+			ParticipantID: string(characterState.ParticipantID),
 			Name:          characterState.Name,
 			SystemProfile: characterState.SystemProfile,
 		}

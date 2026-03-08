@@ -5,12 +5,14 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 func decideAdversaryConditionChange(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeAdversaryConditionChanged, "adversary",
-		func(p *AdversaryConditionChangePayload) string { return strings.TrimSpace(p.AdversaryID) },
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeAdversaryConditionChanged, "adversary",
+		func(p *AdversaryConditionChangePayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
 		func(s SnapshotState, hasState bool, p *AdversaryConditionChangePayload, _ func() time.Time) *command.Rejection {
 			if hasState {
 				if hasMissingAdversaryConditionRemovals(s, *p) {
@@ -26,15 +28,26 @@ func decideAdversaryConditionChange(snapshotState SnapshotState, hasSnapshot boo
 					}
 				}
 			}
-			p.AdversaryID = strings.TrimSpace(p.AdversaryID)
+			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
 			p.Source = strings.TrimSpace(p.Source)
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p AdversaryConditionChangePayload) AdversaryConditionChangedPayload {
+			return AdversaryConditionChangedPayload{
+				AdversaryID: p.AdversaryID,
+				Conditions:  p.ConditionsAfter,
+				Added:       p.Added,
+				Removed:     p.Removed,
+				Source:      p.Source,
+				RollSeq:     p.RollSeq,
+			}
+		},
+		now)
 }
 
 func decideAdversaryCreate(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeAdversaryCreated, "adversary",
-		func(p *AdversaryCreatePayload) string { return strings.TrimSpace(p.AdversaryID) },
+		func(p *AdversaryCreatePayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
 		func(s SnapshotState, hasState bool, p *AdversaryCreatePayload, _ func() time.Time) *command.Rejection {
 			if hasState && isAdversaryCreateNoMutation(s, *p) {
 				return &command.Rejection{
@@ -42,10 +55,10 @@ func decideAdversaryCreate(snapshotState SnapshotState, hasSnapshot bool, cmd co
 					Message: "adversary create is unchanged",
 				}
 			}
-			p.AdversaryID = strings.TrimSpace(p.AdversaryID)
+			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
 			p.Name = strings.TrimSpace(p.Name)
 			p.Kind = strings.TrimSpace(p.Kind)
-			p.SessionID = strings.TrimSpace(p.SessionID)
+			p.SessionID = ids.SessionID(strings.TrimSpace(p.SessionID.String()))
 			p.Notes = strings.TrimSpace(p.Notes)
 			return nil
 		}, now)
@@ -53,12 +66,12 @@ func decideAdversaryCreate(snapshotState SnapshotState, hasSnapshot bool, cmd co
 
 func decideAdversaryUpdate(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, EventTypeAdversaryUpdated, "adversary",
-		func(p *AdversaryUpdatePayload) string { return strings.TrimSpace(p.AdversaryID) },
+		func(p *AdversaryUpdatePayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
 		func(p *AdversaryUpdatePayload, _ func() time.Time) *command.Rejection {
-			p.AdversaryID = strings.TrimSpace(p.AdversaryID)
+			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
 			p.Name = strings.TrimSpace(p.Name)
 			p.Kind = strings.TrimSpace(p.Kind)
-			p.SessionID = strings.TrimSpace(p.SessionID)
+			p.SessionID = ids.SessionID(strings.TrimSpace(p.SessionID.String()))
 			p.Notes = strings.TrimSpace(p.Notes)
 			return nil
 		}, now)
@@ -66,9 +79,9 @@ func decideAdversaryUpdate(cmd command.Command, now func() time.Time) command.De
 
 func decideAdversaryDelete(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, EventTypeAdversaryDeleted, "adversary",
-		func(p *AdversaryDeletePayload) string { return strings.TrimSpace(p.AdversaryID) },
+		func(p *AdversaryDeletePayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
 		func(p *AdversaryDeletePayload, _ func() time.Time) *command.Rejection {
-			p.AdversaryID = strings.TrimSpace(p.AdversaryID)
+			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
 			p.Reason = strings.TrimSpace(p.Reason)
 			return nil
 		}, now)
@@ -131,7 +144,7 @@ func isAdversaryCreateNoMutation(snapshot SnapshotState, payload AdversaryCreate
 	}
 	return adversary.Name == strings.TrimSpace(payload.Name) &&
 		adversary.Kind == strings.TrimSpace(payload.Kind) &&
-		adversary.SessionID == strings.TrimSpace(payload.SessionID) &&
+		adversary.SessionID == ids.SessionID(strings.TrimSpace(payload.SessionID.String())) &&
 		adversary.Notes == strings.TrimSpace(payload.Notes) &&
 		adversary.HP == payload.HP &&
 		adversary.HPMax == payload.HPMax &&
@@ -143,16 +156,16 @@ func isAdversaryCreateNoMutation(snapshot SnapshotState, payload AdversaryCreate
 		adversary.Armor == payload.Armor
 }
 
-func snapshotAdversaryState(snapshot SnapshotState, adversaryID string) (AdversaryState, bool) {
-	adversaryID = strings.TrimSpace(adversaryID)
-	if adversaryID == "" {
+func snapshotAdversaryState(snapshot SnapshotState, adversaryID ids.AdversaryID) (AdversaryState, bool) {
+	trimmed := ids.AdversaryID(strings.TrimSpace(adversaryID.String()))
+	if trimmed == "" {
 		return AdversaryState{}, false
 	}
-	adversary, ok := snapshot.AdversaryStates[adversaryID]
+	adversary, ok := snapshot.AdversaryStates[trimmed]
 	if !ok {
 		return AdversaryState{}, false
 	}
-	adversary.AdversaryID = adversaryID
+	adversary.AdversaryID = trimmed
 	adversary.CampaignID = snapshot.CampaignID
 	return adversary, true
 }

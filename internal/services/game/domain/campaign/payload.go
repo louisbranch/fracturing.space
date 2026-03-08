@@ -1,6 +1,9 @@
 package campaign
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+)
 
 // CreatePayload captures the payload for campaign.create commands and campaign.created events.
 type CreatePayload struct {
@@ -43,8 +46,8 @@ type AIAuthRotatePayload struct {
 
 // ForkPayload captures the payload for campaign.fork commands and campaign.forked events.
 type ForkPayload struct {
-	ParentCampaignID string `json:"parent_campaign_id"`
-	ForkEventSeq     uint64 `json:"fork_event_seq"`
-	OriginCampaignID string `json:"origin_campaign_id"`
-	CopyParticipants bool   `json:"copy_participants"`
+	ParentCampaignID ids.CampaignID `json:"parent_campaign_id"`
+	ForkEventSeq     uint64         `json:"fork_event_seq"`
+	OriginCampaignID ids.CampaignID `json:"origin_campaign_id"`
+	CopyParticipants bool           `json:"copy_participants"`
 }

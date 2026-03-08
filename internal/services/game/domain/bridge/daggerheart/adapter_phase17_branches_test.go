@@ -44,7 +44,7 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		err := adapter.handleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
 			CharacterID: "char-1",
 			Move:        "prepare",
-			HopeAfter:   intPtr(3),
+			Hope:        intPtr(3),
 		})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character state: character read failed") {
 			t.Fatalf("handleDowntimeMoveApplied() error = %v, want wrapped read error", err)
@@ -67,7 +67,7 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		err := adapter.handleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
 			CharacterID: "char-1",
 			Move:        "prepare",
-			HopeAfter:   intPtr(3),
+			Hope:        intPtr(3),
 		})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character profile: profile read failed") {
 			t.Fatalf("handleDowntimeMoveApplied() error = %v, want wrapped profile read error", err)
@@ -81,7 +81,7 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		err := adapter.handleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
 			CharacterID: "char-1",
 			Move:        "prepare",
-			HopeAfter:   intPtr(-1),
+			Hope:        intPtr(-1),
 		})
 		if err == nil || !strings.Contains(err.Error(), "character_state hope must be in range") {
 			t.Fatalf("handleDowntimeMoveApplied() error = %v, want projection validation error", err)
@@ -96,7 +96,7 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		err := adapter.handleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
 			CharacterID: "char-1",
 			Move:        "prepare",
-			HopeAfter:   intPtr(3),
+			Hope:        intPtr(3),
 		})
 		if err == nil || !strings.Contains(err.Error(), "put daggerheart character state: character write failed") {
 			t.Fatalf("handleDowntimeMoveApplied() error = %v, want wrapped write error", err)
@@ -179,10 +179,9 @@ func TestHandleCharacterTemporaryArmorApplied_ErrorBranches(t *testing.T) {
 func TestHandleGMFearChanged_RejectsOutOfRangeAfter(t *testing.T) {
 	adapter := NewAdapter(newParityDaggerheartStore())
 	err := adapter.handleGMFearChanged(context.Background(), event.Event{CampaignID: "camp-1"}, GMFearChangedPayload{
-		Before: 1,
-		After:  GMFearMax + 1,
+		Value: GMFearMax + 1,
 	})
-	if err == nil || !strings.Contains(err.Error(), "gm_fear_changed after must be in range") {
+	if err == nil || !strings.Contains(err.Error(), "gm_fear_changed value must be in range") {
 		t.Fatalf("handleGMFearChanged() error = %v, want out-of-range error", err)
 	}
 }

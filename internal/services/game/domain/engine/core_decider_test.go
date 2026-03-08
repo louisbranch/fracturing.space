@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
@@ -133,13 +134,13 @@ func TestAggregateState_ConvertsSupportedInputs(t *testing.T) {
 func TestCoreRouteWrappers_DelegateToDomainDeciders(t *testing.T) {
 	now := func() time.Time { return time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC) }
 	state := aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"part-1": {ParticipantID: "part-1", Joined: true},
 		},
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-1": {CharacterID: "char-1", Created: true},
 		},
-		Invites: map[string]invite.State{
+		Invites: map[ids.InviteID]invite.State{
 			"inv-1": {InviteID: "inv-1", Created: true},
 		},
 	}
@@ -213,7 +214,7 @@ func TestCoreRouteWrappers_DelegateToDomainDeciders(t *testing.T) {
 
 func TestParticipantStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
 	current := aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"part-1": {ParticipantID: "part-1", Joined: true},
 		},
 	}
@@ -233,7 +234,7 @@ func TestParticipantStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
 
 func TestCharacterStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
 	current := aggregate.State{
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-1": {CharacterID: "char-1", Created: true},
 		},
 	}
@@ -253,7 +254,7 @@ func TestCharacterStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
 
 func TestInviteStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
 	current := aggregate.State{
-		Invites: map[string]invite.State{
+		Invites: map[ids.InviteID]invite.State{
 			"inv-1": {InviteID: "inv-1", Created: true},
 		},
 	}

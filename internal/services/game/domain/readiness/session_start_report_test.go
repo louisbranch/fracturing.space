@@ -7,6 +7,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
@@ -15,7 +16,7 @@ func TestEvaluateSessionStartReport_IncludesBoundaryAndCoreBlockersInOrder(t *te
 		aggregate.State{
 			Campaign: campaign.State{
 				Status: campaign.StatusCompleted,
-				GmMode: string(campaign.GmModeAI),
+				GmMode: campaign.GmModeAI,
 			},
 		},
 		ReportOptions{
@@ -48,25 +49,25 @@ func TestEvaluateSessionStartReport_IncludesBoundaryAndCoreBlockersInOrder(t *te
 func TestEvaluateSessionStartReport_CollectsCharacterAndPlayerBlockers(t *testing.T) {
 	report := EvaluateSessionStartReport(
 		aggregate.State{
-			Participants: map[string]participant.State{
+			Participants: map[ids.ParticipantID]participant.State{
 				"gm-1": {
 					ParticipantID: "gm-1",
 					Joined:        true,
-					Role:          string(participant.RoleGM),
+					Role:          participant.RoleGM,
 				},
 				"player-1": {
 					ParticipantID: "player-1",
 					Joined:        true,
-					Role:          string(participant.RolePlayer),
+					Role:          participant.RolePlayer,
 				},
 				"player-2": {
 					ParticipantID: "player-2",
 					Joined:        true,
 					Name:          "Player Two",
-					Role:          string(participant.RolePlayer),
+					Role:          participant.RolePlayer,
 				},
 			},
-			Characters: map[string]character.State{
+			Characters: map[ids.CharacterID]character.State{
 				"char-b": {
 					CharacterID:   "char-b",
 					Created:       true,

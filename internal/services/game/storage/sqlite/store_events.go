@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -49,17 +50,19 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 	}
 	evt.Timestamp = evt.Timestamp.UTC().Truncate(time.Millisecond)
 
-	if err := qtx.InitEventSeq(ctx, evt.CampaignID); err != nil {
+	cid := string(evt.CampaignID)
+
+	if err := qtx.InitEventSeq(ctx, cid); err != nil {
 		return event.Event{}, fmt.Errorf("init event seq: %w", err)
 	}
 
-	seq, err := qtx.GetEventSeq(ctx, evt.CampaignID)
+	seq, err := qtx.GetEventSeq(ctx, cid)
 	if err != nil {
 		return event.Event{}, fmt.Errorf("get event seq: %w", err)
 	}
 	evt.Seq = uint64(seq)
 
-	if err := qtx.IncrementEventSeq(ctx, evt.CampaignID); err != nil {
+	if err := qtx.IncrementEventSeq(ctx, cid); err != nil {
 		return event.Event{}, fmt.Errorf("increment event seq: %w", err)
 	}
 
@@ -79,7 +82,7 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 	prevHash := ""
 	if evt.Seq > 1 {
 		prevRow, err := qtx.GetEventBySeq(ctx, db.GetEventBySeqParams{
-			CampaignID: evt.CampaignID,
+			CampaignID: cid,
 			Seq:        int64(evt.Seq - 1),
 		})
 		if err != nil {
@@ -96,7 +99,7 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		return event.Event{}, fmt.Errorf("chain hash is required")
 	}
 
-	signature, keyID, err := s.keyring.SignChainHash(evt.CampaignID, chainHash)
+	signature, keyID, err := s.keyring.SignChainHash(cid, chainHash)
 	if err != nil {
 		return event.Event{}, fmt.Errorf("sign chain hash: %w", err)
 	}
@@ -107,7 +110,7 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 	evt.SignatureKeyID = keyID
 
 	if err := qtx.AppendEvent(ctx, db.AppendEventParams{
-		CampaignID:     evt.CampaignID,
+		CampaignID:     cid,
 		Seq:            int64(evt.Seq),
 		EventHash:      evt.Hash,
 		PrevEventHash:  prevHash,
@@ -116,8 +119,8 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		EventSignature: signature,
 		Timestamp:      toMillis(evt.Timestamp),
 		EventType:      string(evt.Type),
-		SessionID:      evt.SessionID,
-		SceneID:        evt.SceneID,
+		SessionID:      evt.SessionID.String(),
+		SceneID:        evt.SceneID.String(),
 		RequestID:      evt.RequestID,
 		InvocationID:   evt.InvocationID,
 		ActorType:      string(evt.ActorType),
@@ -185,7 +188,7 @@ func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]
 		validated[i] = v
 	}
 
-	campaignID := validated[0].CampaignID
+	campaignID := string(validated[0].CampaignID)
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
@@ -238,7 +241,7 @@ func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]
 			return nil, fmt.Errorf("event %d: chain hash is empty", i)
 		}
 
-		signature, keyID, err := s.keyring.SignChainHash(evt.CampaignID, chainHash)
+		signature, keyID, err := s.keyring.SignChainHash(campaignID, chainHash)
 		if err != nil {
 			return nil, fmt.Errorf("event %d sign: %w", i, err)
 		}
@@ -249,7 +252,7 @@ func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]
 		evt.SignatureKeyID = keyID
 
 		if err := qtx.AppendEvent(ctx, db.AppendEventParams{
-			CampaignID:     evt.CampaignID,
+			CampaignID:     campaignID,
 			Seq:            int64(evt.Seq),
 			EventHash:      evt.Hash,
 			PrevEventHash:  prevChainHash,
@@ -258,8 +261,8 @@ func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]
 			EventSignature: signature,
 			Timestamp:      toMillis(evt.Timestamp),
 			EventType:      string(evt.Type),
-			SessionID:      evt.SessionID,
-			SceneID:        evt.SceneID,
+			SessionID:      evt.SessionID.String(),
+			SceneID:        evt.SceneID.String(),
 			RequestID:      evt.RequestID,
 			InvocationID:   evt.InvocationID,
 			ActorType:      string(evt.ActorType),
@@ -708,7 +711,7 @@ type eventRowData struct {
 
 func eventRowDataToDomain(row eventRowData) (event.Event, error) {
 	return event.Event{
-		CampaignID:     row.CampaignID,
+		CampaignID:     ids.CampaignID(row.CampaignID),
 		Seq:            uint64(row.Seq),
 		Hash:           row.EventHash,
 		PrevHash:       row.PrevEventHash,
@@ -717,8 +720,8 @@ func eventRowDataToDomain(row eventRowData) (event.Event, error) {
 		Signature:      row.EventSignature,
 		Timestamp:      fromMillis(row.Timestamp),
 		Type:           event.Type(row.EventType),
-		SessionID:      row.SessionID,
-		SceneID:        row.SceneID,
+		SessionID:      ids.SessionID(row.SessionID),
+		SceneID:        ids.SceneID(row.SceneID),
 		RequestID:      row.RequestID,
 		InvocationID:   row.InvocationID,
 		ActorType:      event.ActorType(row.ActorType),

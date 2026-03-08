@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 func decideGMFearSet(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		EventTypeGMFearChanged, "campaign",
-		func(_ *GMFearSetPayload) string { return cmd.CampaignID },
+		func(_ *GMFearSetPayload) string { return string(cmd.CampaignID) },
 		func(s SnapshotState, hasState bool, p *GMFearSetPayload, _ func() time.Time) *command.Rejection {
 			if p.After == nil {
 				return &command.Rejection{
@@ -38,14 +39,9 @@ func decideGMFearSet(snapshotState SnapshotState, hasSnapshot bool, cmd command.
 			}
 			return nil
 		},
-		func(s SnapshotState, hasState bool, p GMFearSetPayload) GMFearChangedPayload {
-			before := GMFearDefault
-			if hasState {
-				before = s.GMFear
-			}
+		func(_ SnapshotState, _ bool, p GMFearSetPayload) GMFearChangedPayload {
 			return GMFearChangedPayload{
-				Before: before,
-				After:  *p.After,
+				Value:  *p.After,
 				Reason: strings.TrimSpace(p.Reason),
 			}
 		},
@@ -53,8 +49,9 @@ func decideGMFearSet(snapshotState SnapshotState, hasSnapshot bool, cmd command.
 }
 
 func decideCharacterStatePatch(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeCharacterStatePatched, "character",
-		func(p *CharacterStatePatchPayload) string { return strings.TrimSpace(p.CharacterID) },
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeCharacterStatePatched, "character",
+		func(p *CharacterStatePatchPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(s SnapshotState, hasState bool, p *CharacterStatePatchPayload, _ func() time.Time) *command.Rejection {
 			if hasState && isCharacterStatePatchNoMutation(s, *p) {
 				return &command.Rejection{
@@ -62,14 +59,28 @@ func decideCharacterStatePatch(snapshotState SnapshotState, hasSnapshot bool, cm
 					Message: "character state patch is unchanged",
 				}
 			}
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p CharacterStatePatchPayload) CharacterStatePatchedPayload {
+			return CharacterStatePatchedPayload{
+				CharacterID: p.CharacterID,
+				Source:      strings.TrimSpace(p.Source),
+				HP:          p.HPAfter,
+				Hope:        p.HopeAfter,
+				HopeMax:     p.HopeMaxAfter,
+				Stress:      p.StressAfter,
+				Armor:       p.ArmorAfter,
+				LifeState:   p.LifeStateAfter,
+			}
+		},
+		now)
 }
 
 func decideConditionChange(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeConditionChanged, "character",
-		func(p *ConditionChangePayload) string { return strings.TrimSpace(p.CharacterID) },
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeConditionChanged, "character",
+		func(p *ConditionChangePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(s SnapshotState, hasState bool, p *ConditionChangePayload, _ func() time.Time) *command.Rejection {
 			if hasState {
 				if hasMissingCharacterConditionRemovals(s, *p) {
@@ -85,26 +96,36 @@ func decideConditionChange(snapshotState SnapshotState, hasSnapshot bool, cmd co
 					}
 				}
 			}
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.Source = strings.TrimSpace(p.Source)
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p ConditionChangePayload) ConditionChangedPayload {
+			return ConditionChangedPayload{
+				CharacterID: p.CharacterID,
+				Conditions:  p.ConditionsAfter,
+				Added:       p.Added,
+				Removed:     p.Removed,
+				Source:      p.Source,
+				RollSeq:     p.RollSeq,
+			}
+		},
+		now)
 }
 
 func decideHopeSpend(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		EventTypeCharacterStatePatched, "character",
-		func(p *HopeSpendPayload) string { return strings.TrimSpace(p.CharacterID) },
+		func(p *HopeSpendPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(_ SnapshotState, _ bool, p *HopeSpendPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			return nil
 		},
 		func(_ SnapshotState, _ bool, p HopeSpendPayload) CharacterStatePatchedPayload {
 			return CharacterStatePatchedPayload{
 				CharacterID: p.CharacterID,
 				Source:      "hope.spend",
-				HopeBefore:  &p.Before,
-				HopeAfter:   &p.After,
+				Hope:        &p.After,
 			}
 		},
 		now)
@@ -113,32 +134,43 @@ func decideHopeSpend(snapshotState SnapshotState, hasSnapshot bool, cmd command.
 func decideStressSpend(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
 		EventTypeCharacterStatePatched, "character",
-		func(p *StressSpendPayload) string { return strings.TrimSpace(p.CharacterID) },
+		func(p *StressSpendPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(_ SnapshotState, _ bool, p *StressSpendPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			return nil
 		},
 		func(_ SnapshotState, _ bool, p StressSpendPayload) CharacterStatePatchedPayload {
 			return CharacterStatePatchedPayload{
-				CharacterID:  p.CharacterID,
-				Source:       "stress.spend",
-				StressBefore: &p.Before,
-				StressAfter:  &p.After,
+				CharacterID: p.CharacterID,
+				Source:      "stress.spend",
+				Stress:      &p.After,
 			}
 		},
 		now)
 }
 
-func decideLoadoutSwap(cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFunc(cmd, EventTypeLoadoutSwapped, "character",
-		func(p *LoadoutSwapPayload) string { return strings.TrimSpace(p.CharacterID) },
-		func(p *LoadoutSwapPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+func decideLoadoutSwap(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeLoadoutSwapped, "character",
+		func(p *LoadoutSwapPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(_ SnapshotState, _ bool, p *LoadoutSwapPayload, _ func() time.Time) *command.Rejection {
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.CardID = strings.TrimSpace(p.CardID)
 			p.From = strings.TrimSpace(p.From)
 			p.To = strings.TrimSpace(p.To)
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p LoadoutSwapPayload) LoadoutSwappedPayload {
+			return LoadoutSwappedPayload{
+				CharacterID: p.CharacterID,
+				CardID:      p.CardID,
+				From:        p.From,
+				To:          p.To,
+				RecallCost:  p.RecallCost,
+				Stress:      p.StressAfter,
+			}
+		},
+		now)
 }
 
 func isCharacterStatePatchNoMutation(snapshot SnapshotState, payload CharacterStatePatchPayload) bool {
@@ -201,17 +233,17 @@ func hasMissingCharacterConditionRemovals(snapshot SnapshotState, payload Condit
 	return hasMissingConditionRemovals(character.Conditions, payload.Removed)
 }
 
-func snapshotCharacterState(snapshot SnapshotState, characterID string) (CharacterState, bool) {
-	characterID = strings.TrimSpace(characterID)
-	if characterID == "" {
+func snapshotCharacterState(snapshot SnapshotState, characterID ids.CharacterID) (CharacterState, bool) {
+	trimmed := ids.CharacterID(strings.TrimSpace(characterID.String()))
+	if trimmed == "" {
 		return CharacterState{}, false
 	}
-	character, ok := snapshot.CharacterStates[characterID]
+	character, ok := snapshot.CharacterStates[trimmed]
 	if !ok {
 		return CharacterState{}, false
 	}
-	character.CharacterID = characterID
-	character.CampaignID = snapshot.CampaignID
+	character.CharacterID = trimmed.String()
+	character.CampaignID = snapshot.CampaignID.String()
 	if character.LifeState == "" {
 		character.LifeState = LifeStateAlive
 	}

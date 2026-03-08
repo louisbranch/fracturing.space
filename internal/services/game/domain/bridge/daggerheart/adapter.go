@@ -91,21 +91,21 @@ func (a *Adapter) buildRouter() *module.AdapterRouter {
 }
 
 func (a *Adapter) handleDamageApplied(ctx context.Context, evt event.Event, payload DamageAppliedPayload) error {
-	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, payload.HpAfter, nil, nil, nil, payload.ArmorAfter, nil)
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), payload.Hp, nil, nil, nil, payload.Armor, nil)
 }
 
 func (a *Adapter) handleRestTaken(ctx context.Context, evt event.Event, payload RestTakenPayload) error {
-	if err := a.putSnapshot(ctx, evt.CampaignID, payload.GMFearAfter, payload.ShortRestsAfter); err != nil {
+	if err := a.putSnapshot(ctx, string(evt.CampaignID), payload.GMFear, payload.ShortRests); err != nil {
 		return err
 	}
 	for _, patch := range payload.CharacterStates {
-		characterID := strings.TrimSpace(patch.CharacterID)
+		characterID := strings.TrimSpace(patch.CharacterID.String())
 		if payload.RefreshRest || payload.RefreshLongRest {
-			if err := a.clearRestTemporaryArmor(ctx, evt.CampaignID, characterID, payload.RefreshRest, payload.RefreshLongRest); err != nil {
+			if err := a.clearRestTemporaryArmor(ctx, string(evt.CampaignID), characterID, payload.RefreshRest, payload.RefreshLongRest); err != nil {
 				return err
 			}
 		}
-		if err := a.applyStatePatch(ctx, evt.CampaignID, characterID, nil, patch.HopeAfter, nil, patch.StressAfter, patch.ArmorAfter, nil); err != nil {
+		if err := a.applyStatePatch(ctx, string(evt.CampaignID), characterID, nil, patch.Hope, nil, patch.Stress, patch.Armor, nil); err != nil {
 			return err
 		}
 	}
@@ -136,8 +136,8 @@ func (a *Adapter) clearRestTemporaryArmor(ctx context.Context, campaignID, chara
 }
 
 func (a *Adapter) handleDowntimeMoveApplied(ctx context.Context, evt event.Event, payload DowntimeMoveAppliedPayload) error {
-	characterID := strings.TrimSpace(payload.CharacterID)
-	state, err := a.getCharacterStateOrDefault(ctx, evt.CampaignID, characterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
+	state, err := a.getCharacterStateOrDefault(ctx, string(evt.CampaignID), characterID)
 	if err != nil {
 		return err
 	}
@@ -145,7 +145,7 @@ func (a *Adapter) handleDowntimeMoveApplied(ctx context.Context, evt event.Event
 	if err != nil {
 		return err
 	}
-	nextState, err := projection.ApplyDowntimeMove(state, armorMax, payload.Move, payload.HopeAfter, payload.StressAfter, payload.ArmorAfter)
+	nextState, err := projection.ApplyDowntimeMove(state, armorMax, payload.Move, payload.Hope, payload.Stress, payload.Armor)
 	if err != nil {
 		return err
 	}
@@ -153,9 +153,9 @@ func (a *Adapter) handleDowntimeMoveApplied(ctx context.Context, evt event.Event
 }
 
 func (a *Adapter) handleCharacterTemporaryArmorApplied(ctx context.Context, evt event.Event, payload CharacterTemporaryArmorAppliedPayload) error {
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
 
-	state, err := a.getCharacterStateOrDefault(ctx, evt.CampaignID, characterID)
+	state, err := a.getCharacterStateOrDefault(ctx, string(evt.CampaignID), characterID)
 	if err != nil {
 		return err
 	}
@@ -178,11 +178,11 @@ func (a *Adapter) handleCharacterTemporaryArmorApplied(ctx context.Context, evt 
 }
 
 func (a *Adapter) handleLoadoutSwapped(ctx context.Context, evt event.Event, payload LoadoutSwappedPayload) error {
-	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, nil, nil, nil, payload.StressAfter, nil, nil)
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), nil, nil, nil, payload.Stress, nil, nil)
 }
 
 func (a *Adapter) handleCharacterStatePatched(ctx context.Context, evt event.Event, payload CharacterStatePatchedPayload) error {
-	return a.applyStatePatch(ctx, evt.CampaignID, payload.CharacterID, payload.HPAfter, payload.HopeAfter, payload.HopeMaxAfter, payload.StressAfter, payload.ArmorAfter, payload.LifeStateAfter)
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), payload.HP, payload.Hope, payload.HopeMax, payload.Stress, payload.Armor, payload.LifeState)
 }
 
 func (a *Adapter) handleConditionChanged(ctx context.Context, evt event.Event, payload ConditionChangedPayload) error {
@@ -190,11 +190,11 @@ func (a *Adapter) handleConditionChanged(ctx context.Context, evt event.Event, p
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return fmt.Errorf("condition_changed roll_seq must be positive")
 	}
-	normalizedAfter, err := NormalizeConditions(payload.ConditionsAfter)
+	normalizedAfter, err := NormalizeConditions(payload.Conditions)
 	if err != nil {
 		return fmt.Errorf("condition_changed conditions_after: %w", err)
 	}
-	return a.applyConditionPatch(ctx, evt.CampaignID, payload.CharacterID, normalizedAfter)
+	return a.applyConditionPatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), normalizedAfter)
 }
 
 func (a *Adapter) handleAdversaryConditionChanged(ctx context.Context, evt event.Event, payload AdversaryConditionChangedPayload) error {
@@ -202,26 +202,26 @@ func (a *Adapter) handleAdversaryConditionChanged(ctx context.Context, evt event
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return fmt.Errorf("adversary_condition_changed roll_seq must be positive")
 	}
-	normalizedAfter, err := NormalizeConditions(payload.ConditionsAfter)
+	normalizedAfter, err := NormalizeConditions(payload.Conditions)
 	if err != nil {
 		return fmt.Errorf("adversary_condition_changed conditions_after: %w", err)
 	}
-	return a.applyAdversaryConditionPatch(ctx, evt.CampaignID, payload.AdversaryID, normalizedAfter)
+	return a.applyAdversaryConditionPatch(ctx, string(evt.CampaignID), payload.AdversaryID.String(), normalizedAfter)
 }
 
 func (a *Adapter) handleGMFearChanged(ctx context.Context, evt event.Event, payload GMFearChangedPayload) error {
 	// Range validation before writing to storage.
-	if payload.After < GMFearMin || payload.After > GMFearMax {
-		return fmt.Errorf("gm_fear_changed after must be in range %d..%d", GMFearMin, GMFearMax)
+	if payload.Value < GMFearMin || payload.Value > GMFearMax {
+		return fmt.Errorf("gm_fear_changed value must be in range %d..%d", GMFearMin, GMFearMax)
 	}
-	shortRests := a.snapshotShortRests(ctx, evt.CampaignID)
-	return a.putSnapshot(ctx, evt.CampaignID, payload.After, shortRests)
+	shortRests := a.snapshotShortRests(ctx, string(evt.CampaignID))
+	return a.putSnapshot(ctx, string(evt.CampaignID), payload.Value, shortRests)
 }
 
 func (a *Adapter) handleCountdownCreated(ctx context.Context, evt event.Event, payload CountdownCreatedPayload) error {
 	return a.store.PutDaggerheartCountdown(ctx, storage.DaggerheartCountdown{
-		CampaignID:        evt.CampaignID,
-		CountdownID:       payload.CountdownID,
+		CampaignID:        string(evt.CampaignID),
+		CountdownID:       payload.CountdownID.String(),
 		Name:              payload.Name,
 		Kind:              payload.Kind,
 		Current:           payload.Current,
@@ -230,16 +230,16 @@ func (a *Adapter) handleCountdownCreated(ctx context.Context, evt event.Event, p
 		Looping:           payload.Looping,
 		Variant:           payload.Variant,
 		TriggerEventType:  payload.TriggerEventType,
-		LinkedCountdownID: payload.LinkedCountdownID,
+		LinkedCountdownID: payload.LinkedCountdownID.String(),
 	})
 }
 
 func (a *Adapter) handleCountdownUpdated(ctx context.Context, evt event.Event, payload CountdownUpdatedPayload) error {
-	countdown, err := a.store.GetDaggerheartCountdown(ctx, evt.CampaignID, payload.CountdownID)
+	countdown, err := a.store.GetDaggerheartCountdown(ctx, string(evt.CampaignID), payload.CountdownID.String())
 	if err != nil {
 		return err
 	}
-	nextCountdown, err := projection.ApplyCountdownUpdate(countdown, payload.Before, payload.After)
+	nextCountdown, err := projection.ApplyCountdownUpdate(countdown, payload.Value)
 	if err != nil {
 		return err
 	}
@@ -247,7 +247,7 @@ func (a *Adapter) handleCountdownUpdated(ctx context.Context, evt event.Event, p
 }
 
 func (a *Adapter) handleCountdownDeleted(ctx context.Context, evt event.Event, payload CountdownDeletedPayload) error {
-	return a.store.DeleteDaggerheartCountdown(ctx, evt.CampaignID, payload.CountdownID)
+	return a.store.DeleteDaggerheartCountdown(ctx, string(evt.CampaignID), payload.CountdownID.String())
 }
 
 func (a *Adapter) handleAdversaryCreated(ctx context.Context, evt event.Event, payload AdversaryCreatedPayload) error {
@@ -256,11 +256,11 @@ func (a *Adapter) handleAdversaryCreated(ctx context.Context, evt event.Event, p
 	}
 	createdAt := evt.Timestamp.UTC()
 	return a.store.PutDaggerheartAdversary(ctx, storage.DaggerheartAdversary{
-		CampaignID:  evt.CampaignID,
-		AdversaryID: strings.TrimSpace(payload.AdversaryID),
+		CampaignID:  string(evt.CampaignID),
+		AdversaryID: strings.TrimSpace(payload.AdversaryID.String()),
 		Name:        strings.TrimSpace(payload.Name),
 		Kind:        strings.TrimSpace(payload.Kind),
-		SessionID:   strings.TrimSpace(payload.SessionID),
+		SessionID:   strings.TrimSpace(payload.SessionID.String()),
 		Notes:       strings.TrimSpace(payload.Notes),
 		HP:          payload.HP,
 		HPMax:       payload.HPMax,
@@ -276,21 +276,21 @@ func (a *Adapter) handleAdversaryCreated(ctx context.Context, evt event.Event, p
 }
 
 func (a *Adapter) handleAdversaryUpdated(ctx context.Context, evt event.Event, payload AdversaryUpdatedPayload) error {
-	adversaryID := strings.TrimSpace(payload.AdversaryID)
+	adversaryID := strings.TrimSpace(payload.AdversaryID.String())
 	if err := projection.ValidateAdversaryStats(payload.HP, payload.HPMax, payload.Stress, payload.StressMax, payload.Evasion, payload.Major, payload.Severe, payload.Armor); err != nil {
 		return err
 	}
-	current, err := a.store.GetDaggerheartAdversary(ctx, evt.CampaignID, adversaryID)
+	current, err := a.store.GetDaggerheartAdversary(ctx, string(evt.CampaignID), adversaryID)
 	if err != nil {
 		return err
 	}
 	updatedAt := evt.Timestamp.UTC()
 	return a.store.PutDaggerheartAdversary(ctx, storage.DaggerheartAdversary{
-		CampaignID:  evt.CampaignID,
+		CampaignID:  string(evt.CampaignID),
 		AdversaryID: adversaryID,
 		Name:        strings.TrimSpace(payload.Name),
 		Kind:        strings.TrimSpace(payload.Kind),
-		SessionID:   strings.TrimSpace(payload.SessionID),
+		SessionID:   strings.TrimSpace(payload.SessionID.String()),
 		Notes:       strings.TrimSpace(payload.Notes),
 		HP:          payload.HP,
 		HPMax:       payload.HPMax,
@@ -307,17 +307,17 @@ func (a *Adapter) handleAdversaryUpdated(ctx context.Context, evt event.Event, p
 }
 
 func (a *Adapter) handleAdversaryDamageApplied(ctx context.Context, evt event.Event, payload AdversaryDamageAppliedPayload) error {
-	adversaryID := strings.TrimSpace(payload.AdversaryID)
+	adversaryID := strings.TrimSpace(payload.AdversaryID.String())
 	// State consistency: merge payload with current projection state.
-	current, err := a.store.GetDaggerheartAdversary(ctx, evt.CampaignID, adversaryID)
+	current, err := a.store.GetDaggerheartAdversary(ctx, string(evt.CampaignID), adversaryID)
 	if err != nil {
 		return err
 	}
-	next, err := projection.ApplyAdversaryDamagePatch(current, payload.HpAfter, payload.ArmorAfter)
+	next, err := projection.ApplyAdversaryDamagePatch(current, payload.Hp, payload.Armor)
 	if err != nil {
 		return err
 	}
-	next.CampaignID = evt.CampaignID
+	next.CampaignID = string(evt.CampaignID)
 	next.AdversaryID = adversaryID
 	updatedAt := evt.Timestamp.UTC()
 	next.UpdatedAt = updatedAt
@@ -325,12 +325,12 @@ func (a *Adapter) handleAdversaryDamageApplied(ctx context.Context, evt event.Ev
 }
 
 func (a *Adapter) handleAdversaryDeleted(ctx context.Context, evt event.Event, payload AdversaryDeletedPayload) error {
-	return a.store.DeleteDaggerheartAdversary(ctx, evt.CampaignID, strings.TrimSpace(payload.AdversaryID))
+	return a.store.DeleteDaggerheartAdversary(ctx, string(evt.CampaignID), strings.TrimSpace(payload.AdversaryID.String()))
 }
 
 func (a *Adapter) handleLevelUpApplied(ctx context.Context, evt event.Event, payload LevelUpAppliedPayload) error {
-	characterID := strings.TrimSpace(payload.CharacterID)
-	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, evt.CampaignID, characterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
+	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, string(evt.CampaignID), characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return fmt.Errorf("get daggerheart character profile for level-up: %w", err)
@@ -339,7 +339,7 @@ func (a *Adapter) handleLevelUpApplied(ctx context.Context, evt event.Event, pay
 		return nil
 	}
 
-	profile.Level = payload.LevelAfter
+	profile.Level = payload.Level
 	profile.MajorThreshold += payload.ThresholdDelta
 	profile.SevereThreshold += payload.ThresholdDelta * 2
 
@@ -394,23 +394,23 @@ func applyProfileTraitIncrease(profile *storage.DaggerheartCharacterProfile, tra
 }
 
 func (a *Adapter) handleGoldUpdated(ctx context.Context, evt event.Event, payload GoldUpdatedPayload) error {
-	characterID := strings.TrimSpace(payload.CharacterID)
-	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, evt.CampaignID, characterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
+	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, string(evt.CampaignID), characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return fmt.Errorf("get daggerheart character profile for gold update: %w", err)
 		}
 		return nil
 	}
-	profile.GoldHandfuls = payload.HandfulsAfter
-	profile.GoldBags = payload.BagsAfter
-	profile.GoldChests = payload.ChestsAfter
+	profile.GoldHandfuls = payload.Handfuls
+	profile.GoldBags = payload.Bags
+	profile.GoldChests = payload.Chests
 	return a.store.PutDaggerheartCharacterProfile(ctx, profile)
 }
 
 func (a *Adapter) handleDomainCardAcquired(ctx context.Context, evt event.Event, payload DomainCardAcquiredPayload) error {
-	characterID := strings.TrimSpace(payload.CharacterID)
-	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, evt.CampaignID, characterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
+	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, string(evt.CampaignID), characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return fmt.Errorf("get daggerheart character profile for domain card acquire: %w", err)

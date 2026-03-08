@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -65,7 +66,7 @@ func (s *AuthorizationService) Can(ctx context.Context, in *campaignv1.CanReques
 					"owner_participant_id": ownerParticipantID,
 				}
 				extraAttributes = mergeAuthzAttributes(extraAttributes, characterAttributes)
-				decision := domainauthz.CanCharacterMutation(actor.CampaignAccess, actor.ID, ownerParticipantID)
+				decision := domainauthz.CanCharacterMutation(actor.CampaignAccess, ids.ParticipantID(actor.ID), ids.ParticipantID(ownerParticipantID))
 				if !decision.Allowed {
 					authErr := status.Error(codes.PermissionDenied, "participant lacks permission")
 					emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, decision.ReasonCode, actor, authErr, extraAttributes)

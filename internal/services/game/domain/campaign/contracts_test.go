@@ -213,8 +213,8 @@ func TestFoldForkedIsExplicitNoOp(t *testing.T) {
 	initial := State{
 		Created:     true,
 		Name:        "Sunfall",
-		GameSystem:  "daggerheart",
-		GmMode:      string(GmModeHuman),
+		GameSystem:  GameSystemDaggerheart,
+		GmMode:      GmModeHuman,
 		Status:      StatusActive,
 		ThemePrompt: "Prompt",
 	}

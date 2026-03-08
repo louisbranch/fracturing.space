@@ -4,6 +4,7 @@ package grpcerror
 
 import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	errori18n "github.com/louisbranch/fracturing.space/internal/platform/errors/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"google.golang.org/grpc/codes"
@@ -67,7 +68,11 @@ func NormalizeDomainWriteOptions(options *domainwrite.Options, config NormalizeD
 		}
 	}
 	if options.RejectErr == nil {
-		options.RejectErr = func(message string) error {
+		options.RejectErr = func(code, message string) error {
+			cat := errori18n.GetCatalog("en-US")
+			if localized := cat.Format(code, nil); localized != code {
+				return status.Error(codes.FailedPrecondition, localized)
+			}
 			return status.Error(codes.FailedPrecondition, message)
 		}
 	}

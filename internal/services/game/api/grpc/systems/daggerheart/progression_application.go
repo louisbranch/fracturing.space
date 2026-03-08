@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -81,7 +82,7 @@ func (s *DaggerheartService) runApplyLevelUp(ctx context.Context, in *pb.Daggerh
 	}
 
 	payload := daggerheart.LevelUpApplyPayload{
-		CharacterID:        characterID,
+		CharacterID:        ids.CharacterID(characterID),
 		LevelBefore:        levelBefore,
 		LevelAfter:         levelAfter,
 		Advancements:       advancements,
@@ -97,10 +98,10 @@ func (s *DaggerheartService) runApplyLevelUp(ctx context.Context, in *pb.Daggerh
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartLevelUpApply,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx)),
+		SessionID:     ids.SessionID(strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",

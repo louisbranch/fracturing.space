@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	sqlite "modernc.org/sqlite"
 	sqlite3 "modernc.org/sqlite/lib"
 )
@@ -44,7 +45,7 @@ func TestProcessProjectionApplyOutboxShadowMarksDueRowsFailed(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-shadow",
+		CampaignID:  ids.CampaignID("camp-outbox-shadow"),
 		Timestamp:   time.Date(2026, 2, 16, 2, 0, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -99,7 +100,7 @@ func TestProcessProjectionApplyOutboxShadowSkipsNotDueRows(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-shadow-future",
+		CampaignID:  ids.CampaignID("camp-outbox-shadow-future"),
 		Timestamp:   time.Date(2026, 2, 16, 3, 0, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -148,7 +149,7 @@ func TestMarkProjectionApplyOutboxShadowRetryRequiresProcessingStatus(t *testing
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-shadow-mark",
+		CampaignID:  ids.CampaignID("camp-outbox-shadow-mark"),
 		Timestamp:   time.Date(2026, 2, 16, 4, 0, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -162,7 +163,7 @@ func TestMarkProjectionApplyOutboxShadowRetryRequiresProcessingStatus(t *testing
 
 	err = store.markProjectionApplyOutboxShadowRetry(
 		context.Background(),
-		projectionApplyOutboxRow{CampaignID: stored.CampaignID, Seq: stored.Seq},
+		projectionApplyOutboxRow{CampaignID: string(stored.CampaignID), Seq: stored.Seq},
 		time.Now().UTC(),
 		1,
 		time.Now().UTC().Add(time.Second),
@@ -194,7 +195,7 @@ func TestProcessProjectionApplyOutboxAppliesAndDeletesOnSuccess(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-apply-success",
+		CampaignID:  ids.CampaignID("camp-outbox-apply-success"),
 		Timestamp:   time.Date(2026, 2, 16, 6, 0, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -248,7 +249,7 @@ func TestProcessProjectionApplyOutboxSkipsAuditOnlyEvents(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-audit-skip",
+		CampaignID:  ids.CampaignID("camp-outbox-audit-skip"),
 		Timestamp:   time.Date(2026, 2, 16, 6, 1, 0, 0, time.UTC),
 		Type:        event.Type("story.note_added"),
 		ActorType:   event.ActorTypeSystem,
@@ -298,7 +299,7 @@ func TestProcessProjectionApplyOutboxReclaimsStaleProcessingRows(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-apply-stale-processing",
+		CampaignID:  ids.CampaignID("camp-outbox-apply-stale-processing"),
 		Timestamp:   time.Date(2026, 2, 16, 6, 5, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -365,7 +366,7 @@ func TestProcessProjectionApplyOutboxApplyFailureMarksRetry(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-apply-failure",
+		CampaignID:  ids.CampaignID("camp-outbox-apply-failure"),
 		Timestamp:   time.Date(2026, 2, 16, 7, 0, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -427,7 +428,7 @@ func TestGetProjectionApplyOutboxSummaryCountsAndOldestPending(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	pending, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-summary-pending",
+		CampaignID:  ids.CampaignID("camp-outbox-summary-pending"),
 		Timestamp:   time.Date(2026, 2, 16, 8, 0, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -439,7 +440,7 @@ func TestGetProjectionApplyOutboxSummaryCountsAndOldestPending(t *testing.T) {
 		t.Fatalf("append pending event: %v", err)
 	}
 	failed, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-summary-failed",
+		CampaignID:  ids.CampaignID("camp-outbox-summary-failed"),
 		Timestamp:   time.Date(2026, 2, 16, 8, 0, 1, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -451,7 +452,7 @@ func TestGetProjectionApplyOutboxSummaryCountsAndOldestPending(t *testing.T) {
 		t.Fatalf("append failed event: %v", err)
 	}
 	processing, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-summary-processing",
+		CampaignID:  ids.CampaignID("camp-outbox-summary-processing"),
 		Timestamp:   time.Date(2026, 2, 16, 8, 0, 2, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -463,7 +464,7 @@ func TestGetProjectionApplyOutboxSummaryCountsAndOldestPending(t *testing.T) {
 		t.Fatalf("append processing event: %v", err)
 	}
 	dead, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-summary-dead",
+		CampaignID:  ids.CampaignID("camp-outbox-summary-dead"),
 		Timestamp:   time.Date(2026, 2, 16, 8, 0, 3, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -532,7 +533,7 @@ func TestGetProjectionApplyOutboxSummaryCountsAndOldestPending(t *testing.T) {
 	if summary.PendingCount != 1 || summary.FailedCount != 1 || summary.ProcessingCount != 1 || summary.DeadCount != 1 {
 		t.Fatalf("unexpected summary counts: %+v", summary)
 	}
-	if summary.OldestPendingCampaignID != failed.CampaignID || summary.OldestPendingSeq != failed.Seq {
+	if summary.OldestPendingCampaignID != string(failed.CampaignID) || summary.OldestPendingSeq != failed.Seq {
 		t.Fatalf("unexpected oldest pending row: %+v", summary)
 	}
 	if summary.OldestPendingAt.IsZero() || !summary.OldestPendingAt.Equal(now.Add(-3*time.Minute)) {
@@ -544,7 +545,7 @@ func TestListProjectionApplyOutboxRowsFiltersOrdersAndLimits(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	failedFirst, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-list-failed-1",
+		CampaignID:  ids.CampaignID("camp-outbox-list-failed-1"),
 		Timestamp:   time.Date(2026, 2, 16, 9, 0, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -556,7 +557,7 @@ func TestListProjectionApplyOutboxRowsFiltersOrdersAndLimits(t *testing.T) {
 		t.Fatalf("append failed first event: %v", err)
 	}
 	failedSecond, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-list-failed-2",
+		CampaignID:  ids.CampaignID("camp-outbox-list-failed-2"),
 		Timestamp:   time.Date(2026, 2, 16, 9, 0, 1, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -568,7 +569,7 @@ func TestListProjectionApplyOutboxRowsFiltersOrdersAndLimits(t *testing.T) {
 		t.Fatalf("append failed second event: %v", err)
 	}
 	pending, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-list-pending",
+		CampaignID:  ids.CampaignID("camp-outbox-list-pending"),
 		Timestamp:   time.Date(2026, 2, 16, 9, 0, 2, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -625,7 +626,7 @@ func TestListProjectionApplyOutboxRowsFiltersOrdersAndLimits(t *testing.T) {
 	if len(failedRows) != 2 {
 		t.Fatalf("expected two failed rows, got %d", len(failedRows))
 	}
-	if failedRows[0].CampaignID != failedFirst.CampaignID || failedRows[1].CampaignID != failedSecond.CampaignID {
+	if failedRows[0].CampaignID != string(failedFirst.CampaignID) || failedRows[1].CampaignID != string(failedSecond.CampaignID) {
 		t.Fatalf("expected failed rows ordered by next_attempt_at asc, got %+v", failedRows)
 	}
 	if failedRows[0].Status != "failed" || failedRows[1].Status != "failed" {
@@ -642,7 +643,7 @@ func TestListProjectionApplyOutboxRowsFiltersOrdersAndLimits(t *testing.T) {
 	if err != nil {
 		t.Fatalf("list failed outbox rows with limit: %v", err)
 	}
-	if len(limitedRows) != 1 || limitedRows[0].CampaignID != failedFirst.CampaignID {
+	if len(limitedRows) != 1 || limitedRows[0].CampaignID != string(failedFirst.CampaignID) {
 		t.Fatalf("expected one oldest failed row, got %+v", limitedRows)
 	}
 
@@ -670,7 +671,7 @@ func TestListProjectionApplyOutboxRowsAllStatusesAndZeroLimit(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	first, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-list-all-1",
+		CampaignID:  ids.CampaignID("camp-outbox-list-all-1"),
 		Timestamp:   time.Date(2026, 2, 16, 9, 30, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -682,7 +683,7 @@ func TestListProjectionApplyOutboxRowsAllStatusesAndZeroLimit(t *testing.T) {
 		t.Fatalf("append first event: %v", err)
 	}
 	second, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-list-all-2",
+		CampaignID:  ids.CampaignID("camp-outbox-list-all-2"),
 		Timestamp:   time.Date(2026, 2, 16, 9, 30, 1, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -710,10 +711,10 @@ func TestListProjectionApplyOutboxRowsAllStatusesAndZeroLimit(t *testing.T) {
 	if len(rows) != 2 {
 		t.Fatalf("expected two rows, got %d", len(rows))
 	}
-	if rows[0].CampaignID != first.CampaignID && rows[1].CampaignID != first.CampaignID {
+	if rows[0].CampaignID != string(first.CampaignID) && rows[1].CampaignID != string(first.CampaignID) {
 		t.Fatalf("expected first row campaign to be present, got %+v", rows)
 	}
-	if rows[0].CampaignID != second.CampaignID && rows[1].CampaignID != second.CampaignID {
+	if rows[0].CampaignID != string(second.CampaignID) && rows[1].CampaignID != string(second.CampaignID) {
 		t.Fatalf("expected second row campaign to be present, got %+v", rows)
 	}
 
@@ -730,7 +731,7 @@ func TestProcessProjectionApplyOutboxMarksDeadAfterThreshold(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-apply-dead",
+		CampaignID:  ids.CampaignID("camp-outbox-apply-dead"),
 		Timestamp:   time.Date(2026, 2, 16, 9, 45, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -838,7 +839,7 @@ func TestCompleteProjectionApplyOutboxRowRequiresProcessingStatus(t *testing.T) 
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-complete-status",
+		CampaignID:  ids.CampaignID("camp-outbox-complete-status"),
 		Timestamp:   time.Date(2026, 2, 16, 10, 15, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -853,7 +854,7 @@ func TestCompleteProjectionApplyOutboxRowRequiresProcessingStatus(t *testing.T) 
 	err = store.completeProjectionApplyOutboxRow(
 		context.Background(),
 		projectionApplyOutboxRow{
-			CampaignID: stored.CampaignID,
+			CampaignID: string(stored.CampaignID),
 			Seq:        stored.Seq,
 		},
 	)
@@ -879,7 +880,7 @@ func TestRequeueProjectionApplyOutboxRowTransitionsDeadToPending(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-requeue-dead",
+		CampaignID:  ids.CampaignID("camp-outbox-requeue-dead"),
 		Timestamp:   time.Date(2026, 2, 16, 10, 30, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -905,7 +906,7 @@ func TestRequeueProjectionApplyOutboxRowTransitionsDeadToPending(t *testing.T) {
 		t.Fatalf("prepare dead row: %v", err)
 	}
 
-	requeued, err := store.RequeueProjectionApplyOutboxRow(context.Background(), stored.CampaignID, stored.Seq, now)
+	requeued, err := store.RequeueProjectionApplyOutboxRow(context.Background(), string(stored.CampaignID), stored.Seq, now)
 	if err != nil {
 		t.Fatalf("requeue dead outbox row: %v", err)
 	}
@@ -947,7 +948,7 @@ func TestRequeueProjectionApplyOutboxRowReturnsFalseWhenNotDead(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-requeue-pending",
+		CampaignID:  ids.CampaignID("camp-outbox-requeue-pending"),
 		Timestamp:   time.Date(2026, 2, 16, 10, 35, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -961,7 +962,7 @@ func TestRequeueProjectionApplyOutboxRowReturnsFalseWhenNotDead(t *testing.T) {
 
 	requeued, err := store.RequeueProjectionApplyOutboxRow(
 		context.Background(),
-		stored.CampaignID,
+		string(stored.CampaignID),
 		stored.Seq,
 		time.Date(2026, 2, 16, 10, 36, 0, 0, time.UTC),
 	)
@@ -1009,7 +1010,7 @@ func TestRequeueProjectionApplyOutboxDeadRowsRequeuesByLimitAndOrder(t *testing.
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	evtA, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-requeue-batch-a",
+		CampaignID:  ids.CampaignID("camp-outbox-requeue-batch-a"),
 		Timestamp:   time.Date(2026, 2, 16, 11, 0, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -1021,7 +1022,7 @@ func TestRequeueProjectionApplyOutboxDeadRowsRequeuesByLimitAndOrder(t *testing.
 		t.Fatalf("append event A: %v", err)
 	}
 	evtB, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-requeue-batch-b",
+		CampaignID:  ids.CampaignID("camp-outbox-requeue-batch-b"),
 		Timestamp:   time.Date(2026, 2, 16, 11, 0, 1, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -1033,7 +1034,7 @@ func TestRequeueProjectionApplyOutboxDeadRowsRequeuesByLimitAndOrder(t *testing.
 		t.Fatalf("append event B: %v", err)
 	}
 	evtC, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  "camp-outbox-requeue-batch-c",
+		CampaignID:  ids.CampaignID("camp-outbox-requeue-batch-c"),
 		Timestamp:   time.Date(2026, 2, 16, 11, 0, 2, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
 		ActorType:   event.ActorTypeSystem,
@@ -1113,9 +1114,9 @@ func TestRequeueProjectionApplyOutboxDeadRowsRequeuesByLimitAndOrder(t *testing.
 		return state
 	}
 
-	stateA := fetch(evtA.CampaignID, evtA.Seq)
-	stateB := fetch(evtB.CampaignID, evtB.Seq)
-	stateC := fetch(evtC.CampaignID, evtC.Seq)
+	stateA := fetch(string(evtA.CampaignID), evtA.Seq)
+	stateB := fetch(string(evtB.CampaignID), evtB.Seq)
+	stateC := fetch(string(evtC.CampaignID), evtC.Seq)
 
 	if stateA.status != "pending" || stateB.status != "pending" {
 		t.Fatalf("expected oldest two rows requeued to pending, got A=%q B=%q", stateA.status, stateB.status)

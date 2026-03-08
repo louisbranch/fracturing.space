@@ -120,17 +120,13 @@ func TestApplyDamage_Success(t *testing.T) {
 		t.Fatalf("apply daggerheart damage: %v", err)
 	}
 
-	hpBefore := result.HPBefore
 	hpAfter := result.HPAfter
-	armorBefore := result.ArmorBefore
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
 	payload := daggerheart.DamageAppliedPayload{
 		CharacterID:        "char-1",
-		HpBefore:           &hpBefore,
-		HpAfter:            &hpAfter,
-		ArmorBefore:        &armorBefore,
-		ArmorAfter:         &armorAfter,
+		Hp:                 &hpAfter,
+		Armor:              &armorAfter,
 		ArmorSpent:         result.ArmorSpent,
 		Severity:           daggerheartSeverityToString(result.Result.Severity),
 		Marks:              result.Result.Marks,
@@ -144,7 +140,7 @@ func TestApplyDamage_Success(t *testing.T) {
 		MassiveDamage:      damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             damage.Source,
-		SourceCharacterIDs: sourceCharacterIDs,
+		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -205,17 +201,13 @@ func TestApplyDamage_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("apply daggerheart damage: %v", err)
 	}
 
-	hpBefore := result.HPBefore
 	hpAfter := result.HPAfter
-	armorBefore := result.ArmorBefore
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
 	payload := daggerheart.DamageAppliedPayload{
 		CharacterID:        "char-1",
-		HpBefore:           &hpBefore,
-		HpAfter:            &hpAfter,
-		ArmorBefore:        &armorBefore,
-		ArmorAfter:         &armorAfter,
+		Hp:                 &hpAfter,
+		Armor:              &armorAfter,
 		ArmorSpent:         result.ArmorSpent,
 		Severity:           daggerheartSeverityToString(result.Result.Severity),
 		Marks:              result.Result.Marks,
@@ -229,7 +221,7 @@ func TestApplyDamage_UsesDomainEngine(t *testing.T) {
 		MassiveDamage:      damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             damage.Source,
-		SourceCharacterIDs: sourceCharacterIDs,
+		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -325,17 +317,13 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 		t.Fatalf("apply daggerheart damage: %v", err)
 	}
 
-	hpBefore := result.HPBefore
 	hpAfter := result.HPAfter
-	armorBefore := result.ArmorBefore
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
 	payload := daggerheart.DamageAppliedPayload{
 		CharacterID:        "char-1",
-		HpBefore:           &hpBefore,
-		HpAfter:            &hpAfter,
-		ArmorBefore:        &armorBefore,
-		ArmorAfter:         &armorAfter,
+		Hp:                 &hpAfter,
+		Armor:              &armorAfter,
 		ArmorSpent:         result.ArmorSpent,
 		Severity:           daggerheartSeverityToString(result.Result.Severity),
 		Marks:              result.Result.Marks,
@@ -349,7 +337,7 @@ func TestApplyDamage_WithArmorMitigation(t *testing.T) {
 		MassiveDamage:      damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             damage.Source,
-		SourceCharacterIDs: sourceCharacterIDs,
+		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -425,12 +413,10 @@ func TestApplyDamage_RequireDamageRollWithoutSeq(t *testing.T) {
 func TestApplyConditions_LifeStateOnly(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	before := daggerheart.LifeStateAlive
 	after := daggerheart.LifeStateUnconscious
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:     "char-1",
-		LifeStateBefore: &before,
-		LifeStateAfter:  &after,
+		CharacterID: "char-1",
+		LifeState:   &after,
 	}
 	patchJSON, err := json.Marshal(patchPayload)
 	if err != nil {
@@ -540,10 +526,9 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 	now := testTimestamp
 
 	conditionPayload := daggerheart.ConditionChangedPayload{
-		CharacterID:      "char-1",
-		ConditionsBefore: []string{},
-		ConditionsAfter:  []string{daggerheart.ConditionHidden},
-		Added:            []string{daggerheart.ConditionHidden},
+		CharacterID: "char-1",
+		Conditions:  []string{daggerheart.ConditionHidden},
+		Added:       []string{daggerheart.ConditionHidden},
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)
 	if err != nil {
@@ -623,9 +608,8 @@ func TestApplyConditions_UsesDomainEngineForLifeState(t *testing.T) {
 	before := daggerheart.LifeStateAlive
 	after := daggerheart.LifeStateUnconscious
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:     "char-1",
-		LifeStateBefore: &before,
-		LifeStateAfter:  &after,
+		CharacterID: "char-1",
+		LifeState:   &after,
 	}
 	patchJSON, err := json.Marshal(patchPayload)
 	if err != nil {

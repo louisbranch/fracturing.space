@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 // FoldHandledTypes returns the event types handled by the invite fold function.
@@ -27,10 +28,10 @@ func Fold(state State, evt event.Event) (State, error) {
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
 		}
-		state.InviteID = payload.InviteID
-		state.ParticipantID = payload.ParticipantID
-		state.RecipientUserID = payload.RecipientUserID
-		state.CreatedByParticipantID = payload.CreatedByParticipantID
+		state.InviteID = ids.InviteID(payload.InviteID)
+		state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
+		state.RecipientUserID = ids.UserID(payload.RecipientUserID)
+		state.CreatedByParticipantID = ids.ParticipantID(payload.CreatedByParticipantID)
 		status := payload.Status
 		if normalized, ok := normalizeStatusLabel(payload.Status); ok {
 			status = normalized
@@ -42,10 +43,10 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
 		}
 		if payload.InviteID != "" {
-			state.InviteID = payload.InviteID
+			state.InviteID = ids.InviteID(payload.InviteID)
 		}
 		if payload.ParticipantID != "" {
-			state.ParticipantID = payload.ParticipantID
+			state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
 		}
 		state.Status = statusClaimed
 	case EventTypeRevoked:
@@ -54,7 +55,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
 		}
 		if payload.InviteID != "" {
-			state.InviteID = payload.InviteID
+			state.InviteID = ids.InviteID(payload.InviteID)
 		}
 		state.Status = statusRevoked
 	case EventTypeUpdated:
@@ -63,7 +64,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
 		}
 		if payload.InviteID != "" {
-			state.InviteID = payload.InviteID
+			state.InviteID = ids.InviteID(payload.InviteID)
 		}
 		if payload.Status != "" {
 			status := payload.Status

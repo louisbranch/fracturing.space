@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
@@ -18,11 +19,12 @@ const (
 	rejectionCodeGoldInvalid = "GOLD_INVALID"
 )
 
-func decideGoldUpdate(cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFunc(cmd, EventTypeGoldUpdated, "character",
-		func(p *GoldUpdatePayload) string { return strings.TrimSpace(p.CharacterID) },
-		func(p *GoldUpdatePayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+func decideGoldUpdate(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeGoldUpdated, "character",
+		func(p *GoldUpdatePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(_ SnapshotState, _ bool, p *GoldUpdatePayload, _ func() time.Time) *command.Rejection {
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.Reason = strings.TrimSpace(p.Reason)
 
 			if p.HandfulsAfter < 0 || p.HandfulsAfter > goldHandfulsMax {
@@ -38,7 +40,17 @@ func decideGoldUpdate(cmd command.Command, now func() time.Time) command.Decisio
 				return &command.Rejection{Code: rejectionCodeGoldInvalid, Message: "gold update must change at least one denomination"}
 			}
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p GoldUpdatePayload) GoldUpdatedPayload {
+			return GoldUpdatedPayload{
+				CharacterID: p.CharacterID,
+				Handfuls:    p.HandfulsAfter,
+				Bags:        p.BagsAfter,
+				Chests:      p.ChestsAfter,
+				Reason:      p.Reason,
+			}
+		},
+		now)
 }
 
 // ── Domain Card Vault ───────────────────────────────────────────────────
@@ -49,9 +61,9 @@ const (
 
 func decideDomainCardAcquire(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, EventTypeDomainCardAcquired, "character",
-		func(p *DomainCardAcquirePayload) string { return strings.TrimSpace(p.CharacterID) },
+		func(p *DomainCardAcquirePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(p *DomainCardAcquirePayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.CardID = strings.TrimSpace(p.CardID)
 			p.Destination = strings.TrimSpace(p.Destination)
 			if p.Destination != "vault" && p.Destination != "loadout" {
@@ -69,9 +81,9 @@ const (
 
 func decideEquipmentSwap(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, EventTypeEquipmentSwapped, "character",
-		func(p *EquipmentSwapPayload) string { return strings.TrimSpace(p.CharacterID) },
+		func(p *EquipmentSwapPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(p *EquipmentSwapPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.ItemID = strings.TrimSpace(p.ItemID)
 			p.ItemType = strings.TrimSpace(p.ItemType)
 			p.From = strings.TrimSpace(p.From)
@@ -100,11 +112,12 @@ const (
 	rejectionCodeConsumableInvalid = "CONSUMABLE_INVALID"
 )
 
-func decideConsumableUse(cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFunc(cmd, EventTypeConsumableUsed, "character",
-		func(p *ConsumableUsePayload) string { return strings.TrimSpace(p.CharacterID) },
-		func(p *ConsumableUsePayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+func decideConsumableUse(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeConsumableUsed, "character",
+		func(p *ConsumableUsePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(_ SnapshotState, _ bool, p *ConsumableUsePayload, _ func() time.Time) *command.Rejection {
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.ConsumableID = strings.TrimSpace(p.ConsumableID)
 			if p.QuantityBefore <= 0 {
 				return &command.Rejection{Code: rejectionCodeConsumableInvalid, Message: "quantity_before must be positive"}
@@ -113,14 +126,23 @@ func decideConsumableUse(cmd command.Command, now func() time.Time) command.Deci
 				return &command.Rejection{Code: rejectionCodeConsumableInvalid, Message: "quantity_after must be quantity_before - 1"}
 			}
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p ConsumableUsePayload) ConsumableUsedPayload {
+			return ConsumableUsedPayload{
+				CharacterID:  p.CharacterID,
+				ConsumableID: p.ConsumableID,
+				Quantity:     p.QuantityAfter,
+			}
+		},
+		now)
 }
 
-func decideConsumableAcquire(cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFunc(cmd, EventTypeConsumableAcquired, "character",
-		func(p *ConsumableAcquirePayload) string { return strings.TrimSpace(p.CharacterID) },
-		func(p *ConsumableAcquirePayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+func decideConsumableAcquire(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeConsumableAcquired, "character",
+		func(p *ConsumableAcquirePayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(_ SnapshotState, _ bool, p *ConsumableAcquirePayload, _ func() time.Time) *command.Rejection {
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.ConsumableID = strings.TrimSpace(p.ConsumableID)
 			if p.QuantityAfter < 1 || p.QuantityAfter > consumableStackMax {
 				return &command.Rejection{Code: rejectionCodeConsumableInvalid, Message: "quantity_after must be in range 1..5"}
@@ -129,5 +151,13 @@ func decideConsumableAcquire(cmd command.Command, now func() time.Time) command.
 				return &command.Rejection{Code: rejectionCodeConsumableInvalid, Message: "quantity_after must be quantity_before + 1"}
 			}
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p ConsumableAcquirePayload) ConsumableAcquiredPayload {
+			return ConsumableAcquiredPayload{
+				CharacterID:  p.CharacterID,
+				ConsumableID: p.ConsumableID,
+				Quantity:     p.QuantityAfter,
+			}
+		},
+		now)
 }

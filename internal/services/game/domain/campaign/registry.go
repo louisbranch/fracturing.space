@@ -282,10 +282,10 @@ func validateForkPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.ParentCampaignID) == "" {
+	if strings.TrimSpace(payload.ParentCampaignID.String()) == "" {
 		return errors.New("parent_campaign_id is required")
 	}
-	if strings.TrimSpace(payload.OriginCampaignID) == "" {
+	if strings.TrimSpace(payload.OriginCampaignID.String()) == "" {
 		return errors.New("origin_campaign_id is required")
 	}
 	return nil

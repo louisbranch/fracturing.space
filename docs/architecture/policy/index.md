@@ -13,4 +13,5 @@ last_reviewed: "2026-03-02"
 Cross-cutting rules and quality policies.
 
 - [Event payload change policy](event-payload-change-policy.md)
+- [Event payload design](event-payload-design.md)
 - [Testing policy](testing-policy.md)

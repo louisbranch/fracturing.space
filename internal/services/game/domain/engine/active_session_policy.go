@@ -66,7 +66,7 @@ func RejectActiveSessionBlockedCommand(state session.State, cmd command.Command)
 		return command.Decision{}, false
 	}
 	message := "campaign has an active session"
-	if sessionID := strings.TrimSpace(state.SessionID); sessionID != "" {
+	if sessionID := strings.TrimSpace(string(state.SessionID)); sessionID != "" {
 		message = fmt.Sprintf("campaign has an active session: active_session_id=%s", sessionID)
 	}
 	return command.Reject(command.Rejection{
@@ -76,7 +76,7 @@ func RejectActiveSessionBlockedCommand(state session.State, cmd command.Command)
 }
 
 func isInGameCharacterCommand(cmd command.Command) bool {
-	return cmd.ActorType == command.ActorTypeSystem && strings.TrimSpace(cmd.SessionID) != ""
+	return cmd.ActorType == command.ActorTypeSystem && strings.TrimSpace(cmd.SessionID.String()) != ""
 }
 
 func commandNamespace(cmdType command.Type) string {

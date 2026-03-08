@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -270,7 +271,7 @@ type projectionEventStore struct {
 func (s *projectionEventStore) ListEvents(_ context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error) {
 	results := make([]event.Event, 0, limit)
 	for _, evt := range s.events {
-		if evt.CampaignID != campaignID {
+		if string(evt.CampaignID) != campaignID {
 			continue
 		}
 		if evt.Seq <= afterSeq {
@@ -292,7 +293,7 @@ func newCampaignCreatedEvent(campaignID string, seq uint64) event.Event {
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:  campaignID,
+		CampaignID:  ids.CampaignID(campaignID),
 		Seq:         seq,
 		Timestamp:   time.Date(2025, 1, 10, 10, 0, 0, 0, time.UTC),
 		Type:        event.Type("campaign.created"),
@@ -304,7 +305,7 @@ func newCampaignCreatedEvent(campaignID string, seq uint64) event.Event {
 
 func newParticipantJoinedEvent(campaignID, participantID string, seq uint64) event.Event {
 	payload := participant.JoinPayload{
-		ParticipantID:  participantID,
+		ParticipantID:  ids.ParticipantID(participantID),
 		Name:           "Player One",
 		Role:           "PLAYER",
 		Controller:     "CONTROLLER_HUMAN",
@@ -312,7 +313,7 @@ func newParticipantJoinedEvent(campaignID, participantID string, seq uint64) eve
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:  campaignID,
+		CampaignID:  ids.CampaignID(campaignID),
 		Seq:         seq,
 		Timestamp:   time.Date(2025, 1, 10, 10, 1, 0, 0, time.UTC),
 		Type:        event.Type("participant.joined"),
@@ -323,10 +324,10 @@ func newParticipantJoinedEvent(campaignID, participantID string, seq uint64) eve
 }
 
 func newGMFearChangedEvent(campaignID string, seq uint64, gmFear int) event.Event {
-	payload := daggerheart.GMFearChangedPayload{Before: 0, After: gmFear}
+	payload := daggerheart.GMFearChangedPayload{Value: gmFear}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Seq:           seq,
 		Timestamp:     time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC),
 		Type:          event.Type("sys.daggerheart.gm_fear_changed"),
@@ -339,18 +340,15 @@ func newGMFearChangedEvent(campaignID string, seq uint64, gmFear int) event.Even
 }
 
 func newCharacterStateChangedEvent(campaignID, characterID string, seq uint64, hp, hope, stress int) event.Event {
-	hpAfter := hp
-	hopeAfter := hope
-	stressAfter := stress
-	payload := daggerheart.CharacterStatePatchPayload{
-		CharacterID: characterID,
-		HPAfter:     &hpAfter,
-		HopeAfter:   &hopeAfter,
-		StressAfter: &stressAfter,
+	payload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID: ids.CharacterID(characterID),
+		HP:          &hp,
+		Hope:        &hope,
+		Stress:      &stress,
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Seq:           seq,
 		Timestamp:     time.Date(2025, 1, 10, 12, 5, 0, 0, time.UTC),
 		Type:          event.Type("sys.daggerheart.character_state_patched"),
@@ -362,17 +360,17 @@ func newCharacterStateChangedEvent(campaignID, characterID string, seq uint64, h
 	}
 }
 
-func newDamageAppliedEvent(campaignID, characterID string, seq uint64, hpAfter, armorAfter int) event.Event {
+func newDamageAppliedEvent(campaignID, characterID string, seq uint64, hp, armor int) event.Event {
 	payload := daggerheart.DamageAppliedPayload{
-		CharacterID: characterID,
-		HpAfter:     &hpAfter,
-		ArmorAfter:  &armorAfter,
+		CharacterID: ids.CharacterID(characterID),
+		Hp:          &hp,
+		Armor:       &armor,
 		Severity:    "major",
 		Marks:       2,
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Seq:           seq,
 		Timestamp:     time.Date(2025, 1, 10, 12, 6, 0, 0, time.UTC),
 		Type:          event.Type("sys.daggerheart.damage_applied"),
@@ -385,25 +383,23 @@ func newDamageAppliedEvent(campaignID, characterID string, seq uint64, hpAfter, 
 }
 
 func newRestTakenEvent(campaignID, characterID string, seq uint64) event.Event {
-	hopeAfter := 2
-	stressAfter := 0
-	payload := daggerheart.RestTakePayload{
-		RestType:         "short",
-		Interrupted:      false,
-		GMFearBefore:     0,
-		GMFearAfter:      2,
-		ShortRestsBefore: 0,
-		ShortRestsAfter:  1,
-		RefreshRest:      true,
-		CharacterStates: []daggerheart.RestCharacterStatePatch{{
-			CharacterID: characterID,
-			HopeAfter:   &hopeAfter,
-			StressAfter: &stressAfter,
+	hope := 2
+	stress := 0
+	payload := daggerheart.RestTakenPayload{
+		RestType:    "short",
+		Interrupted: false,
+		GMFear:      2,
+		ShortRests:  1,
+		RefreshRest: true,
+		CharacterStates: []daggerheart.RestTakenCharacterPatch{{
+			CharacterID: ids.CharacterID(characterID),
+			Hope:        &hope,
+			Stress:      &stress,
 		}},
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Seq:           seq,
 		Timestamp:     time.Date(2025, 1, 10, 12, 7, 0, 0, time.UTC),
 		Type:          event.Type("sys.daggerheart.rest_taken"),
@@ -416,15 +412,15 @@ func newRestTakenEvent(campaignID, characterID string, seq uint64) event.Event {
 }
 
 func newDowntimeMoveAppliedEvent(campaignID, characterID string, seq uint64) event.Event {
-	hopeAfter := 3
+	hope := 3
 	payload := daggerheart.DowntimeMoveAppliedPayload{
-		CharacterID: characterID,
+		CharacterID: ids.CharacterID(characterID),
 		Move:        "prepare",
-		HopeAfter:   &hopeAfter,
+		Hope:        &hope,
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Seq:           seq,
 		Timestamp:     time.Date(2025, 1, 10, 12, 8, 0, 0, time.UTC),
 		Type:          event.Type("sys.daggerheart.downtime_move_applied"),
@@ -437,18 +433,18 @@ func newDowntimeMoveAppliedEvent(campaignID, characterID string, seq uint64) eve
 }
 
 func newLoadoutSwappedEvent(campaignID, characterID string, seq uint64) event.Event {
-	stressAfter := 2
+	stress := 2
 	payload := daggerheart.LoadoutSwappedPayload{
-		CharacterID: characterID,
+		CharacterID: ids.CharacterID(characterID),
 		CardID:      "card-1",
 		From:        "vault",
 		To:          "active",
 		RecallCost:  1,
-		StressAfter: &stressAfter,
+		Stress:      &stress,
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Seq:           seq,
 		Timestamp:     time.Date(2025, 1, 10, 12, 9, 0, 0, time.UTC),
 		Type:          event.Type("sys.daggerheart.loadout_swapped"),

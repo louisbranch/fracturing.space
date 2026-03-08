@@ -6,6 +6,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/replay"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -54,7 +55,7 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 	options := l.Options
 	checkpoints := l.Checkpoints
 	if l.Snapshots != nil {
-		snapshotState, snapshotSeq, err := l.Snapshots.GetState(ctx, cmd.CampaignID)
+		snapshotState, snapshotSeq, err := l.Snapshots.GetState(ctx, string(cmd.CampaignID))
 		if err != nil {
 			if !errors.Is(err, replay.ErrCheckpointNotFound) {
 				return nil, err
@@ -78,7 +79,7 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 			state = l.StateFactory()
 		}
 	}
-	result, err := replay.Replay(ctx, l.Events, checkpoints, l.Folder, cmd.CampaignID, state, options)
+	result, err := replay.Replay(ctx, l.Events, checkpoints, l.Folder, string(cmd.CampaignID), state, options)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +114,7 @@ func (s checkpointCapStore) Save(ctx context.Context, checkpoint replay.Checkpoi
 // The generic aggregate is narrowed to session only because gate policy is always
 // session-scoped by design.
 func (l ReplayGateStateLoader) LoadSession(ctx context.Context, campaignID, _ string) (session.State, error) {
-	state, err := l.StateLoader.Load(ctx, command.Command{CampaignID: campaignID})
+	state, err := l.StateLoader.Load(ctx, command.Command{CampaignID: ids.CampaignID(campaignID)})
 	if err != nil {
 		return session.State{}, err
 	}
@@ -135,7 +136,7 @@ func (l ReplayGateStateLoader) LoadSession(ctx context.Context, campaignID, _ st
 
 // LoadScene returns the scene state for scene-scoped gate checks.
 func (l ReplayGateStateLoader) LoadScene(ctx context.Context, campaignID, sceneID string) (scene.State, error) {
-	state, err := l.StateLoader.Load(ctx, command.Command{CampaignID: campaignID})
+	state, err := l.StateLoader.Load(ctx, command.Command{CampaignID: ids.CampaignID(campaignID)})
 	if err != nil {
 		return scene.State{}, err
 	}
@@ -144,7 +145,7 @@ func (l ReplayGateStateLoader) LoadScene(ctx context.Context, campaignID, sceneI
 	}
 	switch typed := state.(type) {
 	case aggregate.State:
-		if s, ok := typed.Scenes[sceneID]; ok {
+		if s, ok := typed.Scenes[ids.SceneID(sceneID)]; ok {
 			return s, nil
 		}
 		return scene.State{}, nil
@@ -152,7 +153,7 @@ func (l ReplayGateStateLoader) LoadScene(ctx context.Context, campaignID, sceneI
 		if typed == nil {
 			return scene.State{}, errors.New("state is required")
 		}
-		if s, ok := typed.Scenes[sceneID]; ok {
+		if s, ok := typed.Scenes[ids.SceneID(sceneID)]; ok {
 			return s, nil
 		}
 		return scene.State{}, nil

@@ -8,6 +8,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 const (
@@ -103,14 +104,14 @@ func decideJoin(state State, cmd command.Command, now func() time.Time) command.
 		})
 	}
 
-	participantID := strings.TrimSpace(payload.ParticipantID)
+	participantID := strings.TrimSpace(payload.ParticipantID.String())
 	if participantID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantIDRequired,
 			Message: "participant id is required",
 		})
 	}
-	userID := strings.TrimSpace(payload.UserID)
+	userID := strings.TrimSpace(payload.UserID.String())
 	name := strings.TrimSpace(payload.Name)
 	if name == "" {
 		return command.Reject(command.Rejection{
@@ -164,8 +165,8 @@ func decideJoin(state State, cmd command.Command, now func() time.Time) command.
 	}
 
 	normalizedPayload := JoinPayload{
-		ParticipantID:  participantID,
-		UserID:         userID,
+		ParticipantID:  ids.ParticipantID(participantID),
+		UserID:         ids.UserID(userID),
 		Name:           name,
 		Role:           role,
 		Controller:     controller,
@@ -194,7 +195,7 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	participantID := strings.TrimSpace(payload.ParticipantID)
+	participantID := strings.TrimSpace(payload.ParticipantID.String())
 	if participantID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantIDRequired,
@@ -264,7 +265,7 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 		}
 	}
 	if avatarSetProvided || avatarAssetProvided || userIDProvided {
-		avatarUserID := strings.TrimSpace(state.UserID)
+		avatarUserID := strings.TrimSpace(string(state.UserID))
 		if userIDProvided {
 			avatarUserID = strings.TrimSpace(rawUserID)
 		}
@@ -297,19 +298,19 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 			normalizedFields["avatar_asset_id"] = resolvedAssetID
 		}
 	}
-	effectiveUserID := strings.TrimSpace(state.UserID)
+	effectiveUserID := strings.TrimSpace(string(state.UserID))
 	if value, ok := normalizedFields["user_id"]; ok {
 		effectiveUserID = strings.TrimSpace(value)
 	}
-	effectiveRole := strings.TrimSpace(state.Role)
+	effectiveRole := strings.TrimSpace(string(state.Role))
 	if value, ok := normalizedFields["role"]; ok {
 		effectiveRole = strings.TrimSpace(value)
 	}
-	effectiveController := strings.TrimSpace(state.Controller)
+	effectiveController := strings.TrimSpace(string(state.Controller))
 	if value, ok := normalizedFields["controller"]; ok {
 		effectiveController = strings.TrimSpace(value)
 	}
-	effectiveAccess := strings.TrimSpace(state.CampaignAccess)
+	effectiveAccess := strings.TrimSpace(string(state.CampaignAccess))
 	if value, ok := normalizedFields["campaign_access"]; ok {
 		effectiveAccess = strings.TrimSpace(value)
 	}
@@ -320,7 +321,7 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 		now = time.Now
 	}
 
-	normalizedPayload := UpdatePayload{ParticipantID: participantID, Fields: normalizedFields}
+	normalizedPayload := UpdatePayload{ParticipantID: ids.ParticipantID(participantID), Fields: normalizedFields}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
 	evt := command.NewEvent(cmd, EventTypeUpdated, "participant", participantID, payloadJSON, now().UTC())
 	return command.Accept(evt)
@@ -340,7 +341,7 @@ func decideLeave(state State, cmd command.Command, now func() time.Time) command
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	participantID := strings.TrimSpace(payload.ParticipantID)
+	participantID := strings.TrimSpace(payload.ParticipantID.String())
 	if participantID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantIDRequired,
@@ -352,7 +353,7 @@ func decideLeave(state State, cmd command.Command, now func() time.Time) command
 		now = time.Now
 	}
 
-	normalizedPayload := LeavePayload{ParticipantID: participantID, Reason: reason}
+	normalizedPayload := LeavePayload{ParticipantID: ids.ParticipantID(participantID), Reason: reason}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
 	evt := command.NewEvent(cmd, EventTypeLeft, "participant", participantID, payloadJSON, now().UTC())
 	return command.Accept(evt)
@@ -362,7 +363,7 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
 	}
-	if isAIController(state.Controller) {
+	if isAIController(string(state.Controller)) {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantAIIdentityLocked,
 			Message: "ai-controlled participants cannot change user identity bindings",
@@ -375,14 +376,14 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	participantID := strings.TrimSpace(payload.ParticipantID)
+	participantID := strings.TrimSpace(payload.ParticipantID.String())
 	if participantID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantIDRequired,
 			Message: "participant id is required",
 		})
 	}
-	userID := strings.TrimSpace(payload.UserID)
+	userID := strings.TrimSpace(payload.UserID.String())
 	if userID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantUserIDRequired,
@@ -393,7 +394,7 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 		now = time.Now
 	}
 
-	normalizedPayload := BindPayload{ParticipantID: participantID, UserID: userID}
+	normalizedPayload := BindPayload{ParticipantID: ids.ParticipantID(participantID), UserID: ids.UserID(userID)}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
 	evt := command.NewEvent(cmd, EventTypeBound, "participant", participantID, payloadJSON, now().UTC())
 	return command.Accept(evt)
@@ -403,7 +404,7 @@ func decideUnbind(state State, cmd command.Command, now func() time.Time) comman
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
 	}
-	if isAIController(state.Controller) {
+	if isAIController(string(state.Controller)) {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantAIIdentityLocked,
 			Message: "ai-controlled participants cannot change user identity bindings",
@@ -416,15 +417,15 @@ func decideUnbind(state State, cmd command.Command, now func() time.Time) comman
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	participantID := strings.TrimSpace(payload.ParticipantID)
+	participantID := strings.TrimSpace(payload.ParticipantID.String())
 	if participantID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantIDRequired,
 			Message: "participant id is required",
 		})
 	}
-	userID := strings.TrimSpace(payload.UserID)
-	if userID != "" && userID != strings.TrimSpace(state.UserID) {
+	userID := strings.TrimSpace(payload.UserID.String())
+	if userID != "" && userID != strings.TrimSpace(string(state.UserID)) {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantUserIDMismatch,
 			Message: "participant user id mismatch",
@@ -435,7 +436,7 @@ func decideUnbind(state State, cmd command.Command, now func() time.Time) comman
 		now = time.Now
 	}
 
-	normalizedPayload := UnbindPayload{ParticipantID: participantID, UserID: userID, Reason: reason}
+	normalizedPayload := UnbindPayload{ParticipantID: ids.ParticipantID(participantID), UserID: ids.UserID(userID), Reason: reason}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
 	evt := command.NewEvent(cmd, EventTypeUnbound, "participant", participantID, payloadJSON, now().UTC())
 	return command.Accept(evt)
@@ -445,7 +446,7 @@ func decideSeatReassign(state State, cmd command.Command, now func() time.Time) 
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
 	}
-	if isAIController(state.Controller) {
+	if isAIController(string(state.Controller)) {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantAIIdentityLocked,
 			Message: "ai-controlled participants cannot change user identity bindings",
@@ -458,21 +459,21 @@ func decideSeatReassign(state State, cmd command.Command, now func() time.Time) 
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	participantID := strings.TrimSpace(payload.ParticipantID)
+	participantID := strings.TrimSpace(payload.ParticipantID.String())
 	if participantID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantIDRequired,
 			Message: "participant id is required",
 		})
 	}
-	priorUserID := strings.TrimSpace(payload.PriorUserID)
-	if priorUserID != "" && priorUserID != strings.TrimSpace(state.UserID) {
+	priorUserID := strings.TrimSpace(payload.PriorUserID.String())
+	if priorUserID != "" && priorUserID != strings.TrimSpace(string(state.UserID)) {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantUserIDMismatch,
 			Message: "participant user id mismatch",
 		})
 	}
-	userID := strings.TrimSpace(payload.UserID)
+	userID := strings.TrimSpace(payload.UserID.String())
 	if userID == "" {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantUserIDRequired,
@@ -485,9 +486,9 @@ func decideSeatReassign(state State, cmd command.Command, now func() time.Time) 
 	}
 
 	normalizedPayload := SeatReassignPayload{
-		ParticipantID: participantID,
-		PriorUserID:   priorUserID,
-		UserID:        userID,
+		ParticipantID: ids.ParticipantID(participantID),
+		PriorUserID:   ids.UserID(priorUserID),
+		UserID:        ids.UserID(userID),
 		Reason:        reason,
 	}
 	payloadJSON, _ := json.Marshal(normalizedPayload)

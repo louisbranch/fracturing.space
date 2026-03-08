@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -109,9 +110,15 @@ func sceneRoute(_ CoreDecider, current aggregate.State, cmd command.Command, now
 
 // sessionStartRoute handles session.start with campaign-level readiness checks.
 //
-// For draft campaigns, this route emits campaign.updated(status=active) and
-// session.started in one decision so append remains atomic and avoids partial
-// state transitions.
+// This is an intentional cross-aggregate exception: for draft campaigns, it
+// emits both campaign.updated(status=active) and session.started in a single
+// decision so the transition is atomic. Without this, a crash between the two
+// writes could leave a campaign active with no session or a session started
+// on a draft campaign.
+//
+// All other routes stay within a single aggregate boundary. This exception is
+// acceptable because campaign activation is a one-time lifecycle transition
+// that is tightly coupled to the first session start.
 func sessionStartRoute(d CoreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	if now == nil {
 		now = time.Now
@@ -121,7 +128,7 @@ func sessionStartRoute(d CoreDecider, current aggregate.State, cmd command.Comma
 
 	var systemReadiness readiness.CharacterSystemReadiness
 	if d.Systems != nil {
-		systemID := strings.TrimSpace(current.Campaign.GameSystem)
+		systemID := strings.TrimSpace(string(current.Campaign.GameSystem))
 		if mod := d.Systems.Get(systemID, ""); mod != nil {
 			if checker, ok := mod.(module.CharacterReadinessChecker); ok {
 				systemReadiness = checker.CharacterReady
@@ -153,7 +160,7 @@ func sessionStartRoute(d CoreDecider, current aggregate.State, cmd command.Comma
 		cmd,
 		campaign.EventTypeUpdated,
 		"campaign",
-		cmd.CampaignID,
+		string(cmd.CampaignID),
 		campaignPayloadJSON,
 		decisionTime,
 	)
@@ -269,6 +276,25 @@ func buildCoreRouteTable(definitions []command.Definition) (map[command.Type]cor
 	return routes, nil
 }
 
+// Entity ID Resolution
+//
+// Commands reference their target entity in one of two places:
+//
+//  1. Command.EntityID — the primary channel, set by the transport layer when
+//     the entity is explicit in the API request (e.g. URL path parameter).
+//
+//  2. Command.PayloadJSON — the fallback channel, used when the entity ID is
+//     embedded in the command body rather than the request envelope.
+//
+// The *StateFor helpers below try EntityID first, then unmarshal PayloadJSON
+// as a last resort. If neither source provides a valid ID, the helper returns
+// a zero-value state. The downstream decider is responsible for rejecting
+// commands that require a target entity but received none.
+//
+// This dual-source pattern keeps transport layers flexible (some APIs carry
+// the entity in the path, others in the body) while the domain layer remains
+// transport-agnostic.
+
 type participantIDPayload struct {
 	ParticipantID string `json:"participant_id"`
 }
@@ -294,7 +320,7 @@ func participantStateFor(cmd command.Command, current aggregate.State) participa
 	if participantID == "" {
 		return participant.State{}
 	}
-	return current.Participants[participantID]
+	return current.Participants[ids.ParticipantID(participantID)]
 }
 
 type characterIDPayload struct {
@@ -322,7 +348,7 @@ func characterStateFor(cmd command.Command, current aggregate.State) character.S
 	if characterID == "" {
 		return character.State{}
 	}
-	return current.Characters[characterID]
+	return current.Characters[ids.CharacterID(characterID)]
 }
 
 type inviteIDPayload struct {
@@ -350,5 +376,5 @@ func inviteStateFor(cmd command.Command, current aggregate.State) invite.State {
 	if inviteID == "" {
 		return invite.State{}
 	}
-	return current.Invites[inviteID]
+	return current.Invites[ids.InviteID(inviteID)]
 }

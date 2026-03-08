@@ -9,6 +9,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 var (
@@ -80,6 +81,14 @@ type CommandTyper interface {
 // Implementations must be deterministic: given the same inputs they must
 // return the same state, because replay depends on this guarantee.
 //
+// Typed recovery: because StateFactory returns `any`, system fold functions
+// need a typed assertion helper to recover the concrete state pointer. The
+// canonical pattern is a package-level `assertSnapshotState(any) (*T, error)`
+// function that handles nil → zero-value initialization. See
+// [FoldRouter] for the generic dispatcher that calls this assertion
+// automatically, and bridge/daggerheart/folder.go for a reference
+// implementation.
+//
 // NOTE: This is the write-path StateFactory (returns untyped `any`).
 // See also bridge.StateHandlerFactory (domain/bridge/registry_bridge.go)
 // which returns typed handlers (CharacterStateHandler, SnapshotStateHandler)
@@ -87,8 +96,8 @@ type CommandTyper interface {
 // the bridge variant is used by the API layer to provide resource/damage
 // abstractions.
 type StateFactory interface {
-	NewCharacterState(campaignID, characterID, kind string) (any, error)
-	NewSnapshotState(campaignID string) (any, error)
+	NewCharacterState(campaignID ids.CampaignID, characterID ids.CharacterID, kind string) (any, error)
+	NewSnapshotState(campaignID ids.CampaignID) (any, error)
 }
 
 // Module defines the interface for a system module.

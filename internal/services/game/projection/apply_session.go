@@ -11,7 +11,7 @@ import (
 )
 
 func (a Applier) applySessionStarted(ctx context.Context, evt event.Event, payload session.StartPayload) error {
-	sessionID := strings.TrimSpace(payload.SessionID)
+	sessionID := strings.TrimSpace(payload.SessionID.String())
 	if sessionID == "" {
 		sessionID = strings.TrimSpace(evt.EntityID)
 	}
@@ -24,7 +24,7 @@ func (a Applier) applySessionStarted(ctx context.Context, evt event.Event, paylo
 	}
 	return a.Session.PutSession(ctx, storage.SessionRecord{
 		ID:         sessionID,
-		CampaignID: evt.CampaignID,
+		CampaignID: string(evt.CampaignID),
 		Name:       strings.TrimSpace(payload.SessionName),
 		Status:     session.StatusActive,
 		StartedAt:  startedAt,
@@ -33,7 +33,7 @@ func (a Applier) applySessionStarted(ctx context.Context, evt event.Event, paylo
 }
 
 func (a Applier) applySessionEnded(ctx context.Context, evt event.Event, payload session.EndPayload) error {
-	sessionID := strings.TrimSpace(payload.SessionID)
+	sessionID := strings.TrimSpace(payload.SessionID.String())
 	if sessionID == "" {
 		sessionID = strings.TrimSpace(evt.EntityID)
 	}
@@ -44,12 +44,12 @@ func (a Applier) applySessionEnded(ctx context.Context, evt event.Event, payload
 	if err != nil {
 		return err
 	}
-	_, _, err = a.Session.EndSession(ctx, evt.CampaignID, sessionID, endedAt)
+	_, _, err = a.Session.EndSession(ctx, string(evt.CampaignID), sessionID, endedAt)
 	return err
 }
 
 func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, payload session.GateOpenedPayload) error {
-	gateID := strings.TrimSpace(payload.GateID)
+	gateID := strings.TrimSpace(payload.GateID.String())
 	if gateID == "" {
 		gateID = strings.TrimSpace(evt.EntityID)
 	}
@@ -70,8 +70,8 @@ func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, pa
 		return err
 	}
 	return a.SessionGate.PutSessionGate(ctx, storage.SessionGate{
-		CampaignID:         evt.CampaignID,
-		SessionID:          evt.SessionID,
+		CampaignID:         string(evt.CampaignID),
+		SessionID:          evt.SessionID.String(),
 		GateID:             gateID,
 		GateType:           gateType,
 		Status:             session.GateStatusOpen,
@@ -84,14 +84,14 @@ func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, pa
 }
 
 func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event, payload session.GateResolvedPayload) error {
-	gateID := strings.TrimSpace(payload.GateID)
+	gateID := strings.TrimSpace(payload.GateID.String())
 	if gateID == "" {
 		gateID = strings.TrimSpace(evt.EntityID)
 	}
 	if gateID == "" {
 		return fmt.Errorf("gate id is required")
 	}
-	gate, err := a.SessionGate.GetSessionGate(ctx, evt.CampaignID, evt.SessionID, gateID)
+	gate, err := a.SessionGate.GetSessionGate(ctx, string(evt.CampaignID), evt.SessionID.String(), gateID)
 	if err != nil {
 		return fmt.Errorf("get session gate: %w", err)
 	}
@@ -112,14 +112,14 @@ func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event, 
 }
 
 func (a Applier) applySessionGateAbandoned(ctx context.Context, evt event.Event, payload session.GateAbandonedPayload) error {
-	gateID := strings.TrimSpace(payload.GateID)
+	gateID := strings.TrimSpace(payload.GateID.String())
 	if gateID == "" {
 		gateID = strings.TrimSpace(evt.EntityID)
 	}
 	if gateID == "" {
 		return fmt.Errorf("gate id is required")
 	}
-	gate, err := a.SessionGate.GetSessionGate(ctx, evt.CampaignID, evt.SessionID, gateID)
+	gate, err := a.SessionGate.GetSessionGate(ctx, string(evt.CampaignID), evt.SessionID.String(), gateID)
 	if err != nil {
 		return fmt.Errorf("get session gate: %w", err)
 	}
@@ -144,7 +144,7 @@ func (a Applier) applySessionSpotlightSet(ctx context.Context, evt event.Event, 
 	if err != nil {
 		return err
 	}
-	if err := session.ValidateSpotlightTarget(spotlightType, payload.CharacterID); err != nil {
+	if err := session.ValidateSpotlightTarget(spotlightType, payload.CharacterID.String()); err != nil {
 		return err
 	}
 
@@ -153,10 +153,10 @@ func (a Applier) applySessionSpotlightSet(ctx context.Context, evt event.Event, 
 		return err
 	}
 	return a.SessionSpotlight.PutSessionSpotlight(ctx, storage.SessionSpotlight{
-		CampaignID:         evt.CampaignID,
-		SessionID:          evt.SessionID,
+		CampaignID:         string(evt.CampaignID),
+		SessionID:          evt.SessionID.String(),
 		SpotlightType:      spotlightType,
-		CharacterID:        strings.TrimSpace(payload.CharacterID),
+		CharacterID:        strings.TrimSpace(payload.CharacterID.String()),
 		UpdatedAt:          updatedAt,
 		UpdatedByActorType: string(evt.ActorType),
 		UpdatedByActorID:   evt.ActorID,
@@ -164,5 +164,5 @@ func (a Applier) applySessionSpotlightSet(ctx context.Context, evt event.Event, 
 }
 
 func (a Applier) applySessionSpotlightCleared(ctx context.Context, evt event.Event) error {
-	return a.SessionSpotlight.ClearSessionSpotlight(ctx, evt.CampaignID, evt.SessionID)
+	return a.SessionSpotlight.ClearSessionSpotlight(ctx, string(evt.CampaignID), evt.SessionID.String())
 }

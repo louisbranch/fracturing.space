@@ -69,85 +69,53 @@ func TestIsAlreadyExistsError(t *testing.T) {
 	}
 }
 
-func TestConversionHelpers(t *testing.T) {
-	if gameSystemToString(bridge.SystemIDDaggerheart) != "DAGGERHEART" {
-		t.Fatal("expected daggerheart game system string")
+func TestEnumToStorage(t *testing.T) {
+	tests := []struct {
+		name string
+		val  string
+		want string
+	}{
+		{"known value", string(bridge.SystemIDDaggerheart), "DAGGERHEART"},
+		{"empty value", "", "UNSPECIFIED"},
+		{"lowercase value", string(campaign.StatusActive), "ACTIVE"},
+		{"mixed case", string(participant.RoleGM), "GM"},
 	}
-	if gameSystemToString(bridge.SystemIDUnspecified) != "UNSPECIFIED" {
-		t.Fatal("expected unspecified game system string")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Use bridge.SystemID as a representative ~string type for the first two,
+			// and raw string conversion for the rest.
+			got := enumToStorage(bridge.SystemID(tt.val))
+			if got != tt.want {
+				t.Fatalf("enumToStorage(%q) = %q, want %q", tt.val, got, tt.want)
+			}
+		})
 	}
-	if stringToGameSystem("unknown") != bridge.SystemIDUnspecified {
-		t.Fatal("expected fallback game system unspecified")
+}
+
+func TestEnumFromStorage(t *testing.T) {
+	// Round-trip: known values
+	if got := enumFromStorage("DAGGERHEART", bridge.NormalizeSystemID); got != bridge.SystemIDDaggerheart {
+		t.Fatalf("expected daggerheart, got %q", got)
+	}
+	if got := enumFromStorage("ACTIVE", campaign.NormalizeStatus); got != campaign.StatusActive {
+		t.Fatalf("expected active, got %q", got)
+	}
+	if got := enumFromStorage("GM", participant.NormalizeRole); got != participant.RoleGM {
+		t.Fatalf("expected gm, got %q", got)
+	}
+	if got := enumFromStorage("PC", character.NormalizeKind); got != character.KindPC {
+		t.Fatalf("expected pc, got %q", got)
+	}
+	if got := enumFromStorage("ENDED", session.NormalizeStatus); got != session.StatusEnded {
+		t.Fatalf("expected ended, got %q", got)
 	}
 
-	if campaignStatusToString(campaign.StatusArchived) != "ARCHIVED" {
-		t.Fatal("expected archived status string")
+	// Unknown values fall back to zero value
+	if got := enumFromStorage("bogus", bridge.NormalizeSystemID); got != bridge.SystemIDUnspecified {
+		t.Fatalf("expected unspecified, got %q", got)
 	}
-	if stringToCampaignStatus("ACTIVE") != campaign.StatusActive {
-		t.Fatal("expected active status")
-	}
-	if stringToCampaignStatus("bogus") != campaign.StatusUnspecified {
-		t.Fatal("expected unspecified status fallback")
-	}
-
-	if gmModeToString(campaign.GmModeHybrid) != "HYBRID" {
-		t.Fatal("expected hybrid gm mode")
-	}
-	if stringToGmMode("AI") != campaign.GmModeAI {
-		t.Fatal("expected AI gm mode")
-	}
-	if stringToGmMode("bogus") != campaign.GmModeUnspecified {
-		t.Fatal("expected unspecified gm mode")
-	}
-
-	if participantRoleToString(participant.RoleGM) != "GM" {
-		t.Fatal("expected GM role")
-	}
-	if stringToParticipantRole("PLAYER") != participant.RolePlayer {
-		t.Fatal("expected player role")
-	}
-	if stringToParticipantRole("bogus") != participant.RoleUnspecified {
-		t.Fatal("expected unspecified role")
-	}
-
-	if participantControllerToString(participant.ControllerAI) != "AI" {
-		t.Fatal("expected AI controller")
-	}
-	if stringToParticipantController("HUMAN") != participant.ControllerHuman {
-		t.Fatal("expected human controller")
-	}
-	if stringToParticipantController("bogus") != participant.ControllerUnspecified {
-		t.Fatal("expected unspecified controller")
-	}
-
-	if participantAccessToString(participant.CampaignAccessOwner) != "OWNER" {
-		t.Fatal("expected owner access")
-	}
-	if stringToParticipantAccess("MEMBER") != participant.CampaignAccessMember {
-		t.Fatal("expected member access")
-	}
-	if stringToParticipantAccess("bogus") != participant.CampaignAccessUnspecified {
-		t.Fatal("expected unspecified access")
-	}
-
-	if characterKindToString(character.KindNPC) != "NPC" {
-		t.Fatal("expected NPC kind")
-	}
-	if stringToCharacterKind("PC") != character.KindPC {
-		t.Fatal("expected PC kind")
-	}
-	if stringToCharacterKind("bogus") != character.KindUnspecified {
-		t.Fatal("expected unspecified kind")
-	}
-
-	if sessionStatusToString(session.StatusEnded) != "ENDED" {
-		t.Fatal("expected ended session status")
-	}
-	if stringToSessionStatus("ACTIVE") != session.StatusActive {
-		t.Fatal("expected active session status")
-	}
-	if stringToSessionStatus("bogus") != session.StatusUnspecified {
-		t.Fatal("expected unspecified session status")
+	if got := enumFromStorage("bogus", campaign.NormalizeStatus); got != campaign.StatusUnspecified {
+		t.Fatalf("expected unspecified, got %q", got)
 	}
 }
 

@@ -1,35 +1,39 @@
 package scene
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+)
 
 func TestHasPC(t *testing.T) {
 	tests := []struct {
 		name       string
-		characters map[string]bool
-		pcs        map[string]bool
+		characters map[ids.CharacterID]bool
+		pcs        map[ids.CharacterID]bool
 		want       bool
 	}{
 		{
 			name:       "matching PC",
-			characters: map[string]bool{"c1": true, "c2": true},
-			pcs:        map[string]bool{"c2": true, "c3": true},
+			characters: map[ids.CharacterID]bool{"c1": true, "c2": true},
+			pcs:        map[ids.CharacterID]bool{"c2": true, "c3": true},
 			want:       true,
 		},
 		{
 			name:       "no matching PC",
-			characters: map[string]bool{"c1": true},
-			pcs:        map[string]bool{"c2": true},
+			characters: map[ids.CharacterID]bool{"c1": true},
+			pcs:        map[ids.CharacterID]bool{"c2": true},
 			want:       false,
 		},
 		{
 			name:       "empty characters",
 			characters: nil,
-			pcs:        map[string]bool{"c1": true},
+			pcs:        map[ids.CharacterID]bool{"c1": true},
 			want:       false,
 		},
 		{
 			name:       "empty pcs",
-			characters: map[string]bool{"c1": true},
+			characters: map[ids.CharacterID]bool{"c1": true},
 			pcs:        nil,
 			want:       false,
 		},

@@ -130,9 +130,9 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
-			HPAfter:     intPtr(6),
-			HopeAfter:   intPtr(2),
-			StressAfter: intPtr(1),
+			HP:          intPtr(6),
+			Hope:        intPtr(2),
+			Stress:      intPtr(1),
 		}),
 	})
 
@@ -682,9 +682,9 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
-			HPAfter:     intPtr(6),
-			HopeAfter:   intPtr(2),
-			StressAfter: intPtr(1),
+			HP:          intPtr(6),
+			Hope:        intPtr(2),
+			Stress:      intPtr(1),
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
@@ -696,8 +696,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.GMFearChangedPayload{
-			Before: 2,
-			After:  4,
+			Value: 4,
 		}),
 	})
 
@@ -976,8 +975,7 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 		SystemID:      daggerheart.SystemID,
 		SystemVersion: daggerheart.SystemVersion,
 		PayloadJSON: mustJSON(t, daggerheart.GMFearChangedPayload{
-			Before: 1,
-			After:  2,
+			Value: 2,
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{

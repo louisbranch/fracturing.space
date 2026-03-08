@@ -65,11 +65,9 @@ func TestApplyRollOutcome_Success(t *testing.T) {
 	stressBefore := state.Stress
 	stressAfter := stressBefore
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:  "char-1",
-		HopeBefore:   &hopeBefore,
-		HopeAfter:    &hopeAfter,
-		StressBefore: &stressBefore,
-		StressAfter:  &stressAfter,
+		CharacterID: "char-1",
+		Hope:        &hopeAfter,
+		Stress:      &stressAfter,
 	}
 	patchJSON, err := json.Marshal(patchPayload)
 	if err != nil {
@@ -153,11 +151,9 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 	stressBefore := state.Stress
 	stressAfter := stressBefore
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:  "char-1",
-		HopeBefore:   &hopeBefore,
-		HopeAfter:    &hopeAfter,
-		StressBefore: &stressBefore,
-		StressAfter:  &stressAfter,
+		CharacterID: "char-1",
+		Hope:        &hopeAfter,
+		Stress:      &stressAfter,
 	}
 	patchJSON, err := json.Marshal(patchPayload)
 	if err != nil {
@@ -288,8 +284,7 @@ func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
 	hopeAfter := hopeBefore + 1
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
-		HopeBefore:  &hopeBefore,
-		HopeAfter:   &hopeAfter,
+		Hope:        &hopeAfter,
 	}
 	patchJSON, err := json.Marshal(patchPayload)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -169,7 +170,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
-		if sessionID != "" && rollEvent.SessionID != sessionID {
+		if sessionID != "" && rollEvent.SessionID.String() != sessionID {
 			return nil, status.Error(codes.InvalidArgument, "roll seq does not match session")
 		}
 	}
@@ -179,7 +180,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	if conditionChanged {
 		payload := daggerheart.ConditionChangePayload{
-			CharacterID:      characterID,
+			CharacterID:      ids.CharacterID(characterID),
 			ConditionsBefore: before,
 			ConditionsAfter:  after,
 			Added:            added,
@@ -192,11 +193,11 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 			return nil, status.Errorf(codes.Internal, "encode condition payload: %v", err)
 		}
 		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-			CampaignID:    campaignID,
+			CampaignID:    ids.CampaignID(campaignID),
 			Type:          commandTypeDaggerheartConditionChange,
 			ActorType:     command.ActorTypeSystem,
-			SessionID:     sessionID,
-			SceneID:       sceneID,
+			SessionID:     ids.SessionID(sessionID),
+			SceneID:       ids.SceneID(sceneID),
 			RequestID:     requestID,
 			InvocationID:  invocationID,
 			EntityType:    "character",
@@ -211,8 +212,8 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 	}
 
 	if lifeStateChanged {
-		payload := daggerheart.CharacterStatePatchedPayload{
-			CharacterID:     characterID,
+		payload := daggerheart.CharacterStatePatchPayload{
+			CharacterID:     ids.CharacterID(characterID),
 			LifeStateBefore: &lifeStateBefore,
 			LifeStateAfter:  &lifeStateAfter,
 		}
@@ -221,11 +222,11 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 			return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
 		}
 		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-			CampaignID:    campaignID,
+			CampaignID:    ids.CampaignID(campaignID),
 			Type:          commandTypeDaggerheartCharacterStatePatch,
 			ActorType:     command.ActorTypeSystem,
-			SessionID:     sessionID,
-			SceneID:       sceneID,
+			SessionID:     ids.SessionID(sessionID),
+			SceneID:       ids.SceneID(sceneID),
 			RequestID:     requestID,
 			InvocationID:  invocationID,
 			EntityType:    "character",
@@ -369,13 +370,13 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 		if err != nil {
 			return nil, handleDomainError(err)
 		}
-		if sessionID != "" && rollEvent.SessionID != sessionID {
+		if sessionID != "" && rollEvent.SessionID.String() != sessionID {
 			return nil, status.Error(codes.InvalidArgument, "roll seq does not match session")
 		}
 	}
 
 	payload := daggerheart.AdversaryConditionChangePayload{
-		AdversaryID:      adversaryID,
+		AdversaryID:      ids.AdversaryID(adversaryID),
 		ConditionsBefore: before,
 		ConditionsAfter:  after,
 		Added:            added,
@@ -392,11 +393,11 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartAdversaryCondition,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",
@@ -494,11 +495,11 @@ func (s *DaggerheartService) runApplyGmMove(ctx context.Context, in *pb.Daggerhe
 			return nil, status.Errorf(codes.Internal, "encode gm fear payload: %v", err)
 		}
 		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-			CampaignID:    campaignID,
+			CampaignID:    ids.CampaignID(campaignID),
 			Type:          commandTypeDaggerheartGMFearSet,
 			ActorType:     command.ActorTypeSystem,
-			SessionID:     sessionID,
-			SceneID:       sceneID,
+			SessionID:     ids.SessionID(sessionID),
+			SceneID:       ids.SceneID(sceneID),
 			RequestID:     requestID,
 			InvocationID:  invocationID,
 			EntityType:    "campaign",

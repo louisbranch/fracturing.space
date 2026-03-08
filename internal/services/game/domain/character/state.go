@@ -1,5 +1,7 @@
 package character
 
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+
 // State captures replayed character identity and profile state.
 //
 // Characters are mutable records tied to participants and are intentionally
@@ -10,11 +12,11 @@ type State struct {
 	// Deleted marks soft-delete semantics before full lifecycle cleanup.
 	Deleted bool
 	// CharacterID is the immutable identifier used in command payloads and events.
-	CharacterID string
+	CharacterID ids.CharacterID
 	// Name is the display label visible in gameplay and UIs.
 	Name string
 	// Kind captures whether this is PC/NPC (and future kinds).
-	Kind string
+	Kind Kind
 	// Notes stores campaign-local free-form character metadata.
 	Notes string
 	// AvatarSetID identifies the avatar set bound to this character.
@@ -26,9 +28,9 @@ type State struct {
 	// Aliases stores normalized ordered aliases.
 	Aliases []string
 	// OwnerParticipantID is the governance owner participant for mutation authority.
-	OwnerParticipantID string
+	OwnerParticipantID ids.ParticipantID
 	// ParticipantID stores controller assignment for operational gameplay control.
-	ParticipantID string
+	ParticipantID ids.ParticipantID
 	// SystemProfile carries system-specific structured data for mechanics systems.
 	SystemProfile map[string]any
 }

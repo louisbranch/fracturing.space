@@ -51,9 +51,9 @@ func (r *timelineProjectionResolver) resolve(ctx context.Context, evt event.Even
 	if entityID == "" {
 		switch domain {
 		case "campaign":
-			entityID = strings.TrimSpace(evt.CampaignID)
+			entityID = strings.TrimSpace(string(evt.CampaignID))
 		case "session":
-			entityID = strings.TrimSpace(evt.SessionID)
+			entityID = strings.TrimSpace(evt.SessionID.String())
 		}
 	}
 
@@ -68,7 +68,7 @@ func (r *timelineProjectionResolver) resolve(ctx context.Context, evt event.Even
 		}
 		return commonv1.IconId_ICON_ID_CAMPAIGN, campaignProjectionDisplay(entry), nil
 	case "participant":
-		entry, ok, err := r.lookupParticipant(ctx, evt.CampaignID, entityID)
+		entry, ok, err := r.lookupParticipant(ctx, string(evt.CampaignID), entityID)
 		if err != nil {
 			return commonv1.IconId_ICON_ID_PARTICIPANT, nil, err
 		}
@@ -77,7 +77,7 @@ func (r *timelineProjectionResolver) resolve(ctx context.Context, evt event.Even
 		}
 		return commonv1.IconId_ICON_ID_PARTICIPANT, participantProjectionDisplay(entry), nil
 	case "character":
-		entry, ok, err := r.lookupCharacter(ctx, evt.CampaignID, entityID)
+		entry, ok, err := r.lookupCharacter(ctx, string(evt.CampaignID), entityID)
 		if err != nil {
 			return commonv1.IconId_ICON_ID_CHARACTER, nil, err
 		}
@@ -86,7 +86,7 @@ func (r *timelineProjectionResolver) resolve(ctx context.Context, evt event.Even
 		}
 		return commonv1.IconId_ICON_ID_CHARACTER, characterProjectionDisplay(entry), nil
 	case "session":
-		entry, ok, err := r.lookupSession(ctx, evt.CampaignID, entityID)
+		entry, ok, err := r.lookupSession(ctx, string(evt.CampaignID), entityID)
 		if err != nil {
 			return commonv1.IconId_ICON_ID_SESSION, nil, err
 		}

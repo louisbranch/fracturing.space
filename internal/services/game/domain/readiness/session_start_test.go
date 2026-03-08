@@ -7,16 +7,17 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
 func TestEvaluateSessionStart_MissingGMRejected(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 		},
 	}, nil)
@@ -31,11 +32,11 @@ func TestEvaluateSessionStart_MissingGMRejected(t *testing.T) {
 
 func TestEvaluateSessionStart_MissingPlayerRejected(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"gm-1": {
 				ParticipantID: "gm-1",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
+				Role:          participant.RoleGM,
 			},
 		},
 	}, nil)
@@ -50,20 +51,20 @@ func TestEvaluateSessionStart_MissingPlayerRejected(t *testing.T) {
 
 func TestEvaluateSessionStart_PlayerWithoutCharacterRejected(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"gm-1": {
 				ParticipantID: "gm-1",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
+				Role:          participant.RoleGM,
 			},
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
 				Name:          "Avery",
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 		},
-		Characters: map[string]character.State{},
+		Characters: map[ids.CharacterID]character.State{},
 	}, nil)
 
 	if rejection == nil {
@@ -82,19 +83,19 @@ func TestEvaluateSessionStart_PlayerWithoutCharacterRejected(t *testing.T) {
 
 func TestEvaluateSessionStart_CharacterWithoutControllerRejected(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"gm-1": {
 				ParticipantID: "gm-1",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
+				Role:          participant.RoleGM,
 			},
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 		},
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
 				CharacterID: "char-1",
 				Created:     true,
@@ -119,19 +120,19 @@ func TestEvaluateSessionStart_CharacterWithoutControllerRejected(t *testing.T) {
 
 func TestEvaluateSessionStart_SystemReadinessRejected(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"gm-1": {
 				ParticipantID: "gm-1",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
+				Role:          participant.RoleGM,
 			},
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 		},
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
 				CharacterID:   "char-1",
 				Created:       true,
@@ -162,19 +163,19 @@ func TestEvaluateSessionStart_SystemReadinessRejected(t *testing.T) {
 
 func TestEvaluateSessionStart_ReadyCampaignAccepted(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"gm-1": {
 				ParticipantID: "gm-1",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
+				Role:          participant.RoleGM,
 			},
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 		},
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
 				CharacterID:   "char-1",
 				Created:       true,
@@ -196,7 +197,7 @@ func TestEvaluateSessionStart_ReadyCampaignAccepted(t *testing.T) {
 func TestEvaluateSessionStart_AIGMModeRequiresBoundAgent(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
 		Campaign: campaign.State{
-			GmMode: "ai",
+			GmMode: campaign.GmModeAI,
 		},
 	}, nil)
 	if rejection == nil {
@@ -210,23 +211,23 @@ func TestEvaluateSessionStart_AIGMModeRequiresBoundAgent(t *testing.T) {
 func TestEvaluateSessionStart_AIGMModeWithBoundAgentAccepted(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
 		Campaign: campaign.State{
-			GmMode:    "  HYBRID  ",
+			GmMode:    campaign.GmModeHybrid,
 			AIAgentID: "agent-1",
 		},
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"gm-ai-1": {
 				ParticipantID: "gm-ai-1",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
-				Controller:    string(participant.ControllerAI),
+				Role:          participant.RoleGM,
+				Controller:    participant.ControllerAI,
 			},
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 		},
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
 				CharacterID:   "char-1",
 				Created:       true,
@@ -242,23 +243,23 @@ func TestEvaluateSessionStart_AIGMModeWithBoundAgentAccepted(t *testing.T) {
 func TestEvaluateSessionStart_AIGMModeWithoutAIGMParticipantRejected(t *testing.T) {
 	rejection := EvaluateSessionStart(aggregate.State{
 		Campaign: campaign.State{
-			GmMode:    "ai",
+			GmMode:    campaign.GmModeAI,
 			AIAgentID: "agent-1",
 		},
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"gm-human-1": {
 				ParticipantID: "gm-human-1",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
-				Controller:    string(participant.ControllerHuman),
+				Role:          participant.RoleGM,
+				Controller:    participant.ControllerHuman,
 			},
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 		},
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
 				CharacterID:   "char-1",
 				Created:       true,
@@ -277,13 +278,13 @@ func TestEvaluateSessionStart_AIGMModeWithoutAIGMParticipantRejected(t *testing.
 func TestIsAIGMMode(t *testing.T) {
 	tests := []struct {
 		name string
-		mode string
+		mode campaign.GmMode
 		want bool
 	}{
-		{name: "ai", mode: "ai", want: true},
-		{name: "hybrid", mode: "hybrid", want: true},
-		{name: "human", mode: "human", want: false},
-		{name: "empty", mode: "  ", want: false},
+		{name: "ai", mode: campaign.GmModeAI, want: true},
+		{name: "hybrid", mode: campaign.GmModeHybrid, want: true},
+		{name: "human", mode: campaign.GmModeHuman, want: false},
+		{name: "unspecified", mode: campaign.GmModeUnspecified, want: false},
 	}
 
 	for _, tt := range tests {

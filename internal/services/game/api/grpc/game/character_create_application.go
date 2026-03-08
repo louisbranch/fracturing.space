@@ -17,6 +17,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
@@ -102,14 +103,14 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 
 	workflowPayload := character.CreateWithProfilePayload{
 		Create: character.CreatePayload{
-			CharacterID:        characterID,
-			OwnerParticipantID: strings.TrimSpace(policyActor.ID),
+			CharacterID:        ids.CharacterID(characterID),
+			OwnerParticipantID: ids.ParticipantID(strings.TrimSpace(policyActor.ID)),
 			Name:               name,
 			Kind:               in.GetKind().String(),
 			Notes:              notes,
 			AvatarSetID:        avatarSetID,
 			AvatarAssetID:      avatarAssetID,
-			ParticipantID:      defaultParticipantID,
+			ParticipantID:      ids.ParticipantID(defaultParticipantID),
 			Pronouns:           pronouns,
 			Aliases:            append([]string(nil), in.GetAliases()...),
 		},

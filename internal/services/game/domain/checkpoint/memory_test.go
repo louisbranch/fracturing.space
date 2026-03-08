@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -52,13 +53,13 @@ func TestMemoryCheckpoint_SaveAndGetState(t *testing.T) {
 			GateOpen: true,
 			GateID:   "gate-1",
 		},
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"p1": {Joined: true},
 		},
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"c1": {Created: true},
 		},
-		Invites: map[string]invite.State{
+		Invites: map[ids.InviteID]invite.State{
 			"i1": {Created: true},
 		},
 		Systems: map[module.Key]any{

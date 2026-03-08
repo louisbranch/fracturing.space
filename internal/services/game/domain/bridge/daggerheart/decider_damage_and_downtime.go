@@ -5,12 +5,14 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 func decideDamageApply(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeDamageApplied, "character",
-		func(p *DamageApplyPayload) string { return strings.TrimSpace(p.CharacterID) },
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeDamageApplied, "character",
+		func(p *DamageApplyPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(s SnapshotState, hasState bool, p *DamageApplyPayload, _ func() time.Time) *command.Rejection {
 			if p.ArmorSpent > 1 {
 				return &command.Rejection{
@@ -34,11 +36,33 @@ func decideDamageApply(snapshotState SnapshotState, hasSnapshot bool, cmd comman
 					}
 				}
 			}
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.DamageType = strings.TrimSpace(p.DamageType)
 			p.Source = strings.TrimSpace(p.Source)
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p DamageApplyPayload) DamageAppliedPayload {
+			return DamageAppliedPayload{
+				CharacterID:        p.CharacterID,
+				Hp:                 p.HpAfter,
+				Armor:              p.ArmorAfter,
+				ArmorSpent:         p.ArmorSpent,
+				Severity:           p.Severity,
+				Marks:              p.Marks,
+				DamageType:         p.DamageType,
+				RollSeq:            p.RollSeq,
+				ResistPhysical:     p.ResistPhysical,
+				ResistMagic:        p.ResistMagic,
+				ImmunePhysical:     p.ImmunePhysical,
+				ImmuneMagic:        p.ImmuneMagic,
+				Direct:             p.Direct,
+				MassiveDamage:      p.MassiveDamage,
+				Mitigated:          p.Mitigated,
+				Source:             p.Source,
+				SourceCharacterIDs: p.SourceCharacterIDs,
+			}
+		},
+		now)
 }
 
 // decideMultiTargetDamageApply handles batch damage across multiple characters
@@ -79,7 +103,7 @@ func decideMultiTargetDamageApply(snapshotState SnapshotState, hasSnapshot bool,
 						}
 					}
 				}
-				t.CharacterID = strings.TrimSpace(t.CharacterID)
+				t.CharacterID = ids.CharacterID(strings.TrimSpace(t.CharacterID.String()))
 				t.DamageType = strings.TrimSpace(t.DamageType)
 				t.Source = strings.TrimSpace(t.Source)
 			}
@@ -92,8 +116,26 @@ func decideMultiTargetDamageApply(snapshotState SnapshotState, hasSnapshot bool,
 				specs = append(specs, module.EventSpec{
 					Type:       EventTypeDamageApplied,
 					EntityType: "character",
-					EntityID:   t.CharacterID,
-					Payload:    t,
+					EntityID:   t.CharacterID.String(),
+					Payload: DamageAppliedPayload{
+						CharacterID:        t.CharacterID,
+						Hp:                 t.HpAfter,
+						Armor:              t.ArmorAfter,
+						ArmorSpent:         t.ArmorSpent,
+						Severity:           t.Severity,
+						Marks:              t.Marks,
+						DamageType:         t.DamageType,
+						RollSeq:            t.RollSeq,
+						ResistPhysical:     t.ResistPhysical,
+						ResistMagic:        t.ResistMagic,
+						ImmunePhysical:     t.ImmunePhysical,
+						ImmuneMagic:        t.ImmuneMagic,
+						Direct:             t.Direct,
+						MassiveDamage:      t.MassiveDamage,
+						Mitigated:          t.Mitigated,
+						Source:             t.Source,
+						SourceCharacterIDs: t.SourceCharacterIDs,
+					},
 				})
 			}
 			return specs, nil
@@ -101,8 +143,9 @@ func decideMultiTargetDamageApply(snapshotState SnapshotState, hasSnapshot bool,
 }
 
 func decideAdversaryDamageApply(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeAdversaryDamageApplied, "adversary",
-		func(p *AdversaryDamageApplyPayload) string { return strings.TrimSpace(p.AdversaryID) },
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeAdversaryDamageApplied, "adversary",
+		func(p *AdversaryDamageApplyPayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
 		func(s SnapshotState, hasState bool, p *AdversaryDamageApplyPayload, _ func() time.Time) *command.Rejection {
 			if hasState {
 				if adversary, ok := snapshotAdversaryState(s, p.AdversaryID); ok {
@@ -120,11 +163,33 @@ func decideAdversaryDamageApply(snapshotState SnapshotState, hasSnapshot bool, c
 					}
 				}
 			}
-			p.AdversaryID = strings.TrimSpace(p.AdversaryID)
+			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
 			p.DamageType = strings.TrimSpace(p.DamageType)
 			p.Source = strings.TrimSpace(p.Source)
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p AdversaryDamageApplyPayload) AdversaryDamageAppliedPayload {
+			return AdversaryDamageAppliedPayload{
+				AdversaryID:        p.AdversaryID,
+				Hp:                 p.HpAfter,
+				Armor:              p.ArmorAfter,
+				ArmorSpent:         p.ArmorSpent,
+				Severity:           p.Severity,
+				Marks:              p.Marks,
+				DamageType:         p.DamageType,
+				RollSeq:            p.RollSeq,
+				ResistPhysical:     p.ResistPhysical,
+				ResistMagic:        p.ResistMagic,
+				ImmunePhysical:     p.ImmunePhysical,
+				ImmuneMagic:        p.ImmuneMagic,
+				Direct:             p.Direct,
+				MassiveDamage:      p.MassiveDamage,
+				Mitigated:          p.Mitigated,
+				Source:             p.Source,
+				SourceCharacterIDs: p.SourceCharacterIDs,
+			}
+		},
+		now)
 }
 
 const (
@@ -133,8 +198,9 @@ const (
 )
 
 func decideDowntimeMoveApply(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeDowntimeMoveApplied, "character",
-		func(p *DowntimeMoveApplyPayload) string { return strings.TrimSpace(p.CharacterID) },
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeDowntimeMoveApplied, "character",
+		func(p *DowntimeMoveApplyPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(s SnapshotState, hasState bool, p *DowntimeMoveApplyPayload, _ func() time.Time) *command.Rejection {
 			if hasState && s.DowntimeMovesSinceRest >= downtimeMovesPerRestLimit {
 				return &command.Rejection{
@@ -142,17 +208,27 @@ func decideDowntimeMoveApply(snapshotState SnapshotState, hasSnapshot bool, cmd 
 					Message: "downtime move limit reached (2 per rest)",
 				}
 			}
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.Move = strings.TrimSpace(p.Move)
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p DowntimeMoveApplyPayload) DowntimeMoveAppliedPayload {
+			return DowntimeMoveAppliedPayload{
+				CharacterID: p.CharacterID,
+				Move:        p.Move,
+				Hope:        p.HopeAfter,
+				Stress:      p.StressAfter,
+				Armor:       p.ArmorAfter,
+			}
+		},
+		now)
 }
 
 func decideCharacterTemporaryArmorApply(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, EventTypeCharacterTemporaryArmorApplied, "character",
-		func(p *CharacterTemporaryArmorApplyPayload) string { return strings.TrimSpace(p.CharacterID) },
+		func(p *CharacterTemporaryArmorApplyPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(p *CharacterTemporaryArmorApplyPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.Source = strings.TrimSpace(p.Source)
 			p.Duration = strings.TrimSpace(p.Duration)
 			p.SourceID = strings.TrimSpace(p.SourceID)

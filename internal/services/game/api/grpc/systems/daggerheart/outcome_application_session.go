@@ -77,7 +77,7 @@ func (s *DaggerheartService) validateSessionOutcome(
 	if rollEvent.Type != eventTypeActionRollResolved {
 		return sessionOutcomePrelude{}, status.Error(codes.InvalidArgument, "roll seq does not reference action.roll_resolved")
 	}
-	if rollEvent.SessionID != sessionID {
+	if rollEvent.SessionID.String() != sessionID {
 		return sessionOutcomePrelude{}, status.Error(codes.InvalidArgument, "roll seq does not match session")
 	}
 

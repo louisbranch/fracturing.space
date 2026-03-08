@@ -171,8 +171,7 @@ func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
 	hopeAfter := 1
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
-		HopeBefore:  &hopeBefore,
-		HopeAfter:   &hopeAfter,
+		Hope:        &hopeAfter,
 	}
 	patchJSON, err := json.Marshal(patchPayload)
 	if err != nil {
@@ -300,12 +299,10 @@ func TestSessionActionRoll_WithModifiers(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	now := testTimestamp
-	hopeBefore := 2
 	hopeAfter := 1
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
-		HopeBefore:  &hopeBefore,
-		HopeAfter:   &hopeAfter,
+		Hope:        &hopeAfter,
 	}
 	patchJSON, err := json.Marshal(patchPayload)
 	if err != nil {

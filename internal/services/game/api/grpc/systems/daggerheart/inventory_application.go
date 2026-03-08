@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -44,10 +45,10 @@ func (s *DaggerheartService) executeDomainCommand(ctx context.Context, campaignI
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err := s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          cmdType,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx)),
+		SessionID:     ids.SessionID(strings.TrimSpace(grpcmeta.SessionIDFromContext(ctx))),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",
@@ -76,7 +77,7 @@ func (s *DaggerheartService) runUpdateGold(ctx context.Context, in *pb.Daggerhea
 	}
 
 	payload := daggerheart.GoldUpdatePayload{
-		CharacterID:    characterID,
+		CharacterID:    ids.CharacterID(characterID),
 		HandfulsBefore: int(in.GetHandfulsBefore()),
 		HandfulsAfter:  int(in.GetHandfulsAfter()),
 		BagsBefore:     int(in.GetBagsBefore()),
@@ -129,7 +130,7 @@ func (s *DaggerheartService) runAcquireDomainCard(ctx context.Context, in *pb.Da
 	}
 
 	payload := daggerheart.DomainCardAcquirePayload{
-		CharacterID: characterID,
+		CharacterID: ids.CharacterID(characterID),
 		CardID:      cardID,
 		CardLevel:   int(in.GetCardLevel()),
 		Destination: strings.TrimSpace(in.GetDestination()),
@@ -174,7 +175,7 @@ func (s *DaggerheartService) runSwapEquipment(ctx context.Context, in *pb.Dagger
 	}
 
 	payload := daggerheart.EquipmentSwapPayload{
-		CharacterID: characterID,
+		CharacterID: ids.CharacterID(characterID),
 		ItemID:      itemID,
 		ItemType:    strings.TrimSpace(in.GetItemType()),
 		From:        strings.TrimSpace(in.GetFrom()),
@@ -218,7 +219,7 @@ func (s *DaggerheartService) runUseConsumable(ctx context.Context, in *pb.Dagger
 	}
 
 	payload := daggerheart.ConsumableUsePayload{
-		CharacterID:    characterID,
+		CharacterID:    ids.CharacterID(characterID),
 		ConsumableID:   consumableID,
 		QuantityBefore: int(in.GetQuantityBefore()),
 		QuantityAfter:  int(in.GetQuantityAfter()),
@@ -260,7 +261,7 @@ func (s *DaggerheartService) runAcquireConsumable(ctx context.Context, in *pb.Da
 	}
 
 	payload := daggerheart.ConsumableAcquirePayload{
-		CharacterID:    characterID,
+		CharacterID:    ids.CharacterID(characterID),
 		ConsumableID:   consumableID,
 		QuantityBefore: int(in.GetQuantityBefore()),
 		QuantityAfter:  int(in.GetQuantityAfter()),

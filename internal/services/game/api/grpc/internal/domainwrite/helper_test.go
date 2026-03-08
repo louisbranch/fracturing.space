@@ -92,7 +92,7 @@ func TestNormalizeErrorHandlers_DefaultMessages(t *testing.T) {
 		t.Fatalf("apply message = %q, want to contain %q", applyResult.Error(), "apply event: boom")
 	}
 
-	rejectResult := rejectErr("nope")
+	rejectResult := rejectErr("SOME_CODE", "nope")
 	if rejectResult.Error() != "nope" {
 		t.Fatalf("reject message = %q, want %q", rejectResult.Error(), "nope")
 	}
@@ -123,7 +123,7 @@ func TestNormalizeErrorHandlers_CallbackOverrides(t *testing.T) {
 	executeErr, applyErr, rejectErr := NormalizeErrorHandlers(ErrorHandlerOptions{
 		ExecuteErr: func(error) error { return wantExecute },
 		ApplyErr:   func(error) error { return wantApply },
-		RejectErr:  func(string) error { return wantReject },
+		RejectErr:  func(string, string) error { return wantReject },
 	})
 
 	if got := executeErr(errors.New("boom")); got != wantExecute {
@@ -132,7 +132,7 @@ func TestNormalizeErrorHandlers_CallbackOverrides(t *testing.T) {
 	if got := applyErr(errors.New("boom")); got != wantApply {
 		t.Fatalf("apply override mismatch: got %v, want %v", got, wantApply)
 	}
-	if got := rejectErr("boom"); got != wantReject {
+	if got := rejectErr("SOME_CODE", "boom"); got != wantReject {
 		t.Fatalf("reject override mismatch: got %v, want %v", got, wantReject)
 	}
 }

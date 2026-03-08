@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -192,19 +193,19 @@ func readySessionStartAggregateState(status campaign.Status) aggregate.State {
 			Created: true,
 			Status:  status,
 		},
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"gm-1": {
 				ParticipantID: "gm-1",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
+				Role:          participant.RoleGM,
 			},
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 		},
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
 				CharacterID:   "char-1",
 				Created:       true,

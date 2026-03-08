@@ -191,13 +191,13 @@ func (a Applier) validatePreconditions(h handlerEntry, evt event.Event) error {
 		return fmt.Errorf("%s store is not configured", missing[0])
 	}
 
-	if h.ids&requireCampaignID != 0 && strings.TrimSpace(evt.CampaignID) == "" {
+	if h.ids&requireCampaignID != 0 && strings.TrimSpace(string(evt.CampaignID)) == "" {
 		return fmt.Errorf("campaign id is required")
 	}
 	if h.ids&requireEntityID != 0 && strings.TrimSpace(evt.EntityID) == "" {
 		return fmt.Errorf("entity id is required")
 	}
-	if h.ids&requireSessionID != 0 && strings.TrimSpace(evt.SessionID) == "" {
+	if h.ids&requireSessionID != 0 && strings.TrimSpace(evt.SessionID.String()) == "" {
 		return fmt.Errorf("session id is required")
 	}
 	return nil

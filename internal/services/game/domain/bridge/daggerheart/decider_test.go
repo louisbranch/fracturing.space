@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
@@ -59,11 +60,8 @@ func TestDecideGMFearSet_EmitsGMFearChanged(t *testing.T) {
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
-	if payload.Before != 2 {
-		t.Fatalf("payload before = %d, want %d", payload.Before, 2)
-	}
-	if payload.After != 4 {
-		t.Fatalf("payload after = %d, want %d", payload.After, 4)
+	if payload.Value != 4 {
+		t.Fatalf("payload value = %d, want %d", payload.Value, 4)
 	}
 	if payload.Reason != "doom" {
 		t.Fatalf("payload reason = %s, want %s", payload.Reason, "doom")
@@ -274,22 +272,15 @@ func TestDecideCharacterStatePatch_EmitsCharacterStatePatched(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload struct {
-		CharacterID string `json:"character_id"`
-		HPBefore    *int   `json:"hp_before"`
-		HPAfter     *int   `json:"hp_after"`
-	}
+	var payload CharacterStatePatchedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 	if payload.CharacterID != "char-1" {
 		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
 	}
-	if payload.HPBefore == nil || *payload.HPBefore != 6 {
-		t.Fatalf("hp before = %v, want %d", payload.HPBefore, 6)
-	}
-	if payload.HPAfter == nil || *payload.HPAfter != 5 {
-		t.Fatalf("hp after = %v, want %d", payload.HPAfter, 5)
+	if payload.HP == nil || *payload.HP != 5 {
+		t.Fatalf("hp = %v, want %d", payload.HP, 5)
 	}
 }
 
@@ -307,7 +298,7 @@ func TestDecideCharacterStatePatch_UnchangedStateRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {CampaignID: "camp-1", CharacterID: "char-1", HP: 6},
 		},
 	}
@@ -396,7 +387,7 @@ func TestDecideConditionChange_UnchangedStateRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Conditions: []string{"vulnerable"}},
 		},
 	}
@@ -427,7 +418,7 @@ func TestDecideConditionChange_RemoveMissingConditionRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {CampaignID: "camp-1", CharacterID: "char-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -485,22 +476,15 @@ func TestDecideHopeSpend_EmitsCharacterStatePatched(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload struct {
-		CharacterID string `json:"character_id"`
-		HopeBefore  *int   `json:"hope_before"`
-		HopeAfter   *int   `json:"hope_after"`
-	}
+	var payload CharacterStatePatchedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 	if payload.CharacterID != "char-1" {
 		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
 	}
-	if payload.HopeBefore == nil || *payload.HopeBefore != 2 {
-		t.Fatalf("hope_before = %v, want %d", payload.HopeBefore, 2)
-	}
-	if payload.HopeAfter == nil || *payload.HopeAfter != 1 {
-		t.Fatalf("hope_after = %v, want %d", payload.HopeAfter, 1)
+	if payload.Hope == nil || *payload.Hope != 1 {
+		t.Fatalf("hope = %v, want %d", payload.Hope, 1)
 	}
 }
 
@@ -603,22 +587,15 @@ func TestDecideStressSpend_EmitsCharacterStatePatched(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload struct {
-		CharacterID  string `json:"character_id"`
-		StressBefore *int   `json:"stress_before"`
-		StressAfter  *int   `json:"stress_after"`
-	}
+	var payload CharacterStatePatchedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 	if payload.CharacterID != "char-1" {
 		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
 	}
-	if payload.StressBefore == nil || *payload.StressBefore != 3 {
-		t.Fatalf("stress_before = %v, want %d", payload.StressBefore, 3)
-	}
-	if payload.StressAfter == nil || *payload.StressAfter != 2 {
-		t.Fatalf("stress_after = %v, want %d", payload.StressAfter, 2)
+	if payload.Stress == nil || *payload.Stress != 2 {
+		t.Fatalf("stress = %v, want %d", payload.Stress, 2)
 	}
 }
 
@@ -663,15 +640,7 @@ func TestDecideLoadoutSwap_EmitsLoadoutSwapped(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload struct {
-		CharacterID  string `json:"character_id"`
-		CardID       string `json:"card_id"`
-		From         string `json:"from"`
-		To           string `json:"to"`
-		RecallCost   int    `json:"recall_cost"`
-		StressBefore *int   `json:"stress_before"`
-		StressAfter  *int   `json:"stress_after"`
-	}
+	var payload LoadoutSwappedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -690,11 +659,8 @@ func TestDecideLoadoutSwap_EmitsLoadoutSwapped(t *testing.T) {
 	if payload.RecallCost != 1 {
 		t.Fatalf("recall cost = %d, want %d", payload.RecallCost, 1)
 	}
-	if payload.StressBefore == nil || *payload.StressBefore != 3 {
-		t.Fatalf("stress before = %v, want %d", payload.StressBefore, 3)
-	}
-	if payload.StressAfter == nil || *payload.StressAfter != 2 {
-		t.Fatalf("stress after = %v, want %d", payload.StressAfter, 2)
+	if payload.Stress == nil || *payload.Stress != 2 {
+		t.Fatalf("stress = %v, want %d", payload.Stress, 2)
 	}
 }
 
@@ -740,14 +706,12 @@ func TestDecideRestTake_EmitsRestTaken(t *testing.T) {
 	}
 
 	var payload struct {
-		RestType         string `json:"rest_type"`
-		Interrupted      bool   `json:"interrupted"`
-		GMFearBefore     int    `json:"gm_fear_before"`
-		GMFearAfter      int    `json:"gm_fear_after"`
-		ShortRestsBefore int    `json:"short_rests_before"`
-		ShortRestsAfter  int    `json:"short_rests_after"`
-		RefreshRest      bool   `json:"refresh_rest"`
-		RefreshLongRest  bool   `json:"refresh_long_rest"`
+		RestType        string `json:"rest_type"`
+		Interrupted     bool   `json:"interrupted"`
+		GMFearAfter     int    `json:"gm_fear_after"`
+		ShortRestsAfter int    `json:"short_rests_after"`
+		RefreshRest     bool   `json:"refresh_rest"`
+		RefreshLongRest bool   `json:"refresh_long_rest"`
 	}
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
@@ -758,14 +722,8 @@ func TestDecideRestTake_EmitsRestTaken(t *testing.T) {
 	if payload.Interrupted {
 		t.Fatal("expected interrupted to be false")
 	}
-	if payload.GMFearBefore != 1 {
-		t.Fatalf("gm fear before = %d, want %d", payload.GMFearBefore, 1)
-	}
 	if payload.GMFearAfter != 2 {
 		t.Fatalf("gm fear after = %d, want %d", payload.GMFearAfter, 2)
-	}
-	if payload.ShortRestsBefore != 0 {
-		t.Fatalf("short rests before = %d, want %d", payload.ShortRestsBefore, 0)
 	}
 	if payload.ShortRestsAfter != 1 {
 		t.Fatalf("short rests after = %d, want %d", payload.ShortRestsAfter, 1)
@@ -829,7 +787,7 @@ func TestDecideRestTake_WithLongTermCountdown_BeforeMismatchRejected(t *testing.
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[string]CountdownState{
+		CountdownStates: map[ids.CountdownID]CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
 		},
 	}
@@ -860,7 +818,7 @@ func TestDecideRestTake_WithLongTermCountdown_UnchangedRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[string]CountdownState{
+		CountdownStates: map[ids.CountdownID]CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 3, Max: 4, Direction: "increase", Looping: true},
 		},
 	}
@@ -918,11 +876,7 @@ func TestDecideDamageApply_EmitsDamageApplied(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload struct {
-		CharacterID string `json:"character_id"`
-		DamageType  string `json:"damage_type"`
-		HPAfter     *int   `json:"hp_after"`
-	}
+	var payload DamageAppliedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -932,8 +886,8 @@ func TestDecideDamageApply_EmitsDamageApplied(t *testing.T) {
 	if payload.DamageType != "physical" {
 		t.Fatalf("damage type = %s, want %s", payload.DamageType, "physical")
 	}
-	if payload.HPAfter == nil || *payload.HPAfter != 3 {
-		t.Fatalf("hp after = %v, want %d", payload.HPAfter, 3)
+	if payload.Hp == nil || *payload.Hp != 3 {
+		t.Fatalf("hp = %v, want %d", payload.Hp, 3)
 	}
 }
 
@@ -951,7 +905,7 @@ func TestDecideDamageApply_BeforeMismatchRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {
 				CharacterID: "char-1",
 				HP:          5,
@@ -1037,11 +991,7 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload struct {
-		AdversaryID string `json:"adversary_id"`
-		DamageType  string `json:"damage_type"`
-		HPAfter     *int   `json:"hp_after"`
-	}
+	var payload AdversaryDamageAppliedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -1051,8 +1001,8 @@ func TestDecideAdversaryDamageApply_EmitsAdversaryDamageApplied(t *testing.T) {
 	if payload.DamageType != "physical" {
 		t.Fatalf("damage type = %s, want %s", payload.DamageType, "physical")
 	}
-	if payload.HPAfter == nil || *payload.HPAfter != 3 {
-		t.Fatalf("hp after = %v, want %d", payload.HPAfter, 3)
+	if payload.Hp == nil || *payload.Hp != 3 {
+		t.Fatalf("hp = %v, want %d", payload.Hp, 3)
 	}
 }
 
@@ -1070,7 +1020,7 @@ func TestDecideAdversaryDamageApply_BeforeMismatchRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[string]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1",
 				HP:          7,
@@ -1189,7 +1139,7 @@ func TestDecideCountdownUpdate_UnchangedStateRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[string]CountdownState{
+		CountdownStates: map[ids.CountdownID]CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 3, Max: 4, Direction: "increase", Looping: true},
 		},
 	}
@@ -1220,7 +1170,7 @@ func TestDecideCountdownUpdate_BeforeMismatchRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CountdownStates: map[string]CountdownState{
+		CountdownStates: map[ids.CountdownID]CountdownState{
 			"cd-1": {CountdownID: "cd-1", Current: 1, Max: 4, Direction: "increase", Looping: false},
 		},
 	}
@@ -1320,12 +1270,7 @@ func TestDecideDowntimeMoveApply_EmitsDowntimeMoveApplied(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload struct {
-		CharacterID  string `json:"character_id"`
-		Move         string `json:"move"`
-		StressBefore *int   `json:"stress_before"`
-		StressAfter  *int   `json:"stress_after"`
-	}
+	var payload DowntimeMoveAppliedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
@@ -1335,11 +1280,8 @@ func TestDecideDowntimeMoveApply_EmitsDowntimeMoveApplied(t *testing.T) {
 	if payload.Move != "clear_all_stress" {
 		t.Fatalf("move = %s, want %s", payload.Move, "clear_all_stress")
 	}
-	if payload.StressBefore == nil || *payload.StressBefore != 3 {
-		t.Fatalf("stress before = %v, want %d", payload.StressBefore, 3)
-	}
-	if payload.StressAfter == nil || *payload.StressAfter != 0 {
-		t.Fatalf("stress after = %v, want %d", payload.StressAfter, 0)
+	if payload.Stress == nil || *payload.Stress != 0 {
+		t.Fatalf("stress = %v, want %d", payload.Stress, 0)
 	}
 }
 
@@ -1413,7 +1355,7 @@ func TestDecideAdversaryConditionChange_UnchangedStateRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[string]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -1444,7 +1386,7 @@ func TestDecideAdversaryConditionChange_RemoveMissingConditionRejected(t *testin
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[string]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]AdversaryState{
 			"adv-1": {AdversaryID: "adv-1", Conditions: []string{"hidden"}},
 		},
 	}
@@ -1533,7 +1475,7 @@ func TestDecideAdversaryCreate_UnchangedStateRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[string]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]AdversaryState{
 			"adv-1": {
 				AdversaryID: "adv-1", Name: "Goblin", Kind: "bruiser", SessionID: "sess-1", Notes: "note",
 				HP: 6, HPMax: 6, Stress: 2, StressMax: 2, Evasion: 1, Major: 2, Severe: 3, Armor: 1,
@@ -1741,7 +1683,7 @@ func TestDecideMultiTargetDamageApply_BeforeMismatchRejected(t *testing.T) {
 
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {CharacterID: "char-1", HP: 10, Armor: 0},
 			"char-2": {CharacterID: "char-2", HP: 999, Armor: 0}, // mismatch
 		},

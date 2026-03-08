@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -14,10 +15,10 @@ import (
 
 func sceneEvent(typ event.Type, campaignID, sessionID, sceneID string, payloadJSON []byte, ts time.Time) event.Event {
 	return event.Event{
-		CampaignID:  campaignID,
+		CampaignID:  ids.CampaignID(campaignID),
 		Type:        typ,
-		SessionID:   sessionID,
-		SceneID:     sceneID,
+		SessionID:   ids.SessionID(sessionID),
+		SceneID:     ids.SceneID(sceneID),
 		Timestamp:   ts,
 		ActorType:   event.ActorTypeSystem,
 		PayloadJSON: payloadJSON,
@@ -34,7 +35,7 @@ func TestApplySceneCreated(t *testing.T) {
 	charStore := newFakeSceneCharacterStore()
 	applier := Applier{Scene: sceneStore, SceneCharacter: charStore}
 
-	payload := scene.CreatePayload{SceneID: "sc-1", Name: "Battle", Description: "Fierce", CharacterIDs: []string{"char-1", "char-2"}}
+	payload := scene.CreatePayload{SceneID: "sc-1", Name: "Battle", Description: "Fierce", CharacterIDs: []ids.CharacterID{"char-1", "char-2"}}
 	data, _ := json.Marshal(payload)
 	evt := sceneEvent(scene.EventTypeCreated, "camp-1", "sess-1", "sc-1", data, sceneStamp)
 
@@ -93,7 +94,7 @@ func TestApplySceneCreated_SkipsEmptyCharacterIDs(t *testing.T) {
 	charStore := newFakeSceneCharacterStore()
 	applier := Applier{Scene: sceneStore, SceneCharacter: charStore}
 
-	payload := scene.CreatePayload{SceneID: "sc-1", Name: "X", CharacterIDs: []string{"char-1", "", " "}}
+	payload := scene.CreatePayload{SceneID: "sc-1", Name: "X", CharacterIDs: []ids.CharacterID{"char-1", "", " "}}
 	data, _ := json.Marshal(payload)
 	evt := sceneEvent(scene.EventTypeCreated, "camp-1", "sess-1", "sc-1", data, sceneStamp)
 

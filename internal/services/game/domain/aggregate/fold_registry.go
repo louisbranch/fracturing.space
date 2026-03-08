@@ -8,6 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
@@ -29,8 +30,8 @@ type foldEntry struct {
 // foldEntityKeyed is a generic helper for entity-keyed fold entries. It
 // validates the EntityID, lazily initializes the map, looks up the sub-state,
 // calls the domain fold, and writes back the result.
-func foldEntityKeyed[S any](
-	m *map[string]S,
+func foldEntityKeyed[K ~string, S any](
+	m *map[K]S,
 	evt event.Event,
 	domainName string,
 	fold func(S, event.Event) (S, error),
@@ -39,14 +40,15 @@ func foldEntityKeyed[S any](
 		return fmt.Errorf("%s fold requires EntityID but got empty for %s", domainName, evt.Type)
 	}
 	if *m == nil {
-		*m = make(map[string]S)
+		*m = make(map[K]S)
 	}
-	sub := (*m)[evt.EntityID]
+	key := K(evt.EntityID)
+	sub := (*m)[key]
 	updated, err := fold(sub, evt)
 	if err != nil {
 		return err
 	}
-	(*m)[evt.EntityID] = updated
+	(*m)[key] = updated
 	return nil
 }
 
@@ -131,7 +133,7 @@ func foldScene(state *State, evt event.Event) error {
 		return fmt.Errorf("scene fold: %w", err)
 	}
 	if state.Scenes == nil {
-		state.Scenes = make(map[string]scene.State)
+		state.Scenes = make(map[ids.SceneID]scene.State)
 	}
 	sub := state.Scenes[sceneID]
 	updated, err := scene.Fold(sub, evt)
@@ -143,7 +145,7 @@ func foldScene(state *State, evt event.Event) error {
 }
 
 // extractSceneID reads the scene_id field from any scene event payload.
-func extractSceneID(evt event.Event) (string, error) {
+func extractSceneID(evt event.Event) (ids.SceneID, error) {
 	var envelope struct {
 		SceneID string `json:"scene_id"`
 	}
@@ -153,5 +155,5 @@ func extractSceneID(evt event.Event) (string, error) {
 	if envelope.SceneID == "" {
 		return "", fmt.Errorf("scene_id is empty in %s payload", evt.Type)
 	}
-	return envelope.SceneID, nil
+	return ids.SceneID(envelope.SceneID), nil
 }

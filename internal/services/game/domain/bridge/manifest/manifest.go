@@ -15,6 +15,21 @@ type ProjectionStores struct {
 	Daggerheart storage.DaggerheartStore
 }
 
+// ExtractProjectionStores probes a concrete store for system-specific
+// interfaces and returns a ProjectionStores populated with the ones it
+// implements. This centralizes the type-assertion coupling so callers
+// (outbox apply, maintenance replay, integrity checks) don't each
+// independently hard-code the assertion list. When a new game system is
+// added, update this function and ProjectionStores — all callers benefit
+// automatically.
+func ExtractProjectionStores(store any) ProjectionStores {
+	ps := ProjectionStores{}
+	if dhs, ok := store.(storage.DaggerheartStore); ok {
+		ps.Daggerheart = dhs
+	}
+	return ps
+}
+
 // SystemDescriptor declares one built-in system and how each startup surface should
 // wire it. Keeping this list explicit makes add/remove operations discoverable
 // for newcomers and reviewable in one file.

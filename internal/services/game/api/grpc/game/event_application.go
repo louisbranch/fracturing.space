@@ -11,6 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -37,11 +38,11 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		return event.Event{}, status.Error(codes.PermissionDenied, "append event is restricted to maintenance/admin scope")
 	}
 	input := event.Event{
-		CampaignID:   in.GetCampaignId(),
+		CampaignID:   ids.CampaignID(in.GetCampaignId()),
 		Timestamp:    time.Now().UTC(),
 		Type:         event.Type(strings.TrimSpace(in.GetType())),
-		SessionID:    strings.TrimSpace(in.GetSessionId()),
-		SceneID:      strings.TrimSpace(in.GetSceneId()),
+		SessionID:    ids.SessionID(strings.TrimSpace(in.GetSessionId())),
+		SceneID:      ids.SceneID(strings.TrimSpace(in.GetSceneId())),
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		ActorType:    event.ActorType(strings.TrimSpace(in.GetActorType())),
@@ -58,12 +59,12 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		return event.Event{}, status.Error(codes.FailedPrecondition, "event type is not supported for append")
 	}
 	cmd := commandbuild.Core(commandbuild.CoreInput{
-		CampaignID:   input.CampaignID,
+		CampaignID:   string(input.CampaignID),
 		Type:         cmdType,
 		ActorType:    commandActorTypeForEventActor(input.ActorType),
 		ActorID:      input.ActorID,
-		SessionID:    input.SessionID,
-		SceneID:      input.SceneID,
+		SessionID:    input.SessionID.String(),
+		SceneID:      input.SceneID.String(),
 		RequestID:    input.RequestID,
 		InvocationID: input.InvocationID,
 		EntityType:   input.EntityType,

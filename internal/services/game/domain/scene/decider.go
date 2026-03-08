@@ -9,6 +9,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 const (
@@ -60,7 +61,7 @@ const (
 //
 // Commands that operate on a single scene look up the target scene by ID.
 // Cross-scene commands (transfer, transition) look up multiple scenes.
-func Decide(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func Decide(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	if now == nil {
 		now = time.Now
 	}
@@ -114,7 +115,7 @@ func decideCreate(cmd command.Command, now func() time.Time) command.Decision {
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
@@ -133,7 +134,7 @@ func decideCreate(cmd command.Command, now func() time.Time) command.Decision {
 	events := make([]event.Event, 0, 1+len(charIDs))
 
 	normalizedCreate := CreatePayload{
-		SceneID:      sceneID,
+		SceneID:      ids.SceneID(sceneID),
 		Name:         name,
 		Description:  description,
 		CharacterIDs: charIDs,
@@ -142,7 +143,7 @@ func decideCreate(cmd command.Command, now func() time.Time) command.Decision {
 	events = append(events, command.NewEvent(cmd, EventTypeCreated, "scene", sceneID, createJSON, ts))
 
 	for _, charID := range charIDs {
-		addPayload := CharacterAddedPayload{SceneID: sceneID, CharacterID: charID}
+		addPayload := CharacterAddedPayload{SceneID: ids.SceneID(sceneID), CharacterID: charID}
 		addJSON, _ := json.Marshal(addPayload)
 		events = append(events, command.NewEvent(cmd, EventTypeCharacterAdded, "scene", sceneID, addJSON, ts))
 	}
@@ -150,12 +151,12 @@ func decideCreate(cmd command.Command, now func() time.Time) command.Decision {
 	return command.Accept(events...)
 }
 
-func decideUpdate(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideUpdate(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload UpdatePayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
@@ -164,7 +165,7 @@ func decideUpdate(scenes map[string]State, cmd command.Command, now func() time.
 	}
 
 	normalized := UpdatePayload{
-		SceneID:     sceneID,
+		SceneID:     ids.SceneID(sceneID),
 		Name:        strings.TrimSpace(payload.Name),
 		Description: strings.TrimSpace(payload.Description),
 	}
@@ -173,12 +174,12 @@ func decideUpdate(scenes map[string]State, cmd command.Command, now func() time.
 	return command.Accept(evt)
 }
 
-func decideEnd(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideEnd(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload EndPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
@@ -186,80 +187,80 @@ func decideEnd(scenes map[string]State, cmd command.Command, now func() time.Tim
 		return command.Reject(*rejection)
 	}
 
-	normalized := EndPayload{SceneID: sceneID, Reason: strings.TrimSpace(payload.Reason)}
+	normalized := EndPayload{SceneID: ids.SceneID(sceneID), Reason: strings.TrimSpace(payload.Reason)}
 	payloadJSON, _ := json.Marshal(normalized)
 	evt := command.NewEvent(cmd, EventTypeEnded, "scene", sceneID, payloadJSON, now().UTC())
 	return command.Accept(evt)
 }
 
-func decideCharacterAdd(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideCharacterAdd(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload CharacterAddedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
 	if rejection := requireActiveScene(scenes, sceneID); rejection != nil {
 		return command.Reject(*rejection)
 	}
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
 	if characterID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeCharacterIDRequired, Message: "character id is required"})
 	}
-	scene := scenes[sceneID]
-	if scene.Characters[characterID] {
+	scene := scenes[ids.SceneID(sceneID)]
+	if scene.Characters[ids.CharacterID(characterID)] {
 		return command.Reject(command.Rejection{Code: rejectionCodeCharacterAlreadyInScene, Message: "character is already in scene"})
 	}
 
-	normalized := CharacterAddedPayload{SceneID: sceneID, CharacterID: characterID}
+	normalized := CharacterAddedPayload{SceneID: ids.SceneID(sceneID), CharacterID: ids.CharacterID(characterID)}
 	payloadJSON, _ := json.Marshal(normalized)
 	evt := command.NewEvent(cmd, EventTypeCharacterAdded, "scene", sceneID, payloadJSON, now().UTC())
 	return command.Accept(evt)
 }
 
-func decideCharacterRemove(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideCharacterRemove(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload CharacterRemovedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
 	if rejection := requireActiveScene(scenes, sceneID); rejection != nil {
 		return command.Reject(*rejection)
 	}
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
 	if characterID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeCharacterIDRequired, Message: "character id is required"})
 	}
-	scene := scenes[sceneID]
-	if !scene.Characters[characterID] {
+	scene := scenes[ids.SceneID(sceneID)]
+	if !scene.Characters[ids.CharacterID(characterID)] {
 		return command.Reject(command.Rejection{Code: rejectionCodeCharacterNotInScene, Message: "character is not in scene"})
 	}
 
-	normalized := CharacterRemovedPayload{SceneID: sceneID, CharacterID: characterID}
+	normalized := CharacterRemovedPayload{SceneID: ids.SceneID(sceneID), CharacterID: ids.CharacterID(characterID)}
 	payloadJSON, _ := json.Marshal(normalized)
 	evt := command.NewEvent(cmd, EventTypeCharacterRemoved, "scene", sceneID, payloadJSON, now().UTC())
 	return command.Accept(evt)
 }
 
-func decideCharacterTransfer(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideCharacterTransfer(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload CharacterTransferPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sourceSceneID := strings.TrimSpace(payload.SourceSceneID)
+	sourceSceneID := strings.TrimSpace(payload.SourceSceneID.String())
 	if sourceSceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSourceSceneIDRequired, Message: "source scene id is required"})
 	}
-	targetSceneID := strings.TrimSpace(payload.TargetSceneID)
+	targetSceneID := strings.TrimSpace(payload.TargetSceneID.String())
 	if targetSceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeTargetSceneIDRequired, Message: "target scene id is required"})
 	}
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
 	if characterID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeCharacterIDRequired, Message: "character id is required"})
 	}
@@ -269,33 +270,33 @@ func decideCharacterTransfer(scenes map[string]State, cmd command.Command, now f
 	if rejection := requireActiveScene(scenes, targetSceneID); rejection != nil {
 		return command.Reject(*rejection)
 	}
-	source := scenes[sourceSceneID]
-	if !source.Characters[characterID] {
+	source := scenes[ids.SceneID(sourceSceneID)]
+	if !source.Characters[ids.CharacterID(characterID)] {
 		return command.Reject(command.Rejection{Code: rejectionCodeCharacterNotInScene, Message: "character is not in source scene"})
 	}
 
 	ts := now().UTC()
-	removePayload := CharacterRemovedPayload{SceneID: sourceSceneID, CharacterID: characterID}
+	removePayload := CharacterRemovedPayload{SceneID: ids.SceneID(sourceSceneID), CharacterID: ids.CharacterID(characterID)}
 	removeJSON, _ := json.Marshal(removePayload)
 	removeEvt := command.NewEvent(cmd, EventTypeCharacterRemoved, "scene", sourceSceneID, removeJSON, ts)
 
-	addPayload := CharacterAddedPayload{SceneID: targetSceneID, CharacterID: characterID}
+	addPayload := CharacterAddedPayload{SceneID: ids.SceneID(targetSceneID), CharacterID: ids.CharacterID(characterID)}
 	addJSON, _ := json.Marshal(addPayload)
 	addEvt := command.NewEvent(cmd, EventTypeCharacterAdded, "scene", targetSceneID, addJSON, ts)
 
 	return command.Accept(removeEvt, addEvt)
 }
 
-func decideTransition(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideTransition(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload TransitionPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sourceSceneID := strings.TrimSpace(payload.SourceSceneID)
+	sourceSceneID := strings.TrimSpace(payload.SourceSceneID.String())
 	if sourceSceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSourceSceneIDRequired, Message: "source scene id is required"})
 	}
-	newSceneID := strings.TrimSpace(payload.NewSceneID)
+	newSceneID := strings.TrimSpace(payload.NewSceneID.String())
 	if newSceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeNewSceneIDRequired, Message: "new scene id is required"})
 	}
@@ -307,7 +308,7 @@ func decideTransition(scenes map[string]State, cmd command.Command, now func() t
 		return command.Reject(*rejection)
 	}
 
-	source := scenes[sourceSceneID]
+	source := scenes[ids.SceneID(sourceSceneID)]
 	charIDs := sortedCharacterIDs(source.Characters)
 	description := strings.TrimSpace(payload.Description)
 
@@ -316,7 +317,7 @@ func decideTransition(scenes map[string]State, cmd command.Command, now func() t
 
 	// 1. Create the new scene.
 	createPayload := CreatePayload{
-		SceneID:      newSceneID,
+		SceneID:      ids.SceneID(newSceneID),
 		Name:         name,
 		Description:  description,
 		CharacterIDs: charIDs,
@@ -326,32 +327,32 @@ func decideTransition(scenes map[string]State, cmd command.Command, now func() t
 
 	// 2. Add each character to the new scene.
 	for _, charID := range charIDs {
-		addPayload := CharacterAddedPayload{SceneID: newSceneID, CharacterID: charID}
+		addPayload := CharacterAddedPayload{SceneID: ids.SceneID(newSceneID), CharacterID: charID}
 		addJSON, _ := json.Marshal(addPayload)
 		events = append(events, command.NewEvent(cmd, EventTypeCharacterAdded, "scene", newSceneID, addJSON, ts))
 	}
 
 	// 3. End the source scene.
-	endPayload := EndPayload{SceneID: sourceSceneID, Reason: "transitioned"}
+	endPayload := EndPayload{SceneID: ids.SceneID(sourceSceneID), Reason: "transitioned"}
 	endJSON, _ := json.Marshal(endPayload)
 	events = append(events, command.NewEvent(cmd, EventTypeEnded, "scene", sourceSceneID, endJSON, ts))
 
 	return command.Accept(events...)
 }
 
-func decideGateOpen(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideGateOpen(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload GateOpenedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
 	if rejection := requireActiveScene(scenes, sceneID); rejection != nil {
 		return command.Reject(*rejection)
 	}
-	gateID := strings.TrimSpace(payload.GateID)
+	gateID := strings.TrimSpace(payload.GateID.String())
 	if gateID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateIDRequired, Message: "gate id is required"})
 	}
@@ -359,14 +360,14 @@ func decideGateOpen(scenes map[string]State, cmd command.Command, now func() tim
 	if err != nil {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateTypeRequired, Message: err.Error()})
 	}
-	scene := scenes[sceneID]
+	scene := scenes[ids.SceneID(sceneID)]
 	if scene.GateOpen {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateAlreadyOpen, Message: "scene gate is already open"})
 	}
 
 	normalized := GateOpenedPayload{
-		SceneID:  sceneID,
-		GateID:   gateID,
+		SceneID:  ids.SceneID(sceneID),
+		GateID:   ids.GateID(gateID),
 		GateType: gateType,
 		Reason:   strings.TrimSpace(payload.Reason),
 		Metadata: payload.Metadata,
@@ -376,30 +377,30 @@ func decideGateOpen(scenes map[string]State, cmd command.Command, now func() tim
 	return command.Accept(evt)
 }
 
-func decideGateResolve(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideGateResolve(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload GateResolvedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
 	if rejection := requireActiveScene(scenes, sceneID); rejection != nil {
 		return command.Reject(*rejection)
 	}
-	gateID := strings.TrimSpace(payload.GateID)
+	gateID := strings.TrimSpace(payload.GateID.String())
 	if gateID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateIDRequired, Message: "gate id is required"})
 	}
-	scene := scenes[sceneID]
+	scene := scenes[ids.SceneID(sceneID)]
 	if !scene.GateOpen {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateNotOpen, Message: "scene gate is not open"})
 	}
 
 	normalized := GateResolvedPayload{
-		SceneID:    sceneID,
-		GateID:     gateID,
+		SceneID:    ids.SceneID(sceneID),
+		GateID:     ids.GateID(gateID),
 		Decision:   strings.TrimSpace(payload.Decision),
 		Resolution: payload.Resolution,
 	}
@@ -408,30 +409,30 @@ func decideGateResolve(scenes map[string]State, cmd command.Command, now func() 
 	return command.Accept(evt)
 }
 
-func decideGateAbandon(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideGateAbandon(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload GateAbandonedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
 	if rejection := requireActiveScene(scenes, sceneID); rejection != nil {
 		return command.Reject(*rejection)
 	}
-	gateID := strings.TrimSpace(payload.GateID)
+	gateID := strings.TrimSpace(payload.GateID.String())
 	if gateID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateIDRequired, Message: "gate id is required"})
 	}
-	scene := scenes[sceneID]
+	scene := scenes[ids.SceneID(sceneID)]
 	if !scene.GateOpen {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneGateNotOpen, Message: "scene gate is not open"})
 	}
 
 	normalized := GateAbandonedPayload{
-		SceneID: sceneID,
-		GateID:  gateID,
+		SceneID: ids.SceneID(sceneID),
+		GateID:  ids.GateID(gateID),
 		Reason:  strings.TrimSpace(payload.Reason),
 	}
 	payloadJSON, _ := json.Marshal(normalized)
@@ -439,12 +440,12 @@ func decideGateAbandon(scenes map[string]State, cmd command.Command, now func() 
 	return command.Accept(evt)
 }
 
-func decideSpotlightSet(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideSpotlightSet(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload SpotlightSetPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
@@ -455,49 +456,49 @@ func decideSpotlightSet(scenes map[string]State, cmd command.Command, now func()
 	if spotlightType == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSpotlightTypeRequired, Message: "spotlight type is required"})
 	}
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := strings.TrimSpace(payload.CharacterID.String())
 	if spotlightType == SpotlightTypeCharacter {
 		if characterID == "" {
 			return command.Reject(command.Rejection{Code: rejectionCodeCharacterIDRequired, Message: "character id is required for character spotlight"})
 		}
-		scene := scenes[sceneID]
-		if !scene.Characters[characterID] {
+		scene := scenes[ids.SceneID(sceneID)]
+		if !scene.Characters[ids.CharacterID(characterID)] {
 			return command.Reject(command.Rejection{Code: rejectionCodeCharacterNotInScene, Message: "character is not in scene"})
 		}
 	}
 
-	normalized := SpotlightSetPayload{SceneID: sceneID, SpotlightType: spotlightType, CharacterID: characterID}
+	normalized := SpotlightSetPayload{SceneID: ids.SceneID(sceneID), SpotlightType: spotlightType, CharacterID: ids.CharacterID(characterID)}
 	payloadJSON, _ := json.Marshal(normalized)
 	evt := command.NewEvent(cmd, EventTypeSpotlightSet, "scene", sceneID, payloadJSON, now().UTC())
 	return command.Accept(evt)
 }
 
-func decideSpotlightClear(scenes map[string]State, cmd command.Command, now func() time.Time) command.Decision {
+func decideSpotlightClear(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload SpotlightClearedPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return rejectPayloadDecode(cmd, err)
 	}
-	sceneID := strings.TrimSpace(payload.SceneID)
+	sceneID := strings.TrimSpace(payload.SceneID.String())
 	if sceneID == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSceneIDRequired, Message: "scene id is required"})
 	}
 	if rejection := requireActiveScene(scenes, sceneID); rejection != nil {
 		return command.Reject(*rejection)
 	}
-	scene := scenes[sceneID]
+	scene := scenes[ids.SceneID(sceneID)]
 	if scene.SpotlightType == "" {
 		return command.Reject(command.Rejection{Code: rejectionCodeSpotlightNotSet, Message: "spotlight is not set"})
 	}
 
-	normalized := SpotlightClearedPayload{SceneID: sceneID, Reason: strings.TrimSpace(payload.Reason)}
+	normalized := SpotlightClearedPayload{SceneID: ids.SceneID(sceneID), Reason: strings.TrimSpace(payload.Reason)}
 	payloadJSON, _ := json.Marshal(normalized)
 	evt := command.NewEvent(cmd, EventTypeSpotlightCleared, "scene", sceneID, payloadJSON, now().UTC())
 	return command.Accept(evt)
 }
 
 // requireActiveScene validates that the scene exists and is active.
-func requireActiveScene(scenes map[string]State, sceneID string) *command.Rejection {
-	scene, ok := scenes[sceneID]
+func requireActiveScene(scenes map[ids.SceneID]State, sceneID string) *command.Rejection {
+	scene, ok := scenes[ids.SceneID(sceneID)]
 	if !ok {
 		return &command.Rejection{Code: rejectionCodeSceneNotFound, Message: "scene not found"}
 	}
@@ -515,11 +516,11 @@ func rejectPayloadDecode(cmd command.Command, err error) command.Decision {
 }
 
 // normalizeCharacterIDs trims, deduplicates, and filters empty character IDs.
-func normalizeCharacterIDs(ids []string) []string {
-	seen := make(map[string]bool, len(ids))
-	result := make([]string, 0, len(ids))
-	for _, id := range ids {
-		trimmed := strings.TrimSpace(id)
+func normalizeCharacterIDs(charIDs []ids.CharacterID) []ids.CharacterID {
+	seen := make(map[ids.CharacterID]bool, len(charIDs))
+	result := make([]ids.CharacterID, 0, len(charIDs))
+	for _, id := range charIDs {
+		trimmed := ids.CharacterID(strings.TrimSpace(id.String()))
 		if trimmed == "" || seen[trimmed] {
 			continue
 		}
@@ -530,14 +531,18 @@ func normalizeCharacterIDs(ids []string) []string {
 }
 
 // sortedCharacterIDs returns a stable-sorted slice of character IDs from a map.
-func sortedCharacterIDs(chars map[string]bool) []string {
-	ids := make([]string, 0, len(chars))
+func sortedCharacterIDs(chars map[ids.CharacterID]bool) []ids.CharacterID {
+	strs := make([]string, 0, len(chars))
 	for id := range chars {
-		ids = append(ids, id)
+		strs = append(strs, string(id))
 	}
 	// Sort for deterministic event order in replay.
-	sortStrings(ids)
-	return ids
+	slices.Sort(strs)
+	result := make([]ids.CharacterID, 0, len(strs))
+	for _, s := range strs {
+		result = append(result, ids.CharacterID(s))
+	}
+	return result
 }
 
 // sortStrings sorts a slice of strings in place.

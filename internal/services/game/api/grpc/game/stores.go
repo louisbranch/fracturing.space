@@ -99,3 +99,8 @@ func (s Stores) DomainExecutor() domainwrite.Executor {
 func (s Stores) DomainWriteRuntime() *domainwrite.Runtime {
 	return s.WriteRuntime
 }
+
+// AuditEventStore exposes the audit store for domain rejection telemetry.
+func (s Stores) AuditEventStore() storage.AuditEventStore {
+	return s.Audit
+}

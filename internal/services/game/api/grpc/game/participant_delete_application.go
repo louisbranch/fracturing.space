@@ -11,6 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -76,7 +77,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	reason := strings.TrimSpace(in.GetReason())
 	applier := c.stores.Applier()
 	payload := participant.LeavePayload{
-		ParticipantID: participantID,
+		ParticipantID: ids.ParticipantID(participantID),
 		Reason:        reason,
 	}
 	payloadJSON, err := json.Marshal(payload)

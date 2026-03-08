@@ -29,7 +29,7 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event, pa
 	if name == "" {
 		return fmt.Errorf("name is required")
 	}
-	userID := strings.TrimSpace(payload.UserID)
+	userID := strings.TrimSpace(payload.UserID.String())
 
 	createdAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
@@ -37,7 +37,7 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event, pa
 	}
 	if err := a.Participant.PutParticipant(ctx, storage.ParticipantRecord{
 		ID:             participantID,
-		CampaignID:     strings.TrimSpace(evt.CampaignID),
+		CampaignID:     strings.TrimSpace(string(evt.CampaignID)),
 		UserID:         userID,
 		Name:           name,
 		Role:           role,
@@ -52,11 +52,11 @@ func (a Applier) applyParticipantJoined(ctx context.Context, evt event.Event, pa
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
-	pCount, err := a.Participant.CountParticipants(ctx, evt.CampaignID)
+	pCount, err := a.Participant.CountParticipants(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -73,7 +73,7 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event, p
 		return nil
 	}
 
-	current, err := a.Participant.GetParticipant(ctx, evt.CampaignID, participantID)
+	current, err := a.Participant.GetParticipant(ctx, string(evt.CampaignID), participantID)
 	if err != nil {
 		return err
 	}
@@ -126,7 +126,7 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event, p
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -138,15 +138,15 @@ func (a Applier) applyParticipantUpdated(ctx context.Context, evt event.Event, p
 func (a Applier) applyParticipantLeft(ctx context.Context, evt event.Event) error {
 	participantID := strings.TrimSpace(evt.EntityID)
 
-	if err := a.Participant.DeleteParticipant(ctx, evt.CampaignID, participantID); err != nil {
+	if err := a.Participant.DeleteParticipant(ctx, string(evt.CampaignID), participantID); err != nil {
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
-	pCount, err := a.Participant.CountParticipants(ctx, evt.CampaignID)
+	pCount, err := a.Participant.CountParticipants(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -163,12 +163,12 @@ func (a Applier) applyParticipantLeft(ctx context.Context, evt event.Event) erro
 func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event, payload participant.BindPayload) error {
 	participantID := strings.TrimSpace(evt.EntityID)
 
-	userID := strings.TrimSpace(payload.UserID)
+	userID := strings.TrimSpace(payload.UserID.String())
 	if userID == "" {
 		return fmt.Errorf("participant.bound user_id is required")
 	}
 
-	current, err := a.Participant.GetParticipant(ctx, evt.CampaignID, participantID)
+	current, err := a.Participant.GetParticipant(ctx, string(evt.CampaignID), participantID)
 	if err != nil {
 		return err
 	}
@@ -182,7 +182,7 @@ func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event, pay
 	updated.UpdatedAt = updatedAt
 
 	if a.ClaimIndex != nil {
-		if err := a.ClaimIndex.PutParticipantClaim(ctx, evt.CampaignID, userID, participantID, updatedAt); err != nil {
+		if err := a.ClaimIndex.PutParticipantClaim(ctx, string(evt.CampaignID), userID, participantID, updatedAt); err != nil {
 			return err
 		}
 	}
@@ -191,7 +191,7 @@ func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event, pay
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -203,9 +203,9 @@ func (a Applier) applyParticipantBound(ctx context.Context, evt event.Event, pay
 func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event, payload participant.UnbindPayload) error {
 	participantID := strings.TrimSpace(evt.EntityID)
 
-	requestedUserID := strings.TrimSpace(payload.UserID)
+	requestedUserID := strings.TrimSpace(payload.UserID.String())
 
-	current, err := a.Participant.GetParticipant(ctx, evt.CampaignID, participantID)
+	current, err := a.Participant.GetParticipant(ctx, string(evt.CampaignID), participantID)
 	if err != nil {
 		return err
 	}
@@ -215,7 +215,7 @@ func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event, p
 	}
 
 	if a.ClaimIndex != nil && currentUserID != "" {
-		if err := a.ClaimIndex.DeleteParticipantClaim(ctx, evt.CampaignID, currentUserID); err != nil {
+		if err := a.ClaimIndex.DeleteParticipantClaim(ctx, string(evt.CampaignID), currentUserID); err != nil {
 			return err
 		}
 	}
@@ -232,7 +232,7 @@ func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event, p
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -244,13 +244,13 @@ func (a Applier) applyParticipantUnbound(ctx context.Context, evt event.Event, p
 func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event, payload participant.SeatReassignPayload) error {
 	participantID := strings.TrimSpace(evt.EntityID)
 
-	newUserID := strings.TrimSpace(payload.UserID)
+	newUserID := strings.TrimSpace(payload.UserID.String())
 	if newUserID == "" {
 		return fmt.Errorf("participant.seat_reassigned user_id is required")
 	}
-	priorUserID := strings.TrimSpace(payload.PriorUserID)
+	priorUserID := strings.TrimSpace(payload.PriorUserID.String())
 
-	current, err := a.Participant.GetParticipant(ctx, evt.CampaignID, participantID)
+	current, err := a.Participant.GetParticipant(ctx, string(evt.CampaignID), participantID)
 	if err != nil {
 		return err
 	}
@@ -266,11 +266,11 @@ func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event, paylo
 
 	if a.ClaimIndex != nil {
 		if currentUserID != "" {
-			if err := a.ClaimIndex.DeleteParticipantClaim(ctx, evt.CampaignID, currentUserID); err != nil {
+			if err := a.ClaimIndex.DeleteParticipantClaim(ctx, string(evt.CampaignID), currentUserID); err != nil {
 				return err
 			}
 		}
-		if err := a.ClaimIndex.PutParticipantClaim(ctx, evt.CampaignID, newUserID, participantID, updatedAt); err != nil {
+		if err := a.ClaimIndex.PutParticipantClaim(ctx, string(evt.CampaignID), newUserID, participantID, updatedAt); err != nil {
 			return err
 		}
 	}
@@ -283,7 +283,7 @@ func (a Applier) applySeatReassigned(ctx context.Context, evt event.Event, paylo
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}

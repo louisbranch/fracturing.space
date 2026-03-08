@@ -286,6 +286,28 @@ func TestValidateProfileAdapterCoverage_SkipsNonProfileSystems(t *testing.T) {
 	}
 }
 
+func TestExtractProjectionStores_PopulatesDaggerheart(t *testing.T) {
+	store := fakeDaggerheartStore{}
+	ps := ExtractProjectionStores(store)
+	if ps.Daggerheart == nil {
+		t.Fatal("expected Daggerheart store to be populated")
+	}
+}
+
+func TestExtractProjectionStores_NilForNonImplementor(t *testing.T) {
+	ps := ExtractProjectionStores("not a store")
+	if ps.Daggerheart != nil {
+		t.Fatal("expected Daggerheart store to be nil for non-implementor")
+	}
+}
+
+func TestExtractProjectionStores_NilInput(t *testing.T) {
+	ps := ExtractProjectionStores(nil)
+	if ps.Daggerheart != nil {
+		t.Fatal("expected Daggerheart store to be nil for nil input")
+	}
+}
+
 func parseGameSystemID(raw string) (domainbridge.SystemID, bool) {
 	return domainbridge.NormalizeSystemID(raw)
 }

@@ -38,7 +38,7 @@ func (g DecisionGate) Check(state session.State, cmd command.Command) command.De
 		return command.Decision{}
 	}
 	message := "session gate is open"
-	if gateID := strings.TrimSpace(state.GateID); gateID != "" {
+	if gateID := strings.TrimSpace(string(state.GateID)); gateID != "" {
 		message = fmt.Sprintf("session gate is open: %s", gateID)
 	}
 	return command.Reject(command.Rejection{
@@ -63,7 +63,7 @@ func (g DecisionGate) CheckScene(state scene.State, cmd command.Command) command
 		return command.Decision{}
 	}
 	message := "scene gate is open"
-	if gateID := strings.TrimSpace(state.GateID); gateID != "" {
+	if gateID := strings.TrimSpace(string(state.GateID)); gateID != "" {
 		message = fmt.Sprintf("scene gate is open: %s", gateID)
 	}
 	return command.Reject(command.Rejection{

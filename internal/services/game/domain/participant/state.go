@@ -1,5 +1,7 @@
 package participant
 
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+
 // State captures replayed campaign membership and control intent.
 //
 // Permission checks in multiple services derive from this snapshot to avoid
@@ -10,17 +12,17 @@ type State struct {
 	// Left indicates a completed leave command has been processed.
 	Left bool
 	// ParticipantID is the campaign-scoped identity used by domain commands.
-	ParticipantID string
+	ParticipantID ids.ParticipantID
 	// UserID links participant records to external authentication identities.
-	UserID string
+	UserID ids.UserID
 	// Name is shown across campaign/session UI and projection outputs.
 	Name string
 	// Role is the campaign role used for authorization decisions.
-	Role string
+	Role Role
 	// Controller indicates who can command actions for this participant.
-	Controller string
+	Controller Controller
 	// CampaignAccess controls visibility and permission scope at campaign level.
-	CampaignAccess string
+	CampaignAccess CampaignAccess
 	// AvatarSetID identifies the avatar set bound to this participant.
 	AvatarSetID string
 	// AvatarAssetID identifies the avatar image within AvatarSetID.

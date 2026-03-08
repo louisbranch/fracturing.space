@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -140,7 +141,7 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 			before := hopeAfter
 			after := before - spend.Amount
 			payload := daggerheart.HopeSpendPayload{
-				CharacterID: characterID,
+				CharacterID: ids.CharacterID(characterID),
 				Amount:      spend.Amount,
 				Before:      before,
 				After:       after,

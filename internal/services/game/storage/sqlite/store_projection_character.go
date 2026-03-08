@@ -44,7 +44,7 @@ func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) err
 		OwnerParticipantID:      c.OwnerParticipantID,
 		ControllerParticipantID: toNullString(c.ParticipantID),
 		Name:                    c.Name,
-		Kind:                    characterKindToString(c.Kind),
+		Kind:                    enumToStorage(c.Kind),
 		Notes:                   c.Notes,
 		AvatarSetID:             c.AvatarSetID,
 		AvatarAssetID:           c.AvatarAssetID,

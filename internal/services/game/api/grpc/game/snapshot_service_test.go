@@ -397,21 +397,15 @@ func TestPatchCharacterState_Success(t *testing.T) {
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
 
-	hpBefore := 15
-	hpAfter := 10
-	hopeBefore := 3
-	hopeAfter := 5
-	stressBefore := 1
-	stressAfter := 3
+	hp := 10
+	hope := 5
+	stress := 3
 
 	payloadJSON, err := json.Marshal(daggerheart.CharacterStatePatchedPayload{
-		CharacterID:  "ch1",
-		HPBefore:     &hpBefore,
-		HPAfter:      &hpAfter,
-		HopeBefore:   &hopeBefore,
-		HopeAfter:    &hopeAfter,
-		StressBefore: &stressBefore,
-		StressAfter:  &stressAfter,
+		CharacterID: "ch1",
+		HP:          &hp,
+		Hope:        &hope,
+		Stress:      &stress,
 	})
 	if err != nil {
 		t.Fatalf("encode payload: %v", err)
@@ -493,21 +487,15 @@ func TestPatchCharacterState_SetToZero(t *testing.T) {
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
 
-	hpBefore := 15
-	hpAfter := 0
-	hopeBefore := 5
-	hopeAfter := 0
-	stressBefore := 3
-	stressAfter := 0
+	hp := 0
+	hope := 0
+	stress := 0
 
 	payloadJSON, err := json.Marshal(daggerheart.CharacterStatePatchedPayload{
-		CharacterID:  "ch1",
-		HPBefore:     &hpBefore,
-		HPAfter:      &hpAfter,
-		HopeBefore:   &hopeBefore,
-		HopeAfter:    &hopeAfter,
-		StressBefore: &stressBefore,
-		StressAfter:  &stressAfter,
+		CharacterID: "ch1",
+		HP:          &hp,
+		Hope:        &hope,
+		Stress:      &stress,
 	})
 	if err != nil {
 		t.Fatalf("encode payload: %v", err)
@@ -683,7 +671,7 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
-	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Before: 0, After: 7})
+	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Value: 7})
 	if err != nil {
 		t.Fatalf("encode payload: %v", err)
 	}
@@ -751,7 +739,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 3}
 
-	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Before: 3, After: 10})
+	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Value: 10})
 	if err != nil {
 		t.Fatalf("encode payload: %v", err)
 	}
@@ -809,7 +797,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
 
-	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Before: 5, After: 0})
+	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Value: 0})
 	if err != nil {
 		t.Fatalf("encode payload: %v", err)
 	}
@@ -860,7 +848,7 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
-	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Before: 0, After: 5})
+	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Value: 5})
 	if err != nil {
 		t.Fatalf("encode payload: %v", err)
 	}
@@ -923,21 +911,15 @@ func TestPatchCharacterState_UsesDomainEngine(t *testing.T) {
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
 
-	hpBefore := 15
-	hpAfter := 10
-	hopeBefore := 3
-	hopeAfter := 5
-	stressBefore := 1
-	stressAfter := 1
+	hp := 10
+	hope := 5
+	stress := 1
 
 	payloadJSON, err := json.Marshal(daggerheart.CharacterStatePatchedPayload{
-		CharacterID:  "ch1",
-		HPBefore:     &hpBefore,
-		HPAfter:      &hpAfter,
-		HopeBefore:   &hopeBefore,
-		HopeAfter:    &hopeAfter,
-		StressBefore: &stressBefore,
-		StressAfter:  &stressAfter,
+		CharacterID: "ch1",
+		HP:          &hp,
+		Hope:        &hope,
+		Stress:      &stress,
 	})
 	if err != nil {
 		t.Fatalf("encode payload: %v", err)

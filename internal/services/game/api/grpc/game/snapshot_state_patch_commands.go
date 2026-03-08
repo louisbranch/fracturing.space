@@ -20,7 +20,7 @@ func applyDaggerheartCharacterStatePatchCommand(
 	characterID string,
 	actorType event.ActorType,
 	actorID string,
-	payload daggerheart.CharacterStatePatchedPayload,
+	payload daggerheart.CharacterStatePatchPayload,
 ) error {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -66,7 +66,7 @@ func executeDaggerheartConditionChangeCommand(
 	actorType event.ActorType,
 	actorID string,
 	sessionID string,
-	payload daggerheart.ConditionChangedPayload,
+	payload daggerheart.ConditionChangePayload,
 	applyErrMessage string,
 ) error {
 	payloadJSON, err := json.Marshal(payload)

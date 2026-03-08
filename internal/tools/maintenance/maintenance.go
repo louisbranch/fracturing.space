@@ -588,11 +588,7 @@ func runCampaign(ctx context.Context, eventStore storage.EventStore, projStore s
 		result.ExitCode = 1
 		return result
 	}
-	systemStores := systemmanifest.ProjectionStores{}
-	if dhs, ok := projStore.(storage.DaggerheartStore); ok {
-		systemStores.Daggerheart = dhs
-	}
-	systemAdapters, err := systemmanifest.AdapterRegistry(systemStores)
+	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ExtractProjectionStores(projStore))
 	if err != nil {
 		result.Error = fmt.Sprintf("build projection adapters: %v", err)
 		result.ExitCode = 1
@@ -1146,11 +1142,7 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 		return report, warnings, fmt.Errorf("seed campaign: %w", err)
 	}
 
-	scratchSystemStores := systemmanifest.ProjectionStores{}
-	if dhs, ok := scratch.(storage.DaggerheartStore); ok {
-		scratchSystemStores.Daggerheart = dhs
-	}
-	systemAdapters, err := systemmanifest.AdapterRegistry(scratchSystemStores)
+	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ExtractProjectionStores(scratch))
 	if err != nil {
 		return report, warnings, fmt.Errorf("build projection adapters: %w", err)
 	}
@@ -1164,9 +1156,9 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 	}
 	report.LastSeq = lastSeq
 
-	sourceDH, sourceOk := source.(storage.DaggerheartStore)
-	scratchDH, scratchOk := scratch.(storage.DaggerheartStore)
-	if !sourceOk || !scratchOk {
+	sourceDH := systemmanifest.ExtractProjectionStores(source).Daggerheart
+	scratchDH := systemmanifest.ExtractProjectionStores(scratch).Daggerheart
+	if sourceDH == nil || scratchDH == nil {
 		return report, warnings, nil
 	}
 
@@ -1279,11 +1271,7 @@ func runGapRepair(ctx context.Context, eventStore storage.EventStore, projStore 
 		errOut = io.Discard
 	}
 
-	gapSystemStores := systemmanifest.ProjectionStores{}
-	if dhs, ok := projStore.(storage.DaggerheartStore); ok {
-		gapSystemStores.Daggerheart = dhs
-	}
-	systemAdapters, err := systemmanifest.AdapterRegistry(gapSystemStores)
+	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ExtractProjectionStores(projStore))
 	if err != nil {
 		return fmt.Errorf("build projection adapters: %w", err)
 	}

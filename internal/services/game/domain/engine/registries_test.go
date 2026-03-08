@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
@@ -965,11 +966,11 @@ func (m *fakeModuleWithStateFactory) StateFactory() module.StateFactory         
 
 type deterministicFactory struct{}
 
-func (f *deterministicFactory) NewSnapshotState(_ string) (any, error) {
+func (f *deterministicFactory) NewSnapshotState(_ ids.CampaignID) (any, error) {
 	return map[string]int{"counter": 0}, nil
 }
 
-func (f *deterministicFactory) NewCharacterState(_, _, _ string) (any, error) {
+func (f *deterministicFactory) NewCharacterState(_ ids.CampaignID, _ ids.CharacterID, _ string) (any, error) {
 	return map[string]int{"hp": 10}, nil
 }
 
@@ -977,12 +978,12 @@ type nonDeterministicSnapshotFactory struct {
 	calls int
 }
 
-func (f *nonDeterministicSnapshotFactory) NewSnapshotState(_ string) (any, error) {
+func (f *nonDeterministicSnapshotFactory) NewSnapshotState(_ ids.CampaignID) (any, error) {
 	f.calls++
 	return map[string]int{"counter": f.calls}, nil
 }
 
-func (f *nonDeterministicSnapshotFactory) NewCharacterState(_, _, _ string) (any, error) {
+func (f *nonDeterministicSnapshotFactory) NewCharacterState(_ ids.CampaignID, _ ids.CharacterID, _ string) (any, error) {
 	return map[string]int{"hp": 10}, nil
 }
 
@@ -990,11 +991,11 @@ type nonDeterministicCharacterFactory struct {
 	calls int
 }
 
-func (f *nonDeterministicCharacterFactory) NewSnapshotState(_ string) (any, error) {
+func (f *nonDeterministicCharacterFactory) NewSnapshotState(_ ids.CampaignID) (any, error) {
 	return map[string]int{"counter": 0}, nil
 }
 
-func (f *nonDeterministicCharacterFactory) NewCharacterState(_, _, _ string) (any, error) {
+func (f *nonDeterministicCharacterFactory) NewCharacterState(_ ids.CampaignID, _ ids.CharacterID, _ string) (any, error) {
 	f.calls++
 	return map[string]int{"hp": f.calls}, nil
 }

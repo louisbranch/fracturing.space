@@ -104,7 +104,7 @@ func putSessionWithQueries(ctx context.Context, queries *db.Queries, sess storag
 		CampaignID: sess.CampaignID,
 		ID:         sess.ID,
 		Name:       sess.Name,
-		Status:     sessionStatusToString(sess.Status),
+		Status:     enumToStorage(sess.Status),
 		StartedAt:  toMillis(sess.StartedAt),
 		UpdatedAt:  toMillis(sess.UpdatedAt),
 		EndedAt:    endedAt,
@@ -149,7 +149,7 @@ func endSessionWithQueries(ctx context.Context, queries *db.Queries, campaignID,
 		sess.EndedAt = &sess.UpdatedAt
 
 		if err := queries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
-			Status:     sessionStatusToString(sess.Status),
+			Status:     enumToStorage(sess.Status),
 			UpdatedAt:  toMillis(sess.UpdatedAt),
 			EndedAt:    toNullMillis(sess.EndedAt),
 			CampaignID: campaignID,

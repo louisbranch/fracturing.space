@@ -6,4 +6,25 @@
 //
 // Projection is the persistence seam: write-side decisions emit events, projection
 // code transforms those events into query-friendly tables and materialized views.
+//
+// # Handler Ordering
+//
+// Projection handlers assume strict event sequence order within a campaign
+// journal. Parent entities (Campaign, Session) must be projected before child
+// entities (Participant, Character, Scene) because handlers reference parent
+// rows via foreign keys and read parent state for denormalized fields.
+//
+// This ordering is guaranteed by two mechanisms:
+//
+//  1. The event journal stores events with monotonically increasing sequence
+//     numbers per campaign. Storage implementations return events in sequence
+//     order from ListEvents.
+//
+//  2. Replay enforces contiguity: if an event's sequence number doesn't equal
+//     lastSeq+1, replay aborts with a gap error rather than silently skipping
+//     events that downstream handlers depend on. See [ReplayCampaignWith].
+//
+// When adding new projection handlers, ensure they tolerate being called for
+// events whose parent entity was created in an earlier event within the same
+// campaign journal.
 package projection

@@ -14,6 +14,7 @@ Core explanations for system model, vocabulary, and write-path behavior.
 
 - [Overview](overview.md)
 - [System architecture](architecture.md)
+- [Design philosophy](design-philosophy.md)
 - [Domain language](domain-language.md)
 - [Event-driven system](event-driven-system.md)
 - [gRPC write path](grpc-write-path.md)

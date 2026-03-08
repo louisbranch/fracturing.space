@@ -128,6 +128,21 @@ type Context struct {
 	ParticipantID string
 }
 
+// grpcNotFoundError translates gRPC NotFound/InvalidArgument errors into
+// user-friendly messages for MCP tool responses. Other errors are wrapped
+// with the provided entity label.
+func grpcNotFoundError(err error, entity string) error {
+	if s, ok := status.FromError(err); ok {
+		switch s.Code() {
+		case codes.NotFound:
+			return fmt.Errorf("%s not found", entity)
+		case codes.InvalidArgument:
+			return fmt.Errorf("%s not found or does not belong to campaign", entity)
+		}
+	}
+	return fmt.Errorf("get %s: %w", entity, err)
+}
+
 // validateCampaignExists checks if a campaign exists by calling GetCampaign.
 func validateCampaignExists(ctx context.Context, client statev1.CampaignServiceClient, campaignID string, invocationID string) (ToolCallMetadata, error) {
 	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
@@ -140,12 +155,7 @@ func validateCampaignExists(ctx context.Context, client statev1.CampaignServiceC
 		CampaignId: campaignID,
 	}, grpc.Header(&header))
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return ToolCallMetadata{}, fmt.Errorf("campaign not found")
-			}
-		}
-		return ToolCallMetadata{}, fmt.Errorf("get campaign: %w", err)
+		return ToolCallMetadata{}, grpcNotFoundError(err, "campaign")
 	}
 
 	return MergeResponseMetadata(callMeta, header), nil
@@ -165,15 +175,7 @@ func validateSessionExists(ctx context.Context, client statev1.SessionServiceCli
 		SessionId:  sessionID,
 	}, grpc.Header(&header))
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return ToolCallMetadata{}, fmt.Errorf("session not found")
-			}
-			if s.Code() == codes.InvalidArgument {
-				return ToolCallMetadata{}, fmt.Errorf("session not found or does not belong to campaign")
-			}
-		}
-		return ToolCallMetadata{}, fmt.Errorf("get session: %w", err)
+		return ToolCallMetadata{}, grpcNotFoundError(err, "session")
 	}
 
 	return MergeResponseMetadata(callMeta, header), nil
@@ -193,15 +195,7 @@ func validateParticipantExists(ctx context.Context, client statev1.ParticipantSe
 		ParticipantId: participantID,
 	}, grpc.Header(&header))
 	if err != nil {
-		if s, ok := status.FromError(err); ok {
-			if s.Code() == codes.NotFound {
-				return ToolCallMetadata{}, fmt.Errorf("participant not found")
-			}
-			if s.Code() == codes.InvalidArgument {
-				return ToolCallMetadata{}, fmt.Errorf("participant not found or does not belong to campaign")
-			}
-		}
-		return ToolCallMetadata{}, fmt.Errorf("get participant: %w", err)
+		return ToolCallMetadata{}, grpcNotFoundError(err, "participant")
 	}
 
 	return MergeResponseMetadata(callMeta, header), nil

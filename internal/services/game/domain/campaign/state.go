@@ -12,9 +12,9 @@ type State struct {
 	// Locale stores the campaign language preference as a BCP-47 tag.
 	Locale string
 	// GameSystem is the chosen ruleset, used to route system-owned behavior.
-	GameSystem string
+	GameSystem GameSystem
 	// GmMode captures who is allowed to lead game decisions.
-	GmMode string
+	GmMode GmMode
 	// Status is the current lifecycle state that gates what operations are legal.
 	Status Status
 	// ThemePrompt stores optional campaign setup context for narrative features.
