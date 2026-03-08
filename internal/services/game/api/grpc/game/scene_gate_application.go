@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -42,8 +43,8 @@ func (a sceneApplication) OpenSceneGate(ctx context.Context, campaignID string, 
 	}
 
 	payload := scene.GateOpenedPayload{
-		SceneID:  sceneID,
-		GateID:   gateID,
+		SceneID:  ids.SceneID(sceneID),
+		GateID:   ids.GateID(gateID),
 		GateType: gateType,
 		Reason:   strings.TrimSpace(in.GetReason()),
 	}
@@ -94,8 +95,8 @@ func (a sceneApplication) ResolveSceneGate(ctx context.Context, campaignID strin
 	}
 
 	payload := scene.GateResolvedPayload{
-		SceneID:  sceneID,
-		GateID:   gateID,
+		SceneID:  ids.SceneID(sceneID),
+		GateID:   ids.GateID(gateID),
 		Decision: strings.TrimSpace(in.GetDecision()),
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -145,8 +146,8 @@ func (a sceneApplication) AbandonSceneGate(ctx context.Context, campaignID strin
 	}
 
 	payload := scene.GateAbandonedPayload{
-		SceneID: sceneID,
-		GateID:  gateID,
+		SceneID: ids.SceneID(sceneID),
+		GateID:  ids.GateID(gateID),
 		Reason:  strings.TrimSpace(in.GetReason()),
 	}
 	payloadJSON, err := json.Marshal(payload)

@@ -11,6 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
@@ -153,7 +154,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		payloadFields[key] = stringValue
 	}
 	payload := participant.UpdatePayload{
-		ParticipantID: participantID,
+		ParticipantID: ids.ParticipantID(participantID),
 		Fields:        payloadFields,
 	}
 	payloadJSON, err := json.Marshal(payload)

@@ -6,43 +6,44 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
 func TestActiveParticipantsByID_IsDeterministicAndFiltersInactive(t *testing.T) {
 	indexed := activeParticipantsByID(aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"player-z": {
 				ParticipantID: "player-z",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 			"gm-a": {
 				ParticipantID: "gm-a",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
+				Role:          participant.RoleGM,
 			},
 			"gm-ai": {
 				ParticipantID: "gm-ai",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
-				Controller:    string(participant.ControllerAI),
+				Role:          participant.RoleGM,
+				Controller:    participant.ControllerAI,
 			},
 			"player-a": {
 				ParticipantID: "player-a",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 			"ignored-left": {
 				ParticipantID: "ignored-left",
 				Joined:        true,
 				Left:          true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 			"ignored-invalid-role": {
 				ParticipantID: "ignored-invalid-role",
 				Joined:        true,
-				Role:          "invalid",
+				Role:          participant.Role("invalid"),
 			},
 		},
 	})
@@ -63,7 +64,7 @@ func TestActiveParticipantsByID_IsDeterministicAndFiltersInactive(t *testing.T) 
 
 func TestActiveCharactersByID_IsDeterministicAndFiltersInactive(t *testing.T) {
 	indexed := activeCharactersByID(aggregate.State{
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-z": {
 				CharacterID:   "char-z",
 				Created:       true,
@@ -98,19 +99,19 @@ func TestActiveCharactersByID_IsDeterministicAndFiltersInactive(t *testing.T) {
 
 func TestEvaluateSessionStart_SystemReadinessMessageFormatting(t *testing.T) {
 	base := aggregate.State{
-		Participants: map[string]participant.State{
+		Participants: map[ids.ParticipantID]participant.State{
 			"gm-1": {
 				ParticipantID: "gm-1",
 				Joined:        true,
-				Role:          string(participant.RoleGM),
+				Role:          participant.RoleGM,
 			},
 			"player-1": {
 				ParticipantID: "player-1",
 				Joined:        true,
-				Role:          string(participant.RolePlayer),
+				Role:          participant.RolePlayer,
 			},
 		},
-		Characters: map[string]character.State{
+		Characters: map[ids.CharacterID]character.State{
 			"char-1": {
 				CharacterID:   "char-1",
 				Created:       true,

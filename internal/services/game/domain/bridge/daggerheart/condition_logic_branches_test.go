@@ -3,12 +3,14 @@ package daggerheart
 import (
 	"strings"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 func TestIsCharacterStatePatchNoMutation_FieldMismatchBranches(t *testing.T) {
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {
 				CharacterID: "char-1",
 				HP:          6,
@@ -213,21 +215,21 @@ func TestValidateConditionSetPayload_Branches(t *testing.T) {
 
 func TestFoldGMFearChangedAndCountdownUpdate_Branches(t *testing.T) {
 	t.Run("gm fear rejects out of range", func(t *testing.T) {
-		err := foldGMFearChanged(&SnapshotState{}, GMFearChangedPayload{After: GMFearMax + 1})
-		if err == nil || !strings.Contains(err.Error(), "gm fear after must be in range") {
+		err := foldGMFearChanged(&SnapshotState{}, GMFearChangedPayload{Value: GMFearMax + 1})
+		if err == nil || !strings.Contains(err.Error(), "gm fear value must be in range") {
 			t.Fatalf("foldGMFearChanged() error = %v, want range error", err)
 		}
 	})
 
 	t.Run("countdown update sets looping on looped payload", func(t *testing.T) {
 		state := &SnapshotState{
-			CountdownStates: map[string]CountdownState{
+			CountdownStates: map[ids.CountdownID]CountdownState{
 				"cd-1": {CountdownID: "cd-1", Current: 1, Looping: false},
 			},
 		}
 		if err := foldCountdownUpdated(state, CountdownUpdatedPayload{
 			CountdownID: "cd-1",
-			After:       2,
+			Value:       2,
 			Looped:      true,
 		}); err != nil {
 			t.Fatalf("foldCountdownUpdated() error = %v", err)

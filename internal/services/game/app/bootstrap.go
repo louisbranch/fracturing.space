@@ -55,7 +55,7 @@ type serverBootstrapConfig struct {
 	newHealthServer                 func() *health.Server
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
 	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
-	buildProjectionApplyOutboxApply func(projectionApplyStore, systemmanifest.ProjectionStores, *event.Registry) func(context.Context, event.Event) error
+	buildProjectionApplyOutboxApply func(projectionApplyStore, *event.Registry) func(context.Context, event.Event) error
 	buildStatusRuntime              func(context.Context, string, *storageBundle, bool, bool) statusRuntimeState
 }
 
@@ -130,6 +130,7 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 				grpc.ChainStreamInterceptor(
 					grpcmeta.StreamServerInterceptor(nil),
 					interceptors.InternalServiceIdentityStreamInterceptor(internalIdentity),
+					interceptors.StreamAuditInterceptor(bundle.events),
 				),
 			)
 		}
@@ -185,7 +186,7 @@ func (b *serverBootstrap) configureStoresAndApplier(
 	writeRuntime := gamegrpc.NewWriteRuntime()
 	stores := gamegrpc.NewStoresFromProjection(gamegrpc.StoresFromProjectionConfig{
 		ProjectionStore: bundle.projections,
-		SystemStores:    systemmanifest.ProjectionStores{Daggerheart: bundle.projections},
+		SystemStores:    systemmanifest.ExtractProjectionStores(bundle.projections),
 		EventStore:      bundle.events,
 		ContentStore:    bundle.content,
 		WriteRuntime:    writeRuntime,
@@ -235,7 +236,6 @@ func (b *serverBootstrap) configureProjectionRuntime(
 	srvEnv serverEnv,
 	stores *gamegrpc.Stores,
 	projectionStore projectionApplyStore,
-	systemStores systemmanifest.ProjectionStores,
 	registries engine.Registries,
 	adapters *bridge.AdapterRegistry,
 ) (projectionRuntimeState, error) {
@@ -259,7 +259,7 @@ func (b *serverBootstrap) configureProjectionRuntime(
 	return projectionRuntimeState{
 		enableApplyWorker:  enableApplyWorker,
 		enableShadowWorker: enableShadowWorker,
-		applyOutbox:        b.config.buildProjectionApplyOutboxApply(projectionStore, systemStores, projectionRegistries),
+		applyOutbox:        b.config.buildProjectionApplyOutboxApply(projectionStore, projectionRegistries),
 	}, nil
 }
 
@@ -393,7 +393,6 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		srvEnv,
 		&stores,
 		bundle.projections,
-		stores.SystemStores,
 		registries,
 		storeState.applier.Adapters,
 	)

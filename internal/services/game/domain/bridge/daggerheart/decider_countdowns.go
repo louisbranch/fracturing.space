@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
@@ -26,36 +27,60 @@ func decideRestTake(snapshotState SnapshotState, cmd command.Command, now func()
 		if rejection := countdownUpdateSnapshotRejection(snapshotState, *payload.LongTermCountdown); rejection != nil {
 			return command.Reject(*rejection)
 		}
-		payload.LongTermCountdown.CountdownID = strings.TrimSpace(payload.LongTermCountdown.CountdownID)
+		payload.LongTermCountdown.CountdownID = ids.CountdownID(strings.TrimSpace(payload.LongTermCountdown.CountdownID.String()))
 		payload.LongTermCountdown.Reason = strings.TrimSpace(payload.LongTermCountdown.Reason)
 	}
-	payloadJSON, _ := json.Marshal(payload)
+	// Build event payload, stripping Before fields and LongTermCountdown.
+	eventPayload := RestTakenPayload{
+		RestType:        payload.RestType,
+		Interrupted:     payload.Interrupted,
+		GMFear:          payload.GMFearAfter,
+		ShortRests:      payload.ShortRestsAfter,
+		RefreshRest:     payload.RefreshRest,
+		RefreshLongRest: payload.RefreshLongRest,
+	}
+	for _, patch := range payload.CharacterStates {
+		eventPayload.CharacterStates = append(eventPayload.CharacterStates, RestTakenCharacterPatch{
+			CharacterID: patch.CharacterID,
+			Hope:        patch.HopeAfter,
+			Stress:      patch.StressAfter,
+			Armor:       patch.ArmorAfter,
+		})
+	}
+	eventPayloadJSON, _ := json.Marshal(eventPayload)
 	entityID := strings.TrimSpace(cmd.EntityID)
 	if entityID == "" {
-		entityID = cmd.CampaignID
+		entityID = string(cmd.CampaignID)
 	}
-	restEvent := command.NewEvent(cmd, EventTypeRestTaken, "session", entityID, payloadJSON, now().UTC())
+	restEvent := command.NewEvent(cmd, EventTypeRestTaken, "session", entityID, eventPayloadJSON, now().UTC())
 
 	if payload.LongTermCountdown == nil {
 		return command.Accept(restEvent)
 	}
-	countdownPayload := *payload.LongTermCountdown
-	countdownPayloadJSON, _ := json.Marshal(countdownPayload)
-	countdownEvent := command.NewEvent(cmd, EventTypeCountdownUpdated, "countdown", countdownPayload.CountdownID, countdownPayloadJSON, now().UTC())
+	src := *payload.LongTermCountdown
+	countdownEventPayload := CountdownUpdatedPayload{
+		CountdownID: src.CountdownID,
+		Value:       src.After,
+		Delta:       src.Delta,
+		Looped:      src.Looped,
+		Reason:      src.Reason,
+	}
+	countdownPayloadJSON, _ := json.Marshal(countdownEventPayload)
+	countdownEvent := command.NewEvent(cmd, EventTypeCountdownUpdated, "countdown", countdownEventPayload.CountdownID.String(), countdownPayloadJSON, now().UTC())
 	return command.Accept(restEvent, countdownEvent)
 }
 
 func decideCountdownCreate(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, EventTypeCountdownCreated, "countdown",
-		func(p *CountdownCreatePayload) string { return strings.TrimSpace(p.CountdownID) },
+		func(p *CountdownCreatePayload) string { return strings.TrimSpace(p.CountdownID.String()) },
 		func(p *CountdownCreatePayload, _ func() time.Time) *command.Rejection {
-			p.CountdownID = strings.TrimSpace(p.CountdownID)
+			p.CountdownID = ids.CountdownID(strings.TrimSpace(p.CountdownID.String()))
 			p.Name = strings.TrimSpace(p.Name)
 			p.Kind = strings.TrimSpace(p.Kind)
 			p.Direction = strings.TrimSpace(p.Direction)
 			p.Variant = strings.TrimSpace(p.Variant)
 			p.TriggerEventType = strings.TrimSpace(p.TriggerEventType)
-			p.LinkedCountdownID = strings.TrimSpace(p.LinkedCountdownID)
+			p.LinkedCountdownID = ids.CountdownID(strings.TrimSpace(p.LinkedCountdownID.String()))
 			if p.Variant == "" {
 				p.Variant = "standard"
 			}
@@ -76,25 +101,35 @@ func decideCountdownCreate(cmd command.Command, now func() time.Time) command.De
 }
 
 func decideCountdownUpdate(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFuncWithState(cmd, snapshotState, hasSnapshot, EventTypeCountdownUpdated, "countdown",
-		func(p *CountdownUpdatePayload) string { return strings.TrimSpace(p.CountdownID) },
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot, EventTypeCountdownUpdated, "countdown",
+		func(p *CountdownUpdatePayload) string { return strings.TrimSpace(p.CountdownID.String()) },
 		func(s SnapshotState, hasState bool, p *CountdownUpdatePayload, _ func() time.Time) *command.Rejection {
 			if hasState {
 				if rejection := countdownUpdateSnapshotRejection(s, *p); rejection != nil {
 					return rejection
 				}
 			}
-			p.CountdownID = strings.TrimSpace(p.CountdownID)
+			p.CountdownID = ids.CountdownID(strings.TrimSpace(p.CountdownID.String()))
 			p.Reason = strings.TrimSpace(p.Reason)
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p CountdownUpdatePayload) CountdownUpdatedPayload {
+			return CountdownUpdatedPayload{
+				CountdownID: p.CountdownID,
+				Value:       p.After,
+				Delta:       p.Delta,
+				Looped:      p.Looped,
+				Reason:      p.Reason,
+			}
+		},
+		now)
 }
 
 func decideCountdownDelete(cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFunc(cmd, EventTypeCountdownDeleted, "countdown",
-		func(p *CountdownDeletePayload) string { return strings.TrimSpace(p.CountdownID) },
+		func(p *CountdownDeletePayload) string { return strings.TrimSpace(p.CountdownID.String()) },
 		func(p *CountdownDeletePayload, _ func() time.Time) *command.Rejection {
-			p.CountdownID = strings.TrimSpace(p.CountdownID)
+			p.CountdownID = ids.CountdownID(strings.TrimSpace(p.CountdownID.String()))
 			p.Reason = strings.TrimSpace(p.Reason)
 			return nil
 		}, now)
@@ -130,16 +165,16 @@ func countdownUpdateSnapshotRejection(snapshot SnapshotState, payload CountdownU
 	return nil
 }
 
-func snapshotCountdownState(snapshot SnapshotState, countdownID string) (CountdownState, bool) {
-	countdownID = strings.TrimSpace(countdownID)
-	if countdownID == "" {
+func snapshotCountdownState(snapshot SnapshotState, countdownID ids.CountdownID) (CountdownState, bool) {
+	trimmed := ids.CountdownID(strings.TrimSpace(countdownID.String()))
+	if trimmed == "" {
 		return CountdownState{}, false
 	}
-	countdown, ok := snapshot.CountdownStates[countdownID]
+	countdown, ok := snapshot.CountdownStates[trimmed]
 	if !ok {
 		return CountdownState{}, false
 	}
-	countdown.CountdownID = countdownID
+	countdown.CountdownID = trimmed
 	countdown.CampaignID = snapshot.CampaignID
 	return countdown, true
 }

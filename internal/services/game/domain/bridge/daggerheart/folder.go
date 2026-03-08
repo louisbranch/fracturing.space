@@ -6,6 +6,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/reducer"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
@@ -40,7 +41,7 @@ func (f *Folder) Fold(state any, evt event.Event) (any, error) {
 		return nil, err
 	}
 	if s.CampaignID == "" {
-		s.CampaignID = evt.CampaignID
+		s.CampaignID = ids.CampaignID(evt.CampaignID)
 	}
 	return f.router.Fold(s, evt)
 }
@@ -98,10 +99,10 @@ func assertSnapshotState(state any) (*SnapshotState, error) {
 }
 
 func foldGMFearChanged(state *SnapshotState, payload GMFearChangedPayload) error {
-	if payload.After < GMFearMin || payload.After > GMFearMax {
-		return fmt.Errorf("gm fear after must be in range %d..%d", GMFearMin, GMFearMax)
+	if payload.Value < GMFearMin || payload.Value > GMFearMax {
+		return fmt.Errorf("gm fear value must be in range %d..%d", GMFearMin, GMFearMax)
 	}
-	state.GMFear = payload.After
+	state.GMFear = payload.Value
 	return nil
 }
 
@@ -126,15 +127,15 @@ func foldCharacterTemporaryArmorApplied(state *SnapshotState, payload CharacterT
 }
 
 func foldRestTaken(state *SnapshotState, payload RestTakenPayload) error {
-	state.GMFear = payload.GMFearAfter
+	state.GMFear = payload.GMFear
 	if state.GMFear < GMFearMin || state.GMFear > GMFearMax {
 		return fmt.Errorf("rest_taken gm_fear_after must be in range %d..%d", GMFearMin, GMFearMax)
 	}
 	state.DowntimeMovesSinceRest = 0
 	for _, patch := range payload.CharacterStates {
-		applyRestCharacterPatch(state, patch)
+		applyRestTakenCharacterPatch(state, patch)
 		if payload.RefreshRest || payload.RefreshLongRest {
-			clearRestTemporaryArmor(state, patch.CharacterID, payload.RefreshRest, payload.RefreshLongRest)
+			clearRestTemporaryArmor(state, patch.CharacterID.String(), payload.RefreshRest, payload.RefreshLongRest)
 		}
 	}
 	return nil
@@ -157,7 +158,7 @@ func foldCountdownCreated(state *SnapshotState, payload CountdownCreatedPayload)
 
 func foldCountdownUpdated(state *SnapshotState, payload CountdownUpdatedPayload) error {
 	applyCountdownUpsert(state, payload.CountdownID, func(cs *CountdownState) {
-		cs.Current = payload.After
+		cs.Current = payload.Value
 		if payload.Looped {
 			cs.Looping = true
 		}
@@ -171,23 +172,23 @@ func foldCountdownDeleted(state *SnapshotState, payload CountdownDeletedPayload)
 }
 
 func foldDamageApplied(state *SnapshotState, payload DamageAppliedPayload) error {
-	applyDamageApplied(state, payload.CharacterID, payload.HpAfter, payload.ArmorAfter)
+	applyDamageApplied(state, payload.CharacterID, payload.Hp, payload.Armor)
 	return nil
 }
 
 func foldAdversaryDamageApplied(state *SnapshotState, payload AdversaryDamageAppliedPayload) error {
-	applyAdversaryDamage(state, payload.AdversaryID, payload.HpAfter, payload.ArmorAfter)
+	applyAdversaryDamage(state, payload.AdversaryID, payload.Hp, payload.Armor)
 	return nil
 }
 
 func foldDowntimeMoveApplied(state *SnapshotState, payload DowntimeMoveAppliedPayload) error {
-	applyDowntimeMove(state, payload.CharacterID, payload.Move, payload.HopeAfter, payload.StressAfter, payload.ArmorAfter)
+	applyDowntimeMove(state, payload.CharacterID, payload.Move, payload.Hope, payload.Stress, payload.Armor)
 	state.DowntimeMovesSinceRest++
 	return nil
 }
 
 func foldAdversaryConditionChanged(state *SnapshotState, payload AdversaryConditionChangedPayload) error {
-	applyAdversaryConditionsChanged(state, payload.AdversaryID, payload.ConditionsAfter)
+	applyAdversaryConditionsChanged(state, payload.AdversaryID, payload.Conditions)
 	return nil
 }
 
@@ -202,7 +203,7 @@ func foldAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatedPayload)
 }
 
 func foldAdversaryDeleted(state *SnapshotState, payload AdversaryDeletedPayload) error {
-	delete(state.AdversaryStates, strings.TrimSpace(payload.AdversaryID))
+	delete(state.AdversaryStates, ids.AdversaryID(strings.TrimSpace(payload.AdversaryID.String())))
 	return nil
 }
 
@@ -237,68 +238,68 @@ func foldConsumableAcquired(state *SnapshotState, payload ConsumableAcquiredPayl
 }
 
 // touchCharacter ensures a CharacterState entry exists for the given character.
-func touchCharacter(state *SnapshotState, rawID string) {
-	characterID := strings.TrimSpace(rawID)
+func touchCharacter(state *SnapshotState, rawID ids.CharacterID) {
+	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
 	if characterID == "" {
 		return
 	}
 	cs := state.CharacterStates[characterID]
-	cs.CampaignID = state.CampaignID
-	cs.CharacterID = characterID
+	cs.CampaignID = state.CampaignID.String()
+	cs.CharacterID = characterID.String()
 	state.CharacterStates[characterID] = cs
 }
 
 func applyCharacterStatePatched(state *SnapshotState, payload CharacterStatePatchedPayload) {
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
 	if characterID == "" {
 		return
 	}
 	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID
-	characterState.CharacterID = characterID
+	characterState.CampaignID = state.CampaignID.String()
+	characterState.CharacterID = characterID.String()
 	reducer.ApplyCharacterStatePatch(&characterState, reducer.CharacterStatePatch{
-		HPAfter:        payload.HPAfter,
-		HopeAfter:      payload.HopeAfter,
-		HopeMaxAfter:   payload.HopeMaxAfter,
-		StressAfter:    payload.StressAfter,
-		ArmorAfter:     payload.ArmorAfter,
-		LifeStateAfter: payload.LifeStateAfter,
+		HPAfter:        payload.HP,
+		HopeAfter:      payload.Hope,
+		HopeMaxAfter:   payload.HopeMax,
+		StressAfter:    payload.Stress,
+		ArmorAfter:     payload.Armor,
+		LifeStateAfter: payload.LifeState,
 	})
 	state.CharacterStates[characterID] = characterState
 }
 
 func applyCharacterConditionsChanged(state *SnapshotState, payload ConditionChangedPayload) {
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
 	if characterID == "" {
 		return
 	}
 	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID
-	characterState.CharacterID = characterID
-	reducer.ApplyConditionPatch(&characterState, payload.ConditionsAfter)
+	characterState.CampaignID = state.CampaignID.String()
+	characterState.CharacterID = characterID.String()
+	reducer.ApplyConditionPatch(&characterState, payload.Conditions)
 	state.CharacterStates[characterID] = characterState
 }
 
 func applyCharacterLoadoutSwapped(state *SnapshotState, payload LoadoutSwappedPayload) {
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
 	if characterID == "" {
 		return
 	}
 	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID
-	characterState.CharacterID = characterID
-	reducer.ApplyLoadoutSwap(&characterState, payload.StressAfter)
+	characterState.CampaignID = state.CampaignID.String()
+	characterState.CharacterID = characterID.String()
+	reducer.ApplyLoadoutSwap(&characterState, payload.Stress)
 	state.CharacterStates[characterID] = characterState
 }
 
 func applyCharacterTemporaryArmorApplied(state *SnapshotState, payload CharacterTemporaryArmorAppliedPayload) {
-	characterID := strings.TrimSpace(payload.CharacterID)
+	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
 	if characterID == "" {
 		return
 	}
 	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID
-	characterState.CharacterID = characterID
+	characterState.CampaignID = state.CampaignID.String()
+	characterState.CharacterID = characterID.String()
 	reducer.ApplyTemporaryArmor(&characterState, reducer.TemporaryArmorPatch{
 		Source:   strings.TrimSpace(payload.Source),
 		Duration: strings.TrimSpace(payload.Duration),
@@ -308,82 +309,82 @@ func applyCharacterTemporaryArmorApplied(state *SnapshotState, payload Character
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyRestCharacterPatch(state *SnapshotState, payload RestCharacterStatePatch) {
-	characterID := strings.TrimSpace(payload.CharacterID)
+func applyRestTakenCharacterPatch(state *SnapshotState, payload RestTakenCharacterPatch) {
+	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
 	if characterID == "" {
 		return
 	}
 	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID
-	characterState.CharacterID = characterID
+	characterState.CampaignID = state.CampaignID.String()
+	characterState.CharacterID = characterID.String()
 	reducer.ApplyRestPatch(&characterState, reducer.RestCharacterPatch{
-		HopeAfter:   payload.HopeAfter,
-		StressAfter: payload.StressAfter,
-		ArmorAfter:  payload.ArmorAfter,
+		HopeAfter:   payload.Hope,
+		StressAfter: payload.Stress,
+		ArmorAfter:  payload.Armor,
 	})
 	state.CharacterStates[characterID] = characterState
 }
 
-func clearRestTemporaryArmor(state *SnapshotState, characterID string, clearShortRest bool, clearLongRest bool) {
-	characterID = strings.TrimSpace(characterID)
+func clearRestTemporaryArmor(state *SnapshotState, rawID string, clearShortRest bool, clearLongRest bool) {
+	characterID := ids.CharacterID(strings.TrimSpace(rawID))
 	if characterID == "" {
 		return
 	}
 	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID
-	characterState.CharacterID = characterID
+	characterState.CampaignID = state.CampaignID.String()
+	characterState.CharacterID = characterID.String()
 	reducer.ClearRestTemporaryArmor(&characterState, clearShortRest, clearLongRest)
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyCountdownUpsert(state *SnapshotState, countdownID string, mutate func(*CountdownState)) {
-	countdownID = strings.TrimSpace(countdownID)
-	if countdownID == "" {
+func applyCountdownUpsert(state *SnapshotState, countdownID ids.CountdownID, mutate func(*CountdownState)) {
+	trimmed := ids.CountdownID(strings.TrimSpace(countdownID.String()))
+	if trimmed == "" {
 		return
 	}
-	countdownState := state.CountdownStates[countdownID]
+	countdownState := state.CountdownStates[trimmed]
 	countdownState.CampaignID = state.CampaignID
-	countdownState.CountdownID = countdownID
+	countdownState.CountdownID = trimmed
 	if mutate != nil {
 		mutate(&countdownState)
 	}
-	state.CountdownStates[countdownID] = countdownState
+	state.CountdownStates[trimmed] = countdownState
 }
 
-func deleteCountdownState(state *SnapshotState, countdownID string) {
-	countdownID = strings.TrimSpace(countdownID)
-	if countdownID == "" {
+func deleteCountdownState(state *SnapshotState, countdownID ids.CountdownID) {
+	trimmed := ids.CountdownID(strings.TrimSpace(countdownID.String()))
+	if trimmed == "" {
 		return
 	}
-	delete(state.CountdownStates, countdownID)
+	delete(state.CountdownStates, trimmed)
 }
 
-func applyDamageApplied(state *SnapshotState, characterID string, hpAfter, armorAfter *int) {
-	characterID = strings.TrimSpace(characterID)
+func applyDamageApplied(state *SnapshotState, rawID ids.CharacterID, hpAfter, armorAfter *int) {
+	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
 	if characterID == "" {
 		return
 	}
 	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID
-	characterState.CharacterID = characterID
+	characterState.CampaignID = state.CampaignID.String()
+	characterState.CharacterID = characterID.String()
 	reducer.ApplyDamage(&characterState, hpAfter, armorAfter)
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyDowntimeMove(state *SnapshotState, characterID string, move string, hopeAfter, stressAfter, armorAfter *int) {
-	characterID = strings.TrimSpace(characterID)
+func applyDowntimeMove(state *SnapshotState, rawID ids.CharacterID, move string, hopeAfter, stressAfter, armorAfter *int) {
+	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
 	if characterID == "" {
 		return
 	}
 	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID
-	characterState.CharacterID = characterID
+	characterState.CampaignID = state.CampaignID.String()
+	characterState.CharacterID = characterID.String()
 	reducer.ApplyDowntimeMove(&characterState, move, hopeAfter, stressAfter, armorAfter)
 	state.CharacterStates[characterID] = characterState
 }
 
-func applyAdversaryDamage(state *SnapshotState, adversaryID string, hpAfter, armorAfter *int) {
-	adversaryID = strings.TrimSpace(adversaryID)
+func applyAdversaryDamage(state *SnapshotState, rawID ids.AdversaryID, hpAfter, armorAfter *int) {
+	adversaryID := ids.AdversaryID(strings.TrimSpace(rawID.String()))
 	if adversaryID == "" {
 		return
 	}
@@ -400,7 +401,7 @@ func applyAdversaryDamage(state *SnapshotState, adversaryID string, hpAfter, arm
 }
 
 func applyAdversaryCreated(state *SnapshotState, payload AdversaryCreatePayload) {
-	adversaryID := strings.TrimSpace(payload.AdversaryID)
+	adversaryID := ids.AdversaryID(strings.TrimSpace(payload.AdversaryID.String()))
 	if adversaryID == "" {
 		return
 	}
@@ -409,7 +410,7 @@ func applyAdversaryCreated(state *SnapshotState, payload AdversaryCreatePayload)
 	adversaryState.AdversaryID = adversaryID
 	adversaryState.Name = payload.Name
 	adversaryState.Kind = strings.TrimSpace(payload.Kind)
-	adversaryState.SessionID = strings.TrimSpace(payload.SessionID)
+	adversaryState.SessionID = ids.SessionID(strings.TrimSpace(payload.SessionID.String()))
 	adversaryState.Notes = payload.Notes
 	adversaryState.HP = payload.HP
 	adversaryState.HPMax = payload.HPMax
@@ -423,7 +424,7 @@ func applyAdversaryCreated(state *SnapshotState, payload AdversaryCreatePayload)
 }
 
 func applyAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatePayload) {
-	adversaryID := strings.TrimSpace(payload.AdversaryID)
+	adversaryID := ids.AdversaryID(strings.TrimSpace(payload.AdversaryID.String()))
 	if adversaryID == "" {
 		return
 	}
@@ -445,8 +446,8 @@ func applyAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatePayload)
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
-func applyAdversaryConditionsChanged(state *SnapshotState, adversaryID string, after []string) {
-	adversaryID = strings.TrimSpace(adversaryID)
+func applyAdversaryConditionsChanged(state *SnapshotState, rawID ids.AdversaryID, after []string) {
+	adversaryID := ids.AdversaryID(strings.TrimSpace(rawID.String()))
 	if adversaryID == "" {
 		return
 	}

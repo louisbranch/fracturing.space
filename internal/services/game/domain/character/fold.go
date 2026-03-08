@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 type characterUpdateFieldApplier func(*State, string) error
@@ -16,7 +17,7 @@ var characterUpdateFieldAppliers = map[string]characterUpdateFieldApplier{
 		return nil
 	},
 	"kind": func(state *State, value string) error {
-		state.Kind = value
+		state.Kind = Kind(value)
 		return nil
 	},
 	"notes": func(state *State, value string) error {
@@ -24,11 +25,11 @@ var characterUpdateFieldAppliers = map[string]characterUpdateFieldApplier{
 		return nil
 	},
 	"participant_id": func(state *State, value string) error {
-		state.ParticipantID = value
+		state.ParticipantID = ids.ParticipantID(value)
 		return nil
 	},
 	"owner_participant_id": func(state *State, value string) error {
-		state.OwnerParticipantID = value
+		state.OwnerParticipantID = ids.ParticipantID(value)
 		return nil
 	},
 	"avatar_set_id": func(state *State, value string) error {
@@ -87,11 +88,11 @@ func foldCreated(state State, evt event.Event) (State, error) {
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
 	}
-	state.CharacterID = payload.CharacterID
-	state.OwnerParticipantID = payload.OwnerParticipantID
-	state.ParticipantID = strings.TrimSpace(payload.ParticipantID)
+	state.CharacterID = ids.CharacterID(payload.CharacterID)
+	state.OwnerParticipantID = ids.ParticipantID(payload.OwnerParticipantID)
+	state.ParticipantID = ids.ParticipantID(strings.TrimSpace(payload.ParticipantID.String()))
 	state.Name = payload.Name
-	state.Kind = payload.Kind
+	state.Kind = Kind(payload.Kind)
 	state.Notes = payload.Notes
 	state.AvatarSetID = payload.AvatarSetID
 	state.AvatarAssetID = payload.AvatarAssetID
@@ -106,7 +107,7 @@ func foldUpdated(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
 	}
 	if payload.CharacterID != "" {
-		state.CharacterID = payload.CharacterID
+		state.CharacterID = ids.CharacterID(payload.CharacterID)
 	}
 	if err := applyCharacterUpdateFields(&state, payload.Fields); err != nil {
 		return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
@@ -122,7 +123,7 @@ func foldDeleted(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
 	}
 	if payload.CharacterID != "" {
-		state.CharacterID = payload.CharacterID
+		state.CharacterID = ids.CharacterID(payload.CharacterID)
 	}
 	return state, nil
 }
@@ -133,7 +134,7 @@ func foldProfileUpdated(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
 	}
 	if payload.CharacterID != "" {
-		state.CharacterID = payload.CharacterID
+		state.CharacterID = ids.CharacterID(payload.CharacterID)
 	}
 	state.SystemProfile = payload.SystemProfile
 	return state, nil

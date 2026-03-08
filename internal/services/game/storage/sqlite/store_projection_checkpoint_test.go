@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -30,7 +31,7 @@ func TestApplyProjectionEventExactlyOnceSkipsDuplicateSeq(t *testing.T) {
 	}
 
 	evt := event.Event{
-		CampaignID:  "camp-exactly-once",
+		CampaignID:  ids.CampaignID("camp-exactly-once"),
 		Seq:         42,
 		Type:        event.Type("participant.joined"),
 		Timestamp:   now.Add(time.Second),
@@ -57,7 +58,7 @@ func TestApplyProjectionEventExactlyOnceSkipsDuplicateSeq(t *testing.T) {
 		t.Fatal("expected first apply to mutate projections")
 	}
 
-	campaignRecord, err := store.Get(context.Background(), evt.CampaignID)
+	campaignRecord, err := store.Get(context.Background(), string(evt.CampaignID))
 	if err != nil {
 		t.Fatalf("get campaign after first apply: %v", err)
 	}
@@ -79,7 +80,7 @@ func TestApplyProjectionEventExactlyOnceSkipsDuplicateSeq(t *testing.T) {
 		t.Fatalf("expected duplicate apply to skip callback, got %d calls", calls)
 	}
 
-	campaignRecord, err = store.Get(context.Background(), evt.CampaignID)
+	campaignRecord, err = store.Get(context.Background(), string(evt.CampaignID))
 	if err != nil {
 		t.Fatalf("get campaign after duplicate apply: %v", err)
 	}
@@ -94,7 +95,7 @@ func TestApplyProjectionEventExactlyOnceConcurrentDuplicateSeq(t *testing.T) {
 	seedCampaign(t, store, "camp-exactly-once-concurrent", now)
 
 	evt := event.Event{
-		CampaignID:  "camp-exactly-once-concurrent",
+		CampaignID:  ids.CampaignID("camp-exactly-once-concurrent"),
 		Seq:         43,
 		Type:        event.Type("participant.joined"),
 		Timestamp:   now.Add(time.Second),

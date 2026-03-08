@@ -9,6 +9,7 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
@@ -146,12 +147,12 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	normalizedPayload, rejection := normalizeCreatePayload(payload, cmd.CampaignID)
+	normalizedPayload, rejection := normalizeCreatePayload(payload, string(cmd.CampaignID))
 	if rejection != nil {
 		return command.Reject(*rejection)
 	}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeCreated, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -171,7 +172,7 @@ func decideCreateWithParticipants(state State, cmd command.Command, now func() t
 		})
 	}
 
-	normalizedCampaign, rejection := normalizeCreatePayload(payload.Campaign, cmd.CampaignID)
+	normalizedCampaign, rejection := normalizeCreatePayload(payload.Campaign, string(cmd.CampaignID))
 	if rejection != nil {
 		return command.Reject(*rejection)
 	}
@@ -184,12 +185,12 @@ func decideCreateWithParticipants(state State, cmd command.Command, now func() t
 
 	decisionTime := nowFunc(now)().UTC()
 	campaignPayloadJSON, _ := json.Marshal(normalizedCampaign)
-	campaignCreated := command.NewEvent(cmd, EventTypeCreated, "campaign", cmd.CampaignID, campaignPayloadJSON, decisionTime)
+	campaignCreated := command.NewEvent(cmd, EventTypeCreated, "campaign", string(cmd.CampaignID), campaignPayloadJSON, decisionTime)
 
 	seenParticipantIDs := make(map[string]struct{}, len(payload.Participants))
 	participantEvents := make([]event.Event, 0, len(payload.Participants))
 	for _, joinPayload := range payload.Participants {
-		participantID := strings.TrimSpace(joinPayload.ParticipantID)
+		participantID := strings.TrimSpace(joinPayload.ParticipantID.String())
 		if _, exists := seenParticipantIDs[participantID]; exists {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeCampaignParticipantDuplicate,
@@ -344,7 +345,7 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 
 	normalizedPayload := UpdatePayload{Fields: normalizedFields}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -372,7 +373,7 @@ func decideAIBind(state State, cmd command.Command, now func() time.Time) comman
 
 	normalizedPayload := AIBindPayload{AIAgentID: agentID}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeAIBound, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeAIBound, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -384,7 +385,7 @@ func decideAIUnbind(state State, cmd command.Command, now func() time.Time) comm
 		})
 	}
 	payloadJSON, _ := json.Marshal(AIUnbindPayload{})
-	evt := command.NewEvent(cmd, EventTypeAIUnbound, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeAIUnbound, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -407,7 +408,7 @@ func decideAIAuthRotate(state State, cmd command.Command, now func() time.Time) 
 	payload.EpochAfter = state.AIAuthEpoch + 1
 	payload.Reason = strings.TrimSpace(payload.Reason)
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeAIAuthRotated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeAIAuthRotated, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -425,10 +426,10 @@ func decideFork(state State, cmd command.Command, now func() time.Time) command.
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	payload.ParentCampaignID = strings.TrimSpace(payload.ParentCampaignID)
-	payload.OriginCampaignID = strings.TrimSpace(payload.OriginCampaignID)
+	payload.ParentCampaignID = ids.CampaignID(strings.TrimSpace(payload.ParentCampaignID.String()))
+	payload.OriginCampaignID = ids.CampaignID(strings.TrimSpace(payload.OriginCampaignID.String()))
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeForked, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeForked, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -453,7 +454,7 @@ func decideLifecycleStatus(state State, cmd command.Command, now func() time.Tim
 
 	normalizedPayload := UpdatePayload{Fields: map[string]string{"status": string(targetStatus)}}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", cmd.CampaignID, payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 

@@ -20,15 +20,15 @@ var defaultCampaignProjectionScopes = []string{
 // eventToProto converts a domain event to a proto Event message.
 func eventToProto(evt event.Event) *campaignv1.Event {
 	return &campaignv1.Event{
-		CampaignId:    evt.CampaignID,
+		CampaignId:    string(evt.CampaignID),
 		Seq:           evt.Seq,
 		Hash:          evt.Hash,
 		Ts:            timestamppb.New(evt.Timestamp),
 		Type:          string(evt.Type),
 		SystemId:      evt.SystemID,
 		SystemVersion: evt.SystemVersion,
-		SessionId:     evt.SessionID,
-		SceneId:       evt.SceneID,
+		SessionId:     evt.SessionID.String(),
+		SceneId:       evt.SceneID.String(),
 		RequestId:     evt.RequestID,
 		InvocationId:  evt.InvocationID,
 		ActorType:     string(evt.ActorType),
@@ -41,7 +41,7 @@ func eventToProto(evt event.Event) *campaignv1.Event {
 
 func campaignUpdateEventCommitted(evt event.Event) *campaignv1.CampaignUpdate {
 	return &campaignv1.CampaignUpdate{
-		CampaignId: evt.CampaignID,
+		CampaignId: string(evt.CampaignID),
 		Seq:        evt.Seq,
 		EventType:  string(evt.Type),
 		EventTime:  timestamppb.New(evt.Timestamp),
@@ -55,7 +55,7 @@ func campaignUpdateEventCommitted(evt event.Event) *campaignv1.CampaignUpdate {
 
 func campaignUpdateProjectionApplied(evt event.Event, scopes []string) *campaignv1.CampaignUpdate {
 	return &campaignv1.CampaignUpdate{
-		CampaignId: evt.CampaignID,
+		CampaignId: string(evt.CampaignID),
 		Seq:        evt.Seq,
 		EventType:  string(evt.Type),
 		EventTime:  timestamppb.New(evt.Timestamp),

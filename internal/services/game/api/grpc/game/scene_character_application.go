@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -33,7 +34,7 @@ func (a sceneApplication) AddCharacterToScene(ctx context.Context, campaignID st
 		return err
 	}
 
-	payload := scene.CharacterAddedPayload{SceneID: sceneID, CharacterID: characterID}
+	payload := scene.CharacterAddedPayload{SceneID: ids.SceneID(sceneID), CharacterID: ids.CharacterID(characterID)}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return status.Errorf(codes.Internal, "encode payload: %v", err)
@@ -80,7 +81,7 @@ func (a sceneApplication) RemoveCharacterFromScene(ctx context.Context, campaign
 		return err
 	}
 
-	payload := scene.CharacterRemovedPayload{SceneID: sceneID, CharacterID: characterID}
+	payload := scene.CharacterRemovedPayload{SceneID: ids.SceneID(sceneID), CharacterID: ids.CharacterID(characterID)}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return status.Errorf(codes.Internal, "encode payload: %v", err)
@@ -132,9 +133,9 @@ func (a sceneApplication) TransferCharacter(ctx context.Context, campaignID stri
 	}
 
 	payload := scene.CharacterTransferPayload{
-		SourceSceneID: sourceSceneID,
-		TargetSceneID: targetSceneID,
-		CharacterID:   characterID,
+		SourceSceneID: ids.SceneID(sourceSceneID),
+		TargetSceneID: ids.SceneID(targetSceneID),
+		CharacterID:   ids.CharacterID(characterID),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

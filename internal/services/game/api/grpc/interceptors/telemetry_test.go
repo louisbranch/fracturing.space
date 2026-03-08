@@ -281,3 +281,92 @@ func TestAuditInterceptorStoreErrorIgnored(t *testing.T) {
 		t.Fatalf("expected event to be emitted, got %d", store.count)
 	}
 }
+
+// fakeServerStream provides a minimal grpc.ServerStream for stream interceptor tests.
+type fakeServerStream struct {
+	grpc.ServerStream
+	ctx context.Context
+}
+
+func (s *fakeServerStream) Context() context.Context { return s.ctx }
+
+func TestStreamAuditInterceptorNoStore(t *testing.T) {
+	interceptor := StreamAuditInterceptor(nil)
+	stream := &fakeServerStream{ctx: context.Background()}
+	info := &grpc.StreamServerInfo{FullMethod: campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName}
+	called := false
+
+	err := interceptor(nil, stream, info, func(srv any, stream grpc.ServerStream) error {
+		called = true
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !called {
+		t.Fatal("expected handler to be called")
+	}
+}
+
+func TestStreamAuditInterceptorEmitsEvent(t *testing.T) {
+	store := &fakeAuditStore{}
+	interceptor := StreamAuditInterceptor(store)
+	info := &grpc.StreamServerInfo{FullMethod: campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName}
+
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
+		grpcmeta.ParticipantIDHeader, "participant-1",
+	))
+	ctx = grpcmeta.WithRequestID(ctx, "req-stream")
+	stream := &fakeServerStream{ctx: ctx}
+
+	err := interceptor(nil, stream, info, func(srv any, stream grpc.ServerStream) error {
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if store.count != 1 {
+		t.Fatalf("expected one audit event, got %d", store.count)
+	}
+	if store.last.EventName != events.GRPCStream {
+		t.Fatalf("expected event name %s, got %s", events.GRPCStream, store.last.EventName)
+	}
+	if store.last.ActorType != "participant" || store.last.ActorID != "participant-1" {
+		t.Fatalf("expected participant actor, got %s/%s", store.last.ActorType, store.last.ActorID)
+	}
+	if store.last.RequestID != "req-stream" {
+		t.Fatalf("expected request id req-stream, got %s", store.last.RequestID)
+	}
+	if got := store.last.Attributes["method_kind"].(string); got != "read" {
+		t.Fatalf("expected read method_kind, got %s", got)
+	}
+}
+
+func TestStreamAuditInterceptorErrorSeverity(t *testing.T) {
+	store := &fakeAuditStore{}
+	interceptor := StreamAuditInterceptor(store)
+	info := &grpc.StreamServerInfo{FullMethod: campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName}
+	stream := &fakeServerStream{ctx: context.Background()}
+
+	err := interceptor(nil, stream, info, func(srv any, stream grpc.ServerStream) error {
+		return status.Error(codes.Unavailable, "stream ended")
+	})
+	if err == nil {
+		t.Fatal("expected handler error")
+	}
+	if store.count != 1 {
+		t.Fatalf("expected one audit event, got %d", store.count)
+	}
+	if store.last.Severity != "ERROR" {
+		t.Fatalf("expected error severity, got %s", store.last.Severity)
+	}
+	if store.last.Attributes["code"] != codes.Unavailable.String() {
+		t.Fatalf("expected code Unavailable, got %v", store.last.Attributes["code"])
+	}
+}
+
+func TestClassifyMethodKind_SubscribeIsRead(t *testing.T) {
+	if got := classifyMethodKind(campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName); got != "read" {
+		t.Fatalf("expected SubscribeCampaignUpdates to be read, got %s", got)
+	}
+}

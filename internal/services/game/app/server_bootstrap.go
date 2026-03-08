@@ -42,14 +42,14 @@ func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
 	return newServerBootstrap().NewWithAddr(ctx, addr)
 }
 
-func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, systemStores systemmanifest.ProjectionStores, eventRegistry *event.Registry) func(context.Context, event.Event) error {
+func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, eventRegistry *event.Registry) func(context.Context, event.Event) error {
 	if projectionStore == nil {
 		return nil
 	}
 	// Build a base adapter registry once at closure creation. Per-transaction
 	// callbacks rebind it with the transaction-scoped store so each adapter
 	// operates within the exactly-once transaction boundary.
-	baseAdapters, err := systemmanifest.AdapterRegistry(systemStores)
+	baseAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ExtractProjectionStores(projectionStore))
 	if err != nil {
 		log.Printf("build base adapter registry: %v", err)
 		return nil
@@ -59,14 +59,7 @@ func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, syste
 			ctx,
 			evt,
 			func(applyCtx context.Context, applyEvt event.Event, txStore storage.ProjectionApplyTxStore) error {
-				// Extract system-specific stores from the transaction-scoped
-				// store via type assertion. The concrete SQLite store implements
-				// DaggerheartStore even though the core interface doesn't embed it.
-				txSystemStores := systemmanifest.ProjectionStores{}
-				if dhs, ok := txStore.(storage.DaggerheartStore); ok {
-					txSystemStores.Daggerheart = dhs
-				}
-				systemAdapters, err := systemmanifest.RebindAdapterRegistry(baseAdapters, txSystemStores)
+				systemAdapters, err := systemmanifest.RebindAdapterRegistry(baseAdapters, systemmanifest.ExtractProjectionStores(txStore))
 				if err != nil {
 					return fmt.Errorf("rebind projection system adapter registry: %w", err)
 				}

@@ -1,7 +1,7 @@
 ---
 title: "gRPC write path"
 parent: "Foundations"
-nav_order: 6
+nav_order: 7
 status: canonical
 owner: engineering
 last_reviewed: "2026-03-07"
@@ -79,7 +79,7 @@ type Options struct {
     MissingEventMsg    string            // Error message when RequireEvents fails
     ExecuteErr         func(error) error // Custom executor error wrapper
     ApplyErr           func(error) error // Custom applier error wrapper
-    RejectErr          func(string) error // Custom rejection wrapper
+    RejectErr          func(code, message string) error // Custom rejection wrapper (code enables i18n lookup)
     ExecuteErrMessage  string            // Fallback message for ExecuteErr
     ApplyErrMessage    string            // Fallback message for ApplyErr
 }

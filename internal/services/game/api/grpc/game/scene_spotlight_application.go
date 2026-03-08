@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,9 +35,9 @@ func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID stri
 	}
 
 	payload := scene.SpotlightSetPayload{
-		SceneID:       sceneID,
+		SceneID:       ids.SceneID(sceneID),
 		SpotlightType: spotlightType,
-		CharacterID:   strings.TrimSpace(in.GetCharacterId()),
+		CharacterID:   ids.CharacterID(strings.TrimSpace(in.GetCharacterId())),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -81,7 +82,7 @@ func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID st
 	}
 
 	payload := scene.SpotlightClearedPayload{
-		SceneID: sceneID,
+		SceneID: ids.SceneID(sceneID),
 		Reason:  strings.TrimSpace(in.GetReason()),
 	}
 	payloadJSON, err := json.Marshal(payload)

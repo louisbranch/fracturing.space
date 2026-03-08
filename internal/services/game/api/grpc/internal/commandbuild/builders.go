@@ -2,6 +2,7 @@ package commandbuild
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 // CoreInput describes a command envelope for core domain commands.
@@ -23,12 +24,12 @@ type CoreInput struct {
 // Core builds a core-domain command envelope.
 func Core(in CoreInput) command.Command {
 	return command.Command{
-		CampaignID:    in.CampaignID,
+		CampaignID:    ids.CampaignID(in.CampaignID),
 		Type:          in.Type,
 		ActorType:     in.ActorType,
 		ActorID:       in.ActorID,
-		SessionID:     in.SessionID,
-		SceneID:       in.SceneID,
+		SessionID:     ids.SessionID(in.SessionID),
+		SceneID:       ids.SceneID(in.SceneID),
 		RequestID:     in.RequestID,
 		InvocationID:  in.InvocationID,
 		CorrelationID: in.CorrelationID,

@@ -34,8 +34,8 @@ func Fold(state State, evt event.Event) (State, error) {
 		}
 		state.Name = payload.Name
 		state.Locale = normalizeCampaignLocale(payload.Locale)
-		state.GameSystem = payload.GameSystem
-		state.GmMode = payload.GmMode
+		state.GameSystem = GameSystem(payload.GameSystem)
+		state.GmMode = GmMode(payload.GmMode)
 		state.Status = StatusDraft
 		state.CoverAssetID = strings.TrimSpace(payload.CoverAssetID)
 		state.CoverSetID = strings.TrimSpace(payload.CoverSetID)

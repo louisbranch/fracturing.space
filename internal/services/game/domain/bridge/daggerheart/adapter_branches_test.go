@@ -15,7 +15,7 @@ func TestHandleDowntimeMoveApplied_CreatesMissingCharacterState(t *testing.T) {
 	err := adapter.handleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
 		CharacterID: "char-1",
 		Move:        "prepare",
-		HopeAfter:   intPtr(3),
+		Hope:        intPtr(3),
 	})
 	if err != nil {
 		t.Fatalf("handleDowntimeMoveApplied: %v", err)
@@ -55,9 +55,9 @@ func TestHandleConditionChanged_RejectsZeroRollSeq(t *testing.T) {
 	adapter := NewAdapter(store)
 	rollSeq := uint64(0)
 	err := adapter.handleConditionChanged(context.Background(), event.Event{CampaignID: "camp-1"}, ConditionChangedPayload{
-		CharacterID:     "char-1",
-		ConditionsAfter: []string{"hidden"},
-		RollSeq:         &rollSeq,
+		CharacterID: "char-1",
+		Conditions:  []string{"hidden"},
+		RollSeq:     &rollSeq,
 	})
 	if err == nil || !strings.Contains(err.Error(), "roll_seq must be positive") {
 		t.Fatalf("expected roll_seq validation error, got %v", err)
@@ -69,10 +69,9 @@ func TestHandleAdversaryConditionChanged_RejectsZeroRollSeq(t *testing.T) {
 	adapter := NewAdapter(store)
 	rollSeq := uint64(0)
 	err := adapter.handleAdversaryConditionChanged(context.Background(), event.Event{CampaignID: "camp-1"}, AdversaryConditionChangedPayload{
-		AdversaryID:      "adv-1",
-		ConditionsAfter:  []string{"hidden"},
-		RollSeq:          &rollSeq,
-		ConditionsBefore: []string{},
+		AdversaryID: "adv-1",
+		Conditions:  []string{"hidden"},
+		RollSeq:     &rollSeq,
 	})
 	if err == nil || !strings.Contains(err.Error(), "roll_seq must be positive") {
 		t.Fatalf("expected roll_seq validation error, got %v", err)

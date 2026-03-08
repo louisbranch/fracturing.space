@@ -11,4 +11,10 @@ const (
 	GRPCWrite = "telemetry.grpc.write"
 	// AuthzDecision captures authorization allow/deny/override decisions.
 	AuthzDecision = "telemetry.authz.decision"
+	// DomainRejection captures domain command rejections for operational visibility.
+	DomainRejection = "telemetry.domain.rejection"
+	// GRPCStream captures durable audit events for server-streaming gRPC handlers.
+	GRPCStream = "telemetry.grpc.stream"
+	// ProjectionGapDetected captures projection sequence gaps at apply time.
+	ProjectionGapDetected = "telemetry.projection.gap_detected"
 )

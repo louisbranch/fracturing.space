@@ -15,6 +15,7 @@ import (
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -118,10 +119,10 @@ func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.Daggerhear
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartRestTake,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
+		SessionID:     ids.SessionID(sessionID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "session",
@@ -245,7 +246,7 @@ func (s *DaggerheartService) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 	armorBefore := result.ArmorBefore
 	armorAfter := result.ArmorAfter
 	payload := daggerheart.DowntimeMoveApplyPayload{
-		CharacterID:  characterID,
+		CharacterID:  ids.CharacterID(characterID),
 		Move:         daggerheartDowntimeMoveToString(move),
 		HopeBefore:   &hopeBefore,
 		HopeAfter:    &hopeAfter,
@@ -263,10 +264,10 @@ func (s *DaggerheartService) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartDowntimeMoveApply,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
+		SessionID:     ids.SessionID(sessionID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",
@@ -349,7 +350,7 @@ func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.
 	}
 
 	payload := daggerheart.CharacterTemporaryArmorApplyPayload{
-		CharacterID: characterID,
+		CharacterID: ids.CharacterID(characterID),
 		Source:      strings.TrimSpace(in.Armor.GetSource()),
 		Duration:    strings.TrimSpace(in.Armor.GetDuration()),
 		Amount:      int(in.Armor.GetAmount()),
@@ -364,11 +365,11 @@ func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartTemporaryArmorApply,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",
@@ -470,7 +471,7 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	stressAfter := state.Stress
 
 	payload := daggerheart.LoadoutSwapPayload{
-		CharacterID:  characterID,
+		CharacterID:  ids.CharacterID(characterID),
 		CardID:       in.Swap.CardId,
 		From:         "vault",
 		To:           "active",
@@ -487,11 +488,11 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartLoadoutSwap,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",
@@ -517,7 +518,7 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	}
 	if !in.Swap.InRest && in.Swap.RecallCost > 0 {
 		stressSpendPayload := daggerheart.StressSpendPayload{
-			CharacterID: characterID,
+			CharacterID: ids.CharacterID(characterID),
 			Amount:      int(in.Swap.RecallCost),
 			Before:      stressBefore,
 			After:       stressAfter,
@@ -528,11 +529,11 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 			return nil, status.Errorf(codes.Internal, "encode stress spend payload: %v", err)
 		}
 		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-			CampaignID:    campaignID,
+			CampaignID:    ids.CampaignID(campaignID),
 			Type:          commandTypeDaggerheartStressSpend,
 			ActorType:     command.ActorTypeSystem,
-			SessionID:     sessionID,
-			SceneID:       sceneID,
+			SessionID:     ids.SessionID(sessionID),
+			SceneID:       ids.SceneID(sceneID),
 			RequestID:     requestID,
 			InvocationID:  invocationID,
 			EntityType:    "character",
@@ -686,8 +687,8 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 	if lifeStateBefore == "" {
 		lifeStateBefore = daggerheart.LifeStateAlive
 	}
-	patchPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID: characterID,
+	patchPayload := daggerheart.CharacterStatePatchPayload{
+		CharacterID: ids.CharacterID(characterID),
 	}
 	if hpBefore != hpAfter {
 		patchPayload.HPBefore = &hpBefore
@@ -726,11 +727,11 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartCharacterStatePatch,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",

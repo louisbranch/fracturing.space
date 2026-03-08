@@ -38,12 +38,13 @@ type Options struct {
 	ShouldApply        func(event.Event) bool
 	ExecuteErr         func(error) error
 	ApplyErr           func(error) error
-	RejectErr          func(string) error
+	RejectErr          func(code, message string) error
 
 	// OnRejection is called when a command is rejected, before converting
 	// the rejection into an error. Transport layers can supply this to log
-	// or emit metrics for idempotent rejections without polluting domain code.
-	OnRejection func(OnRejectionInfo)
+	// or emit audit events for idempotent rejections without polluting domain code.
+	// Context is passed through for trace propagation into audit records.
+	OnRejection func(context.Context, OnRejectionInfo)
 
 	// ExecuteErrMessage and ApplyErrMessage are used to construct default
 	// ExecuteErr / ApplyErr handlers when those callbacks are nil.
@@ -75,7 +76,7 @@ func RequireEventsWithDiagnostics(missingEventMsg, applyErrMsg string) Options {
 type ErrorHandlerOptions struct {
 	ExecuteErr        func(error) error
 	ApplyErr          func(error) error
-	RejectErr         func(string) error
+	RejectErr         func(code, message string) error
 	ExecuteErrMessage string
 	ApplyErrMessage   string
 }
@@ -193,14 +194,14 @@ func ExecuteAndApply(
 	if len(result.Decision.Rejections) > 0 {
 		rejection := result.Decision.Rejections[0]
 		if options.OnRejection != nil {
-			options.OnRejection(OnRejectionInfo{
-				CampaignID:  cmd.CampaignID,
+			options.OnRejection(ctx, OnRejectionInfo{
+				CampaignID:  string(cmd.CampaignID),
 				CommandType: cmd.Type,
 				Code:        rejection.Code,
 				Message:     rejection.Message,
 			})
 		}
-		return engine.Result{}, options.RejectErr(rejection.Message)
+		return engine.Result{}, options.RejectErr(rejection.Code, rejection.Message)
 	}
 	if options.RequireEvents && len(result.Decision.Events) == 0 {
 		return engine.Result{}, errors.New(options.MissingEventMsg)
@@ -261,7 +262,7 @@ func normalizeOptions(options Options) Options {
 func NormalizeErrorHandlers(options ErrorHandlerOptions) (
 	executeErr func(error) error,
 	applyErr func(error) error,
-	rejectErr func(string) error,
+	rejectErr func(code, message string) error,
 ) {
 	executeErr = options.ExecuteErr
 	applyErr = options.ApplyErr
@@ -286,7 +287,7 @@ func NormalizeErrorHandlers(options ErrorHandlerOptions) (
 		}
 	}
 	if rejectErr == nil {
-		rejectErr = func(message string) error {
+		rejectErr = func(code, message string) error {
 			return errors.New(message)
 		}
 	}

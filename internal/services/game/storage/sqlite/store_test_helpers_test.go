@@ -12,7 +12,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/migrations"
 )
 
 func testKeyring(t *testing.T) *integrity.Keyring {
@@ -61,39 +60,6 @@ func openTestContentStore(t *testing.T) *Store {
 	t.Cleanup(func() {
 		if err := store.Close(); err != nil {
 			t.Fatalf("close content store: %v", err)
-		}
-	})
-	return store
-}
-
-// openTestCombinedStore opens a projections store with a keyring so both
-// projections tables and the event integrity path are available in
-// ApplyRollOutcome.
-func openTestCombinedStore(t *testing.T) *Store {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "combined.sqlite")
-	store, err := OpenProjections(path)
-	if err != nil {
-		t.Fatalf("open combined store: %v", err)
-	}
-	// Attach the keyring so event appends within ApplyRollOutcome work.
-	store.keyring = testKeyring(t)
-	registries, err := engine.BuildRegistries(daggerheart.NewModule())
-	if err != nil {
-		_ = store.Close()
-		t.Fatalf("build registries: %v", err)
-	}
-	store.eventRegistry = registries.Events
-
-	// Run events migrations on the same database so the events tables exist.
-	if err := runMigrations(store.sqlDB, migrations.EventsFS, "events"); err != nil {
-		_ = store.Close()
-		t.Fatalf("run events migrations: %v", err)
-	}
-
-	t.Cleanup(func() {
-		if err := store.Close(); err != nil {
-			t.Fatalf("close combined store: %v", err)
 		}
 	})
 	return store

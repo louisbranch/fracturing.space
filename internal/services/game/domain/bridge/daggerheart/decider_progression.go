@@ -6,14 +6,16 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
-func decideLevelUpApply(cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFunc(cmd, EventTypeLevelUpApplied, "character",
-		func(p *LevelUpApplyPayload) string { return strings.TrimSpace(p.CharacterID) },
-		func(p *LevelUpApplyPayload, _ func() time.Time) *command.Rejection {
-			p.CharacterID = strings.TrimSpace(p.CharacterID)
+func decideLevelUpApply(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeLevelUpApplied, "character",
+		func(p *LevelUpApplyPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
+		func(_ SnapshotState, _ bool, p *LevelUpApplyPayload, _ func() time.Time) *command.Rejection {
+			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
 			p.NewDomainCardID = strings.TrimSpace(p.NewDomainCardID)
 			if p.NewDomainCardID != "" && p.NewDomainCardLevel < 1 {
 				return &command.Rejection{Code: "LEVEL_UP_INVALID", Message: "new_domain_card_level must be at least 1 when new_domain_card_id is set"}
@@ -45,7 +47,7 @@ func decideLevelUpApply(cmd command.Command, now func() time.Time) command.Decis
 			}
 
 			req := mechanics.LevelUpRequest{
-				CharacterID:  p.CharacterID,
+				CharacterID:  p.CharacterID.String(),
 				LevelBefore:  p.LevelBefore,
 				LevelAfter:   p.LevelAfter,
 				Advancements: domainAdvs,
@@ -68,5 +70,20 @@ func decideLevelUpApply(cmd command.Command, now func() time.Time) command.Decis
 			p.MarkedAfter = result.MarkedTraits
 			p.ThresholdDelta = result.ThresholdDelta
 			return nil
-		}, now)
+		},
+		func(_ SnapshotState, _ bool, p LevelUpApplyPayload) LevelUpAppliedPayload {
+			return LevelUpAppliedPayload{
+				CharacterID:        p.CharacterID,
+				Level:              p.LevelAfter,
+				Advancements:       p.Advancements,
+				NewDomainCardID:    p.NewDomainCardID,
+				NewDomainCardLevel: p.NewDomainCardLevel,
+				Tier:               p.Tier,
+				IsTierEntry:        p.IsTierEntry,
+				ClearMarks:         p.ClearMarks,
+				Marked:             p.MarkedAfter,
+				ThresholdDelta:     p.ThresholdDelta,
+			}
+		},
+		now)
 }

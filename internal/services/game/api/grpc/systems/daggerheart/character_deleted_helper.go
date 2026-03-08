@@ -9,6 +9,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -18,7 +19,7 @@ func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, ca
 		return err
 	}
 	payload := character.DeletePayload{
-		CharacterID: characterID,
+		CharacterID: ids.CharacterID(characterID),
 		Reason:      strings.TrimSpace(reason),
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -27,10 +28,10 @@ func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, ca
 	}
 	applier := s.stores.Applier()
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:   campaignID,
+		CampaignID:   ids.CampaignID(campaignID),
 		Type:         commandTypeCharacterDelete,
 		ActorType:    command.ActorTypeSystem,
-		SessionID:    grpcmeta.SessionIDFromContext(ctx),
+		SessionID:    ids.SessionID(grpcmeta.SessionIDFromContext(ctx)),
 		RequestID:    grpcmeta.RequestIDFromContext(ctx),
 		InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 		EntityType:   "character",

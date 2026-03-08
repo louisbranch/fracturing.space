@@ -8,6 +8,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
@@ -53,7 +54,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 		}
-		sessionID := strings.TrimSpace(payload.SessionID)
+		sessionID := strings.TrimSpace(payload.SessionID.String())
 		if sessionID == "" {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeSessionIDRequired,
@@ -65,10 +66,10 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now = time.Now
 		}
 
-		normalizedPayload := StartPayload{SessionID: sessionID, SessionName: sessionName}
+		normalizedPayload := StartPayload{SessionID: ids.SessionID(sessionID), SessionName: sessionName}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := command.NewEvent(cmd, EventTypeStarted, "session", sessionID, payloadJSON, now().UTC())
-		evt.SessionID = sessionID
+		evt.SessionID = ids.SessionID(sessionID)
 
 		return command.Accept(evt)
 
@@ -83,7 +84,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 		}
-		sessionID := strings.TrimSpace(payload.SessionID)
+		sessionID := strings.TrimSpace(payload.SessionID.String())
 		if sessionID == "" {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeSessionIDRequired,
@@ -94,10 +95,10 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now = time.Now
 		}
 
-		normalizedPayload := EndPayload{SessionID: sessionID}
+		normalizedPayload := EndPayload{SessionID: ids.SessionID(sessionID)}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := command.NewEvent(cmd, EventTypeEnded, "session", sessionID, payloadJSON, now().UTC())
-		evt.SessionID = sessionID
+		evt.SessionID = ids.SessionID(sessionID)
 
 		return command.Accept(evt)
 
@@ -106,7 +107,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 		}
-		gateID := strings.TrimSpace(payload.GateID)
+		gateID := strings.TrimSpace(payload.GateID.String())
 		gateType := strings.TrimSpace(payload.GateType)
 		reason := strings.TrimSpace(payload.Reason)
 		if gateID == "" {
@@ -125,7 +126,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now = time.Now
 		}
 
-		normalizedPayload := GateOpenedPayload{GateID: gateID, GateType: gateType, Reason: reason, Metadata: payload.Metadata}
+		normalizedPayload := GateOpenedPayload{GateID: ids.GateID(gateID), GateType: gateType, Reason: reason, Metadata: payload.Metadata}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := command.NewEvent(cmd, EventTypeGateOpened, "session_gate", gateID, payloadJSON, now().UTC())
 
@@ -137,10 +138,10 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			EventTypeGateResolved,
 			"session_gate",
 			func(payload *GateResolvedPayload) string {
-				return payload.GateID
+				return payload.GateID.String()
 			},
 			func(payload *GateResolvedPayload, _ func() time.Time) *command.Rejection {
-				payload.GateID = strings.TrimSpace(payload.GateID)
+				payload.GateID = ids.GateID(strings.TrimSpace(payload.GateID.String()))
 				payload.Decision = strings.TrimSpace(payload.Decision)
 				if payload.GateID == "" {
 					return &command.Rejection{
@@ -159,10 +160,10 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			EventTypeGateAbandoned,
 			"session_gate",
 			func(payload *GateAbandonedPayload) string {
-				return payload.GateID
+				return payload.GateID.String()
 			},
 			func(payload *GateAbandonedPayload, _ func() time.Time) *command.Rejection {
-				payload.GateID = strings.TrimSpace(payload.GateID)
+				payload.GateID = ids.GateID(strings.TrimSpace(payload.GateID.String()))
 				payload.Reason = strings.TrimSpace(payload.Reason)
 				if payload.GateID == "" {
 					return &command.Rejection{
@@ -181,7 +182,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 		}
 		spotlightType := strings.TrimSpace(payload.SpotlightType)
-		characterID := strings.TrimSpace(payload.CharacterID)
+		characterID := strings.TrimSpace(payload.CharacterID.String())
 		if spotlightType == "" {
 			return command.Reject(command.Rejection{
 				Code:    rejectionCodeSessionSpotlightTypeRequired,
@@ -192,9 +193,9 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			now = time.Now
 		}
 
-		normalizedPayload := SpotlightSetPayload{SpotlightType: spotlightType, CharacterID: characterID}
+		normalizedPayload := SpotlightSetPayload{SpotlightType: spotlightType, CharacterID: ids.CharacterID(characterID)}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeSpotlightSet, "session", cmd.SessionID, payloadJSON, now().UTC())
+		evt := command.NewEvent(cmd, EventTypeSpotlightSet, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
 
 		return command.Accept(evt)
 
@@ -204,7 +205,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			EventTypeSpotlightCleared,
 			"session",
 			func(_ *SpotlightClearedPayload) string {
-				return cmd.SessionID
+				return cmd.SessionID.String()
 			},
 			func(payload *SpotlightClearedPayload, _ func() time.Time) *command.Rejection {
 				payload.Reason = strings.TrimSpace(payload.Reason)

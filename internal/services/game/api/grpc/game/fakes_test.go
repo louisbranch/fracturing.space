@@ -883,14 +883,15 @@ func (s *fakeEventStore) AppendEvent(_ context.Context, evt event.Event) (event.
 	if s.appendErr != nil {
 		return event.Event{}, s.appendErr
 	}
-	seq := s.nextSeq[evt.CampaignID]
+	cid := string(evt.CampaignID)
+	seq := s.nextSeq[cid]
 	if seq == 0 {
 		seq = 1
 	}
 	evt.Seq = seq
-	evt.Hash = "fakehash-" + evt.CampaignID + "-" + string(rune('0'+seq))
-	s.nextSeq[evt.CampaignID] = seq + 1
-	s.events[evt.CampaignID] = append(s.events[evt.CampaignID], evt)
+	evt.Hash = "fakehash-" + cid + "-" + string(rune('0'+seq))
+	s.nextSeq[cid] = seq + 1
+	s.events[cid] = append(s.events[cid], evt)
 	s.byHash[evt.Hash] = evt
 	return evt, nil
 }
@@ -952,7 +953,7 @@ func (s *fakeEventStore) ListEventsBySession(_ context.Context, campaignID, sess
 	}
 	var result []event.Event
 	for _, e := range events {
-		if e.SessionID == sessionID && e.Seq > afterSeq {
+		if e.SessionID.String() == sessionID && e.Seq > afterSeq {
 			result = append(result, e)
 			if limit > 0 && len(result) >= limit {
 				break

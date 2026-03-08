@@ -120,17 +120,13 @@ func TestApplyAdversaryDamage_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("apply adversary damage: %v", err)
 	}
-	hpBefore := result.HPBefore
 	hpAfter := result.HPAfter
-	armorBefore := result.ArmorBefore
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
 	payload := daggerheart.AdversaryDamageAppliedPayload{
 		AdversaryID:        "adv-1",
-		HpBefore:           &hpBefore,
-		HpAfter:            &hpAfter,
-		ArmorBefore:        &armorBefore,
-		ArmorAfter:         &armorAfter,
+		Hp:                 &hpAfter,
+		Armor:              &armorAfter,
 		ArmorSpent:         result.ArmorSpent,
 		Severity:           daggerheartSeverityToString(result.Result.Severity),
 		Marks:              result.Result.Marks,
@@ -144,7 +140,7 @@ func TestApplyAdversaryDamage_Success(t *testing.T) {
 		MassiveDamage:      damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             damage.Source,
-		SourceCharacterIDs: sourceCharacterIDs,
+		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -203,17 +199,13 @@ func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("apply adversary damage: %v", err)
 	}
-	hpBefore := result.HPBefore
 	hpAfter := result.HPAfter
-	armorBefore := result.ArmorBefore
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
 	payload := daggerheart.AdversaryDamageAppliedPayload{
 		AdversaryID:        "adv-1",
-		HpBefore:           &hpBefore,
-		HpAfter:            &hpAfter,
-		ArmorBefore:        &armorBefore,
-		ArmorAfter:         &armorAfter,
+		Hp:                 &hpAfter,
+		Armor:              &armorAfter,
 		ArmorSpent:         result.ArmorSpent,
 		Severity:           daggerheartSeverityToString(result.Result.Severity),
 		Marks:              result.Result.Marks,
@@ -227,7 +219,7 @@ func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
 		MassiveDamage:      damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             damage.Source,
-		SourceCharacterIDs: sourceCharacterIDs,
+		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -312,17 +304,13 @@ func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("apply adversary damage: %v", err)
 	}
-	hpBefore := result.HPBefore
 	hpAfter := result.HPAfter
-	armorBefore := result.ArmorBefore
 	armorAfter := result.ArmorAfter
 	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
 	payload := daggerheart.AdversaryDamageAppliedPayload{
 		AdversaryID:        "adv-1",
-		HpBefore:           &hpBefore,
-		HpAfter:            &hpAfter,
-		ArmorBefore:        &armorBefore,
-		ArmorAfter:         &armorAfter,
+		Hp:                 &hpAfter,
+		Armor:              &armorAfter,
 		ArmorSpent:         result.ArmorSpent,
 		Severity:           daggerheartSeverityToString(result.Result.Severity),
 		Marks:              result.Result.Marks,
@@ -336,7 +324,7 @@ func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
 		MassiveDamage:      damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             damage.Source,
-		SourceCharacterIDs: sourceCharacterIDs,
+		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

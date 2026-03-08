@@ -38,7 +38,7 @@ func (s *Store) PutInvite(ctx context.Context, inv storage.InviteRecord) error {
 		CampaignID:             inv.CampaignID,
 		ParticipantID:          inv.ParticipantID,
 		RecipientUserID:        strings.TrimSpace(inv.RecipientUserID),
-		Status:                 inviteStatusToString(inv.Status),
+		Status:                 enumToStorage(inv.Status),
 		CreatedByParticipantID: inv.CreatedByParticipantID,
 		CreatedAt:              toMillis(inv.CreatedAt),
 		UpdatedAt:              toMillis(inv.UpdatedAt),
@@ -85,7 +85,7 @@ func (s *Store) ListInvites(ctx context.Context, campaignID string, recipientUse
 	recipientUserID = strings.TrimSpace(recipientUserID)
 	statusFilter := ""
 	if status != invite.StatusUnspecified {
-		statusFilter = inviteStatusToString(status)
+		statusFilter = enumToStorage(status)
 	}
 
 	var rows []db.Invite
@@ -142,7 +142,7 @@ func (s *Store) ListPendingInvites(ctx context.Context, campaignID string, pageS
 		return storage.InvitePage{}, fmt.Errorf("page size must be greater than zero")
 	}
 
-	status := inviteStatusToString(invite.StatusPending)
+	status := enumToStorage(invite.StatusPending)
 	var rows []db.Invite
 	var err error
 	if pageToken == "" {
@@ -191,7 +191,7 @@ func (s *Store) ListPendingInvitesForRecipient(ctx context.Context, userID strin
 		return storage.InvitePage{}, fmt.Errorf("page size must be greater than zero")
 	}
 
-	status := inviteStatusToString(invite.StatusPending)
+	status := enumToStorage(invite.StatusPending)
 	var rows []db.Invite
 	var err error
 	if pageToken == "" {
@@ -241,7 +241,7 @@ func (s *Store) UpdateInviteStatus(ctx context.Context, inviteID string, status 
 	}
 
 	return s.q.UpdateInviteStatus(ctx, db.UpdateInviteStatusParams{
-		Status:    inviteStatusToString(status),
+		Status:    enumToStorage(status),
 		UpdatedAt: toMillis(updatedAt),
 		ID:        inviteID,
 	})

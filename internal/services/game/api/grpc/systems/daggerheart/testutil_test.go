@@ -10,6 +10,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 // testTimestamp is a shared timestamp for deterministic test events.
@@ -115,10 +116,10 @@ func (b *rollEventBuilder) appendTo(store *fakeEventStore) event.Event {
 		b.t.Fatalf("encode roll payload: %v", err)
 	}
 	evt, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  b.campaignID,
+		CampaignID:  ids.CampaignID(b.campaignID),
 		Timestamp:   testTimestamp,
 		Type:        event.Type("action.roll_resolved"),
-		SessionID:   b.sessionID,
+		SessionID:   ids.SessionID(b.sessionID),
 		RequestID:   b.requestID,
 		ActorType:   event.ActorTypeSystem,
 		EntityType:  "roll",

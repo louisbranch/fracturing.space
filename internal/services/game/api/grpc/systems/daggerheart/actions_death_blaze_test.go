@@ -162,19 +162,13 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve death move: %v", err)
 	}
-	lifeStateBefore := daggerheart.LifeStateAlive
 	payload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:     "char-1",
-		LifeStateBefore: &lifeStateBefore,
-		LifeStateAfter:  &result.LifeState,
-		HPBefore:        &result.HPBefore,
-		HPAfter:         &result.HPAfter,
-		HopeBefore:      &result.HopeBefore,
-		HopeAfter:       &result.HopeAfter,
-		HopeMaxBefore:   &result.HopeMaxBefore,
-		HopeMaxAfter:    &result.HopeMaxAfter,
-		StressBefore:    &result.StressBefore,
-		StressAfter:     &result.StressAfter,
+		CharacterID: "char-1",
+		LifeState:   &result.LifeState,
+		HP:          &result.HPAfter,
+		Hope:        &result.HopeAfter,
+		HopeMax:     &result.HopeMaxAfter,
+		Stress:      &result.StressAfter,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -269,22 +263,13 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("resolve death move: %v", err)
 	}
 
-	lifeStateBefore := state.LifeState
-	if lifeStateBefore == "" {
-		lifeStateBefore = daggerheart.LifeStateAlive
-	}
 	payload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:     "char-1",
-		LifeStateBefore: &lifeStateBefore,
-		LifeStateAfter:  &result.LifeState,
-		HPBefore:        &result.HPBefore,
-		HPAfter:         &result.HPAfter,
-		HopeBefore:      &result.HopeBefore,
-		HopeAfter:       &result.HopeAfter,
-		HopeMaxBefore:   &result.HopeMaxBefore,
-		HopeMaxAfter:    &result.HopeMaxAfter,
-		StressBefore:    &result.StressBefore,
-		StressAfter:     &result.StressAfter,
+		CharacterID: "char-1",
+		LifeState:   &result.LifeState,
+		HP:          &result.HPAfter,
+		Hope:        &result.HopeAfter,
+		HopeMax:     &result.HopeMaxAfter,
+		Stress:      &result.StressAfter,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -418,11 +403,7 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 	}
 	payload := daggerheart.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
-		LifeStateBefore: func() *string {
-			l := daggerheart.LifeStateBlazeOfGlory
-			return &l
-		}(),
-		LifeStateAfter: func() *string {
+		LifeState: func() *string {
 			l := daggerheart.LifeStateDead
 			return &l
 		}(),
@@ -500,11 +481,7 @@ func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 
 	payload := daggerheart.CharacterStatePatchedPayload{
 		CharacterID: "char-1",
-		LifeStateBefore: func() *string {
-			l := daggerheart.LifeStateBlazeOfGlory
-			return &l
-		}(),
-		LifeStateAfter: func() *string {
+		LifeState: func() *string {
 			l := daggerheart.LifeStateDead
 			return &l
 		}(),

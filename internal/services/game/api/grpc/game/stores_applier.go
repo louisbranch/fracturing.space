@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 )
 
@@ -52,5 +53,6 @@ func (s Stores) TryApplier() (projection.Applier, error) {
 		SceneSpotlight:   s.SceneSpotlight,
 		Watermarks:       s.Watermarks,
 		Adapters:         adapters,
+		Auditor:          audit.NewEmitter(s.Audit),
 	}, nil
 }

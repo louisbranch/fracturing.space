@@ -60,6 +60,26 @@ Adding a game system requires four registries, all wired from one
 `SystemDescriptor` in `domain/bridge/manifest/manifest.go`. If a system is
 present in one registry and missing in another, startup validation fails.
 
+```mermaid
+flowchart TD
+    SD["SystemDescriptor\n(manifest.go)"]
+
+    SD -->|BuildModule| MOD["Module Registry\n(write path)"]
+    SD -->|BuildAdapter| ADP["Adapter Registry\n(projection)"]
+    SD -->|BuildMetadataSystem| META["Metadata Registry\n(API surface)"]
+
+    MOD -->|"commands → deciders\nevents → folders"| ENGINE["Domain Engine"]
+    ADP -->|"system events → stores"| PROJ["Projection Applier"]
+    META -->|"contracts, state handlers"| GRPC["gRPC Transport"]
+
+    VAL{{"Startup Parity\nValidation"}}
+    MOD --- VAL
+    ADP --- VAL
+    META --- VAL
+    VAL -->|"all three agree"| OK["Server starts"]
+    VAL -->|"mismatch"| FAIL["Fatal error"]
+```
+
 | Registry | Scope | File | What it provides |
 |----------|-------|------|------------------|
 | **Module** | Write path | `domain/module/registry.go` | Routes commands to deciders, events to folders during replay |
@@ -81,15 +101,7 @@ domain packages remain independent from generated API code.
 4. **Validate projection contracts** — handler coverage, no stale handlers, adapter events.
 5. **Three-way parity check** — module, metadata, and adapter registries must agree on which systems exist.
 
-### Startup failure diagnostics
-
-Registry startup failures should be actionable without tracing call stacks:
-
-- module registration failures are wrapped as `system module <id>@<version> <step>: <cause>`
-- registry validation failures are wrapped as `registry validation <step>: <cause>`
-- missing/orphaned type lists are sorted to keep messages deterministic across runs
-
-### Common mistakes
+### Common startup failures
 
 | Mistake | Error |
 |---------|-------|
@@ -122,22 +134,14 @@ Keep handlers thin and avoid transport logic in domain packages.
 - Rejection codes should be stable, machine-readable constants.
 - Multi-consequence mechanics should prefer single-command atomic emission patterns.
 
-## Character creation workflow boundary
-
-Character creation workflow APIs are generic at transport level, while step semantics
-are owned by each system provider. Workflow contracts use workflow-owned context
-models (`CampaignContext`, `CharacterContext`) instead of storage record structs so
-provider behavior stays decoupled from projection persistence shape.
-
 ## Minimum review checklist
-
-For any new system or mechanic:
 
 1. Command and event registrations are explicit and tested.
 2. Replay fold and projection adapter coverage exists for new event types.
 3. Mutating paths use shared command execution orchestration.
 4. Generated event catalogs are updated (`docs/events/`).
 5. At least one happy-path and one rejection-path test exists per new command/event pair.
+
 ## Related docs
 
 - [Event-driven system](../foundations/event-driven-system.md)

@@ -17,6 +17,30 @@ Entry point: `server.NewWithAddrContext()` in `internal/services/game/app/bootst
 
 ## Phase overview
 
+```mermaid
+flowchart TD
+    START([NewWithAddrContext]) --> P1
+
+    P1["1. Registries\ncommand/event/system types"]
+    P1 -->|fatal| P2
+    P2["2. Network\nTCP listener"]
+    P2 -->|fatal| P3
+    P3["3. Storage\nevents + projections + content DBs"]
+    P3 -->|fatal| P4
+    P4["4. Domain\nstores, applier, write runtime"]
+    P4 -->|fatal| P5
+    P5["5. Systems\nparity check, gap repair, policy"]
+    P5 -->|fatal| P6
+    P6["6. Dependencies\nAuth, Social, AI, Status"]
+    P6 -->|"Auth fatal\nothers graceful"| P7
+    P7["7. Transport\ngRPC service registration"]
+    P7 -->|fatal| P8
+    P8["8. Runtime\nprojection mode, workers, status"]
+    P8 --> SERVE([Server.Serve])
+
+    P1 & P2 & P3 & P4 & P5 & P6 & P7 & P8 -.->|"on failure"| RB["LIFO Rollback\nclean up in reverse order"]
+```
+
 | # | Phase | File | Failure behavior |
 |---|-------|------|-----------------|
 | 1 | Registries | `bootstrap.go` | Fatal — command/event types misconfigured |

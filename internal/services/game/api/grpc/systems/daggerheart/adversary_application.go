@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -87,10 +88,10 @@ func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.Dagg
 	}
 
 	payload := daggerheart.AdversaryCreatePayload{
-		AdversaryID: adversaryID,
+		AdversaryID: ids.AdversaryID(adversaryID),
 		Name:        name,
 		Kind:        kind,
-		SessionID:   sessionID,
+		SessionID:   ids.SessionID(sessionID),
 		Notes:       notes,
 		HP:          stats.HP,
 		HPMax:       stats.HPMax,
@@ -110,11 +111,11 @@ func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.Dagg
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartAdversaryCreate,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",
@@ -232,10 +233,10 @@ func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.Dagg
 	}
 
 	payload := daggerheart.AdversaryUpdatePayload{
-		AdversaryID: adversaryID,
+		AdversaryID: ids.AdversaryID(adversaryID),
 		Name:        name,
 		Kind:        kind,
-		SessionID:   sessionID,
+		SessionID:   ids.SessionID(sessionID),
 		Notes:       notes,
 		HP:          stats.HP,
 		HPMax:       stats.HPMax,
@@ -255,11 +256,11 @@ func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.Dagg
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartAdversaryUpdate,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",
@@ -324,7 +325,7 @@ func (s *DaggerheartService) runDeleteAdversary(ctx context.Context, in *pb.Dagg
 	}
 
 	payload := daggerheart.AdversaryDeletePayload{
-		AdversaryID: adversaryID,
+		AdversaryID: ids.AdversaryID(adversaryID),
 		Reason:      strings.TrimSpace(in.GetReason()),
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -336,11 +337,11 @@ func (s *DaggerheartService) runDeleteAdversary(ctx context.Context, in *pb.Dagg
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartAdversaryDelete,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "adversary",

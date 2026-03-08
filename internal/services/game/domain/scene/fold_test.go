@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 func TestFold_Created_SetsActiveAndMetadata(t *testing.T) {
@@ -101,7 +102,7 @@ func TestFold_Ended_ClearsActiveAndTransientState(t *testing.T) {
 }
 
 func TestFold_CharacterAdded_AddsToMap(t *testing.T) {
-	state := State{Characters: map[string]bool{"c1": true}}
+	state := State{Characters: map[ids.CharacterID]bool{"c1": true}}
 	evt := event.Event{
 		Type:        EventTypeCharacterAdded,
 		PayloadJSON: []byte(`{"scene_id":"s1","character_id":"c2"}`),
@@ -119,7 +120,7 @@ func TestFold_CharacterAdded_AddsToMap(t *testing.T) {
 }
 
 func TestFold_CharacterRemoved_RemovesFromMap(t *testing.T) {
-	state := State{Characters: map[string]bool{"c1": true, "c2": true}}
+	state := State{Characters: map[ids.CharacterID]bool{"c1": true, "c2": true}}
 	evt := event.Event{
 		Type:        EventTypeCharacterRemoved,
 		PayloadJSON: []byte(`{"scene_id":"s1","character_id":"c1"}`),

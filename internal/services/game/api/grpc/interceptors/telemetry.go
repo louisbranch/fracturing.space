@@ -81,6 +81,65 @@ func AuditInterceptor(store storage.AuditEventStore) grpc.UnaryServerInterceptor
 	}
 }
 
+// StreamAuditInterceptor emits an audit event for each server-streaming gRPC
+// call handled by the game service. The event captures method, result code,
+// and trace context. Request-scoped fields (campaignID, sessionID) are not
+// available at the interceptor level for streams — only the handler has access
+// to the request message.
+func StreamAuditInterceptor(store storage.AuditEventStore) grpc.StreamServerInterceptor {
+	return func(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
+		err := handler(srv, stream)
+		if store == nil {
+			return err
+		}
+
+		ctx := stream.Context()
+
+		severity := audit.SeverityInfo
+		code := codes.OK
+		if err != nil {
+			severity = audit.SeverityError
+			if st, ok := status.FromError(err); ok {
+				code = st.Code()
+			}
+		}
+
+		actorID := grpcmeta.ParticipantIDFromContext(ctx)
+		actorType := "system"
+		if actorID != "" {
+			actorType = "participant"
+		}
+
+		var traceID, spanID string
+		if sc := trace.SpanFromContext(ctx).SpanContext(); sc.IsValid() {
+			traceID = sc.TraceID().String()
+			spanID = sc.SpanID().String()
+		}
+
+		emitter := audit.NewEmitter(store)
+		emitErr := emitter.Emit(ctx, storage.AuditEvent{
+			EventName:    events.GRPCStream,
+			Severity:     string(severity),
+			ActorType:    actorType,
+			ActorID:      actorID,
+			RequestID:    grpcmeta.RequestIDFromContext(ctx),
+			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+			TraceID:      traceID,
+			SpanID:       spanID,
+			Attributes: map[string]any{
+				"method":      info.FullMethod,
+				"method_kind": classifyMethodKind(info.FullMethod),
+				"code":        code.String(),
+			},
+		})
+		if emitErr != nil {
+			log.Printf("stream audit emit %s: %v", info.FullMethod, emitErr)
+		}
+
+		return err
+	}
+}
+
 type telemetryCampaignIDGetter interface {
 	GetCampaignId() string
 }
@@ -140,7 +199,8 @@ func classifyMethodKind(fullMethod string) string {
 		campaignv1.SystemService_GetGameSystem_FullMethodName,
 		campaignv1.StatisticsService_GetGameStatistics_FullMethodName,
 		campaignv1.AuthorizationService_Can_FullMethodName,
-		campaignv1.AuthorizationService_BatchCan_FullMethodName:
+		campaignv1.AuthorizationService_BatchCan_FullMethodName,
+		campaignv1.EventService_SubscribeCampaignUpdates_FullMethodName:
 		return "read"
 	default:
 		return "write"

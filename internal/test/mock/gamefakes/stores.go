@@ -160,14 +160,15 @@ func NewEventStore() *EventStore {
 }
 
 func (s *EventStore) AppendEvent(_ context.Context, evt event.Event) (event.Event, error) {
-	seq := s.NextSeq[evt.CampaignID]
+	cid := string(evt.CampaignID)
+	seq := s.NextSeq[cid]
 	if seq == 0 {
 		seq = 1
 	}
 	evt.Seq = seq
 	evt.Hash = "fakehash"
-	s.NextSeq[evt.CampaignID] = seq + 1
-	s.Events[evt.CampaignID] = append(s.Events[evt.CampaignID], evt)
+	s.NextSeq[cid] = seq + 1
+	s.Events[cid] = append(s.Events[cid], evt)
 	s.ByHash[evt.Hash] = evt
 	return evt, nil
 }
@@ -205,7 +206,7 @@ func (s *EventStore) ListEvents(_ context.Context, campaignID string, afterSeq u
 func (s *EventStore) ListEventsBySession(_ context.Context, campaignID, sessionID string, afterSeq uint64, limit int) ([]event.Event, error) {
 	result := make([]event.Event, 0)
 	for _, e := range s.Events[campaignID] {
-		if e.SessionID == sessionID && e.Seq > afterSeq {
+		if e.SessionID.String() == sessionID && e.Seq > afterSeq {
 			result = append(result, e)
 			if limit > 0 && len(result) >= limit {
 				break
@@ -271,10 +272,10 @@ func eventMatchesPageFilter(evt event.Event, filter storage.EventQueryFilter) bo
 	if !matchExact(filter.EventType, string(evt.Type)) {
 		return false
 	}
-	if !matchExact(filter.SessionID, evt.SessionID) {
+	if !matchExact(filter.SessionID, evt.SessionID.String()) {
 		return false
 	}
-	if !matchExact(filter.SceneID, evt.SceneID) {
+	if !matchExact(filter.SceneID, evt.SceneID.String()) {
 		return false
 	}
 	if !matchExact(filter.RequestID, evt.RequestID) {
@@ -333,7 +334,7 @@ func eventMatchesPageFilterClause(evt event.Event, clause string, params []any) 
 
 	if strings.Contains(clause, "session_id = ?") {
 		value, ok := nextString()
-		if !ok || evt.SessionID != value {
+		if !ok || evt.SessionID.String() != value {
 			return false
 		}
 	}

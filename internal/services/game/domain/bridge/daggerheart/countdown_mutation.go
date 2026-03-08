@@ -1,6 +1,10 @@
 package daggerheart
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+)
 
 const (
 	// BreathCountdownName is the canonical countdown label for underwater breath.
@@ -41,7 +45,7 @@ func ResolveCountdownMutation(input CountdownMutationInput) (CountdownMutation, 
 	return CountdownMutation{
 		Update: update,
 		Payload: CountdownUpdatePayload{
-			CountdownID: strings.TrimSpace(input.Countdown.ID),
+			CountdownID: ids.CountdownID(strings.TrimSpace(input.Countdown.ID)),
 			Before:      update.Before,
 			After:       update.After,
 			Delta:       update.Delta,

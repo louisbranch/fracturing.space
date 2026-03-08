@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -164,7 +165,7 @@ func testEventRegistry(t *testing.T) *event.Registry {
 
 func eventToEvent(evt testevent.Event) event.Event {
 	return event.Event{
-		CampaignID:     strings.TrimSpace(evt.CampaignID),
+		CampaignID:     ids.CampaignID(strings.TrimSpace(string(evt.CampaignID))),
 		Seq:            evt.Seq,
 		Hash:           evt.Hash,
 		PrevHash:       evt.PrevHash,
@@ -173,7 +174,7 @@ func eventToEvent(evt testevent.Event) event.Event {
 		SignatureKeyID: evt.SignatureKeyID,
 		Type:           event.Type(strings.TrimSpace(string(evt.Type))),
 		Timestamp:      evt.Timestamp,
-		SessionID:      evt.SessionID,
+		SessionID:      ids.SessionID(evt.SessionID),
 		RequestID:      evt.RequestID,
 		InvocationID:   evt.InvocationID,
 		ActorType:      event.ActorType(evt.ActorType),
@@ -758,8 +759,7 @@ func TestApplySystemEvent_UsesDaggerheartAdapterForSysPrefixedEventType(t *testi
 	}
 
 	payload, err := json.Marshal(daggerheartsys.GMFearChangedPayload{
-		Before: 1,
-		After:  4,
+		Value:  4,
 		Reason: "test",
 	})
 	if err != nil {

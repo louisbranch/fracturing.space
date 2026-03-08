@@ -85,14 +85,10 @@ func TestApplyRest_ShortRest_Success(t *testing.T) {
 	now := testTimestamp
 
 	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
-		RestType:         "short",
-		Interrupted:      false,
-		GMFearBefore:     0,
-		GMFearAfter:      0,
-		ShortRestsBefore: 0,
-		ShortRestsAfter:  1,
-		RefreshRest:      false,
-		RefreshLongRest:  false,
+		RestType:    "short",
+		Interrupted: false,
+		GMFear:      0,
+		ShortRests:  1,
 	})
 	if err != nil {
 		t.Fatalf("encode rest payload: %v", err)
@@ -210,14 +206,10 @@ func TestApplyRest_LongRest_Success(t *testing.T) {
 	now := testTimestamp
 
 	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
-		RestType:         "long",
-		Interrupted:      false,
-		GMFearBefore:     0,
-		GMFearAfter:      0,
-		ShortRestsBefore: 1,
-		ShortRestsAfter:  0,
-		RefreshRest:      false,
-		RefreshLongRest:  false,
+		RestType:    "long",
+		Interrupted: false,
+		GMFear:      0,
+		ShortRests:  0,
 	})
 	if err != nil {
 		t.Fatalf("encode rest payload: %v", err)
@@ -263,14 +255,10 @@ func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 	now := testTimestamp
 
 	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
-		RestType:         "long",
-		Interrupted:      false,
-		GMFearBefore:     0,
-		GMFearAfter:      0,
-		ShortRestsBefore: 1,
-		ShortRestsAfter:  0,
-		RefreshRest:      false,
-		RefreshLongRest:  false,
+		RestType:    "long",
+		Interrupted: false,
+		GMFear:      0,
+		ShortRests:  0,
 	})
 	if err != nil {
 		t.Fatalf("encode rest payload: %v", err)
@@ -328,14 +316,10 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 	now := testTimestamp
 
 	payloadJSON, err := json.Marshal(daggerheart.RestTakenPayload{
-		RestType:         "long",
-		Interrupted:      false,
-		GMFearBefore:     0,
-		GMFearAfter:      0,
-		ShortRestsBefore: 1,
-		ShortRestsAfter:  0,
-		RefreshRest:      false,
-		RefreshLongRest:  false,
+		RestType:    "long",
+		Interrupted: false,
+		GMFear:      0,
+		ShortRests:  0,
 	})
 	if err != nil {
 		t.Fatalf("encode rest payload: %v", err)

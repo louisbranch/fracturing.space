@@ -9,6 +9,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/observability/audit"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -54,6 +55,9 @@ type Applier struct {
 	// Now returns the current time used for watermark timestamps. Tests can
 	// override it for deterministic assertions; nil defaults to time.Now.
 	Now func() time.Time
+	// Auditor emits operational audit events for projection anomalies (e.g.
+	// sequence gaps). Nil-safe: no events are emitted when unset.
+	Auditor *audit.Emitter
 }
 
 // Apply routes domain events into denormalized read-model stores.

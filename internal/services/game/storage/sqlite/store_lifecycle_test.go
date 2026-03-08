@@ -418,116 +418,98 @@ func TestCampaignPutUpdate(t *testing.T) {
 	}
 }
 
-func TestConversionHelpersCoverage(t *testing.T) {
-	// Draft status
-	if campaignStatusToString(campaign.StatusDraft) != "DRAFT" {
+func TestEnumRoundTripCoverage(t *testing.T) {
+	// enumToStorage covers all enum types
+	if enumToStorage(campaign.StatusDraft) != "DRAFT" {
 		t.Fatal("expected DRAFT")
 	}
-	if campaignStatusToString(campaign.StatusCompleted) != "COMPLETED" {
+	if enumToStorage(campaign.StatusCompleted) != "COMPLETED" {
 		t.Fatal("expected COMPLETED")
 	}
-	if stringToCampaignStatus("DRAFT") != campaign.StatusDraft {
-		t.Fatal("expected draft status")
+	if enumToStorage(campaign.StatusArchived) != "ARCHIVED" {
+		t.Fatal("expected ARCHIVED")
 	}
-	if stringToCampaignStatus("COMPLETED") != campaign.StatusCompleted {
-		t.Fatal("expected completed status")
-	}
-	if stringToCampaignStatus("ARCHIVED") != campaign.StatusArchived {
-		t.Fatal("expected archived status")
-	}
-
-	// GM Mode: HUMAN
-	if gmModeToString(campaign.GmModeHuman) != "HUMAN" {
+	if enumToStorage(campaign.GmModeHuman) != "HUMAN" {
 		t.Fatal("expected HUMAN")
 	}
-	if stringToGmMode("HUMAN") != campaign.GmModeHuman {
-		t.Fatal("expected human mode")
+	if enumToStorage(campaign.GmModeAI) != "AI" {
+		t.Fatal("expected AI gm mode")
 	}
-	if stringToGmMode("HYBRID") != campaign.GmModeHybrid {
-		t.Fatal("expected hybrid mode")
-	}
-
-	// Participant: Manager access
-	if participantAccessToString(participant.CampaignAccessManager) != "MANAGER" {
+	if enumToStorage(participant.CampaignAccessManager) != "MANAGER" {
 		t.Fatal("expected MANAGER")
 	}
-	if stringToParticipantAccess("MANAGER") != participant.CampaignAccessManager {
-		t.Fatal("expected manager access")
+	if enumToStorage(participant.CampaignAccessOwner) != "OWNER" {
+		t.Fatal("expected OWNER")
 	}
-	if stringToParticipantAccess("OWNER") != participant.CampaignAccessOwner {
-		t.Fatal("expected owner access")
+	if enumToStorage(participant.RoleGM) != "GM" {
+		t.Fatal("expected GM")
 	}
-
-	// Participant: Unspecified controller
-	if participantControllerToString(participant.ControllerUnspecified) != "UNSPECIFIED" {
-		t.Fatal("expected UNSPECIFIED controller")
-	}
-
-	// Character: Unspecified kind
-	if characterKindToString(character.KindUnspecified) != "UNSPECIFIED" {
-		t.Fatal("expected UNSPECIFIED kind")
-	}
-
-	// Session: Unspecified status
-	if sessionStatusToString(session.StatusUnspecified) != "UNSPECIFIED" {
-		t.Fatal("expected UNSPECIFIED session status")
-	}
-
-	// Participant role: Unspecified
-	if participantRoleToString(participant.RoleUnspecified) != "UNSPECIFIED" {
-		t.Fatal("expected UNSPECIFIED role")
-	}
-
-	// Participant access: Unspecified
-	if participantAccessToString(participant.CampaignAccessUnspecified) != "UNSPECIFIED" {
-		t.Fatal("expected UNSPECIFIED access")
-	}
-
-	// stringToParticipantRole: GM case
-	if stringToParticipantRole("GM") != participant.RoleGM {
-		t.Fatal("expected GM role")
-	}
-
-	// stringToParticipantController: AI case
-	if stringToParticipantController("AI") != participant.ControllerAI {
+	if enumToStorage(participant.ControllerAI) != "AI" {
 		t.Fatal("expected AI controller")
 	}
 
-	// participantControllerToString: AI case
-	if participantControllerToString(participant.ControllerAI) != "AI" {
-		t.Fatal("expected AI string")
+	// enumFromStorage round-trips through domain Normalize functions
+	if enumFromStorage("DRAFT", campaign.NormalizeStatus) != campaign.StatusDraft {
+		t.Fatal("expected draft status")
 	}
-
-	// participantRoleToString: GM case
-	if participantRoleToString(participant.RoleGM) != "GM" {
-		t.Fatal("expected GM string")
+	if enumFromStorage("COMPLETED", campaign.NormalizeStatus) != campaign.StatusCompleted {
+		t.Fatal("expected completed status")
 	}
-
-	// campaignStatusToString: Archived
-	if campaignStatusToString(campaign.StatusArchived) != "ARCHIVED" {
-		t.Fatal("expected ARCHIVED")
+	if enumFromStorage("ARCHIVED", campaign.NormalizeStatus) != campaign.StatusArchived {
+		t.Fatal("expected archived status")
 	}
-
-	// gmModeToString: AI and Unspecified
-	if gmModeToString(campaign.GmModeAI) != "AI" {
-		t.Fatal("expected AI")
+	if enumFromStorage("UNKNOWN", campaign.NormalizeStatus) != campaign.StatusUnspecified {
+		t.Fatal("expected unspecified status for unknown string")
 	}
-	if gmModeToString(campaign.GmModeUnspecified) != "UNSPECIFIED" {
-		t.Fatal("expected UNSPECIFIED gm mode")
+	if enumFromStorage("HUMAN", campaign.NormalizeGmMode) != campaign.GmModeHuman {
+		t.Fatal("expected human mode")
 	}
-	if stringToGmMode("AI") != campaign.GmModeAI {
+	if enumFromStorage("HYBRID", campaign.NormalizeGmMode) != campaign.GmModeHybrid {
+		t.Fatal("expected hybrid mode")
+	}
+	if enumFromStorage("AI", campaign.NormalizeGmMode) != campaign.GmModeAI {
 		t.Fatal("expected AI mode")
 	}
-	if stringToGmMode("UNKNOWN") != campaign.GmModeUnspecified {
+	if enumFromStorage("UNKNOWN", campaign.NormalizeGmMode) != campaign.GmModeUnspecified {
 		t.Fatal("expected unspecified mode for unknown string")
 	}
+	if enumFromStorage("MANAGER", participant.NormalizeCampaignAccess) != participant.CampaignAccessManager {
+		t.Fatal("expected manager access")
+	}
+	if enumFromStorage("OWNER", participant.NormalizeCampaignAccess) != participant.CampaignAccessOwner {
+		t.Fatal("expected owner access")
+	}
+	if enumFromStorage("GM", participant.NormalizeRole) != participant.RoleGM {
+		t.Fatal("expected GM role")
+	}
+	if enumFromStorage("AI", participant.NormalizeController) != participant.ControllerAI {
+		t.Fatal("expected AI controller")
+	}
+	if enumFromStorage("HUMAN", participant.NormalizeController) != participant.ControllerHuman {
+		t.Fatal("expected human controller")
+	}
 
-	// campaignStatusToString: Unspecified
-	if campaignStatusToString(campaign.StatusUnspecified) != "UNSPECIFIED" {
+	// Zero-value enums produce UNSPECIFIED in storage
+	if enumToStorage(campaign.GmModeUnspecified) != "UNSPECIFIED" {
+		t.Fatal("expected UNSPECIFIED gm mode")
+	}
+	if enumToStorage(campaign.StatusUnspecified) != "UNSPECIFIED" {
 		t.Fatal("expected UNSPECIFIED campaign status")
 	}
-	if stringToCampaignStatus("UNKNOWN") != campaign.StatusUnspecified {
-		t.Fatal("expected unspecified status for unknown string")
+	if enumToStorage(participant.ControllerUnspecified) != "UNSPECIFIED" {
+		t.Fatal("expected UNSPECIFIED controller")
+	}
+	if enumToStorage(character.KindUnspecified) != "UNSPECIFIED" {
+		t.Fatal("expected UNSPECIFIED kind")
+	}
+	if enumToStorage(session.StatusUnspecified) != "UNSPECIFIED" {
+		t.Fatal("expected UNSPECIFIED session status")
+	}
+	if enumToStorage(participant.RoleUnspecified) != "UNSPECIFIED" {
+		t.Fatal("expected UNSPECIFIED role")
+	}
+	if enumToStorage(participant.CampaignAccessUnspecified) != "UNSPECIFIED" {
+		t.Fatal("expected UNSPECIFIED access")
 	}
 }
 

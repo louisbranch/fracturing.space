@@ -336,11 +336,9 @@ func TestApplyRollOutcome_UsesDomainEngineForCharacterStatePatch(t *testing.T) {
 	stressAfter := stressBefore
 
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:  "char-1",
-		HopeBefore:   &hopeBefore,
-		HopeAfter:    &hopeAfter,
-		StressBefore: &stressBefore,
-		StressAfter:  &stressAfter,
+		CharacterID: "char-1",
+		Hope:        &hopeAfter,
+		Stress:      &stressAfter,
 	}
 	patchJSON, err := json.Marshal(patchPayload)
 	if err != nil {
@@ -476,11 +474,9 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	stressBefore := profile.StressMax
 	stressAfter := stressBefore - 1
 	patchPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:  "char-1",
-		HopeBefore:   &hopeBefore,
-		HopeAfter:    &hopeAfter,
-		StressBefore: &stressBefore,
-		StressAfter:  &stressAfter,
+		CharacterID: "char-1",
+		Hope:        &hopeAfter,
+		Stress:      &stressAfter,
 	}
 	patchJSON, err := json.Marshal(patchPayload)
 	if err != nil {
@@ -489,11 +485,10 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 
 	rollSeq := rollEvent.Seq
 	conditionPayload := daggerheart.ConditionChangedPayload{
-		CharacterID:      "char-1",
-		ConditionsBefore: []string{daggerheart.ConditionVulnerable},
-		ConditionsAfter:  []string{},
-		Removed:          []string{daggerheart.ConditionVulnerable},
-		RollSeq:          &rollSeq,
+		CharacterID: "char-1",
+		Conditions:  []string{},
+		Removed:     []string{daggerheart.ConditionVulnerable},
+		RollSeq:     &rollSeq,
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)
 	if err != nil {

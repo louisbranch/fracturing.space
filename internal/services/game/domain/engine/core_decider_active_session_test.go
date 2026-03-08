@@ -7,6 +7,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -52,7 +53,7 @@ func TestCoreDeciderDecide_AllowsSessionScopedFamiliesWhenSessionActive(t *testi
 	}
 }
 
-func sessionStateStarted(sessionID string) session.State {
+func sessionStateStarted(sessionID ids.SessionID) session.State {
 	return session.State{
 		Started:   true,
 		SessionID: sessionID,

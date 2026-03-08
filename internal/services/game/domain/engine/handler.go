@@ -115,10 +115,6 @@ type Handler struct {
 	Now                  func() time.Time
 }
 
-// HandlerConfig is an alias for Handler to support legacy call sites.
-// Prefer passing Handler directly to NewHandler.
-type HandlerConfig = Handler
-
 // NewHandler validates required dependencies and returns a configured Handler.
 // Use this constructor in production wiring to catch missing dependencies at
 // startup rather than at first request. The Handler struct remains exported
@@ -156,18 +152,6 @@ type Result struct {
 	State    any
 }
 
-// Handle validates a command, checks gate policy, and returns a decision.
-//
-// Use Handle when you need validation plus event emission decisions without
-// requiring caller to materialize post-apply state.
-func (h Handler) Handle(ctx context.Context, cmd command.Command) (command.Decision, error) {
-	_, _, decision, err := h.prepareExecution(ctx, cmd)
-	if err != nil {
-		return command.Decision{}, err
-	}
-	return decision, nil
-}
-
 func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, error) {
 	validated, state, decision, err := h.prepareExecution(ctx, cmd)
 	if err != nil {
@@ -179,10 +163,10 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 	}
 
 	if h.Snapshots != nil {
-		if err := h.Snapshots.SaveState(ctx, validated.CampaignID, lastSeq, state); err != nil {
+		if err := h.Snapshots.SaveState(ctx, string(validated.CampaignID), lastSeq, state); err != nil {
 			return Result{}, newPostPersistError(
 				PostPersistStageSnapshot,
-				validated.CampaignID,
+				string(validated.CampaignID),
 				lastSeq,
 				fmt.Errorf("%w: %w", ErrPostPersistSnapshotFailed, err),
 			)
@@ -191,13 +175,13 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 	if h.Checkpoints != nil {
 		now := h.nowFunc()
 		if err := h.Checkpoints.Save(ctx, replay.Checkpoint{
-			CampaignID: validated.CampaignID,
+			CampaignID: string(validated.CampaignID),
 			LastSeq:    lastSeq,
 			UpdatedAt:  now().UTC(),
 		}); err != nil {
 			return Result{}, newPostPersistError(
 				PostPersistStageCheckpoint,
-				validated.CampaignID,
+				string(validated.CampaignID),
 				lastSeq,
 				fmt.Errorf("%w: %w", ErrPostPersistCheckpointFailed, err),
 			)
@@ -206,6 +190,19 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 	return Result{Decision: decision, State: state}, nil
 }
 
+// prepareExecution runs the full command pipeline: validate → gate → load → decide → append → fold.
+//
+// Gate evaluation order is intentional:
+//  1. Session gate first — cheapest check, broadest scope. If the session is
+//     gated (e.g. waiting for a roll outcome), most commands are rejected without
+//     loading state or evaluating scene context.
+//  2. Scene gate second — narrower scope, still cheaper than full state load.
+//     Only evaluated for commands with GateScopeScene.
+//  3. State load and decision — only reached when gates pass.
+//
+// This ordering minimizes work for the common rejection case (command sent while
+// a gate is active) and ensures gate checks use lightweight state loaders rather
+// than the full replay pipeline.
 func (h Handler) prepareExecution(ctx context.Context, cmd command.Command) (command.Command, any, command.Decision, error) {
 	validated, err := h.validateCommand(cmd)
 	if err != nil {
@@ -269,7 +266,7 @@ func (h Handler) evaluateSessionGate(ctx context.Context, cmd command.Command) (
 		if h.GateStateLoader == nil {
 			return command.Decision{}, ErrGateStateLoaderRequired
 		}
-		state, err := h.GateStateLoader.LoadSession(ctx, cmd.CampaignID, cmd.SessionID)
+		state, err := h.GateStateLoader.LoadSession(ctx, string(cmd.CampaignID), cmd.SessionID.String())
 		if err != nil {
 			return command.Decision{}, err
 		}
@@ -285,7 +282,7 @@ func (h Handler) evaluateSceneGate(ctx context.Context, cmd command.Command) (co
 		if h.SceneGateStateLoader == nil {
 			return command.Decision{}, ErrSceneGateStateLoaderRequired
 		}
-		state, err := h.SceneGateStateLoader.LoadScene(ctx, cmd.CampaignID, cmd.SceneID)
+		state, err := h.SceneGateStateLoader.LoadScene(ctx, string(cmd.CampaignID), cmd.SceneID.String())
 		if err != nil {
 			return command.Decision{}, err
 		}
@@ -407,7 +404,7 @@ func (h Handler) applyDecisionEvents(state any, decision command.Decision) (any,
 			if journalPersisted {
 				return nil, newPostPersistError(
 					PostPersistStageFold,
-					evt.CampaignID,
+					string(evt.CampaignID),
 					evt.Seq,
 					fmt.Errorf("%w: %w", ErrPostPersistApplyFailed, err),
 				)

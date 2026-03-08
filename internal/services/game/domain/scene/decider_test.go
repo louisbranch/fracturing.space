@@ -7,14 +7,15 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 var fixedNow = time.Date(2026, 3, 5, 12, 0, 0, 0, time.UTC)
 
 func nowFunc() time.Time { return fixedNow }
 
-func activeScene(id string, characters ...string) State {
-	chars := make(map[string]bool, len(characters))
+func activeScene(id ids.SceneID, characters ...ids.CharacterID) State {
+	chars := make(map[ids.CharacterID]bool, len(characters))
 	for _, c := range characters {
 		chars[c] = true
 	}
@@ -25,8 +26,8 @@ func activeScene(id string, characters ...string) State {
 	}
 }
 
-func scenesMap(scenes ...State) map[string]State {
-	m := make(map[string]State, len(scenes))
+func scenesMap(scenes ...State) map[ids.SceneID]State {
+	m := make(map[ids.SceneID]State, len(scenes))
 	for _, s := range scenes {
 		m[s.SceneID] = s
 	}
@@ -109,7 +110,7 @@ func TestDecideCreate_EmitsCreatedAndCharacterAddedEvents(t *testing.T) {
 		if err := json.Unmarshal(d.Events[evtIdx].PayloadJSON, &added); err != nil {
 			t.Fatal(err)
 		}
-		wantCharID := []string{"char-1", "char-2"}[i]
+		wantCharID := []ids.CharacterID{"char-1", "char-2"}[i]
 		if added.CharacterID != wantCharID {
 			t.Fatalf("event[%d] character_id = %q, want %q", evtIdx, added.CharacterID, wantCharID)
 		}

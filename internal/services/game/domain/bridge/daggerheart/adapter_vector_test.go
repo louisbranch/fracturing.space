@@ -11,6 +11,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -70,7 +71,7 @@ func TestAdapterAndFolder_EventVectorParity(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	campaignID := "camp-1"
+	campaignID := ids.CampaignID("camp-1")
 	base := time.Date(2026, 2, 28, 10, 0, 0, 0, time.UTC)
 	var folded any
 	for i, typ := range sequence {
@@ -86,7 +87,7 @@ func TestAdapterAndFolder_EventVectorParity(t *testing.T) {
 			ActorType:     event.ActorTypeSystem,
 			ActorID:       "system-1",
 			EntityType:    "campaign",
-			EntityID:      campaignID,
+			EntityID:      string(campaignID),
 			SystemID:      SystemID,
 			SystemVersion: SystemVersion,
 			PayloadJSON:   payloadJSON,
@@ -100,7 +101,7 @@ func TestAdapterAndFolder_EventVectorParity(t *testing.T) {
 		}
 
 		folderState := assertTestSnapshotState(t, folded)
-		adapterState := store.snapshotState(campaignID)
+		adapterState := store.snapshotState(string(campaignID))
 		folderState = canonicalizeSnapshotForParity(folderState)
 		adapterState = canonicalizeSnapshotForParity(adapterState)
 		if !reflect.DeepEqual(folderState, adapterState) {
@@ -113,28 +114,27 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 	lifeStateAlive := LifeStateAlive
 	return map[event.Type]any{
 		EventTypeGMFearChanged: GMFearChangedPayload{
-			Before: 0,
-			After:  2,
+			Value: 2,
 		},
 		EventTypeCharacterStatePatched: CharacterStatePatchedPayload{
-			CharacterID:    "char-1",
-			HPAfter:        intPtr(6),
-			HopeAfter:      intPtr(2),
-			HopeMaxAfter:   intPtr(6),
-			StressAfter:    intPtr(1),
-			ArmorAfter:     intPtr(0),
-			LifeStateAfter: &lifeStateAlive,
+			CharacterID: "char-1",
+			HP:          intPtr(6),
+			Hope:        intPtr(2),
+			HopeMax:     intPtr(6),
+			Stress:      intPtr(1),
+			Armor:       intPtr(0),
+			LifeState:   &lifeStateAlive,
 		},
 		EventTypeConditionChanged: ConditionChangedPayload{
-			CharacterID:     "char-1",
-			ConditionsAfter: []string{"hidden"},
+			CharacterID: "char-1",
+			Conditions:  []string{"hidden"},
 		},
 		EventTypeLoadoutSwapped: LoadoutSwappedPayload{
 			CharacterID: "char-1",
 			CardID:      "card-1",
 			From:        "vault",
 			To:          "active",
-			StressAfter: intPtr(2),
+			Stress:      intPtr(2),
 		},
 		EventTypeCharacterTemporaryArmorApplied: CharacterTemporaryArmorAppliedPayload{
 			CharacterID: "char-1",
@@ -144,29 +144,27 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			SourceID:    "tmp-1",
 		},
 		EventTypeRestTaken: RestTakenPayload{
-			RestType:         "short",
-			GMFearBefore:     2,
-			GMFearAfter:      3,
-			ShortRestsBefore: 0,
-			ShortRestsAfter:  1,
-			RefreshRest:      true,
-			CharacterStates: []RestCharacterStatePatch{
+			RestType:    "short",
+			GMFear:      3,
+			ShortRests:  1,
+			RefreshRest: true,
+			CharacterStates: []RestTakenCharacterPatch{
 				{
 					CharacterID: "char-1",
-					HopeAfter:   intPtr(3),
-					StressAfter: intPtr(0),
+					Hope:        intPtr(3),
+					Stress:      intPtr(0),
 				},
 			},
 		},
 		EventTypeDamageApplied: DamageAppliedPayload{
 			CharacterID: "char-1",
-			HpAfter:     intPtr(5),
-			ArmorAfter:  intPtr(0),
+			Hp:          intPtr(5),
+			Armor:       intPtr(0),
 		},
 		EventTypeDowntimeMoveApplied: DowntimeMoveAppliedPayload{
 			CharacterID: "char-1",
 			Move:        "prepare",
-			HopeAfter:   intPtr(4),
+			Hope:        intPtr(4),
 		},
 		EventTypeCountdownCreated: CountdownCreatedPayload{
 			CountdownID:       "cd-1",
@@ -182,8 +180,7 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 		},
 		EventTypeCountdownUpdated: CountdownUpdatedPayload{
 			CountdownID: "cd-1",
-			Before:      0,
-			After:       1,
+			Value:       1,
 			Delta:       1,
 			Looped:      false,
 		},
@@ -206,13 +203,13 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			Armor:       1,
 		},
 		EventTypeAdversaryConditionChanged: AdversaryConditionChangedPayload{
-			AdversaryID:     "adv-1",
-			ConditionsAfter: []string{"hidden"},
+			AdversaryID: "adv-1",
+			Conditions:  []string{"hidden"},
 		},
 		EventTypeAdversaryDamageApplied: AdversaryDamageAppliedPayload{
 			AdversaryID: "adv-1",
-			HpAfter:     intPtr(4),
-			ArmorAfter:  intPtr(0),
+			Hp:          intPtr(4),
+			Armor:       intPtr(0),
 		},
 		EventTypeAdversaryUpdated: AdversaryUpdatedPayload{
 			AdversaryID: "adv-1",
@@ -234,21 +231,18 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 		},
 		EventTypeLevelUpApplied: LevelUpAppliedPayload{
 			CharacterID: "char-1",
-			LevelBefore: 1,
-			LevelAfter:  2,
+			Level:       2,
 			Advancements: []LevelUpAdvancementPayload{
 				{Type: "add_hp_slots"},
 				{Type: "add_stress_slots"},
 			},
 			Tier:           2,
-			PreviousTier:   1,
 			IsTierEntry:    true,
 			ThresholdDelta: 1,
 		},
 		EventTypeGoldUpdated: GoldUpdatedPayload{
-			CharacterID:    "char-1",
-			HandfulsBefore: 0,
-			HandfulsAfter:  3,
+			CharacterID: "char-1",
+			Handfuls:    3,
 		},
 		EventTypeDomainCardAcquired: DomainCardAcquiredPayload{
 			CharacterID: "char-1",
@@ -264,16 +258,14 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 			To:          "active",
 		},
 		EventTypeConsumableUsed: ConsumableUsedPayload{
-			CharacterID:    "char-1",
-			ConsumableID:   "potion-1",
-			QuantityBefore: 2,
-			QuantityAfter:  1,
+			CharacterID:  "char-1",
+			ConsumableID: "potion-1",
+			Quantity:     1,
 		},
 		EventTypeConsumableAcquired: ConsumableAcquiredPayload{
-			CharacterID:    "char-1",
-			ConsumableID:   "scroll-1",
-			QuantityBefore: 0,
-			QuantityAfter:  1,
+			CharacterID:  "char-1",
+			ConsumableID: "scroll-1",
+			Quantity:     1,
 		},
 	}
 }
@@ -438,11 +430,11 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 	defer m.mu.Unlock()
 
 	state := SnapshotState{
-		CampaignID:      campaignID,
+		CampaignID:      ids.CampaignID(campaignID),
 		GMFear:          GMFearDefault,
-		CharacterStates: make(map[string]CharacterState),
-		AdversaryStates: make(map[string]AdversaryState),
-		CountdownStates: make(map[string]CountdownState),
+		CharacterStates: make(map[ids.CharacterID]CharacterState),
+		AdversaryStates: make(map[ids.AdversaryID]AdversaryState),
+		CountdownStates: make(map[ids.CountdownID]CountdownState),
 	}
 	if snap, ok := m.snapshots[campaignID]; ok {
 		state.GMFear = snap.GMFear
@@ -458,18 +450,18 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 			armorMax = profile.ArmorMax
 		}
 		character := projection.CharacterStateFromStorage(stored, armorMax)
-		state.CharacterStates[character.CharacterID] = character
+		state.CharacterStates[ids.CharacterID(character.CharacterID)] = character
 	}
 	for key, stored := range m.adversaries {
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		state.AdversaryStates[stored.AdversaryID] = AdversaryState{
-			CampaignID:  stored.CampaignID,
-			AdversaryID: stored.AdversaryID,
+		state.AdversaryStates[ids.AdversaryID(stored.AdversaryID)] = AdversaryState{
+			CampaignID:  ids.CampaignID(stored.CampaignID),
+			AdversaryID: ids.AdversaryID(stored.AdversaryID),
 			Name:        stored.Name,
 			Kind:        stored.Kind,
-			SessionID:   stored.SessionID,
+			SessionID:   ids.SessionID(stored.SessionID),
 			Notes:       stored.Notes,
 			HP:          stored.HP,
 			HPMax:       stored.HPMax,
@@ -486,9 +478,9 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 		if !strings.HasPrefix(key, prefix) {
 			continue
 		}
-		state.CountdownStates[stored.CountdownID] = CountdownState{
-			CampaignID:        stored.CampaignID,
-			CountdownID:       stored.CountdownID,
+		state.CountdownStates[ids.CountdownID(stored.CountdownID)] = CountdownState{
+			CampaignID:        ids.CampaignID(stored.CampaignID),
+			CountdownID:       ids.CountdownID(stored.CountdownID),
 			Name:              stored.Name,
 			Kind:              stored.Kind,
 			Current:           stored.Current,
@@ -497,7 +489,7 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 			Looping:           stored.Looping,
 			Variant:           stored.Variant,
 			TriggerEventType:  stored.TriggerEventType,
-			LinkedCountdownID: stored.LinkedCountdownID,
+			LinkedCountdownID: ids.CountdownID(stored.LinkedCountdownID),
 		}
 	}
 	return state

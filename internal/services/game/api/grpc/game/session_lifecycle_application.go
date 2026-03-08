@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -35,7 +36,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	actorID, actorType := resolveCommandActor(ctx)
 
 	payload := session.StartPayload{
-		SessionID:   sessionID,
+		SessionID:   ids.SessionID(sessionID),
 		SessionName: sessionName,
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -97,7 +98,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 	if current.Status == session.StatusEnded {
 		return current, nil
 	}
-	payload := session.EndPayload{SessionID: sessionID}
+	payload := session.EndPayload{SessionID: ids.SessionID(sessionID)}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)

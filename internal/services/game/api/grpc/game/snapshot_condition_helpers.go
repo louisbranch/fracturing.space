@@ -5,6 +5,7 @@ import (
 
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -78,8 +79,8 @@ func applyStressVulnerableCondition(
 		return nil
 	}
 
-	payload := daggerheart.ConditionChangedPayload{
-		CharacterID:      characterID,
+	payload := daggerheart.ConditionChangePayload{
+		CharacterID:      ids.CharacterID(characterID),
 		ConditionsBefore: normalized,
 		ConditionsAfter:  after,
 		Added:            added,

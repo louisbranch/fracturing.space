@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 )
 
@@ -16,7 +17,7 @@ func TestCoreDeciderRoutesInviteCommands(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	decider := engine.CoreDecider{}
 	state := aggregate.State{
-		Invites: map[string]invite.State{
+		Invites: map[ids.InviteID]invite.State{
 			"inv-1": {Created: true, Status: "pending"},
 		},
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -95,8 +96,8 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 
 	participantPayloads := []participant.JoinPayload{
 		{
-			ParticipantID:  creatorID,
-			UserID:         userID,
+			ParticipantID:  ids.ParticipantID(creatorID),
+			UserID:         ids.UserID(userID),
 			Name:           creatorDisplayName,
 			Role:           creatorRole,
 			Controller:     "HUMAN",
@@ -112,7 +113,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate ai participant id: %v", err)
 		}
 		participantPayloads = append(participantPayloads, participant.JoinPayload{
-			ParticipantID:  aiParticipantID,
+			ParticipantID:  ids.ParticipantID(aiParticipantID),
 			UserID:         "",
 			Name:           defaultAIParticipantName(defaultLocale),
 			Role:           "GM",

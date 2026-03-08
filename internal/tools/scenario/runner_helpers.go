@@ -497,10 +497,10 @@ func (r *Runner) resolveOpenSessionGate(ctx context.Context, state *scenarioStat
 		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			return fmt.Errorf("decode session gate payload: %w", err)
 		}
-		if strings.TrimSpace(payload.GateID) == "" {
+		if strings.TrimSpace(payload.GateID.String()) == "" {
 			continue
 		}
-		gateID = payload.GateID
+		gateID = payload.GateID.String()
 		break
 	}
 	if gateID == "" {
@@ -1844,7 +1844,7 @@ func (r *Runner) assertDamageFlags(
 		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			return fmt.Errorf("decode damage payload: %w", err)
 		}
-		if targetID != "" && payload.CharacterID != targetID {
+		if targetID != "" && payload.CharacterID.String() != targetID {
 			continue
 		}
 		if expect.resistPhysical != nil && payload.ResistPhysical != *expect.resistPhysical {

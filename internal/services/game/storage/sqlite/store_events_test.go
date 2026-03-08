@@ -9,15 +9,16 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func testEvent(campaignID string, typ event.Type, sessionID string) event.Event {
 	return event.Event{
-		CampaignID:  campaignID,
+		CampaignID:  ids.CampaignID(campaignID),
 		Timestamp:   time.Date(2026, 2, 3, 12, 0, 0, 0, time.UTC),
 		Type:        typ,
-		SessionID:   sessionID,
+		SessionID:   ids.SessionID(sessionID),
 		ActorType:   event.ActorTypeSystem,
 		EntityType:  "campaign",
 		EntityID:    campaignID,
@@ -664,7 +665,7 @@ func TestAppendEventFieldRoundTrip(t *testing.T) {
 	store := openTestEventsStore(t)
 
 	evt := event.Event{
-		CampaignID:    "camp-fields",
+		CampaignID:    ids.CampaignID("camp-fields"),
 		Timestamp:     time.Date(2026, 2, 3, 12, 0, 0, 0, time.UTC),
 		Type:          event.Type("sys.daggerheart.character_state_patched"),
 		SessionID:     "sess-1",
@@ -696,8 +697,8 @@ func TestAppendEventFieldRoundTrip(t *testing.T) {
 		expected string
 		actual   string
 	}{
-		{"CampaignID", stored.CampaignID, got.CampaignID},
-		{"SessionID", stored.SessionID, got.SessionID},
+		{"CampaignID", string(stored.CampaignID), string(got.CampaignID)},
+		{"SessionID", stored.SessionID.String(), got.SessionID.String()},
 		{"RequestID", stored.RequestID, got.RequestID},
 		{"InvocationID", stored.InvocationID, got.InvocationID},
 		{"ActorID", stored.ActorID, got.ActorID},

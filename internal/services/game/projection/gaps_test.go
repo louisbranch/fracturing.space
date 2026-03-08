@@ -166,7 +166,7 @@ type gapEventStore struct {
 func (s *gapEventStore) ListEvents(_ context.Context, campaignID string, afterSeq uint64, limit int) ([]event.Event, error) {
 	var results []event.Event
 	for _, evt := range s.events {
-		if evt.CampaignID != campaignID || evt.Seq <= afterSeq {
+		if string(evt.CampaignID) != campaignID || evt.Seq <= afterSeq {
 			continue
 		}
 		results = append(results, evt)

@@ -11,6 +11,7 @@ import (
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -71,11 +72,11 @@ func campaignReadinessAggregateState(
 	state := aggregate.State{
 		Campaign: campaign.State{
 			Status:    campaignRecord.Status,
-			GmMode:    string(campaignRecord.GmMode),
+			GmMode:    campaignRecord.GmMode,
 			AIAgentID: strings.TrimSpace(campaignRecord.AIAgentID),
 		},
-		Participants: make(map[string]participant.State, len(participantRecords)),
-		Characters:   make(map[string]character.State, len(characterRecords)),
+		Participants: make(map[ids.ParticipantID]participant.State, len(participantRecords)),
+		Characters:   make(map[ids.CharacterID]character.State, len(characterRecords)),
 	}
 
 	for _, participantRecord := range participantRecords {
@@ -83,14 +84,14 @@ func campaignReadinessAggregateState(
 		if participantID == "" {
 			continue
 		}
-		state.Participants[participantID] = participant.State{
+		state.Participants[ids.ParticipantID(participantID)] = participant.State{
 			Joined:         true,
-			ParticipantID:  participantID,
-			UserID:         strings.TrimSpace(participantRecord.UserID),
+			ParticipantID:  ids.ParticipantID(participantID),
+			UserID:         ids.UserID(strings.TrimSpace(participantRecord.UserID)),
 			Name:           strings.TrimSpace(participantRecord.Name),
-			Role:           string(participantRecord.Role),
-			Controller:     string(participantRecord.Controller),
-			CampaignAccess: string(participantRecord.CampaignAccess),
+			Role:           participantRecord.Role,
+			Controller:     participantRecord.Controller,
+			CampaignAccess: participantRecord.CampaignAccess,
 		}
 	}
 
@@ -99,11 +100,11 @@ func campaignReadinessAggregateState(
 		if characterID == "" {
 			continue
 		}
-		state.Characters[characterID] = character.State{
+		state.Characters[ids.CharacterID(characterID)] = character.State{
 			Created:       true,
-			CharacterID:   characterID,
+			CharacterID:   ids.CharacterID(characterID),
 			Name:          strings.TrimSpace(characterRecord.Name),
-			ParticipantID: strings.TrimSpace(characterRecord.ParticipantID),
+			ParticipantID: ids.ParticipantID(strings.TrimSpace(characterRecord.ParticipantID)),
 			SystemProfile: map[string]any{},
 		}
 	}
@@ -113,7 +114,7 @@ func campaignReadinessAggregateState(
 			return aggregate.State{}, status.Error(codes.Internal, "daggerheart projection store is not configured")
 		}
 		for characterID, characterState := range state.Characters {
-			profile, err := stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignRecord.ID, characterID)
+			profile, err := stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignRecord.ID, string(characterID))
 			if err != nil {
 				if errors.Is(err, storage.ErrNotFound) {
 					continue

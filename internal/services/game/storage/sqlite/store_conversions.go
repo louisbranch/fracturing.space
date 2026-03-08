@@ -17,203 +17,19 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
 
-// Conversion helpers
-
-func gameSystemToString(gs bridge.SystemID) string {
-	switch gs {
-	case bridge.SystemIDDaggerheart:
-		return "DAGGERHEART"
-	default:
+// enumToStorage converts a domain enum to its uppercase storage representation.
+func enumToStorage[T ~string](val T) string {
+	if val == "" {
 		return "UNSPECIFIED"
 	}
+	return strings.ToUpper(string(val))
 }
 
-func stringToGameSystem(s string) bridge.SystemID {
-	systemID, ok := bridge.NormalizeSystemID(s)
-	if !ok {
-		return bridge.SystemIDUnspecified
-	}
-	return systemID
-}
-
-func campaignStatusToString(status campaign.Status) string {
-	switch strings.ToLower(strings.TrimSpace(string(status))) {
-	case "draft":
-		return "DRAFT"
-	case "active":
-		return "ACTIVE"
-	case "completed":
-		return "COMPLETED"
-	case "archived":
-		return "ARCHIVED"
-	default:
-		return "UNSPECIFIED"
-	}
-}
-
-func stringToCampaignStatus(s string) campaign.Status {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "DRAFT":
-		return campaign.StatusDraft
-	case "ACTIVE":
-		return campaign.StatusActive
-	case "COMPLETED":
-		return campaign.StatusCompleted
-	case "ARCHIVED":
-		return campaign.StatusArchived
-	default:
-		return campaign.StatusUnspecified
-	}
-}
-
-func gmModeToString(gm campaign.GmMode) string {
-	switch strings.ToLower(strings.TrimSpace(string(gm))) {
-	case "human":
-		return "HUMAN"
-	case "ai":
-		return "AI"
-	case "hybrid":
-		return "HYBRID"
-	default:
-		return "UNSPECIFIED"
-	}
-}
-
-func stringToGmMode(s string) campaign.GmMode {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "HUMAN":
-		return campaign.GmModeHuman
-	case "AI":
-		return campaign.GmModeAI
-	case "HYBRID":
-		return campaign.GmModeHybrid
-	default:
-		return campaign.GmModeUnspecified
-	}
-}
-
-func campaignIntentToString(intent campaign.Intent) string {
-	switch strings.ToLower(strings.TrimSpace(string(intent))) {
-	case "standard":
-		return "STANDARD"
-	case "starter":
-		return "STARTER"
-	case "sandbox":
-		return "SANDBOX"
-	default:
-		return "UNSPECIFIED"
-	}
-}
-
-func stringToCampaignIntent(s string) campaign.Intent {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "STANDARD":
-		return campaign.IntentStandard
-	case "STARTER":
-		return campaign.IntentStarter
-	case "SANDBOX":
-		return campaign.IntentSandbox
-	default:
-		return campaign.IntentUnspecified
-	}
-}
-
-func campaignAccessPolicyToString(policy campaign.AccessPolicy) string {
-	switch strings.ToLower(strings.TrimSpace(string(policy))) {
-	case "private":
-		return "PRIVATE"
-	case "restricted":
-		return "RESTRICTED"
-	case "public":
-		return "PUBLIC"
-	default:
-		return "UNSPECIFIED"
-	}
-}
-
-func stringToCampaignAccessPolicy(s string) campaign.AccessPolicy {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "PRIVATE":
-		return campaign.AccessPolicyPrivate
-	case "RESTRICTED":
-		return campaign.AccessPolicyRestricted
-	case "PUBLIC":
-		return campaign.AccessPolicyPublic
-	default:
-		return campaign.AccessPolicyUnspecified
-	}
-}
-
-func inviteStatusToString(status invite.Status) string {
-	switch strings.ToLower(strings.TrimSpace(string(status))) {
-	case "pending":
-		return "PENDING"
-	case "claimed":
-		return "CLAIMED"
-	case "revoked":
-		return "REVOKED"
-	default:
-		return "UNSPECIFIED"
-	}
-}
-
-func stringToInviteStatus(s string) invite.Status {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "PENDING":
-		return invite.StatusPending
-	case "CLAIMED":
-		return invite.StatusClaimed
-	case "REVOKED":
-		return invite.StatusRevoked
-	default:
-		return invite.StatusUnspecified
-	}
-}
-
-func participantRoleToString(role participant.Role) string {
-	switch strings.ToLower(strings.TrimSpace(string(role))) {
-	case "gm":
-		return "GM"
-	case "player":
-		return "PLAYER"
-	default:
-		return "UNSPECIFIED"
-	}
-}
-
-func stringToParticipantRole(s string) participant.Role {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "GM":
-		return participant.RoleGM
-	case "PLAYER":
-		return participant.RolePlayer
-	default:
-		return participant.RoleUnspecified
-	}
-}
-
-func participantControllerToString(controller participant.Controller) string {
-	switch strings.ToLower(strings.TrimSpace(string(controller))) {
-	case "human":
-		return "HUMAN"
-	case "ai":
-		return "AI"
-	default:
-		return "UNSPECIFIED"
-	}
-}
-
-func participantAccessToString(access participant.CampaignAccess) string {
-	switch strings.ToLower(strings.TrimSpace(string(access))) {
-	case "member":
-		return "MEMBER"
-	case "manager":
-		return "MANAGER"
-	case "owner":
-		return "OWNER"
-	default:
-		return "UNSPECIFIED"
-	}
+// enumFromStorage converts an uppercase storage string to a domain enum
+// using the domain's existing Normalize function.
+func enumFromStorage[T ~string](s string, normalize func(string) (T, bool)) T {
+	val, _ := normalize(s)
+	return val
 }
 
 func boolToInt(value bool) int64 {
@@ -227,72 +43,16 @@ func intToBool(value int64) bool {
 	return value != 0
 }
 
-func stringToParticipantController(s string) participant.Controller {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "HUMAN":
-		return participant.ControllerHuman
-	case "AI":
-		return participant.ControllerAI
-	default:
-		return participant.ControllerUnspecified
+// unmarshalOptionalJSON decodes a JSON string into dest if non-empty.
+// Skips silently when raw is blank; returns a labeled error on decode failure.
+func unmarshalOptionalJSON[T any](raw string, dest *T, label string) error {
+	if strings.TrimSpace(raw) == "" {
+		return nil
 	}
-}
-
-func stringToParticipantAccess(s string) participant.CampaignAccess {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "MEMBER":
-		return participant.CampaignAccessMember
-	case "MANAGER":
-		return participant.CampaignAccessManager
-	case "OWNER":
-		return participant.CampaignAccessOwner
-	default:
-		return participant.CampaignAccessUnspecified
+	if err := json.Unmarshal([]byte(raw), dest); err != nil {
+		return fmt.Errorf("decode %s: %w", label, err)
 	}
-}
-
-func characterKindToString(kind character.Kind) string {
-	switch strings.ToLower(strings.TrimSpace(string(kind))) {
-	case "pc":
-		return "PC"
-	case "npc":
-		return "NPC"
-	default:
-		return "UNSPECIFIED"
-	}
-}
-
-func stringToCharacterKind(s string) character.Kind {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "PC":
-		return character.KindPC
-	case "NPC":
-		return character.KindNPC
-	default:
-		return character.KindUnspecified
-	}
-}
-
-func sessionStatusToString(status session.Status) string {
-	switch strings.ToLower(strings.TrimSpace(string(status))) {
-	case "active":
-		return "ACTIVE"
-	case "ended":
-		return "ENDED"
-	default:
-		return "UNSPECIFIED"
-	}
-}
-
-func stringToSessionStatus(s string) session.Status {
-	switch strings.ToUpper(strings.TrimSpace(s)) {
-	case "ACTIVE":
-		return session.StatusActive
-	case "ENDED":
-		return session.StatusEnded
-	default:
-		return session.StatusUnspecified
-	}
+	return nil
 }
 
 // Domain conversion helpers
@@ -329,11 +89,11 @@ func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error
 		ID:               row.ID,
 		Name:             row.Name,
 		Locale:           locale,
-		System:           stringToGameSystem(row.GameSystem),
-		Status:           stringToCampaignStatus(row.Status),
-		GmMode:           stringToGmMode(row.GmMode),
-		Intent:           stringToCampaignIntent(row.Intent),
-		AccessPolicy:     stringToCampaignAccessPolicy(row.AccessPolicy),
+		System:           enumFromStorage(row.GameSystem, bridge.NormalizeSystemID),
+		Status:           enumFromStorage(row.Status, campaign.NormalizeStatus),
+		GmMode:           enumFromStorage(row.GmMode, campaign.NormalizeGmMode),
+		Intent:           campaign.NormalizeIntent(row.Intent),
+		AccessPolicy:     campaign.NormalizeAccessPolicy(row.AccessPolicy),
 		ParticipantCount: int(row.ParticipantCount),
 		CharacterCount:   int(row.CharacterCount),
 		ThemePrompt:      row.ThemePrompt,
@@ -443,32 +203,15 @@ func participantRowDataToDomain(row participantRowData) (storage.ParticipantReco
 		CampaignID:     row.CampaignID,
 		UserID:         row.UserID,
 		Name:           row.DisplayName,
-		Role:           stringToParticipantRole(row.Role),
-		Controller:     stringToParticipantController(row.Controller),
-		CampaignAccess: stringToParticipantAccess(row.CampaignAccess),
+		Role:           enumFromStorage(row.Role, participant.NormalizeRole),
+		Controller:     enumFromStorage(row.Controller, participant.NormalizeController),
+		CampaignAccess: enumFromStorage(row.CampaignAccess, participant.NormalizeCampaignAccess),
 		AvatarSetID:    row.AvatarSetID,
 		AvatarAssetID:  row.AvatarAssetID,
 		Pronouns:       row.Pronouns,
 		CreatedAt:      fromMillis(row.CreatedAt),
 		UpdatedAt:      fromMillis(row.UpdatedAt),
 	}, nil
-}
-
-func dbParticipantToDomain(row db.Participant) (storage.ParticipantRecord, error) {
-	return participantRowDataToDomain(participantRowData{
-		CampaignID:     row.CampaignID,
-		ID:             row.ID,
-		UserID:         row.UserID,
-		DisplayName:    row.DisplayName,
-		Role:           row.Role,
-		Controller:     row.Controller,
-		CampaignAccess: row.CampaignAccess,
-		AvatarSetID:    row.AvatarSetID,
-		AvatarAssetID:  row.AvatarAssetID,
-		Pronouns:       row.Pronouns,
-		CreatedAt:      row.CreatedAt,
-		UpdatedAt:      row.UpdatedAt,
-	})
 }
 
 func dbGetParticipantRowToDomain(row db.GetParticipantRow) (storage.ParticipantRecord, error) {
@@ -545,7 +288,7 @@ func dbInviteToDomain(row db.Invite) (storage.InviteRecord, error) {
 		CampaignID:             row.CampaignID,
 		ParticipantID:          row.ParticipantID,
 		RecipientUserID:        row.RecipientUserID,
-		Status:                 stringToInviteStatus(row.Status),
+		Status:                 enumFromStorage(row.Status, invite.NormalizeStatus),
 		CreatedByParticipantID: row.CreatedByParticipantID,
 		CreatedAt:              fromMillis(row.CreatedAt),
 		UpdatedAt:              fromMillis(row.UpdatedAt),
@@ -558,10 +301,8 @@ func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
 		participantID = row.ControllerParticipantID.String
 	}
 	aliases := make([]string, 0)
-	if strings.TrimSpace(row.AliasesJson) != "" {
-		if err := json.Unmarshal([]byte(row.AliasesJson), &aliases); err != nil {
-			return storage.CharacterRecord{}, fmt.Errorf("decode character aliases: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.AliasesJson, &aliases, "character aliases"); err != nil {
+		return storage.CharacterRecord{}, err
 	}
 	return storage.CharacterRecord{
 		ID:                 row.ID,
@@ -569,7 +310,7 @@ func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
 		OwnerParticipantID: row.OwnerParticipantID,
 		ParticipantID:      participantID,
 		Name:               row.Name,
-		Kind:               stringToCharacterKind(row.Kind),
+		Kind:               enumFromStorage(row.Kind, character.NormalizeKind),
 		Notes:              row.Notes,
 		AvatarSetID:        row.AvatarSetID,
 		AvatarAssetID:      row.AvatarAssetID,
@@ -585,7 +326,7 @@ func dbSessionToDomain(row db.Session) (storage.SessionRecord, error) {
 		ID:         row.ID,
 		CampaignID: row.CampaignID,
 		Name:       row.Name,
-		Status:     stringToSessionStatus(row.Status),
+		Status:     enumFromStorage(row.Status, session.NormalizeStatus),
 		StartedAt:  fromMillis(row.StartedAt),
 		UpdatedAt:  fromMillis(row.UpdatedAt),
 	}
@@ -639,25 +380,17 @@ func dbDaggerheartClassToStorage(row db.DaggerheartClass) (storage.DaggerheartCl
 		CreatedAt:       fromMillis(row.CreatedAt),
 		UpdatedAt:       fromMillis(row.UpdatedAt),
 	}
-	if row.StartingItemsJson != "" {
-		if err := json.Unmarshal([]byte(row.StartingItemsJson), &class.StartingItems); err != nil {
-			return storage.DaggerheartClass{}, fmt.Errorf("decode daggerheart class starting items: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.StartingItemsJson, &class.StartingItems, "daggerheart class starting items"); err != nil {
+		return storage.DaggerheartClass{}, err
 	}
-	if row.FeaturesJson != "" {
-		if err := json.Unmarshal([]byte(row.FeaturesJson), &class.Features); err != nil {
-			return storage.DaggerheartClass{}, fmt.Errorf("decode daggerheart class features: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.FeaturesJson, &class.Features, "daggerheart class features"); err != nil {
+		return storage.DaggerheartClass{}, err
 	}
-	if row.HopeFeatureJson != "" {
-		if err := json.Unmarshal([]byte(row.HopeFeatureJson), &class.HopeFeature); err != nil {
-			return storage.DaggerheartClass{}, fmt.Errorf("decode daggerheart class hope feature: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.HopeFeatureJson, &class.HopeFeature, "daggerheart class hope feature"); err != nil {
+		return storage.DaggerheartClass{}, err
 	}
-	if row.DomainIdsJson != "" {
-		if err := json.Unmarshal([]byte(row.DomainIdsJson), &class.DomainIDs); err != nil {
-			return storage.DaggerheartClass{}, fmt.Errorf("decode daggerheart class domain ids: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.DomainIdsJson, &class.DomainIDs, "daggerheart class domain ids"); err != nil {
+		return storage.DaggerheartClass{}, err
 	}
 	return class, nil
 }
@@ -671,20 +404,14 @@ func dbDaggerheartSubclassToStorage(row db.DaggerheartSubclass) (storage.Daggerh
 		CreatedAt:      fromMillis(row.CreatedAt),
 		UpdatedAt:      fromMillis(row.UpdatedAt),
 	}
-	if row.FoundationFeaturesJson != "" {
-		if err := json.Unmarshal([]byte(row.FoundationFeaturesJson), &subclass.FoundationFeatures); err != nil {
-			return storage.DaggerheartSubclass{}, fmt.Errorf("decode daggerheart subclass foundation features: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.FoundationFeaturesJson, &subclass.FoundationFeatures, "daggerheart subclass foundation features"); err != nil {
+		return storage.DaggerheartSubclass{}, err
 	}
-	if row.SpecializationFeaturesJson != "" {
-		if err := json.Unmarshal([]byte(row.SpecializationFeaturesJson), &subclass.SpecializationFeatures); err != nil {
-			return storage.DaggerheartSubclass{}, fmt.Errorf("decode daggerheart subclass specialization features: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.SpecializationFeaturesJson, &subclass.SpecializationFeatures, "daggerheart subclass specialization features"); err != nil {
+		return storage.DaggerheartSubclass{}, err
 	}
-	if row.MasteryFeaturesJson != "" {
-		if err := json.Unmarshal([]byte(row.MasteryFeaturesJson), &subclass.MasteryFeatures); err != nil {
-			return storage.DaggerheartSubclass{}, fmt.Errorf("decode daggerheart subclass mastery features: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.MasteryFeaturesJson, &subclass.MasteryFeatures, "daggerheart subclass mastery features"); err != nil {
+		return storage.DaggerheartSubclass{}, err
 	}
 	return subclass, nil
 }
@@ -697,10 +424,8 @@ func dbDaggerheartHeritageToStorage(row db.DaggerheartHeritage) (storage.Daggerh
 		CreatedAt: fromMillis(row.CreatedAt),
 		UpdatedAt: fromMillis(row.UpdatedAt),
 	}
-	if row.FeaturesJson != "" {
-		if err := json.Unmarshal([]byte(row.FeaturesJson), &heritage.Features); err != nil {
-			return storage.DaggerheartHeritage{}, fmt.Errorf("decode daggerheart heritage features: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.FeaturesJson, &heritage.Features, "daggerheart heritage features"); err != nil {
+		return storage.DaggerheartHeritage{}, err
 	}
 	return heritage, nil
 }
@@ -733,20 +458,14 @@ func dbDaggerheartAdversaryEntryToStorage(row db.DaggerheartAdversaryEntry) (sto
 		CreatedAt:       fromMillis(row.CreatedAt),
 		UpdatedAt:       fromMillis(row.UpdatedAt),
 	}
-	if row.StandardAttackJson != "" {
-		if err := json.Unmarshal([]byte(row.StandardAttackJson), &entry.StandardAttack); err != nil {
-			return storage.DaggerheartAdversaryEntry{}, fmt.Errorf("decode daggerheart adversary standard attack: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.StandardAttackJson, &entry.StandardAttack, "daggerheart adversary standard attack"); err != nil {
+		return storage.DaggerheartAdversaryEntry{}, err
 	}
-	if row.ExperiencesJson != "" {
-		if err := json.Unmarshal([]byte(row.ExperiencesJson), &entry.Experiences); err != nil {
-			return storage.DaggerheartAdversaryEntry{}, fmt.Errorf("decode daggerheart adversary experiences: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.ExperiencesJson, &entry.Experiences, "daggerheart adversary experiences"); err != nil {
+		return storage.DaggerheartAdversaryEntry{}, err
 	}
-	if row.FeaturesJson != "" {
-		if err := json.Unmarshal([]byte(row.FeaturesJson), &entry.Features); err != nil {
-			return storage.DaggerheartAdversaryEntry{}, fmt.Errorf("decode daggerheart adversary features: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.FeaturesJson, &entry.Features, "daggerheart adversary features"); err != nil {
+		return storage.DaggerheartAdversaryEntry{}, err
 	}
 	return entry, nil
 }
@@ -763,20 +482,14 @@ func dbDaggerheartBeastformToStorage(row db.DaggerheartBeastform) (storage.Dagge
 		CreatedAt:    fromMillis(row.CreatedAt),
 		UpdatedAt:    fromMillis(row.UpdatedAt),
 	}
-	if row.AttackJson != "" {
-		if err := json.Unmarshal([]byte(row.AttackJson), &entry.Attack); err != nil {
-			return storage.DaggerheartBeastformEntry{}, fmt.Errorf("decode daggerheart beastform attack: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.AttackJson, &entry.Attack, "daggerheart beastform attack"); err != nil {
+		return storage.DaggerheartBeastformEntry{}, err
 	}
-	if row.AdvantagesJson != "" {
-		if err := json.Unmarshal([]byte(row.AdvantagesJson), &entry.Advantages); err != nil {
-			return storage.DaggerheartBeastformEntry{}, fmt.Errorf("decode daggerheart beastform advantages: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.AdvantagesJson, &entry.Advantages, "daggerheart beastform advantages"); err != nil {
+		return storage.DaggerheartBeastformEntry{}, err
 	}
-	if row.FeaturesJson != "" {
-		if err := json.Unmarshal([]byte(row.FeaturesJson), &entry.Features); err != nil {
-			return storage.DaggerheartBeastformEntry{}, fmt.Errorf("decode daggerheart beastform features: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.FeaturesJson, &entry.Features, "daggerheart beastform features"); err != nil {
+		return storage.DaggerheartBeastformEntry{}, err
 	}
 	return entry, nil
 }
@@ -851,10 +564,8 @@ func dbDaggerheartWeaponToStorage(row db.DaggerheartWeapon) (storage.Daggerheart
 		CreatedAt:  fromMillis(row.CreatedAt),
 		UpdatedAt:  fromMillis(row.UpdatedAt),
 	}
-	if row.DamageDiceJson != "" {
-		if err := json.Unmarshal([]byte(row.DamageDiceJson), &weapon.DamageDice); err != nil {
-			return storage.DaggerheartWeapon{}, fmt.Errorf("decode daggerheart weapon damage dice: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.DamageDiceJson, &weapon.DamageDice, "daggerheart weapon damage dice"); err != nil {
+		return storage.DaggerheartWeapon{}, err
 	}
 	return weapon, nil
 }
@@ -897,25 +608,17 @@ func dbDaggerheartEnvironmentToStorage(row db.DaggerheartEnvironment) (storage.D
 		CreatedAt:  fromMillis(row.CreatedAt),
 		UpdatedAt:  fromMillis(row.UpdatedAt),
 	}
-	if row.ImpulsesJson != "" {
-		if err := json.Unmarshal([]byte(row.ImpulsesJson), &env.Impulses); err != nil {
-			return storage.DaggerheartEnvironment{}, fmt.Errorf("decode daggerheart environment impulses: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.ImpulsesJson, &env.Impulses, "daggerheart environment impulses"); err != nil {
+		return storage.DaggerheartEnvironment{}, err
 	}
-	if row.PotentialAdversaryIdsJson != "" {
-		if err := json.Unmarshal([]byte(row.PotentialAdversaryIdsJson), &env.PotentialAdversaryIDs); err != nil {
-			return storage.DaggerheartEnvironment{}, fmt.Errorf("decode daggerheart environment adversaries: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.PotentialAdversaryIdsJson, &env.PotentialAdversaryIDs, "daggerheart environment adversaries"); err != nil {
+		return storage.DaggerheartEnvironment{}, err
 	}
-	if row.FeaturesJson != "" {
-		if err := json.Unmarshal([]byte(row.FeaturesJson), &env.Features); err != nil {
-			return storage.DaggerheartEnvironment{}, fmt.Errorf("decode daggerheart environment features: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.FeaturesJson, &env.Features, "daggerheart environment features"); err != nil {
+		return storage.DaggerheartEnvironment{}, err
 	}
-	if row.PromptsJson != "" {
-		if err := json.Unmarshal([]byte(row.PromptsJson), &env.Prompts); err != nil {
-			return storage.DaggerheartEnvironment{}, fmt.Errorf("decode daggerheart environment prompts: %w", err)
-		}
+	if err := unmarshalOptionalJSON(row.PromptsJson, &env.Prompts, "daggerheart environment prompts"); err != nil {
+		return storage.DaggerheartEnvironment{}, err
 	}
 	return env, nil
 }

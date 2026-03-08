@@ -179,10 +179,10 @@ func TestApplyCountdownUpdate(t *testing.T) {
 		Current:     1,
 		Max:         4,
 	}
-	if _, err := ApplyCountdownUpdate(countdown, 0, 2); err == nil {
-		t.Fatal("expected before mismatch error")
+	if _, err := ApplyCountdownUpdate(countdown, 5); err == nil {
+		t.Fatal("expected out-of-range error")
 	}
-	next, err := ApplyCountdownUpdate(countdown, 1, 2)
+	next, err := ApplyCountdownUpdate(countdown, 2)
 	if err != nil {
 		t.Fatalf("ApplyCountdownUpdate: %v", err)
 	}

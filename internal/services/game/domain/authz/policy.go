@@ -3,6 +3,7 @@ package authz
 import (
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 )
 
@@ -206,7 +207,7 @@ func CanCampaignAccess(access participant.CampaignAccess, capability Capability)
 
 // CanCharacterMutation checks baseline role access and member ownership guard for
 // character mutations.
-func CanCharacterMutation(access participant.CampaignAccess, actorParticipantID, ownerParticipantID string) PolicyDecision {
+func CanCharacterMutation(access participant.CampaignAccess, actorParticipantID, ownerParticipantID ids.ParticipantID) PolicyDecision {
 	decision := CanCampaignAccess(access, CapabilityMutateCharacters)
 	if !decision.Allowed {
 		return decision
@@ -214,9 +215,9 @@ func CanCharacterMutation(access participant.CampaignAccess, actorParticipantID,
 	if access != participant.CampaignAccessMember {
 		return decision
 	}
-	actorParticipantID = strings.TrimSpace(actorParticipantID)
-	ownerParticipantID = strings.TrimSpace(ownerParticipantID)
-	if actorParticipantID == "" || ownerParticipantID == "" || actorParticipantID != ownerParticipantID {
+	actor := ids.ParticipantID(strings.TrimSpace(actorParticipantID.String()))
+	owner := ids.ParticipantID(strings.TrimSpace(ownerParticipantID.String()))
+	if actor == "" || owner == "" || actor != owner {
 		return PolicyDecision{Allowed: false, ReasonCode: ReasonDenyNotResourceOwner}
 	}
 	return PolicyDecision{Allowed: true, ReasonCode: ReasonAllowResourceOwner}

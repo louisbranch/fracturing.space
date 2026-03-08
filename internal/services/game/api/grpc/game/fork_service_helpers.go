@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fork"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -49,7 +50,7 @@ func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 
 func forkEventForCampaign(evt event.Event, campaignID string) event.Event {
 	forked := evt
-	forked.CampaignID = campaignID
+	forked.CampaignID = ids.CampaignID(campaignID)
 	forked.Seq = 0
 	forked.Hash = ""
 	forked.PrevHash = ""

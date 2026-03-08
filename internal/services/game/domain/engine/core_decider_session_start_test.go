@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
@@ -21,19 +22,19 @@ func TestCoreDeciderSessionStart_DraftCampaignEmitsActivationAndSessionStart(t *
 	decision := CoreDecider{}.Decide(
 		aggregate.State{
 			Campaign: campaign.State{Created: true, Status: campaign.StatusDraft},
-			Participants: map[string]participant.State{
+			Participants: map[ids.ParticipantID]participant.State{
 				"gm-1": {
 					ParticipantID: "gm-1",
 					Joined:        true,
-					Role:          string(participant.RoleGM),
+					Role:          participant.RoleGM,
 				},
 				"player-1": {
 					ParticipantID: "player-1",
 					Joined:        true,
-					Role:          string(participant.RolePlayer),
+					Role:          participant.RolePlayer,
 				},
 			},
-			Characters: map[string]character.State{
+			Characters: map[ids.CharacterID]character.State{
 				"char-1": {
 					CharacterID:   "char-1",
 					Created:       true,
@@ -77,19 +78,19 @@ func TestCoreDeciderSessionStart_ReadinessFailureRejected(t *testing.T) {
 	decision := CoreDecider{}.Decide(
 		aggregate.State{
 			Campaign: campaign.State{Created: true, Status: campaign.StatusActive},
-			Participants: map[string]participant.State{
+			Participants: map[ids.ParticipantID]participant.State{
 				"gm-1": {
 					ParticipantID: "gm-1",
 					Joined:        true,
-					Role:          string(participant.RoleGM),
+					Role:          participant.RoleGM,
 				},
 				"player-1": {
 					ParticipantID: "player-1",
 					Joined:        true,
-					Role:          string(participant.RolePlayer),
+					Role:          participant.RolePlayer,
 				},
 			},
-			Characters: map[string]character.State{
+			Characters: map[ids.CharacterID]character.State{
 				"char-1": {
 					CharacterID: "char-1",
 					Created:     true,
@@ -126,19 +127,19 @@ func TestCoreDeciderSessionStart_ActiveSessionBoundaryRejected(t *testing.T) {
 		aggregate.State{
 			Campaign: campaign.State{Created: true, Status: campaign.StatusActive},
 			Session:  session.State{Started: true},
-			Participants: map[string]participant.State{
+			Participants: map[ids.ParticipantID]participant.State{
 				"gm-1": {
 					ParticipantID: "gm-1",
 					Joined:        true,
-					Role:          string(participant.RoleGM),
+					Role:          participant.RoleGM,
 				},
 				"player-1": {
 					ParticipantID: "player-1",
 					Joined:        true,
-					Role:          string(participant.RolePlayer),
+					Role:          participant.RolePlayer,
 				},
 			},
-			Characters: map[string]character.State{
+			Characters: map[ids.CharacterID]character.State{
 				"char-1": {
 					CharacterID:   "char-1",
 					Created:       true,
@@ -180,19 +181,19 @@ func TestCoreDeciderSessionStart_UsesSystemCharacterReadinessChecker(t *testing.
 	decision := CoreDecider{Systems: systems}.Decide(
 		aggregate.State{
 			Campaign: campaign.State{Created: true, Status: campaign.StatusActive, GameSystem: "stub"},
-			Participants: map[string]participant.State{
+			Participants: map[ids.ParticipantID]participant.State{
 				"gm-1": {
 					ParticipantID: "gm-1",
 					Joined:        true,
-					Role:          string(participant.RoleGM),
+					Role:          participant.RoleGM,
 				},
 				"player-1": {
 					ParticipantID: "player-1",
 					Joined:        true,
-					Role:          string(participant.RolePlayer),
+					Role:          participant.RolePlayer,
 				},
 			},
-			Characters: map[string]character.State{
+			Characters: map[ids.CharacterID]character.State{
 				"char-1": {
 					CharacterID:   "char-1",
 					Created:       true,

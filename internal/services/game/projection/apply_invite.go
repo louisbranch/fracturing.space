@@ -11,14 +11,14 @@ import (
 )
 
 func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event, payload invite.CreatePayload) error {
-	inviteID := strings.TrimSpace(payload.InviteID)
+	inviteID := strings.TrimSpace(payload.InviteID.String())
 	if inviteID == "" {
 		inviteID = strings.TrimSpace(evt.EntityID)
 	}
 	if inviteID == "" {
 		return fmt.Errorf("invite id is required")
 	}
-	participantID := strings.TrimSpace(payload.ParticipantID)
+	participantID := strings.TrimSpace(payload.ParticipantID.String())
 	if participantID == "" {
 		return fmt.Errorf("invite.created participant_id is required")
 	}
@@ -33,11 +33,11 @@ func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event, payloa
 	}
 	inv := storage.InviteRecord{
 		ID:                     inviteID,
-		CampaignID:             evt.CampaignID,
+		CampaignID:             string(evt.CampaignID),
 		ParticipantID:          participantID,
-		RecipientUserID:        strings.TrimSpace(payload.RecipientUserID),
+		RecipientUserID:        strings.TrimSpace(payload.RecipientUserID.String()),
 		Status:                 status,
-		CreatedByParticipantID: strings.TrimSpace(payload.CreatedByParticipantID),
+		CreatedByParticipantID: strings.TrimSpace(payload.CreatedByParticipantID.String()),
 		CreatedAt:              createdAt,
 		UpdatedAt:              createdAt,
 	}
@@ -46,7 +46,7 @@ func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event, payloa
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (a Applier) applyInviteCreated(ctx context.Context, evt event.Event, payloa
 func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event, payload invite.ClaimPayload) error {
 	inviteID := strings.TrimSpace(evt.EntityID)
 
-	if payload.InviteID != "" && strings.TrimSpace(payload.InviteID) != inviteID {
+	if payload.InviteID != "" && strings.TrimSpace(payload.InviteID.String()) != inviteID {
 		return fmt.Errorf("invite.claimed invite_id mismatch")
 	}
 
@@ -70,7 +70,7 @@ func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event, payloa
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event, payloa
 func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event, payload invite.RevokePayload) error {
 	inviteID := strings.TrimSpace(evt.EntityID)
 
-	if payload.InviteID != "" && strings.TrimSpace(payload.InviteID) != inviteID {
+	if payload.InviteID != "" && strings.TrimSpace(payload.InviteID.String()) != inviteID {
 		return fmt.Errorf("invite.revoked invite_id mismatch")
 	}
 
@@ -94,7 +94,7 @@ func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event, payloa
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -104,7 +104,7 @@ func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event, payloa
 }
 
 func (a Applier) applyInviteUpdated(ctx context.Context, evt event.Event, payload invite.UpdatePayload) error {
-	inviteID := strings.TrimSpace(payload.InviteID)
+	inviteID := strings.TrimSpace(payload.InviteID.String())
 	if inviteID == "" {
 		inviteID = strings.TrimSpace(evt.EntityID)
 	}

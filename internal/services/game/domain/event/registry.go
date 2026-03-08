@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"maps"
 	"sort"
 	"strings"
 	"time"
 
 	coreencoding "github.com/louisbranch/fracturing.space/internal/services/game/core/encoding"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 var (
@@ -49,6 +51,13 @@ var canonicalJSON = coreencoding.CanonicalJSON
 //
 // Event names are part of the write-path contract; changing one affects
 // replay, projections, and downstream integrations.
+//
+// Naming convention: event types use dot-separated domain prefix with
+// underscored past-tense verb — e.g. "campaign.updated", "scene.gate_opened",
+// "sys.daggerheart.damage_applied". Command types use dot-separated imperative
+// — e.g. "campaign.update", "scene.gate.open". The distinction is intentional:
+// events describe facts that happened (past tense) while commands describe
+// requests to act (imperative).
 type Type string
 
 // Owner identifies whether an event type is core or system-owned.
@@ -81,7 +90,7 @@ const (
 // The envelope is immutable metadata + business payload: storage appends
 // integrity hashes and chain fields after validation, preserving replay order.
 type Event struct {
-	CampaignID     string
+	CampaignID     ids.CampaignID
 	Seq            uint64
 	Hash           string
 	PrevHash       string
@@ -92,8 +101,8 @@ type Event struct {
 	Timestamp      time.Time
 	ActorType      ActorType
 	ActorID        string
-	SessionID      string
-	SceneID        string
+	SessionID      ids.SessionID
+	SceneID        ids.SceneID
 	RequestID      string
 	InvocationID   string
 	EntityType     string
@@ -258,7 +267,7 @@ func validateStorageFieldsUnset(evt Event) error {
 // normalizeAppendEnvelope trims append envelope metadata and resolves the
 // registered definition that governs owner/addressing rules.
 func (r *Registry) normalizeAppendEnvelope(evt Event) (Event, Definition, error) {
-	evt.CampaignID = strings.TrimSpace(evt.CampaignID)
+	evt.CampaignID = ids.CampaignID(strings.TrimSpace(string(evt.CampaignID)))
 	if evt.CampaignID == "" {
 		return Event{}, Definition{}, ErrCampaignIDRequired
 	}
@@ -291,8 +300,8 @@ func (r *Registry) normalizeAppendEnvelope(evt Event) (Event, Definition, error)
 		return Event{}, Definition{}, ErrActorIDRequired
 	}
 
-	evt.SessionID = strings.TrimSpace(evt.SessionID)
-	evt.SceneID = strings.TrimSpace(evt.SceneID)
+	evt.SessionID = ids.SessionID(strings.TrimSpace(evt.SessionID.String()))
+	evt.SceneID = ids.SceneID(strings.TrimSpace(evt.SceneID.String()))
 	evt.RequestID = strings.TrimSpace(evt.RequestID)
 	evt.InvocationID = strings.TrimSpace(evt.InvocationID)
 	evt.EntityType = strings.TrimSpace(evt.EntityType)
@@ -410,6 +419,15 @@ func (r *Registry) Definition(eventType Type) (Definition, bool) {
 //
 // Legacy journal entries may contain the deprecated type; Resolve translates
 // them so projection and replay code only needs to handle the canonical type.
+//
+// Use RegisterAlias when renaming an event type after events with the old name
+// have already been persisted to production journals. The alias ensures those
+// historical events are transparently routed to the canonical handler during
+// replay and projection without requiring a data migration.
+//
+// Do not use RegisterAlias to create semantic synonyms — each domain concept
+// should have exactly one canonical event type. If a new event represents
+// different semantics, register it as a new type instead.
 func (r *Registry) RegisterAlias(deprecated, canonical Type) error {
 	if r == nil {
 		return fmt.Errorf("registry is required")
@@ -450,9 +468,7 @@ func (r *Registry) ListAliases() map[Type]Type {
 		return nil
 	}
 	result := make(map[Type]Type, len(r.aliases))
-	for deprecated, canonical := range r.aliases {
-		result[deprecated] = canonical
-	}
+	maps.Copy(result, r.aliases)
 	return result
 }
 

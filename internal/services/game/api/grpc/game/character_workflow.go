@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -131,7 +132,7 @@ func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context,
 	applier := c.stores.Applier()
 
 	commandPayload := character.ProfileUpdatePayload{
-		CharacterID:   characterID,
+		CharacterID:   ids.CharacterID(characterID),
 		SystemProfile: systemProfile,
 	}
 	commandPayloadJSON, err := json.Marshal(commandPayload)

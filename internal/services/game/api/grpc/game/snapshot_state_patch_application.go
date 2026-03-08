@@ -10,6 +10,7 @@ import (
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -132,8 +133,8 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 	}
 
 	added, removed := daggerheart.DiffConditions(normalizedBefore, normalizedAfter)
-	conditionPayload := daggerheart.ConditionChangedPayload{
-		CharacterID:      characterID,
+	conditionPayload := daggerheart.ConditionChangePayload{
+		CharacterID:      ids.CharacterID(characterID),
 		ConditionsBefore: normalizedBefore,
 		ConditionsAfter:  normalizedAfter,
 		Added:            added,

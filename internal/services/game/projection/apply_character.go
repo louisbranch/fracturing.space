@@ -15,7 +15,7 @@ import (
 func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event, payload character.CreatePayload) error {
 	characterID := strings.TrimSpace(evt.EntityID)
 
-	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID) != characterID {
+	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID.String()) != characterID {
 		return fmt.Errorf("character_id mismatch")
 	}
 
@@ -33,20 +33,20 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event, pay
 	if err != nil {
 		return err
 	}
-	ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID)
+	ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID.String())
 	if ownerParticipantID == "" {
 		ownerParticipantID = strings.TrimSpace(evt.ActorID)
 	}
 	ch := storage.CharacterRecord{
 		ID:                 characterID,
-		CampaignID:         strings.TrimSpace(evt.CampaignID),
+		CampaignID:         string(evt.CampaignID),
 		OwnerParticipantID: ownerParticipantID,
 		Name:               name,
 		Kind:               kind,
 		Notes:              strings.TrimSpace(payload.Notes),
 		AvatarSetID:        strings.TrimSpace(payload.AvatarSetID),
 		AvatarAssetID:      strings.TrimSpace(payload.AvatarAssetID),
-		ParticipantID:      strings.TrimSpace(payload.ParticipantID),
+		ParticipantID:      strings.TrimSpace(payload.ParticipantID.String()),
 		Pronouns:           strings.TrimSpace(payload.Pronouns),
 		Aliases:            normalizeProjectionAliases(payload.Aliases),
 		CreatedAt:          createdAt,
@@ -56,11 +56,11 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event, pay
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
-	cCount, err := a.Character.CountCharacters(ctx, evt.CampaignID)
+	cCount, err := a.Character.CountCharacters(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -73,14 +73,14 @@ func (a Applier) applyCharacterCreated(ctx context.Context, evt event.Event, pay
 func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event, payload character.UpdatePayload) error {
 	characterID := strings.TrimSpace(evt.EntityID)
 
-	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID) != characterID {
+	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID.String()) != characterID {
 		return fmt.Errorf("character_id mismatch")
 	}
 	if len(payload.Fields) == 0 {
 		return nil
 	}
 
-	current, err := a.Character.GetCharacter(ctx, evt.CampaignID, characterID)
+	current, err := a.Character.GetCharacter(ctx, string(evt.CampaignID), characterID)
 	if err != nil {
 		return err
 	}
@@ -131,7 +131,7 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event, pay
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -143,19 +143,19 @@ func (a Applier) applyCharacterUpdated(ctx context.Context, evt event.Event, pay
 func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event, payload character.DeletePayload) error {
 	characterID := strings.TrimSpace(evt.EntityID)
 
-	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID) != characterID {
+	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID.String()) != characterID {
 		return fmt.Errorf("character_id mismatch")
 	}
 
-	if err := a.Character.DeleteCharacter(ctx, evt.CampaignID, characterID); err != nil {
+	if err := a.Character.DeleteCharacter(ctx, string(evt.CampaignID), characterID); err != nil {
 		return err
 	}
 
-	campaignRecord, err := a.Campaign.Get(ctx, evt.CampaignID)
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
-	cCount, err := a.Character.CountCharacters(ctx, evt.CampaignID)
+	cCount, err := a.Character.CountCharacters(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -172,7 +172,7 @@ func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event, pay
 func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Event, payload character.ProfileUpdatePayload) error {
 	characterID := strings.TrimSpace(evt.EntityID)
 
-	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID) != characterID {
+	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID.String()) != characterID {
 		return fmt.Errorf("character_id mismatch")
 	}
 	if payload.SystemProfile == nil {
@@ -194,7 +194,7 @@ func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Eve
 		if err != nil {
 			return fmt.Errorf("marshal %s profile payload: %w", systemName, err)
 		}
-		if err := profileAdapter.ApplyProfile(ctx, evt.CampaignID, characterID, rawProfile); err != nil {
+		if err := profileAdapter.ApplyProfile(ctx, string(evt.CampaignID), characterID, rawProfile); err != nil {
 			return err
 		}
 	}

@@ -78,7 +78,7 @@ func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event, payl
 		return nil
 	}
 
-	current, err := a.Campaign.Get(ctx, evt.CampaignID)
+	current, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -130,15 +130,15 @@ func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event, payl
 }
 
 func (a Applier) applyCampaignForked(ctx context.Context, evt event.Event, payload campaign.ForkPayload) error {
-	return a.CampaignFork.SetCampaignForkMetadata(ctx, evt.CampaignID, storage.ForkMetadata{
-		ParentCampaignID: payload.ParentCampaignID,
+	return a.CampaignFork.SetCampaignForkMetadata(ctx, string(evt.CampaignID), storage.ForkMetadata{
+		ParentCampaignID: payload.ParentCampaignID.String(),
 		ForkEventSeq:     payload.ForkEventSeq,
-		OriginCampaignID: payload.OriginCampaignID,
+		OriginCampaignID: payload.OriginCampaignID.String(),
 	})
 }
 
 func (a Applier) applyCampaignAIBound(ctx context.Context, evt event.Event, payload campaign.AIBindPayload) error {
-	current, err := a.Campaign.Get(ctx, evt.CampaignID)
+	current, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -152,7 +152,7 @@ func (a Applier) applyCampaignAIBound(ctx context.Context, evt event.Event, payl
 }
 
 func (a Applier) applyCampaignAIUnbound(ctx context.Context, evt event.Event, _ campaign.AIUnbindPayload) error {
-	current, err := a.Campaign.Get(ctx, evt.CampaignID)
+	current, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}
@@ -166,7 +166,7 @@ func (a Applier) applyCampaignAIUnbound(ctx context.Context, evt event.Event, _ 
 }
 
 func (a Applier) applyCampaignAIAuthRotated(ctx context.Context, evt event.Event, payload campaign.AIAuthRotatePayload) error {
-	current, err := a.Campaign.Get(ctx, evt.CampaignID)
+	current, err := a.Campaign.Get(ctx, string(evt.CampaignID))
 	if err != nil {
 		return err
 	}

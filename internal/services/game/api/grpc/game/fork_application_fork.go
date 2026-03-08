@@ -16,6 +16,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fork"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -129,9 +130,9 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 
 	forkPayload := campaign.ForkPayload{
-		ParentCampaignID: sourceCampaignID,
+		ParentCampaignID: ids.CampaignID(sourceCampaignID),
 		ForkEventSeq:     forkEventSeq,
-		OriginCampaignID: originCampaignID,
+		OriginCampaignID: ids.CampaignID(originCampaignID),
 		CopyParticipants: in.GetCopyParticipants(),
 	}
 	forkJSON, err := json.Marshal(forkPayload)

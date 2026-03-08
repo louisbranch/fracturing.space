@@ -16,7 +16,6 @@ import (
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -255,7 +254,7 @@ func TestBuildProjectionApplyOutboxApplySkipsDuplicateSeq(t *testing.T) {
 		t.Fatalf("seed campaign: %v", err)
 	}
 
-	apply := buildProjectionApplyOutboxApply(store, systemmanifest.ProjectionStores{Daggerheart: store}, nil)
+	apply := buildProjectionApplyOutboxApply(store, nil)
 	if apply == nil {
 		t.Fatal("expected projection apply callback")
 	}
@@ -288,7 +287,7 @@ func TestBuildProjectionApplyOutboxApplySkipsDuplicateSeq(t *testing.T) {
 		t.Fatalf("duplicate projection apply: %v", err)
 	}
 
-	campaignRecord, err := store.Get(context.Background(), evt.CampaignID)
+	campaignRecord, err := store.Get(context.Background(), string(evt.CampaignID))
 	if err != nil {
 		t.Fatalf("get campaign: %v", err)
 	}
@@ -1003,7 +1002,7 @@ func TestStartProjectionApplyOutboxWorkerProcessesRowsWhenEnabled(t *testing.T) 
 		if err == nil {
 			remaining := false
 			for _, row := range rows {
-				if row.CampaignID == stored.CampaignID && row.Seq == stored.Seq {
+				if row.CampaignID == string(stored.CampaignID) && row.Seq == stored.Seq {
 					remaining = true
 					break
 				}
@@ -1075,7 +1074,7 @@ func TestStartProjectionApplyOutboxShadowWorkerProcessesRowsWhenEnabled(t *testi
 		rows, err := store.ListProjectionApplyOutboxRows(context.Background(), "failed", 10)
 		if err == nil {
 			for _, row := range rows {
-				if row.CampaignID == stored.CampaignID && row.Seq == stored.Seq && row.AttemptCount == 1 {
+				if row.CampaignID == string(stored.CampaignID) && row.Seq == stored.Seq && row.AttemptCount == 1 {
 					return
 				}
 			}
@@ -1366,14 +1365,15 @@ func newFakeDomainEventStore() *fakeDomainEventStore {
 }
 
 func (s *fakeDomainEventStore) AppendEvent(_ context.Context, evt event.Event) (event.Event, error) {
-	seq := s.nextSeq[evt.CampaignID]
+	cid := string(evt.CampaignID)
+	seq := s.nextSeq[cid]
 	if seq == 0 {
 		seq = 1
 	}
 	stored := evt
 	stored.Seq = seq
-	s.nextSeq[evt.CampaignID] = seq + 1
-	s.events[evt.CampaignID] = append(s.events[evt.CampaignID], stored)
+	s.nextSeq[cid] = seq + 1
+	s.events[cid] = append(s.events[cid], stored)
 	return stored, nil
 }
 
@@ -1409,7 +1409,7 @@ func (s *fakeDomainEventStore) ListEventsBySession(_ context.Context, campaignID
 	entries := s.events[campaignID]
 	result := make([]event.Event, 0, len(entries))
 	for _, evt := range entries {
-		if evt.Seq > afterSeq && evt.SessionID == sessionID {
+		if evt.Seq > afterSeq && evt.SessionID.String() == sessionID {
 			result = append(result, evt)
 			if limit > 0 && len(result) >= limit {
 				break

@@ -1,6 +1,10 @@
 package daggerheart
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+)
 
 // RestApplicationInput captures transport-agnostic rest application inputs.
 type RestApplicationInput struct {
@@ -53,7 +57,7 @@ func ResolveRestApplication(input RestApplicationInput) (RestTakePayload, error)
 				continue
 			}
 			payload.CharacterStates = append(payload.CharacterStates, RestCharacterStatePatch{
-				CharacterID: characterID,
+				CharacterID: ids.CharacterID(characterID),
 			})
 		}
 		if len(payload.CharacterStates) == 0 {

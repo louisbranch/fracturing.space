@@ -295,20 +295,20 @@ func TestListTimelineEntries_CharacterStateChanges(t *testing.T) {
 		},
 	}
 
-	hpAfter := 6
-	hopeAfter := 2
-	hopeMaxAfter := 6
-	stressAfter := 0
-	armorAfter := 0
-	lifeStateAfter := "alive"
+	hp := 6
+	hope := 2
+	hopeMax := 6
+	stress := 0
+	armor := 0
+	lifeState := "alive"
 	payload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:    "ch1",
-		HPAfter:        &hpAfter,
-		HopeAfter:      &hopeAfter,
-		HopeMaxAfter:   &hopeMaxAfter,
-		StressAfter:    &stressAfter,
-		ArmorAfter:     &armorAfter,
-		LifeStateAfter: &lifeStateAfter,
+		CharacterID: "ch1",
+		HP:          &hp,
+		Hope:        &hope,
+		HopeMax:     &hopeMax,
+		Stress:      &stress,
+		Armor:       &armor,
+		LifeState:   &lifeState,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -379,32 +379,20 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 		},
 	}
 
-	hpBefore := 3
-	hpAfter := 6
-	hopeBefore := 1
-	hopeAfter := 2
-	hopeMaxBefore := 6
-	hopeMaxAfter := 7
-	stressBefore := 1
-	stressAfter := 1
-	armorBefore := 0
-	armorAfter := 2
-	lifeStateBefore := "alive"
-	lifeStateAfter := "dying"
+	hp := 6
+	hope := 2
+	hopeMax := 7
+	stress := 1
+	armor := 2
+	lifeState := "dying"
 	payload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:     "ch1",
-		HPBefore:        &hpBefore,
-		HPAfter:         &hpAfter,
-		HopeBefore:      &hopeBefore,
-		HopeAfter:       &hopeAfter,
-		HopeMaxBefore:   &hopeMaxBefore,
-		HopeMaxAfter:    &hopeMaxAfter,
-		StressBefore:    &stressBefore,
-		StressAfter:     &stressAfter,
-		ArmorBefore:     &armorBefore,
-		ArmorAfter:      &armorAfter,
-		LifeStateBefore: &lifeStateBefore,
-		LifeStateAfter:  &lifeStateAfter,
+		CharacterID: "ch1",
+		HP:          &hp,
+		Hope:        &hope,
+		HopeMax:     &hopeMax,
+		Stress:      &stress,
+		Armor:       &armor,
+		LifeState:   &lifeState,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -453,12 +441,10 @@ func TestListTimelineEntries_CharacterStateChanges_WithBefore(t *testing.T) {
 			t.Fatalf("field %q = %q, want %q", label, got, value)
 		}
 	}
-	assertField("HP", "3 -> 6")
-	assertField("Hope", "1 -> 2")
-	assertField("Hope Max", "6 -> 7")
-	assertField("Armor", "0 -> 2")
-	assertField("Life State", "alive -> dying")
-	if _, ok := fieldMap["Stress"]; ok {
-		t.Fatalf("expected stress change to be omitted")
-	}
+	assertField("HP", "= 6")
+	assertField("Hope", "= 2")
+	assertField("Hope Max", "= 7")
+	assertField("Stress", "= 1")
+	assertField("Armor", "= 2")
+	assertField("Life State", "= dying")
 }

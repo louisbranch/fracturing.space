@@ -5,25 +5,26 @@ import (
 	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 type participantUpdateFieldApplier func(*State, string)
 
 var participantUpdateFieldAppliers = map[string]participantUpdateFieldApplier{
 	"user_id": func(state *State, value string) {
-		state.UserID = value
+		state.UserID = ids.UserID(value)
 	},
 	"name": func(state *State, value string) {
 		state.Name = value
 	},
 	"role": func(state *State, value string) {
-		state.Role = value
+		state.Role = Role(value)
 	},
 	"controller": func(state *State, value string) {
-		state.Controller = value
+		state.Controller = Controller(value)
 	},
 	"campaign_access": func(state *State, value string) {
-		state.CampaignAccess = value
+		state.CampaignAccess = CampaignAccess(value)
 	},
 	"avatar_set_id": func(state *State, value string) {
 		state.AvatarSetID = value
@@ -76,12 +77,12 @@ func foldJoined(state State, evt event.Event) (State, error) {
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
 	}
-	state.ParticipantID = payload.ParticipantID
-	state.UserID = payload.UserID
+	state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
+	state.UserID = ids.UserID(payload.UserID)
 	state.Name = payload.Name
-	state.Role = payload.Role
-	state.Controller = payload.Controller
-	state.CampaignAccess = payload.CampaignAccess
+	state.Role = Role(payload.Role)
+	state.Controller = Controller(payload.Controller)
+	state.CampaignAccess = CampaignAccess(payload.CampaignAccess)
 	state.AvatarSetID = payload.AvatarSetID
 	state.AvatarAssetID = payload.AvatarAssetID
 	state.Pronouns = payload.Pronouns
@@ -94,7 +95,7 @@ func foldUpdated(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
 	}
 	if payload.ParticipantID != "" {
-		state.ParticipantID = payload.ParticipantID
+		state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
 	}
 	applyParticipantUpdateFields(&state, payload.Fields)
 	return state, nil
@@ -109,7 +110,7 @@ func foldLeft(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
 	}
 	if payload.ParticipantID != "" {
-		state.ParticipantID = payload.ParticipantID
+		state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
 	}
 	return state, nil
 }
@@ -120,9 +121,9 @@ func foldBound(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
 	}
 	if payload.ParticipantID != "" {
-		state.ParticipantID = payload.ParticipantID
+		state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
 	}
-	state.UserID = payload.UserID
+	state.UserID = ids.UserID(payload.UserID)
 	return state, nil
 }
 
@@ -132,7 +133,7 @@ func foldUnbound(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
 	}
 	if payload.ParticipantID != "" {
-		state.ParticipantID = payload.ParticipantID
+		state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
 	}
 	state.UserID = ""
 	return state, nil
@@ -144,9 +145,9 @@ func foldSeatReassigned(state State, evt event.Event) (State, error) {
 		return state, fmt.Errorf("participant fold %s: %w", evt.Type, err)
 	}
 	if payload.ParticipantID != "" {
-		state.ParticipantID = payload.ParticipantID
+		state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
 	}
-	state.UserID = payload.UserID
+	state.UserID = ids.UserID(payload.UserID)
 	return state, nil
 }
 

@@ -11,6 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -50,7 +51,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	}
 	payload := session.SpotlightSetPayload{
 		SpotlightType: string(spotlightType),
-		CharacterID:   characterID,
+		CharacterID:   ids.CharacterID(characterID),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

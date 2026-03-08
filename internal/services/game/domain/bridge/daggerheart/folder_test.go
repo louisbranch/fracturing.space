@@ -6,6 +6,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
@@ -90,7 +91,7 @@ func TestFolderApplyGMFearChanged_UpdatesState(t *testing.T) {
 	projector := NewFolder()
 	state := SnapshotState{CampaignID: "camp-1", GMFear: 2}
 
-	payload, err := json.Marshal(GMFearChangedPayload{Before: 2, After: 5, Reason: "shift"})
+	payload, err := json.Marshal(GMFearChangedPayload{Value: 5, Reason: "shift"})
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
 	}
@@ -115,16 +116,12 @@ func TestFolderApplyGMFearChanged_UpdatesState(t *testing.T) {
 
 func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 	projector := NewFolder()
-	hpAfter := 6
-	hopeAfter := 2
+	hp := 6
+	hope := 2
 	payload, err := json.Marshal(CharacterStatePatchedPayload{
-		CharacterID:    "char-1",
-		HPAfter:        &hpAfter,
-		HopeAfter:      &hopeAfter,
-		HopeMaxAfter:   nil,
-		StressAfter:    nil,
-		ArmorAfter:     nil,
-		LifeStateAfter: nil,
+		CharacterID: "char-1",
+		HP:          &hp,
+		Hope:        &hope,
 	})
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
@@ -151,20 +148,18 @@ func TestFolderApplyCharacterStatePatched_StoresCharacterState(t *testing.T) {
 	if character.CharacterID != "char-1" {
 		t.Fatalf("character id = %s, want %s", character.CharacterID, "char-1")
 	}
-	if character.HP != hpAfter {
-		t.Fatalf("hp = %d, want %d", character.HP, hpAfter)
+	if character.HP != hp {
+		t.Fatalf("hp = %d, want %d", character.HP, hp)
 	}
-	if character.Hope != hopeAfter {
-		t.Fatalf("hope = %d, want %d", character.Hope, hopeAfter)
+	if character.Hope != hope {
+		t.Fatalf("hope = %d, want %d", character.Hope, hope)
 	}
 }
 
-func TestFolderApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *testing.T) {
+func TestFolderApplyCharacterStatePatched_DoesNotMutateWithoutAfterFields(t *testing.T) {
 	projector := NewFolder()
-	hpBefore := 7
 	payload, err := json.Marshal(CharacterStatePatchedPayload{
 		CharacterID: "char-1",
-		HPBefore:    &hpBefore,
 	})
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
@@ -172,7 +167,7 @@ func TestFolderApplyCharacterStatePatched_DoesNotMutateFromBeforeOnly(t *testing
 
 	updated, err := projector.Fold(SnapshotState{
 		CampaignID: "camp-1",
-		CharacterStates: map[string]CharacterState{
+		CharacterStates: map[ids.CharacterID]CharacterState{
 			"char-1": {
 				CampaignID:  "camp-1",
 				CharacterID: "char-1",
@@ -203,7 +198,7 @@ func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 	projector := NewFolder()
 	state := SnapshotState{
 		CampaignID: "camp-1",
-		AdversaryStates: map[string]AdversaryState{
+		AdversaryStates: map[ids.AdversaryID]AdversaryState{
 			"adv-1": {
 				CampaignID:  "camp-1",
 				AdversaryID: "adv-1",
@@ -292,7 +287,7 @@ func TestFolderApplyHandlesAllRegisteredEvents(t *testing.T) {
 		t.Run(string(def.Type), func(t *testing.T) {
 			payloadJSON := []byte(`{}`)
 			if def.Type == EventTypeGMFearChanged {
-				payload, err := json.Marshal(GMFearChangedPayload{Before: 1, After: 2})
+				payload, err := json.Marshal(GMFearChangedPayload{Value: 2})
 				if err != nil {
 					t.Fatalf("marshal payload: %v", err)
 				}

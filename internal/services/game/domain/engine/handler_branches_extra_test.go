@@ -58,7 +58,7 @@ func (s *orderedCheckpointStore) Save(context.Context, replay.Checkpoint) error 
 	return nil
 }
 
-func TestHandle_RequiresGateStateLoaderForSessionScopedCommand(t *testing.T) {
+func TestExecute_RequiresGateStateLoaderForSessionScopedCommand(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
 		Type:  command.Type("session.start"),
@@ -74,7 +74,7 @@ func TestHandle_RequiresGateStateLoaderForSessionScopedCommand(t *testing.T) {
 		Decider:  fixedDecider{},
 	}
 
-	_, err := handler.Handle(context.Background(), command.Command{
+	_, err := handler.Execute(context.Background(), command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("session.start"),
 		ActorType:  command.ActorTypeSystem,
@@ -85,7 +85,7 @@ func TestHandle_RequiresGateStateLoaderForSessionScopedCommand(t *testing.T) {
 	}
 }
 
-func TestHandle_PropagatesGateLoaderError(t *testing.T) {
+func TestExecute_PropagatesGateLoaderError(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
 		Type:  command.Type("session.start"),
@@ -102,7 +102,7 @@ func TestHandle_PropagatesGateLoaderError(t *testing.T) {
 		Decider:         fixedDecider{},
 	}
 
-	_, err := handler.Handle(context.Background(), command.Command{
+	_, err := handler.Execute(context.Background(), command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("session.start"),
 		ActorType:  command.ActorTypeSystem,

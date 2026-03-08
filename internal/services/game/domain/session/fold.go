@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 // FoldHandledTypes returns the event types handled by the session fold function.
@@ -34,7 +35,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 		}
-		state.SessionID = payload.SessionID
+		state.SessionID = ids.SessionID(payload.SessionID)
 		state.Name = payload.SessionName
 	case EventTypeEnded:
 		state.Ended = true
@@ -44,7 +45,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 		}
 		if payload.SessionID != "" {
-			state.SessionID = payload.SessionID
+			state.SessionID = ids.SessionID(payload.SessionID)
 		}
 	case EventTypeGateOpened:
 		state.GateOpen = true
@@ -52,7 +53,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 		}
-		state.GateID = payload.GateID
+		state.GateID = ids.GateID(payload.GateID)
 	case EventTypeGateResolved, EventTypeGateAbandoned:
 		state.GateOpen = false
 		state.GateID = ""
@@ -62,7 +63,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 		}
 		state.SpotlightType = payload.SpotlightType
-		state.SpotlightCharacterID = payload.CharacterID
+		state.SpotlightCharacterID = ids.CharacterID(payload.CharacterID)
 	case EventTypeSpotlightCleared:
 		state.SpotlightType = ""
 		state.SpotlightCharacterID = ""

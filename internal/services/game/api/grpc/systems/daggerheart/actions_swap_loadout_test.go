@@ -175,9 +175,8 @@ func TestSwapLoadout_WithRecallCost(t *testing.T) {
 		t.Fatalf("encode loadout payload: %v", err)
 	}
 	spendPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:  "char-1",
-		StressBefore: &stressBefore,
-		StressAfter:  &stressAfter,
+		CharacterID: "char-1",
+		Stress:      &stressAfter,
 	}
 	spendJSON, err := json.Marshal(spendPayload)
 	if err != nil {
@@ -373,9 +372,8 @@ func TestSwapLoadout_UsesDomainEngineForStressSpend(t *testing.T) {
 	}
 
 	spendPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:  "char-1",
-		StressBefore: &stressBefore,
-		StressAfter:  &stressAfter,
+		CharacterID: "char-1",
+		Stress:      &stressAfter,
 	}
 	spendJSON, err := json.Marshal(spendPayload)
 	if err != nil {

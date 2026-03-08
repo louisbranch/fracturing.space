@@ -39,7 +39,7 @@ func (m *Memory) Append(ctx context.Context, evt event.Event) (event.Event, erro
 	if m == nil {
 		return event.Event{}, errors.New("journal is required")
 	}
-	campaignID := strings.TrimSpace(evt.CampaignID)
+	campaignID := strings.TrimSpace(string(evt.CampaignID))
 	if campaignID == "" {
 		return event.Event{}, ErrCampaignIDRequired
 	}

@@ -1,9 +1,11 @@
 package action
 
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+
 // RollState captures authoritative roll metadata for causal replay checks.
 type RollState struct {
 	RequestID string
-	SessionID string
+	SessionID ids.SessionID
 	Outcome   string
 }
 

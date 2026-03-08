@@ -12,7 +12,7 @@ func validateAdversaryCreatePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if err := requireTrimmedValue(payload.AdversaryID, "adversary_id"); err != nil {
+	if err := requireTrimmedValue(payload.AdversaryID.String(), "adversary_id"); err != nil {
 		return err
 	}
 	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
@@ -30,7 +30,7 @@ func validateAdversaryUpdatePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if err := requireTrimmedValue(payload.AdversaryID, "adversary_id"); err != nil {
+	if err := requireTrimmedValue(payload.AdversaryID.String(), "adversary_id"); err != nil {
 		return err
 	}
 	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
@@ -48,7 +48,7 @@ func validateAdversaryDeletePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.AdversaryID) == "" {
+	if strings.TrimSpace(payload.AdversaryID.String()) == "" {
 		return errors.New("adversary_id is required")
 	}
 	return nil
@@ -63,7 +63,7 @@ func validateLevelUpApplyPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	if payload.LevelBefore < 1 || payload.LevelBefore > 10 {
@@ -82,7 +82,20 @@ func validateLevelUpApplyPayload(raw json.RawMessage) error {
 }
 
 func validateLevelUpAppliedPayload(raw json.RawMessage) error {
-	return validateLevelUpApplyPayload(raw)
+	var payload LevelUpAppliedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if payload.Level < 1 || payload.Level > 10 {
+		return fmt.Errorf("level_after must be in range 1..10")
+	}
+	if len(payload.Advancements) == 0 {
+		return errors.New("advancements is required")
+	}
+	return nil
 }
 
 func validateGoldUpdatePayload(raw json.RawMessage) error {
@@ -90,7 +103,7 @@ func validateGoldUpdatePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	if payload.HandfulsAfter < 0 || payload.HandfulsAfter > 9 {
@@ -111,7 +124,23 @@ func validateGoldUpdatePayload(raw json.RawMessage) error {
 }
 
 func validateGoldUpdatedPayload(raw json.RawMessage) error {
-	return validateGoldUpdatePayload(raw)
+	var payload GoldUpdatedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if payload.Handfuls < 0 || payload.Handfuls > 9 {
+		return errors.New("handfuls_after must be in range 0..9")
+	}
+	if payload.Bags < 0 || payload.Bags > 9 {
+		return errors.New("bags_after must be in range 0..9")
+	}
+	if payload.Chests < 0 || payload.Chests > 1 {
+		return errors.New("chests_after must be in range 0..1")
+	}
+	return nil
 }
 
 func validateDomainCardAcquirePayload(raw json.RawMessage) error {
@@ -119,7 +148,7 @@ func validateDomainCardAcquirePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	if strings.TrimSpace(payload.CardID) == "" {
@@ -144,7 +173,7 @@ func validateEquipmentSwapPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	if strings.TrimSpace(payload.ItemID) == "" {
@@ -177,7 +206,7 @@ func validateConsumableUsePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	if strings.TrimSpace(payload.ConsumableID) == "" {
@@ -193,7 +222,17 @@ func validateConsumableUsePayload(raw json.RawMessage) error {
 }
 
 func validateConsumableUsedPayload(raw json.RawMessage) error {
-	return validateConsumableUsePayload(raw)
+	var payload ConsumableUsedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.ConsumableID) == "" {
+		return errors.New("consumable_id is required")
+	}
+	return nil
 }
 
 func validateConsumableAcquirePayload(raw json.RawMessage) error {
@@ -201,7 +240,7 @@ func validateConsumableAcquirePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	if strings.TrimSpace(payload.ConsumableID) == "" {
@@ -217,5 +256,18 @@ func validateConsumableAcquirePayload(raw json.RawMessage) error {
 }
 
 func validateConsumableAcquiredPayload(raw json.RawMessage) error {
-	return validateConsumableAcquirePayload(raw)
+	var payload ConsumableAcquiredPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.ConsumableID) == "" {
+		return errors.New("consumable_id is required")
+	}
+	if payload.Quantity < 1 || payload.Quantity > 5 {
+		return errors.New("quantity_after must be in range 1..5")
+	}
+	return nil
 }

@@ -80,10 +80,9 @@ func TestApplyAdversaryConditions_AddCondition_Success(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	payload := daggerheart.AdversaryConditionChangedPayload{
-		AdversaryID:      "adv-1",
-		ConditionsBefore: []string{},
-		ConditionsAfter:  []string{daggerheart.ConditionVulnerable},
-		Added:            []string{daggerheart.ConditionVulnerable},
+		AdversaryID: "adv-1",
+		Conditions:  []string{daggerheart.ConditionVulnerable},
+		Added:       []string{daggerheart.ConditionVulnerable},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -133,10 +132,9 @@ func TestApplyAdversaryConditions_RemoveCondition_Success(t *testing.T) {
 	dhStore.adversaries["camp-1:adv-1"] = adv
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	payload := daggerheart.AdversaryConditionChangedPayload{
-		AdversaryID:      "adv-1",
-		ConditionsBefore: []string{daggerheart.ConditionVulnerable},
-		ConditionsAfter:  []string{},
-		Removed:          []string{daggerheart.ConditionVulnerable},
+		AdversaryID: "adv-1",
+		Conditions:  []string{},
+		Removed:     []string{daggerheart.ConditionVulnerable},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -180,11 +178,10 @@ func TestApplyAdversaryConditions_UsesDomainEngine(t *testing.T) {
 	now := testTimestamp
 
 	payload := daggerheart.AdversaryConditionChangedPayload{
-		AdversaryID:      "adv-1",
-		ConditionsBefore: []string{},
-		ConditionsAfter:  []string{daggerheart.ConditionVulnerable},
-		Added:            []string{daggerheart.ConditionVulnerable},
-		Source:           "test",
+		AdversaryID: "adv-1",
+		Conditions:  []string{daggerheart.ConditionVulnerable},
+		Added:       []string{daggerheart.ConditionVulnerable},
+		Source:      "test",
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

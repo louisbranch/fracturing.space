@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 // FoldHandledTypes returns the event types handled by the scene fold function.
@@ -35,12 +36,12 @@ func Fold(state State, evt event.Event) (State, error) {
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("scene fold %s: %w", evt.Type, err)
 		}
-		state.SceneID = payload.SceneID
+		state.SceneID = ids.SceneID(payload.SceneID)
 		state.Name = payload.Name
 		state.Description = payload.Description
 		state.Active = true
 		if state.Characters == nil {
-			state.Characters = make(map[string]bool)
+			state.Characters = make(map[ids.CharacterID]bool)
 		}
 
 	case EventTypeUpdated:
@@ -68,16 +69,16 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("scene fold %s: %w", evt.Type, err)
 		}
 		if state.Characters == nil {
-			state.Characters = make(map[string]bool)
+			state.Characters = make(map[ids.CharacterID]bool)
 		}
-		state.Characters[payload.CharacterID] = true
+		state.Characters[ids.CharacterID(payload.CharacterID)] = true
 
 	case EventTypeCharacterRemoved:
 		var payload CharacterRemovedPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("scene fold %s: %w", evt.Type, err)
 		}
-		delete(state.Characters, payload.CharacterID)
+		delete(state.Characters, ids.CharacterID(payload.CharacterID))
 
 	case EventTypeGateOpened:
 		var payload GateOpenedPayload
@@ -85,7 +86,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("scene fold %s: %w", evt.Type, err)
 		}
 		state.GateOpen = true
-		state.GateID = payload.GateID
+		state.GateID = ids.GateID(payload.GateID)
 
 	case EventTypeGateResolved, EventTypeGateAbandoned:
 		state.GateOpen = false
@@ -97,7 +98,7 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("scene fold %s: %w", evt.Type, err)
 		}
 		state.SpotlightType = payload.SpotlightType
-		state.SpotlightCharacterID = payload.CharacterID
+		state.SpotlightCharacterID = ids.CharacterID(payload.CharacterID)
 
 	case EventTypeSpotlightCleared:
 		state.SpotlightType = ""

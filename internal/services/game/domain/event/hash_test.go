@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 func TestEventHashDeterministic(t *testing.T) {
@@ -107,8 +109,8 @@ func TestContentEnvelope_OptionalFieldsBranchCoverage(t *testing.T) {
 		Type:          Type("campaign.created"),
 		ActorType:     ActorTypeSystem,
 		PayloadJSON:   []byte(`{"ok":true}`),
-		SessionID:     "sess-1",
-		SceneID:       "scene-1",
+		SessionID:     ids.SessionID("sess-1"),
+		SceneID:       ids.SceneID("scene-1"),
 		RequestID:     "req-1",
 		InvocationID:  "inv-1",
 		ActorID:       "actor-1",
@@ -121,8 +123,8 @@ func TestContentEnvelope_OptionalFieldsBranchCoverage(t *testing.T) {
 	}
 	envelope := contentEnvelope(withAll)
 	for key := range map[string]string{
-		"session_id":     withAll.SessionID,
-		"scene_id":       withAll.SceneID,
+		"session_id":     withAll.SessionID.String(),
+		"scene_id":       withAll.SceneID.String(),
 		"request_id":     withAll.RequestID,
 		"invocation_id":  withAll.InvocationID,
 		"actor_id":       withAll.ActorID,
@@ -175,7 +177,7 @@ func TestChainEnvelope_IncludesPrevHashAndOptionalFields(t *testing.T) {
 		Type:         Type("campaign.created"),
 		ActorType:    ActorTypeSystem,
 		PayloadJSON:  []byte(`{"ok":true}`),
-		SessionID:    "sess-1",
+		SessionID:    ids.SessionID("sess-1"),
 		RequestID:    "req-1",
 		InvocationID: "inv-1",
 		ActorID:      "actor-1",

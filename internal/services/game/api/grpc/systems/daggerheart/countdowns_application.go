@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -94,7 +95,7 @@ func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.Dagg
 	}
 
 	payload := daggerheart.CountdownCreatePayload{
-		CountdownID: countdownID,
+		CountdownID: ids.CountdownID(countdownID),
 		Name:        name,
 		Kind:        kind,
 		Current:     current,
@@ -111,11 +112,11 @@ func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.Dagg
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartCountdownCreate,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "countdown",
@@ -214,11 +215,11 @@ func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.Dagg
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartCountdownUpdate,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "countdown",
@@ -293,7 +294,7 @@ func (s *DaggerheartService) runDeleteCountdown(ctx context.Context, in *pb.Dagg
 	}
 
 	payload := daggerheart.CountdownDeletePayload{
-		CountdownID: countdownID,
+		CountdownID: ids.CountdownID(countdownID),
 		Reason:      strings.TrimSpace(in.GetReason()),
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -305,11 +306,11 @@ func (s *DaggerheartService) runDeleteCountdown(ctx context.Context, in *pb.Dagg
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartCountdownDelete,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "countdown",
@@ -378,8 +379,8 @@ func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.
 
 	lifeStateBefore := state.LifeState
 	lifeStateAfter := daggerheart.LifeStateDead
-	patchPayload := daggerheart.CharacterStatePatchedPayload{
-		CharacterID:     characterID,
+	patchPayload := daggerheart.CharacterStatePatchPayload{
+		CharacterID:     ids.CharacterID(characterID),
 		LifeStateBefore: &lifeStateBefore,
 		LifeStateAfter:  &lifeStateAfter,
 	}
@@ -392,11 +393,11 @@ func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          commandTypeDaggerheartCharacterStatePatch,
 		ActorType:     command.ActorTypeSystem,
-		SessionID:     sessionID,
-		SceneID:       sceneID,
+		SessionID:     ids.SessionID(sessionID),
+		SceneID:       ids.SceneID(sceneID),
 		RequestID:     requestID,
 		InvocationID:  invocationID,
 		EntityType:    "character",

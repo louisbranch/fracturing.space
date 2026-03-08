@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -186,7 +187,7 @@ func (s *DaggerheartService) resolveGMConsequence(
 			return res, status.Errorf(codes.Internal, "normalize gate type: %v", err)
 		}
 		payload := session.GateOpenedPayload{
-			GateID:   gateID,
+			GateID:   ids.GateID(gateID),
 			GateType: gateType,
 			Reason:   "gm_consequence",
 			Metadata: map[string]any{

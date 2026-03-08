@@ -11,6 +11,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -43,7 +44,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 
 	applier := c.stores.Applier()
 	payload := character.UpdatePayload{
-		CharacterID: characterID,
+		CharacterID: ids.CharacterID(characterID),
 		Fields: map[string]string{
 			"participant_id":  participantID,
 			"avatar_set_id":   identitySnapshot.avatarSetID,

@@ -16,6 +16,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
 	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
@@ -490,7 +491,7 @@ func TestRunOutboxRequeueModeRequeuesDeadRow(t *testing.T) {
 
 	cfg := Config{
 		Command:                 commandOutboxRequeue,
-		OutboxRequeueCampaignID: stored.CampaignID,
+		OutboxRequeueCampaignID: string(stored.CampaignID),
 		OutboxRequeueSeq:        stored.Seq,
 		EventsDBPath:            eventsPath,
 	}
@@ -587,9 +588,9 @@ func TestRunOutboxRequeueDeadModeRequeuesRows(t *testing.T) {
 			t.Fatalf("prepare dead outbox row %s/%d: %v", campaignID, seq, err)
 		}
 	}
-	markDead(storedA.CampaignID, storedA.Seq, time.Date(2026, 2, 16, 13, 1, 0, 0, time.UTC))
-	markDead(storedB.CampaignID, storedB.Seq, time.Date(2026, 2, 16, 13, 2, 0, 0, time.UTC))
-	markDead(storedC.CampaignID, storedC.Seq, time.Date(2026, 2, 16, 13, 3, 0, 0, time.UTC))
+	markDead(string(storedA.CampaignID), storedA.Seq, time.Date(2026, 2, 16, 13, 1, 0, 0, time.UTC))
+	markDead(string(storedB.CampaignID), storedB.Seq, time.Date(2026, 2, 16, 13, 2, 0, 0, time.UTC))
+	markDead(string(storedC.CampaignID), storedC.Seq, time.Date(2026, 2, 16, 13, 3, 0, 0, time.UTC))
 
 	cfg := Config{
 		Command:                commandOutboxRequeueAll,
@@ -1178,7 +1179,7 @@ func TestScanSnapshotEventsListError(t *testing.T) {
 // makeDaggerheartEvent builds v2 system events for snapshot validation tests.
 func makeDaggerheartEvent(campaignID string, eventType string, payload []byte) event.Event {
 	return event.Event{
-		CampaignID:    campaignID,
+		CampaignID:    ids.CampaignID(campaignID),
 		Type:          event.Type(eventType),
 		Timestamp:     time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC),
 		EntityType:    "action",

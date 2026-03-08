@@ -26,11 +26,8 @@ func validateGMFearChangedPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if payload.After < GMFearMin || payload.After > GMFearMax {
-		return fmt.Errorf("after must be in range %d..%d", GMFearMin, GMFearMax)
-	}
-	if payload.Before == payload.After {
-		return errors.New("before and after must differ")
+	if payload.Value < GMFearMin || payload.Value > GMFearMax {
+		return fmt.Errorf("value must be in range %d..%d", GMFearMin, GMFearMax)
 	}
 	return nil
 }
@@ -40,7 +37,7 @@ func validateCharacterStatePatchPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	if !hasCharacterStateChange(payload) {
@@ -50,7 +47,18 @@ func validateCharacterStatePatchPayload(raw json.RawMessage) error {
 }
 
 func validateCharacterStatePatchedPayload(raw json.RawMessage) error {
-	return validateCharacterStatePatchPayload(raw)
+	var payload CharacterStatePatchedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if payload.HP == nil && payload.Hope == nil && payload.HopeMax == nil &&
+		payload.Stress == nil && payload.Armor == nil && payload.LifeState == nil {
+		return errors.New("character_state_patched must include at least one after field")
+	}
+	return nil
 }
 
 func validateHopeSpendPayload(raw json.RawMessage) error {
@@ -58,7 +66,7 @@ func validateHopeSpendPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	if payload.Amount <= 0 {
@@ -78,7 +86,7 @@ func validateStressSpendPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	if payload.Amount <= 0 {
@@ -98,7 +106,7 @@ func validateConditionChangePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CharacterID) == "" {
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
 		return errors.New("character_id is required")
 	}
 	return validateConditionSetPayload(
@@ -110,7 +118,20 @@ func validateConditionChangePayload(raw json.RawMessage) error {
 }
 
 func validateConditionChangedPayload(raw json.RawMessage) error {
-	return validateConditionChangePayload(raw)
+	var payload ConditionChangedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if payload.Conditions == nil {
+		return errors.New("conditions_after is required")
+	}
+	if _, err := NormalizeConditions(payload.Conditions); err != nil {
+		return fmt.Errorf("conditions_after: %w", err)
+	}
+	return nil
 }
 
 func validateLoadoutSwapPayload(raw json.RawMessage) error {
@@ -118,7 +139,7 @@ func validateLoadoutSwapPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if err := requireTrimmedValue(payload.CharacterID, "character_id"); err != nil {
+	if err := requireTrimmedValue(payload.CharacterID.String(), "character_id"); err != nil {
 		return err
 	}
 	if err := requireTrimmedValue(payload.CardID, "card_id"); err != nil {
@@ -128,7 +149,17 @@ func validateLoadoutSwapPayload(raw json.RawMessage) error {
 }
 
 func validateLoadoutSwappedPayload(raw json.RawMessage) error {
-	return validateLoadoutSwapPayload(raw)
+	var payload LoadoutSwappedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.CharacterID.String(), "character_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.CardID, "card_id"); err != nil {
+		return err
+	}
+	return nil
 }
 
 func validateRestTakePayload(raw json.RawMessage) error {
@@ -151,7 +182,17 @@ func validateRestTakePayload(raw json.RawMessage) error {
 }
 
 func validateRestTakenPayload(raw json.RawMessage) error {
-	return validateRestTakePayload(raw)
+	var payload RestTakenPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.RestType, "rest_type"); err != nil {
+		return err
+	}
+	if payload.GMFear < GMFearMin || payload.GMFear > GMFearMax {
+		return fmt.Errorf("gm_fear_after must be in range %d..%d", GMFearMin, GMFearMax)
+	}
+	return nil
 }
 
 func validateCountdownCreatePayload(raw json.RawMessage) error {
@@ -159,7 +200,7 @@ func validateCountdownCreatePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if err := requireTrimmedValue(payload.CountdownID, "countdown_id"); err != nil {
+	if err := requireTrimmedValue(payload.CountdownID.String(), "countdown_id"); err != nil {
 		return err
 	}
 	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
@@ -190,7 +231,7 @@ func validateCountdownCreatePayload(raw json.RawMessage) error {
 	if variant == "dynamic" && strings.TrimSpace(payload.TriggerEventType) == "" {
 		return errors.New("trigger_event_type is required for dynamic countdowns")
 	}
-	if variant == "linked" && strings.TrimSpace(payload.LinkedCountdownID) == "" {
+	if variant == "linked" && strings.TrimSpace(payload.LinkedCountdownID.String()) == "" {
 		return errors.New("linked_countdown_id is required for linked countdowns")
 	}
 	return nil
@@ -205,7 +246,7 @@ func validateCountdownUpdatePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CountdownID) == "" {
+	if strings.TrimSpace(payload.CountdownID.String()) == "" {
 		return errors.New("countdown_id is required")
 	}
 	if payload.Before == payload.After && payload.Delta == 0 {
@@ -215,7 +256,14 @@ func validateCountdownUpdatePayload(raw json.RawMessage) error {
 }
 
 func validateCountdownUpdatedPayload(raw json.RawMessage) error {
-	return validateCountdownUpdatePayload(raw)
+	var payload CountdownUpdatedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CountdownID.String()) == "" {
+		return errors.New("countdown_id is required")
+	}
+	return nil
 }
 
 func validateCountdownDeletePayload(raw json.RawMessage) error {
@@ -223,7 +271,7 @@ func validateCountdownDeletePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.CountdownID) == "" {
+	if strings.TrimSpace(payload.CountdownID.String()) == "" {
 		return errors.New("countdown_id is required")
 	}
 	return nil
@@ -238,7 +286,7 @@ func validateAdversaryConditionChangePayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	if strings.TrimSpace(payload.AdversaryID) == "" {
+	if strings.TrimSpace(payload.AdversaryID.String()) == "" {
 		return errors.New("adversary_id is required")
 	}
 	return validateConditionSetPayload(
@@ -250,7 +298,20 @@ func validateAdversaryConditionChangePayload(raw json.RawMessage) error {
 }
 
 func validateAdversaryConditionChangedPayload(raw json.RawMessage) error {
-	return validateAdversaryConditionChangePayload(raw)
+	var payload AdversaryConditionChangedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.AdversaryID.String()) == "" {
+		return errors.New("adversary_id is required")
+	}
+	if payload.Conditions == nil {
+		return errors.New("conditions_after is required")
+	}
+	if _, err := NormalizeConditions(payload.Conditions); err != nil {
+		return fmt.Errorf("conditions_after: %w", err)
+	}
+	return nil
 }
 
 func validateConditionSetPayload(before, after, added, removed []string) error {
@@ -369,7 +430,7 @@ func hasRestTakeMutation(payload RestTakePayload) bool {
 }
 
 func validateRestLongTermCountdownPayload(payload CountdownUpdatePayload) error {
-	if strings.TrimSpace(payload.CountdownID) == "" {
+	if strings.TrimSpace(payload.CountdownID.String()) == "" {
 		return errors.New("long_term_countdown.countdown_id is required")
 	}
 	if payload.Before == payload.After && payload.Delta == 0 {

@@ -19,10 +19,9 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	payload := daggerheart.ConditionChangedPayload{
-		CharacterID:      "ch1",
-		ConditionsBefore: []string{},
-		ConditionsAfter:  []string{"vulnerable"},
-		Added:            []string{"vulnerable"},
+		CharacterID: "ch1",
+		Conditions:  []string{"vulnerable"},
+		Added:       []string{"vulnerable"},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -82,10 +81,9 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 	dhStore := newFakeDaggerheartStore()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	payload := daggerheart.ConditionChangedPayload{
-		CharacterID:      "ch1",
-		ConditionsBefore: []string{"vulnerable"},
-		ConditionsAfter:  []string{},
-		Removed:          []string{"vulnerable"},
+		CharacterID: "ch1",
+		Conditions:  []string{},
+		Removed:     []string{"vulnerable"},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

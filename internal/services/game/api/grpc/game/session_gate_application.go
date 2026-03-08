@@ -12,6 +12,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -65,7 +66,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 	payload := session.GateOpenedPayload{
-		GateID:   gateID,
+		GateID:   ids.GateID(gateID),
 		GateType: gateType,
 		Reason:   reason,
 		Metadata: metadata,
@@ -140,7 +141,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 	payload := session.GateResolvedPayload{
-		GateID:     gateID,
+		GateID:     ids.GateID(gateID),
 		Decision:   strings.TrimSpace(in.GetDecision()),
 		Resolution: resolution,
 	}
@@ -209,7 +210,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 		return gate, nil
 	}
 	payload := session.GateAbandonedPayload{
-		GateID: gateID,
+		GateID: ids.GateID(gateID),
 		Reason: session.NormalizeGateReason(in.GetReason()),
 	}
 	payloadJSON, err := json.Marshal(payload)

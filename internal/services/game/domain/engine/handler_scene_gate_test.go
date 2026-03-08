@@ -18,7 +18,7 @@ func (f fakeSceneGateLoader) LoadScene(_ context.Context, _, _ string) (scene.St
 	return f.state, f.err
 }
 
-func TestHandle_RejectsWhenSceneGateOpen(t *testing.T) {
+func TestExecute_RejectsWhenSceneGateOpen(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
 		Type:  command.Type("scene.gate_open"),
@@ -45,22 +45,22 @@ func TestHandle_RejectsWhenSceneGateOpen(t *testing.T) {
 		SceneID:    "scene-1",
 	}
 
-	decision, err := handler.Handle(context.Background(), cmd)
+	result, err := handler.Execute(context.Background(), cmd)
 	if err != nil {
-		t.Fatalf("handle: %v", err)
+		t.Fatalf("execute: %v", err)
 	}
 	if decider.called {
 		t.Fatal("expected decider not to be called")
 	}
-	if len(decision.Rejections) != 1 {
-		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	if len(result.Decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(result.Decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeSceneGateOpen {
-		t.Errorf("code = %q, want %q", decision.Rejections[0].Code, rejectionCodeSceneGateOpen)
+	if result.Decision.Rejections[0].Code != rejectionCodeSceneGateOpen {
+		t.Errorf("code = %q, want %q", result.Decision.Rejections[0].Code, rejectionCodeSceneGateOpen)
 	}
 }
 
-func TestHandle_SceneGateRequiresSceneID(t *testing.T) {
+func TestExecute_SceneGateRequiresSceneID(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
 		Type:  command.Type("scene.action"),
@@ -85,13 +85,13 @@ func TestHandle_SceneGateRequiresSceneID(t *testing.T) {
 		// No SceneID — scene-scoped command must fail closed.
 	}
 
-	_, err := handler.Handle(context.Background(), cmd)
+	_, err := handler.Execute(context.Background(), cmd)
 	if !errors.Is(err, ErrSceneIDRequired) {
 		t.Fatalf("expected ErrSceneIDRequired, got %v", err)
 	}
 }
 
-func TestHandle_SceneGateLoaderError(t *testing.T) {
+func TestExecute_SceneGateLoaderError(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
 		Type:  command.Type("scene.action"),
@@ -116,13 +116,13 @@ func TestHandle_SceneGateLoaderError(t *testing.T) {
 		SceneID:    "scene-1",
 	}
 
-	_, err := handler.Handle(context.Background(), cmd)
+	_, err := handler.Execute(context.Background(), cmd)
 	if err == nil {
 		t.Fatal("expected error from scene gate loader")
 	}
 }
 
-func TestHandle_SceneGateRequiresLoader(t *testing.T) {
+func TestExecute_SceneGateRequiresLoader(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
 		Type:  command.Type("scene.action"),
@@ -146,7 +146,7 @@ func TestHandle_SceneGateRequiresLoader(t *testing.T) {
 		SceneID:    "scene-1",
 	}
 
-	_, err := handler.Handle(context.Background(), cmd)
+	_, err := handler.Execute(context.Background(), cmd)
 	if !errors.Is(err, ErrSceneGateStateLoaderRequired) {
 		t.Fatalf("expected ErrSceneGateStateLoaderRequired, got %v", err)
 	}

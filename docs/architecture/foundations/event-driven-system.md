@@ -1,7 +1,7 @@
 ---
 title: "Event-driven system"
 parent: "Foundations"
-nav_order: 4
+nav_order: 5
 status: canonical
 owner: engineering
 last_reviewed: "2026-03-02"

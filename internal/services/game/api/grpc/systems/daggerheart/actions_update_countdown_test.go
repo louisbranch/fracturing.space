@@ -87,8 +87,7 @@ func TestUpdateCountdown_Success(t *testing.T) {
 	}
 	updatePayload := daggerheart.CountdownUpdatedPayload{
 		CountdownID: "cd-update",
-		Before:      update.Before,
-		After:       update.After,
+		Value:       update.After,
 		Delta:       update.Delta,
 		Looped:      update.Looped,
 	}
@@ -187,8 +186,7 @@ func TestUpdateCountdown_UsesDomainEngine(t *testing.T) {
 	}
 	updatePayload := daggerheart.CountdownUpdatedPayload{
 		CountdownID: "cd-1",
-		Before:      update.Before,
-		After:       update.After,
+		Value:       update.After,
 		Delta:       update.Delta,
 		Looped:      update.Looped,
 		Reason:      "advance",

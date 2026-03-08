@@ -59,7 +59,7 @@ func TestNormalizeDomainWriteOptionsDefaults(t *testing.T) {
 		t.Fatalf("apply code = %s, want %s", status.Code(applyErr), codes.Internal)
 	}
 
-	rejectErr := options.RejectErr("rejected")
+	rejectErr := options.RejectErr("SOME_CODE", "rejected")
 	if status.Code(rejectErr) != codes.FailedPrecondition {
 		t.Fatalf("reject code = %s, want %s", status.Code(rejectErr), codes.FailedPrecondition)
 	}

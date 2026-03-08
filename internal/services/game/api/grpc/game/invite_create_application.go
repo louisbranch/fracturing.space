@@ -13,6 +13,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -67,10 +68,10 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
 	applier := a.stores.Applier()
 	payload := invite.CreatePayload{
-		InviteID:               inviteID,
-		ParticipantID:          participantID,
-		RecipientUserID:        recipientUserID,
-		CreatedByParticipantID: strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx)),
+		InviteID:               ids.InviteID(inviteID),
+		ParticipantID:          ids.ParticipantID(participantID),
+		RecipientUserID:        ids.UserID(recipientUserID),
+		CreatedByParticipantID: ids.ParticipantID(strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

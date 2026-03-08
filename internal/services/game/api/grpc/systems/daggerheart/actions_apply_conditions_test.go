@@ -19,10 +19,9 @@ func TestApplyConditions_AddCondition_Success(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	conditionPayload := daggerheart.ConditionChangedPayload{
-		CharacterID:      "char-1",
-		ConditionsBefore: []string{},
-		ConditionsAfter:  []string{daggerheart.ConditionHidden},
-		Added:            []string{daggerheart.ConditionHidden},
+		CharacterID: "char-1",
+		Conditions:  []string{daggerheart.ConditionHidden},
+		Added:       []string{daggerheart.ConditionHidden},
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)
 	if err != nil {
@@ -68,10 +67,9 @@ func TestApplyConditions_RemoveCondition_Success(t *testing.T) {
 	dhStore.States["camp-1:char-1"] = state
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	conditionPayload := daggerheart.ConditionChangedPayload{
-		CharacterID:      "char-1",
-		ConditionsBefore: []string{daggerheart.ConditionHidden, daggerheart.ConditionVulnerable},
-		ConditionsAfter:  []string{daggerheart.ConditionVulnerable},
-		Removed:          []string{daggerheart.ConditionHidden},
+		CharacterID: "char-1",
+		Conditions:  []string{daggerheart.ConditionVulnerable},
+		Removed:     []string{daggerheart.ConditionHidden},
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)
 	if err != nil {
@@ -117,11 +115,10 @@ func TestApplyConditions_AddAndRemove(t *testing.T) {
 	dhStore.States["camp-1:char-1"] = state
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	conditionPayload := daggerheart.ConditionChangedPayload{
-		CharacterID:      "char-1",
-		ConditionsBefore: []string{daggerheart.ConditionHidden},
-		ConditionsAfter:  []string{daggerheart.ConditionVulnerable},
-		Added:            []string{daggerheart.ConditionVulnerable},
-		Removed:          []string{daggerheart.ConditionHidden},
+		CharacterID: "char-1",
+		Conditions:  []string{daggerheart.ConditionVulnerable},
+		Added:       []string{daggerheart.ConditionVulnerable},
+		Removed:     []string{daggerheart.ConditionHidden},
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)
 	if err != nil {

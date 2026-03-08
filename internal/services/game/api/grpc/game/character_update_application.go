@@ -13,6 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/grpc/codes"
@@ -131,7 +132,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		payloadFields[key] = stringValue
 	}
 	payload := character.UpdatePayload{
-		CharacterID: characterID,
+		CharacterID: ids.CharacterID(characterID),
 		Fields:      payloadFields,
 	}
 	payloadJSON, err := json.Marshal(payload)

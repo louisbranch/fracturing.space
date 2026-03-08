@@ -9,6 +9,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -157,19 +158,19 @@ func cloneSnapshotState(state any) any {
 func cloneAggregateState(source aggregate.State) aggregate.State {
 	cloned := source
 	if source.Participants != nil {
-		cloned.Participants = make(map[string]participant.State, len(source.Participants))
+		cloned.Participants = make(map[ids.ParticipantID]participant.State, len(source.Participants))
 		for key, value := range source.Participants {
 			cloned.Participants[key] = value
 		}
 	}
 	if source.Characters != nil {
-		cloned.Characters = make(map[string]character.State, len(source.Characters))
+		cloned.Characters = make(map[ids.CharacterID]character.State, len(source.Characters))
 		for key, value := range source.Characters {
 			cloned.Characters[key] = value
 		}
 	}
 	if source.Invites != nil {
-		cloned.Invites = make(map[string]invite.State, len(source.Invites))
+		cloned.Invites = make(map[ids.InviteID]invite.State, len(source.Invites))
 		for key, value := range source.Invites {
 			cloned.Invites[key] = value
 		}

@@ -53,12 +53,12 @@ func daggerheartStateChangeFields(payloadJSON []byte) []*campaignv1.ProjectionFi
 		return nil
 	}
 	fields := make([]*campaignv1.ProjectionField, 0, 6)
-	appendIntChange(&fields, "HP", payload.HPBefore, payload.HPAfter)
-	appendIntChange(&fields, "Hope", payload.HopeBefore, payload.HopeAfter)
-	appendIntChange(&fields, "Hope Max", payload.HopeMaxBefore, payload.HopeMaxAfter)
-	appendIntChange(&fields, "Stress", payload.StressBefore, payload.StressAfter)
-	appendIntChange(&fields, "Armor", payload.ArmorBefore, payload.ArmorAfter)
-	appendStringChange(&fields, "Life State", payload.LifeStateBefore, payload.LifeStateAfter)
+	appendIntChange(&fields, "HP", nil, payload.HP)
+	appendIntChange(&fields, "Hope", nil, payload.Hope)
+	appendIntChange(&fields, "Hope Max", nil, payload.HopeMax)
+	appendIntChange(&fields, "Stress", nil, payload.Stress)
+	appendIntChange(&fields, "Armor", nil, payload.Armor)
+	appendStringChange(&fields, "Life State", nil, payload.LifeState)
 	return fields
 }
 

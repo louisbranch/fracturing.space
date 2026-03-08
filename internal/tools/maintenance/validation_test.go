@@ -57,12 +57,10 @@ func TestValidateSnapshotEvent_CharacterStatePatched(t *testing.T) {
 	}
 
 	t.Run("valid", func(t *testing.T) {
-		hpBefore := 5
 		hpAfter := 4
 		evt := makeEvent(daggerheart.CharacterStatePatchedPayload{
 			CharacterID: "char-1",
-			HPBefore:    &hpBefore,
-			HPAfter:     &hpAfter,
+			HP:          &hpAfter,
 		})
 		if err := validateSnapshotEvent(registry, evt); err != nil {
 			t.Errorf("unexpected error: %v", err)
@@ -110,14 +108,14 @@ func TestValidateSnapshotEvent_GMFearChanged(t *testing.T) {
 	}
 
 	t.Run("valid", func(t *testing.T) {
-		evt := makeEvent(daggerheart.GMFearChangedPayload{After: 3})
+		evt := makeEvent(daggerheart.GMFearChangedPayload{Value: 3})
 		if err := validateSnapshotEvent(registry, evt); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 	})
 
 	t.Run("out of range", func(t *testing.T) {
-		evt := makeEvent(daggerheart.GMFearChangedPayload{After: daggerheart.GMFearMax + 1})
+		evt := makeEvent(daggerheart.GMFearChangedPayload{Value: daggerheart.GMFearMax + 1})
 		if err := validateSnapshotEvent(registry, evt); err == nil {
 			t.Error("expected error for out of range fear")
 		}

@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -52,7 +53,7 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	reason := strings.TrimSpace(in.GetReason())
 	applier := c.stores.Applier()
 	payload := character.DeletePayload{
-		CharacterID: characterID,
+		CharacterID: ids.CharacterID(characterID),
 		Reason:      reason,
 	}
 	payloadJSON, err := json.Marshal(payload)

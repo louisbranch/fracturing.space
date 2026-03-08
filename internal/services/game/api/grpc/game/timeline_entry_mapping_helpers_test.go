@@ -99,8 +99,8 @@ func TestTimelineChangeFieldsUnknownType(t *testing.T) {
 }
 
 func TestTimelineEntryFromEventAddsChangeProjectionWithoutResolverDisplay(t *testing.T) {
-	hpAfter := 6
-	payload := daggerheart.CharacterStatePatchedPayload{HPAfter: &hpAfter}
+	hp := 6
+	payload := daggerheart.CharacterStatePatchedPayload{HP: &hp}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
 		t.Fatalf("marshal payload: %v", err)
