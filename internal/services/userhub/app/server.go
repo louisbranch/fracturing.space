@@ -26,12 +26,12 @@ import (
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
+// newManagedConn wraps platformgrpc.NewManagedConn for testability.
+var newManagedConn = platformgrpc.NewManagedConn
+
 const defaultPort = 8092
 
-var (
-	dialLenient = platformgrpc.DialLenient
-	listenTCP   = net.Listen
-)
+var listenTCP = net.Listen
 
 // RuntimeConfig controls userhub service startup and dependency wiring.
 type RuntimeConfig struct {
@@ -53,10 +53,10 @@ type Server struct {
 	reporter     *platformstatus.Reporter
 	stopReporter func()
 
-	gameConn          *grpc.ClientConn
-	socialConn        *grpc.ClientConn
-	notificationsConn *grpc.ClientConn
-	statusConn        *grpc.ClientConn
+	gameMc          *platformgrpc.ManagedConn
+	socialMc        *platformgrpc.ManagedConn
+	notificationsMc *platformgrpc.ManagedConn
+	statusMc        *platformgrpc.ManagedConn
 
 	stopCampaignProjectionSync context.CancelFunc
 	campaignProjectionDone     chan struct{}
@@ -94,53 +94,76 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		log.Printf(format, args...)
 	}
 
-	gameConn := dialLenient(ctx, normalized.GameAddr, logf)
-	socialConn := dialLenient(ctx, normalized.SocialAddr, logf)
-	notificationsConn := dialLenient(ctx, normalized.NotificationsAddr, logf)
+	// Status reporter — starts with nil client; bound later when statusMc is ready.
+	reporter := platformstatus.NewReporter("userhub", nil)
 
-	// Build gateways — handle nil connections by passing nil clients.
-	var gameGateway domain.GameGateway
-	var eventClient gamev1.EventServiceClient
-	if gameConn != nil {
-		gameGateway = newGRPCGameGateway(
-			gamev1.NewCampaignServiceClient(gameConn),
-			gamev1.NewInviteServiceClient(gameConn),
-		)
-		eventClient = gamev1.NewEventServiceClient(gameConn)
+	// Dial all optional dependencies via ManagedConn. Connections are non-nil
+	// immediately; RPCs fail with Unavailable until the peer is up. The domain
+	// layer's DegradedDependencies / stale-cache pattern handles this.
+	gameMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name:             "game",
+		Addr:             normalized.GameAddr,
+		Mode:             platformgrpc.ModeOptional,
+		Logf:             logf,
+		StatusReporter:   reporter,
+		StatusCapability: "userhub.game.integration",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("userhub: managed conn game: %w", err)
 	}
 
-	var socialGateway domain.SocialGateway
-	if socialConn != nil {
-		socialGateway = newGRPCSocialGateway(socialv1.NewSocialServiceClient(socialConn))
+	socialMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name:             "social",
+		Addr:             normalized.SocialAddr,
+		Mode:             platformgrpc.ModeOptional,
+		Logf:             logf,
+		StatusReporter:   reporter,
+		StatusCapability: "userhub.social.integration",
+	})
+	if err != nil {
+		gameMc.Close()
+		return nil, fmt.Errorf("userhub: managed conn social: %w", err)
 	}
 
-	var notificationsGateway domain.NotificationsGateway
-	if notificationsConn != nil {
-		notificationsGateway = newGRPCNotificationsGateway(notificationsv1.NewNotificationServiceClient(notificationsConn))
+	notificationsMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name:             "notifications",
+		Addr:             normalized.NotificationsAddr,
+		Mode:             platformgrpc.ModeOptional,
+		Logf:             logf,
+		StatusReporter:   reporter,
+		StatusCapability: "userhub.notifications.integration",
+	})
+	if err != nil {
+		gameMc.Close()
+		socialMc.Close()
+		return nil, fmt.Errorf("userhub: managed conn notifications: %w", err)
 	}
 
-	var retainCampaignDependency func(string)
-	var releaseCampaignDependency func(string)
-	var stopCampaignProjectionSync context.CancelFunc
-	var campaignProjectionDone chan struct{}
+	// Build gateways — conn is always non-nil, RPCs fail gracefully until peer is up.
+	gameGateway := newGRPCGameGateway(
+		gamev1.NewCampaignServiceClient(gameMc.Conn()),
+		gamev1.NewInviteServiceClient(gameMc.Conn()),
+	)
+	eventClient := gamev1.NewEventServiceClient(gameMc.Conn())
+	socialGateway := newGRPCSocialGateway(socialv1.NewSocialServiceClient(socialMc.Conn()))
+	notificationsGateway := newGRPCNotificationsGateway(notificationsv1.NewNotificationServiceClient(notificationsMc.Conn()))
+
 	var domainService *domain.Service
-	if eventClient != nil {
-		retainCampaignDependency, releaseCampaignDependency, stopCampaignProjectionSync, campaignProjectionDone = startCampaignProjectionSubscriptionManager(
-			ctx,
-			eventClient,
-			func(campaignID string) {
-				if domainService == nil {
-					return
-				}
-				if _, err := domainService.InvalidateDashboards(context.Background(), domain.InvalidateDashboardsInput{
-					CampaignIDs: []string{campaignID},
-					Reason:      "game.projection_applied",
-				}); err != nil {
-					log.Printf("userhub: invalidate dashboards for campaign %s: %v", campaignID, err)
-				}
-			},
-		)
-	}
+	retainCampaignDependency, releaseCampaignDependency, stopCampaignProjectionSync, campaignProjectionDone := startCampaignProjectionSubscriptionManager(
+		ctx,
+		eventClient,
+		func(campaignID string) {
+			if domainService == nil {
+				return
+			}
+			if _, err := domainService.InvalidateDashboards(context.Background(), domain.InvalidateDashboardsInput{
+				CampaignIDs: []string{campaignID},
+				Reason:      "game.projection_applied",
+			}); err != nil {
+				log.Printf("userhub: invalidate dashboards for campaign %s: %v", campaignID, err)
+			}
+		},
+	)
 	domainService = domain.NewService(gameGateway, socialGateway, notificationsGateway, domain.Config{
 		CacheFreshTTL: normalized.CacheFreshTTL,
 		CacheStaleTTL: normalized.CacheStaleTTL,
@@ -154,9 +177,9 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 
 	listener, err := listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
 	if err != nil {
-		closeConn(gameConn, "game")
-		closeConn(socialConn, "social")
-		closeConn(notificationsConn, "notifications")
+		gameMc.Close()
+		socialMc.Close()
+		notificationsMc.Close()
 		return nil, fmt.Errorf("listen on userhub port %d: %w", normalized.Port, err)
 	}
 
@@ -169,31 +192,44 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	healthServer.SetServingStatus("userhub.v1.UserHubService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("userhub.v1.UserHubControlService", grpc_health_v1.HealthCheckResponse_SERVING)
 
+	// Status service connection — optional, late-binds reporter when ready.
 	statusAddr := normalized.StatusAddr
 	if strings.TrimSpace(statusAddr) == "" {
 		statusAddr = serviceaddr.DefaultGRPCAddr(serviceaddr.ServiceStatus)
 	}
-	statusConn := dialLenient(ctx, statusAddr, logf)
-	var statusClient statusv1.StatusServiceClient
-	if statusConn != nil {
-		statusClient = statusv1.NewStatusServiceClient(statusConn)
+	statusMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "status",
+		Addr: statusAddr,
+		Mode: platformgrpc.ModeOptional,
+		Logf: logf,
+	})
+	if err != nil {
+		gameMc.Close()
+		socialMc.Close()
+		notificationsMc.Close()
+		listener.Close()
+		return nil, fmt.Errorf("userhub: managed conn status: %w", err)
 	}
 
-	reporter := platformstatus.NewReporter("userhub", statusClient)
-	reporter.Register("userhub.dashboard", capStatus(gameConn != nil))
-	reporter.Register("userhub.game.integration", capStatus(gameConn != nil))
-	reporter.Register("userhub.social.integration", capStatus(socialConn != nil))
-	reporter.Register("userhub.notifications.integration", capStatus(notificationsConn != nil))
+	// Dashboard capability tracks game readiness since it depends on game data.
+	reporter.Register("userhub.dashboard", platformstatus.Unavailable)
+
+	// Late-bind the reporter's client when the status service becomes reachable.
+	go func() {
+		if statusMc.WaitReady(ctx) == nil {
+			reporter.SetClient(statusv1.NewStatusServiceClient(statusMc.Conn()))
+		}
+	}()
 
 	return &Server{
 		listener:                   listener,
 		grpcServer:                 grpcServer,
 		health:                     healthServer,
 		reporter:                   reporter,
-		gameConn:                   gameConn,
-		socialConn:                 socialConn,
-		notificationsConn:          notificationsConn,
-		statusConn:                 statusConn,
+		gameMc:                     gameMc,
+		socialMc:                   socialMc,
+		notificationsMc:            notificationsMc,
+		statusMc:                   statusMc,
 		stopCampaignProjectionSync: stopCampaignProjectionSync,
 		campaignProjectionDone:     campaignProjectionDone,
 	}, nil
@@ -277,10 +313,10 @@ func (s *Server) Close() {
 				log.Printf("close userhub listener: %v", err)
 			}
 		}
-		closeConn(s.statusConn, "status")
-		closeConn(s.notificationsConn, "notifications")
-		closeConn(s.socialConn, "social")
-		closeConn(s.gameConn, "game")
+		closeManagedConn(s.statusMc, "status")
+		closeManagedConn(s.notificationsMc, "notifications")
+		closeManagedConn(s.socialMc, "social")
+		closeManagedConn(s.gameMc, "game")
 	})
 }
 
@@ -300,18 +336,11 @@ func normalizeRuntimeConfig(cfg RuntimeConfig) (RuntimeConfig, error) {
 	return cfg, nil
 }
 
-func closeConn(conn *grpc.ClientConn, name string) {
-	if conn == nil {
+func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
+	if mc == nil {
 		return
 	}
-	if err := conn.Close(); err != nil {
-		log.Printf("close %s connection: %v", name, err)
+	if err := mc.Close(); err != nil {
+		log.Printf("close %s managed conn: %v", name, err)
 	}
-}
-
-func capStatus(available bool) platformstatus.CapabilityStatus {
-	if available {
-		return platformstatus.Operational
-	}
-	return platformstatus.Unavailable
 }

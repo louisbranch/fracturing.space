@@ -7,11 +7,8 @@ import (
 	"strings"
 	"time"
 
-	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
-	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -26,53 +23,6 @@ const (
 type catalogCapabilityState struct {
 	Ready  bool
 	Detail string
-}
-
-// dialStatusLenient attempts to connect to the status service.
-// On failure it returns nil values — the reporter will accumulate locally.
-// The caller must close the returned connection on shutdown.
-func dialStatusLenient(ctx context.Context, addr string) (*grpc.ClientConn, statusv1.StatusServiceClient) {
-	if addr == "" {
-		return nil, nil
-	}
-	logf := func(format string, args ...any) {
-		log.Printf("status %s", fmt.Sprintf(format, args...))
-	}
-	conn := platformgrpc.DialLenient(startupContext(ctx), addr, logf)
-	if conn == nil {
-		log.Printf("status service unavailable; capability reporting disabled")
-		return nil, nil
-	}
-	return conn, statusv1.NewStatusServiceClient(conn)
-}
-
-// initStatusReporter creates and configures the game service status reporter.
-// It wires capability registrations for the game service's functional areas.
-func initStatusReporter(
-	statusClient statusv1.StatusServiceClient,
-	socialAvailable, aiAvailable bool,
-	catalogState catalogCapabilityState,
-) *platformstatus.Reporter {
-	reporter := platformstatus.NewReporter("game", statusClient)
-
-	reporter.Register(capabilityGameCampaignService, platformstatus.Operational)
-	reporter.Register(capabilityGameCharacterCreation, platformstatus.Degraded)
-	reporter.Register(capabilityGameSystemDaggerheart, platformstatus.Degraded)
-	applyCatalogCapabilityState(reporter, catalogState)
-
-	if socialAvailable {
-		reporter.Register("game.social.integration", platformstatus.Operational)
-	} else {
-		reporter.Register("game.social.integration", platformstatus.Degraded)
-	}
-
-	if aiAvailable {
-		reporter.Register("game.ai.integration", platformstatus.Operational)
-	} else {
-		reporter.Register("game.ai.integration", platformstatus.Degraded)
-	}
-
-	return reporter
 }
 
 // evaluateCatalogCapabilityState resolves whether catalog-backed capabilities are

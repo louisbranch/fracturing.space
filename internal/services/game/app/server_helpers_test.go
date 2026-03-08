@@ -478,15 +478,6 @@ func TestOpenStorageBundleProjectionFailure(t *testing.T) {
 	}
 }
 
-func TestDialAuthGRPCTimeout(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
-
-	if _, err := dialAuthGRPC(ctx, "127.0.0.1:1"); err == nil {
-		t.Fatal("expected dial auth error")
-	}
-}
-
 func TestLoadServerEnvDomainEnabledDefaults(t *testing.T) {
 	key := "FRACTURING_SPACE_GAME_DOMAIN_ENABLED"
 	if val, ok := os.LookupEnv(key); ok {

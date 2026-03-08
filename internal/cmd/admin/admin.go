@@ -7,25 +7,22 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"time"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
-	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/admin"
 )
 
 // Config holds the admin command configuration.
 type Config struct {
-	HTTPAddr            string        `env:"FRACTURING_SPACE_ADMIN_ADDR"                    envDefault:":8081"`
-	GRPCAddr            string        `env:"FRACTURING_SPACE_GAME_ADDR"`
-	AuthAddr            string        `env:"FRACTURING_SPACE_AUTH_ADDR"`
-	GRPCDialTimeout     time.Duration `env:"FRACTURING_SPACE_ADMIN_DIAL_TIMEOUT"             envDefault:"2s"`
-	StatusAddr          string        `env:"FRACTURING_SPACE_STATUS_ADDR"`
-	AuthIntrospectURL   string        `env:"FRACTURING_SPACE_ADMIN_AUTH_INTROSPECT_URL"`
-	OAuthResourceSecret string        `env:"FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET"`
-	LoginURL            string        `env:"FRACTURING_SPACE_ADMIN_LOGIN_URL"`
+	HTTPAddr            string `env:"FRACTURING_SPACE_ADMIN_ADDR"                    envDefault:":8081"`
+	GRPCAddr            string `env:"FRACTURING_SPACE_GAME_ADDR"`
+	AuthAddr            string `env:"FRACTURING_SPACE_AUTH_ADDR"`
+	StatusAddr          string `env:"FRACTURING_SPACE_STATUS_ADDR"`
+	AuthIntrospectURL   string `env:"FRACTURING_SPACE_ADMIN_AUTH_INTROSPECT_URL"`
+	OAuthResourceSecret string `env:"FRACTURING_SPACE_ADMIN_OAUTH_RESOURCE_SECRET"`
+	LoginURL            string `env:"FRACTURING_SPACE_ADMIN_LOGIN_URL"`
 }
 
 // ParseConfig parses environment and flags into a Config.
@@ -33,9 +30,6 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	var cfg Config
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
-	}
-	if cfg.GRPCDialTimeout <= 0 {
-		cfg.GRPCDialTimeout = timeouts.GRPCDial
 	}
 	cfg.GRPCAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GRPCAddr, serviceaddr.ServiceGame)
 	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
@@ -51,6 +45,19 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	return cfg, nil
 }
 
+// logConfiguredAddresses logs the dependency addresses for startup diagnostics.
+func logConfiguredAddresses(cfg Config) {
+	if addr := strings.TrimSpace(cfg.GRPCAddr); addr != "" {
+		log.Printf("admin startup: dependency=game address=%s", addr)
+	}
+	if addr := strings.TrimSpace(cfg.AuthAddr); addr != "" {
+		log.Printf("admin startup: dependency=auth address=%s", addr)
+	}
+	if addr := strings.TrimSpace(cfg.StatusAddr); addr != "" {
+		log.Printf("admin startup: dependency=status address=%s", addr)
+	}
+}
+
 // Run creates the admin control-plane and starts it for the current process.
 func Run(ctx context.Context, cfg Config) error {
 	var authCfg *admin.AuthConfig
@@ -63,29 +70,24 @@ func Run(ctx context.Context, cfg Config) error {
 	}
 
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceAdmin, func(context.Context) error {
+		reporter := platformstatus.NewReporter("admin", nil)
+		reporter.Register("admin.dashboard", platformstatus.Operational)
+
+		logConfiguredAddresses(cfg)
+
 		server, err := admin.NewServer(ctx, admin.Config{
-			HTTPAddr:        cfg.HTTPAddr,
-			GRPCAddr:        cfg.GRPCAddr,
-			AuthAddr:        cfg.AuthAddr,
-			StatusAddr:      cfg.StatusAddr,
-			GRPCDialTimeout: cfg.GRPCDialTimeout,
-			AuthConfig:      authCfg,
+			HTTPAddr:       cfg.HTTPAddr,
+			GRPCAddr:       cfg.GRPCAddr,
+			AuthAddr:       cfg.AuthAddr,
+			StatusAddr:     cfg.StatusAddr,
+			AuthConfig:     authCfg,
+			StatusReporter: reporter,
 		})
 		if err != nil {
 			return fmt.Errorf("init admin server: %w", err)
 		}
 		defer server.Close()
 
-		dependencyStatuses := server.DependencyStatuses()
-		for _, statusLine := range formatDependencyStatusLines(dependencyStatuses) {
-			log.Printf("admin startup: %s", statusLine)
-		}
-		for _, warning := range dependencyStatusWarnings(dependencyStatuses) {
-			log.Printf("admin startup: %s", warning)
-		}
-
-		reporter := platformstatus.NewReporter("admin", server.StatusClient())
-		registerDependencyCapabilities(reporter, dependencyStatuses)
 		stopReporter := reporter.Start(ctx)
 		defer stopReporter()
 

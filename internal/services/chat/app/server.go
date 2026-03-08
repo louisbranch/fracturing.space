@@ -41,6 +41,9 @@ const (
 	maxIdempotencyRecord = 4000
 )
 
+// newManagedConn wraps platformgrpc.NewManagedConn for testability.
+var newManagedConn = platformgrpc.NewManagedConn
+
 var errCampaignSessionInactive = errors.New("campaign has no active session")
 var errCampaignParticipantRequired = errors.New("campaign participant access required")
 
@@ -55,7 +58,6 @@ type Config struct {
 	AIAddr              string
 	AuthBaseURL         string
 	OAuthResourceSecret string
-	GRPCDialTimeout     time.Duration
 	ReadHeaderTimeout   time.Duration
 	ShutdownTimeout     time.Duration
 }
@@ -68,9 +70,9 @@ type Server struct {
 	httpAddr                       string
 	shutdownTimeout                time.Duration
 	httpServer                     *http.Server
-	gameConn                       *gogrpc.ClientConn
-	authConn                       *gogrpc.ClientConn
-	aiConn                         *gogrpc.ClientConn
+	gameMc                         *platformgrpc.ManagedConn
+	authMc                         *platformgrpc.ManagedConn
+	aiMc                           *platformgrpc.ManagedConn
 	campaignUpdateSubscriptionDone chan struct{}
 	campaignUpdateSubscriptionStop context.CancelFunc
 	aiTurnSubscriptionDone         chan struct{}
@@ -92,18 +94,6 @@ type wsError struct {
 	Message   string         `json:"message"`
 	Retryable bool           `json:"retryable"`
 	Details   map[string]any `json:"details,omitempty"`
-}
-
-type gameGRPCClients struct {
-	conn              *gogrpc.ClientConn
-	participantClient statev1.ParticipantServiceClient
-	campaignAIClient  statev1.CampaignAIServiceClient
-	eventClient       statev1.EventServiceClient
-}
-
-type aiGRPCClients struct {
-	conn             *gogrpc.ClientConn
-	invocationClient aiv1.InvocationServiceClient
 }
 
 type webSessionAuthClient interface {
@@ -227,59 +217,70 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	if config.ShutdownTimeout <= 0 {
 		config.ShutdownTimeout = timeouts.Shutdown
 	}
-	if config.GRPCDialTimeout <= 0 {
-		config.GRPCDialTimeout = timeouts.GRPCDial
+	logf := func(format string, args ...any) {
+		log.Printf(format, args...)
 	}
 
-	var gameConn *gogrpc.ClientConn
+	var gameMc *platformgrpc.ManagedConn
 	var participantClient statev1.ParticipantServiceClient
 	var sessionClient statev1.SessionServiceClient
 	var campaignClient statev1.CampaignServiceClient
 	var campaignAIClient statev1.CampaignAIServiceClient
 	var eventClient statev1.EventServiceClient
-	var authConn *gogrpc.ClientConn
+	var authMc *platformgrpc.ManagedConn
 	var authSessionClient webSessionAuthClient
-	var aiConn *gogrpc.ClientConn
+	var aiMc *platformgrpc.ManagedConn
 	var aiInvocationClient aiv1.InvocationServiceClient
-	if strings.TrimSpace(config.GameAddr) != "" {
-		clients, err := dialGameGRPC(ctx, config)
+	if gameAddr := strings.TrimSpace(config.GameAddr); gameAddr != "" {
+		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+			Name: "game",
+			Addr: gameAddr,
+			Mode: platformgrpc.ModeOptional,
+			Logf: logf,
+			DialOpts: append(
+				platformgrpc.LenientDialOptions(),
+				gogrpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceChat)),
+				gogrpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceChat)),
+			),
+		})
 		if err != nil {
-			log.Printf("game gRPC dial failed, campaign membership checks unavailable: %v", err)
+			log.Printf("game managed conn failed, campaign membership checks unavailable: %v", err)
 		} else {
-			gameConn = clients.conn
-			participantClient = clients.participantClient
-			sessionClient = statev1.NewSessionServiceClient(clients.conn)
-			campaignClient = statev1.NewCampaignServiceClient(clients.conn)
-			campaignAIClient = clients.campaignAIClient
-			eventClient = clients.eventClient
+			gameMc = mc
+			conn := mc.Conn()
+			participantClient = statev1.NewParticipantServiceClient(conn)
+			sessionClient = statev1.NewSessionServiceClient(conn)
+			campaignClient = statev1.NewCampaignServiceClient(conn)
+			campaignAIClient = statev1.NewCampaignAIServiceClient(conn)
+			eventClient = statev1.NewEventServiceClient(conn)
 		}
 	}
-	if strings.TrimSpace(config.AIAddr) != "" {
-		clients, err := dialAIGRPC(ctx, config)
+	if aiAddr := strings.TrimSpace(config.AIAddr); aiAddr != "" {
+		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+			Name: "ai",
+			Addr: aiAddr,
+			Mode: platformgrpc.ModeOptional,
+			Logf: logf,
+		})
 		if err != nil {
-			log.Printf("ai gRPC dial failed, campaign ai relay unavailable: %v", err)
+			log.Printf("ai managed conn failed, campaign ai relay unavailable: %v", err)
 		} else {
-			aiConn = clients.conn
-			aiInvocationClient = clients.invocationClient
+			aiMc = mc
+			aiInvocationClient = aiv1.NewInvocationServiceClient(mc.Conn())
 		}
 	}
 	if authAddr := strings.TrimSpace(config.AuthAddr); authAddr != "" {
-		logf := func(format string, args ...any) {
-			log.Printf("auth %s", fmt.Sprintf(format, args...))
-		}
-		conn, err := platformgrpc.DialWithHealth(
-			ctx,
-			nil,
-			authAddr,
-			config.GRPCDialTimeout,
-			logf,
-			platformgrpc.DefaultClientDialOptions()...,
-		)
+		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+			Name: "auth",
+			Addr: authAddr,
+			Mode: platformgrpc.ModeOptional,
+			Logf: logf,
+		})
 		if err != nil {
-			log.Printf("auth gRPC dial failed, web session chat auth unavailable: %v", err)
+			log.Printf("auth managed conn failed, web session chat auth unavailable: %v", err)
 		} else {
-			authConn = conn
-			authSessionClient = authv1.NewAuthServiceClient(conn)
+			authMc = mc
+			authSessionClient = authv1.NewAuthServiceClient(mc.Conn())
 		}
 	}
 
@@ -337,9 +338,9 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		httpAddr:                       httpAddr,
 		shutdownTimeout:                config.ShutdownTimeout,
 		httpServer:                     httpServer,
-		gameConn:                       gameConn,
-		authConn:                       authConn,
-		aiConn:                         aiConn,
+		gameMc:                         gameMc,
+		authMc:                         authMc,
+		aiMc:                           aiMc,
 		campaignUpdateSubscriptionDone: campaignUpdateDone,
 		campaignUpdateSubscriptionStop: campaignUpdateStop,
 		aiTurnSubscriptionDone:         aiTurnDone,
@@ -412,91 +413,16 @@ func (s *Server) Close() {
 	if s.aiTurnSubscriptionDone != nil {
 		<-s.aiTurnSubscriptionDone
 	}
-	if s.gameConn != nil {
-		if err := s.gameConn.Close(); err != nil {
-			log.Printf("close game gRPC connection: %v", err)
-		}
-	}
-	if s.authConn != nil {
-		if err := s.authConn.Close(); err != nil {
-			log.Printf("close auth gRPC connection: %v", err)
-		}
-	}
-	if s.aiConn != nil {
-		if err := s.aiConn.Close(); err != nil {
-			log.Printf("close ai gRPC connection: %v", err)
-		}
-	}
+	closeManagedConn(s.gameMc, "game")
+	closeManagedConn(s.authMc, "auth")
+	closeManagedConn(s.aiMc, "ai")
 }
 
-func dialGameGRPC(ctx context.Context, config Config) (gameGRPCClients, error) {
-	gameAddr := strings.TrimSpace(config.GameAddr)
-	if gameAddr == "" {
-		return gameGRPCClients{}, nil
+func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
+	if mc == nil {
+		return
 	}
-	if ctx == nil {
-		return gameGRPCClients{}, errors.New("context is required")
+	if err := mc.Close(); err != nil {
+		log.Printf("close chat %s managed conn: %v", name, err)
 	}
-	if config.GRPCDialTimeout <= 0 {
-		config.GRPCDialTimeout = timeouts.GRPCDial
-	}
-
-	logf := func(format string, args ...any) {
-		log.Printf("game %s", fmt.Sprintf(format, args...))
-	}
-
-	conn, err := platformgrpc.DialWithHealth(
-		ctx,
-		nil,
-		gameAddr,
-		config.GRPCDialTimeout,
-		logf,
-		append(
-			platformgrpc.DefaultClientDialOptions(),
-			gogrpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceChat)),
-			gogrpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceChat)),
-		)...,
-	)
-	if err != nil {
-		return gameGRPCClients{}, fmt.Errorf("dial game gRPC %s: %w", gameAddr, err)
-	}
-	return gameGRPCClients{
-		conn:              conn,
-		participantClient: statev1.NewParticipantServiceClient(conn),
-		campaignAIClient:  statev1.NewCampaignAIServiceClient(conn),
-		eventClient:       statev1.NewEventServiceClient(conn),
-	}, nil
-}
-
-func dialAIGRPC(ctx context.Context, config Config) (aiGRPCClients, error) {
-	aiAddr := strings.TrimSpace(config.AIAddr)
-	if aiAddr == "" {
-		return aiGRPCClients{}, nil
-	}
-	if ctx == nil {
-		return aiGRPCClients{}, errors.New("context is required")
-	}
-	if config.GRPCDialTimeout <= 0 {
-		config.GRPCDialTimeout = timeouts.GRPCDial
-	}
-
-	logf := func(format string, args ...any) {
-		log.Printf("ai %s", fmt.Sprintf(format, args...))
-	}
-
-	conn, err := platformgrpc.DialWithHealth(
-		ctx,
-		nil,
-		aiAddr,
-		config.GRPCDialTimeout,
-		logf,
-		platformgrpc.DefaultClientDialOptions()...,
-	)
-	if err != nil {
-		return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, err)
-	}
-	return aiGRPCClients{
-		conn:             conn,
-		invocationClient: aiv1.NewInvocationServiceClient(conn),
-	}, nil
 }

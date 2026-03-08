@@ -7,7 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	gogrpc "google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func validRuntimeConfig() RuntimeConfig {
@@ -16,6 +18,28 @@ func validRuntimeConfig() RuntimeConfig {
 		SocialAddr:        "social:8090",
 		NotificationsAddr: "notifications:8088",
 	}
+}
+
+// stubManagedConn replaces newManagedConn with a version that creates real
+// non-blocking connections (using lenient dial options) but skips health
+// monitoring. Returns a cleanup function that restores the original.
+func stubManagedConn(t *testing.T) {
+	t.Helper()
+	previous := newManagedConn
+	newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+		// Force optional mode and a stub health check that always fails
+		// (avoids blocking in tests where the peer is unreachable).
+		cfg.Mode = platformgrpc.ModeOptional
+		cfg.DialOpts = []gogrpc.DialOption{
+			gogrpc.WithTransportCredentials(insecure.NewCredentials()),
+		}
+		cfg.StatusReporter = nil
+		cfg.Logf = func(string, ...any) {}
+		return platformgrpc.NewManagedConn(ctx, cfg)
+	}
+	t.Cleanup(func() {
+		newManagedConn = previous
+	})
 }
 
 func TestRunRequiresGameAddress(t *testing.T) {
@@ -73,13 +97,7 @@ func TestRunRequiresNotificationsAddress(t *testing.T) {
 }
 
 func TestNewAndServeLifecycle(t *testing.T) {
-	previousDial := dialLenient
-	dialLenient = func(context.Context, string, func(string, ...any), ...grpc.DialOption) *grpc.ClientConn {
-		return nil
-	}
-	t.Cleanup(func() {
-		dialLenient = previousDial
-	})
+	stubManagedConn(t)
 
 	port := freeTCPPort(t)
 	srv, err := New(context.Background(), RuntimeConfig{
@@ -114,13 +132,7 @@ func TestNewAndServeLifecycle(t *testing.T) {
 }
 
 func TestServeRequiresContext(t *testing.T) {
-	previousDial := dialLenient
-	dialLenient = func(context.Context, string, func(string, ...any), ...grpc.DialOption) *grpc.ClientConn {
-		return nil
-	}
-	t.Cleanup(func() {
-		dialLenient = previousDial
-	})
+	stubManagedConn(t)
 
 	srv, err := New(context.Background(), RuntimeConfig{
 		Port:              freeTCPPort(t),

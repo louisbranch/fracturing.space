@@ -148,57 +148,9 @@ func TestConfigureProjectionRuntime_ReturnsBuildProjectionRegistriesError(t *tes
 	}
 }
 
-func TestBuildStatusRuntime_NilBundleReturnsReporterAndDegradedCatalog(t *testing.T) {
-	state := buildStatusRuntime(context.Background(), "", nil, false, false)
-	if state.conn != nil {
-		t.Fatal("expected nil status connection when status address is empty")
-	}
-	if state.reporter == nil {
-		t.Fatal("expected status reporter to be initialized")
-	}
-	if state.catalogReadyAtStartup {
-		t.Fatal("expected catalog readiness to be false when content store is unavailable")
-	}
-}
-
-func TestConfigureStatusRuntime_UsesConfiguredBuilder(t *testing.T) {
-	called := false
-	var gotAddr string
-	var gotBundle *storageBundle
-	var gotSocial bool
-	var gotAI bool
-	wantState := statusRuntimeState{
-		catalogReadyAtStartup: true,
-	}
-	bootstrap := newServerBootstrapWithConfig(serverBootstrapConfig{
-		buildStatusRuntime: func(_ context.Context, statusAddr string, bundle *storageBundle, socialAvailable, aiAvailable bool) statusRuntimeState {
-			called = true
-			gotAddr = statusAddr
-			gotBundle = bundle
-			gotSocial = socialAvailable
-			gotAI = aiAvailable
-			return wantState
-		},
-	})
-
-	bundle := &storageBundle{}
-	state := bootstrap.configureStatusRuntime(context.Background(), "status:9000", bundle, true, false)
-	if !called {
-		t.Fatal("expected configured status runtime builder to be called")
-	}
-	if gotAddr != "status:9000" {
-		t.Fatalf("expected status address status:9000, got %s", gotAddr)
-	}
-	if gotBundle != bundle {
-		t.Fatal("expected storage bundle to be forwarded to status runtime builder")
-	}
-	if !gotSocial {
-		t.Fatal("expected social availability flag to be forwarded")
-	}
-	if gotAI {
-		t.Fatal("expected ai availability flag to be forwarded as false")
-	}
-	if state.catalogReadyAtStartup != wantState.catalogReadyAtStartup {
-		t.Fatal("expected status runtime state from configured builder")
+func TestStatusRuntimeState_CatalogReadinessDegradesWithNilBundle(t *testing.T) {
+	catalogState := evaluateCatalogCapabilityState(context.Background(), nil)
+	if catalogState.Ready {
+		t.Fatal("expected catalog readiness to be false when store is nil")
 	}
 }

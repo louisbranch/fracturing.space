@@ -10,8 +10,8 @@ import (
 	"time"
 
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
-	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health"
 )
 
@@ -35,9 +35,6 @@ func TestNormalizeRuntimeConfigDefaults(t *testing.T) {
 	}
 	if cfg.DBPath != defaultWorkerDB {
 		t.Fatalf("db path = %q, want %q", cfg.DBPath, defaultWorkerDB)
-	}
-	if cfg.GRPCDialTimeout != timeouts.GRPCDial {
-		t.Fatalf("dial timeout = %v, want %v", cfg.GRPCDialTimeout, timeouts.GRPCDial)
 	}
 }
 
@@ -104,14 +101,25 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 	}
 }
 
-func TestNewRuntimeBuildsAndCloses(t *testing.T) {
-	previousDial := dialWithHealth
-	dialWithHealth = func(context.Context, platformgrpc.Dialer, string, time.Duration, func(string, ...any), ...grpc.DialOption) (*grpc.ClientConn, error) {
-		return nil, nil
+func stubManagedConn(t *testing.T) {
+	t.Helper()
+	previous := newManagedConn
+	newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+		cfg.Mode = platformgrpc.ModeOptional
+		cfg.DialOpts = []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		}
+		cfg.StatusReporter = nil
+		cfg.Logf = func(string, ...any) {}
+		return platformgrpc.NewManagedConn(ctx, cfg)
 	}
 	t.Cleanup(func() {
-		dialWithHealth = previousDial
+		newManagedConn = previous
 	})
+}
+
+func TestNewRuntimeBuildsAndCloses(t *testing.T) {
+	stubManagedConn(t)
 
 	srv, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
@@ -172,13 +180,7 @@ func TestRuntimeServeStopsOnContextCancellation(t *testing.T) {
 }
 
 func TestRuntimeServeRequiresContext(t *testing.T) {
-	previousDial := dialWithHealth
-	dialWithHealth = func(context.Context, platformgrpc.Dialer, string, time.Duration, func(string, ...any), ...grpc.DialOption) (*grpc.ClientConn, error) {
-		return nil, nil
-	}
-	t.Cleanup(func() {
-		dialWithHealth = previousDial
-	})
+	stubManagedConn(t)
 
 	runtime, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),

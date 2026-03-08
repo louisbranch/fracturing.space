@@ -1,63 +1,33 @@
 package web
 
 import (
+	"context"
 	"testing"
 
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 )
 
-func TestRegisterDependencyCapabilitiesMapsStates(t *testing.T) {
-	t.Parallel()
-
-	requirements := dependencyRequirements(testDependencyConfig())
-	statuses := map[string]dependencyStatus{
-		dependencyNameAuth: {
-			Name:    dependencyNameAuth,
-			Address: "auth:8083",
-			State:   dependencyDialStateConnected,
-		},
-		dependencyNameSocial: {
-			Name:    dependencyNameSocial,
-			Address: "social:8090",
-			State:   dependencyDialStateDialFailed,
-		},
-		dependencyNameGame: {
-			Name:    dependencyNameGame,
-			Address: "game:8082",
-			State:   dependencyDialStateUnavailable,
-		},
-	}
-
+func TestStartStatusServiceEmptyAddr(t *testing.T) {
 	reporter := platformstatus.NewReporter("web", nil)
-	registerDependencyCapabilities(reporter, requirements, statuses)
-
-	snapshot := reporter.Snapshot()
-	if len(snapshot) != len(requirements) {
-		t.Fatalf("registered capabilities = %d, want %d", len(snapshot), len(requirements))
+	mc, client := startStatusService(context.Background(), "", reporter)
+	if mc != nil {
+		t.Fatal("expected nil ManagedConn for empty address")
 	}
-
-	capabilities := make(map[string]platformstatus.CapabilityStatus, len(snapshot))
-	for _, capability := range snapshot {
-		capabilities[capability.Name] = capability.Status
-	}
-
-	for _, dep := range requirements {
-		got, ok := capabilities[dep.capability]
-		if !ok {
-			t.Fatalf("missing registered capability %q", dep.capability)
-		}
-		want := platformstatus.Unavailable
-		if dep.name == dependencyNameAuth {
-			want = platformstatus.Operational
-		}
-		if got != want {
-			t.Fatalf("capability %q status = %v, want %v", dep.capability, got, want)
-		}
+	if client != nil {
+		t.Fatal("expected nil client for empty address")
 	}
 }
 
-func TestRegisterDependencyCapabilitiesNilReporter(t *testing.T) {
-	t.Parallel()
+func TestStartStatusServiceCreatesClient(t *testing.T) {
+	stubManagedConn(t)
 
-	registerDependencyCapabilities(nil, dependencyRequirements(testDependencyConfig()), map[string]dependencyStatus{})
+	reporter := platformstatus.NewReporter("web", nil)
+	mc, client := startStatusService(context.Background(), "status:8093", reporter)
+	if mc == nil {
+		t.Fatal("expected non-nil ManagedConn")
+	}
+	defer mc.Close()
+	if client == nil {
+		t.Fatal("expected non-nil StatusServiceClient")
+	}
 }

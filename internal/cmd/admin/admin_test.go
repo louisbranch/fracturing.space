@@ -3,7 +3,6 @@ package admin
 import (
 	"flag"
 	"testing"
-	"time"
 )
 
 func TestParseConfigDefaults(t *testing.T) {
@@ -20,9 +19,6 @@ func TestParseConfigDefaults(t *testing.T) {
 	}
 	if cfg.AuthAddr != "auth:8083" {
 		t.Fatalf("expected default auth addr, got %q", cfg.AuthAddr)
-	}
-	if cfg.GRPCDialTimeout != 2*time.Second {
-		t.Fatalf("expected default dial timeout, got %v", cfg.GRPCDialTimeout)
 	}
 }
 

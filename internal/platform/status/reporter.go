@@ -183,16 +183,25 @@ func (r *Reporter) pushLoop(ctx context.Context) {
 	}
 }
 
-func (r *Reporter) push(ctx context.Context) {
-	if r.client == nil {
-		if !r.loggedNoConn {
-			r.logf("status reporter: no client connection, accumulating locally")
-			r.loggedNoConn = true
-		}
-		return
+// SetClient replaces the status-service client at runtime. This allows
+// late-binding when the status service connection becomes available after
+// boot (e.g., via ManagedConn). A nil client disables pushing until the
+// next SetClient call. If a non-nil client is set, an immediate push is
+// triggered to flush any accumulated state.
+func (r *Reporter) SetClient(client statusv1.StatusServiceClient) {
+	r.mu.Lock()
+	r.client = client
+	r.loggedNoConn = false
+	r.mu.Unlock()
+	if client != nil {
+		r.triggerPush()
 	}
+}
 
+func (r *Reporter) push(ctx context.Context) {
 	r.mu.RLock()
+	client := r.client
+	loggedNoConn := r.loggedNoConn
 	caps := make([]*statusv1.CapabilityReport, 0, len(r.capabilities))
 	for _, cap := range r.capabilities {
 		caps = append(caps, &statusv1.CapabilityReport{
@@ -204,8 +213,18 @@ func (r *Reporter) push(ctx context.Context) {
 	}
 	r.mu.RUnlock()
 
+	if client == nil {
+		if !loggedNoConn {
+			r.mu.Lock()
+			r.loggedNoConn = true
+			r.mu.Unlock()
+			r.logf("status reporter: no client connection, accumulating locally")
+		}
+		return
+	}
+
 	now := r.now()
-	_, err := r.client.ReportStatus(ctx, &statusv1.ReportStatusRequest{
+	_, err := client.ReportStatus(ctx, &statusv1.ReportStatusRequest{
 		Report: &statusv1.ServiceStatusReport{
 			Service:      r.service,
 			Capabilities: caps,

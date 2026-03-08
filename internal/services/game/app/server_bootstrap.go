@@ -2,17 +2,11 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
-	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
-	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -131,96 +125,6 @@ func openStorageBundle(ctx context.Context, srvEnv serverEnv, eventRegistry *eve
 		events:      eventStore,
 		projections: projStore,
 		content:     contentStore,
-	}, nil
-}
-
-// dialAuthGRPC opens an authenticated gRPC client to auth service.
-func dialAuthGRPC(ctx context.Context, authAddr string) (authGRPCClients, error) {
-	ctx = startupContext(ctx)
-	logf := func(format string, args ...any) {
-		log.Printf("auth %s", fmt.Sprintf(format, args...))
-	}
-	conn, err := platformgrpc.DialWithHealth(
-		ctx,
-		nil,
-		authAddr,
-		timeouts.GRPCDial,
-		logf,
-		platformgrpc.DefaultClientDialOptions()...,
-	)
-	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return authGRPCClients{}, fmt.Errorf("auth gRPC health check failed for %s: %w", authAddr, dialErr.Err)
-			}
-			return authGRPCClients{}, fmt.Errorf("dial auth gRPC %s: %w", authAddr, dialErr.Err)
-		}
-		return authGRPCClients{}, fmt.Errorf("dial auth gRPC %s: %w", authAddr, err)
-	}
-	return authGRPCClients{
-		conn:       conn,
-		authClient: authv1.NewAuthServiceClient(conn),
-	}, nil
-}
-
-// dialSocialGRPC opens an authenticated gRPC client to social service.
-func dialSocialGRPC(ctx context.Context, socialAddr string) (socialGRPCClients, error) {
-	ctx = startupContext(ctx)
-	logf := func(format string, args ...any) {
-		log.Printf("social %s", fmt.Sprintf(format, args...))
-	}
-	conn, err := platformgrpc.DialWithHealth(
-		ctx,
-		nil,
-		socialAddr,
-		timeouts.GRPCDial,
-		logf,
-		platformgrpc.DefaultClientDialOptions()...,
-	)
-	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return socialGRPCClients{}, fmt.Errorf("social gRPC health check failed for %s: %w", socialAddr, dialErr.Err)
-			}
-			return socialGRPCClients{}, fmt.Errorf("dial social gRPC %s: %w", socialAddr, dialErr.Err)
-		}
-		return socialGRPCClients{}, fmt.Errorf("dial social gRPC %s: %w", socialAddr, err)
-	}
-	return socialGRPCClients{
-		conn:         conn,
-		socialClient: socialv1.NewSocialServiceClient(conn),
-	}, nil
-}
-
-// dialAIGRPC opens a gRPC client to ai service.
-func dialAIGRPC(ctx context.Context, aiAddr string) (aiGRPCClients, error) {
-	ctx = startupContext(ctx)
-	logf := func(format string, args ...any) {
-		log.Printf("ai %s", fmt.Sprintf(format, args...))
-	}
-	conn, err := platformgrpc.DialWithHealth(
-		ctx,
-		nil,
-		aiAddr,
-		timeouts.GRPCDial,
-		logf,
-		platformgrpc.DefaultClientDialOptions()...,
-	)
-	if err != nil {
-		var dialErr *platformgrpc.DialError
-		if errors.As(err, &dialErr) {
-			if dialErr.Stage == platformgrpc.DialStageHealth {
-				return aiGRPCClients{}, fmt.Errorf("ai gRPC health check failed for %s: %w", aiAddr, dialErr.Err)
-			}
-			return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, dialErr.Err)
-		}
-		return aiGRPCClients{}, fmt.Errorf("dial ai gRPC %s: %w", aiAddr, err)
-	}
-	return aiGRPCClients{
-		conn:        conn,
-		agentClient: aiv1.NewAgentServiceClient(conn),
 	}, nil
 }
 

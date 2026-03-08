@@ -7,10 +7,29 @@ import (
 	"slices"
 	"strings"
 	"testing"
-	"time"
 
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
+
+func stubManagedConn(t *testing.T) {
+	t.Helper()
+	previous := newManagedConn
+	newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+		cfg.Mode = platformgrpc.ModeOptional
+		cfg.DialOpts = []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		}
+		cfg.StatusReporter = nil
+		cfg.Logf = func(string, ...any) {}
+		return platformgrpc.NewManagedConn(ctx, cfg)
+	}
+	t.Cleanup(func() {
+		newManagedConn = previous
+	})
+}
 
 func TestParseConfigDefaults(t *testing.T) {
 	t.Parallel()
@@ -148,7 +167,7 @@ func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 	requirements := dependencyRequirements(testDependencyConfig())
 	requiredNames := make([]string, 0, len(requirements))
 	for _, dep := range requirements {
-		if dep.required {
+		if dep.mode == platformgrpc.ModeRequired {
 			requiredNames = append(requiredNames, dep.name)
 		}
 	}
@@ -178,62 +197,46 @@ func TestDependencyRequirementsCapabilitiesAreUnique(t *testing.T) {
 	}
 }
 
-func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
-	t.Parallel()
+func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
+	stubManagedConn(t)
 
-	calls := []string{}
-	dialer := func(_ context.Context, address string, _ time.Duration) (*grpc.ClientConn, error) {
-		calls = append(calls, address)
-		return &grpc.ClientConn{}, nil
-	}
 	cfg := testDependencyConfig()
 	cfg.AssetBaseURL = "https://cdn.example.com/assets"
 	requirements := dependencyRequirements(cfg)
+	reporter := platformstatus.NewReporter("web", nil)
 
-	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, cfg.GRPCDialTimeout, dialer)
+	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, reporter)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
-	if len(calls) != 7 {
-		t.Fatalf("dial calls = %d, want %d", len(calls), 7)
-	}
+	defer closeManagedConns(conns)
+
 	if len(conns) != 7 {
-		t.Fatalf("dependency connections = %d, want %d", len(conns), 7)
-	}
-	if len(statuses) != 7 {
-		t.Fatalf("statuses = %d, want %d", len(statuses), 7)
-	}
-	for name, status := range statuses {
-		if status.State != dependencyDialStateConnected {
-			t.Fatalf("status[%s].State = %q, want %q", name, status.State, dependencyDialStateConnected)
-		}
-	}
-	if warnings := dependencyStatusWarnings(requirements, statuses); len(warnings) != 0 {
-		t.Fatalf("warnings = %v, want none", warnings)
+		t.Fatalf("managed conns = %d, want 7", len(conns))
 	}
 	if bundle.Principal.SessionClient == nil {
-		t.Fatalf("expected principal session client")
+		t.Fatal("expected principal session client")
 	}
 	if bundle.Modules.Campaigns.CampaignClient == nil {
-		t.Fatalf("expected campaign client")
+		t.Fatal("expected campaign client")
 	}
 	if bundle.Modules.Settings.CredentialClient == nil {
-		t.Fatalf("expected credential client")
+		t.Fatal("expected credential client")
 	}
 	if bundle.Modules.Profile.SocialClient == nil {
-		t.Fatalf("expected profile social client")
+		t.Fatal("expected profile social client")
 	}
 	if bundle.Modules.Settings.SocialClient == nil {
-		t.Fatalf("expected settings social client")
+		t.Fatal("expected settings social client")
 	}
 	if bundle.Modules.Dashboard.UserHubClient == nil {
-		t.Fatalf("expected userhub client")
+		t.Fatal("expected userhub client")
 	}
 	if bundle.Modules.Notifications.NotificationClient == nil {
-		t.Fatalf("expected notification client")
+		t.Fatal("expected notification client")
 	}
 	if bundle.Modules.Discovery.DiscoveryClient == nil {
-		t.Fatalf("expected discovery client")
+		t.Fatal("expected discovery client")
 	}
 	if bundle.Principal.AssetBaseURL != "https://cdn.example.com/assets" {
 		t.Fatalf("Principal.AssetBaseURL = %q, want %q", bundle.Principal.AssetBaseURL, "https://cdn.example.com/assets")
@@ -243,174 +246,60 @@ func TestBootstrapDependenciesDialsAllConfiguredServices(t *testing.T) {
 	}
 }
 
-func TestBootstrapDependenciesOptionalFailuresProduceWarnings(t *testing.T) {
-	t.Parallel()
-
-	calls := []string{}
-	dialer := func(_ context.Context, address string, _ time.Duration) (*grpc.ClientConn, error) {
-		calls = append(calls, address)
-		if address == "ai:8087" {
-			return nil, errors.New("ai down")
+func TestBootstrapDependenciesErrorClosesConns(t *testing.T) {
+	previous := newManagedConn
+	callCount := 0
+	newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+		callCount++
+		if cfg.Name == dependencyNameGame {
+			return nil, errors.New("game unavailable")
 		}
-		return &grpc.ClientConn{}, nil
-	}
-	cfg := testDependencyConfig()
-	requirements := dependencyRequirements(cfg)
-	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, cfg.GRPCDialTimeout, dialer)
-	if err != nil {
-		t.Fatalf("bootstrapDependencies() error = %v", err)
-	}
-	if len(conns) != 6 {
-		t.Fatalf("dependency connections = %d, want %d", len(conns), 6)
-	}
-	if len(calls) != 7 {
-		t.Fatalf("dial calls = %d, want %d", len(calls), 7)
-	}
-	if got := statuses["ai"].State; got != dependencyDialStateDialFailed {
-		t.Fatalf("status[ai].State = %q, want %q", got, dependencyDialStateDialFailed)
-	}
-	warnings := dependencyStatusWarnings(requirements, statuses)
-	if len(warnings) != 1 {
-		t.Fatalf("warnings = %v, want one warning", warnings)
-	}
-	if !strings.Contains(warnings[0], "ai") {
-		t.Fatalf("warning = %q, want ai warning", warnings[0])
-	}
-	if bundle.Modules.Settings.CredentialClient != nil {
-		t.Fatalf("expected credential client to be unavailable")
-	}
-}
-
-func TestBootstrapDependenciesCollectsMultipleWarnings(t *testing.T) {
-	t.Parallel()
-
-	calls := []string{}
-	failures := map[string]error{
-		"ai:8087":      errors.New("ai down"),
-		"userhub:8092": errors.New("userhub down"),
-	}
-	dialer := func(_ context.Context, address string, _ time.Duration) (*grpc.ClientConn, error) {
-		calls = append(calls, address)
-		if err, ok := failures[address]; ok {
-			return nil, err
+		cfg.Mode = platformgrpc.ModeOptional
+		cfg.DialOpts = []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
 		}
-		return &grpc.ClientConn{}, nil
+		cfg.StatusReporter = nil
+		cfg.Logf = func(string, ...any) {}
+		return platformgrpc.NewManagedConn(ctx, cfg)
 	}
-	cfg := testDependencyConfig()
-	requirements := dependencyRequirements(cfg)
-	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, cfg.GRPCDialTimeout, dialer)
-	if err != nil {
-		t.Fatalf("bootstrapDependencies() error = %v", err)
-	}
-	if len(calls) != 7 {
-		t.Fatalf("dial calls = %d, want %d", len(calls), 7)
-	}
-	if len(conns) != 5 {
-		t.Fatalf("dependency connections = %d, want %d", len(conns), 5)
-	}
-	if got := statuses["ai"].State; got != dependencyDialStateDialFailed {
-		t.Fatalf("status[ai].State = %q, want %q", got, dependencyDialStateDialFailed)
-	}
-	if got := statuses["userhub"].State; got != dependencyDialStateDialFailed {
-		t.Fatalf("status[userhub].State = %q, want %q", got, dependencyDialStateDialFailed)
-	}
-	warnings := dependencyStatusWarnings(requirements, statuses)
-	if len(warnings) != 2 {
-		t.Fatalf("warnings = %v, want two warnings", warnings)
-	}
-	var (
-		hasAI      bool
-		hasUserHub bool
-	)
-	for _, warning := range warnings {
-		if strings.Contains(warning, "ai") {
-			hasAI = true
-		}
-		if strings.Contains(warning, "userhub") {
-			hasUserHub = true
-		}
-	}
-	if !hasAI || !hasUserHub {
-		t.Fatalf("unexpected warnings: %v", warnings)
-	}
-	if bundle.Modules.Settings.CredentialClient != nil {
-		t.Fatalf("expected credential client to be unavailable")
-	}
-	if bundle.Modules.Dashboard.UserHubClient != nil {
-		t.Fatalf("expected userhub client to be unavailable")
-	}
-}
-
-func TestBootstrapDependenciesRequiredNilConnectionReturnsError(t *testing.T) {
-	t.Parallel()
-
-	calls := []string{}
-	dialer := func(_ context.Context, address string, _ time.Duration) (*grpc.ClientConn, error) {
-		calls = append(calls, address)
-		if address == "social:8090" {
-			return nil, nil
-		}
-		return &grpc.ClientConn{}, nil
-	}
-	cfg := testDependencyConfig()
-	requirements := dependencyRequirements(cfg)
-	bundle, conns, statuses, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, cfg.GRPCDialTimeout, dialer)
-	if err == nil {
-		t.Fatalf("bootstrapDependencies() error = nil, want required dependency error")
-	}
-	if !strings.Contains(err.Error(), "social") {
-		t.Fatalf("bootstrapDependencies() error = %q, want social dependency detail", err.Error())
-	}
-	if len(calls) != 7 {
-		t.Fatalf("dial calls = %d, want %d", len(calls), 7)
-	}
-	if len(conns) != 6 {
-		t.Fatalf("dependency connections = %d, want %d", len(conns), 6)
-	}
-	if got := statuses["social"].State; got != dependencyDialStateUnavailable {
-		t.Fatalf("status[social].State = %q, want %q", got, dependencyDialStateUnavailable)
-	}
-	warnings := dependencyStatusWarnings(requirements, statuses)
-	if len(warnings) != 1 {
-		t.Fatalf("warnings = %v, want one warning", warnings)
-	}
-	if !strings.Contains(warnings[0], "social") {
-		t.Fatalf("warning = %q, want social warning", warnings[0])
-	}
-	if bundle.Principal.SocialClient != nil {
-		t.Fatalf("expected principal social client to be unavailable")
-	}
-	if bundle.Modules.Profile.SocialClient != nil || bundle.Modules.Settings.SocialClient != nil {
-		t.Fatalf("expected profile/settings social clients to be unavailable")
-	}
-}
-
-func TestFormatDependencyStatusLinesSortedAndDetailed(t *testing.T) {
-	t.Parallel()
-
-	lines := formatDependencyStatusLines(map[string]dependencyStatus{
-		"userhub": {
-			Name:    "userhub",
-			Address: "userhub:8092",
-			State:   dependencyDialStateConnected,
-		},
-		"ai": {
-			Name:    "ai",
-			Address: "ai:8087",
-			State:   dependencyDialStateDialFailed,
-			Detail:  "dial timeout",
-		},
+	t.Cleanup(func() {
+		newManagedConn = previous
 	})
-	if len(lines) != 2 {
-		t.Fatalf("len(formatDependencyStatusLines()) = %d, want 2", len(lines))
+
+	cfg := testDependencyConfig()
+	requirements := dependencyRequirements(cfg)
+	reporter := platformstatus.NewReporter("web", nil)
+
+	_, _, err := bootstrapDependencies(context.Background(), requirements, "", reporter)
+	if err == nil {
+		t.Fatal("expected error for game dependency failure")
 	}
-	if !strings.Contains(lines[0], "dependency=ai") {
-		t.Fatalf("line[0] = %q, want ai first (sorted)", lines[0])
+	if !strings.Contains(err.Error(), "game") {
+		t.Fatalf("error = %q, want game dependency detail", err.Error())
 	}
-	if !strings.Contains(lines[0], "detail=dial timeout") {
-		t.Fatalf("line[0] = %q, want detail", lines[0])
+	// Game is the 3rd dependency — auth and social succeed, game fails.
+	if callCount != 3 {
+		t.Fatalf("newManagedConn calls = %d, want 3", callCount)
 	}
-	if !strings.Contains(lines[1], "dependency=userhub") {
-		t.Fatalf("line[1] = %q, want userhub second (sorted)", lines[1])
+}
+
+func TestBootstrapDependenciesSkipsEmptyAddress(t *testing.T) {
+	stubManagedConn(t)
+
+	cfg := testDependencyConfig()
+	cfg.AIAddr = ""
+	cfg.DiscoveryAddr = "  "
+	requirements := dependencyRequirements(cfg)
+	reporter := platformstatus.NewReporter("web", nil)
+
+	_, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter)
+	if err != nil {
+		t.Fatalf("bootstrapDependencies() error = %v", err)
+	}
+	defer closeManagedConns(conns)
+
+	// 7 requirements - 2 empty addresses = 5 connections.
+	if len(conns) != 5 {
+		t.Fatalf("managed conns = %d, want 5", len(conns))
 	}
 }

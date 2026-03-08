@@ -3,58 +3,44 @@ package web
 import (
 	"context"
 	"log"
-	"time"
+	"strings"
 
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 )
 
-// startStatusReporter starts integration capability reporting for startup dependencies.
-// It always returns a stop function that must be deferred by callers.
-func startStatusReporter(
+// startStatusService creates a ManagedConn for the status service and
+// late-binds the reporter client when the connection becomes healthy.
+func startStatusService(
 	ctx context.Context,
 	statusAddr string,
-	dialTimeout time.Duration,
-	requirements []dependencyRequirement,
-	statuses map[string]dependencyStatus,
-) (statusv1.StatusServiceClient, func()) {
-	statusConn := platformgrpc.DialLenientWithTimeout(ctx, statusAddr, dialTimeout, log.Printf)
-	var statusClient statusv1.StatusServiceClient
-	if statusConn != nil {
-		statusClient = statusv1.NewStatusServiceClient(statusConn)
-	}
-
-	reporter := platformstatus.NewReporter("web", statusClient)
-	registerDependencyCapabilities(reporter, requirements, statuses)
-	stopReporter := reporter.Start(ctx)
-
-	stop := func() {
-		stopReporter()
-		if statusConn == nil {
-			return
-		}
-		if err := statusConn.Close(); err != nil {
-			log.Printf("close status connection: %v", err)
-		}
-	}
-	return statusClient, stop
-}
-
-// registerDependencyCapabilities keeps capability registration order deterministic.
-func registerDependencyCapabilities(
 	reporter *platformstatus.Reporter,
-	requirements []dependencyRequirement,
-	statuses map[string]dependencyStatus,
-) {
-	if reporter == nil {
-		return
+) (*platformgrpc.ManagedConn, statusv1.StatusServiceClient) {
+	addr := strings.TrimSpace(statusAddr)
+	if addr == "" {
+		return nil, nil
 	}
-	for _, dep := range requirements {
-		if status, ok := statuses[dep.name]; ok && status.State == dependencyDialStateConnected {
-			reporter.Register(dep.capability, platformstatus.Operational)
-			continue
+	mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "status",
+		Addr: addr,
+		Mode: platformgrpc.ModeOptional,
+		Logf: log.Printf,
+	})
+	if err != nil {
+		log.Printf("web: status managed conn: %v", err)
+		return nil, nil
+	}
+
+	client := statusv1.NewStatusServiceClient(mc.Conn())
+
+	// Late-bind: once the status service is reachable, attach the client to
+	// the reporter so accumulated capabilities flush to the status service.
+	go func() {
+		if mc.WaitReady(ctx) == nil {
+			reporter.SetClient(client)
 		}
-		reporter.Register(dep.capability, platformstatus.Unavailable)
-	}
+	}()
+
+	return mc, client
 }

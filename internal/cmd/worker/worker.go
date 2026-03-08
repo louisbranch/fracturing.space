@@ -25,7 +25,6 @@ type Config struct {
 	MaxAttempts       int           `env:"FRACTURING_SPACE_WORKER_MAX_ATTEMPTS" envDefault:"8"`
 	RetryBackoff      time.Duration `env:"FRACTURING_SPACE_WORKER_RETRY_BACKOFF" envDefault:"5s"`
 	RetryMaxDelay     time.Duration `env:"FRACTURING_SPACE_WORKER_RETRY_MAX_DELAY" envDefault:"5m"`
-	GRPCDialTimeout   time.Duration `env:"FRACTURING_SPACE_WORKER_DIAL_TIMEOUT" envDefault:"2s"`
 	StatusAddr        string        `env:"FRACTURING_SPACE_STATUS_ADDR"`
 }
 
@@ -50,7 +49,6 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.IntVar(&cfg.MaxAttempts, "max-attempts", cfg.MaxAttempts, "Maximum processing attempts before dead-letter")
 	fs.DurationVar(&cfg.RetryBackoff, "retry-backoff", cfg.RetryBackoff, "Base retry backoff delay")
 	fs.DurationVar(&cfg.RetryMaxDelay, "retry-max-delay", cfg.RetryMaxDelay, "Maximum retry delay")
-	fs.DurationVar(&cfg.GRPCDialTimeout, "dial-timeout", cfg.GRPCDialTimeout, "gRPC dependency dial timeout")
 	if err := entrypoint.ParseArgs(fs, args); err != nil {
 		return Config{}, err
 	}
@@ -83,7 +81,6 @@ func Run(ctx context.Context, cfg Config) error {
 			MaxAttempts:       cfg.MaxAttempts,
 			RetryBackoff:      cfg.RetryBackoff,
 			RetryMaxDelay:     cfg.RetryMaxDelay,
-			GRPCDialTimeout:   cfg.GRPCDialTimeout,
 		})
 	})
 }
