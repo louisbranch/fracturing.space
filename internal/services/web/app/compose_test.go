@@ -208,6 +208,9 @@ func TestComposeRejectsCookieMutationWithoutSameOriginProof(t *testing.T) {
 	if rr.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusForbidden)
 	}
+	if body := rr.Body.String(); !strings.Contains(body, `id="app-error-state"`) {
+		t.Fatalf("body missing styled error page: %q", body)
+	}
 }
 
 func TestComposeAllowsCookieMutationWithSameOriginHeader(t *testing.T) {

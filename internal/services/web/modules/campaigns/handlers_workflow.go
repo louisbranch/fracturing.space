@@ -13,7 +13,7 @@ import (
 
 // handleCharacterCreationStep applies the next character creation workflow step.
 func (h handlers) handleCharacterCreationStep(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
-	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_character_creation_form", "failed to parse character creation form") {
+	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_character_creation_form", routepath.AppCampaignCharacterCreation(campaignID, characterID)) {
 		return
 	}
 
@@ -68,7 +68,7 @@ func (h handlers) writeCreationStepError(w http.ResponseWriter, r *http.Request,
 func (h handlers) handleCharacterCreationReset(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	ctx, _ := h.RequestContextAndUserID(r)
 	if err := h.service.ResetCharacterCreationWorkflow(ctx, campaignID, characterID); err != nil {
-		h.WriteError(w, r, err)
+		h.writeCreationStepError(w, r, err, campaignID, characterID)
 		return
 	}
 	httpx.WriteRedirect(w, r, routepath.AppCampaignCharacterCreation(campaignID, characterID))

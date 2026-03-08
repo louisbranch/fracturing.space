@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -171,7 +172,7 @@ func requireCookieSessionSameOrigin(policy requestmeta.SchemePolicy) func(http.H
 				return
 			}
 			if !hasSameOriginProof(r, policy) {
-				http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+				weberror.WriteAppError(w, r, http.StatusForbidden, nil)
 				return
 			}
 			next.ServeHTTP(w, r)

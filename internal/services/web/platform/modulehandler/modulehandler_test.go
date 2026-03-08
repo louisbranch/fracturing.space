@@ -183,7 +183,7 @@ func TestWriteNotFoundRendersAppErrorPage(t *testing.T) {
 	}
 }
 
-func TestWriteErrorUsesSafeMessageForBadRequest(t *testing.T) {
+func TestWriteErrorRendersStyledPageForBadRequest(t *testing.T) {
 	t.Parallel()
 
 	base := NewTestBase()
@@ -195,8 +195,8 @@ func TestWriteErrorUsesSafeMessageForBadRequest(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, http.StatusText(http.StatusBadRequest)) {
-		t.Fatalf("expected generic status text in body, got %q", body)
+	if !strings.Contains(body, `id="app-error-state"`) {
+		t.Fatalf("body missing styled error page marker: %q", body)
 	}
 	// Invariant: module error responses must not leak internal error strings.
 	if strings.Contains(body, "sensitive parse failure") {

@@ -52,21 +52,30 @@ func TestAppErrorCopyHelpers(t *testing.T) {
 
 	loc := testLocalizer{
 		appErrorPageTitleNotFoundKey:  "Not Found",
+		appErrorPageTitleClientErrKey: "Request Error",
 		appErrorPageTitleServerErrKey: "Server Error",
 		appErrorHeadingNotFoundKey:    "Missing Route",
+		appErrorHeadingClientErrKey:   "Bad Request",
 		appErrorHeadingServerErrKey:   "Something Went Wrong",
 		appErrorMessageNotFoundKey:    "No route matched your request.",
+		appErrorMessageClientErrKey:   "Please check your request.",
 		appErrorMessageServerErrKey:   "Please try again later.",
 	}
 
 	if got := AppErrorPageTitle(http.StatusNotFound, loc); got != "Not Found" {
 		t.Fatalf("AppErrorPageTitle(404) = %q, want %q", got, "Not Found")
 	}
-	if got := AppErrorPageTitle(http.StatusTeapot, loc); got != "Server Error" {
-		t.Fatalf("AppErrorPageTitle(non-404) = %q, want %q", got, "Server Error")
+	if got := AppErrorPageTitle(http.StatusTeapot, loc); got != "Request Error" {
+		t.Fatalf("AppErrorPageTitle(4xx) = %q, want %q", got, "Request Error")
+	}
+	if got := AppErrorPageTitle(http.StatusInternalServerError, loc); got != "Server Error" {
+		t.Fatalf("AppErrorPageTitle(500) = %q, want %q", got, "Server Error")
 	}
 	if got := appErrorHeading(http.StatusNotFound, loc); got != "Missing Route" {
 		t.Fatalf("appErrorHeading(404) = %q, want %q", got, "Missing Route")
+	}
+	if got := appErrorHeading(http.StatusForbidden, loc); got != "Bad Request" {
+		t.Fatalf("appErrorHeading(403) = %q, want %q", got, "Bad Request")
 	}
 	if got := appErrorHeading(http.StatusInternalServerError, loc); got != "Something Went Wrong" {
 		t.Fatalf("appErrorHeading(500) = %q, want %q", got, "Something Went Wrong")
@@ -74,14 +83,20 @@ func TestAppErrorCopyHelpers(t *testing.T) {
 	if got := appErrorMessage(http.StatusNotFound, loc); got != "No route matched your request." {
 		t.Fatalf("appErrorMessage(404) = %q, want %q", got, "No route matched your request.")
 	}
-	if got := appErrorMessage(http.StatusForbidden, loc); got != "Please try again later." {
-		t.Fatalf("appErrorMessage(non-404) = %q, want %q", got, "Please try again later.")
+	if got := appErrorMessage(http.StatusForbidden, loc); got != "Please check your request." {
+		t.Fatalf("appErrorMessage(403) = %q, want %q", got, "Please check your request.")
+	}
+	if got := appErrorMessage(http.StatusInternalServerError, loc); got != "Please try again later." {
+		t.Fatalf("appErrorMessage(500) = %q, want %q", got, "Please try again later.")
 	}
 	if got := normalizeAppErrorStatus(http.StatusNotFound); got != http.StatusNotFound {
 		t.Fatalf("normalizeAppErrorStatus(404) = %d, want %d", got, http.StatusNotFound)
 	}
-	if got := normalizeAppErrorStatus(http.StatusConflict); got != http.StatusInternalServerError {
-		t.Fatalf("normalizeAppErrorStatus(non-404) = %d, want %d", got, http.StatusInternalServerError)
+	if got := normalizeAppErrorStatus(http.StatusConflict); got != http.StatusBadRequest {
+		t.Fatalf("normalizeAppErrorStatus(409) = %d, want %d", got, http.StatusBadRequest)
+	}
+	if got := normalizeAppErrorStatus(http.StatusInternalServerError); got != http.StatusInternalServerError {
+		t.Fatalf("normalizeAppErrorStatus(500) = %d, want %d", got, http.StatusInternalServerError)
 	}
 }
 

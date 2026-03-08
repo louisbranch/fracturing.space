@@ -83,7 +83,7 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 		{name: "campaign overview post rejected", method: http.MethodPost, path: routepath.AppCampaign("c1"), wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodGet + ", HEAD"},
 		{name: "campaign edit get", method: http.MethodGet, path: routepath.AppCampaignEdit("c1"), wantStatus: http.StatusOK},
 		{name: "campaign edit post", method: http.MethodPost, path: routepath.AppCampaignEdit("c1"), body: "name=Updated&theme_prompt=Theme&locale=en-US", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaign("c1")},
-		{name: "campaign ai binding post", method: http.MethodPost, path: routepath.AppCampaignAIBinding("c1"), body: "participant_id=p-manager&ai_agent_id=agent-1", wantStatus: http.StatusForbidden},
+		{name: "campaign ai binding post", method: http.MethodPost, path: routepath.AppCampaignAIBinding("c1"), body: "participant_id=p-manager&ai_agent_id=agent-1", wantStatus: http.StatusFound},
 		{name: "campaign session start get resolves session detail route", method: http.MethodGet, path: routepath.AppCampaignSessionStart("c1"), wantStatus: http.StatusOK},
 		{name: "campaign session start post", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+One", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaignSessions("c1")},
 		{name: "campaign unknown subpath", method: http.MethodGet, path: routepath.AppCampaign("c1") + "/unknown", wantStatus: http.StatusNotFound},
