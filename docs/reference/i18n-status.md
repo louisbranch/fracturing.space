@@ -2,7 +2,6 @@
 title: "I18n status"
 parent: "Reference"
 nav_order: 20
-last_reviewed: "2026-03-07"
 ---
 
 # I18n Status

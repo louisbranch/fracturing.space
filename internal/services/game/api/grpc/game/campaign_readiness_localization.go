@@ -48,15 +48,15 @@ func localizeReadinessBlockerMessage(locale commonv1.Locale, blocker readiness.B
 	case readiness.RejectionCodeSessionReadinessPlayerRequired:
 		return printer.Sprintf("game.session_readiness.player_required")
 	case readiness.RejectionCodeSessionReadinessCharacterControllerRequired:
-		return printer.Sprintf("game.session_readiness.character_controller_required", readinessBlockerMetadataValue(blocker.Metadata, "character_id"))
+		return printer.Sprintf("game.session_readiness.character_controller_required", readinessCharacterLabel(blocker.Metadata))
 	case readiness.RejectionCodeSessionReadinessPlayerCharacterRequired:
 		return printer.Sprintf("game.session_readiness.player_character_required", readinessPlayerParticipantLabel(blocker.Metadata))
 	case readiness.RejectionCodeSessionReadinessCharacterSystemRequired:
 		reason := readinessBlockerOptionalMetadataValue(blocker.Metadata, "reason")
 		if reason == "" {
-			return printer.Sprintf("game.session_readiness.character_system_required", readinessBlockerMetadataValue(blocker.Metadata, "character_id"))
+			return printer.Sprintf("game.session_readiness.character_system_required", readinessCharacterLabel(blocker.Metadata))
 		}
-		return printer.Sprintf("game.session_readiness.character_system_required_with_reason", readinessBlockerMetadataValue(blocker.Metadata, "character_id"), reason)
+		return printer.Sprintf("game.session_readiness.character_system_required_with_reason", readinessCharacterLabel(blocker.Metadata), reason)
 	default:
 		return strings.TrimSpace(blocker.Message)
 	}
@@ -72,6 +72,14 @@ func readinessPlayerParticipantLabel(metadata map[string]string) string {
 		return name
 	}
 	return readinessBlockerMetadataValue(metadata, "participant_id")
+}
+
+func readinessCharacterLabel(metadata map[string]string) string {
+	name := readinessBlockerOptionalMetadataValue(metadata, "character_name")
+	if name != "" {
+		return name
+	}
+	return readinessBlockerMetadataValue(metadata, "character_id")
 }
 
 func readinessBlockerMetadataValue(metadata map[string]string, key string) string {

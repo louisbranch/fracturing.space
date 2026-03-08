@@ -161,12 +161,11 @@ func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness Cha
 		characterState := activeCharacters.byID[characterID]
 		controllerParticipantID := strings.TrimSpace(characterState.ParticipantID)
 		if controllerParticipantID == "" {
+			characterLabel, metadata := readinessCharacterLabelAndMetadata(characterID, characterState.Name)
 			blockers = append(blockers, newBlocker(
 				RejectionCodeSessionReadinessCharacterControllerRequired,
-				fmt.Sprintf("campaign readiness requires character %s to have a controller", characterID),
-				map[string]string{
-					"character_id": characterID,
-				},
+				fmt.Sprintf("campaign readiness requires character %s to have a controller", characterLabel),
+				metadata,
 			))
 		}
 
@@ -182,15 +181,13 @@ func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness Cha
 			continue
 		}
 		reason = strings.TrimSpace(reason)
-		metadata := map[string]string{
-			"character_id": characterID,
-		}
+		characterLabel, metadata := readinessCharacterLabelAndMetadata(characterID, characterState.Name)
 		if reason != "" {
 			metadata["reason"] = reason
 		}
 		blockers = append(blockers, newBlocker(
 			RejectionCodeSessionReadinessCharacterSystemRequired,
-			systemReadinessMessage(characterID, reason),
+			systemReadinessMessage(characterLabel, reason),
 			metadata,
 		))
 	}
@@ -219,6 +216,21 @@ func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness Cha
 	}
 
 	return blockers
+}
+
+func readinessCharacterLabelAndMetadata(characterID, characterName string) (string, map[string]string) {
+	trimmedID := strings.TrimSpace(characterID)
+	metadata := map[string]string{
+		"character_id": trimmedID,
+	}
+
+	trimmedName := strings.TrimSpace(characterName)
+	if trimmedName != "" {
+		metadata["character_name"] = trimmedName
+		return trimmedName, metadata
+	}
+
+	return trimmedID, metadata
 }
 
 func newBlocker(code, message string, metadata map[string]string) Blocker {
@@ -251,8 +263,8 @@ func normalizeCampaignStatus(status campaign.Status) campaign.Status {
 	return campaign.Status(trimmed)
 }
 
-func systemReadinessMessage(characterID, reason string) string {
-	message := fmt.Sprintf("campaign readiness requires character %s to satisfy system readiness", characterID)
+func systemReadinessMessage(characterLabel, reason string) string {
+	message := fmt.Sprintf("campaign readiness requires character %s to satisfy system readiness", characterLabel)
 	if reason == "" {
 		return message
 	}
@@ -319,6 +331,7 @@ type characterIndex struct {
 
 type aggregateCharacterState struct {
 	ParticipantID string
+	Name          string
 	SystemProfile map[string]any
 }
 
@@ -341,6 +354,7 @@ func activeCharactersByID(state aggregate.State) characterIndex {
 		}
 		indexed.byID[characterID] = aggregateCharacterState{
 			ParticipantID: characterState.ParticipantID,
+			Name:          characterState.Name,
 			SystemProfile: characterState.SystemProfile,
 		}
 		indexed.ids = append(indexed.ids, characterID)
