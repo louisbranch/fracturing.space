@@ -10,17 +10,22 @@ import (
 )
 
 type gatewayStub struct {
-	profile SettingsProfile
-	locale  string
-	keys    []SettingsAIKey
-	err     error
+	profile     SettingsProfile
+	locale      string
+	keys        []SettingsAIKey
+	credentials []SettingsAICredentialOption
+	models      []SettingsAIModelOption
+	agents      []SettingsAIAgent
+	err         error
 
-	lastUserID     string
-	lastProfile    SettingsProfile
-	lastLocale     string
-	lastLabel      string
-	lastSecret     string
-	lastCredential string
+	lastUserID       string
+	lastProfile      SettingsProfile
+	lastLocale       string
+	lastLabel        string
+	lastSecret       string
+	lastAgent        CreateAIAgentInput
+	lastCredentialID string
+	lastCredential   string
 }
 
 func (g gatewayStub) LoadProfile(context.Context, string) (SettingsProfile, error) {
@@ -51,10 +56,35 @@ func (g gatewayStub) ListAIKeys(context.Context, string) ([]SettingsAIKey, error
 	}
 	return g.keys, nil
 }
+func (g gatewayStub) ListAIAgentCredentials(context.Context, string) ([]SettingsAICredentialOption, error) {
+	if g.err != nil {
+		return nil, g.err
+	}
+	return g.credentials, nil
+}
+func (g gatewayStub) ListAIAgents(context.Context, string) ([]SettingsAIAgent, error) {
+	if g.err != nil {
+		return nil, g.err
+	}
+	return g.agents, nil
+}
+func (g *gatewayStub) ListAIProviderModels(_ context.Context, userID string, credentialID string) ([]SettingsAIModelOption, error) {
+	g.lastUserID = userID
+	g.lastCredentialID = credentialID
+	if g.err != nil {
+		return nil, g.err
+	}
+	return g.models, nil
+}
 func (g *gatewayStub) CreateAIKey(_ context.Context, userID string, label string, secret string) error {
 	g.lastUserID = userID
 	g.lastLabel = label
 	g.lastSecret = secret
+	return g.err
+}
+func (g *gatewayStub) CreateAIAgent(_ context.Context, userID string, input CreateAIAgentInput) error {
+	g.lastUserID = userID
+	g.lastAgent = input
 	return g.err
 }
 func (g *gatewayStub) RevokeAIKey(_ context.Context, userID string, credentialID string) error {
@@ -126,6 +156,32 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 		t.Fatalf("CreateAIKey() error = nil, want unavailable error")
 	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
 		t.Fatalf("CreateAIKey() status = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+	if credentials, err := gateway.ListAIAgentCredentials(ctx, "user-1"); err == nil {
+		t.Fatalf("ListAIAgentCredentials() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("ListAIAgentCredentials() status = %d, want %d", got, http.StatusServiceUnavailable)
+	} else if credentials != nil {
+		t.Fatalf("ListAIAgentCredentials() = %+v, want nil", credentials)
+	}
+	if agents, err := gateway.ListAIAgents(ctx, "user-1"); err == nil {
+		t.Fatalf("ListAIAgents() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("ListAIAgents() status = %d, want %d", got, http.StatusServiceUnavailable)
+	} else if agents != nil {
+		t.Fatalf("ListAIAgents() = %+v, want nil", agents)
+	}
+	if models, err := gateway.ListAIProviderModels(ctx, "user-1", "cred-1"); err == nil {
+		t.Fatalf("ListAIProviderModels() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("ListAIProviderModels() status = %d, want %d", got, http.StatusServiceUnavailable)
+	} else if models != nil {
+		t.Fatalf("ListAIProviderModels() = %+v, want nil", models)
+	}
+	if err := gateway.CreateAIAgent(ctx, "user-1", CreateAIAgentInput{Name: "Narrator", CredentialID: "cred-1", Model: "gpt-4o-mini"}); err == nil {
+		t.Fatalf("CreateAIAgent() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("CreateAIAgent() status = %d, want %d", got, http.StatusServiceUnavailable)
 	}
 	if err := gateway.RevokeAIKey(ctx, "user-1", "cred-1"); err == nil {
 		t.Fatalf("RevokeAIKey() error = nil, want unavailable error")
@@ -297,5 +353,61 @@ func TestCreateAndRevokeAIKeyValidationAndDelegation(t *testing.T) {
 	}
 	if gateway.lastCredential != "cred-1" {
 		t.Fatalf("revoke delegation credential = %q, want %q", gateway.lastCredential, "cred-1")
+	}
+}
+
+func TestAIAgentServiceFlowsValidateNormalizeAndDelegate(t *testing.T) {
+	t.Parallel()
+
+	gateway := &gatewayStub{
+		credentials: []SettingsAICredentialOption{{ID: " cred-1 ", Label: " Primary ", Provider: " OpenAI "}},
+		models:      []SettingsAIModelOption{{ID: " gpt-4o-mini ", OwnedBy: " openai "}},
+		agents:      []SettingsAIAgent{{ID: " agent-1 ", Name: " Narrator ", Provider: " OpenAI ", Model: " gpt-4o-mini ", Status: " Active ", CreatedAt: " 2026-01-01 00:00 UTC "}},
+	}
+	svc := NewService(gateway)
+
+	credentials, err := svc.ListAIAgentCredentials(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("ListAIAgentCredentials() error = %v", err)
+	}
+	if len(credentials) != 1 || credentials[0].ID != "cred-1" || credentials[0].Label != "Primary" {
+		t.Fatalf("credentials = %+v", credentials)
+	}
+
+	models, err := svc.ListAIProviderModels(context.Background(), "user-1", " cred-1 ")
+	if err != nil {
+		t.Fatalf("ListAIProviderModels() error = %v", err)
+	}
+	if len(models) != 1 || models[0].ID != "gpt-4o-mini" {
+		t.Fatalf("models = %+v", models)
+	}
+	if gateway.lastCredentialID != "cred-1" {
+		t.Fatalf("credential id = %q, want %q", gateway.lastCredentialID, "cred-1")
+	}
+
+	agents, err := svc.ListAIAgents(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("ListAIAgents() error = %v", err)
+	}
+	if len(agents) != 1 || agents[0].Name != "Narrator" || agents[0].Status != "Active" {
+		t.Fatalf("agents = %+v", agents)
+	}
+
+	if err := svc.CreateAIAgent(context.Background(), "user-1", CreateAIAgentInput{}); err == nil {
+		t.Fatalf("expected create validation error")
+	}
+	if err := svc.CreateAIAgent(context.Background(), "user-1", CreateAIAgentInput{
+		Name:         " Narrator ",
+		CredentialID: " cred-1 ",
+		Model:        " gpt-4o-mini ",
+		Instructions: " Keep the session moving. ",
+	}); err != nil {
+		t.Fatalf("CreateAIAgent() error = %v", err)
+	}
+	if gateway.lastAgent.Name != "Narrator" || gateway.lastAgent.CredentialID != "cred-1" || gateway.lastAgent.Model != "gpt-4o-mini" {
+		t.Fatalf("delegated agent input = %+v", gateway.lastAgent)
+	}
+	if gateway.lastAgent.Instructions != "Keep the session moving." {
+		t.Fatalf("instructions = %q, want %q", gateway.lastAgent.Instructions, "Keep the session moving.")
 	}
 }

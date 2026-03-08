@@ -63,3 +63,39 @@ func TestLoadAIKeyRowsUsesServiceResult(t *testing.T) {
 		t.Fatalf("requested user id = %q, want %q", gw.lastRequestedUserID, "user-1")
 	}
 }
+
+func TestLoadAIAgentRowsAndCredentialsUseServiceResult(t *testing.T) {
+	t.Parallel()
+
+	gw := &fakeGateway{
+		credentials: []SettingsAICredentialOption{{ID: "cred-1", Label: "Primary", Provider: "OpenAI"}},
+		agents: []SettingsAIAgent{{
+			ID:        "agent-1",
+			Name:      "Narrator",
+			Provider:  "OpenAI",
+			Model:     "gpt-4o-mini",
+			Status:    "Active",
+			CreatedAt: "2026-01-01 00:00 UTC",
+		}},
+	}
+	h := newHandlers(settingsapp.NewService(gw), modulehandler.NewTestBase(), requestmeta.SchemePolicy{}, nil)
+
+	options, err := h.loadAIAgentCredentialOptions(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("loadAIAgentCredentialOptions() error = %v", err)
+	}
+	if len(options) != 1 || options[0].ID != "cred-1" {
+		t.Fatalf("credential options = %+v", options)
+	}
+
+	rows, err := h.loadAIAgentRows(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("loadAIAgentRows() error = %v", err)
+	}
+	if len(rows) != 1 || rows[0].Name != "Narrator" {
+		t.Fatalf("agent rows = %+v", rows)
+	}
+	if gw.lastRequestedUserID != "user-1" {
+		t.Fatalf("requested user id = %q, want %q", gw.lastRequestedUserID, "user-1")
+	}
+}

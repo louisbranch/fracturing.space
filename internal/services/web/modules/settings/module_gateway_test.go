@@ -127,7 +127,8 @@ func TestGRPCGatewayListCreateAndRevokeAIKeys(t *testing.T) {
 			CreatedAt: &timestamppb.Timestamp{Seconds: 1, Nanos: 2_000_000_000},
 		},
 	}}}
-	gateway := settingsgateway.GRPCGateway{CredentialClient: credentials}
+	agents := &agentClientStub{}
+	gateway := settingsgateway.GRPCGateway{CredentialClient: credentials, AgentClient: agents}
 
 	rows, err := gateway.ListAIKeys(context.Background(), "user-1")
 	if err != nil {
@@ -179,6 +180,43 @@ func TestGRPCGatewayListCreateAndRevokeAIKeys(t *testing.T) {
 	if credentials.lastRevokeReq.GetCredentialId() != "cred-1" {
 		t.Fatalf("credential id = %q, want %q", credentials.lastRevokeReq.GetCredentialId(), "cred-1")
 	}
+
+	credentialOptions, err := gateway.ListAIAgentCredentials(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("ListAIAgentCredentials() error = %v", err)
+	}
+	if len(credentialOptions) != 1 || credentialOptions[0].ID != "cred-1" {
+		t.Fatalf("credential options = %+v", credentialOptions)
+	}
+
+	models, err := gateway.ListAIProviderModels(context.Background(), "user-1", "cred-1")
+	if err != nil {
+		t.Fatalf("ListAIProviderModels() error = %v", err)
+	}
+	if len(models) != 1 || models[0].ID != "gpt-4o-mini" {
+		t.Fatalf("models = %+v", models)
+	}
+
+	agentRows, err := gateway.ListAIAgents(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("ListAIAgents() error = %v", err)
+	}
+	if len(agentRows) != 1 || agentRows[0].Name != "Narrator" {
+		t.Fatalf("agent rows = %+v", agentRows)
+	}
+
+	err = gateway.CreateAIAgent(context.Background(), "user-1", CreateAIAgentInput{
+		Name:         "Narrator",
+		CredentialID: "cred-1",
+		Model:        "gpt-4o-mini",
+		Instructions: "Keep the session moving.",
+	})
+	if err != nil {
+		t.Fatalf("CreateAIAgent() error = %v", err)
+	}
+	if agents.lastCreateReq == nil || agents.lastCreateReq.GetCredentialId() != "cred-1" || agents.lastCreateReq.GetInstructions() != "Keep the session moving." {
+		t.Fatalf("agent create request = %+v", agents.lastCreateReq)
+	}
 }
 
 func TestGRPCGatewayMissingClientBehavior(t *testing.T) {
@@ -195,7 +233,16 @@ func TestGRPCGatewayMissingClientBehavior(t *testing.T) {
 		{name: "load locale", run: func() error { _, err := gateway.LoadLocale(context.Background(), "user-1"); return err }},
 		{name: "save locale", run: func() error { return gateway.SaveLocale(context.Background(), "user-1", "en-US") }},
 		{name: "list ai keys", run: func() error { _, err := gateway.ListAIKeys(context.Background(), "user-1"); return err }},
+		{name: "list agent credentials", run: func() error { _, err := gateway.ListAIAgentCredentials(context.Background(), "user-1"); return err }},
+		{name: "list ai agents", run: func() error { _, err := gateway.ListAIAgents(context.Background(), "user-1"); return err }},
+		{name: "list provider models", run: func() error {
+			_, err := gateway.ListAIProviderModels(context.Background(), "user-1", "cred-1")
+			return err
+		}},
 		{name: "create ai key", run: func() error { return gateway.CreateAIKey(context.Background(), "user-1", "label", "secret") }},
+		{name: "create ai agent", run: func() error {
+			return gateway.CreateAIAgent(context.Background(), "user-1", CreateAIAgentInput{Name: "Narrator", CredentialID: "cred-1", Model: "gpt-4o-mini"})
+		}},
 		{name: "revoke ai key", run: func() error { return gateway.RevokeAIKey(context.Background(), "user-1", "cred-1") }},
 	}
 
@@ -309,4 +356,53 @@ func (f *credentialClientStub) RevokeCredential(_ context.Context, req *aiv1.Rev
 		return nil, f.revokeErr
 	}
 	return &aiv1.RevokeCredentialResponse{}, nil
+}
+
+type agentClientStub struct {
+	listAgentsResp    *aiv1.ListAgentsResponse
+	listAgentsErr     error
+	listModelsResp    *aiv1.ListProviderModelsResponse
+	listModelsErr     error
+	createErr         error
+	lastCreateReq     *aiv1.CreateAgentRequest
+	lastListModelsReq *aiv1.ListProviderModelsRequest
+}
+
+func (f *agentClientStub) ListAgents(context.Context, *aiv1.ListAgentsRequest, ...grpc.CallOption) (*aiv1.ListAgentsResponse, error) {
+	if f.listAgentsErr != nil {
+		return nil, f.listAgentsErr
+	}
+	if f.listAgentsResp != nil {
+		return f.listAgentsResp, nil
+	}
+	return &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{{
+		Id:           "agent-1",
+		Name:         "Narrator",
+		Provider:     aiv1.Provider_PROVIDER_OPENAI,
+		Model:        "gpt-4o-mini",
+		Status:       aiv1.AgentStatus_AGENT_STATUS_ACTIVE,
+		Instructions: "Keep the session moving.",
+	}}}, nil
+}
+
+func (f *agentClientStub) ListProviderModels(_ context.Context, req *aiv1.ListProviderModelsRequest, _ ...grpc.CallOption) (*aiv1.ListProviderModelsResponse, error) {
+	f.lastListModelsReq = req
+	if f.listModelsErr != nil {
+		return nil, f.listModelsErr
+	}
+	if f.listModelsResp != nil {
+		return f.listModelsResp, nil
+	}
+	return &aiv1.ListProviderModelsResponse{Models: []*aiv1.ProviderModel{{
+		Id:      "gpt-4o-mini",
+		OwnedBy: "openai",
+	}}}, nil
+}
+
+func (f *agentClientStub) CreateAgent(_ context.Context, req *aiv1.CreateAgentRequest, _ ...grpc.CallOption) (*aiv1.CreateAgentResponse, error) {
+	f.lastCreateReq = req
+	if f.createErr != nil {
+		return nil, f.createErr
+	}
+	return &aiv1.CreateAgentResponse{}, nil
 }

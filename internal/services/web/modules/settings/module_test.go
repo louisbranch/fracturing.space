@@ -292,7 +292,7 @@ func TestMountUsesDependenciesSocialClientWhenGatewayNotProvided(t *testing.T) {
 		Bio:      "From dependencies",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -315,7 +315,7 @@ func TestMountSettingsProfileFailsClosedWhenSocialClientMissing(t *testing.T) {
 	t.Parallel()
 
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(nil, account, nil), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(nil, account, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -335,7 +335,7 @@ func TestMountSettingsLocaleFailsClosedWhenAccountClientMissing(t *testing.T) {
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -355,7 +355,7 @@ func TestMountSettingsAIKeysFailsClosedWhenCredentialClientMissing(t *testing.T)
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -485,9 +485,10 @@ func TestMountServesSettingsSubpaths(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 	paths := map[string]string{
-		routepath.AppSettingsProfile: `action="/app/settings/profile"`,
-		routepath.AppSettingsLocale:  `action="/app/settings/locale"`,
-		routepath.AppSettingsAIKeys:  `action="/app/settings/ai-keys"`,
+		routepath.AppSettingsProfile:  `action="/app/settings/profile"`,
+		routepath.AppSettingsLocale:   `action="/app/settings/locale"`,
+		routepath.AppSettingsAIKeys:   `action="/app/settings/ai-keys"`,
+		routepath.AppSettingsAIAgents: `action="/app/settings/ai-agents"`,
 	}
 	for path, marker := range paths {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
@@ -503,7 +504,7 @@ func TestMountServesSettingsSubpaths(t *testing.T) {
 		if !strings.Contains(body, `<h1 class="mb-0">Settings</h1>`) {
 			t.Fatalf("path %q body missing settings heading", path)
 		}
-		for _, href := range []string{routepath.AppSettingsProfile, routepath.AppSettingsLocale, routepath.AppSettingsAIKeys} {
+		for _, href := range []string{routepath.AppSettingsProfile, routepath.AppSettingsLocale, routepath.AppSettingsAIKeys, routepath.AppSettingsAIAgents} {
 			if !strings.Contains(body, `href="`+href+`"`) {
 				t.Fatalf("path %q body missing menu href %q", path, href)
 			}
@@ -536,6 +537,37 @@ func TestMountSettingsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	// Invariant: HTMX requests must receive partial content, never a full document envelope.
 	if strings.Contains(strings.ToLower(body), "<!doctype html") || strings.Contains(strings.ToLower(body), "<html") {
 		t.Fatalf("expected htmx fragment without document wrapper")
+	}
+}
+
+func TestMountAIAgentsGetLoadsModelsAndListsAgents(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsAIAgents+"?credential_id=cred-1", nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`id="settings-ai-agents"`,
+		`action="/app/settings/ai-agents"`,
+		`name="credential_id"`,
+		`name="model"`,
+		`name="instructions"`,
+		`value="gpt-4o-mini"`,
+		`Narrator`,
+		`Keep the session moving.`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing marker %q: %q", marker, body)
+		}
 	}
 }
 
@@ -591,7 +623,7 @@ func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *t
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -648,7 +680,7 @@ func TestMountProfilePostBlankPronounsSavesUnspecifiedPronouns(t *testing.T) {
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -819,6 +851,60 @@ func TestMountAIKeysCreatePostValidationErrorRendersBadRequest(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
 	if !strings.Contains(rr.Body.String(), "Label and API key secret are required.") {
+		t.Fatalf("body missing validation error: %q", rr.Body.String())
+	}
+}
+
+func TestMountAIAgentsCreatePostSavesAndRedirects(t *testing.T) {
+	t.Parallel()
+
+	gateway := newPopulatedFakeGateway()
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	form := url.Values{
+		"name":          {"Narrator"},
+		"credential_id": {"cred-1"},
+		"model":         {"gpt-4o-mini"},
+		"instructions":  {"Keep the session moving."},
+	}
+	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsAIAgents, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppSettingsAIAgents {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsAIAgents)
+	}
+	if gateway.lastCreatedAgent.Name != "Narrator" || gateway.lastCreatedAgent.CredentialID != "cred-1" {
+		t.Fatalf("created agent = %+v", gateway.lastCreatedAgent)
+	}
+}
+
+func TestMountAIAgentsCreatePostValidationErrorRendersBadRequest(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	form := url.Values{
+		"name":          {"Narrator"},
+		"credential_id": {"cred-1"},
+	}
+	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsAIAgents, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	}
+	if !strings.Contains(rr.Body.String(), "Name, credential, and model are required.") {
 		t.Fatalf("body missing validation error: %q", rr.Body.String())
 	}
 }

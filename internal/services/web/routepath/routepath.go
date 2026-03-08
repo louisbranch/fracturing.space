@@ -194,6 +194,9 @@ const AppSettingsLocale = "/app/settings/locale"
 // AppSettingsAIKeys returns the AI keys settings route.
 const AppSettingsAIKeys = "/app/settings/ai-keys"
 
+// AppSettingsAIAgents returns the AI agents settings route.
+const AppSettingsAIAgents = "/app/settings/ai-agents"
+
 // AppSettingsAIKeyRevoke returns the AI key revoke route.
 func AppSettingsAIKeyRevoke(credentialID string) string {
 	return AppSettingsAIKeys + "/" + escapeSegment(credentialID) + "/revoke"

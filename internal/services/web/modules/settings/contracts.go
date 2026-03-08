@@ -11,6 +11,18 @@ type SettingsProfile = settingsapp.SettingsProfile
 // SettingsAIKey is the transport-facing alias for settings app AI key rows.
 type SettingsAIKey = settingsapp.SettingsAIKey
 
+// SettingsAICredentialOption is the transport-facing alias for agent credential options.
+type SettingsAICredentialOption = settingsapp.SettingsAICredentialOption
+
+// SettingsAIModelOption is the transport-facing alias for provider-backed model options.
+type SettingsAIModelOption = settingsapp.SettingsAIModelOption
+
+// SettingsAIAgent is the transport-facing alias for settings AI agent rows.
+type SettingsAIAgent = settingsapp.SettingsAIAgent
+
+// CreateAIAgentInput is the transport-facing alias for agent creation input.
+type CreateAIAgentInput = settingsapp.CreateAIAgentInput
+
 // SettingsGateway is the transport-facing alias for settings app gateway contract.
 type SettingsGateway = settingsapp.Gateway
 
@@ -24,3 +36,6 @@ type AccountClient = settingsgateway.AccountClient
 
 // CredentialClient defines an internal contract used at this web package boundary.
 type CredentialClient = settingsgateway.CredentialClient
+
+// AgentClient defines an internal contract used at this web package boundary.
+type AgentClient = settingsgateway.AgentClient

@@ -2,9 +2,10 @@ package ai
 
 import (
 	"context"
-	"errors"
+	"encoding/json"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -18,9 +19,11 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 func response(status int, body string) *http.Response {
+	header := make(http.Header)
+	header.Set("Content-Type", "application/json")
 	return &http.Response{
 		StatusCode: status,
-		Header:     make(http.Header),
+		Header:     header,
 		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 }
@@ -54,7 +57,7 @@ func TestOpenAIInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
 		Input:            "Say hello",
 		CredentialSecret: "sk-1",
 	})
-	if err == nil || !strings.Contains(err.Error(), "read") {
+	if err == nil || !strings.Contains(err.Error(), "unexpected EOF") {
 		t.Fatalf("error = %v, want read error", err)
 	}
 }
@@ -91,71 +94,99 @@ func TestSetOpenAIInvocationAdapterStoresAdapter(t *testing.T) {
 	if got := svc.providerInvocationAdapters[providergrant.ProviderOpenAI]; got != adapter {
 		t.Fatalf("stored adapter = %v, want %v", got, adapter)
 	}
+	if got := svc.providerModelAdapters[providergrant.ProviderOpenAI]; got != adapter {
+		t.Fatalf("stored model adapter = %v, want %v", got, adapter)
+	}
 }
 
-func TestOpenAIInvokeAdapterInvokeValidation(t *testing.T) {
-	client := &http.Client{
-		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-			t.Fatalf("round trip should not execute for validation failure: %v", req.URL)
-			return nil, nil
-		}),
-	}
-
+func TestOpenAIBaseURLFromResponsesURL(t *testing.T) {
 	tests := []struct {
-		name    string
-		adapter *openAIInvokeAdapter
-		input   ProviderInvokeInput
+		name         string
+		responsesURL string
+		want         string
 	}{
 		{
-			name: "missing responses url",
-			adapter: &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
-				ResponsesURL: "",
-				HTTPClient:   client,
-			}},
-			input: ProviderInvokeInput{Model: "gpt-4o-mini", Input: "hello", CredentialSecret: "sk-1"},
+			name:         "default base url",
+			responsesURL: "",
+			want:         "https://api.openai.com/v1",
 		},
 		{
-			name: "missing credential secret",
-			adapter: &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
-				ResponsesURL: "https://provider.example.com/v1/responses",
-				HTTPClient:   client,
-			}},
-			input: ProviderInvokeInput{Model: "gpt-4o-mini", Input: "hello", CredentialSecret: ""},
+			name:         "responses path trimmed",
+			responsesURL: "https://provider.example.com/v1/responses",
+			want:         "https://provider.example.com/v1",
 		},
 		{
-			name: "missing model",
-			adapter: &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
-				ResponsesURL: "https://provider.example.com/v1/responses",
-				HTTPClient:   client,
-			}},
-			input: ProviderInvokeInput{Model: "", Input: "hello", CredentialSecret: "sk-1"},
+			name:         "trailing slash trimmed",
+			responsesURL: "https://provider.example.com/v1/responses/",
+			want:         "https://provider.example.com/v1",
 		},
 		{
-			name: "missing input",
-			adapter: &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
-				ResponsesURL: "https://provider.example.com/v1/responses",
-				HTTPClient:   client,
-			}},
-			input: ProviderInvokeInput{Model: "gpt-4o-mini", Input: "", CredentialSecret: "sk-1"},
+			name:         "custom endpoint without responses suffix",
+			responsesURL: "https://provider.example.com/custom",
+			want:         "https://provider.example.com/custom",
 		},
 	}
 
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := tt.adapter.Invoke(context.Background(), tt.input); err == nil {
-				t.Fatal("expected validation error")
+			if got := openAIBaseURLFromResponsesURL(tt.responsesURL); got != tt.want {
+				t.Fatalf("base url = %q, want %q", got, tt.want)
 			}
 		})
 	}
 }
 
-func TestOpenAIInvokeAdapterInvokeRoundTripError(t *testing.T) {
+func TestOpenAIInvokeAdapterInvokeValidation(t *testing.T) {
+	tests := []struct {
+		name  string
+		input ProviderInvokeInput
+		want  string
+	}{
+		{
+			name:  "missing credential secret",
+			input: ProviderInvokeInput{Model: "gpt-4o-mini", Input: "hello"},
+			want:  "credential secret is required",
+		},
+		{
+			name:  "missing model",
+			input: ProviderInvokeInput{Input: "hello", CredentialSecret: "sk-1"},
+			want:  "model is required",
+		},
+		{
+			name:  "missing input",
+			input: ProviderInvokeInput{Model: "gpt-4o-mini", CredentialSecret: "sk-1"},
+			want:  "input is required",
+		},
+	}
+
 	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				return nil, errors.New("dial timeout")
+				t.Fatalf("round trip should not execute for validation failure: %v", req.URL)
+				return nil, nil
+			}),
+		},
+	}}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := adapter.Invoke(context.Background(), tt.input)
+			if err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestOpenAIInvokeAdapterInvokeProviderError(t *testing.T) {
+	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+		ResponsesURL: "https://provider.example.com/v1/responses",
+		HTTPClient: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				return nil, io.ErrUnexpectedEOF
 			}),
 		},
 	}}
@@ -165,44 +196,8 @@ func TestOpenAIInvokeAdapterInvokeRoundTripError(t *testing.T) {
 		Input:            "Say hello",
 		CredentialSecret: "sk-1",
 	})
-	if err == nil || !strings.Contains(err.Error(), "invoke request failed") {
-		t.Fatalf("error = %v, want invoke request failed", err)
-	}
-}
-
-func TestOpenAIInvokeAdapterInvokeSuccessWithOutputText(t *testing.T) {
-	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
-		ResponsesURL: "https://provider.example.com/v1/responses",
-		HTTPClient: &http.Client{
-			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
-				if req.Header.Get("Authorization") != "Bearer sk-1" {
-					t.Fatalf("authorization = %q", req.Header.Get("Authorization"))
-				}
-				body, err := io.ReadAll(req.Body)
-				if err != nil {
-					t.Fatalf("read body: %v", err)
-				}
-				if !strings.Contains(string(body), "\"model\":\"gpt-4o-mini\"") {
-					t.Fatalf("request body = %s", string(body))
-				}
-				if !strings.Contains(string(body), "\"input\":\"Say hello\"") {
-					t.Fatalf("request body = %s", string(body))
-				}
-				return response(http.StatusOK, `{"output_text":"Hello from OpenAI"}`), nil
-			}),
-		},
-	}}
-
-	got, err := adapter.Invoke(context.Background(), ProviderInvokeInput{
-		Model:            "gpt-4o-mini",
-		Input:            "Say hello",
-		CredentialSecret: "sk-1",
-	})
-	if err != nil {
-		t.Fatalf("invoke: %v", err)
-	}
-	if got.OutputText != "Hello from OpenAI" {
-		t.Fatalf("output_text = %q, want %q", got.OutputText, "Hello from OpenAI")
+	if err == nil || !strings.Contains(err.Error(), "invoke request failed") || !strings.Contains(err.Error(), "unexpected EOF") {
+		t.Fatalf("error = %v, want provider error", err)
 	}
 }
 
@@ -210,9 +205,11 @@ func TestOpenAIInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
 	tests := []struct {
 		name string
 		body string
+		want string
 	}{
-		{name: "invalid json", body: "{bad json"},
-		{name: "missing output", body: "{}"},
+		{name: "invalid json", body: "{bad json", want: "decode invoke response"},
+		{name: "missing output", body: `{}`, want: "invoke response missing output text"},
+		{name: "blank output", body: `{"output_text":" "}`, want: "invoke response missing output text"},
 	}
 
 	for _, tt := range tests {
@@ -231,14 +228,102 @@ func TestOpenAIInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
 				Model:            "gpt-4o-mini",
 				Input:            "Say hello",
 				CredentialSecret: "sk-1",
-			}); err == nil {
-				t.Fatal("expected invoke error")
+			}); err == nil || !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("error = %v, want %q", err, tt.want)
 			}
 		})
 	}
 }
 
-func TestOpenAIInvokeAdapterInvokeNon2xx(t *testing.T) {
+func TestOpenAIInvokeAdapterInvokeAndListModels(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer sk-1" {
+			t.Fatalf("authorization = %q", r.Header.Get("Authorization"))
+		}
+		switch {
+		case r.Method == http.MethodPost && r.URL.Path == "/v1/responses":
+			var body struct {
+				Model        string `json:"model"`
+				Input        string `json:"input"`
+				Instructions string `json:"instructions"`
+			}
+			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+				t.Fatalf("decode request body: %v", err)
+			}
+			if body.Model != "gpt-4o-mini" {
+				t.Fatalf("model = %q, want %q", body.Model, "gpt-4o-mini")
+			}
+			if body.Instructions != "Stay in character." {
+				t.Fatalf("instructions = %q, want %q", body.Instructions, "Stay in character.")
+			}
+			if body.Input != "Say hello" {
+				t.Fatalf("input = %q, want %q", body.Input, "Say hello")
+			}
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"output_text": "Hello from OpenAI",
+			})
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/models":
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"object": "list",
+				"data": []map[string]any{
+					{
+						"id":       "gpt-4o-mini",
+						"object":   "model",
+						"created":  1,
+						"owned_by": "openai",
+					},
+					{
+						"id":       "gpt-4o",
+						"object":   "model",
+						"created":  1,
+						"owned_by": "openai",
+					},
+				},
+			})
+		default:
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+	}))
+	defer server.Close()
+
+	adapter := NewOpenAIInvokeAdapter(OpenAIInvokeConfig{
+		ResponsesURL: server.URL + "/v1/responses",
+	})
+	got, err := adapter.Invoke(context.Background(), ProviderInvokeInput{
+		Model:            "gpt-4o-mini",
+		Input:            "Say hello",
+		Instructions:     "Stay in character.",
+		CredentialSecret: "sk-1",
+	})
+	if err != nil {
+		t.Fatalf("invoke: %v", err)
+	}
+	if got.OutputText != "Hello from OpenAI" {
+		t.Fatalf("output_text = %q, want %q", got.OutputText, "Hello from OpenAI")
+	}
+
+	modelAdapter, ok := adapter.(ProviderModelAdapter)
+	if !ok {
+		t.Fatalf("adapter type %T does not implement ProviderModelAdapter", adapter)
+	}
+	models, err := modelAdapter.ListModels(context.Background(), ProviderListModelsInput{CredentialSecret: "sk-1"})
+	if err != nil {
+		t.Fatalf("list models: %v", err)
+	}
+	if len(models) != 2 {
+		t.Fatalf("models len = %d, want 2", len(models))
+	}
+	if models[0].ID != "gpt-4o-mini" || models[1].ID != "gpt-4o" {
+		t.Fatalf("models = %#v, want gpt-4o-mini and gpt-4o", models)
+	}
+	if models[0].Created != 1 || models[1].Created != 1 {
+		t.Fatalf("created values = %#v, want provider-created timestamps preserved", models)
+	}
+}
+
+func TestOpenAIInvokeAdapterListModelsValidationAndError(t *testing.T) {
 	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
@@ -248,12 +333,10 @@ func TestOpenAIInvokeAdapterInvokeNon2xx(t *testing.T) {
 		},
 	}}
 
-	_, err := adapter.Invoke(context.Background(), ProviderInvokeInput{
-		Model:            "gpt-4o-mini",
-		Input:            "Say hello",
-		CredentialSecret: "sk-1",
-	})
-	if err == nil || !strings.Contains(err.Error(), "status 401") {
-		t.Fatalf("error = %v, want status 401", err)
+	if _, err := adapter.ListModels(context.Background(), ProviderListModelsInput{}); err == nil || !strings.Contains(err.Error(), "credential secret is required") {
+		t.Fatalf("error = %v, want missing credential secret", err)
+	}
+	if _, err := adapter.ListModels(context.Background(), ProviderListModelsInput{CredentialSecret: "sk-1"}); err == nil || !strings.Contains(err.Error(), "list models") {
+		t.Fatalf("error = %v, want list models provider error", err)
 	}
 }

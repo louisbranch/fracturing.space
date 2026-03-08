@@ -26,6 +26,7 @@ func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
 					SocialClient:     defaultSocialClient(),
 					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
 					CredentialClient: fakeCredentialClient{},
+					AgentClient:      fakeAgentClient{},
 				},
 			},
 		),

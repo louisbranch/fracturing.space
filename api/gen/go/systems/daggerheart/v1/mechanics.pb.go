@@ -345,10 +345,19 @@ func (x *Intermediates) GetFearGtHope() bool {
 
 // ExplainStep represents a step in the rules explanation.
 type ExplainStep struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Code          string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
-	Message       string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
-	Data          *structpb.Struct       `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Code    string                 `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message string                 `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
+	// Step-code-dependent structured data. Shape varies by code:
+	//
+	//	SUM_DICE:          hope (int), fear (int), base_total (int)
+	//	APPLY_MODIFIER:    base_total (int), modifier (int), total (int)
+	//	CHECK_CRIT:        hope (int), fear (int), is_crit (bool)
+	//	CHECK_DIFFICULTY:  total (int), meets_difficulty (bool),
+	//	                   critical_auto_success (bool), difficulty_present (bool),
+	//	                   difficulty (int, present only when difficulty_present)
+	//	SELECT_OUTCOME:    outcome_code (int), outcome_label (string)
+	Data          *structpb.Struct `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

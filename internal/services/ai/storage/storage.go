@@ -39,6 +39,7 @@ type AgentRecord struct {
 	OwnerUserID     string
 	Name            string
 	Handle          string
+	Instructions    string
 	Provider        string
 	Model           string
 	CredentialID    string

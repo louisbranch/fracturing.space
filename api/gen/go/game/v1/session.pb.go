@@ -289,10 +289,20 @@ type SessionGate struct {
 	ResolvedAt          *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=resolved_at,json=resolvedAt,proto3" json:"resolved_at,omitempty"`
 	ResolvedByActorType string                 `protobuf:"bytes,11,opt,name=resolved_by_actor_type,json=resolvedByActorType,proto3" json:"resolved_by_actor_type,omitempty"`
 	ResolvedByActorId   string                 `protobuf:"bytes,12,opt,name=resolved_by_actor_id,json=resolvedByActorId,proto3" json:"resolved_by_actor_id,omitempty"`
-	Metadata            *structpb.Struct       `protobuf:"bytes,13,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Resolution          *structpb.Struct       `protobuf:"bytes,14,opt,name=resolution,proto3" json:"resolution,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// Gate-type-dependent metadata supplied when the gate was opened.
+	// Shape varies by gate type. Known keys for system-generated gates:
+	//
+	//	"roll_seq"    (number) — sequence of the roll event that triggered the gate
+	//	"request_id"  (string) — request ID associated with the gate trigger
+	//
+	// Consumers should treat unknown keys as pass-through.
+	Metadata *structpb.Struct `protobuf:"bytes,13,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// Gate-type-dependent resolution data supplied when the gate was resolved.
+	// Shape is determined by the gate type and the resolving actor. The field is
+	// optional and may be empty when the resolution carries no structured data.
+	Resolution    *structpb.Struct `protobuf:"bytes,14,opt,name=resolution,proto3" json:"resolution,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SessionGate) Reset() {
@@ -926,13 +936,15 @@ func (x *EndSessionResponse) GetSession() *Session {
 }
 
 type OpenSessionGateRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CampaignId    string                 `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	GateType      string                 `protobuf:"bytes,3,opt,name=gate_type,json=gateType,proto3" json:"gate_type,omitempty"`
-	Reason        string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
-	GateId        string                 `protobuf:"bytes,5,opt,name=gate_id,json=gateId,proto3" json:"gate_id,omitempty"`
-	Metadata      *structpb.Struct       `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CampaignId string                 `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	SessionId  string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	GateType   string                 `protobuf:"bytes,3,opt,name=gate_type,json=gateType,proto3" json:"gate_type,omitempty"`
+	Reason     string                 `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	GateId     string                 `protobuf:"bytes,5,opt,name=gate_id,json=gateId,proto3" json:"gate_id,omitempty"`
+	// Gate-type-dependent metadata passed through to the SessionGate.metadata
+	// field. See SessionGate.metadata for known keys.
+	Metadata      *structpb.Struct `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1054,12 +1066,14 @@ func (x *OpenSessionGateResponse) GetGate() *SessionGate {
 }
 
 type ResolveSessionGateRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	CampaignId    string                 `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
-	SessionId     string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
-	GateId        string                 `protobuf:"bytes,3,opt,name=gate_id,json=gateId,proto3" json:"gate_id,omitempty"`
-	Decision      string                 `protobuf:"bytes,4,opt,name=decision,proto3" json:"decision,omitempty"`
-	Resolution    *structpb.Struct       `protobuf:"bytes,5,opt,name=resolution,proto3" json:"resolution,omitempty"`
+	state      protoimpl.MessageState `protogen:"open.v1"`
+	CampaignId string                 `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
+	SessionId  string                 `protobuf:"bytes,2,opt,name=session_id,json=sessionId,proto3" json:"session_id,omitempty"`
+	GateId     string                 `protobuf:"bytes,3,opt,name=gate_id,json=gateId,proto3" json:"gate_id,omitempty"`
+	Decision   string                 `protobuf:"bytes,4,opt,name=decision,proto3" json:"decision,omitempty"`
+	// Gate-type-dependent resolution data passed through to
+	// SessionGate.resolution. See SessionGate.resolution for semantics.
+	Resolution    *structpb.Struct `protobuf:"bytes,5,opt,name=resolution,proto3" json:"resolution,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

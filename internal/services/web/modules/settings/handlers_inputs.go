@@ -26,3 +26,18 @@ func parseLocaleInput(form url.Values) string {
 func parseAIKeyCreateInput(form url.Values) (label string, secret string) {
 	return strings.TrimSpace(form.Get("label")), strings.TrimSpace(form.Get("secret"))
 }
+
+// parseAIAgentCredentialSelectionInput maps the selected credential query value.
+func parseAIAgentCredentialSelectionInput(values url.Values) string {
+	return strings.TrimSpace(values.Get("credential_id"))
+}
+
+// parseAIAgentCreateInput maps create-agent form values.
+func parseAIAgentCreateInput(form url.Values) CreateAIAgentInput {
+	return CreateAIAgentInput{
+		Name:         strings.TrimSpace(form.Get("name")),
+		CredentialID: strings.TrimSpace(form.Get("credential_id")),
+		Model:        strings.TrimSpace(form.Get("model")),
+		Instructions: strings.TrimSpace(form.Get("instructions")),
+	}
+}

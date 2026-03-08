@@ -431,6 +431,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 					SocialClient:     social,
 					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
 					CredentialClient: fakeCredentialClient{},
+					AgentClient:      fakeAgentClient{},
 				},
 				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 			},
@@ -486,6 +487,7 @@ func TestAppPageUserDropdownProfileFallsBackToSettingsNoticeWhenUsernameMissing(
 					SocialClient:     social,
 					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
 					CredentialClient: fakeCredentialClient{},
+					AgentClient:      fakeAgentClient{},
 				},
 				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 			},
@@ -529,6 +531,7 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 					SocialClient:     social,
 					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
 					CredentialClient: fakeCredentialClient{},
+					AgentClient:      fakeAgentClient{},
 				},
 				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 			},
@@ -571,6 +574,7 @@ type fakeAccountClient struct {
 }
 
 type fakeCredentialClient struct{}
+type fakeAgentClient struct{}
 
 func (f *fakeAccountClient) GetProfile(context.Context, *authv1.GetProfileRequest, ...grpc.CallOption) (*authv1.GetProfileResponse, error) {
 	f.getProfileCalled = true
@@ -632,4 +636,16 @@ func (fakeCredentialClient) CreateCredential(context.Context, *aiv1.CreateCreden
 
 func (fakeCredentialClient) RevokeCredential(context.Context, *aiv1.RevokeCredentialRequest, ...grpc.CallOption) (*aiv1.RevokeCredentialResponse, error) {
 	return &aiv1.RevokeCredentialResponse{}, nil
+}
+
+func (fakeAgentClient) ListAgents(context.Context, *aiv1.ListAgentsRequest, ...grpc.CallOption) (*aiv1.ListAgentsResponse, error) {
+	return &aiv1.ListAgentsResponse{}, nil
+}
+
+func (fakeAgentClient) ListProviderModels(context.Context, *aiv1.ListProviderModelsRequest, ...grpc.CallOption) (*aiv1.ListProviderModelsResponse, error) {
+	return &aiv1.ListProviderModelsResponse{}, nil
+}
+
+func (fakeAgentClient) CreateAgent(context.Context, *aiv1.CreateAgentRequest, ...grpc.CallOption) (*aiv1.CreateAgentResponse, error) {
+	return &aiv1.CreateAgentResponse{}, nil
 }

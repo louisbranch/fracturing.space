@@ -80,6 +80,7 @@ message Agent {
   google.protobuf.Timestamp updated_at = 9;
   string provider_grant_id = 10;
   string handle = 11;
+  string instructions = 12;
 }
 
 message ProviderGrant {
@@ -161,6 +162,7 @@ message RevokeCredentialResponse {
 service AgentService {
   rpc CreateAgent(CreateAgentRequest) returns (CreateAgentResponse);
   rpc ListAgents(ListAgentsRequest) returns (ListAgentsResponse);
+  rpc ListProviderModels(ListProviderModelsRequest) returns (ListProviderModelsResponse);
   rpc ListAccessibleAgents(ListAccessibleAgentsRequest) returns (ListAccessibleAgentsResponse);
   rpc GetAccessibleAgent(GetAccessibleAgentRequest) returns (GetAccessibleAgentResponse);
   rpc ValidateCampaignAgentBinding(ValidateCampaignAgentBindingRequest) returns (ValidateCampaignAgentBindingResponse);
@@ -196,6 +198,7 @@ message CreateAgentRequest {
   string credential_id = 4;
   string provider_grant_id = 5;
   string handle = 6;
+  string instructions = 7;
 }
 
 message CreateAgentResponse {
@@ -210,6 +213,21 @@ message ListAgentsRequest {
 message ListAgentsResponse {
   repeated Agent agents = 1;
   string next_page_token = 2;
+}
+
+message ListProviderModelsRequest {
+  Provider provider = 1;
+  string credential_id = 2;
+  string provider_grant_id = 3;
+}
+
+message ProviderModel {
+  string id = 1;
+  string owned_by = 2;
+}
+
+message ListProviderModelsResponse {
+  repeated ProviderModel models = 1;
 }
 
 message ListAccessibleAgentsRequest {
@@ -245,6 +263,7 @@ message UpdateAgentRequest {
   string model = 3;
   string credential_id = 4;
   string provider_grant_id = 5;
+  string instructions = 6;
 }
 
 message UpdateAgentResponse {

@@ -185,6 +185,9 @@ func TestNotificationAndSettingsRouteBuilders(t *testing.T) {
 	if AppSettingsLocale != "/app/settings/locale" {
 		t.Fatalf("AppSettingsLocale = %q", AppSettingsLocale)
 	}
+	if AppSettingsAIAgents != "/app/settings/ai-agents" {
+		t.Fatalf("AppSettingsAIAgents = %q", AppSettingsAIAgents)
+	}
 	if got := AppSettingsAIKeyRevoke("cred-1"); got != "/app/settings/ai-keys/cred-1/revoke" {
 		t.Fatalf("AppSettingsAIKeyRevoke() = %q", got)
 	}

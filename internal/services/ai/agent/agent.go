@@ -57,6 +57,7 @@ type Agent struct {
 	OwnerUserID     string
 	Name            string
 	Handle          string
+	Instructions    string
 	Provider        Provider
 	Model           string
 	CredentialID    string
@@ -71,6 +72,7 @@ type CreateInput struct {
 	OwnerUserID     string
 	Name            string
 	Handle          string
+	Instructions    string
 	Provider        Provider
 	Model           string
 	CredentialID    string
@@ -82,6 +84,7 @@ type UpdateInput struct {
 	ID              string
 	OwnerUserID     string
 	Name            string
+	Instructions    string
 	Model           string
 	CredentialID    string
 	ProviderGrantID string
@@ -103,6 +106,7 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 		return CreateInput{}, err
 	}
 	input.Handle = normalizedHandle
+	input.Instructions = strings.TrimSpace(input.Instructions)
 
 	input.Provider = Provider(strings.ToLower(strings.TrimSpace(string(input.Provider))))
 	if input.Provider != ProviderOpenAI {
@@ -137,6 +141,7 @@ func NormalizeUpdateInput(input UpdateInput) (UpdateInput, error) {
 	}
 
 	input.Name = strings.TrimSpace(input.Name)
+	input.Instructions = strings.TrimSpace(input.Instructions)
 	input.Model = strings.TrimSpace(input.Model)
 	credentialID, providerGrantID, err := normalizeAuthReference(input.CredentialID, input.ProviderGrantID, false)
 	if err != nil {
@@ -173,6 +178,7 @@ func Create(input CreateInput, now func() time.Time, idGenerator func() (string,
 		OwnerUserID:     normalized.OwnerUserID,
 		Name:            normalized.Name,
 		Handle:          normalized.Handle,
+		Instructions:    normalized.Instructions,
 		Provider:        normalized.Provider,
 		Model:           normalized.Model,
 		CredentialID:    normalized.CredentialID,
