@@ -71,8 +71,10 @@ Epoch rotation triggers:
 
 - `campaign.ai_bind`
 - `campaign.ai_unbind`
-- `session.started`
-- `session.ended`
+
+Session boundaries do not rotate the epoch. Grant validation includes `session_id`
+in its claims check, so grants issued for a previous session are automatically
+invalid when a new session starts — no epoch bump required.
 
 Epoch does not rotate for unrelated campaign mutations (name/theme/cover/etc.).
 

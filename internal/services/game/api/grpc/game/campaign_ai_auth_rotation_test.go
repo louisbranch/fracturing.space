@@ -15,7 +15,7 @@ import (
 )
 
 func TestRotateCampaignAIAuthEpochValidation(t *testing.T) {
-	err := rotateCampaignAIAuthEpoch(context.Background(), Stores{}, "camp-1", aiAuthRotateReasonSessionStarted, "actor-1", command.ActorTypeParticipant)
+	err := rotateCampaignAIAuthEpoch(context.Background(), Stores{}, "camp-1", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
 	assertStatusCode(t, err, codes.Internal)
 
 	stores := Stores{
@@ -25,7 +25,7 @@ func TestRotateCampaignAIAuthEpochValidation(t *testing.T) {
 		},
 	}
 
-	err = rotateCampaignAIAuthEpoch(context.Background(), stores, "", aiAuthRotateReasonSessionStarted, "actor-1", command.ActorTypeParticipant)
+	err = rotateCampaignAIAuthEpoch(context.Background(), stores, "", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
 	assertStatusCode(t, err, codes.InvalidArgument)
 
 	err = rotateCampaignAIAuthEpoch(context.Background(), stores, "camp-1", "", "actor-1", command.ActorTypeParticipant)
@@ -45,7 +45,7 @@ func TestRotateCampaignAIAuthEpochSuccess(t *testing.T) {
 		grpcmeta.InvocationIDHeader, "inv-1",
 	))
 
-	err := rotateCampaignAIAuthEpoch(ctx, stores, "camp-1", aiAuthRotateReasonSessionStarted, "actor-1", command.ActorTypeParticipant)
+	err := rotateCampaignAIAuthEpoch(ctx, stores, "camp-1", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
 	if err != nil {
 		t.Fatalf("rotate campaign ai auth epoch: %v", err)
 	}
@@ -59,7 +59,7 @@ func TestRotateCampaignAIAuthEpochSuccess(t *testing.T) {
 		t.Fatalf("unexpected actor in command: %+v", domain.lastCommand)
 	}
 	payload := strings.TrimSpace(string(domain.lastCommand.PayloadJSON))
-	if !strings.Contains(payload, aiAuthRotateReasonSessionStarted) {
-		t.Fatalf("payload = %q, expected reason %q", payload, aiAuthRotateReasonSessionStarted)
+	if !strings.Contains(payload, aiAuthRotateReasonCampaignAIBound) {
+		t.Fatalf("payload = %q, expected reason %q", payload, aiAuthRotateReasonCampaignAIBound)
 	}
 }
