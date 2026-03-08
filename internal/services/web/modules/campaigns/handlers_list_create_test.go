@@ -14,6 +14,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -348,6 +349,10 @@ func TestMountCampaignCreatePostCreatesCampaignAndRedirects(t *testing.T) {
 	if got := rr.Header().Get("Location"); got != routepath.AppCampaign("camp-777") {
 		t.Fatalf("location = %q, want %q", got, routepath.AppCampaign("camp-777"))
 	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindSuccess || notice.Key != "web.campaigns.notice_campaign_created" {
+		t.Fatalf("flash = %+v, want success/web.campaigns.notice_campaign_created", notice)
+	}
 }
 
 func TestMountCampaignCreatePostUsesHTMXRedirect(t *testing.T) {
@@ -372,6 +377,10 @@ func TestMountCampaignCreatePostUsesHTMXRedirect(t *testing.T) {
 	}
 	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaign("camp-htmx") {
 		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaign("camp-htmx"))
+	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindSuccess || notice.Key != "web.campaigns.notice_campaign_created" {
+		t.Fatalf("flash = %+v, want success/web.campaigns.notice_campaign_created", notice)
 	}
 }
 
@@ -400,6 +409,10 @@ func TestMountCampaignCreatePostAppliesDefaults(t *testing.T) {
 	if got := gateway.lastCreateInput.GMMode; got != GmModeAI {
 		t.Fatalf("GMMode = %v, want %v", got, GmModeAI)
 	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindSuccess || notice.Key != "web.campaigns.notice_campaign_created" {
+		t.Fatalf("flash = %+v, want success/web.campaigns.notice_campaign_created", notice)
+	}
 }
 
 func TestMountCampaignCreatePostRejectsEmptyName(t *testing.T) {
@@ -416,16 +429,16 @@ func TestMountCampaignCreatePostRejectsEmptyName(t *testing.T) {
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	// Invariant: invalid create submissions must not redirect to a campaign route.
-	if got := rr.Header().Get("Location"); got != "" {
-		t.Fatalf("location = %q, want empty", got)
+	// Invariant: invalid create submissions must redirect back to the create form, not a campaign route.
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignsCreate {
+		t.Fatalf("location = %q, want %q", got, routepath.AppCampaignsCreate)
 	}
 }
 
-func TestMountCampaignCreateValidationErrorIsLocalizedForPTBR(t *testing.T) {
+func TestMountCampaignCreateValidationErrorRedirectsWithFlash(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{}, Base: modulehandler.NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil), ChatFallbackPort: "", Workflows: nil})
@@ -438,11 +451,11 @@ func TestMountCampaignCreateValidationErrorIsLocalizedForPTBR(t *testing.T) {
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if !strings.Contains(rr.Body.String(), "Nome da campanha é obrigatório") {
-		t.Fatalf("expected localized campaign-name validation error, got %q", rr.Body.String())
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignsCreate {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignsCreate)
 	}
 }
 
@@ -506,23 +519,33 @@ func TestMountCampaignCreatePostRejectsInvalidSystemAndGMMode(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		form url.Values
+		name    string
+		form    url.Values
+		wantKey string
 	}{
-		{name: "invalid system", form: url.Values{"name": {"New"}, "system": {"invalid-system"}}},
-		{name: "invalid gm mode", form: url.Values{"name": {"New"}, "gm_mode": {"invalid-gm"}}},
+		{name: "invalid system", form: url.Values{"name": {"New"}, "system": {"invalid-system"}}, wantKey: "error.web.message.campaign_system_is_invalid"},
+		{name: "invalid gm mode", form: url.Values{"name": {"New"}, "gm_mode": {"invalid-gm"}}, wantKey: "error.web.message.campaign_gm_mode_is_invalid"},
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignsCreate, strings.NewReader(tc.form.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			rr := httptest.NewRecorder()
 			mount.Handler.ServeHTTP(rr, req)
-			if rr.Code != http.StatusBadRequest {
-				t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+			if rr.Code != http.StatusFound {
+				t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+			}
+			if got := rr.Header().Get("Location"); got != routepath.AppCampaignsCreate {
+				t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignsCreate)
+			}
+			notice := flashNoticeFromResponse(t, rr)
+			if notice.Kind != flash.KindError {
+				t.Fatalf("flash kind = %q, want %q", notice.Kind, flash.KindError)
+			}
+			if notice.Key != tc.wantKey {
+				t.Fatalf("flash key = %q, want %q", notice.Key, tc.wantKey)
 			}
 		})
 	}
@@ -543,12 +566,22 @@ func TestMountCampaignCreatePostMapsServiceErrorStatus(t *testing.T) {
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusForbidden {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusForbidden)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignsCreate {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignsCreate)
+	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindError {
+		t.Fatalf("flash kind = %q, want %q", notice.Kind, flash.KindError)
+	}
+	if notice.Key != "error.web.message.failed_to_create_campaign" {
+		t.Fatalf("flash key = %q, want %q", notice.Key, "error.web.message.failed_to_create_campaign")
 	}
 }
 
-func TestMountCampaignCreatePostReturnsBadRequestOnFormParseFailure(t *testing.T) {
+func TestMountCampaignCreatePostRedirectsOnFormParseFailure(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
@@ -563,8 +596,18 @@ func TestMountCampaignCreatePostReturnsBadRequestOnFormParseFailure(t *testing.T
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignsCreate {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignsCreate)
+	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindError {
+		t.Fatalf("flash kind = %q, want %q", notice.Kind, flash.KindError)
+	}
+	if notice.Key != "error.web.message.failed_to_parse_campaign_create_form" {
+		t.Fatalf("flash key = %q, want %q", notice.Key, "error.web.message.failed_to_parse_campaign_create_form")
 	}
 }
 

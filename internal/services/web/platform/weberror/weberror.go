@@ -16,7 +16,7 @@ import (
 
 // ShouldRenderAppError reports whether status should use app error-page UX.
 func ShouldRenderAppError(statusCode int) bool {
-	return statusCode == http.StatusNotFound || statusCode >= http.StatusInternalServerError
+	return statusCode >= http.StatusBadRequest
 }
 
 // PublicMessage resolves a user-safe localized error message.
@@ -45,9 +45,6 @@ func PublicMessage(loc webi18n.Localizer, err error) string {
 func WriteAppError(w http.ResponseWriter, r *http.Request, statusCode int, resolver pagerender.RequestResolver) {
 	if w == nil {
 		return
-	}
-	if !ShouldRenderAppError(statusCode) {
-		statusCode = http.StatusInternalServerError
 	}
 
 	var resolveLanguage module.ResolveLanguage
@@ -86,9 +83,6 @@ func WritePublicAppError(w http.ResponseWriter, r *http.Request, statusCode int)
 	if w == nil {
 		return
 	}
-	if !ShouldRenderAppError(statusCode) {
-		statusCode = http.StatusInternalServerError
-	}
 	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
 	pagerender.WritePublicPage(
 		w,
@@ -106,13 +100,7 @@ func WritePublicError(w http.ResponseWriter, r *http.Request, err error) {
 	if w == nil {
 		return
 	}
-	statusCode := apperrors.HTTPStatus(err)
-	if ShouldRenderAppError(statusCode) {
-		WritePublicAppError(w, r, statusCode)
-		return
-	}
-	loc, _ := webi18n.ResolveLocalizer(w, r, nil)
-	http.Error(w, PublicMessage(loc, err), statusCode)
+	WritePublicAppError(w, r, apperrors.HTTPStatus(err))
 }
 
 // WriteModuleError writes a module-safe localized error response.
@@ -120,15 +108,5 @@ func WriteModuleError(w http.ResponseWriter, r *http.Request, err error, resolve
 	if w == nil {
 		return
 	}
-	statusCode := apperrors.HTTPStatus(err)
-	if ShouldRenderAppError(statusCode) {
-		WriteAppError(w, r, statusCode, resolver)
-		return
-	}
-	var resolveLanguage module.ResolveLanguage
-	if resolver != nil {
-		resolveLanguage = resolver.ResolveRequestLanguage
-	}
-	loc, _ := webi18n.ResolveLocalizer(w, r, resolveLanguage)
-	http.Error(w, PublicMessage(loc, err), statusCode)
+	WriteAppError(w, r, apperrors.HTTPStatus(err), resolver)
 }

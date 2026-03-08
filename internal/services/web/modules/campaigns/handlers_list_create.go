@@ -6,7 +6,6 @@ import (
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
-	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -95,26 +94,27 @@ func (h handlers) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 // handleCreateCampaignSubmit handles this route in the module transport layer.
 func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseForm(); err != nil {
-		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_campaign_create_form", "failed to parse campaign create form"))
+		flash.Write(w, r, flash.Notice{Kind: flash.KindError, Key: "error.web.message.failed_to_parse_campaign_create_form"})
+		httpx.WriteRedirect(w, r, routepath.AppCampaignsCreate)
 		return
 	}
 	input, err := parseCreateCampaignInput(r.Form)
 	if err != nil {
-		h.WriteError(w, r, err)
+		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
 	input.Locale = h.RequestLocaleTag(r)
 	created, err := h.service.CreateCampaign(ctx, input)
 	if err != nil {
-		h.WriteError(w, r, err)
+		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
 		return
 	}
 	if h.sync != nil {
 		h.sync.CampaignCreated(ctx, userID, created.CampaignID)
 	}
 
-	httpx.WriteRedirect(w, r, routepath.AppCampaign(created.CampaignID))
+	h.writeMutationSuccess(w, r, "web.campaigns.notice_campaign_created", routepath.AppCampaign(created.CampaignID))
 }
 
 // parseAppGameSystem parses inbound values into package-safe forms.

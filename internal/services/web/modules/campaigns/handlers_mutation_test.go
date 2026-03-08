@@ -1,6 +1,8 @@
 package campaigns
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -8,10 +10,31 @@ import (
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc/metadata"
 )
+
+// flashNoticeFromResponse extracts the flash notice from a response's Set-Cookie header.
+func flashNoticeFromResponse(t *testing.T, rr *httptest.ResponseRecorder) flash.Notice {
+	t.Helper()
+	for _, cookie := range rr.Result().Cookies() {
+		if cookie.Name == flash.CookieName {
+			decoded, err := base64.RawURLEncoding.DecodeString(cookie.Value)
+			if err != nil {
+				t.Fatalf("flash cookie base64 decode: %v", err)
+			}
+			var notice flash.Notice
+			if err := json.Unmarshal(decoded, &notice); err != nil {
+				t.Fatalf("flash cookie json unmarshal: %v", err)
+			}
+			return notice
+		}
+	}
+	t.Fatal("no flash cookie found in response")
+	return flash.Notice{}
+}
 
 func TestMountCharacterCreateUsesHXRedirect(t *testing.T) {
 	t.Parallel()
@@ -24,6 +47,10 @@ func TestMountCharacterCreateUsesHXRedirect(t *testing.T) {
 	mount.Handler.ServeHTTP(rr, req)
 	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignCharacter("c1", "char-created") {
 		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignCharacter("c1", "char-created"))
+	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindSuccess || notice.Key != "web.campaigns.notice_character_created" {
+		t.Fatalf("flash = %+v, want success/web.campaigns.notice_character_created", notice)
 	}
 }
 
@@ -42,6 +69,10 @@ func TestMountCharacterCreateRedirectsForNonHTMX(t *testing.T) {
 	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacter("c1", "char-created") {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacter("c1", "char-created"))
 	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindSuccess || notice.Key != "web.campaigns.notice_character_created" {
+		t.Fatalf("flash = %+v, want success/web.campaigns.notice_character_created", notice)
+	}
 }
 
 func TestMountCharacterCreateRedirectsToCreationFlowWhenWorkflowExists(t *testing.T) {
@@ -59,6 +90,10 @@ func TestMountCharacterCreateRedirectsToCreationFlowWhenWorkflowExists(t *testin
 	if got := rr.Header().Get("Location"); got != routepath.AppCampaignCharacterCreation("c1", "char-created") {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignCharacterCreation("c1", "char-created"))
 	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindSuccess || notice.Key != "web.campaigns.notice_character_created" {
+		t.Fatalf("flash = %+v, want success/web.campaigns.notice_character_created", notice)
+	}
 }
 
 func TestMountCharacterCreateRejectsInvalidKind(t *testing.T) {
@@ -70,136 +105,139 @@ func TestMountCharacterCreateRejectsInvalidKind(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindError {
+		t.Fatalf("flash kind = %q, want %q", notice.Kind, flash.KindError)
+	}
+	if notice.Key != "error.web.message.character_kind_value_is_invalid" {
+		t.Fatalf("flash key = %q, want %q", notice.Key, "error.web.message.character_kind_value_is_invalid")
 	}
 }
 
-func TestStableMutationRoutesReturnParseErrorLocalizationKeys(t *testing.T) {
+func TestStableMutationRoutesReturnParseErrorFlashKeys(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 
 	tests := []struct {
-		name        string
-		path        string
-		wantMarkerA string
-		wantMarkerB string
+		name    string
+		path    string
+		wantKey string
 	}{
 		{
-			name:        "campaign update parse error",
-			path:        routepath.AppCampaignEdit("c1"),
-			wantMarkerA: "error.web.message.failed_to_parse_campaign_update_form",
-			wantMarkerB: "failed to parse campaign update form",
+			name:    "campaign update parse error",
+			path:    routepath.AppCampaignEdit("c1"),
+			wantKey: "error.web.message.failed_to_parse_campaign_update_form",
 		},
 		{
-			name:        "session start parse error",
-			path:        routepath.AppCampaignSessionStart("c1"),
-			wantMarkerA: "error.web.message.failed_to_parse_session_start_form",
-			wantMarkerB: "failed to parse session start form",
+			name:    "session start parse error",
+			path:    routepath.AppCampaignSessionStart("c1"),
+			wantKey: "error.web.message.failed_to_parse_session_start_form",
 		},
 		{
-			name:        "session end parse error",
-			path:        routepath.AppCampaignSessionEnd("c1"),
-			wantMarkerA: "error.web.message.failed_to_parse_session_end_form",
-			wantMarkerB: "failed to parse session end form",
+			name:    "session end parse error",
+			path:    routepath.AppCampaignSessionEnd("c1"),
+			wantKey: "error.web.message.failed_to_parse_session_end_form",
 		},
 		{
-			name:        "invite create parse error",
-			path:        routepath.AppCampaignInviteCreate("c1"),
-			wantMarkerA: "error.web.message.failed_to_parse_invite_create_form",
-			wantMarkerB: "failed to parse invite create form",
+			name:    "invite create parse error",
+			path:    routepath.AppCampaignInviteCreate("c1"),
+			wantKey: "error.web.message.failed_to_parse_invite_create_form",
 		},
 		{
-			name:        "invite revoke parse error",
-			path:        routepath.AppCampaignInviteRevoke("c1"),
-			wantMarkerA: "error.web.message.failed_to_parse_invite_revoke_form",
-			wantMarkerB: "failed to parse invite revoke form",
+			name:    "invite revoke parse error",
+			path:    routepath.AppCampaignInviteRevoke("c1"),
+			wantKey: "error.web.message.failed_to_parse_invite_revoke_form",
 		},
 		{
-			name:        "participant update parse error",
-			path:        routepath.AppCampaignParticipantEdit("c1", "p-manager"),
-			wantMarkerA: "error.web.message.failed_to_parse_participant_update_form",
-			wantMarkerB: "failed to parse participant update form",
+			name:    "participant update parse error",
+			path:    routepath.AppCampaignParticipantEdit("c1", "p-manager"),
+			wantKey: "error.web.message.failed_to_parse_participant_update_form",
 		},
 		{
-			name:        "character update parse error",
-			path:        routepath.AppCampaignCharacterEdit("c1", "char-1"),
-			wantMarkerA: "error.web.message.failed_to_parse_character_update_form",
-			wantMarkerB: "failed to parse character update form",
+			name:    "character update parse error",
+			path:    routepath.AppCampaignCharacterEdit("c1", "char-1"),
+			wantKey: "error.web.message.failed_to_parse_character_update_form",
+		},
+		{
+			name:    "campaign ai binding parse error",
+			path:    routepath.AppCampaignAIBinding("c1"),
+			wantKey: "error.web.message.failed_to_parse_campaign_ai_binding_form",
+		},
+		{
+			name:    "character create parse error",
+			path:    routepath.AppCampaignCharacterCreate("c1"),
+			wantKey: "error.web.message.failed_to_parse_character_create_form",
 		},
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			req := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader("bad=%zz"))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			rr := httptest.NewRecorder()
 			mount.Handler.ServeHTTP(rr, req)
-			if rr.Code != http.StatusBadRequest {
-				t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+			if rr.Code != http.StatusFound {
+				t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 			}
-			body := rr.Body.String()
-			if !strings.Contains(body, tc.wantMarkerA) && !strings.Contains(body, tc.wantMarkerB) {
-				t.Fatalf("body missing parse error marker %q or %q: %q", tc.wantMarkerA, tc.wantMarkerB, body)
+			notice := flashNoticeFromResponse(t, rr)
+			if notice.Key != tc.wantKey {
+				t.Fatalf("flash key = %q, want %q", notice.Key, tc.wantKey)
 			}
 		})
 	}
 }
 
-func TestStableMutationRoutesReturnRequiredFieldLocalizationKeys(t *testing.T) {
+func TestStableMutationRoutesReturnRequiredFieldFlashKeys(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, _ := m.Mount()
 
 	tests := []struct {
-		name        string
-		path        string
-		body        string
-		wantMarkerA string
-		wantMarkerB string
+		name    string
+		path    string
+		body    string
+		wantKey string
 	}{
 		{
-			name:        "session end missing session id",
-			path:        routepath.AppCampaignSessionEnd("c1"),
-			body:        "session_id=   ",
-			wantMarkerA: "error.web.message.session_id_is_required",
-			wantMarkerB: "session id is required",
+			name:    "session end missing session id",
+			path:    routepath.AppCampaignSessionEnd("c1"),
+			body:    "session_id=   ",
+			wantKey: "error.web.message.session_id_is_required",
 		},
 		{
-			name:        "invite create missing participant id",
-			path:        routepath.AppCampaignInviteCreate("c1"),
-			body:        "participant_id=   &recipient_user_id=user-2",
-			wantMarkerA: "error.web.message.participant_id_is_required",
-			wantMarkerB: "participant id is required",
+			name:    "invite create missing participant id",
+			path:    routepath.AppCampaignInviteCreate("c1"),
+			body:    "participant_id=   &recipient_user_id=user-2",
+			wantKey: "error.web.message.participant_id_is_required",
 		},
 		{
-			name:        "invite revoke missing invite id",
-			path:        routepath.AppCampaignInviteRevoke("c1"),
-			body:        "invite_id=   ",
-			wantMarkerA: "error.web.message.invite_id_is_required",
-			wantMarkerB: "invite id is required",
+			name:    "invite revoke missing invite id",
+			path:    routepath.AppCampaignInviteRevoke("c1"),
+			body:    "invite_id=   ",
+			wantKey: "error.web.message.invite_id_is_required",
 		},
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			req := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			rr := httptest.NewRecorder()
 			mount.Handler.ServeHTTP(rr, req)
-			if rr.Code != http.StatusBadRequest {
-				t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+			if rr.Code != http.StatusFound {
+				t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 			}
-			body := rr.Body.String()
-			if !strings.Contains(body, tc.wantMarkerA) && !strings.Contains(body, tc.wantMarkerB) {
-				t.Fatalf("body missing validation marker %q or %q: %q", tc.wantMarkerA, tc.wantMarkerB, body)
+			notice := flashNoticeFromResponse(t, rr)
+			if notice.Key != tc.wantKey {
+				t.Fatalf("flash key = %q, want %q", notice.Key, tc.wantKey)
 			}
 		})
 	}
@@ -216,53 +254,60 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 		path         string
 		body         string
 		wantLocation string
+		wantFlashKey string
 	}{
 		{
 			name:         "campaign update",
 			path:         routepath.AppCampaignEdit("c1"),
 			body:         "name=Campaign+One&theme_prompt=Updated+theme&locale=en-US",
 			wantLocation: routepath.AppCampaign("c1"),
+			wantFlashKey: "web.campaigns.notice_campaign_updated",
 		},
 		{
 			name:         "session start",
 			path:         routepath.AppCampaignSessionStart("c1"),
 			body:         "name=Session+Two",
 			wantLocation: routepath.AppCampaignSessions("c1"),
+			wantFlashKey: "web.campaigns.notice_session_started",
 		},
 		{
 			name:         "session end",
 			path:         routepath.AppCampaignSessionEnd("c1"),
 			body:         "session_id=sess-1",
 			wantLocation: routepath.AppCampaignSessions("c1"),
+			wantFlashKey: "web.campaigns.notice_session_ended",
 		},
 		{
 			name:         "invite create",
 			path:         routepath.AppCampaignInviteCreate("c1"),
 			body:         "participant_id=p-1&recipient_user_id=user-123",
 			wantLocation: routepath.AppCampaignInvites("c1"),
+			wantFlashKey: "web.campaigns.notice_invite_created",
 		},
 		{
 			name:         "invite revoke",
 			path:         routepath.AppCampaignInviteRevoke("c1"),
 			body:         "invite_id=inv-1",
 			wantLocation: routepath.AppCampaignInvites("c1"),
+			wantFlashKey: "web.campaigns.notice_invite_revoked",
 		},
 		{
 			name:         "participant update",
 			path:         routepath.AppCampaignParticipantEdit("c1", "p-manager"),
 			body:         "name=Manager+One&role=player&pronouns=they%2Fthem",
 			wantLocation: routepath.AppCampaignParticipants("c1"),
+			wantFlashKey: "web.campaigns.notice_participant_updated",
 		},
 		{
 			name:         "character update",
 			path:         routepath.AppCampaignCharacterEdit("c1", "char-1"),
 			body:         "name=Hero+Updated&pronouns=they%2Fthem",
 			wantLocation: routepath.AppCampaignCharacter("c1", "char-1"),
+			wantFlashKey: "web.campaigns.notice_character_updated",
 		},
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name+" browser", func(t *testing.T) {
 			t.Parallel()
 			req := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
@@ -274,6 +319,13 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			}
 			if got := rr.Header().Get("Location"); got != tc.wantLocation {
 				t.Fatalf("Location = %q, want %q", got, tc.wantLocation)
+			}
+			notice := flashNoticeFromResponse(t, rr)
+			if notice.Kind != flash.KindSuccess {
+				t.Fatalf("flash kind = %q, want %q", notice.Kind, flash.KindSuccess)
+			}
+			if notice.Key != tc.wantFlashKey {
+				t.Fatalf("flash key = %q, want %q", notice.Key, tc.wantFlashKey)
 			}
 		})
 
@@ -289,6 +341,13 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			}
 			if got := rr.Header().Get("HX-Redirect"); got != tc.wantLocation {
 				t.Fatalf("HX-Redirect = %q, want %q", got, tc.wantLocation)
+			}
+			notice := flashNoticeFromResponse(t, rr)
+			if notice.Kind != flash.KindSuccess {
+				t.Fatalf("flash kind = %q, want %q", notice.Kind, flash.KindSuccess)
+			}
+			if notice.Key != tc.wantFlashKey {
+				t.Fatalf("flash key = %q, want %q", notice.Key, tc.wantFlashKey)
 			}
 		})
 	}
@@ -317,6 +376,10 @@ func TestCampaignAIBindingRouteRedirectsBackToParticipantEdit(t *testing.T) {
 	if got := rr.Header().Get("Location"); got != routepath.AppCampaignParticipantEdit("c1", "p-ai") {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignParticipantEdit("c1", "p-ai"))
 	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Kind != flash.KindSuccess || notice.Key != "web.campaigns.notice_ai_binding_saved" {
+		t.Fatalf("flash = %+v, want success/web.campaigns.notice_ai_binding_saved", notice)
+	}
 }
 
 func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
@@ -326,39 +389,35 @@ func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
 	mount, _ := m.Mount()
 
 	tests := []struct {
-		name        string
-		body        string
-		wantMarkerA string
-		wantMarkerB string
+		name    string
+		body    string
+		wantKey string
 	}{
 		{
-			name:        "invalid role",
-			body:        "name=Manager+One&role=invalid&pronouns=they%2Fthem",
-			wantMarkerA: "error.web.message.participant_role_value_is_invalid",
-			wantMarkerB: "participant role value is invalid",
+			name:    "invalid role",
+			body:    "name=Manager+One&role=invalid&pronouns=they%2Fthem",
+			wantKey: "error.web.message.participant_role_value_is_invalid",
 		},
 		{
-			name:        "invalid access",
-			body:        "name=Manager+One&role=player&campaign_access=invalid",
-			wantMarkerA: "error.web.message.campaign_access_value_is_invalid",
-			wantMarkerB: "campaign access value is invalid",
+			name:    "invalid access",
+			body:    "name=Manager+One&role=player&campaign_access=invalid",
+			wantKey: "error.web.message.campaign_access_value_is_invalid",
 		},
 	}
 
 	for _, tc := range tests {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignParticipantEdit("c1", "p-manager"), strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			rr := httptest.NewRecorder()
 			mount.Handler.ServeHTTP(rr, req)
-			if rr.Code != http.StatusBadRequest {
-				t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+			if rr.Code != http.StatusFound {
+				t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 			}
-			body := rr.Body.String()
-			if !strings.Contains(body, tc.wantMarkerA) && !strings.Contains(body, tc.wantMarkerB) {
-				t.Fatalf("body missing validation marker %q or %q: %q", tc.wantMarkerA, tc.wantMarkerB, body)
+			notice := flashNoticeFromResponse(t, rr)
+			if notice.Key != tc.wantKey {
+				t.Fatalf("flash key = %q, want %q", notice.Key, tc.wantKey)
 			}
 		})
 	}
@@ -385,13 +444,12 @@ func TestParticipantUpdateRouteRejectsAIInvariantTampering(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusConflict {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusConflict)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	body := rr.Body.String()
-	if !strings.Contains(body, "error.web.message.participant_ai_role_and_access_are_fixed") &&
-		!strings.Contains(body, "AI participants must remain GM and Member") {
-		t.Fatalf("body missing AI invariant marker: %q", body)
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Key != "error.web.message.participant_ai_role_and_access_are_fixed" {
+		t.Fatalf("flash key = %q, want %q", notice.Key, "error.web.message.participant_ai_role_and_access_are_fixed")
 	}
 }
 
@@ -405,12 +463,12 @@ func TestCampaignUpdateRouteValidatesLocale(t *testing.T) {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	body := rr.Body.String()
-	if !strings.Contains(body, "error.web.message.campaign_locale_value_is_invalid") && !strings.Contains(body, "campaign locale value is invalid") {
-		t.Fatalf("body missing locale validation marker: %q", body)
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Key != "error.web.message.campaign_locale_value_is_invalid" {
+		t.Fatalf("flash key = %q, want %q", notice.Key, "error.web.message.campaign_locale_value_is_invalid")
 	}
 }
 

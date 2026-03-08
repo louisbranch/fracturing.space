@@ -27,7 +27,7 @@ func TestWriteModuleErrorRendersAppErrorPageForNotFound(t *testing.T) {
 	}
 }
 
-func TestWriteModuleErrorWritesPlainTextForBadRequest(t *testing.T) {
+func TestWriteModuleErrorRendersStyledPageForBadRequest(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
@@ -37,8 +37,8 @@ func TestWriteModuleErrorWritesPlainTextForBadRequest(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, http.StatusText(http.StatusBadRequest)) {
-		t.Fatalf("body = %q, want generic bad-request message", body)
+	if !strings.Contains(body, `id="app-error-state"`) {
+		t.Fatalf("body missing app error state marker: %q", body)
 	}
 	// Invariant: user-facing transport errors must not leak raw internal strings.
 	if strings.Contains(body, "bad form") {
@@ -104,15 +104,19 @@ func TestWriteAppErrorHTMXRendersFragment(t *testing.T) {
 	}
 }
 
-func TestWriteAppErrorNormalizesNonAppStatusesToServerError(t *testing.T) {
+func TestWriteAppErrorPreservesBadRequestStatus(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
 	rr := httptest.NewRecorder()
 	WriteAppError(rr, req, http.StatusBadRequest, nil)
 
-	if rr.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `id="app-error-state"`) {
+		t.Fatalf("body missing app error state marker: %q", body)
 	}
 }
 
@@ -165,15 +169,19 @@ func TestWritePublicAppErrorRendersPublicShell(t *testing.T) {
 	}
 }
 
-func TestWritePublicAppErrorNormalizesNonAppStatusesToServerError(t *testing.T) {
+func TestWritePublicAppErrorPreservesBadRequestStatus(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
 	rr := httptest.NewRecorder()
 	WritePublicAppError(rr, req, http.StatusBadRequest)
 
-	if rr.Code != http.StatusInternalServerError {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
+	if rr.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `id="app-error-state"`) {
+		t.Fatalf("body missing app error state marker: %q", body)
 	}
 }
 
@@ -200,7 +208,7 @@ func TestWritePublicErrorRendersAppErrorForNotFound(t *testing.T) {
 	}
 }
 
-func TestWritePublicErrorWritesPlainTextForBadRequest(t *testing.T) {
+func TestWritePublicErrorRendersStyledPageForBadRequest(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodPost, "/passkeys/login/start", nil)
@@ -211,8 +219,8 @@ func TestWritePublicErrorWritesPlainTextForBadRequest(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, http.StatusText(http.StatusBadRequest)) {
-		t.Fatalf("body = %q, want generic bad-request message", body)
+	if !strings.Contains(body, `id="app-error-state"`) {
+		t.Fatalf("body missing app error state marker: %q", body)
 	}
 	if strings.Contains(body, "unsafe parser detail") {
 		t.Fatalf("body leaked internal error text: %q", body)
@@ -231,6 +239,30 @@ func TestWriteModuleErrorAllowsNilWriter(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
 	WriteModuleError(nil, req, apperrors.E(apperrors.KindInvalidInput, "invalid"), nil)
+}
+
+func TestShouldRenderAppError(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		status int
+		want   bool
+	}{
+		{http.StatusOK, false},
+		{http.StatusMovedPermanently, false},
+		{http.StatusBadRequest, true},
+		{http.StatusForbidden, true},
+		{http.StatusNotFound, true},
+		{http.StatusConflict, true},
+		{http.StatusInternalServerError, true},
+		{http.StatusBadGateway, true},
+		{http.StatusServiceUnavailable, true},
+	}
+	for _, tc := range tests {
+		if got := ShouldRenderAppError(tc.status); got != tc.want {
+			t.Errorf("ShouldRenderAppError(%d) = %v, want %v", tc.status, got, tc.want)
+		}
+	}
 }
 
 type stubLocalizer map[string]string

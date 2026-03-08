@@ -3,19 +3,21 @@ package campaigns
 import (
 	"net/http"
 
-	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 )
 
-// requireParsedForm parses POST form values and writes a localized invalid-input
-// error response when parsing fails.
+// requireParsedForm parses POST form values and writes a flash error notice
+// with redirect when parsing fails.
 func (h handlers) requireParsedForm(
 	w http.ResponseWriter,
 	r *http.Request,
 	localizationKey string,
-	fallbackMessage string,
+	redirectURL string,
 ) bool {
 	if err := r.ParseForm(); err != nil {
-		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, localizationKey, fallbackMessage))
+		flash.Write(w, r, flash.Notice{Kind: flash.KindError, Key: localizationKey})
+		httpx.WriteRedirect(w, r, redirectURL)
 		return false
 	}
 	return true
