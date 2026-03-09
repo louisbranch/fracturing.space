@@ -1,7 +1,6 @@
 package campaigns
 
 import (
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -68,44 +67,20 @@ func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, sess
 }
 
 const campaignSessionTimestampLayout = "2006-01-02 15:04 UTC"
-const campaignSessionMenuRecentLimit = 10
 
 // campaignSessionMenuSubItems builds campaign session subitems for workspace navigation.
+// Only active sessions are shown in the side menu, with a "Join Game" link.
 func campaignSessionMenuSubItems(campaignID string, sessions []CampaignSession, loc webtemplates.Localizer) []webtemplates.AppSideMenuSubItem {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" || len(sessions) == 0 {
 		return []webtemplates.AppSideMenuSubItem{}
 	}
 
-	ordered := append([]CampaignSession(nil), sessions...)
-	sort.SliceStable(ordered, func(i, j int) bool {
-		leftTime, leftOK := campaignSessionMenuStartTime(ordered[i])
-		rightTime, rightOK := campaignSessionMenuStartTime(ordered[j])
-		if leftOK != rightOK {
-			return leftOK
-		}
-		if leftOK && !leftTime.Equal(rightTime) {
-			return leftTime.Before(rightTime)
-		}
-
-		leftID := strings.TrimSpace(ordered[i].ID)
-		rightID := strings.TrimSpace(ordered[j].ID)
-		if leftID == rightID {
-			return strings.ToLower(strings.TrimSpace(ordered[i].Name)) < strings.ToLower(strings.TrimSpace(ordered[j].Name))
-		}
-		return leftID < rightID
-	})
-	if len(ordered) > campaignSessionMenuRecentLimit {
-		ordered = ordered[len(ordered)-campaignSessionMenuRecentLimit:]
-	}
-
 	startLabel := webtemplates.T(loc, "game.sessions.menu.start")
-	endLabel := webtemplates.T(loc, "game.sessions.menu.end")
-	inProgressLabel := webtemplates.T(loc, "game.sessions.menu.in_progress")
-	result := make([]webtemplates.AppSideMenuSubItem, 0, len(ordered))
-	for _, session := range ordered {
+	result := make([]webtemplates.AppSideMenuSubItem, 0)
+	for _, session := range sessions {
 		sessionID := strings.TrimSpace(session.ID)
-		if sessionID == "" {
+		if sessionID == "" || !campaignSessionMenuIsActive(session) {
 			continue
 		}
 
@@ -113,19 +88,14 @@ func campaignSessionMenuSubItems(campaignID string, sessions []CampaignSession, 
 		if startValue == "" {
 			startValue = "-"
 		}
-		endValue := strings.TrimSpace(session.EndedAt)
-		if campaignSessionMenuIsActive(session) {
-			endValue = inProgressLabel
-		} else if endValue == "" {
-			endValue = "-"
-		}
 
 		result = append(result, webtemplates.AppSideMenuSubItem{
 			Label:         campaignSessionMenuItemName(session, loc),
 			URL:           routepath.AppCampaignSession(campaignID, sessionID),
 			StartDetail:   startLabel + ": " + startValue,
-			EndDetail:     endLabel + ": " + endValue,
-			ActiveSession: campaignSessionMenuIsActive(session),
+			ActiveSession: true,
+			JoinURL:       routepath.AppCampaignGame(campaignID),
+			JoinLabel:     webtemplates.T(loc, "game.sessions.action_join_game"),
 		})
 	}
 
@@ -207,45 +177,12 @@ func campaignListItemUpdatedAt(updatedAtUnixNano int64, now time.Time, loc webte
 		now = now.UTC()
 	}
 	updatedAt := time.Unix(0, updatedAtUnixNano).UTC()
-	if updatedAtUnixNano <= 0 {
-		return webtemplates.T(loc, "game.campaigns.updated_at", webtemplates.T(loc, "game.notifications.time.just_now"))
-	}
-	if updatedAt.IsZero() {
+	if updatedAtUnixNano <= 0 || updatedAt.IsZero() {
 		return webtemplates.T(loc, "game.campaigns.updated_at", webtemplates.T(loc, "game.notifications.time.just_now"))
 	}
 
 	delta := now.Sub(updatedAt)
-	if delta < 0 {
-		delta = 0
-	}
-
-	var updatedLabel string
-	switch {
-	case delta < time.Minute:
-		updatedLabel = webtemplates.T(loc, "game.notifications.time.just_now")
-	case delta < time.Hour:
-		minutes := int(delta / time.Minute)
-		if minutes <= 1 {
-			updatedLabel = webtemplates.T(loc, "game.notifications.time.minute_ago")
-		} else {
-			updatedLabel = webtemplates.T(loc, "game.notifications.time.minutes_ago", minutes)
-		}
-	case delta < 24*time.Hour:
-		hours := int(delta / time.Hour)
-		if hours <= 1 {
-			updatedLabel = webtemplates.T(loc, "game.notifications.time.hour_ago")
-		} else {
-			updatedLabel = webtemplates.T(loc, "game.notifications.time.hours_ago", hours)
-		}
-	default:
-		days := int(delta / (24 * time.Hour))
-		if days <= 1 {
-			updatedLabel = webtemplates.T(loc, "game.notifications.time.day_ago")
-		} else {
-			updatedLabel = webtemplates.T(loc, "game.notifications.time.days_ago", days)
-		}
-	}
-	return webtemplates.T(loc, "game.campaigns.updated_at", updatedLabel)
+	return webtemplates.T(loc, "game.campaigns.updated_at", webtemplates.RelativeTimeLabel(delta, loc))
 }
 
 // mapParticipantsView converts domain participants to template view items.

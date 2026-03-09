@@ -56,7 +56,9 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 						<h2 class="card-title">{ T(loc, "game.campaign.menu.overview") }</h2>
 						if view.CanEditCampaign {
 							if campaignActionsLocked(view) {
-								<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-edit-disabled="true">{ T(loc, "game.campaign.action_edit") }</button>
+								<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-edit-disabled="true">{ T(loc, "game.campaign.action_edit") }</button>
+								</div>
 							} else {
 								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignEdit(view.CampaignID) } data-campaign-overview-edit-link="true">{ T(loc, "game.campaign.action_edit") }</a>
 							}
@@ -141,7 +143,13 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 						<div class="flex items-center justify-between gap-3">
 							<h2 class="card-title">{ T(loc, "game.participants.title") }</h2>
 							if view.CanManageParticipants {
-								<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
+								if campaignActionsLocked(view) {
+									<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+										<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
+									</div>
+								} else {
+									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
+								}
 							}
 						</div>
 					</div>
@@ -151,8 +159,8 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 					<p>{ T(loc, "game.participants.empty") }</p>
 				}
 				for _, participant := range view.Participants {
-					<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side overflow-hidden" data-campaign-participant-card-id={ participant.ID }>
-						<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0">
+					<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side" data-campaign-participant-card-id={ participant.ID }>
+						<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0 overflow-hidden">
 							@AppImage(AppImageView{
 								Src:        participant.AvatarURL,
 								Alt:        participant.Name + " avatar",
@@ -182,7 +190,13 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 							</dl>
 							if participant.CanEdit && campaignParticipantEditURL(view, participant) != "" {
 								<div class="card-actions justify-end">
-									<a class="btn btn-outline btn-sm" href={ campaignParticipantEditURL(view, participant) } data-campaign-participant-edit-link="true">{ T(loc, "game.participants.action_edit") }</a>
+									if campaignActionsLocked(view) {
+										<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+											<button class="btn btn-outline btn-sm" type="button" disabled>{ T(loc, "game.participants.action_edit") }</button>
+										</div>
+									} else {
+										<a class="btn btn-outline btn-sm" href={ campaignParticipantEditURL(view, participant) } data-campaign-participant-edit-link="true">{ T(loc, "game.participants.action_edit") }</a>
+									}
 								</div>
 							}
 						</div>
@@ -292,7 +306,9 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 							<h2 class="card-title">{ T(loc, "game.characters.title") }</h2>
 							if view.CanCreateCharacter {
 								if campaignActionsLocked(view) {
-									<button class="btn btn-primary btn-sm" type="button" disabled data-campaign-character-create-disabled="true">{ T(loc, "game.characters.submit_create") }</button>
+									<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+										<button class="btn btn-primary btn-sm" type="button" disabled data-campaign-character-create-disabled="true">{ T(loc, "game.characters.submit_create") }</button>
+									</div>
 								} else {
 									<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignCharacterCreate(view.CampaignID) } data-campaign-character-create-link="true">{ T(loc, "game.characters.submit_create") }</a>
 								}
@@ -305,8 +321,8 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 						<p>{ T(loc, "game.characters.empty") }</p>
 					}
 					for _, character := range view.Characters {
-						<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side overflow-hidden" data-campaign-character-card-id={ character.ID }>
-							<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0">
+						<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side" data-campaign-character-card-id={ character.ID }>
+							<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0 overflow-hidden">
 								@AppImage(AppImageView{
 									Src:        character.AvatarURL,
 									Alt:        character.Name + " avatar",
@@ -341,16 +357,6 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 											<dd>{ campaignCharacterAliases(character.Aliases) }</dd>
 										</div>
 									}
-									<div class="flex gap-2 items-center">
-										<dt class="opacity-70">{ T(loc, "game.characters.field_editability") }:</dt>
-										<dd data-campaign-character-can-edit={ campaignCharacterCanEditAttr(character) } data-campaign-character-edit-reason={ character.EditReasonCode }>
-											if character.CanEdit {
-												<span class="badge badge-outline badge-success">{ T(loc, "game.characters.value_editable") }</span>
-											} else {
-												<span class="badge badge-outline badge-ghost">{ T(loc, "game.characters.value_read_only") }</span>
-											}
-										</dd>
-									</div>
 								</dl>
 								if campaignCharacterDetailURL(view, character) != "" {
 									<div class="card-actions justify-end">
@@ -427,10 +433,23 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 								<a href={ routepath.AppCampaignSession(view.CampaignID, session.ID) }>{ session.Name }</a>
 							</h2>
 							<p data-campaign-session-status={ campaignSessionStatusLabel(loc, session.Status) }>{ campaignSessionStatusLabel(loc, session.Status) }</p>
-							<p data-campaign-session-updated-at={ session.UpdatedAt }>{ session.UpdatedAt }</p>
+							<div class="text-sm space-y-1">
+								if session.StartedAt != "" {
+									<div class="flex gap-2 items-center" data-campaign-session-started-at={ session.StartedAt }>
+										<span class="opacity-70">{ T(loc, "game.sessions.label_started_at") }:</span>
+										@DateTimeTooltip(FormatDateTimeNow(session.StartedAt, loc))
+									</div>
+								}
+								if session.EndedAt != "" {
+									<div class="flex gap-2 items-center" data-campaign-session-ended-at={ session.EndedAt }>
+										<span class="opacity-70">{ T(loc, "game.sessions.label_ended_at") }:</span>
+										@DateTimeTooltip(FormatDateTimeNow(session.EndedAt, loc))
+									</div>
+								}
+							</div>
 							if campaignSessionCanEnd(session.Status) {
 								<div class="card-actions justify-end">
-									<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-end-form="true">
+									<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-end-form="true" onsubmit="return confirm(this.dataset.confirmText);" data-confirm-text={ T(loc, "game.sessions.confirm_end") }>
 										<input type="hidden" name="session_id" value={ session.ID }/>
 										<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.sessions.end") }</button>
 									</form>
@@ -441,23 +460,51 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 				}
 			</div>
 		} else if view.Marker == "campaign-session-detail" {
-			<div class="card bg-base-200">
-				<div class="card-body">
-					<h2 class="card-title" data-campaign-session-detail-id={ campaignSessionByID(loc, view).ID }>{ campaignSessionByID(loc, view).ID }</h2>
-					<p data-campaign-session-detail-name={ campaignSessionByID(loc, view).Name }>{ campaignSessionByID(loc, view).Name }</p>
-					<p data-campaign-session-detail-status={ campaignSessionStatusLabel(loc, campaignSessionByID(loc, view).Status) }>{ campaignSessionStatusLabel(loc, campaignSessionByID(loc, view).Status) }</p>
-					if campaignSessionByID(loc, view).StartedAt != "" {
-						<p data-campaign-session-detail-started-at={ campaignSessionByID(loc, view).StartedAt }>{ campaignSessionByID(loc, view).StartedAt }</p>
-					}
-					if campaignSessionByID(loc, view).UpdatedAt != "" {
-						<p data-campaign-session-detail-updated-at={ campaignSessionByID(loc, view).UpdatedAt }>{ campaignSessionByID(loc, view).UpdatedAt }</p>
-					}
-					if campaignSessionByID(loc, view).EndedAt != "" {
-						<p data-campaign-session-detail-ended-at={ campaignSessionByID(loc, view).EndedAt }>{ campaignSessionByID(loc, view).EndedAt }</p>
-					}
+			<div class="card bg-base-100 border border-base-300 shadow-sm">
+				<div class="card-body gap-4">
+					<div class="flex items-center justify-between gap-3">
+						<h2 class="card-title" data-campaign-session-detail-id={ campaignSessionByID(loc, view).ID }>{ campaignSessionByID(loc, view).Name }</h2>
+						if campaignSessionCanEnd(campaignSessionByID(loc, view).Status) {
+							<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignGame(view.CampaignID) }>{ T(loc, "game.sessions.action_join_game") }</a>
+						}
+					</div>
+					<dl class="grid gap-3 text-sm md:grid-cols-2">
+						<div>
+							<dt class="opacity-70">{ T(loc, "game.sessions.field_name") }</dt>
+							<dd data-campaign-session-detail-name={ campaignSessionByID(loc, view).Name }>{ campaignSessionByID(loc, view).Name }</dd>
+						</div>
+						<div>
+							<dt class="opacity-70">Status</dt>
+							<dd data-campaign-session-detail-status={ campaignSessionStatusLabel(loc, campaignSessionByID(loc, view).Status) }>{ campaignSessionStatusLabel(loc, campaignSessionByID(loc, view).Status) }</dd>
+						</div>
+						if campaignSessionByID(loc, view).StartedAt != "" {
+							<div data-campaign-session-detail-started-at={ campaignSessionByID(loc, view).StartedAt }>
+								<dt class="opacity-70">{ T(loc, "game.sessions.label_started_at") }</dt>
+								<dd>
+									@DateTimeTooltip(FormatDateTimeNow(campaignSessionByID(loc, view).StartedAt, loc))
+								</dd>
+							</div>
+						}
+						if campaignSessionByID(loc, view).EndedAt != "" {
+							<div data-campaign-session-detail-ended-at={ campaignSessionByID(loc, view).EndedAt }>
+								<dt class="opacity-70">{ T(loc, "game.sessions.label_ended_at") }</dt>
+								<dd>
+									@DateTimeTooltip(FormatDateTimeNow(campaignSessionByID(loc, view).EndedAt, loc))
+								</dd>
+							</div>
+						}
+						if campaignSessionCanEnd(campaignSessionByID(loc, view).Status) && campaignSessionByID(loc, view).UpdatedAt != "" {
+							<div data-campaign-session-detail-updated-at={ campaignSessionByID(loc, view).UpdatedAt }>
+								<dt class="opacity-70">{ T(loc, "game.sessions.label_updated_at") }</dt>
+								<dd>
+									@DateTimeTooltip(FormatDateTimeNow(campaignSessionByID(loc, view).UpdatedAt, loc))
+								</dd>
+							</div>
+						}
+					</dl>
 					if campaignSessionCanEnd(campaignSessionByID(loc, view).Status) {
 						<div class="card-actions justify-end">
-							<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-detail-end-form="true">
+							<form method="post" action={ routepath.AppCampaignSessionEnd(view.CampaignID) } data-campaign-session-detail-end-form="true" onsubmit="return confirm(this.dataset.confirmText);" data-confirm-text={ T(loc, "game.sessions.confirm_end") }>
 								<input type="hidden" name="session_id" value={ campaignSessionByID(loc, view).ID }/>
 								<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.sessions.end") }</button>
 							</form>
@@ -473,7 +520,9 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 							<h2 class="card-title" data-campaign-character-detail-id={ campaignCharacterByID(view).ID }>{ campaignCharacterDisplayName(loc, campaignCharacterByID(view)) }</h2>
 							if campaignCharacterByID(view).CanEdit && campaignCharacterEditURL(view) != "" {
 								if campaignActionsLocked(view) {
-									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-character-edit-disabled="true">{ T(loc, "game.characters.action_edit") }</button>
+									<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+										<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-character-edit-disabled="true">{ T(loc, "game.characters.action_edit") }</button>
+									</div>
 								} else {
 									<a class="btn btn-outline btn-sm" href={ campaignCharacterEditURL(view) } data-campaign-character-edit-link="true">{ T(loc, "game.characters.action_edit") }</a>
 								}
@@ -514,13 +563,15 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 							if campaignCharacterByID(view).CanEdit {
 								<div class="card-actions justify-end">
 									if campaignActionsLocked(view) {
-										<button class="btn btn-primary btn-sm" type="button" disabled data-character-creation-disabled="true">
-											if view.CharacterCreation.Ready {
-												{ T(loc, "game.character_creation.action_start_again") }
-											} else {
-												{ T(loc, "game.character_creation.action_continue_creation") }
-											}
-										</button>
+										<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+											<button class="btn btn-primary btn-sm" type="button" disabled data-character-creation-disabled="true">
+												if view.CharacterCreation.Ready {
+													{ T(loc, "game.character_creation.action_start_again") }
+												} else {
+													{ T(loc, "game.character_creation.action_continue_creation") }
+												}
+											</button>
+										</div>
 									} else if view.CharacterCreation.Ready {
 										<form method="post" action={ routepath.AppCampaignCharacterCreationReset(view.CampaignID, view.CharacterID) } data-character-creation-reset-inline="true">
 											<button class="btn btn-primary btn-sm" type="submit">{ T(loc, "game.character_creation.action_start_again") }</button>

@@ -1,0 +1,11 @@
+package templates
+
+templ DateTimeTooltip(display DateTimeDisplay) {
+	if display.DisplayText != "" {
+		<div class="tooltip tooltip-top" data-tip={ display.TooltipText }>
+			<time datetime={ display.ISOValue } data-app-localtime="true">
+				{ display.DisplayText }
+			</time>
+		</div>
+	}
+}

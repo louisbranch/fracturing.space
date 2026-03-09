@@ -234,10 +234,10 @@ func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaig
 func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, campaignID, sessionID string) {
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerSessionDetail,
-		extra: func(loc webtemplates.Localizer, _ webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
+		extra: func(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
 			return []sharedtemplates.BreadcrumbItem{
 				{Label: webtemplates.T(loc, "game.sessions.title"), URL: routepath.AppCampaignSessions(campaignID)},
-				{Label: sessionID},
+				{Label: campaignSessionBreadcrumbLabel(loc, view)},
 			}
 		},
 		loadData: func(_ context.Context, _ string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error {
@@ -246,6 +246,25 @@ func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 			return nil
 		},
 	})
+}
+
+// campaignSessionBreadcrumbLabel resolves the selected session breadcrumb label.
+func campaignSessionBreadcrumbLabel(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) string {
+	selectedSessionID := strings.TrimSpace(view.SessionID)
+	if selectedSessionID == "" {
+		return webtemplates.T(loc, "game.sessions.title")
+	}
+	for _, session := range view.Sessions {
+		if strings.TrimSpace(session.ID) != selectedSessionID {
+			continue
+		}
+		sessionName := strings.TrimSpace(session.Name)
+		if sessionName != "" {
+			return sessionName
+		}
+		break
+	}
+	return webtemplates.T(loc, "game.sessions.menu.unnamed")
 }
 
 // handleInvites handles this route in the module transport layer.

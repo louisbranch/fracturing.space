@@ -551,7 +551,7 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 	for _, marker := range []string{
 		`src="` + expectedAvatarURL + `"`,
 		`alt="Rhea Vale"`,
-		`class="relative z-10 h-full w-full object-cover rounded-full"`,
+		`class="relative z-1 h-full w-full object-cover rounded-full"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing deterministic avatar marker %q: %q", marker, body)

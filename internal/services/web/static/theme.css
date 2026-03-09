@@ -86,6 +86,12 @@ h4 {
   }
 }
 
+/* Tooltip stacking — ensure tooltips in card-body render above sibling figures/images */
+.card-body .tooltip {
+  position: relative;
+  z-index: 2;
+}
+
 /* Campaign cover header contrast */
 
 .campaign-cover-header .breadcrumbs,

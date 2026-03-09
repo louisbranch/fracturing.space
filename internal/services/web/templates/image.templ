@@ -39,7 +39,7 @@ func appImageSkeletonClass(view AppImageView) string {
 }
 
 func appImageClass(view AppImageView) string {
-	base := "relative z-10"
+	base := "relative z-1"
 	imageClass := appImageValue(view.ImageClass)
 	if imageClass == "" {
 		return base + " h-full w-full object-cover"

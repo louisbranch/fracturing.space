@@ -157,12 +157,16 @@ func TestMountCampaignWorkspaceMenuRendersSessionsSectionAcrossPages(t *testing.
 		for _, marker := range []string{
 			`href="/app/campaigns/c1/sessions"`,
 			`class="badge badge-sm badge-soft badge-primary">2</div>`,
-			`data-app-side-menu-subitem="/app/campaigns/c1/sessions/s1"`,
+			// Only the active session (s2) appears as a sub-item.
 			`data-app-side-menu-subitem="/app/campaigns/c1/sessions/s2"`,
 		} {
 			if !strings.Contains(body, marker) {
 				t.Fatalf("path %q body missing sessions menu marker %q: %q", path, marker, body)
 			}
+		}
+		// Ended session s1 should not appear as a sub-item.
+		if strings.Contains(body, `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s1"`) {
+			t.Fatalf("path %q body should not contain ended session sub-item for s1", path)
 		}
 	}
 }
@@ -209,14 +213,17 @@ func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.
 	}
 	body := rr.Body.String()
 
+	// Only the active session (s1) should appear as a sub-item in the menu.
 	s1Idx := strings.Index(body, `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s1"`)
-	s2Idx := strings.Index(body, `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s2"`)
-	s3Idx := strings.Index(body, `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s3"`)
-	if s1Idx == -1 || s2Idx == -1 || s3Idx == -1 {
-		t.Fatalf("expected all session subitems in side menu: %q", body)
+	if s1Idx == -1 {
+		t.Fatalf("expected active session s1 subitem in side menu: %q", body)
 	}
-	if !(s1Idx < s2Idx && s2Idx < s3Idx) {
-		t.Fatalf("expected session subitems oldest-to-newest order; indexes = (%d, %d, %d)", s1Idx, s2Idx, s3Idx)
+	// Ended sessions should not appear.
+	if strings.Contains(body, `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s2"`) {
+		t.Fatalf("ended session s2 should not appear as sub-item")
+	}
+	if strings.Contains(body, `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s3"`) {
+		t.Fatalf("ended session s3 should not appear as sub-item")
 	}
 
 	activeRowMarker := `data-app-side-menu-subitem="/app/campaigns/c1/sessions/s1" data-app-side-menu-subitem-active-session="true"`
@@ -230,8 +237,8 @@ func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.
 	}
 	for _, marker := range []string{
 		`data-app-side-menu-subitem-start="Start: 2026-02-01 20:00 UTC"`,
-		`data-app-side-menu-subitem-end="End: In progress"`,
-		`>Unnamed session</span>`,
+		`>Unnamed session</a>`,
+		`Join Game</a>`,
 	} {
 		if !strings.Contains(activeRowBody, marker) {
 			t.Fatalf("expected active session detail marker %q in output: %q", marker, activeRowBody)
@@ -1428,7 +1435,10 @@ func TestMountUsesWebLayoutForNonHTMX(t *testing.T) {
 func TestMountCampaignSessionDetailRendersBreadcrumbs(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{
+		items:    []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		sessions: []CampaignSession{{ID: "s1", Name: "First Light", Status: "Active"}},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1445,7 +1455,7 @@ func TestMountCampaignSessionDetailRendersBreadcrumbs(t *testing.T) {
 		`href="/app/campaigns"`,
 		`href="/app/campaigns/c1">The Guildhouse</a>`,
 		`href="/app/campaigns/c1/sessions"`,
-		`>s1</li>`,
+		`>First Light</li>`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing breadcrumb marker %q: %q", marker, body)
