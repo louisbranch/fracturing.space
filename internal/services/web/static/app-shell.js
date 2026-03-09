@@ -265,7 +265,26 @@ function initAppToasts() {
 	});
 }
 
+function convertLocalTimes() {
+	document.querySelectorAll("time[data-app-localtime]").forEach(function(el) {
+		var iso = el.getAttribute("datetime");
+		if (!iso) return;
+		var date = new Date(iso);
+		if (isNaN(date.getTime())) return;
+		var now = new Date();
+		var delta = now - date;
+		// Only convert if >= 7 days (relative times are already timezone-agnostic)
+		if (delta >= 7 * 24 * 60 * 60 * 1000) {
+			el.textContent = date.toLocaleString(undefined, {
+				year: "numeric", month: "short", day: "numeric",
+				hour: "2-digit", minute: "2-digit"
+			});
+		}
+	});
+}
+
 syncAppChromeState();
+convertLocalTimes();
 document.addEventListener("DOMContentLoaded", function() {
 	syncAppChromeState();
 });
@@ -293,4 +312,5 @@ document.addEventListener("htmx:afterSwap", function(event) {
 });
 document.addEventListener("htmx:afterSettle", function(event) {
 	syncAppChromeState(appPathFromHtmxDetail(event && event.detail));
+	convertLocalTimes();
 });

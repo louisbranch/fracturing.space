@@ -66,7 +66,7 @@ func TestMapCampaignListItemsIncludesUpdatedAtLabel(t *testing.T) {
 	}
 }
 
-func TestCampaignWorkspaceMenuIncludesSessionSubItemsOldestToNewest(t *testing.T) {
+func TestCampaignWorkspaceMenuShowsOnlyActiveSessionSubItems(t *testing.T) {
 	t.Parallel()
 
 	loc := webi18n.Printer(language.English)
@@ -118,48 +118,40 @@ func TestCampaignWorkspaceMenuIncludesSessionSubItemsOldestToNewest(t *testing.T
 	if menu.Items[3].URL != routepath.AppCampaignSessions("c1") {
 		t.Fatalf("menu.Items[3].URL = %q, want %q", menu.Items[3].URL, routepath.AppCampaignSessions("c1"))
 	}
+	// Badge still shows total count of all sessions.
 	if menu.Items[3].Badge != "3" {
 		t.Fatalf("menu.Items[3].Badge = %q, want %q", menu.Items[3].Badge, "3")
 	}
 	if menu.Items[3].IconID != commonv1.IconId_ICON_ID_SESSION {
 		t.Fatalf("menu.Items[3].IconID = %v, want %v", menu.Items[3].IconID, commonv1.IconId_ICON_ID_SESSION)
 	}
-	if len(menu.Items[3].SubItems) != 3 {
-		t.Fatalf("len(menu.Items[3].SubItems) = %d, want 3", len(menu.Items[3].SubItems))
+	// Only the active session should appear as a sub-item.
+	if len(menu.Items[3].SubItems) != 1 {
+		t.Fatalf("len(menu.Items[3].SubItems) = %d, want 1", len(menu.Items[3].SubItems))
 	}
 
-	gotOrder := []string{
-		menu.Items[3].SubItems[0].URL,
-		menu.Items[3].SubItems[1].URL,
-		menu.Items[3].SubItems[2].URL,
+	active := menu.Items[3].SubItems[0]
+	if active.URL != routepath.AppCampaignSession("c1", "s1") {
+		t.Fatalf("active subitem URL = %q, want %q", active.URL, routepath.AppCampaignSession("c1", "s1"))
 	}
-	wantOrder := []string{
-		routepath.AppCampaignSession("c1", "s1"),
-		routepath.AppCampaignSession("c1", "s2"),
-		routepath.AppCampaignSession("c1", "s3"),
+	if active.Label != "Unnamed session" {
+		t.Fatalf("active session label = %q, want %q", active.Label, "Unnamed session")
 	}
-	for idx := range wantOrder {
-		if gotOrder[idx] != wantOrder[idx] {
-			t.Fatalf("menu session order[%d] = %q, want %q", idx, gotOrder[idx], wantOrder[idx])
-		}
+	if !active.ActiveSession {
+		t.Fatalf("active.ActiveSession = %v, want true", active.ActiveSession)
 	}
-
-	first := menu.Items[3].SubItems[0]
-	if first.Label != "Unnamed session" {
-		t.Fatalf("first session label = %q, want %q", first.Label, "Unnamed session")
+	if active.StartDetail != "Start: 2026-02-01 20:00 UTC" {
+		t.Fatalf("active.StartDetail = %q, want %q", active.StartDetail, "Start: 2026-02-01 20:00 UTC")
 	}
-	if !first.ActiveSession {
-		t.Fatalf("first.ActiveSession = %v, want true", first.ActiveSession)
+	if active.JoinURL != routepath.AppCampaignGame("c1") {
+		t.Fatalf("active.JoinURL = %q, want %q", active.JoinURL, routepath.AppCampaignGame("c1"))
 	}
-	if first.StartDetail != "Start: 2026-02-01 20:00 UTC" {
-		t.Fatalf("first.StartDetail = %q, want %q", first.StartDetail, "Start: 2026-02-01 20:00 UTC")
-	}
-	if first.EndDetail != "End: In progress" {
-		t.Fatalf("first.EndDetail = %q, want %q", first.EndDetail, "End: In progress")
+	if active.JoinLabel != "Join Game" {
+		t.Fatalf("active.JoinLabel = %q, want %q", active.JoinLabel, "Join Game")
 	}
 }
 
-func TestCampaignWorkspaceMenuLimitsSessionSubItemsToMostRecentTen(t *testing.T) {
+func TestCampaignWorkspaceMenuBadgeCountsAllSessionsButSubItemsOnlyActive(t *testing.T) {
 	t.Parallel()
 
 	loc := webi18n.Printer(language.English)
@@ -185,17 +177,12 @@ func TestCampaignWorkspaceMenuLimitsSessionSubItemsToMostRecentTen(t *testing.T)
 	}
 
 	sessionItem := menu.Items[3]
+	// Badge still shows total count.
 	if sessionItem.Badge != "12" {
 		t.Fatalf("session badge = %q, want %q", sessionItem.Badge, "12")
 	}
-	if len(sessionItem.SubItems) != 10 {
-		t.Fatalf("len(session subitems) = %d, want 10", len(sessionItem.SubItems))
-	}
-
-	if got := sessionItem.SubItems[0].URL; got != routepath.AppCampaignSession("c1", "s03") {
-		t.Fatalf("first subitem URL = %q, want %q", got, routepath.AppCampaignSession("c1", "s03"))
-	}
-	if got := sessionItem.SubItems[9].URL; got != routepath.AppCampaignSession("c1", "s12") {
-		t.Fatalf("last subitem URL = %q, want %q", got, routepath.AppCampaignSession("c1", "s12"))
+	// No active sessions, so no sub-items.
+	if len(sessionItem.SubItems) != 0 {
+		t.Fatalf("len(session subitems) = %d, want 0", len(sessionItem.SubItems))
 	}
 }

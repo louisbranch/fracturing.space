@@ -25,7 +25,7 @@ func TestAppImageRendersSkeletonAndImage(t *testing.T) {
 	for _, marker := range []string{
 		`class="relative overflow-hidden aspect-[16/9] w-full"`,
 		`class="skeleton absolute inset-0 z-0 pointer-events-none"`,
-		`class="relative z-10 h-full w-full object-cover"`,
+		`class="relative z-1 h-full w-full object-cover"`,
 		`style="aspect-ratio: 16 / 9;"`,
 		`src="https://cdn.example.com/covers/shipyard.png"`,
 		`alt="Shipyard cover"`,
@@ -97,7 +97,7 @@ func TestAppImageAlwaysPrefixesImageClassWithForegroundLayer(t *testing.T) {
 	}
 	got := buf.String()
 	// Invariant: skeleton must always render below loaded images regardless of custom class input.
-	if !strings.Contains(got, `class="relative z-10 h-full w-full object-cover rounded-full"`) {
+	if !strings.Contains(got, `class="relative z-1 h-full w-full object-cover rounded-full"`) {
 		t.Fatalf("AppImage output missing foreground image layer contract: %q", got)
 	}
 }

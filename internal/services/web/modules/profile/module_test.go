@@ -55,7 +55,7 @@ func TestMountServesProfilePage(t *testing.T) {
 		`data-public-profile-card="true"`,
 		`lg:order-2`,
 		`class="skeleton absolute inset-0 z-0 pointer-events-none"`,
-		`class="relative z-10 h-full w-full object-cover"`,
+		`class="relative z-1 h-full w-full object-cover"`,
 		`aspect-ratio: 1 / 1;`,
 		`src="https://cdn.example.com/avatars/`,
 		`href="/app/dashboard"`,

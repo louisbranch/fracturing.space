@@ -133,6 +133,8 @@ type AppSideMenuSubItem struct {
 	StartDetail   string
 	EndDetail     string
 	ActiveSession bool
+	JoinURL       string
+	JoinLabel     string
 }
 
 type AppSideMenu struct {
@@ -302,6 +304,14 @@ func appSideMenuSubItemActiveSession(item AppSideMenuSubItem) bool {
 	return item.ActiveSession
 }
 
+func appSideMenuSubItemJoinURL(item AppSideMenuSubItem) string {
+	return strings.TrimSpace(item.JoinURL)
+}
+
+func appSideMenuSubItemJoinLabel(item AppSideMenuSubItem) string {
+	return strings.TrimSpace(item.JoinLabel)
+}
+
 func appSideMenuSubItemIsCurrent(menu *AppSideMenu, item AppSideMenuSubItem) bool {
 	if menu == nil {
 		return false
@@ -467,22 +477,32 @@ templ AppSideMenuComponent(menu *AppSideMenu) {
 							<ul class="mt-1 space-y-1 ps-4" data-app-side-menu-subitems="true">
 								for _, subItem := range subItems {
 									<li data-app-side-menu-subitem={ appSideMenuSubItemURL(subItem) } data-app-side-menu-subitem-active-session={ appSideMenuSubItemActiveSession(subItem) }>
-										<a
-											class={ appSideMenuSubItemClass(menu, subItem) }
-											href={ appSideMenuSubItemURL(subItem) }
-											hx-get={ appSideMenuSubItemURL(subItem) }
-											hx-target="#main"
-											hx-swap="innerHTML"
-											hx-push-url="true"
-										>
-											<span class="block truncate text-sm font-medium">{ appSideMenuSubItemLabel(subItem) }</span>
-											if appSideMenuSubItemStartDetail(subItem) != "" {
-												<span class="block text-xs opacity-70" data-app-side-menu-subitem-start={ appSideMenuSubItemStartDetail(subItem) }>{ appSideMenuSubItemStartDetail(subItem) }</span>
-											}
-											if appSideMenuSubItemEndDetail(subItem) != "" {
-												<span class={ appSideMenuSubItemEndClass(subItem) } data-app-side-menu-subitem-end={ appSideMenuSubItemEndDetail(subItem) }>{ appSideMenuSubItemEndDetail(subItem) }</span>
-											}
-										</a>
+										if appSideMenuSubItemJoinURL(subItem) != "" {
+											<div class={ appSideMenuSubItemClass(menu, subItem) }>
+												<a class="block truncate text-sm font-medium hover:underline" href={ appSideMenuSubItemURL(subItem) } hx-get={ appSideMenuSubItemURL(subItem) } hx-target="#main" hx-swap="innerHTML" hx-push-url="true">{ appSideMenuSubItemLabel(subItem) }</a>
+												if appSideMenuSubItemStartDetail(subItem) != "" {
+													<span class="block text-xs opacity-70" data-app-side-menu-subitem-start={ appSideMenuSubItemStartDetail(subItem) }>{ appSideMenuSubItemStartDetail(subItem) }</span>
+												}
+												<a class="btn btn-primary btn-xs mt-1" href={ appSideMenuSubItemJoinURL(subItem) }>{ appSideMenuSubItemJoinLabel(subItem) }</a>
+											</div>
+										} else {
+											<a
+												class={ appSideMenuSubItemClass(menu, subItem) }
+												href={ appSideMenuSubItemURL(subItem) }
+												hx-get={ appSideMenuSubItemURL(subItem) }
+												hx-target="#main"
+												hx-swap="innerHTML"
+												hx-push-url="true"
+											>
+												<span class="block truncate text-sm font-medium">{ appSideMenuSubItemLabel(subItem) }</span>
+												if appSideMenuSubItemStartDetail(subItem) != "" {
+													<span class="block text-xs opacity-70" data-app-side-menu-subitem-start={ appSideMenuSubItemStartDetail(subItem) }>{ appSideMenuSubItemStartDetail(subItem) }</span>
+												}
+												if appSideMenuSubItemEndDetail(subItem) != "" {
+													<span class={ appSideMenuSubItemEndClass(subItem) } data-app-side-menu-subitem-end={ appSideMenuSubItemEndDetail(subItem) }>{ appSideMenuSubItemEndDetail(subItem) }</span>
+												}
+											</a>
+										}
 									</li>
 								}
 							</ul>
