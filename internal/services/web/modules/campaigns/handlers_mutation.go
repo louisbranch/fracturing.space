@@ -16,11 +16,21 @@ import (
 // writeMutationError writes a flash error notice and redirects back to the
 // originating page so the user stays in context and can retry.
 func (h handlers) writeMutationError(w http.ResponseWriter, r *http.Request, err error, fallbackKey, redirectURL string) {
-	key := apperrors.LocalizationKey(err)
-	if key == "" {
-		key = fallbackKey
+	notice := flash.Notice{Kind: flash.KindError}
+	if key := apperrors.LocalizationKey(err); key != "" {
+		notice.Key = key
+	} else {
+		_, lang := h.PageLocalizer(w, r)
+		if message := strings.TrimSpace(apperrors.ResolveRichMessage(err, lang)); message != "" {
+			notice.Message = message
+		} else {
+			notice.Key = fallbackKey
+		}
 	}
-	flash.Write(w, r, flash.Notice{Kind: flash.KindError, Key: key})
+	if notice.Key == "" && strings.TrimSpace(notice.Message) == "" {
+		notice.Key = fallbackKey
+	}
+	flash.Write(w, r, notice)
 	httpx.WriteRedirect(w, r, redirectURL)
 }
 

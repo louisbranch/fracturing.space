@@ -10,11 +10,11 @@ func appErrorStatusLabel(statusCode int) string {
 	return strconv.Itoa(statusCode)
 }
 
-templ AppErrorState(statusCode int, loc Localizer) {
+templ AppErrorState(statusCode int, message string, loc Localizer) {
 	<section id="app-error-state" data-error-status={ appErrorStatusLabel(statusCode) } class="mx-auto grid max-w-3xl gap-4 rounded-box border border-base-300 bg-base-200 p-8 text-center shadow-sm">
 		<p class="text-sm uppercase tracking-[0.2em] opacity-70">{ appErrorStatusLabel(statusCode) }</p>
 		<h1 class="text-3xl font-bold">{ appErrorHeading(statusCode, loc) }</h1>
-		<p class="text-base-content/80">{ appErrorMessage(statusCode, loc) }</p>
+		<p class="text-base-content/80">{ appErrorDisplayMessage(statusCode, message, loc) }</p>
 		<div class="mt-2 flex flex-wrap justify-center gap-3">
 			<a
 				class="btn btn-primary"

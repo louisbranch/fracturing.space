@@ -237,12 +237,27 @@ func TestResolveFlashToastFallsBackToNoticeKeyWhenLocalizationMissing(t *testing
 	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
 	setFlashCookie(t, req, flashnotice.NoticeSuccess("web.notice.missing_translation"))
 	rr := httptest.NewRecorder()
-	toast := resolveFlashToast(rr, req, blankLocalizer{})
+	toast := resolveFlashToast(rr, req, blankLocalizer{}, "en-US")
 	if toast == nil {
 		t.Fatalf("resolveFlashToast() = nil, want toast")
 	}
 	if toast.Message != "web.notice.missing_translation" {
 		t.Fatalf("toast.Message = %q, want notice key fallback", toast.Message)
+	}
+}
+
+func TestResolveFlashToastUsesLiteralMessageWhenKeyMissing(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/c1/invites", nil)
+	setFlashCookie(t, req, flashnotice.Notice{Kind: flashnotice.KindError, Message: "User already has a pending invite in this campaign"})
+	rr := httptest.NewRecorder()
+	toast := resolveFlashToast(rr, req, blankLocalizer{}, "en-US")
+	if toast == nil {
+		t.Fatalf("resolveFlashToast() = nil, want toast")
+	}
+	if toast.Message != "User already has a pending invite in this campaign" {
+		t.Fatalf("toast.Message = %q", toast.Message)
 	}
 }
 

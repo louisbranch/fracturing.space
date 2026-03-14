@@ -55,8 +55,10 @@ func ResolveLocalizer(w http.ResponseWriter, r *http.Request, resolveLanguage fu
 	return sharedi18n.Printer(tag), tag.String()
 }
 
-// LocalizeError resolves a translated error string when a mapping is available.
-func LocalizeError(loc Localizer, err error) string {
+// LocalizeError resolves the best request-facing error string available for the
+// current surface, falling back to the raw local error text for non-rich
+// validation paths that intentionally rely on it.
+func LocalizeError(loc Localizer, err error, locale ...string) string {
 	if err == nil {
 		return ""
 	}
@@ -68,7 +70,23 @@ func LocalizeError(loc Localizer, err error) string {
 		return msg
 	}
 	if key := apperrors.LocalizationKey(err); key != "" {
-		return loc.Sprintf(key)
+		if localized := strings.TrimSpace(loc.Sprintf(key)); localized != "" && localized != key {
+			return localized
+		}
+	}
+	if rich := apperrors.ResolveRichMessage(err, firstLocale(locale)); rich != "" {
+		return rich
 	}
 	return msg
+}
+
+// firstLocale selects the first non-empty locale override when callers supply one.
+func firstLocale(values []string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }

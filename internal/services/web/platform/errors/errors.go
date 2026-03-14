@@ -37,6 +37,12 @@ var EK = httperrors.EK
 // LocalizationKey returns the structured localization key when available.
 var LocalizationKey = httperrors.LocalizationKey
 
+// PublicMessage returns the explicit transport-safe message carried by a typed error.
+var PublicMessage = httperrors.PublicMessage
+
+// ResolveRichMessage localizes preserved rich transport details when possible.
+var ResolveRichMessage = httperrors.ResolveRichMessage
+
 // MapGRPCTransportError converts gRPC transport errors into typed web errors.
 var MapGRPCTransportError = httperrors.MapGRPCTransportError
 

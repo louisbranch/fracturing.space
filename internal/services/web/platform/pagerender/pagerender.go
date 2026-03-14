@@ -76,7 +76,7 @@ func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver RequestRes
 		return nil
 	}
 
-	toast := resolveFlashToast(w, r, loc)
+	toast := resolveFlashToast(w, r, loc, lang)
 	layout := webtemplates.AppLayoutWithMainHeaderAndLayout(page.Title, viewer, page.Header, page.Layout, toast, lang, loc)
 	if err := layout.Render(templ.WithChildren(ctx, fragment), &buf); err != nil {
 		return err
@@ -88,14 +88,20 @@ func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver RequestRes
 }
 
 // resolveFlashToast resolves request-scoped values needed by this package.
-func resolveFlashToast(w http.ResponseWriter, r *http.Request, loc webi18n.Localizer) *webtemplates.AppToast {
+func resolveFlashToast(w http.ResponseWriter, r *http.Request, loc webi18n.Localizer, _ string) *webtemplates.AppToast {
 	notice, ok := flashnotice.ReadAndClear(w, r)
 	if !ok {
 		return nil
 	}
-	message := strings.TrimSpace(loc.Sprintf(notice.Key))
+	message := strings.TrimSpace(notice.Message)
+	key := strings.TrimSpace(notice.Key)
+	if key != "" && loc != nil {
+		if localized := strings.TrimSpace(loc.Sprintf(key)); localized != "" && localized != key {
+			message = localized
+		}
+	}
 	if message == "" {
-		message = strings.TrimSpace(notice.Key)
+		message = key
 	}
 	if message == "" {
 		return nil

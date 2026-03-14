@@ -88,6 +88,6 @@ func newInviteSearchResponse(results []campaignapp.InviteUserSearchResult) invit
 
 // writeJSONError writes one localized JSON error response for campaigns JSON endpoints.
 func (h handlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
-	loc, _ := h.PageLocalizer(w, r)
-	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), webi18n.LocalizeError(loc, err))
+	loc, lang := h.PageLocalizer(w, r)
+	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), webi18n.LocalizeError(loc, err, lang))
 }

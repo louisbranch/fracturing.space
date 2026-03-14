@@ -29,8 +29,8 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 	if err := h.aiKeys.CreateAIKey(ctx, userID, label, secret); err != nil {
 		statusCode := apperrors.HTTPStatus(err)
 		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
-			loc, _ := h.PageLocalizer(w, r)
-			h.renderAIKeysPage(w, r, ctx, userID, statusCode, label, webi18n.LocalizeError(loc, err))
+			loc, lang := h.PageLocalizer(w, r)
+			h.renderAIKeysPage(w, r, ctx, userID, statusCode, label, webi18n.LocalizeError(loc, err, lang))
 			return
 		}
 		h.WriteError(w, r, err)

@@ -38,8 +38,8 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 	profile := parseProfileInput(r.PostForm, existingProfile)
 	if err := h.profile.SaveProfile(ctx, userID, profile); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
-			loc, _ := h.PageLocalizer(w, r)
-			h.renderProfilePage(w, r, http.StatusBadRequest, profile, webi18n.LocalizeError(loc, err))
+			loc, lang := h.PageLocalizer(w, r)
+			h.renderProfilePage(w, r, http.StatusBadRequest, profile, webi18n.LocalizeError(loc, err, lang))
 			return
 		}
 		h.WriteError(w, r, err)

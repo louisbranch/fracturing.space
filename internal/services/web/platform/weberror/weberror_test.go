@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	platformerrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
@@ -46,6 +47,31 @@ func TestWriteModuleErrorRendersStyledPageForBadRequest(t *testing.T) {
 	}
 }
 
+func TestWriteModuleErrorRendersRichTransportMessage(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/c1/invites", nil)
+	rr := httptest.NewRecorder()
+	WriteModuleError(rr, req, apperrors.Error{
+		Kind:                apperrors.KindConflict,
+		Message:             "failed to create invite",
+		PublicMessage:       "Mensagem em portugues",
+		PublicMessageLocale: "pt-BR",
+		ReasonDomain:        platformerrors.Domain,
+		Reason:              string(platformerrors.CodeInviteRecipientAlreadyInvited),
+	}, nil)
+	if rr.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusConflict)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, "User already has a pending invite in this campaign") {
+		t.Fatalf("body missing rich transport message: %q", body)
+	}
+	if strings.Contains(body, "failed to create invite") {
+		t.Fatalf("body leaked generic fallback text: %q", body)
+	}
+}
+
 func TestPublicMessageUsesLocalizedKeyWhenAvailable(t *testing.T) {
 	t.Parallel()
 
@@ -80,6 +106,22 @@ func TestPublicMessageFallsBackWhenLocalizationBlank(t *testing.T) {
 	err := apperrors.EK(apperrors.KindUnknown, "web.error.untranslated", "unsafe detail")
 	if got := PublicMessage(loc, err); got != http.StatusText(http.StatusInternalServerError) {
 		t.Fatalf("PublicMessage() = %q, want %q", got, http.StatusText(http.StatusInternalServerError))
+	}
+}
+
+func TestPublicMessageUsesRichPlatformReasonWhenAvailable(t *testing.T) {
+	t.Parallel()
+
+	err := apperrors.Error{
+		Kind:                apperrors.KindConflict,
+		Message:             "failed to create invite",
+		PublicMessage:       "Mensagem em portugues",
+		PublicMessageLocale: "pt-BR",
+		ReasonDomain:        platformerrors.Domain,
+		Reason:              string(platformerrors.CodeInviteRecipientAlreadyInvited),
+	}
+	if got := PublicMessage(nil, err, "en-US"); got != "User already has a pending invite in this campaign" {
+		t.Fatalf("PublicMessage(rich reason) = %q", got)
 	}
 }
 

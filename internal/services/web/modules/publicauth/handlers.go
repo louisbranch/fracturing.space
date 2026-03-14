@@ -278,8 +278,8 @@ func (h handlers) resolveAuthTag(w http.ResponseWriter, r *http.Request) languag
 
 // writeJSONError centralizes this web behavior in one helper seam.
 func (h handlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
-	loc, _ := webi18n.ResolveLocalizer(w, r, nil)
-	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), weberror.PublicMessage(loc, err))
+	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
+	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), weberror.PublicMessage(loc, err, lang))
 }
 
 // redirectAuthenticatedToApp centralizes this web behavior in one helper seam.

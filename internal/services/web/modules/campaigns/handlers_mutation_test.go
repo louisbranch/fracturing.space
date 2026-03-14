@@ -8,12 +8,17 @@ import (
 	"strings"
 	"testing"
 
+	platformerrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
 // flashNoticeFromResponse extracts the flash notice from a response's Set-Cookie header.
@@ -265,6 +270,66 @@ func TestStableMutationRoutesReturnRequiredFieldFlashKeys(t *testing.T) {
 				t.Fatalf("flash key = %q, want %q", notice.Key, tc.wantKey)
 			}
 		})
+	}
+}
+
+func TestInviteCreateRichErrorRendersSpecificToastAfterRedirect(t *testing.T) {
+	t.Parallel()
+
+	st := status.New(codes.AlreadyExists, "internal invite detail")
+	richStatus, err := st.WithDetails(
+		&errdetails.ErrorInfo{
+			Reason: string(platformerrors.CodeInviteRecipientAlreadyInvited),
+			Domain: platformerrors.Domain,
+			Metadata: map[string]string{
+				"CampaignID": "c1",
+			},
+		},
+		&errdetails.LocalizedMessage{
+			Locale:  "pt-BR",
+			Message: "Mensagem em portugues",
+		},
+	)
+	if err != nil {
+		t.Fatalf("WithDetails() error = %v", err)
+	}
+
+	gateway := managerMutationGateway()
+	gateway.createInviteErr = apperrors.MapGRPCTransportError(richStatus.Err(), apperrors.GRPCStatusMapping{
+		FallbackKind:    apperrors.KindUnknown,
+		FallbackKey:     "error.web.message.failed_to_create_invite",
+		FallbackMessage: "failed to create invite",
+	})
+	m := New(Config{Gateway: gateway, Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	mount, _ := m.Mount()
+
+	postReq := httptest.NewRequest(http.MethodPost, routepath.AppCampaignInviteCreate("c1"), strings.NewReader("participant_id=p-1&username=alice"))
+	postReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	postRR := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(postRR, postReq)
+	if postRR.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", postRR.Code, http.StatusFound)
+	}
+	notice := flashNoticeFromResponse(t, postRR)
+	if notice.Key != "" {
+		t.Fatalf("flash key = %q, want empty for rich message", notice.Key)
+	}
+	if notice.Message == "" {
+		t.Fatalf("flash message = empty, want rich message")
+	}
+
+	getReq := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInvites("c1"), nil)
+	for _, cookie := range postRR.Result().Cookies() {
+		getReq.AddCookie(cookie)
+	}
+	getRR := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(getRR, getReq)
+	body := getRR.Body.String()
+	if !strings.Contains(body, "User already has a pending invite in this campaign") {
+		t.Fatalf("body missing rich invite error copy: %q", body)
+	}
+	if strings.Contains(body, "failed to create invite") {
+		t.Fatalf("body should not fall back to generic invite error copy: %q", body)
 	}
 }
 

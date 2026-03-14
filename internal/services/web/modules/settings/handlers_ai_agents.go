@@ -23,8 +23,8 @@ func (h handlers) handleAIAgentsGet(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			statusCode := apperrors.HTTPStatus(err)
 			if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
-				loc, _ := h.PageLocalizer(w, r)
-				h.renderAIAgentsPage(w, r, ctx, userID, statusCode, form, webi18n.LocalizeError(loc, err))
+				loc, lang := h.PageLocalizer(w, r)
+				h.renderAIAgentsPage(w, r, ctx, userID, statusCode, form, webi18n.LocalizeError(loc, err, lang))
 				return
 			}
 			h.WriteError(w, r, err)
@@ -46,7 +46,7 @@ func (h handlers) handleAIAgentsCreate(w http.ResponseWriter, r *http.Request) {
 	if err := h.aiAgents.CreateAIAgent(ctx, userID, input); err != nil {
 		statusCode := apperrors.HTTPStatus(err)
 		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
-			loc, _ := h.PageLocalizer(w, r)
+			loc, lang := h.PageLocalizer(w, r)
 			form := webtemplates.SettingsAIAgentsForm{
 				Label:        input.Label,
 				CredentialID: input.CredentialID,
@@ -59,7 +59,7 @@ func (h handlers) handleAIAgentsCreate(w http.ResponseWriter, r *http.Request) {
 					form.ModelOptions = mapAIModelTemplateOptions(models)
 				}
 			}
-			h.renderAIAgentsPage(w, r, ctx, userID, statusCode, form, webi18n.LocalizeError(loc, err))
+			h.renderAIAgentsPage(w, r, ctx, userID, statusCode, form, webi18n.LocalizeError(loc, err, lang))
 			return
 		}
 		h.WriteError(w, r, err)
