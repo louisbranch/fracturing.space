@@ -1,11 +1,11 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-14T03:49:16Z",
+  "updated_at": "2026-03-14T04:04:30Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
-      "floor": 94.7,
+      "floor": 94.8,
       "description": "Core action command and outcome behavior."
     },
     {
@@ -60,7 +60,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/character",
-      "floor": 95.6,
+      "floor": 95.9,
       "description": "Character domain invariants and state transitions."
     },
     {
@@ -70,7 +70,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/command",
-      "floor": 92,
+      "floor": 92.7,
       "description": "Command envelope normalization and registry validation."
     },
     {
@@ -105,7 +105,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/participant",
-      "floor": 96.5,
+      "floor": 97.6,
       "description": "Participant lifecycle, access labels, and seat control behavior."
     },
     {
@@ -120,7 +120,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/session",
-      "floor": 93.1,
+      "floor": 95.1,
       "description": "Session start/end and gate behavior."
     },
     {
@@ -200,7 +200,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/tools/websmokeauth",
-      "floor": 50.5,
+      "floor": 56.4,
       "description": "CLI contract and smoke auth harness configuration behavior."
     }
   ]
