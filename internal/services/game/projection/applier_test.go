@@ -1596,6 +1596,7 @@ func TestApplyProfileUpdated(t *testing.T) {
 				"experiences": []map[string]any{
 					{"name": "Ranger", "modifier": 2},
 				},
+				"description": "Tall, patient, and heavily armored.",
 			},
 		},
 	}
@@ -1614,6 +1615,9 @@ func TestApplyProfileUpdated(t *testing.T) {
 	}
 	if profile.Agility != 1 || profile.Knowledge != -1 {
 		t.Fatalf("traits agility=%d knowledge=%d, want 1/-1", profile.Agility, profile.Knowledge)
+	}
+	if profile.Description != "Tall, patient, and heavily armored." {
+		t.Fatalf("description = %q, want %q", profile.Description, "Tall, patient, and heavily armored.")
 	}
 }
 

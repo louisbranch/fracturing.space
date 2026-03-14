@@ -214,6 +214,7 @@ func rejectDaggerheartCreationWorkflowPatchFields(patch *daggerheartv1.Daggerhea
 		len(patch.GetStartingWeaponIds()) == 0 && strings.TrimSpace(patch.GetStartingArmorId()) == "" &&
 		strings.TrimSpace(patch.GetStartingPotionItemId()) == "" &&
 		strings.TrimSpace(patch.GetBackground()) == "" &&
+		strings.TrimSpace(patch.GetDescription()) == "" &&
 		len(patch.GetExperiences()) == 0 && len(patch.GetDomainCardIds()) == 0 &&
 		strings.TrimSpace(patch.GetConnections()) == "" {
 		return nil
