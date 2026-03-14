@@ -1,10 +1,11 @@
-package templates
+package render
 
 import (
+	"github.com/a-h/templ"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-templ campaignCharacterEditorForm(view CampaignDetailView, loc Localizer, title string, action string, submitLabel string, isCreate bool) {
+templ campaignCharacterEditorForm(view DetailView, loc Localizer, title string, action string, submitLabel string, isCreate bool) {
 	<div class="card bg-base-100 border border-base-300 shadow-sm">
 		<div class="card-body gap-4 p-4">
 			<h2 class="card-title">{ title }</h2>
@@ -43,7 +44,7 @@ templ campaignCharacterEditorForm(view CampaignDetailView, loc Localizer, title 
 	</div>
 }
 
-templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
+templ Fragment(view DetailView, loc Localizer) {
 	<section id={ view.Marker } class="space-y-4">
 		if view.Marker == "campaign-overview" {
 			<div class="card bg-base-100 border border-base-300 shadow-sm">
@@ -677,7 +678,7 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 									<span class="badge badge-success badge-outline">{ T(loc, "game.character_creation.ready") }</span>
 								}
 							</div>
-							@creationSummaryBody(view.CharacterCreation, loc)
+							@characterCreationSummaryBody(view.CharacterCreation, loc)
 						</div>
 					</div>
 				}

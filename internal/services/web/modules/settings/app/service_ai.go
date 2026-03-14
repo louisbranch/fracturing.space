@@ -78,7 +78,7 @@ func (s service) ListAIProviderModels(ctx context.Context, userID string, creden
 		return nil, err
 	}
 	resolvedCredentialID := strings.TrimSpace(credentialID)
-	if resolvedCredentialID == "" || !isSafeCredentialPathID(resolvedCredentialID) {
+	if resolvedCredentialID == "" || !IsSafePathID(resolvedCredentialID) {
 		return nil, apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_credential_required", "credential is required")
 	}
 	models, err := s.gateway.ListAIProviderModels(ctx, resolvedUserID, resolvedCredentialID)
@@ -126,7 +126,7 @@ func (s service) CreateAIAgent(ctx context.Context, userID string, input CreateA
 	if !aiAgentLabelPattern.MatchString(input.Label) {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_label_invalid", "agent label is invalid")
 	}
-	if !isSafeCredentialPathID(input.CredentialID) {
+	if !IsSafePathID(input.CredentialID) {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_credential_required", "credential is required")
 	}
 	return s.gateway.CreateAIAgent(ctx, resolvedUserID, input)
@@ -139,7 +139,7 @@ func (s service) DeleteAIAgent(ctx context.Context, userID string, agentID strin
 		return err
 	}
 	resolvedAgentID := strings.TrimSpace(agentID)
-	if resolvedAgentID == "" || !isSafeCredentialPathID(resolvedAgentID) {
+	if resolvedAgentID == "" || !IsSafePathID(resolvedAgentID) {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_agent_required", "agent is required")
 	}
 	return s.gateway.DeleteAIAgent(ctx, resolvedUserID, resolvedAgentID)
@@ -183,7 +183,7 @@ func normalizeSettingsAIKey(key SettingsAIKey) SettingsAIKey {
 	if key.RevokedAt == "" {
 		key.RevokedAt = "-"
 	}
-	if !isSafeCredentialPathID(key.ID) {
+	if !IsSafePathID(key.ID) {
 		key.ID = ""
 		key.CanRevoke = false
 	}

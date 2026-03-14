@@ -12,6 +12,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -39,6 +40,7 @@ const (
 	dependencyNameDiscovery     = "discovery"
 	dependencyNameUserHub       = "userhub"
 	dependencyNameNotifications = "notifications"
+	dependencyNameStatus        = "status"
 )
 
 // startupDependencyPolicy defines whether missing connectivity blocks web
@@ -73,10 +75,14 @@ type dependencyRequirement struct {
 	capability string
 	surfaces   []string
 	setInput   dependencyInputSetter
+	onConnect  dependencyConnHook
 }
 
+// dependencyConnHook performs optional post-connect setup for one dependency.
+type dependencyConnHook func(context.Context, *platformgrpc.ManagedConn)
+
 // dependencyRequirements returns startup requirements in stable dependency order.
-func dependencyRequirements(cfg Config) []dependencyRequirement {
+func dependencyRequirements(cfg Config, reporter *platformstatus.Reporter) []dependencyRequirement {
 	return []dependencyRequirement{
 		dependencyRequirementAuth(cfg.AuthAddr),
 		dependencyRequirementSocial(cfg.SocialAddr),
@@ -85,6 +91,7 @@ func dependencyRequirements(cfg Config) []dependencyRequirement {
 		dependencyRequirementDiscovery(cfg.DiscoveryAddr),
 		dependencyRequirementUserHub(cfg.UserHubAddr),
 		dependencyRequirementNotifications(cfg.NotificationsAddr),
+		dependencyRequirementStatus(cfg.StatusAddr, reporter),
 	}
 }
 
@@ -172,6 +179,19 @@ func dependencyRequirementNotifications(address string) dependencyRequirement {
 	}
 }
 
+// dependencyRequirementStatus returns the status dependency wiring contract.
+func dependencyRequirementStatus(address string, reporter *platformstatus.Reporter) dependencyRequirement {
+	return dependencyRequirement{
+		name:       dependencyNameStatus,
+		address:    address,
+		policy:     startupDependencyOptional,
+		capability: "web.status.integration",
+		surfaces:   []string{"dashboard.health"},
+		setInput:   setDependencyStatus,
+		onConnect:  bindStatusReporter(reporter),
+	}
+}
+
 // setDependencyAuth wires auth clients into principal and module bundles.
 func setDependencyAuth(p *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	authClient := authv1.NewAuthServiceClient(conn)
@@ -233,6 +253,30 @@ func setDependencyNotifications(p *principal.Dependencies, m *modules.Dependenci
 	m.Notifications.NotificationClient = notificationClient
 }
 
+// setDependencyStatus wires the status client into dashboard dependencies.
+func setDependencyStatus(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+	m.Dashboard.StatusClient = statusv1.NewStatusServiceClient(conn)
+}
+
+// bindStatusReporter late-binds the status reporter client once the connection
+// becomes healthy.
+func bindStatusReporter(reporter *platformstatus.Reporter) dependencyConnHook {
+	if reporter == nil {
+		return nil
+	}
+	return func(ctx context.Context, mc *platformgrpc.ManagedConn) {
+		if mc == nil {
+			return
+		}
+		client := statusv1.NewStatusServiceClient(mc.Conn())
+		go func() {
+			if mc.WaitReady(ctx) == nil {
+				reporter.SetClient(client)
+			}
+		}()
+	}
+}
+
 // bootstrapDependencies creates ManagedConns for each requirement and wires
 // gRPC clients into the dependency bundle. Required deps block until healthy;
 // optional deps return immediately.
@@ -267,7 +311,12 @@ func bootstrapDependencies(
 			return web.DependencyBundle{}, nil, fmt.Errorf("dependency %s: %w", dep.name, err)
 		}
 		conns = append(conns, mc)
-		dep.setInput(&principalDeps, &modDeps, mc.Conn())
+		if dep.setInput != nil {
+			dep.setInput(&principalDeps, &modDeps, mc.Conn())
+		}
+		if dep.onConnect != nil {
+			dep.onConnect(ctx, mc)
+		}
 	}
 
 	return web.DependencyBundle{Principal: principalDeps, Modules: modDeps}, conns, nil

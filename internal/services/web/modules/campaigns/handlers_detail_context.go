@@ -7,7 +7,9 @@ import (
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"golang.org/x/text/language"
@@ -106,10 +108,10 @@ func (p *campaignPageContext) layout(campaignID, currentPath string) webtemplate
 	}
 }
 
-// detailView returns a CampaignDetailView pre-filled with workspace fields.
-// Callers set sub-page-specific fields on the returned value before rendering.
-func (p *campaignPageContext) detailView(campaignID, marker string) webtemplates.CampaignDetailView {
-	return webtemplates.CampaignDetailView{
+// detailView returns a module-owned detail render model pre-filled with
+// workspace fields. Callers set sub-page-specific fields before rendering.
+func (p *campaignPageContext) detailView(campaignID, marker string) campaignrender.DetailView {
+	return campaignrender.DetailView{
 		Marker:        marker,
 		CampaignID:    campaignID,
 		Name:          p.workspace.Name,
@@ -163,38 +165,22 @@ func (p *campaignPageContext) header(campaignID string, breadcrumbs []sharedtemp
 
 // routeCampaignID extracts the canonical campaign route parameter.
 func (h handlers) routeCampaignID(r *http.Request) (string, bool) {
-	campaignID := strings.TrimSpace(r.PathValue("campaignID"))
-	if campaignID == "" {
-		return "", false
-	}
-	return campaignID, true
+	return routeparam.Read(r, "campaignID")
 }
 
 // routeCharacterID centralizes this web behavior in one helper seam.
 func (h handlers) routeCharacterID(r *http.Request) (string, bool) {
-	characterID := strings.TrimSpace(r.PathValue("characterID"))
-	if characterID == "" {
-		return "", false
-	}
-	return characterID, true
+	return routeparam.Read(r, "characterID")
 }
 
 // routeParticipantID centralizes this web behavior in one helper seam.
 func (h handlers) routeParticipantID(r *http.Request) (string, bool) {
-	participantID := strings.TrimSpace(r.PathValue("participantID"))
-	if participantID == "" {
-		return "", false
-	}
-	return participantID, true
+	return routeparam.Read(r, "participantID")
 }
 
 // routeSessionID centralizes this web behavior in one helper seam.
 func (h handlers) routeSessionID(r *http.Request) (string, bool) {
-	sessionID := strings.TrimSpace(r.PathValue("sessionID"))
-	if sessionID == "" {
-		return "", false
-	}
-	return sessionID, true
+	return routeparam.Read(r, "sessionID")
 }
 
 // parseFormOrWriteError parses form data and writes a localized invalid-input

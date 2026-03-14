@@ -6,6 +6,7 @@ import (
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -45,7 +46,7 @@ func (h handlers) handleCharacterCreatePage(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	view.CanCreateCharacter = true
-	view.CharacterEditor = webtemplates.CampaignCharacterEditorView{Kind: "PC"}
+	view.CharacterEditor = campaignrender.CharacterEditorView{Kind: "PC"}
 	h.writeCampaignDetailPage(
 		w,
 		r,
@@ -74,7 +75,7 @@ func (h handlers) handleCharacterEdit(w http.ResponseWriter, r *http.Request, ca
 	if strings.TrimSpace(view.CharacterID) == "" {
 		view.CharacterID = characterID
 	}
-	view.Characters = []webtemplates.CampaignCharacterView{{
+	view.Characters = []campaignrender.CharacterView{{
 		ID:                      editor.Character.ID,
 		Name:                    editor.Character.Name,
 		Kind:                    editor.Character.Kind,
@@ -142,7 +143,7 @@ func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, 
 }
 
 // campaignCharacterBreadcrumbLabel resolves the selected character breadcrumb label.
-func campaignCharacterBreadcrumbLabel(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) string {
+func campaignCharacterBreadcrumbLabel(loc webtemplates.Localizer, view campaignrender.DetailView) string {
 	selectedCharacterID := strings.TrimSpace(view.CharacterID)
 	if selectedCharacterID == "" {
 		return webtemplates.T(loc, "game.character_detail.title")
@@ -161,7 +162,7 @@ func campaignCharacterBreadcrumbLabel(loc webtemplates.Localizer, view webtempla
 }
 
 // campaignCharacterEditBreadcrumbLabel resolves the selected character label for edit breadcrumbs.
-func campaignCharacterEditBreadcrumbLabel(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) string {
+func campaignCharacterEditBreadcrumbLabel(loc webtemplates.Localizer, view campaignrender.DetailView) string {
 	if name := strings.TrimSpace(view.CharacterEditor.Name); name != "" {
 		return name
 	}
