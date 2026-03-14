@@ -211,7 +211,7 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 	} else if models != nil {
 		t.Fatalf("ListAIProviderModels() = %+v, want nil", models)
 	}
-	if err := gateway.CreateAIAgent(ctx, "user-1", CreateAIAgentInput{Name: "Narrator", CredentialID: "cred-1", Model: "gpt-4o-mini"}); err == nil {
+	if err := gateway.CreateAIAgent(ctx, "user-1", CreateAIAgentInput{Label: "narrator", CredentialID: "cred-1", Model: "gpt-4o-mini"}); err == nil {
 		t.Fatalf("CreateAIAgent() error = nil, want unavailable error")
 	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
 		t.Fatalf("CreateAIAgent() status = %d, want %d", got, http.StatusServiceUnavailable)
@@ -395,7 +395,7 @@ func TestAIAgentServiceFlowsValidateNormalizeAndDelegate(t *testing.T) {
 	gateway := &gatewayStub{
 		credentials: []SettingsAICredentialOption{{ID: " cred-1 ", Label: " Primary ", Provider: " OpenAI "}},
 		models:      []SettingsAIModelOption{{ID: " gpt-4o-mini ", OwnedBy: " openai "}},
-		agents:      []SettingsAIAgent{{ID: " agent-1 ", Name: " Narrator ", Provider: " OpenAI ", Model: " gpt-4o-mini ", Status: " Active ", CreatedAt: " 2026-01-01 00:00 UTC "}},
+		agents:      []SettingsAIAgent{{ID: " agent-1 ", Label: " narrator ", Provider: " OpenAI ", Model: " gpt-4o-mini ", Status: " Active ", CreatedAt: " 2026-01-01 00:00 UTC "}},
 	}
 	svc := NewService(gateway)
 
@@ -422,7 +422,7 @@ func TestAIAgentServiceFlowsValidateNormalizeAndDelegate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListAIAgents() error = %v", err)
 	}
-	if len(agents) != 1 || agents[0].Name != "Narrator" || agents[0].Status != "Active" {
+	if len(agents) != 1 || agents[0].Label != "narrator" || agents[0].Status != "Active" {
 		t.Fatalf("agents = %+v", agents)
 	}
 
@@ -430,14 +430,14 @@ func TestAIAgentServiceFlowsValidateNormalizeAndDelegate(t *testing.T) {
 		t.Fatalf("expected create validation error")
 	}
 	if err := svc.CreateAIAgent(context.Background(), "user-1", CreateAIAgentInput{
-		Name:         " Narrator ",
+		Label:        " narrator ",
 		CredentialID: " cred-1 ",
 		Model:        " gpt-4o-mini ",
 		Instructions: " Keep the session moving. ",
 	}); err != nil {
 		t.Fatalf("CreateAIAgent() error = %v", err)
 	}
-	if gateway.lastAgent.Name != "Narrator" || gateway.lastAgent.CredentialID != "cred-1" || gateway.lastAgent.Model != "gpt-4o-mini" {
+	if gateway.lastAgent.Label != "narrator" || gateway.lastAgent.CredentialID != "cred-1" || gateway.lastAgent.Model != "gpt-4o-mini" {
 		t.Fatalf("delegated agent input = %+v", gateway.lastAgent)
 	}
 	if gateway.lastAgent.Instructions != "Keep the session moving." {

@@ -77,7 +77,7 @@ func newPopulatedFakeGateway() *fakeGateway {
 		}},
 		agents: []settingsapp.SettingsAIAgent{{
 			ID:           "agent-1",
-			Name:         "Narrator",
+			Label:        "narrator",
 			Provider:     "OpenAI",
 			Model:        "gpt-4o-mini",
 			Status:       "Active",

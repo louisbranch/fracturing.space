@@ -37,8 +37,7 @@ type CredentialPage struct {
 type AgentRecord struct {
 	ID              string
 	OwnerUserID     string
-	Name            string
-	Handle          string
+	Label           string
 	Instructions    string
 	Provider        string
 	Model           string

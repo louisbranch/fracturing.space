@@ -66,6 +66,20 @@ func NewStore() *Store {
 
 // PutCredential stores a credential record.
 func (s *Store) PutCredential(_ context.Context, record storage.CredentialRecord) error {
+	for id, existing := range s.Credentials {
+		if id == record.ID {
+			continue
+		}
+		if !sameNormalizedOwner(record.OwnerUserID, existing.OwnerUserID) {
+			continue
+		}
+		if existing.RevokedAt != nil || strings.EqualFold(strings.TrimSpace(existing.Status), "revoked") {
+			continue
+		}
+		if normalizedLabel(record.Label) == normalizedLabel(existing.Label) {
+			return storage.ErrConflict
+		}
+	}
 	s.Credentials[record.ID] = record
 	return nil
 }
@@ -105,6 +119,17 @@ func (s *Store) RevokeCredential(_ context.Context, ownerUserID string, credenti
 
 // PutAgent stores an agent record.
 func (s *Store) PutAgent(_ context.Context, record storage.AgentRecord) error {
+	for id, existing := range s.Agents {
+		if id == record.ID {
+			continue
+		}
+		if !sameNormalizedOwner(record.OwnerUserID, existing.OwnerUserID) {
+			continue
+		}
+		if normalizedLabel(record.Label) == normalizedLabel(existing.Label) {
+			return storage.ErrConflict
+		}
+	}
 	s.Agents[record.ID] = record
 	return nil
 }
@@ -443,4 +468,12 @@ func (s *Store) CompleteProviderConnectSession(_ context.Context, ownerUserID st
 	rec.UpdatedAt = completedAt
 	s.ConnectSessions[connectSessionID] = rec
 	return nil
+}
+
+func normalizedLabel(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
+}
+
+func sameNormalizedOwner(left string, right string) bool {
+	return strings.TrimSpace(left) == strings.TrimSpace(right)
 }

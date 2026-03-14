@@ -15,38 +15,43 @@ func TestNormalizeCreateInput(t *testing.T) {
 	}{
 		{
 			name:    "missing owner user id",
-			input:   CreateInput{OwnerUserID: "", Name: "Narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
+			input:   CreateInput{OwnerUserID: "", Label: "narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
 			wantErr: ErrEmptyOwnerUserID,
 		},
 		{
 			name:    "invalid provider",
-			input:   CreateInput{OwnerUserID: "user-1", Name: "Narrator", Provider: "other", Model: "gpt-4o-mini", CredentialID: "cred-1"},
+			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: "other", Model: "gpt-4o-mini", CredentialID: "cred-1"},
 			wantErr: ErrInvalidProvider,
 		},
 		{
 			name:    "missing model",
-			input:   CreateInput{OwnerUserID: "user-1", Name: "Narrator", Provider: ProviderOpenAI, Model: "", CredentialID: "cred-1"},
+			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: ProviderOpenAI, Model: "", CredentialID: "cred-1"},
 			wantErr: ErrEmptyModel,
 		},
 		{
 			name:    "missing auth reference",
-			input:   CreateInput{OwnerUserID: "user-1", Name: "Narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini"},
+			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini"},
 			wantErr: ErrMissingAuthReference,
 		},
 		{
 			name:    "multiple auth references",
-			input:   CreateInput{OwnerUserID: "user-1", Name: "Narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1", ProviderGrantID: "grant-1"},
+			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1", ProviderGrantID: "grant-1"},
 			wantErr: ErrMultipleAuthReferences,
 		},
 		{
+			name:    "invalid label format",
+			input:   CreateInput{OwnerUserID: "user-1", Label: "Narrator Prime", Provider: ProviderOpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
+			wantErr: ErrInvalidLabel,
+		},
+		{
 			name:  "normalizes fields",
-			input: CreateInput{OwnerUserID: " user-1 ", Name: "  Narrator  ", Provider: ProviderOpenAI, Model: "  gpt-4o-mini  ", CredentialID: " cred-1 "},
-			want:  CreateInput{OwnerUserID: "user-1", Name: "Narrator", Handle: "narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
+			input: CreateInput{OwnerUserID: " user-1 ", Label: " narrator ", Provider: ProviderOpenAI, Model: "  gpt-4o-mini  ", CredentialID: " cred-1 "},
+			want:  CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
 		},
 		{
 			name:  "normalizes provider grant auth reference",
-			input: CreateInput{OwnerUserID: " user-1 ", Name: "  Narrator  ", Provider: ProviderOpenAI, Model: "  gpt-4o-mini  ", ProviderGrantID: " grant-1 "},
-			want:  CreateInput{OwnerUserID: "user-1", Name: "Narrator", Handle: "narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", ProviderGrantID: "grant-1"},
+			input: CreateInput{OwnerUserID: " user-1 ", Label: " narrator ", Provider: ProviderOpenAI, Model: "  gpt-4o-mini  ", ProviderGrantID: " grant-1 "},
+			want:  CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: ProviderOpenAI, Model: "gpt-4o-mini", ProviderGrantID: "grant-1"},
 		},
 	}
 
@@ -73,7 +78,7 @@ func TestCreateAgent(t *testing.T) {
 	fixedTime := time.Date(2026, 2, 15, 22, 40, 0, 0, time.UTC)
 	input := CreateInput{
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        ProviderOpenAI,
 		Model:           "gpt-4o-mini",
 		ProviderGrantID: "grant-1",
@@ -101,8 +106,8 @@ func TestCreateAgent(t *testing.T) {
 	if created.ProviderGrantID != "grant-1" {
 		t.Fatalf("ProviderGrantID = %q, want %q", created.ProviderGrantID, "grant-1")
 	}
-	if created.Handle != "narrator" {
-		t.Fatalf("Handle = %q, want %q", created.Handle, "narrator")
+	if created.Label != "narrator" {
+		t.Fatalf("Label = %q, want %q", created.Label, "narrator")
 	}
 	if created.CredentialID != "" {
 		t.Fatalf("CredentialID = %q, want empty", created.CredentialID)
@@ -118,12 +123,12 @@ func TestNormalizeUpdateInput(t *testing.T) {
 	}{
 		{
 			name:    "missing agent id",
-			input:   UpdateInput{ID: "", OwnerUserID: "user-1", Name: "Narrator", Model: "gpt-4o-mini", CredentialID: "cred-2"},
+			input:   UpdateInput{ID: "", OwnerUserID: "user-1", Label: "narrator", Model: "gpt-4o-mini", CredentialID: "cred-2"},
 			wantErr: ErrEmptyID,
 		},
 		{
 			name:    "missing owner user id",
-			input:   UpdateInput{ID: "agent-1", OwnerUserID: "", Name: "Narrator", Model: "gpt-4o-mini", CredentialID: "cred-2"},
+			input:   UpdateInput{ID: "agent-1", OwnerUserID: "", Label: "narrator", Model: "gpt-4o-mini", CredentialID: "cred-2"},
 			wantErr: ErrEmptyOwnerUserID,
 		},
 		{
@@ -132,9 +137,14 @@ func TestNormalizeUpdateInput(t *testing.T) {
 			wantErr: ErrMultipleAuthReferences,
 		},
 		{
+			name:    "rejects invalid label",
+			input:   UpdateInput{ID: "agent-1", OwnerUserID: "user-1", Label: "Narrator Prime"},
+			wantErr: ErrInvalidLabel,
+		},
+		{
 			name:  "normalizes optional fields",
-			input: UpdateInput{ID: " agent-1 ", OwnerUserID: " user-1 ", Name: "  Narrator  ", Model: " gpt-4o ", ProviderGrantID: " grant-2 "},
-			want:  UpdateInput{ID: "agent-1", OwnerUserID: "user-1", Name: "Narrator", Model: "gpt-4o", ProviderGrantID: "grant-2"},
+			input: UpdateInput{ID: " agent-1 ", OwnerUserID: " user-1 ", Label: " narrator ", Model: " gpt-4o ", ProviderGrantID: " grant-2 "},
+			want:  UpdateInput{ID: "agent-1", OwnerUserID: "user-1", Label: "narrator", Model: "gpt-4o", ProviderGrantID: "grant-2"},
 		},
 	}
 

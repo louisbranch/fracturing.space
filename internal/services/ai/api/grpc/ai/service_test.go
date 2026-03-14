@@ -183,7 +183,7 @@ func TestCreateAgentRequiresActiveOwnedCredential(t *testing.T) {
 	svc := newTestService(store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     aiv1.Provider_PROVIDER_OPENAI,
 		Model:        "gpt-4o-mini",
 		CredentialId: "cred-1",
@@ -201,7 +201,7 @@ func TestCreateAgentSuccess(t *testing.T) {
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     aiv1.Provider_PROVIDER_OPENAI,
 		Model:        "gpt-4o-mini",
 		CredentialId: "cred-1",
@@ -280,7 +280,7 @@ func TestCreateAgentWithProviderGrantSuccess(t *testing.T) {
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        aiv1.Provider_PROVIDER_OPENAI,
 		Model:           "gpt-4o-mini",
 		ProviderGrantId: "grant-1",
@@ -317,7 +317,7 @@ func TestCreateAgentRejectsMultipleAuthReferences(t *testing.T) {
 	svc := newTestService(store)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateAgent(ctx, &aiv1.CreateAgentRequest{
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        aiv1.Provider_PROVIDER_OPENAI,
 		Model:           "gpt-4o-mini",
 		CredentialId:    "cred-1",
@@ -332,7 +332,7 @@ func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		CredentialID:    "cred-1",
@@ -344,7 +344,7 @@ func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 	store.Agents["agent-2"] = storage.AgentRecord{
 		ID:              "agent-2",
 		OwnerUserID:     "user-2",
-		Name:            "Planner",
+		Label:           "planner",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		CredentialID:    "cred-2",
@@ -374,7 +374,7 @@ func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 	store.Agents["agent-own-1"] = storage.AgentRecord{
 		ID:           "agent-own-1",
 		OwnerUserID:  "user-1",
-		Name:         "Owner Agent",
+		Label:        "owner-agent",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-own-1",
@@ -385,7 +385,7 @@ func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 	store.Agents["agent-shared-1"] = storage.AgentRecord{
 		ID:           "agent-shared-1",
 		OwnerUserID:  "user-owner",
-		Name:         "Shared Agent",
+		Label:        "shared-agent",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-shared-1",
@@ -428,7 +428,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 	store.Agents["agent-approved"] = storage.AgentRecord{
 		ID:           "agent-approved",
 		OwnerUserID:  "owner-1",
-		Name:         "Approved",
+		Label:        "approved-agent",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -439,7 +439,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 	store.Agents["agent-pending"] = storage.AgentRecord{
 		ID:           "agent-pending",
 		OwnerUserID:  "owner-1",
-		Name:         "Pending",
+		Label:        "pending-agent",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-2",
@@ -450,7 +450,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 	store.Agents["agent-denied"] = storage.AgentRecord{
 		ID:           "agent-denied",
 		OwnerUserID:  "owner-1",
-		Name:         "Denied",
+		Label:        "denied-agent",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-3",
@@ -535,7 +535,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 	store.Agents["agent-a"] = storage.AgentRecord{
 		ID:           "agent-a",
 		OwnerUserID:  "user-1",
-		Name:         "A",
+		Label:        "agent-a",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-a",
@@ -546,7 +546,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 	store.Agents["agent-b"] = storage.AgentRecord{
 		ID:           "agent-b",
 		OwnerUserID:  "owner-1",
-		Name:         "B",
+		Label:        "agent-b",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-b",
@@ -557,7 +557,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 	store.Agents["agent-c"] = storage.AgentRecord{
 		ID:           "agent-c",
 		OwnerUserID:  "owner-2",
-		Name:         "C",
+		Label:        "agent-c",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-c",
@@ -652,7 +652,7 @@ func TestGetAccessibleAgentOwner(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Owner Agent",
+		Label:        "owner-agent",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -678,7 +678,7 @@ func TestGetAccessibleAgentApprovedRequester(t *testing.T) {
 	store.Agents["agent-shared"] = storage.AgentRecord{
 		ID:           "agent-shared",
 		OwnerUserID:  "owner-1",
-		Name:         "Shared Agent",
+		Label:        "shared-agent",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-owner",
@@ -714,7 +714,7 @@ func TestGetAccessibleAgentPendingRequesterHidden(t *testing.T) {
 	store.Agents["agent-shared"] = storage.AgentRecord{
 		ID:           "agent-shared",
 		OwnerUserID:  "owner-1",
-		Name:         "Shared Agent",
+		Label:        "shared-agent",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-owner",
@@ -745,7 +745,7 @@ func TestUpdateAgentSwitchesCredentialToProviderGrant(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		CredentialID:    "cred-1",
@@ -807,9 +807,8 @@ func TestUpdateAgentMetadataEditDoesNotRequireLiveModelListing(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Instructions: "Old instructions.",
-		Handle:       "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -826,14 +825,14 @@ func TestUpdateAgentMetadataEditDoesNotRequireLiveModelListing(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.UpdateAgent(ctx, &aiv1.UpdateAgentRequest{
 		AgentId:      "agent-1",
-		Name:         "Lead Narrator",
+		Label:        "lead-narrator",
 		Instructions: "Keep the session moving.",
 	})
 	if err != nil {
 		t.Fatalf("update agent: %v", err)
 	}
-	if got := resp.GetAgent().GetName(); got != "Lead Narrator" {
-		t.Fatalf("name = %q, want %q", got, "Lead Narrator")
+	if got := resp.GetAgent().GetLabel(); got != "lead-narrator" {
+		t.Fatalf("label = %q, want %q", got, "lead-narrator")
 	}
 	if got := resp.GetAgent().GetInstructions(); got != "Keep the session moving." {
 		t.Fatalf("instructions = %q, want %q", got, "Keep the session moving.")
@@ -849,7 +848,7 @@ func TestDeleteAgentRemovesOwnedRecord(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		CredentialID:    "cred-1",
@@ -921,7 +920,7 @@ func TestInvokeAgentRequiresActiveOwnedCredential(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -954,7 +953,7 @@ func TestInvokeAgentProviderGrantPathWithoutCredentialStore(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		ProviderGrantID: "grant-1",
@@ -992,7 +991,7 @@ func TestInvokeAgentCredentialPathWithoutCredentialStore(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1019,7 +1018,7 @@ func TestInvokeAgentSuccess(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1075,7 +1074,7 @@ func TestInvokeAgentWithProviderGrantRefreshesNearExpiry(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		CredentialID:    "",
@@ -1139,7 +1138,7 @@ func TestInvokeAgentWithRefreshFailedGrantWithoutRefreshSupport(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		ProviderGrantID: "grant-1",
@@ -1179,7 +1178,7 @@ func TestInvokeAgentWithExpiredGrantWithoutRefreshSupport(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		ProviderGrantID: "grant-1",
@@ -1223,7 +1222,7 @@ func TestInvokeAgentWithRefreshFailedGrantRefreshesAndInvokes(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		ProviderGrantID: "grant-1",
@@ -1274,7 +1273,7 @@ func TestInvokeAgentWithProviderGrantMissingAccessToken(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		ProviderGrantID: "grant-1",
@@ -1321,7 +1320,7 @@ func TestInvokeAgentHiddenForNonOwner(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-2",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1345,7 +1344,7 @@ func TestInvokeAgentApprovedRequesterCanInvokeOwnerAgent(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1402,7 +1401,7 @@ func TestInvokeAgentApprovedRequesterWritesAuditEvent(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1458,7 +1457,7 @@ func TestInvokeAgentSharedAccessUsesTargetedLookup(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "owner-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1518,7 +1517,7 @@ func TestInvokeAgentApprovedRequesterDeniedAfterRevocation(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1573,7 +1572,7 @@ func TestInvokeAgentPendingRequesterCannotInvokeOwnerAgent(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1617,7 +1616,7 @@ func TestInvokeAgentDeniedRequesterCannotInvokeOwnerAgent(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-owner",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1660,7 +1659,7 @@ func TestInvokeAgentMissingCredentialIsFailedPrecondition(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-missing",
@@ -1683,7 +1682,7 @@ func TestInvokeAgentProviderInvokeError(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1718,7 +1717,7 @@ func TestInvokeAgentEmptyProviderOutputIsInternal(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1755,7 +1754,7 @@ func TestInvokeAgentAdapterUnavailable(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -1790,7 +1789,7 @@ func TestInvokeAgentSecretOpenError(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -2237,7 +2236,7 @@ func TestCreateAccessRequestSuccess(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "owner-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -2273,7 +2272,7 @@ func TestCreateAccessRequestWritesAuditEvent(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "owner-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -2308,7 +2307,7 @@ func TestCreateAccessRequestRejectsOwnAgent(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -2332,7 +2331,7 @@ func TestCreateAccessRequestRejectsUnsupportedScope(t *testing.T) {
 	store.Agents["agent-1"] = storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "owner-1",
-		Name:         "Narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",

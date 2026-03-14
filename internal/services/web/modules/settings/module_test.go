@@ -614,11 +614,12 @@ func TestMountAIAgentsGetLoadsModelsAndListsAgents(t *testing.T) {
 	for _, marker := range []string{
 		`id="settings-ai-agents"`,
 		`action="/app/settings/ai-agents"`,
+		`name="label"`,
 		`name="credential_id"`,
 		`name="model"`,
 		`name="instructions"`,
 		`value="gpt-4o-mini"`,
-		`Narrator`,
+		`narrator`,
 		`Keep the session moving.`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -914,7 +915,7 @@ func TestMountAIAgentsCreatePostSavesAndRedirects(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 	form := url.Values{
-		"name":          {"Narrator"},
+		"label":         {"narrator"},
 		"credential_id": {"cred-1"},
 		"model":         {"gpt-4o-mini"},
 		"instructions":  {"Keep the session moving."},
@@ -929,7 +930,7 @@ func TestMountAIAgentsCreatePostSavesAndRedirects(t *testing.T) {
 	if got := rr.Header().Get("Location"); got != routepath.AppSettingsAIAgents {
 		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsAIAgents)
 	}
-	if gateway.lastCreatedAgent.Name != "Narrator" || gateway.lastCreatedAgent.CredentialID != "cred-1" {
+	if gateway.lastCreatedAgent.Label != "narrator" || gateway.lastCreatedAgent.CredentialID != "cred-1" {
 		t.Fatalf("created agent = %+v", gateway.lastCreatedAgent)
 	}
 }
@@ -943,7 +944,7 @@ func TestMountAIAgentsCreatePostValidationErrorRendersBadRequest(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 	form := url.Values{
-		"name":          {"Narrator"},
+		"label":         {"narrator"},
 		"credential_id": {"cred-1"},
 	}
 	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsAIAgents, strings.NewReader(form.Encode()))
@@ -953,7 +954,7 @@ func TestMountAIAgentsCreatePostValidationErrorRendersBadRequest(t *testing.T) {
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusBadRequest)
 	}
-	if !strings.Contains(rr.Body.String(), "Name, credential, and model are required.") {
+	if !strings.Contains(rr.Body.String(), "Label, credential, and model are required.") {
 		t.Fatalf("body missing validation error: %q", rr.Body.String())
 	}
 }

@@ -116,12 +116,15 @@ func (s service) CreateAIAgent(ctx context.Context, userID string, input CreateA
 	if err != nil {
 		return err
 	}
-	input.Name = strings.TrimSpace(input.Name)
+	input.Label = strings.TrimSpace(input.Label)
 	input.CredentialID = strings.TrimSpace(input.CredentialID)
 	input.Model = strings.TrimSpace(input.Model)
 	input.Instructions = strings.TrimSpace(input.Instructions)
-	if input.Name == "" || input.CredentialID == "" || input.Model == "" {
-		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_required", "name, credential, and model are required")
+	if input.Label == "" || input.CredentialID == "" || input.Model == "" {
+		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_required", "label, credential, and model are required")
+	}
+	if !aiAgentLabelPattern.MatchString(input.Label) {
+		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_label_invalid", "agent label is invalid")
 	}
 	if !isSafeCredentialPathID(input.CredentialID) {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_credential_required", "credential is required")
@@ -191,7 +194,7 @@ func normalizeSettingsAICredentialOption(option SettingsAICredentialOption) Sett
 // normalizeSettingsAIAgent normalizes one AI agent row for stable template rendering.
 func normalizeSettingsAIAgent(agent SettingsAIAgent) SettingsAIAgent {
 	agent.ID = strings.TrimSpace(agent.ID)
-	agent.Name = strings.TrimSpace(agent.Name)
+	agent.Label = strings.TrimSpace(agent.Label)
 	agent.Provider = strings.TrimSpace(agent.Provider)
 	agent.Model = strings.TrimSpace(agent.Model)
 	agent.Status = strings.TrimSpace(agent.Status)

@@ -3,6 +3,7 @@ package sqlite
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -11,6 +12,8 @@ import (
 	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite/migrations"
+	msqlite "modernc.org/sqlite"
+	sqlite3lib "modernc.org/sqlite/lib"
 )
 
 func toMillis(value time.Time) int64 {
@@ -95,6 +98,20 @@ func extractUpMigration(content string) string {
 
 func isAlreadyExistsError(err error) bool {
 	return sqlitemigrate.IsAlreadyExistsError(err)
+}
+
+func isUniqueConstraintError(err error) bool {
+	if err == nil {
+		return false
+	}
+	var sqliteErr *msqlite.Error
+	if errors.As(err, &sqliteErr) {
+		switch sqliteErr.Code() {
+		case sqlite3lib.SQLITE_CONSTRAINT_PRIMARYKEY, sqlite3lib.SQLITE_CONSTRAINT_UNIQUE:
+			return true
+		}
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "unique constraint failed")
 }
 
 // PutAgent persists an agent record.

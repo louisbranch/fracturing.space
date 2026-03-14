@@ -71,7 +71,7 @@ message Credential {
 message Agent {
   string id = 1;
   string owner_user_id = 2;
-  string name = 3;
+  string label = 3;
   Provider provider = 4;
   string model = 5;
   string credential_id = 6;
@@ -79,7 +79,6 @@ message Agent {
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
   string provider_grant_id = 10;
-  string handle = 11;
   string instructions = 12;
 }
 
@@ -192,12 +191,11 @@ service AccessRequestService {
 }
 
 message CreateAgentRequest {
-  string name = 1;
+  string label = 1;
   Provider provider = 2;
   string model = 3;
   string credential_id = 4;
   string provider_grant_id = 5;
-  string handle = 6;
   string instructions = 7;
 }
 
@@ -259,7 +257,7 @@ message ValidateCampaignAgentBindingResponse {
 
 message UpdateAgentRequest {
   string agent_id = 1;
-  string name = 2;
+  string label = 2;
   string model = 3;
   string credential_id = 4;
   string provider_grant_id = 5;

@@ -70,7 +70,7 @@ type CampaignParticipantCreator struct {
 // CampaignAIAgentOption stores one AI binding option state.
 type CampaignAIAgentOption struct {
 	ID       string `json:"id"`
-	Name     string `json:"name"`
+	Label    string `json:"label"`
 	Enabled  bool   `json:"enabled"`
 	Selected bool   `json:"selected"`
 }

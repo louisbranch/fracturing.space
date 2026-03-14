@@ -27,9 +27,10 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	label, secret := parseAIKeyCreateInput(r.PostForm)
 	if err := h.aiKeys.CreateAIKey(ctx, userID, label, secret); err != nil {
-		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
+		statusCode := apperrors.HTTPStatus(err)
+		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
 			loc, _ := h.PageLocalizer(w, r)
-			h.renderAIKeysPage(w, r, ctx, userID, http.StatusBadRequest, label, webi18n.LocalizeError(loc, err))
+			h.renderAIKeysPage(w, r, ctx, userID, statusCode, label, webi18n.LocalizeError(loc, err))
 			return
 		}
 		h.WriteError(w, r, err)

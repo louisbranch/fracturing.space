@@ -68,6 +68,9 @@ ON CONFLICT(id) DO UPDATE SET
 		revokedAt,
 	)
 	if err != nil {
+		if isUniqueConstraintError(err) {
+			return storage.ErrConflict
+		}
 		return fmt.Errorf("put credential: %w", err)
 	}
 	return nil

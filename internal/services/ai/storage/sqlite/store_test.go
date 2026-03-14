@@ -350,8 +350,7 @@ func TestPutGetAgentRoundTrip(t *testing.T) {
 	input := storage.AgentRecord{
 		ID:              "agent-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
-		Handle:          "narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		CredentialID:    "cred-1",
@@ -380,8 +379,7 @@ func TestPutGetAgentRoundTripWithProviderGrant(t *testing.T) {
 	input := storage.AgentRecord{
 		ID:              "agent-grant-1",
 		OwnerUserID:     "user-1",
-		Name:            "Narrator",
-		Handle:          "narrator",
+		Label:           "narrator",
 		Provider:        "openai",
 		Model:           "gpt-4o-mini",
 		CredentialID:    "",
@@ -413,8 +411,7 @@ func TestPutAgentRequiresExactlyOneAuthReference(t *testing.T) {
 	base := storage.AgentRecord{
 		ID:          "agent-1",
 		OwnerUserID: "user-1",
-		Name:        "Narrator",
-		Handle:      "narrator",
+		Label:       "narrator",
 		Provider:    "openai",
 		Model:       "gpt-4o-mini",
 		Status:      "active",
@@ -442,8 +439,7 @@ func TestDeleteAgent(t *testing.T) {
 	if err := store.PutAgent(context.Background(), storage.AgentRecord{
 		ID:           "agent-1",
 		OwnerUserID:  "user-1",
-		Name:         "Narrator",
-		Handle:       "narrator",
+		Label:        "narrator",
 		Provider:     "openai",
 		Model:        "gpt-4o-mini",
 		CredentialID: "cred-1",
@@ -461,6 +457,172 @@ func TestDeleteAgent(t *testing.T) {
 	_, err := store.GetAgent(context.Background(), "agent-1")
 	if !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected not found, got %v", err)
+	}
+}
+
+func TestPutCredentialRejectsDuplicateActiveLabelForOwner(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 16, 1, 0, 0, 0, time.UTC)
+
+	if err := store.PutCredential(context.Background(), storage.CredentialRecord{
+		ID:               "cred-1",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		Label:            "Primary",
+		SecretCiphertext: "enc:1",
+		Status:           "active",
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}); err != nil {
+		t.Fatalf("put first credential: %v", err)
+	}
+
+	err := store.PutCredential(context.Background(), storage.CredentialRecord{
+		ID:               "cred-2",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		Label:            " primary ",
+		SecretCiphertext: "enc:2",
+		Status:           "active",
+		CreatedAt:        now.Add(time.Minute),
+		UpdatedAt:        now.Add(time.Minute),
+	})
+	if !errors.Is(err, storage.ErrConflict) {
+		t.Fatalf("duplicate active label error = %v, want storage.ErrConflict", err)
+	}
+}
+
+func TestPutCredentialAllowsReuseAfterRevocation(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 16, 1, 5, 0, 0, time.UTC)
+
+	if err := store.PutCredential(context.Background(), storage.CredentialRecord{
+		ID:               "cred-1",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		Label:            "Primary",
+		SecretCiphertext: "enc:1",
+		Status:           "active",
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}); err != nil {
+		t.Fatalf("put first credential: %v", err)
+	}
+	if err := store.RevokeCredential(context.Background(), "user-1", "cred-1", now.Add(time.Minute)); err != nil {
+		t.Fatalf("revoke credential: %v", err)
+	}
+
+	if err := store.PutCredential(context.Background(), storage.CredentialRecord{
+		ID:               "cred-2",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		Label:            " primary ",
+		SecretCiphertext: "enc:2",
+		Status:           "active",
+		CreatedAt:        now.Add(2 * time.Minute),
+		UpdatedAt:        now.Add(2 * time.Minute),
+	}); err != nil {
+		t.Fatalf("reuse revoked label: %v", err)
+	}
+}
+
+func TestPutCredentialAllowsSameLabelAcrossOwners(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 16, 1, 10, 0, 0, time.UTC)
+
+	for _, rec := range []storage.CredentialRecord{
+		{
+			ID:               "cred-1",
+			OwnerUserID:      "user-1",
+			Provider:         "openai",
+			Label:            "Primary",
+			SecretCiphertext: "enc:1",
+			Status:           "active",
+			CreatedAt:        now,
+			UpdatedAt:        now,
+		},
+		{
+			ID:               "cred-2",
+			OwnerUserID:      "user-2",
+			Provider:         "openai",
+			Label:            " primary ",
+			SecretCiphertext: "enc:2",
+			Status:           "active",
+			CreatedAt:        now,
+			UpdatedAt:        now,
+		},
+	} {
+		if err := store.PutCredential(context.Background(), rec); err != nil {
+			t.Fatalf("put credential %s: %v", rec.ID, err)
+		}
+	}
+}
+
+func TestPutAgentRejectsDuplicateLabelForOwner(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 16, 1, 15, 0, 0, time.UTC)
+
+	if err := store.PutAgent(context.Background(), storage.AgentRecord{
+		ID:           "agent-1",
+		OwnerUserID:  "user-1",
+		Label:        "narrator",
+		Provider:     "openai",
+		Model:        "gpt-4o-mini",
+		CredentialID: "cred-1",
+		Status:       "active",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}); err != nil {
+		t.Fatalf("put first agent: %v", err)
+	}
+
+	err := store.PutAgent(context.Background(), storage.AgentRecord{
+		ID:           "agent-2",
+		OwnerUserID:  "user-1",
+		Label:        " narrator ",
+		Provider:     "openai",
+		Model:        "gpt-4o",
+		CredentialID: "cred-2",
+		Status:       "active",
+		CreatedAt:    now.Add(time.Minute),
+		UpdatedAt:    now.Add(time.Minute),
+	})
+	if !errors.Is(err, storage.ErrConflict) {
+		t.Fatalf("duplicate label error = %v, want storage.ErrConflict", err)
+	}
+}
+
+func TestPutAgentAllowsSameLabelAcrossOwners(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 16, 1, 20, 0, 0, time.UTC)
+
+	for _, rec := range []storage.AgentRecord{
+		{
+			ID:           "agent-1",
+			OwnerUserID:  "user-1",
+			Label:        "narrator",
+			Provider:     "openai",
+			Model:        "gpt-4o-mini",
+			CredentialID: "cred-1",
+			Status:       "active",
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		},
+		{
+			ID:           "agent-2",
+			OwnerUserID:  "user-2",
+			Label:        " narrator ",
+			Provider:     "openai",
+			Model:        "gpt-4o-mini",
+			CredentialID: "cred-2",
+			Status:       "active",
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		},
+	} {
+		if err := store.PutAgent(context.Background(), rec); err != nil {
+			t.Fatalf("put agent %s: %v", rec.ID, err)
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -59,7 +60,7 @@ type SettingsAIModelOption struct {
 // SettingsAIAgent stores an agent row displayed in the AI agents page.
 type SettingsAIAgent struct {
 	ID           string
-	Name         string
+	Label        string
 	Provider     string
 	Model        string
 	Status       string
@@ -69,11 +70,13 @@ type SettingsAIAgent struct {
 
 // CreateAIAgentInput stores validated agent creation input.
 type CreateAIAgentInput struct {
-	Name         string
+	Label        string
 	CredentialID string
 	Model        string
 	Instructions string
 }
+
+var aiAgentLabelPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{2,31}$`)
 
 // settingsLocale defines an internal contract used at this web package boundary.
 type settingsLocale string
