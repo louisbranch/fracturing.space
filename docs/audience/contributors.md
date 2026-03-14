@@ -12,15 +12,13 @@ Canonical onboarding path for developers adding features, fixing bugs, or improv
 
 1. Choose a runtime path: [Quickstart (Docker)](../running/quickstart.md) or [Local development (Go)](../running/local-dev.md).
 2. Follow the contribution workflow: [Contributing guide](https://github.com/louisbranch/fracturing.space/blob/main/CONTRIBUTING.md).
-3. Run baseline verification:
-   - `make test`
-   - `make smoke`
-4. Before opening or updating a PR:
-   - `make check`
-5. When production behavior changes, check coverage:
-   - `make cover`
-   - `make cover-critical-domain` for game-domain changes
-6. Run docs checks for docs-heavy changes:
+3. Use the supported verification surface:
+   - `make test` during normal implementation
+   - `make smoke` when runtime paths need quick feedback
+   - `make check` before opening or updating a PR
+4. Use `make cover` or `make cover-critical-domain` only when you need focused
+   standalone coverage output separate from `make check`.
+5. Run docs checks for docs-heavy changes:
    - `make docs-check`
 
 ## Good to know

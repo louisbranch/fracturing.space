@@ -65,31 +65,15 @@ Rules:
 - Negative assertions require an explicit `Invariant:` rationale adjacent to the assertion.
 - Coverage is a guardrail, not a target to game.
 
-Verification expectations after code changes:
+Use the canonical [Verification commands](docs/running/verification.md) matrix.
 
-```bash
-make test
-make smoke
-```
+Supported command surface:
 
-PR/PR-update prerequisite (required before opening or updating a PR):
-
-```bash
-make check
-```
-
-Command guidance for agents:
-
-- Fast feedback during implementation:
-  - `make test`
-  - `make smoke`
-- Final verification before push or PR update:
-  - `make check`
-- PR/update verification:
-  - `make check`
-
-Run `make cover` when production behavior changes and report notable coverage impact.
-Run `make cover-critical-domain` for game-domain behavior changes.
+- During normal implementation, run `make test`.
+- Run `make smoke` when runtime paths need quick feedback.
+- Run `make check` immediately before push, PR open, or PR update.
+- Use `make cover` and `make cover-critical-domain` only for focused diagnostics
+  when you need standalone coverage output separate from `make check`.
 
 ## Documentation and Knowledge Durability
 

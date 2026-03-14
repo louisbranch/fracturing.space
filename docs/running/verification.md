@@ -36,6 +36,10 @@ matrix:
 Use them when you are debugging a specific surface or when you need focused
 coverage output separate from `make check`.
 
+`make check` already runs the coverage lane. Do not start `make cover` or
+`make cover-critical-domain` in parallel with `make check`; the coverage
+commands share artifact paths and are guarded to fail fast on overlap.
+
 ## How `make check` works
 
 `make check` runs:

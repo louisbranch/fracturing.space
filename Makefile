@@ -23,7 +23,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/status/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-critical-domain check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -78,6 +78,9 @@ down: ## Stop watcher-based local services and devcontainer
 	@bash .devcontainer/scripts/stop-devcontainer.sh
 
 cover:
+	@COVERAGE_LOCK_LABEL='make cover' bash ./scripts/with-coverage-lock.sh $(MAKE) cover-core
+
+cover-core:
 	mkdir -p "$(GO_TEST_CACHE_DIR)" "$(GO_TEST_TMP_DIR)"
 	rm -f coverage.raw coverage.out coverage.html coverage-treemap.svg coverage.log
 	GOCACHE="$(GO_TEST_CACHE_DIR)" GOTMPDIR="$(GO_TEST_TMP_DIR)" go test -count=1 -tags=integration -covermode=set -coverprofile=coverage.raw ./... > coverage.log 2>&1
@@ -90,6 +93,9 @@ cover:
 	go tool cover -html=coverage.out -o coverage.html
 
 cover-critical-domain:
+	@COVERAGE_LOCK_LABEL='make cover-critical-domain' bash ./scripts/with-coverage-lock.sh $(MAKE) cover-critical-domain-core
+
+cover-critical-domain-core:
 	mkdir -p "$(GO_TEST_CACHE_DIR)" "$(GO_TEST_TMP_DIR)"
 	rm -f coverage-critical-domain.out coverage-critical-domain.func
 	GOCACHE="$(GO_TEST_CACHE_DIR)" GOTMPDIR="$(GO_TEST_TMP_DIR)" go test -count=1 -tags=integration -covermode=set -coverpkg=$(CRITICAL_DOMAIN_COVERPKG) -coverprofile=coverage-critical-domain.out $(CRITICAL_DOMAIN_TEST_PKGS)
@@ -97,7 +103,7 @@ cover-critical-domain:
 	@awk '/^total:/{print}' coverage-critical-domain.func
 
 check-coverage:
-	@bash ./scripts/check-coverage.sh
+	@COVERAGE_LOCK_LABEL='make check-coverage' bash ./scripts/with-coverage-lock.sh bash ./scripts/check-coverage.sh
 
 cover-package-floors:
 	@test -f coverage.out || (echo "coverage.out not found; run 'make cover' first" && exit 1)

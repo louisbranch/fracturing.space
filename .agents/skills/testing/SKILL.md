@@ -42,17 +42,19 @@ Example:
 
 ## Coverage Guardrails
 
-- When production behavior changes, run `make cover` and report notable impact.
-- Run `make cover-critical-domain` for game-domain behavior changes.
+- Use `make cover` and `make cover-critical-domain` only when you need focused
+  standalone coverage diagnostics outside the normal verification workflow.
 - If coverage drops, explain whether risk changed and add targeted tests when needed.
 - If you introduce generated outputs, update `COVER_EXCLUDE_REGEX` in `Makefile` so coverage reflects hand-written code.
 
 ## Verification
 
-- Use the public verification surface from `AGENTS.md` after code changes:
-  - `make test`
-  - `make smoke` for fast runtime feedback
+- Use the public verification surface from `docs/running/verification.md`:
+  - `make test` during normal implementation
+  - `make smoke` when runtime paths need quick feedback
   - `make check` before pushing or updating a PR
+- Do not run `make cover*` in parallel with `make check`; `make check` already
+  generates the shared coverage artifacts.
 - If a command cannot run locally, report why and what risk remains.
 
 ## Removal Policy

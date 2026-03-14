@@ -77,7 +77,8 @@ spreading, or compatibility glue is piling up.
 - Run `make test` after code changes.
 - Use `make smoke` for faster runtime feedback during the cutover.
 - Run `make check` before opening or updating a PR.
-- Run `make cover` when production behavior changes and report notable impact.
+- Use `make cover` only when you need focused standalone coverage output while
+  debugging a refactor; otherwise rely on `make check`.
 
 ## Completion Checklist
 
